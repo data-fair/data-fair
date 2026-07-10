@@ -90,12 +90,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     return canCache[operation]
   }
 
-  const patchDataset = useAsyncAction(async (patch: PatchDatasetReq['body'], options?: { childrenAction?: 'delete' | 'unflag' }) => {
-    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, {
-      method: 'PATCH',
-      body: patch,
-      query: options?.childrenAction ? { childrenAction: options.childrenAction } : undefined
-    })
+  const patchDataset = useAsyncAction(async (patch: PatchDatasetReq['body']) => {
+    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { method: 'PATCH', body: patch })
     dataset.value = patchedDataset
   })
 

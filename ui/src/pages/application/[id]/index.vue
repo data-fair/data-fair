@@ -300,7 +300,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('delete')"
+            v-if="showChangeOwnerSection"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -322,56 +322,17 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('delete') || can('writePartOf')" />
+          <v-divider v-if="showChangeOwnerSection || can('writePartOf')" />
 
-          <v-list-item
-            v-if="can('writePartOf')"
-            :prepend-icon="mdiFamilyTree"
-            class="py-4"
-          >
-            <div class="text-body-1 font-weight-bold">
-              {{ t('partOf') }}
-            </div>
-            <div class="text-body-medium text-medium-emphasis">
-              <i18n-t
-                v-if="application?.partOf"
-                keypath="partOfCurrentDesc"
-                tag="span"
-              >
-                <template #title>
-                  <router-link :to="`/application/${application.partOf.id}`">
-                    {{ application.partOf.title }}
-                  </router-link>
-                </template>
-              </i18n-t>
-              <template v-else>
-                {{ t('partOfDesc') }}
-              </template>
-            </div>
-            <template #append>
-              <part-of-dialog
-                v-if="application"
-                v-model="showPartOfDialog"
-                resource-type="applications"
-                :resource="application"
-                :candidates="partOfCandidates"
-                :candidates-loading="partOfCandidatesLoading"
-                @changed="store.applicationFetch.refresh()"
-              >
-                <template #activator="{ props: activatorProps }">
-                  <v-btn
-                    v-bind="activatorProps"
-                    variant="outlined"
-                    color="error"
-                    class="ml-4 align-self-center"
-                    @click="openPartOfDialog"
-                  >
-                    {{ application?.partOf ? t('partOfUnset') : t('partOfDefine') }}
-                  </v-btn>
-                </template>
-              </part-of-dialog>
-            </template>
-          </v-list-item>
+          <part-of-section
+            v-if="can('writePartOf') && application"
+            resource-type="applications"
+            :resource="application"
+            :candidates="partOfCandidates"
+            :candidates-loading="partOfCandidatesLoading"
+            @open="openPartOfDialog"
+            @changed="store.applicationFetch.refresh()"
+          />
 
           <v-divider v-if="can('writePartOf') && can('delete')" />
 
@@ -391,7 +352,8 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="openDeleteDialog"
+                :loading="openDeleteDialog.loading.value"
+                @click="openDeleteDialog.execute()"
               >
                 {{ t('deleteApp') }}
               </v-btn>
@@ -402,7 +364,7 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('delete')"
+      v-if="showChangeOwnerSection"
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
@@ -463,11 +425,6 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
-  partOf: Ressource parente
-  partOfDefine: Définir comme enfant
-  partOfUnset: Retirer l'attribut enfant
-  partOfDesc: Définir cette application comme n'existant que pour servir une application parente (par exemple un tableau de bord).
-  partOfCurrentDesc: "Cette application est actuellement définie comme enfant de : {title}"
   deleteApp: Supprimer l'application
   deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
@@ -511,11 +468,6 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
-  partOf: Parent resource
-  partOfDefine: Define as child
-  partOfUnset: Remove the child attribute
-  partOfDesc: Define this application as existing only to serve a parent application (e.g. a dashboard).
-  partOfCurrentDesc: "This application is currently defined as a child of: {title}"
   deleteApp: Delete application
   deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
@@ -530,7 +482,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiFamilyTree, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
@@ -605,10 +557,11 @@ const cancelMetadata = () => {
 
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
+// a child always lives in the same account as its parent, it can only follow it (see the API guard)
+const showChangeOwnerSection = computed(() => can('delete') && !application.value?.partOf)
 const showDeleteDialog = ref(false)
 const upgrading = ref(false)
 
-const showPartOfDialog = ref(false)
 const partOfCandidates = computed(() => (parentAppsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title })))
 const partOfCandidatesLoading = computed(() => parentAppsFetch.loading.value)
 const openPartOfDialog = () => {
@@ -664,15 +617,17 @@ const confirmUpgrade = async () => {
   }
 }
 
+// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
+// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
 const childrenCount = ref(0)
-const openDeleteDialog = async () => {
-  showDeleteDialog.value = true
+const openDeleteDialog = useAsyncAction(async () => {
   const [childDatasets, childApps] = await Promise.all([
     $fetch<{ count: number }>('datasets', { query: { partOf: route.params.id, size: 0 } }),
     $fetch<{ count: number }>('applications', { query: { partOf: route.params.id, size: 0 } })
   ])
   childrenCount.value = childDatasets.count + childApps.count
-}
+  showDeleteDialog.value = true
+})
 
 const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
   await remove(childrenAction)

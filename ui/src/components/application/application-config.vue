@@ -166,6 +166,7 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
+import { configRefIds, type ConfigRef } from '@data-fair/data-fair-shared/application/config-refs.ts'
 import { setProperty } from 'dot-prop'
 import equal from 'fast-deep-equal'
 import Debug from 'debug'
@@ -333,9 +334,6 @@ const cancelDraft = useAsyncAction(async () => {
 const showOrphansDialog = ref(false)
 const orphansCount = ref(0)
 
-const extractConfigIds = (items?: { id?: string, href?: string }[]) =>
-  (items ?? []).map(i => i?.id || i?.href?.split('/').pop()).filter(Boolean) as string[]
-
 const validateDraft = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
   if (!canWriteConfig.value || !configDraft.value) return
   if (childrenAction === undefined) {
@@ -346,8 +344,9 @@ const validateDraft = useAsyncAction(async (childrenAction?: 'delete' | 'unflag'
       $fetch<{ results: { id: string }[] }>('datasets', { query: { partOf: application.value?.id, size: 1000, select: 'id' } }),
       $fetch<{ results: { id: string }[] }>('applications', { query: { partOf: application.value?.id, size: 1000, select: 'id' } })
     ])
-    const newDatasetIds = extractConfigIds(configDraft.value.datasets as { id?: string, href?: string }[])
-    const newAppIds = extractConfigIds(configDraft.value.applications as { id?: string, href?: string }[])
+    // the app config schema types these as unknown, they are the same refs the API reads
+    const newDatasetIds = configRefIds(configDraft.value.datasets as ConfigRef[])
+    const newAppIds = configRefIds(configDraft.value.applications as ConfigRef[])
     const orphans = [
       ...childDatasets.results.filter(c => !newDatasetIds.includes(c.id)),
       ...childApps.results.filter(c => !newAppIds.includes(c.id))

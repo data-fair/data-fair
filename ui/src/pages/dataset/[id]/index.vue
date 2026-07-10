@@ -373,7 +373,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('changeOwner').value"
+            v-if="showChangeOwnerSection"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -395,56 +395,17 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('changeOwner').value && (showPartOfSection || canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="showChangeOwnerSection && (showPartOfSection || canDeleteAllLines || can('delete').value)" />
 
-          <v-list-item
-            v-if="showPartOfSection"
-            :prepend-icon="mdiFamilyTree"
-            class="py-4"
-          >
-            <div class="text-body-1 font-weight-bold">
-              {{ t('partOf') }}
-            </div>
-            <div class="text-body-medium text-medium-emphasis">
-              <i18n-t
-                v-if="dataset?.partOf"
-                keypath="partOfCurrentDesc"
-                tag="span"
-              >
-                <template #title>
-                  <router-link :to="`/${dataset.partOf.type === 'dataset' ? 'dataset' : 'application'}/${dataset.partOf.id}`">
-                    {{ dataset.partOf.title }}
-                  </router-link>
-                </template>
-              </i18n-t>
-              <template v-else>
-                {{ t('partOfDesc') }}
-              </template>
-            </div>
-            <template #append>
-              <part-of-dialog
-                v-if="dataset"
-                v-model="showPartOfDialog"
-                resource-type="datasets"
-                :resource="dataset"
-                :candidates="partOfCandidates"
-                :candidates-loading="partOfCandidatesLoading"
-                @changed="store.datasetFetch.refresh()"
-              >
-                <template #activator="{ props: activatorProps }">
-                  <v-btn
-                    v-bind="activatorProps"
-                    variant="outlined"
-                    color="error"
-                    class="ml-4 align-self-center"
-                    @click="openPartOfDialog"
-                  >
-                    {{ dataset?.partOf ? t('partOfUnset') : t('partOfDefine') }}
-                  </v-btn>
-                </template>
-              </part-of-dialog>
-            </template>
-          </v-list-item>
+          <part-of-section
+            v-if="showPartOfSection && dataset"
+            resource-type="datasets"
+            :resource="dataset"
+            :candidates="partOfCandidates"
+            :candidates-loading="partOfCandidatesLoading"
+            @open="openPartOfDialog"
+            @changed="store.datasetFetch.refresh()"
+          />
 
           <v-divider v-if="showPartOfSection && (canDeleteAllLines || can('delete').value)" />
 
@@ -491,7 +452,8 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="openDeleteDialog"
+                :loading="openDeleteDialog.loading.value"
+                @click="openDeleteDialog.execute()"
               >
                 {{ t('deleteDataset') }}
               </v-btn>
@@ -502,7 +464,7 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('changeOwner').value"
+      v-if="showChangeOwnerSection"
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
@@ -629,11 +591,6 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
-  partOf: Ressource parente
-  partOfDefine: Définir comme enfant
-  partOfUnset: Retirer l'attribut enfant
-  partOfDesc: Définir ce jeu de données comme n'existant que pour servir une ressource parente (jeu de données virtuel ou application).
-  partOfCurrentDesc: "Ce jeu de données est actuellement défini comme enfant de : {title}"
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
   deleteAllLinesTitle: Suppression des lignes du jeu de données
@@ -697,11 +654,6 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
-  partOf: Parent resource
-  partOfDefine: Define as child
-  partOfUnset: Remove the child attribute
-  partOfDesc: Define this dataset as existing only to serve a parent resource (virtual dataset or application).
-  partOfCurrentDesc: "This dataset is currently defined as a child of: {title}"
   deleteAllLines: Delete all lines
   deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
   deleteAllLinesTitle: Delete all the lines of the dataset
@@ -731,7 +683,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFamilyTree, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -748,7 +700,7 @@ import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schem
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
-import { isReferenceData } from '~/../../api/contract/master-data.js'
+import { isMasterData } from '~/../../api/contract/master-data.js'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -919,9 +871,11 @@ const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLin
 
 // a virtual dataset can never be defined as a child, don't offer the parent-resource section
 // a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see preparePatch guard)
-const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual && !isReferenceData(dataset.value?.masterData))
+const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual && !isMasterData(dataset.value?.masterData))
 
-const showPartOfDialog = ref(false)
+// a child always lives in the same account as its parent, it can only follow it (see the API guard)
+const showChangeOwnerSection = computed(() => can('changeOwner').value && !dataset.value?.partOf)
+
 const partOfCandidates = computed(() => [
   ...(virtualDatasetsFetch.data.value?.results ?? []).map(d => ({ type: 'dataset' as const, id: d.id, title: d.title })),
   ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
@@ -932,12 +886,14 @@ const openPartOfDialog = () => {
   if (!applicationsFetch.initialized.value) applicationsFetch.refresh()
 }
 
+// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
+// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
 const childrenCount = ref(0)
-const openDeleteDialog = async () => {
-  showDeleteDialog.value = true
+const openDeleteDialog = useAsyncAction(async () => {
   const res = await $fetch<{ count: number }>('datasets', { query: { partOf: id, size: 0 } })
   childrenCount.value = res.count
-}
+  showDeleteDialog.value = true
+})
 
 const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
   await remove(childrenAction)
@@ -1219,7 +1175,7 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('changeOwner').value || showPartOfSection.value || canDeleteAllLines.value || can('delete').value) {
+  if (showChangeOwnerSection.value || showPartOfSection.value || canDeleteAllLines.value || can('delete').value) {
     result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible or sensitive operations: change owner, define/remove this dataset as a child of a parent resource (partOf), delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 

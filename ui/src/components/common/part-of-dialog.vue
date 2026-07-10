@@ -154,7 +154,7 @@ type CurrentPartOf = { type: 'dataset' | 'application', id: string, title?: stri
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  resource: { id: string, title: string, partOf?: CurrentPartOf | null }
+  resource: { id: string, partOf?: CurrentPartOf | null }
   candidates: Candidate[]
   candidatesLoading?: boolean
 }>()
