@@ -1293,6 +1293,11 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
     // locked anchors still vouch for — bulk deletions must go through the transaction path
     if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
+    // dropping swaps the whole collection, so it is out of reach of the own/{owner} routes: their caller
+    // only holds manageOwnLines and would otherwise replace every line of the dataset with his own
+    if (drop && reqLinesOwnerOptional(req)) {
+      return res.status(400).type('text/plain').send('Le mode "drop" n\'est pas supporté pour les opérations sur ses propres lignes.')
+    }
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
