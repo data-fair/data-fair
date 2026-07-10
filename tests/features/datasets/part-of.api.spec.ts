@@ -5,6 +5,10 @@ import { sendDataset, waitForFinalize, waitForDatasetError } from '../../support
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
+// test_user1 is admin of test_org1, test_user5 is a contributor of it (dev/resources/organizations.json).
+// Contributors get the `write` class on every resource of the org through initResourcePermissions, never `admin`.
+const testOrg1Admin = await axiosAuth('test_user1@test.com', 'test_org1')
+const testOrg1Contrib = await axiosAuth('test_user5@test.com', 'test_org1')
 
 test.describe('dataset partOf attribute', () => {
   test.beforeEach(async () => {
@@ -488,6 +492,50 @@ test.describe('dataset partOf attribute', () => {
       ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: member.id } }),
       (err: any) => {
         assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('an organization contributor cannot flag an existing dataset as a child, that stays admin-only', async () => {
+    const member = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const virtualRes = await testOrg1Admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    const virtualDataset = await waitForFinalize(testOrg1Admin, virtualRes.data.id)
+
+    // the contributor holds the write class on both resources, but writePartOf is admin-class
+    await assert.rejects(
+      testOrg1Contrib.patch(`/api/v1/datasets/${member.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } }),
+      (err: any) => {
+        assert.equal(err.status, 403)
+        return true
+      }
+    )
+  })
+
+  test('dropping a child from a virtual dataset cascades without any permission check on the child', async () => {
+    const member = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const child = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const virtualRes = await testOrg1Admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id, child.id] } })
+    const virtualDataset = await waitForFinalize(testOrg1Admin, virtualRes.data.id)
+    await testOrg1Admin.patch(`/api/v1/datasets/${child.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    // the contributor is stripped of every permission on the child, and keeps the write class on the parent
+    await testOrg1Admin.put(`/api/v1/datasets/${child.id}/permissions`, [])
+    await assert.rejects(
+      testOrg1Contrib.get(`/api/v1/datasets/${child.id}`),
+      (err: any) => {
+        assert.equal(err.status, 403)
+        return true
+      }
+    )
+
+    const res = await testOrg1Contrib.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [member.id] } }, { params: { childrenAction: 'delete' } })
+    assert.equal(res.status, 200)
+    await waitForFinalize(testOrg1Admin, virtualDataset.id)
+    await assert.rejects(
+      testOrg1Admin.get(`/api/v1/datasets/${child.id}`),
+      (err: any) => {
+        assert.equal(err.status, 404)
         return true
       }
     )
