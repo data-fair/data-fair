@@ -2,6 +2,7 @@ import config from '#config'
 import path from 'path'
 import memoize from 'memoizee'
 import { ensureArtefact } from '@data-fair/lib-node-registry'
+import { tmpDir } from '../datasets/utils/files.ts'
 import { parseArtefactId } from './operations.ts'
 
 export { parseArtefactId, parseAssetsPath } from './operations.ts'
@@ -13,7 +14,6 @@ export const baseAppUrl = (artefactId: string) => {
   return `${config.publicUrl}/app-assets/${packageName}/${minor}/`
 }
 
-const tmpDir = config.tmpDir ? path.resolve(config.tmpDir) : path.join(config.dataDir, 'tmp')
 const cacheDir = config.registryCacheDir ?? path.join(tmpDir, 'registry-cache')
 
 const doEnsure = async (artefactId: string): Promise<{ dir: string, version: string }> => {
