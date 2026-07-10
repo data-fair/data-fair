@@ -27,3 +27,30 @@ export const getFragmentFetchUrl = (fragment: any): string | null => {
   }
   return null
 }
+
+// Base apps are registry npm artefacts with one mutable artefact per minor line.
+// Artefact id convention: '<packageName>@<major>.<minor>'.
+export const parseArtefactId = (artefactId: string): { packageName: string, minor: string } => {
+  const i = artefactId.lastIndexOf('@')
+  const packageName = i > 0 ? artefactId.slice(0, i) : ''
+  const minor = i > 0 ? artefactId.slice(i + 1) : ''
+  if (!packageName || !/^\d+\.\d+$/.test(minor)) throw new Error(`invalid base-app artefact id "${artefactId}"`)
+  return { packageName, minor }
+}
+
+// Parse the splat segments of an /app-assets request:
+// [...packageNameParts, <minor>, (<exactVersion>)?, ...filePath]
+// The version segment makes the response immutable-cacheable; without it the file
+// is served from the current extract with a short TTL.
+export const parseAssetsPath = (segments: string[]): { artefactId: string, version?: string, filePath: string } | null => {
+  const minorIndex = segments.findIndex(s => /^\d+\.\d+$/.test(s))
+  if (minorIndex <= 0) return null
+  const packageName = segments.slice(0, minorIndex).join('/')
+  let rest = segments.slice(minorIndex + 1)
+  let version: string | undefined
+  if (rest.length && /^\d+\.\d+\.\d+/.test(rest[0])) {
+    version = rest[0]
+    rest = rest.slice(1)
+  }
+  return { artefactId: `${packageName}@${segments[minorIndex]}`, version, filePath: rest.join('/') }
+}
