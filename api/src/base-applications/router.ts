@@ -9,7 +9,7 @@ import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 import type { BaseAppWithContext, Request } from '#types'
-import { initBaseApp, syncBaseApp } from './service.ts'
+import { initBaseApp, syncBaseApp, syncRegistryBaseApps } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 export { init } from './service.ts'
 
@@ -25,6 +25,13 @@ router.post('', async (req, res) => {
   const fullBaseApp = await initBaseApp(baseApp, req.getLocale())
   await syncBaseApp(fullBaseApp)
   res.send(fullBaseApp)
+})
+
+// Sync all 'application' npm artefacts visible in the registry into base-applications.
+// Must be declared before any router.post('/:id'...) if one is ever added.
+router.post('/_sync', async (req, res) => {
+  reqAdminMode(req)
+  res.send(await syncRegistryBaseApps())
 })
 
 router.patch('/:id', async (req, res) => {

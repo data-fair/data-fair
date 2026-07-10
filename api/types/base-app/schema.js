@@ -10,6 +10,10 @@ export default {
   properties: {
     id: { type: 'string' },
     url: { type: 'string' },
+    artefactId: {
+      type: 'string',
+      description: 'Registry artefact id of the base app (e.g. @koumoul/sankey@1.5). One mutable artefact per minor line.'
+    },
     applicationName: { type: 'string' },
     title: { type: 'string' },
     description: { type: 'string' },

@@ -205,6 +205,7 @@ export async function findBaseApplications (reqQuery: Record<string, any>, publi
       category: 1,
       meta: 1,
       url: 1,
+      artefactId: 1,
       image: 1,
       deprecated: 1,
       public: 1,

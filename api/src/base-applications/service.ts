@@ -1,5 +1,7 @@
 import config from '#config'
 import mongo from '#mongo'
+import fsp from 'node:fs/promises'
+import path from 'node:path'
 import axios from '../misc/utils/axios.ts'
 import jsonRefs from 'json-refs'
 import i18n from 'i18n'
@@ -8,6 +10,7 @@ import slug from 'slugify'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { clean, prepareQuery, getFragmentFetchUrl } from './operations.ts'
+import { ensureBaseAppDir, baseAppUrl } from './registry.ts'
 import type { BaseApp } from '#types'
 
 // Meta field names that may appear multiple times with a lang attribute.
@@ -59,6 +62,26 @@ function extractHeadMeta (html: string, locale: string, defaultLocale: string): 
   }
 
   return meta
+}
+
+// Read a resolved config-schema to deduce filters on datasets. Shared between the
+// legacy URL-based import (initBaseApp) and the registry-based one (initBaseAppFromArtefact).
+export function deriveDatasetsFilters (configSchema: any): any[] {
+  const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
+  let datasetsFetches: { fromUrl: string, properties: Record<string, any> }[] = []
+  if (datasetsDefinition) {
+    if (datasetsDefinition.items && getFragmentFetchUrl(datasetsDefinition)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition), properties: datasetsDefinition.items.properties }]
+    if (getFragmentFetchUrl(datasetsDefinition.items)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition.items), properties: datasetsDefinition.items.properties }]
+    if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.filter(item => getFragmentFetchUrl(item)).map(item => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
+  }
+  const datasetsFilters: any[] = []
+  for (const datasetFetch of datasetsFetches) {
+    const info = prepareQuery(new URL(datasetFetch.fromUrl, config.publicUrl).searchParams) as Record<string, any>
+    info.fromUrl = datasetFetch.fromUrl
+    if (datasetFetch.properties) info.properties = datasetFetch.properties
+    datasetsFilters.push(info)
+  }
+  return datasetsFilters
 }
 
 // Fill the collection using the default base applications from config
@@ -113,23 +136,7 @@ export async function initBaseApp (app, locale?: string) {
     const configSchema: any = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
 
     patch.hasConfigSchema = true
-
-    // Read the config schema to deduce filters on datasets
-    const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
-    let datasetsFetches: { fromUrl: string, properties: Record<string, any> }[] = []
-    if (datasetsDefinition) {
-      if (datasetsDefinition.items && getFragmentFetchUrl(datasetsDefinition)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition), properties: datasetsDefinition.items.properties }]
-      if (getFragmentFetchUrl(datasetsDefinition.items)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition.items), properties: datasetsDefinition.items.properties }]
-      if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.filter(item => getFragmentFetchUrl(item)).map(item => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
-    }
-    const datasetsFilters: any[] = []
-    for (const datasetFetch of datasetsFetches) {
-      const info = prepareQuery(new URL(datasetFetch.fromUrl, config.publicUrl).searchParams) as Record<string, any>
-      info.fromUrl = datasetFetch.fromUrl
-      if (datasetFetch.properties) info.properties = datasetFetch.properties
-      datasetsFilters.push(info)
-    }
-    patch.datasetsFilters = datasetsFilters
+    patch.datasetsFilters = deriveDatasetsFilters(configSchema)
   } catch (err) {
     patch.hasConfigSchema = false
     internalError('app-config-schema', err)
@@ -151,4 +158,96 @@ export async function syncBaseApp (baseApp: BaseApp) {
   const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta, datasetsFilters: baseApp.datasetsFilters }
   await mongo.applications.updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
   await mongo.applications.updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
+}
+
+// registry metadata that data-fair mirrors onto the base-application doc at sync time.
+// The registry is authoritative for these fields; everything else (meta, datasetsFilters,
+// applicationName, version) is derived from the tarball content.
+const registryArtefactHeaders = () => ({ 'x-secret-key': config.secretKeys.registry })
+
+const localizedRegistryField = (field: { fr?: string, en?: string } | undefined, locale: string): string | undefined => {
+  if (!field) return undefined
+  return field[locale as 'fr' | 'en'] ?? field.fr ?? field.en
+}
+
+// Init a base app from its registry artefact: download/refresh the extracted tarball,
+// derive meta + datasetsFilters from its content, merge registry metadata, upsert.
+export async function initBaseAppFromArtefact (artefactId: string, locale?: string) {
+  const defaultLocale = config.i18n.defaultLocale
+  const effectiveLocale = locale || defaultLocale
+  const { dir, version } = await ensureBaseAppDir(artefactId)
+  const url = baseAppUrl(artefactId)
+
+  let html: string
+  try {
+    html = await fsp.readFile(path.join(dir, 'index.html'), 'utf8')
+  } catch (err) {
+    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url }))
+  }
+  const meta = extractHeadMeta(html, effectiveLocale, defaultLocale)
+
+  const artefact = (await axios.get(`${config.privateRegistryUrl}/api/v1/artefacts/${encodeURIComponent(artefactId)}`, { headers: registryArtefactHeaders() })).data
+
+  const patch: Partial<BaseApp> = {
+    meta,
+    id: slug(url, { lower: true }),
+    url,
+    artefactId,
+    version,
+    updatedAt: new Date().toISOString(),
+    // registry-authoritative metadata
+    public: artefact.public === true,
+    privateAccess: (artefact.privateAccess ?? []).map((a: any) => ({ type: a.type, id: a.id })),
+    deprecated: artefact.deprecated === true
+  }
+  const title = localizedRegistryField(artefact.title, effectiveLocale)
+  if (title) patch.title = title
+  const description = localizedRegistryField(artefact.description, effectiveLocale)
+  if (description) patch.description = description
+  const group = localizedRegistryField(artefact.group, effectiveLocale)
+  if (group) patch.category = group
+  if (artefact.documentation) patch.documentation = artefact.documentation
+
+  try {
+    const rawSchema = JSON.parse(await fsp.readFile(path.join(dir, 'config-schema.json'), 'utf8'))
+    if (typeof rawSchema !== 'object') throw new Error('Invalid json')
+    const configSchema: any = (await jsonRefs.resolveRefs(rawSchema, { filter: ['local'] })).resolved
+
+    patch.hasConfigSchema = true
+    patch.datasetsFilters = deriveDatasetsFilters(configSchema)
+  } catch (err) {
+    patch.hasConfigSchema = false
+    internalError('app-config-schema', err)
+  }
+
+  if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
+    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url }))
+  }
+  patch.datasetsFilters = patch.datasetsFilters || []
+
+  const storedBaseApp = await mongo.baseApplications
+    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })
+  clean(config.publicUrl, storedBaseApp)
+  return storedBaseApp as BaseApp
+}
+
+// Sync every 'application' npm artefact visible in the registry into base-applications.
+export async function syncRegistryBaseApps () {
+  const failures: { artefactId: string, error: string }[] = []
+  let synced = 0
+  const { results } = (await axios.get(`${config.privateRegistryUrl}/api/v1/artefacts`, {
+    params: { format: 'npm', category: 'application', size: 1000 },
+    headers: registryArtefactHeaders()
+  })).data
+  for (const artefact of results) {
+    try {
+      const baseApp = await initBaseAppFromArtefact(artefact._id)
+      await syncBaseApp(baseApp)
+      synced++
+    } catch (err: any) {
+      internalError('base-app-sync', err)
+      failures.push({ artefactId: artefact._id, error: err.message })
+    }
+  }
+  return { synced, failures }
 }

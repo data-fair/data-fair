@@ -85,6 +85,7 @@ export class DfMongo {
       'base-applications': {
         url_1: [{ url: 1 }, { unique: true }],
         id_1: [{ id: 1 }, { unique: true }],
+        artefactId_1: [{ artefactId: 1 }, { sparse: true }],
         fulltext: [{ title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { weights: { title: 2 } }]
       },
       applications: {
