@@ -146,8 +146,15 @@ preferred precisely because it eliminates this gap.
   path. At scale we cannot check everything all the time, hence "sliding" coverage.
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
 - On a confirmed divergence: alert; show a **diff** (level 2 only — requires the stored
-  payload); allow a superadmin `fixIntegrity` for legitimate-but-untracked edits.
+  payload); allow a superadmin `fixIntegrity` for legitimate-but-untracked edits. A
+  `fixIntegrity` stamp makes the relay **re-anchor then verify** (it runs the check itself
+  after anchoring), so the reconcile action completes with a fresh verdict instead of waiting
+  for the next sweep.
 - Automatic re-push into the history is **not** done initially, but is possible by API.
+- **Realtime feedback:** the relay and checker push `{ historized }` / `{ checked }` events
+  on the `datasets/{id}/integrity` websocket channel (gated by the admin-class
+  `realtime-integrity` operation), which the integrity panel uses to refresh itself — the
+  async outbox flow stays observable without polling.
 - The checker also **owns lock renewal** for long-lived resources — extending the anchor's
   lock (primary) or re-anchoring (fallback); see §3.4.
 
@@ -375,7 +382,8 @@ The integrity API splits read from write:
   …/_integrity/_fix`. Registered as the superadmin-grouped operations `writeIntegrity`,
   `checkIntegrity`, `fixIntegrity` (never grantable through permissions).
 - **Reads are open to the owner account's admins** via the registered admin-class operations
-  `readIntegrity` / `readIntegrityRevisions`: `GET /datasets/{id}/_integrity`, `GET
+  `readIntegrity` / `readIntegrityRevisions` / `realtime-integrity` (the websocket channel of
+  §3.3): `GET /datasets/{id}/_integrity`, `GET
   …/_integrity/revisions`, and the `integrity` field embedded in dataset responses (which
   drives the list breach badge and the `status=error` filter row). These are enforced with the
   standard `permissions.middleware(...)` machinery, so an owner admin holds them implicitly and
