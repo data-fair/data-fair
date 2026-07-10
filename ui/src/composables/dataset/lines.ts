@@ -25,7 +25,7 @@ export type ExtendedResult = {
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>) => {
+export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>, linesOwner?: MaybeRefOrGetter<string | undefined>) => {
   const { id, dataset, draft } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -56,7 +56,11 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     }
     if (toValue(indexedAt)) query.indexedAt = toValue(indexedAt)
     else query.finalizedAt = dataset.value.finalizedAt
-    return withQuery($apiPath + `/datasets/${id}/lines`, query)
+    // own-lines mode: read through own/{owner}/lines so a holder of manageOwnLines (and nothing more)
+    // sees and edits only their own lines — the route filters on _owner server-side
+    const owner = toValue(linesOwner)
+    const path = owner ? `/datasets/${id}/own/${owner}/lines` : `/datasets/${id}/lines`
+    return withQuery($apiPath + path, query)
   })
 
   const total = ref<number>()
