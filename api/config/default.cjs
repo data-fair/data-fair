@@ -48,6 +48,8 @@ module.exports = {
   privateAgentsUrl: null,
   privateOpenapiViewerUrl: null,
   privateRegistryUrl: null,
+  // local disk cache of extracted base-app artefacts downloaded from the registry (should be an emptyDir in k8s)
+  registryCacheDir: null, // defaults to tmpDir + '/registry-cache'
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {

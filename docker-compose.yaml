@@ -209,6 +209,7 @@ services:
   registry:
     profiles:
       - dev
+      - test
     image: ghcr.io/data-fair/registry:main
     network_mode: host
     depends_on:

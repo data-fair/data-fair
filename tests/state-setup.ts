@@ -35,6 +35,10 @@ Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
     `Mock server seems to be unavailable at ${mockUrl}. Start it with: node --experimental-strip-types dev/mock-server.ts`
   )
 
+  // Publish the mock base apps to the dev/test registry
+  const { publishMockApps } = await import('./support/registry.ts')
+  await publishMockApps()
+
   // More visible dev server logs straight in the test output
   try {
     const { existsSync, mkdirSync } = await import('node:fs')

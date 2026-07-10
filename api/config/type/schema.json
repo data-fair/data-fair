@@ -167,6 +167,10 @@
     "privateRegistryUrl": {
       "type": ["string", "null"]
     },
+    "registryCacheDir": {
+      "type": ["string", "null"],
+      "description": "Local disk cache of extracted base-app artefacts downloaded from the registry."
+    },
     "subscriptionUrl": {
       "type": ["string", "null"]
     },
