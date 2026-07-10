@@ -306,4 +306,68 @@ test.describe('REST datasets with owner specific lines', () => {
     res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`)
     assert.equal(res.data.total, 1)
   })
+
+  test('Clean up the ownership columns when line ownership is deactivated', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    assert.equal(res.status, 201)
+    let dataset = res.data
+
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { _id: 'ownedline', col1: 'value 1' })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/ownedline`)
+    assert.equal(res.data._owner, 'user:test_user1')
+
+    // deactivating the ownership drops the columns from the schema and from the stored lines,
+    // the same way deactivating storeUpdatedBy drops _updatedBy/_updatedByName
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: false } })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    assert.equal(dataset.schema.find((p: any) => p.key === '_owner'), undefined)
+    assert.equal(dataset.schema.find((p: any) => p.key === '_ownerName'), undefined)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/ownedline`)
+    assert.equal(res.data.col1, 'value 1')
+    assert.equal(res.data._owner, undefined)
+    assert.equal(res.data._ownerName, undefined)
+
+    // and the own/ routes are not supported anymore
+    await assert.rejects(
+      testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`),
+      (err: any) => err.status === 501
+    )
+  })
+
+  test('Refuse to deactivate line ownership while _owner is part of the primary key', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }],
+      primaryKey: ['col1', '_owner']
+    })
+    assert.equal(res.status, 201)
+    let dataset = res.data
+
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { col1: 'value 1' })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+
+    // unsetting _owner would change the _id getLineId derives for these lines
+    await assert.rejects(
+      testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: false } }),
+      (err: any) => err.status === 400
+    )
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0]._owner, 'user:test_user1')
+
+    // dropping the ownership columns from the primary key in the same patch makes it acceptable
+    res = await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: false }, primaryKey: ['col1'] })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    assert.equal(dataset.schema.find((p: any) => p.key === '_owner'), undefined)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0]._owner, undefined)
+  })
 })
