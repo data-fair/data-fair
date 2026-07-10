@@ -224,6 +224,33 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.equal(res.data.total, 2)
   })
 
+  test('Reject the drop mode on the own lines bulk route', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'adminline', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+
+    // dropping swaps the whole collection: holding manageOwnLines must not be enough to wipe the dataset
+    await assert.rejects(
+      testAlone.post(`/api/v1/datasets/${dataset.id}/own/user:test_alone/_bulk_lines?drop=true`, [{ col1: 'value 2' }]),
+      (err: any) => err.status === 400
+    )
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'adminline')
+  })
+
   test('Preserve line ownership when a line is rewritten from the standard lines routes', async () => {
     let res = await testUser1Org.post('/api/v1/datasets', {
       isRest: true,

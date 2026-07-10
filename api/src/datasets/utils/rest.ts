@@ -1150,6 +1150,11 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
   try {
     const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
+    // dropping swaps the whole collection, so it is out of reach of the own/{owner} routes: their caller
+    // only holds manageOwnLines and would otherwise replace every line of the dataset with his own
+    if (drop && reqLinesOwnerOptional(req)) {
+      return res.status(400).type('text/plain').send('Le mode "drop" n\'est pas supporté pour les opérations sur ses propres lignes.')
+    }
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
