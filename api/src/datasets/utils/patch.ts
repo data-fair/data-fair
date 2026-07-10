@@ -10,7 +10,8 @@ import * as datasetUtils from './index.ts'
 import * as extensions from './extensions.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
-import { isReferenceData } from '../../../contract/master-data.js'
+import { isMasterData } from '../../../contract/master-data.js'
+import { isSameOwner } from '../../misc/utils/part-of.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -149,10 +150,10 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   // two states, checking it against the effective value of the other.
   const effectiveMasterData = 'masterData' in patch ? patch.masterData : dataset.masterData
   const effectivePartOf = 'partOf' in patch ? patch.partOf : dataset.partOf
-  if ('partOf' in patch && patch.partOf && isReferenceData(effectiveMasterData)) {
+  if ('partOf' in patch && patch.partOf && isMasterData(effectiveMasterData)) {
     throw httpError(400, 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource')
   }
-  if ('masterData' in patch && isReferenceData(patch.masterData) && effectivePartOf) {
+  if ('masterData' in patch && isMasterData(patch.masterData) && effectivePartOf) {
     throw httpError(400, 'Un jeu de données défini comme enfant d\'une autre ressource ne peut pas devenir une donnée de référence')
   }
 
@@ -165,12 +166,12 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // a dataset can only be defined as a child if it is used by exactly one parent resource — 0 or
     // 2+ parents (virtual datasets and/or applications combined) makes the relationship ambiguous
     const [virtualParents, appParents] = await Promise.all([
-      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1, partOf: 1 } }).toArray(),
-      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1, partOf: 1 } }).toArray()
+      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1, partOf: 1, owner: 1 } }).toArray(),
+      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1, partOf: 1, owner: 1 } }).toArray()
     ])
     const parents = [
-      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title, partOf: d.partOf })),
-      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title, partOf: a.partOf }))
+      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title, partOf: d.partOf, owner: d.owner })),
+      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title, partOf: a.partOf, owner: a.owner }))
     ]
     if (parents.length !== 1) throw httpError(400, `Ce jeu de données ne peut être défini comme enfant que s'il est utilisé par une seule ressource parente (jeu de données virtuel ou application) ; il en compte actuellement ${parents.length}.`)
     const [parent] = parents
@@ -178,6 +179,8 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // a resource that is itself a child cannot be a parent: chains would leave silent orphans
     // behind cascading deletions
     if (parent.partOf) throw httpError(400, 'La ressource parente est elle-même définie comme enfant d\'une autre ressource, les chaînages ne sont pas autorisés')
+    // both always live in the same account, so that cascading deletions never reach another account
+    if (!isSameOwner(parent.owner, dataset.owner)) throw httpError(400, 'La ressource parente doit appartenir au même compte que la ressource enfant')
     // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
     patch.partOf.title = parent.title
   }

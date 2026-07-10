@@ -2,7 +2,6 @@
 import type { Router, Request, Response, NextFunction } from 'express'
 import type { Request as DfRequest, Event } from '#types'
 import clone from '@data-fair/lib-utils/clone.js'
-import moment from 'moment'
 import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -11,7 +10,6 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
-import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
@@ -26,11 +24,11 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren, listPartOfChildrenIds } from '../service.ts'
+import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren, listPartOfChildrenIds, listPartOfChildren, changeDatasetOwner } from '../service.ts'
+import { requireChildrenAction } from '../../misc/utils/part-of.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
-import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 
 const clean = datasetUtils.clean
@@ -155,20 +153,18 @@ export const registerMetadataRoutes = (router: Router) => {
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
 
       // dropping members from a virtual dataset can orphan datasets still defined as its partOf
-      // children: mirror the deletion guard, restricted to the members actually removed
+      // children: mirror the deletion guard, restricted to the members actually removed. Detected
+      // (and refused) up-front, but applied only once the patch itself is persisted — the cascade is
+      // irreversible and preparePatch/applyPatch can still reject the request.
+      let orphans: string[] | undefined
+      let childrenAction: 'delete' | 'unflag' | undefined
       if (dataset.isVirtual && patch.virtual) {
         const childrenIds = await listPartOfChildrenIds('dataset', dataset.id)
         const newChildren: string[] = patch.virtual.children ?? []
-        const orphans = childrenIds.filter(id => !newChildren.includes(id))
-        if (orphans.length) {
-          const childrenAction = req.query.childrenAction as string | undefined
-          if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
-            throw httpError(409, `Cette modification retire ${orphans.length} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-          }
-          // the child datasets were explicitly opted into this relationship by their own owner (via
-          // the admin-only writePartOf permission on the child itself), so no extra per-child
-          // permission check is required here
-          await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction, orphans)
+        const detected = childrenIds.filter(id => !newChildren.includes(id))
+        if (detected.length) {
+          childrenAction = requireChildrenAction(req.query.childrenAction as string | undefined, `Cette modification retire ${detected.length} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+          orphans = detected
         }
       }
 
@@ -181,6 +177,8 @@ export const registerMetadataRoutes = (router: Router) => {
             if (err.code !== 11000) throw err
             throw httpError(400, req.__('errors.dupSlug'))
           })
+
+        if (orphans && childrenAction) await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction, orphans)
 
         if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
@@ -212,6 +210,15 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const sessionState = reqSessionAuthenticated(req)
 
+    // a child only exists to serve its parent, and both always live in the same account: it can only
+    // follow its parent, never move on its own
+    if (dataset.partOf) {
+      throw httpError(409, 'Ce jeu de données est défini comme enfant d\'une autre ressource, il ne peut pas changer de compte indépendamment de celle-ci.')
+    }
+    // only a virtual dataset can be the parent of datasets, no need to look for children otherwise
+    const children: any[] = dataset.isVirtual ? await listPartOfChildren('dataset', dataset.id) : []
+    const movedDatasets = [dataset, ...children]
+
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
     if (!sessionState.user.adminMode) {
       if (req.body.type === 'user' && req.body.id !== sessionState.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
@@ -223,69 +230,34 @@ export const registerMetadataRoutes = (router: Router) => {
     }
 
     if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
+      // the children move along with their parent, they all consume the new owner's limits
       const remaining = await limits.remaining(req.body)
-      if (remaining.nbDatasets === 0) {
+      if (remaining.nbDatasets !== -1 && remaining.nbDatasets < movedDatasets.length) {
         debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
         return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
       }
-      if (dataset.storage) {
-        if (remaining.storage !== -1 && remaining.storage < dataset.storage.size) {
-          debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
-        }
-        if (remaining.indexed !== -1 && dataset.storage.indexed && remaining.indexed < dataset.storage.indexed.size) {
-          debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
-        }
+      const movedSize = movedDatasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
+      const movedIndexed = movedDatasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
+      if (remaining.storage !== -1 && remaining.storage < movedSize) {
+        debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
+        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
+      }
+      if (remaining.indexed !== -1 && movedIndexed && remaining.indexed < movedIndexed) {
+        debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
+        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
       }
     }
 
-    const patch: any = {
-      owner: req.body,
-      updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
-      updatedAt: moment().toISOString()
+    const patchedDataset = await changeDatasetOwner(dataset, req.body, sessionState)
+    for (const child of children) {
+      await syncRemoteService(await changeDatasetOwner(child, req.body, sessionState))
     }
 
-    const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === req.body.type && dataset.owner.id === req.body.id
-    if (sameOrg && !dataset.owner.department && req.body.department) {
-      // moving from org root to a department, we keep the publicationSites
-    } else {
-      patch.publicationSites = []
-    }
-    if (!sameOrg && req.body.publications) {
-      patch.publications = []
-    }
-
-    const preservePermissions = (dataset.permissions || []).filter((p: any) => {
-      // keep public permissions
-      if (!p.type) return true
-      if (sameOrg) {
-        // keep individual user permissions (user partners)
-        if (p.type === 'user') return true
-        // keep permissions to external org (org partners)
-        if (p.type === 'organization' && p.id !== dataset.owner.id) return true
-      }
-      return false
-    })
-    await permissions.initResourcePermissions(patch, preservePermissions)
-
-    const patchedDataset: any = await mongo.db.collection('datasets')
-      .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
-
-    // Move all files
-    if (dir(dataset) !== dir(patchedDataset)) {
-      try {
-        await filesStorage.moveDir(dir(dataset), dir(patchedDataset))
-      } catch (err) {
-        console.warn('Error while moving dataset directory', err)
-      }
-    }
-
-    const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+    const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
     const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
 
     eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner })
-    eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: patch.owner })
+    eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: req.body })
     const event = {
       title: 'Changement de propriétaire d\'un jeu de données',
       body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
@@ -296,12 +268,12 @@ export const registerMetadataRoutes = (router: Router) => {
       sender: { ...dataset.owner, role: 'admin' }
     }
     eventsQueue.pushEvent(event, sessionState)
-    eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+    eventsQueue.pushEvent({ ...event, sender: { ...req.body, role: 'admin' } }, sessionState)
 
     await syncRemoteService(patchedDataset)
 
     await updateTotalStorage(dataset.owner)
-    await updateTotalStorage(patch.owner)
+    await updateTotalStorage(req.body)
 
     res.status(200).json(clean(req as DfRequest, patchedDataset))
   })
@@ -311,15 +283,10 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
 
-    const childrenCount = await countPartOfChildren('dataset', dataset.id)
+    // only a virtual dataset can be the parent of datasets, no need to look for children otherwise
+    const childrenCount = dataset.isVirtual ? await countPartOfChildren('dataset', dataset.id) : 0
     if (childrenCount > 0) {
-      const childrenAction = req.query.childrenAction as string | undefined
-      if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
-        throw httpError(409, `Ce jeu de données virtuel a ${childrenCount} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-      }
-      // the child datasets were explicitly opted into this relationship by their own owner (via the
-      // admin-only writePartOf permission on the child itself), so no extra per-child permission check
-      // is required here — the cascading action was already authorized when partOf was set
+      const childrenAction = requireChildrenAction(req.query.childrenAction as string | undefined, `Ce jeu de données virtuel a ${childrenCount} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
       await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction)
     }
 

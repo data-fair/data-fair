@@ -324,4 +324,172 @@ test.describe('dataset partOf attribute', () => {
       }
     )
   })
+
+  test('a rejected patch does not cascade the deletion of the children it would have orphaned', async () => {
+    const ax = testUser1
+    const child = await sendDataset('datasets/dataset1.csv', ax)
+    const conflicting = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [child.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${child.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    // the patch drops the child AND takes an already-used slug: applyPatch rejects it with a 400
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [] }, slug: conflicting.slug }, { params: { childrenAction: 'delete' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+
+    // the request failed, so the child must still be there, still flagged
+    const res = await ax.get(`/api/v1/datasets/${child.id}`)
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+  })
+
+  test('a child dataset stays resolvable by slug, only browsing listings hide it', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    // a slug lookup is a targeted fetch, exactly like an id lookup: it must not be filtered
+    let res = await ax.get('/api/v1/datasets', { params: { slug: dataset.slug } })
+    assert.equal(res.data.count, 1)
+    assert.equal(res.data.results[0].id, dataset.id)
+    res = await ax.get('/api/v1/datasets', { params: { slugs: dataset.slug } })
+    assert.equal(res.data.count, 1)
+  })
+
+  test('cannot define a dataset as a child of a parent belonging to another account', async () => {
+    const ax = testUser1
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const datasetRef = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+
+    // the application belongs to the org, the dataset it uses to the user's personal account
+    const { data: orgApp } = await axOrg.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await axOrg.put(`/api/v1/applications/${orgApp.id}/config`, { datasets: [{ id: dataset.id, href: datasetRef.href }] })
+
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'application', id: orgApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('a dataset defined as a child cannot change account on its own', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    await assert.rejects(
+      ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+  })
+
+  test('changing the account of a parent migrates its children along with it', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    const newOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
+    const res = await ax.put(`/api/v1/datasets/${virtualDataset.id}/owner`, newOwner)
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.owner, newOwner)
+
+    // the child followed its parent, and is still flagged as its child (read from the new account)
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    const child = (await axOrg.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.deepEqual(child.owner, newOwner)
+    assert.deepEqual(child.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+  })
+
+  test('a dataset can be created directly as a child of an eligible parent', async () => {
+    const ax = testUser1
+    const member = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a child created from its parent',
+      partOf: { type: 'dataset', id: virtualDataset.id, title: 'stale title sent by the client' }
+    })
+    assert.equal(res.status, 201)
+    // the parent's title is denormalized server-side at creation too
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+
+    // and it is immediately hidden from the default listing, like any other child
+    const list = await ax.get('/api/v1/datasets')
+    assert.ok(!list.data.results.find((d: any) => d.id === res.data.id))
+  })
+
+  test('a dataset can be created directly as a child of an application', async () => {
+    const ax = testUser1
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    // the parent of a child dataset is a virtual dataset OR an application
+    const res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a child created from its parent application',
+      partOf: { type: 'application', id: app.id }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: app.id, title: app.title })
+
+    const list = await ax.get('/api/v1/datasets')
+    assert.ok(!list.data.results.find((d: any) => d.id === res.data.id))
+  })
+
+  test('cannot create a dataset as a child of a parent belonging to another account', async () => {
+    const ax = testUser1
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    const member = await sendDataset('datasets/dataset1.csv', axOrg)
+    const virtualRes = await axOrg.post('/api/v1/datasets', { isVirtual: true, title: 'org virtual', virtual: { children: [member.id] } })
+    await waitForFinalize(axOrg, virtualRes.data.id)
+
+    await assert.rejects(
+      ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualRes.data.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('cannot create a virtual dataset as a child, nor a child of a non-virtual dataset', async () => {
+    const ax = testUser1
+    const member = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    await waitForFinalize(ax, virtualRes.data.id)
+
+    await assert.rejects(
+      ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual child', virtual: { children: [member.id] }, partOf: { type: 'dataset', id: virtualRes.data.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+    // a plain file/rest dataset can never be a parent of a dataset, only a virtual one can
+    await assert.rejects(
+      ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: member.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
 })

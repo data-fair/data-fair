@@ -316,6 +316,96 @@ test.describe('application partOf attribute', () => {
     assert.deepEqual(datasetARes.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
   })
 
+  test('a rejected patch does not cascade the deletion of the children it would have orphaned', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const { data: conflicting } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'conflicting app' })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    // the patch drops the child from the configuration AND takes an already-used slug: it is rejected
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${parentApp.id}`, { configuration: {}, slug: conflicting.slug }, { params: { childrenAction: 'delete' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+
+    // the request failed, so the child must still be there, still flagged
+    const res = await ax.get(`/api/v1/applications/${childApp.id}`)
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
+  test('an application can be created directly as a child of an eligible parent', async () => {
+    const ax = testUser1
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    const res = await ax.post('/api/v1/applications', {
+      url: mockAppUrl('monapp1'),
+      title: 'a child created from its parent',
+      partOf: { type: 'application', id: parentApp.id, title: 'stale title sent by the client' }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+
+    const list = await ax.get('/api/v1/applications')
+    assert.ok(!list.data.results.find((a: any) => a.id === res.data.id))
+  })
+
+  test('cannot create an application as a child of a parent belonging to another account', async () => {
+    const ax = testUser1
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    const { data: parentApp } = await axOrg.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    await assert.rejects(
+      ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), partOf: { type: 'application', id: parentApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('an application defined as a child cannot change account on its own, a parent migrates its children', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const childDataset = await sendDataset('datasets/dataset1.csv', ax)
+    const childDatasetRef = (await ax.get('/api/v1/datasets', { params: { id: childDataset.id, select: 'id' } })).data.results[0]
+
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, {
+      applications: [{ id: childApp.id, href: childRef.href }],
+      datasets: [{ id: childDataset.id, href: childDatasetRef.href }]
+    })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+    await ax.patch(`/api/v1/datasets/${childDataset.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    const newOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
+    await assert.rejects(
+      ax.put(`/api/v1/applications/${childApp.id}/owner`, newOwner),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+
+    // the applications change-owner route requires the new owner to be the active account, an
+    // admin session is the simplest way to move a personal application to an organization
+    const axAdmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const res = await axAdmin.put(`/api/v1/applications/${parentApp.id}/owner`, newOwner)
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.owner, newOwner)
+
+    // both kinds of children followed their parent
+    assert.deepEqual((await axAdmin.get(`/api/v1/applications/${childApp.id}`)).data.owner, newOwner)
+    assert.deepEqual((await axAdmin.get(`/api/v1/datasets/${childDataset.id}`)).data.owner, newOwner)
+  })
+
   test('partOf must carry the constant application type', async () => {
     const ax = testUser1
     const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
