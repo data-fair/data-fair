@@ -158,7 +158,7 @@ fr:
   fix: Réconcilier
   enableLabel: Activer le contrôle d'intégrité
   checkOk: Contrôle effectué
-  fixOk: Réconciliation effectuée
+  fixOk: Réconciliation lancée, l'état va se mettre à jour
   toggleOk: Configuration enregistrée
   loadError: Impossible de charger l'état d'intégrité.
   historyTitle: Historique des révisions
@@ -189,7 +189,7 @@ en:
   fix: Reconcile
   enableLabel: Enable integrity checking
   checkOk: Check completed
-  fixOk: Reconciliation completed
+  fixOk: Reconciliation started, the status will update shortly
   toggleOk: Configuration saved
   loadError: Could not load the integrity status.
   historyTitle: Revision history
@@ -209,7 +209,8 @@ en:
 import { mdiShieldRefresh, mdiWrench } from '@mdi/js'
 
 const { t, locale } = useI18n()
-const { dataset } = useDatasetStore()
+const datasetStore = useDatasetStore()
+const { dataset } = datasetStore
 const session = useSession()
 // the panel (status + revision history) is visible to the owner's admins; the enable/disable and
 // check/fix write actions stay superadmin-only
@@ -259,6 +260,22 @@ const load = useAsyncAction(async () => {
   }
 })
 load.execute()
+
+// live refresh: relay anchoring and checker verdicts are pushed on a WS channel gated by the
+// realtime-integrity operation — this is what makes the async _fix flow observable (the worker
+// re-anchors then verifies in the background). Debounced: one action can emit several events
+// (historized + one 'checked' per class).
+const ws = useWS('/data-fair/api/')
+let wsRefreshTimer: ReturnType<typeof setTimeout> | undefined
+if (dataset.value) {
+  ws?.subscribe(`datasets/${dataset.value.id}/integrity`, () => {
+    if (wsRefreshTimer) clearTimeout(wsRefreshTimer)
+    wsRefreshTimer = setTimeout(() => {
+      load.execute()
+      datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+    }, 300)
+  })
+}
 
 const check = useAsyncAction(async () => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })

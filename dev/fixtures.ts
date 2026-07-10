@@ -199,24 +199,10 @@ async function ensureTopics () {
 }
 
 /** Tag every fixture dataset with its topics. Runs after seeding so it also
- * upgrades datasets seeded by earlier runs (they are skip-if-exists).
- *
- * Integrity interaction: a topics PATCH is a legitimate covered-field write,
- * so on integrity-active datasets it historizes a metadata revision — which
- * RE-ANCHORS the current document. On the two fixtures whose demo is a
- * metadata tamper this would legitimize the tampered description and heal
- * the breach, so after tagging them we wait for the re-anchor and re-apply
- * the raw out-of-band tamper, then re-run the check to persist the verdict. */
+ * upgrades datasets seeded by earlier runs (they are skip-if-exists). On
+ * integrity-active datasets the PATCH historizes a metadata revision — wait
+ * for it so later passes (ensureBreachState) cannot race the relay. */
 async function ensureDatasetTopics () {
-  // datasets whose demo state includes an out-of-band METADATA tamper that a
-  // legitimate re-anchor would erase — re-tampered after tagging. The re-tamper
-  // string must DIFFER from the seed-time one: the re-anchor legitimized the
-  // doc as it stood (tampered description included), so re-writing the same
-  // bytes would match the fresh anchor and the check would come back ok.
-  const metadataTampered: Record<string, string> = {
-    'fixtures-integrite-breach': 'description modifiée hors circuit, après ré-ancrage (démo intégrité)',
-    'fixtures-integrite-breach-meta': 'description falsifiée hors circuit, après ré-ancrage (démo intégrité par classe)'
-  }
   for (const [id, topicIds] of Object.entries(datasetTopics)) {
     if (!await datasetExists(id)) continue
     const { data: current } = await dfAx.get(`/api/v1/datasets/${id}`, { params: { select: 'id,topics,integrity' } })
@@ -226,12 +212,28 @@ async function ensureDatasetTopics () {
     const metaAnchor = integrityActive ? await currentRevisionIndex(id, 'metadata') : -1
     await dfAx.patch(`/api/v1/datasets/${id}`, { topics: topicIds.map(tid => fixtureTopics.find(t => t.id === tid)) })
     if (integrityActive) await waitForNewRevision(id, metaAnchor, 'metadata')
-    if (metadataTampered[id]) {
-      await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: metadataTampered[id] })
-      const check = await runCheck(id)
-      console.log(`${id}: topics set (${topicIds.join(', ')}), tamper re-applied (check: file=${check.file?.status} metadata=${check.metadata?.status})`)
-    } else {
-      console.log(`${id}: topics set (${topicIds.join(', ')})`)
+    console.log(`${id}: topics set (${topicIds.join(', ')})`)
+  }
+}
+
+/** The two breach demos must STAY breached: any legitimate covered-field
+ * write (topics tagging, a future fixture pass…) re-anchors the current
+ * metadata and silently heals them. Re-assert the breach on every run:
+ * check, and if metadata comes back ok, re-tamper out-of-band with a
+ * timestamped string (guaranteed to differ from the latest anchor) and
+ * check again to persist the verdict. */
+async function ensureBreachState () {
+  const tamperBase: Record<string, string> = {
+    'fixtures-integrite-breach': 'description modifiée hors circuit (démo intégrité)',
+    'fixtures-integrite-breach-meta': 'description falsifiée hors circuit (démo intégrité par classe)'
+  }
+  for (const [id, base] of Object.entries(tamperBase)) {
+    if (!await datasetExists(id)) continue
+    let check = await runCheck(id)
+    if (check.metadata?.status !== 'breach') {
+      await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: `${base} — ${new Date().toISOString()}` })
+      check = await runCheck(id)
+      console.log(`${id}: metadata breach re-asserted (check: file=${check.file?.status} metadata=${check.metadata?.status})`)
     }
   }
 }
@@ -660,6 +662,7 @@ async function main () {
 
   // after seeding so it also upgrades datasets skipped by earlier runs
   await ensureDatasetTopics()
+  await ensureBreachState()
 
   console.log('\nDone. Browse the seeded data at:')
   for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-breach-meta', 'fixtures-integrite-reconcilie', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {

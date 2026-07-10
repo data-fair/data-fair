@@ -1,7 +1,7 @@
 // tests/features/integrity/metadata.api.spec.ts
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { sendDataset, collectNotifications } from '../../support/workers.ts'
+import { sendDataset, collectNotifications, getRawDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -166,4 +166,61 @@ test('deleting a publication site historizes a new metadata revision', async () 
   expect(keys.length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.metadata.status).toBe('ok')
+})
+
+// Regression: updateTopics must diff old vs new — every settings save (even an unrelated
+// single-key PATCH) flows through it with old == new, and blanket re-anchoring would silently
+// legitimize a not-yet-detected out-of-band tamper (this healed the dev breach fixtures once).
+test('a settings write with unchanged topics does not re-anchor tagged datasets', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+  await waitForFlagCleared(dataset.id)
+
+  const topicId = `integrity-topic-same-${Date.now()}`
+  const existingTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Unchanged topic' }] })
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Unchanged topic' }] })
+  await waitForIntegrityRevisions(p.metadata, 2)
+  await waitForFlagCleared(dataset.id)
+
+  // tamper out-of-band, then save settings with the SAME topics: the propagation must NOT
+  // stamp/re-anchor (that would legitimize the tamper before it was ever detected)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered before unrelated settings save' })
+  const settingsTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsTopics })
+  await new Promise(resolve => setTimeout(resolve, 2000)) // settle: give a wrongly-stamped relay time to run
+  expect((await getRawDataset(dataset.id))._needsHistorizing).toBeUndefined()
+  expect((await listIntegrityKeys(p.metadata)).length).toBe(2)
+  // and the tamper is still detectable
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.metadata.status).toBe('breach')
+})
+
+test('_fix re-anchors then refreshes the verdict itself, no manual check needed', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+  await waitForFlagCleared(dataset.id)
+
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered for the fix flow' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.metadata.status).toBe('breach')
+
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
+  // the relay re-anchors, then (fixIntegrity context) runs the check itself: the verdict
+  // refreshes to ok in the background, with no manual _check call
+  const start = Date.now()
+  let status: string | undefined
+  while (Date.now() - start < 20000) {
+    status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.metadata?.lastCheck?.status
+    if (status === 'ok') break
+    await new Promise(resolve => setTimeout(resolve, 250))
+  }
+  expect(status).toBe('ok')
+  const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`, { params: { class: 'metadata' } })).data
+  expect(revisions.results[0].operation).toBe('fixIntegrity')
 })

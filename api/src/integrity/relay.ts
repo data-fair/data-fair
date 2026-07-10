@@ -1,5 +1,7 @@
 import mongo from '#mongo'
 import config from '#config'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal } from '#types'
 import { isFileDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
@@ -79,4 +81,20 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
     { id: dataset.id },
     { ...(Object.keys(lastRevisionSet).length ? { $set: lastRevisionSet } : {}), $unset: { _needsHistorizing: '' } }
   )
+
+  // realtime feedback for the integrity panel (channel gated by the realtime-integrity operation);
+  // best-effort — a failed emit must not fail the relay (the state is already persisted)
+  try {
+    await wsEmitter.emit(`datasets/${dataset.id}/integrity`, { type: 'historized', classes })
+  } catch (err) { internalError('integrity-ws', err) }
+
+  // reconcile completes with a fresh verdict (re-anchor then verify): the operator's _fix action
+  // must be observable in the panel without waiting for the nightly sweep or a manual check
+  if (hint?.operation === 'fixIntegrity') {
+    const fresh = await mongo.datasets.findOne({ id: dataset.id })
+    if (fresh) {
+      const checker = await import('./checker.ts')
+      await checker.checkDataset(fresh as DatasetInternal)
+    }
+  }
 }

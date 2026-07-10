@@ -2,6 +2,7 @@
 import cron, { type ScheduledTask } from 'node-cron'
 import Debug from 'debug'
 import locks from '@data-fair/lib-node/locks.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import config from '#config'
 import mongo from '#mongo'
@@ -43,6 +44,14 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   }
 }
 
+// realtime feedback for the integrity panel (channel gated by the realtime-integrity operation);
+// best-effort — a failed emit must not fail the check (the verdict is already persisted)
+const emitChecked = async (datasetId: string, cls: ops.IntegrityClass, status: 'ok' | 'breach' | 'unknown') => {
+  try {
+    await wsEmitter.emit(`datasets/${datasetId}/integrity`, { type: 'checked', class: cls, status })
+  } catch (err) { internalError('integrity-ws', err) }
+}
+
 const checkClass = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, cls: ops.IntegrityClass): Promise<ClassCheck> => {
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id, cls)
   const latest = ops.latestKey((await store.listRevisions(prefix)).map((r) => r.key))
@@ -52,6 +61,7 @@ const checkClass = async (dataset: DatasetInternal, store: ReturnType<typeof int
     // and the sweep cursor (sorted on lastCheck.date) advances past this dataset
     const date = new Date().toISOString()
     await mongo.datasets.updateOne({ id: dataset.id }, { $set: { [`integrity.${cls}.lastCheck`]: { date, status: 'unknown' } } })
+    await emitChecked(dataset.id, cls, 'unknown')
     return { status: 'unknown', date }
   }
 
@@ -80,6 +90,7 @@ const checkClass = async (dataset: DatasetInternal, store: ReturnType<typeof int
     await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', `integrity-breach-${cls}`)
   }
   if (status === 'ok') await maybeRenew(dataset, store, cls, latest)
+  await emitChecked(dataset.id, cls, status)
   return { status, date }
 }
 
