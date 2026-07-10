@@ -63,6 +63,11 @@ server {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
   }
+  # use regex to match /data-fair/app-assets/ and /data-fair/app-assets? (base app static files)
+  location ~ ^/data-fair/app-assets(/|$|\?) {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
   location /data-fair/streamsaver {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};

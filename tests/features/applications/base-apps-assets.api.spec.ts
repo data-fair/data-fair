@@ -26,6 +26,14 @@ test.describe('base app assets serving', () => {
     assert.equal(res.status, 200)
     assert.match(res.headers['cache-control'], /immutable/)
 
+    // mismatched exact version: self-heal retries but the extract still doesn't
+    // carry 0.9.9 (only 0.1.0 was ever published) — the file still exists under the
+    // served extract so it's served gracefully, but must NOT be claimed immutable
+    res = await anonymous.get('/app-assets/@test/monapp1/0.1/0.9.9/assets/index-test1.js')
+    assert.equal(res.status, 200)
+    assert.match(res.headers['cache-control'], /max-age=300/)
+    assert.doesNotMatch(res.headers['cache-control'], /immutable/)
+
     // raw index.html is never exposed (contains the %APPLICATION% placeholder)
     await assert.rejects(anonymous.get('/app-assets/@test/monapp1/0.1/index.html'), (err: any) => err.status === 404)
     await assert.rejects(anonymous.get('/app-assets/@test/monapp1/0.1/0.1.0/index.html'), (err: any) => err.status === 404)

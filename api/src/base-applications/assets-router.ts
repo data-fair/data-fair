@@ -41,16 +41,16 @@ export const MIME: Record<string, string> = {
   '.pbf': 'application/x-protobuf'
 }
 
-router.get('/{*assetPath}', async (req, res) => {
+router.get('/*assetPath', async (req, res) => {
   const segments = (req.params.assetPath ?? []) as unknown as string[]
   const parsed = parseAssetsPath([...segments])
   if (!parsed || !parsed.filePath || parsed.filePath === 'index.html') {
-    res.status(404).type('text/plain').send()
+    res.status(404).send('unknown asset path')
     return
   }
   const baseApp = await mongo.baseApplications.findOne({ artefactId: parsed.artefactId }, { projection: { artefactId: 1 } })
   if (!baseApp) {
-    res.status(404).type('text/plain').send()
+    res.status(404).send('unknown base application')
     return
   }
   let { dir, version } = await ensureBaseAppDir(parsed.artefactId)
@@ -64,20 +64,25 @@ router.get('/{*assetPath}', async (req, res) => {
   try {
     filePath = resolvePath(dir, parsed.filePath)
   } catch {
-    res.status(404).type('text/plain').send()
+    res.status(404).send('unknown asset path')
     return
   }
   const stats = await fsp.stat(filePath).catch(() => null)
   if (!stats || !stats.isFile()) {
-    res.status(404).type('text/plain').send()
+    res.status(404).send('unknown asset path')
     return
   }
   const ext = path.extname(parsed.filePath).toLowerCase()
-  res.setHeader('content-type', MIME[ext] ?? 'application/octet-stream')
-  res.setHeader('x-content-type-options', 'nosniff')
-  res.setHeader('x-accel-buffering', 'yes')
-  res.setHeader('content-length', stats.size)
-  if (parsed.version) res.setHeader('cache-control', 'public, max-age=31536000, immutable')
-  else res.setHeader('cache-control', 'public, max-age=300')
+  res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Accel-Buffering', 'yes')
+  res.setHeader('Content-Length', stats.size)
+  // immutable is only safe to claim when the served extract actually matches the
+  // requested exact version: if the self-heal retry above still didn't converge
+  // (registry propagation lag across pods), we still serve the file gracefully
+  // but must not let shared caches pin the mismatched content for a year
+  const servedAsRequestedVersion = !!parsed.version && parsed.version === version
+  if (servedAsRequestedVersion) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+  else res.setHeader('Cache-Control', 'public, max-age=300')
   await pump(createReadStream(filePath), res)
 })
