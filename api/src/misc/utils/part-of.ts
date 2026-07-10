@@ -40,15 +40,31 @@ export const readPartOfParent = async (partOf: PartOf, childOwner: Owner) => {
 }
 
 /**
+ * The write operation on the parent that would make it reference the child. Creating a child under
+ * a parent and making that parent point at it are the same right: whoever can do one can do the other.
+ */
+const canReferenceChild = (parent: any, parentType: 'dataset' | 'application', sessionState: SessionState) =>
+  parentType === 'dataset'
+    // a member is added to a virtual dataset by patching `virtual`, one of the breaking keys
+    ? can('datasets', parent, 'writeDescriptionBreaking', sessionState)
+    // an application's configuration is written by two routes, gated by two different operations;
+    // the disjunction is deliberate — do not tighten it to writeConfig, that would 403 integrators
+    // who reference children through the writeDescription-gated PATCH route
+    : can('applications', parent, 'writeConfig', sessionState) ||
+      can('applications', parent, 'writeDescription', sessionState)
+
+/**
  * Creation-time gate, used when a child is created directly from its parent. The parent cannot
  * reference the child yet, so the flag-time "used by exactly one parent resource" rule is replaced
- * by a permission check on the parent: writePartOf is the admin-class operation governing
- * parent/child links, and whoever holds it on the parent can also unflag the child afterwards.
+ * by a permission check on the parent. It is a write-class check, not the admin-class writePartOf
+ * that guards the danger zone: subordinating a resource that already stands on its own is an admin
+ * act on that resource, creating one that never stood on its own is not. Whoever holds this right
+ * can also unflag the child afterwards, by dropping it from the parent's members.
  */
 export const preparePartOfAtCreation = async (partOf: PartOf, childOwner: Owner, sessionState: SessionState) => {
   const parent = await readPartOfParent(partOf, childOwner)
-  if (!can(partOf.type === 'dataset' ? 'datasets' : 'applications', parent, 'writePartOf', sessionState)) {
-    throw httpError(403, 'Vous n\'avez pas la permission de définir une ressource enfant sur cette ressource parente')
+  if (!canReferenceChild(parent, partOf.type, sessionState)) {
+    throw httpError(403, 'Vous n\'avez pas la permission de modifier cette ressource parente pour qu\'elle référence une ressource enfant')
   }
   // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
   partOf.title = parent.title

@@ -5,6 +5,9 @@ import { sendDataset } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
+// test_user1 is admin of test_org1, test_user5 is a contributor of it (dev/resources/organizations.json).
+const testOrg1Admin = await axiosAuth('test_user1@test.com', 'test_org1')
+const testOrg1Contrib = await axiosAuth('test_user5@test.com', 'test_org1')
 
 test.describe('application partOf attribute', () => {
   test.beforeEach(async () => {
@@ -426,6 +429,50 @@ test.describe('application partOf attribute', () => {
       ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'dataset', id: parentApp.id } }),
       (err: any) => {
         assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('an organization contributor can create an application as a child of a parent it can configure', async () => {
+    const { data: parentApp } = await testOrg1Admin.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    const res = await testOrg1Contrib.post('/api/v1/applications', {
+      url: mockAppUrl('monapp1'),
+      title: 'a child created by a contributor',
+      partOf: { type: 'application', id: parentApp.id }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
+  test('creating an application as a child accepts writeDescription alone, PATCH configuration is not hardened', async () => {
+    const { data: parentApp } = await testOrg1Admin.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    // PATCH /applications/:id with a configuration body is gated by writeDescription, not writeConfig,
+    // so writeDescription alone is enough to make the parent reference a child
+    await testOrg1Admin.put(`/api/v1/applications/${parentApp.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], operations: ['readDescription', 'writeDescription'] }
+    ])
+
+    const res = await testOrg1Contrib.post('/api/v1/applications', {
+      url: mockAppUrl('monapp1'),
+      title: 'a child',
+      partOf: { type: 'application', id: parentApp.id }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
+  test('creating an application as a child requires a write operation on the parent, reading it is not enough', async () => {
+    const { data: parentApp } = await testOrg1Admin.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await testOrg1Admin.put(`/api/v1/applications/${parentApp.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], classes: ['read'] }
+    ])
+
+    await assert.rejects(
+      testOrg1Contrib.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a child', partOf: { type: 'application', id: parentApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 403)
         return true
       }
     )

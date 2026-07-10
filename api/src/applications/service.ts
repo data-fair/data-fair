@@ -234,8 +234,9 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
       newApplication[key] = (existingApplication as any)[key]
     }
   }
-  // partOf is managed exclusively through PATCH (admin-only writePartOf gate + eligibility
-  // validation): a full replace neither drops nor sets it
+  // partOf has its own gated write paths: the write-class parent check at creation, and the
+  // writePartOf danger zone (admin) on PATCH. A full replace uses neither, so it preserves the
+  // existing value rather than letting the request body set or drop it.
   if ('partOf' in existingApplication) newApplication.partOf = (existingApplication as any).partOf
   else delete newApplication.partOf
   newApplication.updatedAt = moment().toISOString()
@@ -424,8 +425,8 @@ export const countChildApplications = async (parentId: string) => {
 // called when deleting an application that has child applications, or editing its configuration
 // in a way that stops referencing some of them (childIds restricts the cascade to those orphans):
 // either cascade the deletion, or unflag them so they survive on their own.
-// Like handlePartOfChildren, no per-child permission check: the children were opted into this
-// relationship by their own owner through the admin-only writePartOf permission.
+// Like handlePartOfChildren, no per-child permission check: a child exists only to serve its parent
+// and shares its lifecycle, so authorizing the parent operation is enough.
 export const handleChildApplications = async (ctx: ApplicationWriteContext, parentId: string, action: 'delete' | 'unflag', childIds?: string[]) => {
   const filter = { 'partOf.id': parentId, ...(childIds ? { id: { $in: childIds } } : {}) }
   if (action === 'unflag') {

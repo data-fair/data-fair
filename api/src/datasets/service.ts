@@ -415,9 +415,9 @@ export const listPartOfChildren = async (parentType: 'dataset' | 'application', 
 // called when deleting a resource that has partOf children, or editing its configuration in a way
 // that stops referencing some of them (childIds restricts the cascade to those orphans): either
 // cascade the deletion, or unflag them so they survive on their own.
-// No per-child permission check is performed: the children were explicitly opted into this
-// relationship by their own owner (via the admin-only writePartOf permission), which is what
-// authorized the cascade in the first place. Callers only have to authorize the parent operation.
+// No per-child permission check is performed: a child exists only to serve its parent and shares its
+// parent's lifecycle, so whoever can edit the parent to the point of no longer referencing the child
+// decides what becomes of it. Callers only have to authorize the parent operation.
 export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'application', parentId: string, action: 'delete' | 'unflag', childIds?: string[]) => {
   const filter = { 'partOf.type': parentType, 'partOf.id': parentId, ...(childIds ? { id: { $in: childIds } } : {}) }
   if (action === 'unflag') {

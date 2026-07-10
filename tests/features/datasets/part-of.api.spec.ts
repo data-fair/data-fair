@@ -540,4 +540,69 @@ test.describe('dataset partOf attribute', () => {
       }
     )
   })
+
+  test('an organization contributor can create a dataset as a child of a virtual dataset it can edit', async () => {
+    const member = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const virtualRes = await testOrg1Admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    const virtualDataset = await waitForFinalize(testOrg1Admin, virtualRes.data.id)
+
+    const res = await testOrg1Contrib.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a child created by a contributor',
+      partOf: { type: 'dataset', id: virtualDataset.id }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+  })
+
+  test('creating a dataset as a child requires a write operation on the parent, reading it is not enough', async () => {
+    const member = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const virtualRes = await testOrg1Admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    const virtualDataset = await waitForFinalize(testOrg1Admin, virtualRes.data.id)
+    await testOrg1Admin.put(`/api/v1/datasets/${virtualDataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], classes: ['read'] }
+    ])
+
+    await assert.rejects(
+      testOrg1Contrib.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualDataset.id } }),
+      (err: any) => {
+        assert.equal(err.status, 403)
+        return true
+      }
+    )
+  })
+
+  test('creating a dataset as a child of a virtual parent requires the breaking variant of writeDescription', async () => {
+    const member = await sendDataset('datasets/dataset1.csv', testOrg1Admin)
+    const virtualRes = await testOrg1Admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
+    const virtualDataset = await waitForFinalize(testOrg1Admin, virtualRes.data.id)
+    // adding a member to a virtual dataset patches `virtual`, a breaking key: plain writeDescription
+    // would let the contributor create a child it could never attach to the parent
+    await testOrg1Admin.put(`/api/v1/datasets/${virtualDataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], operations: ['readDescription', 'writeDescription'] }
+    ])
+
+    await assert.rejects(
+      testOrg1Contrib.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualDataset.id } }),
+      (err: any) => {
+        assert.equal(err.status, 403)
+        return true
+      }
+    )
+  })
+
+  test('creating a dataset as a child of an application parent accepts writeConfig alone', async () => {
+    const { data: parentApp } = await testOrg1Admin.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await testOrg1Admin.put(`/api/v1/applications/${parentApp.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], operations: ['readDescription', 'writeConfig'] }
+    ])
+
+    const res = await testOrg1Contrib.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a child of an application',
+      partOf: { type: 'application', id: parentApp.id }
+    })
+    assert.equal(res.status, 201)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
 })
