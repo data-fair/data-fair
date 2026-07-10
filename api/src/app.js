@@ -173,6 +173,7 @@ export const run = async () => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
+    app.use('/app-assets', (await import('./base-applications/assets-router.ts')).default)
     app.use('/app', (await import('./applications/proxy.ts')).default)
 
     // self hosting of streamsaver man in the middle service worker
