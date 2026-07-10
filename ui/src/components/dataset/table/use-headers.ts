@@ -33,6 +33,12 @@ export type TableHeaderWithProperty = Omit<TableHeader, 'property'> & Required<P
 // keys can contain dots but also slashes, accents, spaces, etc. that would break querySelector
 const toCssKey = (key: string) => key.replace(/[^a-zA-Z0-9_-]/g, '__')
 
+// the calculated columns the table shows and lets the user pick ; the others are internals (_id, _i,
+// _rand, _geopoint...) or the _*Name companions of _updatedBy / _owner, whose readable name is already
+// displayed in the tooltip of the account avatar
+export const visibleCalculatedCols = ['_updatedAt', '_updatedBy', '_owner']
+export const isVisibleCol = (property: SchemaProperty) => !property['x-calculated'] || visibleCalculatedCols.includes(property.key)
+
 export const useHeaders = (
   selectedCols: Ref<string[]>,
   noInteraction: boolean,
@@ -40,7 +46,10 @@ export const useHeaders = (
   selectable: boolean,
   fixed: Ref<string | undefined>,
   syntheticColumns?: MaybeRefOrGetter<SyntheticColumn[]>,
-  headerKeys?: MaybeRefOrGetter<boolean>
+  headerKeys?: MaybeRefOrGetter<boolean>,
+  // shorter labels for some columns, whose schema title describes the data rather than reading well as
+  // a header ; keyed by column key, they never leave the table (the schema itself is untouched)
+  titleOverrides?: MaybeRefOrGetter<Record<string, string>>
 ) => {
   const { dataset, imageField, can } = useDatasetStore()
   const { vocabulary } = useStore()
@@ -48,10 +57,16 @@ export const useHeaders = (
   const headers = computed(() => {
     if (!dataset.value?.schema) return
     const useKeyAsTitle = toValue(headerKeys) === true
+    const overrides = toValue(titleOverrides)
+    const headerTitle = (p: SchemaProperty) => {
+      if (useKeyAsTitle) return p.key
+      if (overrides && Object.hasOwn(overrides, p.key)) return overrides[p.key]
+      return p.title || p['x-originalName'] || p.key
+    }
     let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p) => ({
       key: p.key,
       cssKey: toCssKey(p.key),
-      title: useKeyAsTitle ? p.key : (p.title || p['x-originalName'] || p.key),
+      title: headerTitle(p),
       sortable:
         (!p['x-capabilities'] || p['x-capabilities'].values !== false) && (
           (p.type === 'string' && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry') ||

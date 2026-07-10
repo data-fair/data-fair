@@ -202,22 +202,26 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
     }
   }
   if (dataset.isRest && dataset.rest?.lineOwnership) {
-    if (!schema.find(p => p.key === '_owner')) {
-      schema.push({
-        key: '_owner',
-        type: 'string',
-        title: 'Propriétaire de la ligne',
-        'x-capabilities': { insensitive: false, text: false, textStandard: false }
-      })
+    // datasets created before these columns became x-calculated persisted them as regular properties,
+    // so they survived the filter above; drop the stale definitions before pushing the calculated ones
+    for (const key of ['_owner', '_ownerName']) {
+      const legacyIndex = schema.findIndex(p => p.key === key)
+      if (legacyIndex !== -1) schema.splice(legacyIndex, 1)
     }
-    if (!schema.find(p => p.key === '_ownerName')) {
-      schema.push({
-        key: '_ownerName',
-        type: 'string',
-        title: 'Nom du propriétaire de la ligne',
-        'x-capabilities': { text: false }
-      })
-    }
+    schema.push({
+      'x-calculated': true,
+      key: '_owner',
+      type: 'string',
+      title: 'Propriétaire de la ligne',
+      'x-capabilities': { insensitive: false, text: false, textStandard: false }
+    })
+    schema.push({
+      'x-calculated': true,
+      key: '_ownerName',
+      type: 'string',
+      title: 'Nom du propriétaire de la ligne',
+      'x-capabilities': { text: false }
+    })
   }
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })

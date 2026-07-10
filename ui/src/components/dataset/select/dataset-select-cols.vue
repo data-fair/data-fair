@@ -54,7 +54,7 @@
           >
             <v-checkbox
               v-show="!prop['x-group'] || unfoldedGroups[prop['x-group']]"
-              :label="prop.title || prop['x-originalName'] || prop.key"
+              :label="colLabel(prop)"
               :model-value="cols.includes(prop.key)"
               color="primary"
               density="compact"
@@ -86,15 +86,23 @@ en:
 
 <script setup lang="ts">
 import { mdiChevronDown, mdiChevronRight, mdiTableColumnPlusAfter } from '@mdi/js'
+import type { SchemaProperty } from '#api/types'
+import { isVisibleCol } from '../table/use-headers'
 
 const cols = defineModel<string[]>({ default: [] })
+
+// the picker must offer exactly the columns the table can render, with the labels it shows in its headers
+const { titleOverrides } = defineProps<{ titleOverrides?: Record<string, string> }>()
 
 const { t } = useI18n()
 const { dataset } = useDatasetStore()
 
-const selectableProps = computed(() => {
-  return dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName') ?? []
-})
+const selectableProps = computed(() => dataset.value?.schema?.filter(isVisibleCol) ?? [])
+
+const colLabel = (prop: SchemaProperty) => {
+  if (titleOverrides && Object.hasOwn(titleOverrides, prop.key)) return titleOverrides[prop.key]
+  return prop.title || prop['x-originalName'] || prop.key
+}
 
 const groups = computed(() => {
   return selectableProps.value.reduce((groups, prop) => {
