@@ -81,6 +81,7 @@
       <dataset-select-cols
         v-if="can('select-cols')"
         v-model="cols"
+        :title-overrides="colTitles"
       />
       <dataset-download-results-menu
         v-if="can('download') && baseFetchUrl && total !== undefined"
@@ -456,6 +457,9 @@
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
     fullscreen: Afficher en plein écran
+    colTitles:
+      _updatedBy: Mis à jour par
+      _owner: Propriétaire de ligne
   en:
     cancel: Cancel
     delete: Delete
@@ -467,6 +471,9 @@
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
     fullscreen: Show fullscreen
+    colTitles:
+      _updatedBy: Updated by
+      _owner: Line owner
 </i18n>
 
 <script setup lang="ts">
@@ -475,7 +482,7 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
+import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -564,7 +571,7 @@ const display = useDisplay()
 const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
-const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
+const allCols = computed(() => dataset.value?.schema?.filter(isVisibleCol).map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
 const hideHeader = (header: TableHeader) => {
@@ -643,7 +650,10 @@ const nextPage = async () => {
   }
   paginationPage.value++
 }
-const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
+// the API titles these columns from the data's point of view ("Utilisateur de mise à jour"), which is
+// verbose and imprecise as a table header ; relabel them for display rather than in the schema
+const colTitles = computed(() => Object.fromEntries(['_updatedBy', '_owner'].map(key => [key, t(`colTitles.${key}`)])))
+const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys, colTitles)
 const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
