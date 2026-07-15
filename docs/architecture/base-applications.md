@@ -44,10 +44,10 @@ push: `ensureArtefact` (from `@data-fair/lib-node-registry`, wrapped by
 artefact id** (`memoizee`, `maxAge: 30000`). Within that window every process serves whatever it
 last extracted; after it expires, the next call issues an `If-Modified-Since` request keyed on the
 artefact's `dataUpdatedAt` — a `304` keeps serving the cached extract, a `200` streams and extracts
-the new tarball into a fresh, content-addressed directory (`<version>+<epochSeconds>/`) under
-`config.registryCacheDir` (defaults to `<tmpDir>/registry-cache`). So a patch re-upload is visible
-to every data-fair process within, at most, that ~30 s window — no restart, no explicit
-invalidation call.
+the new tarball into a fresh, content-addressed directory (`<version>+<epochSeconds>/<buildTuple>/`,
+where `buildTuple` is `'js'` for base apps) under `config.registryCacheDir` (defaults to
+`<tmpDir>/registry-cache`). So a patch re-upload is visible to every data-fair process within, at
+most, that ~30 s window — no restart, no explicit invalidation call.
 
 ## 2. `base-applications` as a derived cache
 
@@ -63,10 +63,11 @@ kinds of fields land on a document:
   `public`, `privateAccess`, `deprecated`, `documentation`.
 - **Tarball-derived** — recomputed by extracting and inspecting the artefact content on every
   sync: `meta` (parsed from the `<head>` of the extracted `index.html` — `extractHeadMeta`
-  reads `<title>` and `<meta name="...">` tags, resolving `lang`-tagged variants against the
-  request locale with a `locale → defaultLocale → first` fallback), `applicationName` /
-  `version` (fallback chain: explicit field → `meta['application-name']`/`meta.version` →
-  parsed from the url), and `datasetsFilters` (derived from `config-schema.json` via
+  reads `<title>` and `<meta name="...">` tags; for `description` and `keywords` specifically,
+  resolves `lang`-tagged variants against the request locale with a `locale → defaultLocale → first`
+  fallback; other meta tags take the first occurrence); `applicationName` (fallback chain: explicit
+  field → `meta['application-name']`) and `version` (fallback chain: explicit field → `meta.version`
+  → parsed from the url); and `datasetsFilters` (derived from `config-schema.json` via
   `deriveDatasetsFilters`, used by the application catalog UI to suggest compatible base apps
   for a given dataset).
 
@@ -183,17 +184,17 @@ anyway (graceful degradation — better a possibly-mismatched asset than a 404),
 
 When the proxy (§3.1) builds the transformed `index.html`, every `src`/`href` attribute in
 `<head>` and `<body>` that looks like a **relative** reference (not absolute `http(s)://`, not
-root-relative `/...`, not `data:`, not a `#anchor`) is rewritten to point at the versioned
-`/app-assets` mount:
+protocol-relative `//`, not root-relative `/...`, not `data:`, not a `#anchor`) is rewritten to point
+at the versioned `/app-assets` mount:
 
 ```
 ${basePath}/app-assets/${packageName}/${minor}/${version}/${originalRef.replace(/^\.\//, '')}
 ```
 
 This is why a base app bundle must be built with **document-relative** asset urls (`./js/app.js`,
-not `/js/app.js` or an absolute CDN url baked at build time) — see §5. Anything already absolute
-or root-relative is left untouched (root-relative would break anyway once mounted under
-`/app-assets/...`, so a base app must not rely on it).
+not `/js/app.js` or an absolute CDN url baked at build time) — see §5. Anything already absolute,
+protocol-relative, or root-relative is left untouched (root-relative would break anyway once mounted
+under `/app-assets/...`, so a base app must not rely on it).
 
 ## 5. Publishing a base app (CI workflow)
 
@@ -234,7 +235,7 @@ computes the *same* artefact id independent of which environment runs the script
 federated installs, see below):
 
 - `https://cdn.jsdelivr.net/npm/<npmPackage>@<major.minor[.patch]>/dist/` → `<npmPackage>@<major.minor>`
-  (npm-published apps)
+  (npm-published apps; the regex only matches scoped packages, `@scope/name`)
 - `https://(staging-)?koumoul.com/apps/<name>/<major.minor[.patch]>/` → `@koumoul/<name>@<major.minor>`
   (non-npm koumoul.com deployments, re-packaged as `@koumoul/<name>` artefacts)
 

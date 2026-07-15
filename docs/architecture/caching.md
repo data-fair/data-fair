@@ -174,10 +174,10 @@ a `304` reuses it.
 
 ## Layer 5 — ad-hoc per-process object caches
 
-- **Base-application `index.html`** — `api/src/applications/proxy.js` `htmlCache` (plain object, no
-  expiry, never cleared): each render does a conditional GET to the static app server with the
-  stored `ETag`/`Last-Modified`; a `304` reuses the cached HTML, a fetch error falls back to the
-  last good copy. Bounded only by the number of distinct app URLs.
+- **Base-application `index.html`** — read from the locally extracted registry artefact
+  (`api/src/applications/proxy.ts`); freshness is governed by the 30 s `ensureBaseAppDir`
+  memoize + conditional GET to the registry (see [base-applications.md](./base-applications.md) §1).
+  No in-process HTML cache remains.
 - **Remote-services proxy** (`api/src/remote-services/router.js` ≈ lines 247/276) — not a cache, but
   it forwards the conditional/cache headers both ways so the browser ↔ remote-service cache contract
   is preserved through Data Fair.
@@ -234,14 +234,11 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
 - `resourceBased` throws `400` if a client sends `?finalizedAt=`/`?updatedAt=` *ahead* of the
   resource — the canary for "you're talking to a node whose memoize cache is stale"; logged with
   `console.warn`.
-- `htmlCache` in `applications/proxy.js` has no expiry and no size bound (bounded only by the number
-  of distinct base-app URLs).
 - The Mongo `cache` collection is capped: under heavy vector-tile traffic across many datasets,
   entries can be evicted faster than expected; `mongoSize` is the only knob.
 
 ## Possible improvements
 
-- Bound `htmlCache` (and any other unbounded ad-hoc caches) by size or TTL.
 - A shared (e.g. Redis-backed) layer for cross-replica coherence of the dataset memoize cache, so
   third-party API clients also get read-after-write consistency without the `?updatedAt=` trick.
 - Surface per-dataset cache hit-rate metrics from the API (not only from proxy access logs) so the
