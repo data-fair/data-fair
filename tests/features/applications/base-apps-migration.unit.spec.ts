@@ -56,6 +56,19 @@ test.describe('base-apps migration helpers', () => {
     assert.ok(cssUrls.includes('https://koumoul.com/apps/x/1.0/css/detail.55ee66ff.css'))
   })
 
+  test('parseWebpackChunkUrls handles the single-map shape (no name map, filename IS the hash)', () => {
+    // modeled on a real, live production bundle sampled during migration validation:
+    // koumoul.com's own Nuxt2/webpack4 marketing site runtime
+    // (https://koumoul.com/_nuxt/c8d685a6-1ca8da7.js) builds its css chunk urls as
+    // `n="css/"+{0:"47903a7",1:"ae59b58",...}[e]+".css"` - a single map where the id
+    // resolves directly to the hashed filename, unlike the named vue-cli shape above
+    // which has a separate name map ahead of the hash map.
+    const entry = 'n="css/"+{0:"47903a7",1:"ae59b58"}[e]+".css"'
+    const urls = parseWebpackChunkUrls(entry, 'https://koumoul.com/_nuxt/')
+    assert.ok(urls.includes('https://koumoul.com/_nuxt/css/47903a7.css'))
+    assert.ok(urls.includes('https://koumoul.com/_nuxt/css/ae59b58.css'))
+  })
+
   test('extractHtmlAssetRefs collects src and href attributes', () => {
     const refs = extractHtmlAssetRefs('<link href="https://a/x.css"><script src="./assets/i.js"></script><meta name="x">')
     assert.deepEqual(refs.sort(), ['./assets/i.js', 'https://a/x.css'])

@@ -4,7 +4,9 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import tar from 'tar-stream'
+import slug from 'slugify'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import axios from '../../src/misc/utils/axios.ts'
 import { mapUrlToArtefact, newBaseAppUrl, rewriteTextAsset, extractHtmlAssetRefs, parseWebpackChunkUrls } from '../../src/base-applications/base-apps-migration-utils.ts'
 
@@ -138,6 +140,38 @@ const packFiles = (files: Record<string, Buffer>): Promise<Buffer> => {
   return done
 }
 
+/** Metadata fields the legacy doc can contribute to the registry artefact.
+ * When `artefact` is omitted (fresh publish) every available field is set.
+ * When `artefact` is passed (re-entrant path against an already-existing artefact,
+ * e.g. federated/mirrored install or a previous run that failed after the tarball
+ * upload) only fields the artefact doesn't already carry are included, so we never
+ * clobber metadata that legitimately came from elsewhere. */
+const buildMetaPatch = (baseApp: any, artefact?: Record<string, any>): Record<string, any> => {
+  const missing = (key: string) => !artefact || artefact[key] === undefined || artefact[key] === null
+  const meta: Record<string, any> = {}
+  if (missing('public')) meta.public = baseApp.public === true
+  if (missing('deprecated')) meta.deprecated = baseApp.deprecated === true
+  if (missing('privateAccess') && baseApp.privateAccess?.length) meta.privateAccess = baseApp.privateAccess
+  if (missing('title') && baseApp.title) meta.title = { fr: baseApp.title }
+  if (missing('description') && baseApp.description) meta.description = { fr: baseApp.description }
+  if (missing('group') && baseApp.category) meta.group = { fr: baseApp.category }
+  if (missing('documentation') && baseApp.documentation) meta.documentation = baseApp.documentation
+  return meta
+}
+
+/** Upload baseApp's thumbnail to the artefact, unless the artefact already has one
+ * (mirrors the processings' publish-plugins-to-registry precedent: never clobber a
+ * thumbnail that already exists upstream). */
+const fillThumbnailGap = async (ax: ReturnType<typeof registryAx>, artefactId: string, baseApp: any, artefact: Record<string, any> | undefined, debug: (msg: string) => void) => {
+  if (artefact?.thumbnail) return
+  const thumbnail = await fetchBinary(baseApp.image || baseApp.url + 'thumbnail.png')
+  if (!thumbnail) return
+  const thumbForm = new FormData()
+  thumbForm.append('file', new Blob([thumbnail]), 'thumbnail.png')
+  await ax.post(`/api/v1/artefacts/${encodeURIComponent(artefactId)}/thumbnail`, thumbForm, { validateStatus: s => s < 300 })
+  debug(`filled thumbnail gap for ${artefactId}`)
+}
+
 const upgradeScript: UpgradeScript = {
   description: 'Publish legacy base applications to the registry and rewrite all references',
   async exec (db, debug) {
@@ -184,47 +218,64 @@ const upgradeScript: UpgradeScript = {
           form.append('category', 'application')
           form.append('file', new Blob([tarball]), 'app.tgz')
           await ax.post(`/api/v1/artefacts/npm/${encodeURIComponent(artefactId)}`, form, { validateStatus: s => s === 201 })
-          // metadata from the legacy doc
-          const meta: Record<string, any> = {
-            public: baseApp.public === true,
-            deprecated: baseApp.deprecated === true
-          }
-          if (baseApp.privateAccess?.length) meta.privateAccess = baseApp.privateAccess
-          if (baseApp.title) meta.title = { fr: baseApp.title }
-          if (baseApp.description) meta.description = { fr: baseApp.description }
-          if (baseApp.category) meta.group = { fr: baseApp.category }
-          if (baseApp.documentation) meta.documentation = baseApp.documentation
+          // metadata from the legacy doc (fresh publish: nothing upstream yet, so every field applies)
+          const meta = buildMetaPatch(baseApp)
           await ax.patch(`/api/v1/artefacts/${encodeURIComponent(artefactId)}`, meta)
-          const thumbnail = await fetchBinary(baseApp.image || baseApp.url + 'thumbnail.png')
-          if (thumbnail) {
-            const thumbForm = new FormData()
-            thumbForm.append('file', new Blob([thumbnail]), 'thumbnail.png')
-            await ax.post(`/api/v1/artefacts/${encodeURIComponent(artefactId)}/thumbnail`, thumbForm, { validateStatus: s => s < 300 })
-          }
+          await fillThumbnailGap(ax, artefactId, baseApp, undefined, debug)
           debug(`published ${artefactId}`)
         } else {
           debug(`artefact ${artefactId} already in registry`)
+          // re-entrant path: the artefact may already exist because a previous run of this
+          // script published the tarball but failed before/during the metadata PATCH or the
+          // thumbnail upload, or because it's a federated/mirrored artefact. Either way, only
+          // fill in fields the artefact doesn't already carry - never clobber existing metadata.
+          const artefact = existing.data as Record<string, any>
+          const meta = buildMetaPatch(baseApp, artefact)
+          if (Object.keys(meta).length) {
+            await ax.patch(`/api/v1/artefacts/${encodeURIComponent(artefactId)}`, meta)
+            debug(`filled metadata gaps for ${artefactId}: ${Object.keys(meta).join(', ')}`)
+          }
+          await fillThumbnailGap(ax, artefactId, baseApp, artefact, debug)
         }
 
         // 2. rewrite references (idempotent: only matches the old url)
         const oldUrl = baseApp.url
         const newUrl = newBaseAppUrl(config.publicUrl, packageName, minor)
+        // canonical id: must be computed exactly like initBaseAppFromArtefact (service.ts) does at
+        // boot/sync time, since syncRegistryBaseApps() upserts base-applications docs on this id.
+        // Leaving the legacy id in place would create a duplicate/colliding doc on the next sync
+        // (id and url both carry unique indexes).
+        const newId = slug(newUrl, { lower: true })
         const unset: Record<string, ''> = {}
         if (baseApp.image === oldUrl + 'thumbnail.png') unset.image = ''
-        await db.collection('base-applications').updateOne({ _id: baseApp._id },
-          Object.keys(unset).length
-            ? { $set: { url: newUrl, artefactId }, $unset: unset }
-            : { $set: { url: newUrl, artefactId } })
-        await db.collection('applications').updateMany({ url: oldUrl }, { $set: { url: newUrl, 'baseApp.url': newUrl } })
-        await db.collection('applications').updateMany({ urlDraft: oldUrl }, { $set: { urlDraft: newUrl, 'baseAppDraft.url': newUrl } })
+
+        // Guard idempotency: the boot sync may have already upserted a doc at newId (e.g. it ran
+        // between two executions of this script, or on a federated instance). Re-keying the legacy
+        // doc onto that same id would collide with the unique index, so the synced doc wins - drop
+        // the legacy doc instead and only rewrite the application references.
+        const collision = await db.collection('base-applications').findOne({ id: newId })
+        if (collision && collision._id.toString() !== baseApp._id.toString()) {
+          await db.collection('base-applications').deleteOne({ _id: baseApp._id })
+          debug(`dropped legacy base-applications doc ${baseApp._id} in favor of already-synced ${newId}`)
+        } else {
+          await db.collection('base-applications').updateOne({ _id: baseApp._id },
+            Object.keys(unset).length
+              ? { $set: { url: newUrl, artefactId, id: newId }, $unset: unset }
+              : { $set: { url: newUrl, artefactId, id: newId } })
+        }
+        await db.collection('applications').updateMany({ url: oldUrl }, { $set: { url: newUrl, 'baseApp.url': newUrl, 'baseApp.id': newId } })
+        await db.collection('applications').updateMany({ urlDraft: oldUrl }, { $set: { urlDraft: newUrl, 'baseAppDraft.url': newUrl, 'baseAppDraft.id': newId } })
         debug(`rewrote references ${oldUrl} -> ${newUrl}`)
       } catch (err: any) {
         failures.push({ url: baseApp.url, error: err.message })
         debug(`FAILED ${baseApp.url}: ${err.message}`)
+        internalError('base-apps-migration', err)
       }
     }
     if (failures.length) {
-      debug(`base-apps migration finished with ${failures.length} failures requiring manual follow-up: ${JSON.stringify(failures)}`)
+      const summary = `base-apps migration finished with ${failures.length} failures requiring manual follow-up: ${JSON.stringify(failures)}`
+      debug(summary)
+      internalError('base-apps-migration', new Error(summary))
     }
   }
 }
