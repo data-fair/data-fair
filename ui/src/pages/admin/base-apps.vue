@@ -4,9 +4,8 @@
       {{ t('baseApps') }}
     </h2>
 
-    <!-- Search and Add -->
+    <!-- Search -->
     <v-row class="mb-2">
-      <!-- Search -->
       <v-col
         cols="12"
         sm="6"
@@ -20,22 +19,6 @@
           hide-details
           clearable
           @keypress.enter="baseAppsFetch.refresh()"
-        />
-      </v-col>
-
-      <!-- Add base app -->
-      <v-col
-        cols="12"
-        sm="6"
-      >
-        <v-text-field
-          v-model="urlToAdd"
-          :label="t('add')"
-          :placeholder="t('addPlaceholder')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          @keypress.enter="add.execute()"
         />
       </v-col>
     </v-row>
@@ -206,8 +189,6 @@
 fr:
   baseApps: Modèles d'application
   search: Rechercher
-  add: Ajouter
-  addPlaceholder: Saisissez l'URL d'une nouvelle application
   other: autre
   nbApplications: "{count} application | {count} application | {count} applications"
   datasets: Jeux de données
@@ -225,8 +206,6 @@ fr:
 en:
   baseApps: Application templates
   search: Search
-  add: Add
-  addPlaceholder: Enter the URL of a new application
   other: other
   nbApplications: "{count} application | {count} application | {count} applications"
   datasets: Datasets
@@ -286,13 +265,6 @@ const applyPatch = useAsyncAction(async (baseApp: BaseApp, patch: BaseAppPatch) 
   if (actualPatch.public) actualPatch.privateAccess = []
   actualPatch.category = actualPatch.category || null
   await $fetch(`base-applications/${baseApp.id}`, { method: 'PATCH', body: actualPatch })
-  baseAppsFetch.refresh()
-})
-
-const urlToAdd = ref('')
-const add = useAsyncAction(async () => {
-  await $fetch('base-applications', { method: 'POST', body: { url: urlToAdd.value } })
-  urlToAdd.value = ''
   baseAppsFetch.refresh()
 })
 </script>

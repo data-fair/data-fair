@@ -2,25 +2,22 @@ import express from 'express'
 import config from '#config'
 import fs from 'fs'
 import path from 'path'
-import https from 'https'
-import http from 'http'
 import { createReadStream } from 'node:fs'
 import fsp from 'node:fs/promises'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.ts'
-import CacheableLookup from 'cacheable-lookup'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as serviceWorkers from '../misc/utils/service-workers.ts'
 import { refreshConfigDatasetsRefs } from './utils.ts'
 import { buildManifest, buildLoginHtml } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
-import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache } from './proxy-service.ts'
+import { getManifestBaseApp, getProxyBaseAppAndLimits } from './proxy-service.ts'
 import { ensureBaseAppDir, parseArtefactId } from '../base-applications/registry.ts'
 import { MIME } from '../base-applications/assets-router.ts'
 import Debug from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSiteUrl } from '@data-fair/lib-express'
 import { reqPublicBaseUrl, reqPublicWsBaseUrl } from '../misc/utils/public-base-url.ts'
 import type { Application, Request } from '#types'
 
@@ -39,8 +36,6 @@ const debugIframeRedirect = Debug('iframe-redirect')
 
 const router = express.Router()
 export default router
-
-const cacheableLookup = new CacheableLookup()
 
 const loginHtml = fs.readFileSync(path.resolve(import.meta.dirname, './resources/login.html'), 'utf8')
 
@@ -69,13 +64,6 @@ router.get('/:applicationId/login', setProxyResource, (req, res) => {
     applicationId: req.params.applicationId,
     error: req.query.error as string | undefined
   }))
-})
-
-// for debug only
-router.get('/_htmlcache', (req, res, next) => {
-  const user = reqUserAuthenticated(req)
-  if (!user.adminMode) return res.status(403)
-  return res.send(getHtmlCache())
 })
 
 // Proxy for applications
@@ -117,8 +105,6 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   }
   delete application.configurationDraft
   const applicationUrl = (req.query.draft === 'true' ? (application.urlDraft || application.url) : application.url)
-  // Remove trailing slash for more homogeneous rules afterward
-  const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
 
   // check that the user can access the base appli
   const accessFilter = [
@@ -130,6 +116,9 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
 
   const [limits, baseApp] = await getProxyBaseAppAndLimits(application, applicationUrl, accessFilter)
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
+  // base apps are now served exclusively from registry artefacts; a doc with no artefactId
+  // (e.g. left over from the removed external-url system) has no content to serve
+  if (!baseApp.artefactId) return res.status(404).send(req.__('errors.missingBaseApp'))
 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
@@ -137,37 +126,18 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const wantsIndex = extraPathParts.length === 0 || (extraPathParts.length === 1 && extraPathParts[0] === 'index.html') ||
     (incomingUrl.pathname.endsWith('/') && extraPathParts.length === 0)
 
-  let rawHtml: string
-  let assetsBase: string | null = null
-
-  if (baseApp.artefactId) {
-    const { dir, version } = await ensureBaseAppDir(baseApp.artefactId)
-    if (!wantsIndex && extraPathParts.length) {
-      // any non-index path is a file of the extracted app bundle: serve it directly.
-      // This is the fallback for legacy webpack/nuxt builds whose runtime resolves
-      // lazy chunks against the document URL (/app/:id/...) instead of the script URL.
-      await serveBaseAppFile(res, dir, extraPathParts.join('/'))
-      return
-    }
-    rawHtml = await fsp.readFile(path.join(dir, 'index.html'), 'utf8')
-    const { packageName, minor } = parseArtefactId(baseApp.artefactId)
-    const basePath = new URL(reqPublicBaseUrl(req)).pathname.replace(/\/$/, '')
-    assetsBase = `${basePath}/app-assets/${packageName}/${minor}/${version}/`
-  } else {
-    // legacy external-url base app (removed in the cleanup task)
-    const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
-    const legacyExtraParts = [...extraPathParts]
-    if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) legacyExtraParts.push('index.html')
-    targetUrl.pathname = path.join(targetUrl.pathname, ...legacyExtraParts)
-    targetUrl.search = incomingUrl.searchParams.toString()
-    if (legacyExtraParts.length !== 1 || legacyExtraParts[0] !== 'index.html') {
-      // TODO: check the logs in production, if this line never appears then we can cleanup the code
-      console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
-      await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
-      return
-    }
-    rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
+  const { dir, version } = await ensureBaseAppDir(baseApp.artefactId)
+  if (!wantsIndex && extraPathParts.length) {
+    // any non-index path is a file of the extracted app bundle: serve it directly.
+    // This is the fallback for legacy webpack/nuxt builds whose runtime resolves
+    // lazy chunks against the document URL (/app/:id/...) instead of the script URL.
+    await serveBaseAppFile(res, dir, extraPathParts.join('/'))
+    return
   }
+  const rawHtml = await fsp.readFile(path.join(dir, 'index.html'), 'utf8')
+  const { packageName, minor } = parseArtefactId(baseApp.artefactId)
+  const basePath = new URL(reqPublicBaseUrl(req)).pathname.replace(/\/$/, '')
+  const assetsBase: string | null = `${basePath}/app-assets/${packageName}/${minor}/${version}/`
 
   res.setHeader('x-resource', JSON.stringify({ type: permissions.reqResourceType(req), id: permissions.reqResource(req).id, title: encodeURIComponent(permissions.reqResource(req).title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
@@ -325,56 +295,6 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   res.set('pragma', 'no-cache')
   res.send(parse5.serialize(document))
 })
-
-const deprecatedProxy = async (cleanApplicationUrl: string, targetUrl: URL, req: express.Request, res: express.Response) => {
-  // cacheable-lookup's lookup signature is structurally compatible at runtime but its overloads
-  // don't unify with Node's LookupFunction type; cast the options to RequestOptions to bridge it
-  const options: https.RequestOptions = {
-    hostname: targetUrl.hostname,
-    port: targetUrl.port,
-    protocol: targetUrl.protocol,
-    path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
-    timeout: config.remoteTimeout,
-    lookup: cacheableLookup.lookup as unknown as https.RequestOptions['lookup']
-  }
-  await new Promise<void>((resolve, reject) => {
-    const cacheAppReq = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
-      try {
-        if (appRes.statusCode === 301 || appRes.statusCode === 302) {
-          const exposedUrl = (reqApplication(req) as ProxyApplication).exposedUrl
-          const location = appRes.headers.location!
-            .replace(cleanApplicationUrl, exposedUrl)
-            .replace(cleanApplicationUrl.replace('https://', 'http://'), exposedUrl)
-            .replace(cleanApplicationUrl.replace('https:', ''), exposedUrl) // for gitlab pages
-          res.redirect(location)
-          await pump(appRes, res)
-          return resolve()
-        }
-
-        let contentType = appRes.headers['content-type']
-        // force HTML content type as CDN might not respect it
-        if (!contentType || targetUrl.pathname.endsWith('.html')) {
-          contentType = 'text/html; charset=utf-8'
-        }
-        res.set('content-type', contentType)
-
-        for (const header of ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified']) {
-          if (appRes.headers[header]) res.set(header, appRes.headers[header])
-        }
-        res.status(appRes.statusCode!)
-        await pump(appRes, res)
-        return resolve()
-      } catch (err) {
-        reject(err)
-      }
-    })
-    cacheAppReq.on('error', err => {
-      reject(err)
-    })
-    cacheAppReq.on('error', err => reject(err))
-    cacheAppReq.end()
-  })
-}
 
 const serveBaseAppFile = async (res: express.Response, dir: string, filePath: string) => {
   let resolved: string

@@ -18,108 +18,6 @@ geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock serve
 const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/sirene-api.json'), 'utf8'))
 sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
-const html = `
-  <html>
-    <head>
-      <meta name="application-name" content="test">
-      <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
-    </head>
-    <body>My app body</body>
-    <script>
-      setTimeout(() => {
-        if (window.triggerCapture) {
-          window.triggerCapture()
-        }
-      }, 10)
-    </script>
-  </html>
-`
-
-const monapp1ConfigSchema = {
-  type: 'object',
-  required: ['datasets'],
-  properties: {
-    datasets: {
-      type: 'array',
-      items: [
-        {
-          title: 'Jeu de données',
-          description: 'Ce jeu doit contenir au moins une colonne avec valeur numérique',
-          type: 'object',
-          'x-fromUrl': 'api/v1/datasets?status=finalized&field-type=integer,number&q={q}&select=id,title,schema,userPermissions&{context.datasetFilter}',
-          'x-itemsProp': 'results',
-          'x-itemTitle': 'title',
-          'x-itemKey': 'href',
-          additionalProperties: false,
-          properties: {
-            href: { type: 'string' },
-            title: { type: 'string' },
-            id: { type: 'string' },
-            finalizedAt: { type: 'string' }
-          }
-        },
-        {
-          title: 'Jeu de données de contribution',
-          type: 'object',
-          'x-fromUrl': 'api/v1/datasets?status=finalized&q={q}&select=id,title,schema,userPermissions&{context.datasetFilter}',
-          'x-itemsProp': 'results',
-          'x-itemTitle': 'title',
-          'x-itemKey': 'href',
-          additionalProperties: false,
-          properties: {
-            href: { type: 'string' },
-            title: { type: 'string' },
-            id: { type: 'string' },
-            finalizedAt: { type: 'string' },
-            applicationKeyPermissions: {
-              type: 'object',
-              const: { operations: ['readSafeSchema', 'createLine'] }
-            }
-          }
-        }
-      ]
-    }
-  }
-}
-
-const monapp3ConfigSchema = {
-  type: 'object',
-  required: ['datasets'],
-  allOf: [
-    {
-      title: 'Source des données',
-      properties: {
-        datasets: {
-          type: 'array',
-          items: {
-            title: 'Jeu de données',
-            type: 'object',
-            properties: {
-              href: { type: 'string' },
-              title: { type: 'string' },
-              id: { type: 'string' },
-              schema: { type: 'array' }
-            }
-          },
-          layout: {
-            getItems: {
-              url: 'api/v1/datasets?status=finalized,indexed,updated&q={q}&select=id,title,schema&\\${context.datasetFilter}&size=100&sort=createdAt:-1',
-              itemKey: 'data.href',
-              itemTitle: 'data.title',
-              itemsResults: 'data.results'
-            }
-          }
-        }
-      }
-    },
-    {
-      title: 'Métriques',
-    }
-  ],
-  $id: 'config-schema',
-  layout: 'tabs'
-}
-
 type NdjsonEchoConfig = {
   fields: Record<string, any>
   indexFields?: string[]  // fields modified by line index: numbers get multiplied, strings get index appended
@@ -147,19 +45,6 @@ const staticRoutes: Record<string, () => RouteResult> = {
   '/catalog/api/1/site/': () => ({ status: 200, body: { title: 'My catalog' } }),
   '/catalog/api/1/organizations/suggest/': () => ({ status: 200, body: [{ name: 'Koumoul' }] }),
   '/catalog/api/1/datasets/suggest/': () => ({ status: 200, body: [{ title: 'Test dataset' }] }),
-
-  // App test1
-  '/monapp1/index.html': () => ({ status: 200, body: html, contentType: 'text/html' }),
-  '/monapp1/config-schema.json': () => ({ status: 200, body: monapp1ConfigSchema }),
-  '/monapp1/dir1/info.txt': () => ({ status: 200, body: 'into txt dir1', contentType: 'text/plain' }),
-
-  // App test2
-  '/monapp2/index.html': () => ({ status: 200, body: html, contentType: 'text/html' }),
-  '/monapp2/config-schema.json': () => ({ status: 200, body: {} }),
-
-  // App test3
-  '/monapp3/index.html': () => ({ status: 200, body: html, contentType: 'text/html' }),
-  '/monapp3/config-schema.json': () => ({ status: 200, body: monapp3ConfigSchema }),
 }
 
 // Dynamic routes registered by tests via /_test/routes API

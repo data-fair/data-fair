@@ -83,15 +83,13 @@ router.delete('/', async (req, res, next) => {
     // re-initialize remote services and base apps after cleanup
     const { init: initRemoteServices } = await import('../../remote-services/service.ts')
     await initRemoteServices()
-    const { init: initBaseApps } = await import('../../base-applications/router.ts')
-    await initBaseApps()
     // base apps now come from the registry: re-sync them after the blanket delete.
     // The tmpDir removal above deleted the registry extraction cache, so the memoized
     // ensureBaseAppDir must be cleared or it would return now-deleted directories.
     const { ensureBaseAppDir } = await import('../../base-applications/registry.ts')
     ensureBaseAppDir.clear()
-    const { syncRegistryBaseApps } = await import('../../base-applications/service.ts')
-    await syncRegistryBaseApps()
+    const { init: initBaseApps } = await import('../../base-applications/service.ts')
+    await initBaseApps()
 
     res.status(200).json({ ok: true })
   } catch (err) {
@@ -165,10 +163,10 @@ router.post('/worker-call', async (req, res, next) => {
   }
 })
 
-// Re-initialize base applications from config
+// Re-initialize base applications by re-syncing them from the registry
 router.post('/reload-base-apps', async (req, res, next) => {
   try {
-    const { init } = await import('../../base-applications/router.ts')
+    const { init } = await import('../../base-applications/service.ts')
     await init()
     res.json({ ok: true })
   } catch (err) {

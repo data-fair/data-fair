@@ -237,18 +237,6 @@ module.exports = {
     // -1 disables simplification.
     simplifyMaxVertices: 50000
   },
-  // used to configure service workers in cacheFirst mode for common directories of base applications source code
-  applicationsDirectories: [
-    'https://koumoul.com/apps/',
-    'https://staging-koumoul.com/apps/',
-    'https://koumoul-dev.github.io/',
-    'https://data-fair.github.io/',
-    'https://cdn.jsdelivr.net/npm/@koumoul/',
-    'https://cdn.jsdelivr.net/npm/@data-fair/',
-    'https://cdn.jsdelivr.net/npm/iframe-resizer'
-  ],
-  applications: [],
-  applicationsPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from application to the local equivalent
   baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{
     title: 'Données Entreprises',

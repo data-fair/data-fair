@@ -25,15 +25,13 @@ workbox.core.setLogLevel(workbox.core.LOG_LEVELS.debug);`
   sw += `
 workbox.clientsClaim();
 workbox.skipWaiting();`
-  // Cache first for base applications source code
-  // applications should use hashes in resource names
-  for (const dir of config.applicationsDirectories) {
-    sw += `
+  // Cache first for base applications source code served by data-fair itself
+  // (applications use content hashes / exact versions in resource names)
+  sw += `
 workbox.routing.registerRoute(
-  new RegExp('^${escapeStringRegexp(dir)}.*'),
+  new RegExp('^${escapeStringRegexp(config.publicUrl)}/app-assets/.*'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );`
-  }
 
   // Content from proxied remote services is not refreshed as often
   // fast loading using stale version should not be a problem

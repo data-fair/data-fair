@@ -64,8 +64,8 @@ function extractHeadMeta (html: string, locale: string, defaultLocale: string): 
   return meta
 }
 
-// Read a resolved config-schema to deduce filters on datasets. Shared between the
-// legacy URL-based import (initBaseApp) and the registry-based one (initBaseAppFromArtefact).
+// Read a resolved config-schema to deduce filters on datasets. Used by the
+// registry-based import (initBaseAppFromArtefact).
 export function deriveDatasetsFilters (configSchema: any): any[] {
   const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
   let datasetsFetches: { fromUrl: string, properties: Record<string, any> }[] = []
@@ -84,11 +84,15 @@ export function deriveDatasetsFilters (configSchema: any): any[] {
   return datasetsFilters
 }
 
-// Fill the collection using the default base applications from config
-// and cleanup non-public apps that are not used anywhere
+// Fill the collection from the registry's artefacts (fail-safe: sync errors are
+// reported but never prevent boot) and cleanup deprecated apps that are not used anywhere.
 export const init = async () => {
   await removeDeprecated()
-  await Promise.all(config.applications.map(app => failSafeInitBaseApp(app)))
+  try {
+    await syncRegistryBaseApps()
+  } catch (err) {
+    internalError('base-app-sync', err)
+  }
 }
 
 // Auto removal of deprecated apps used in 0 configs
@@ -98,60 +102,6 @@ async function removeDeprecated () {
     const nbApps = await mongo.applications.countDocuments({ url: baseApp.url })
     if (nbApps === 0) await mongo.baseApplications.deleteOne({ id: baseApp.id })
   }
-}
-
-async function failSafeInitBaseApp (app) {
-  try {
-    await initBaseApp(app)
-  } catch (err) {
-    internalError('app-init', err)
-  }
-}
-
-// Attempts to init an application's description from a URL.
-// `locale` is the locale of the admin triggering the import — used to pick
-// the right variant when the app declares multiple <title>/<meta> tags with
-// a `lang` attribute. Falls back to the API's default locale when absent.
-export async function initBaseApp (app, locale?: string) {
-  if (app.url[app.url.length - 1] !== '/') app.url += '/'
-  const defaultLocale = config.i18n.defaultLocale
-  const effectiveLocale = locale || defaultLocale
-  let html: string
-  try {
-    html = (await axios.get(app.url + 'index.html')).data
-  } catch (err) {
-    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url: app.url }))
-  }
-  const meta = extractHeadMeta(html, effectiveLocale, defaultLocale)
-  const patch: Partial<BaseApp> = {
-    meta,
-    id: slug(app.url, { lower: true }),
-    updatedAt: new Date().toISOString(),
-    ...app
-  }
-
-  try {
-    const res = (await axios.get(app.url + 'config-schema.json'))
-    if (typeof res.data !== 'object') throw new Error('Invalid json')
-    const configSchema: any = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
-
-    patch.hasConfigSchema = true
-    patch.datasetsFilters = deriveDatasetsFilters(configSchema)
-  } catch (err) {
-    patch.hasConfigSchema = false
-    internalError('app-config-schema', err)
-  }
-
-  if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
-    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url: app.url }))
-  }
-
-  patch.datasetsFilters = patch.datasetsFilters || []
-
-  const storedBaseApp = await mongo.baseApplications
-    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })
-  clean(config.publicUrl, storedBaseApp)
-  return storedBaseApp as BaseApp
 }
 
 export async function syncBaseApp (baseApp: BaseApp) {

@@ -69,4 +69,11 @@ test.describe('base applications sync from registry', () => {
       assert.equal(cleanupRes.status, 200)
     }
   })
+
+  test('registering a base application by url is gone', async () => {
+    await assert.rejects(
+      testSuperadmin.post('/api/v1/base-applications', { url: 'https://example.com/myapp/1.0/' }),
+      (err: any) => err.status === 404
+    )
+  })
 })

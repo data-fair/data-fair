@@ -233,18 +233,6 @@ module.exports = {
     __name: 'LISTEN_WHEN_READY',
     __format: 'json'
   },
-  applications: {
-    __name: 'APPLICATIONS',
-    __format: 'json'
-  },
-  applicationsPrivateMapping: {
-    __name: 'APPLICATIONS_PRIVATE_MAPPING',
-    __format: 'json'
-  },
-  applicationsDirectories: {
-    __name: 'APPLICATIONS_DIRECTORIES',
-    __format: 'json'
-  },
   baseAppsCategories: {
     __name: 'BASE_APPS_CATEGORIES',
     __format: 'json'

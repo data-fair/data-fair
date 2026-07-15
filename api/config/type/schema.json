@@ -29,9 +29,6 @@
     "datasetStateRetries",
     "cache",
     "tiles",
-    "applicationsDirectories",
-    "applications",
-    "applicationsPrivateMapping",
     "brand",
     "info",
     "baseAppsCategories",
@@ -347,18 +344,6 @@
         "maxThreads": { "type": "number" },
         "simplifyMaxVertices": { "type": "number" }
       }
-    },
-    "applicationsDirectories": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "applications": {
-      "type": "array",
-      "items": { "type": "object" }
-    },
-    "applicationsPrivateMapping": {
-      "type": "array",
-      "items": { "type": "string" }
     },
     "baseAppsCategories": {
       "type": "array",

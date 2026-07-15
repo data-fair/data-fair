@@ -1,4 +1,3 @@
-import config from '#config'
 import mongo from '#mongo'
 import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -9,23 +8,11 @@ import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 import type { BaseAppWithContext, Request } from '#types'
-import { initBaseApp, syncBaseApp, syncRegistryBaseApps } from './service.ts'
+import { syncBaseApp, syncRegistryBaseApps } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 export { init } from './service.ts'
 
 export const router = express.Router()
-
-router.post('', async (req, res) => {
-  reqAdminMode(req)
-  if (!req.body.url || Object.keys(req.body).length !== 1) {
-    res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
-    return
-  }
-  const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
-  const fullBaseApp = await initBaseApp(baseApp, req.getLocale())
-  await syncBaseApp(fullBaseApp)
-  res.send(fullBaseApp)
-})
 
 // Sync all 'application' npm artefacts visible in the registry into base-applications.
 // Must be declared before any router.post('/:id'...) if one is ever added.
