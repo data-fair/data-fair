@@ -317,6 +317,59 @@ legacy url for manual follow-up.
   hand-patch the artefact directly (`PATCH /api/v1/artefacts/<id>`) rather than re-running the
   script.
 
+### Rolling deploy of the migration release
+
+The 6.16.1 release both flips base apps over to the registry-only model and ships the migration
+script above, so it rolls out like any other deploy — new pods start alongside old ones and take
+over gradually — but with a wider, user-visible transition window than usual.
+
+- **Only the first new pod runs the migration.** `upgradeScripts()` (`@data-fair/lib-node/upgrade-scripts.js`,
+  called from `api/src/app.js` for `worker` pods) takes the `upgrade` Mongo lock before running
+  pending scripts; every other pod that starts while the lock is held logs "upgrade scripts lock
+  is already acquired, skip them" and **starts serving immediately without waiting** for the
+  migration to finish. The migration itself can take minutes: it walks every legacy
+  `base-applications` doc and, per app, may have to scrape a live deployment or re-fetch an npm
+  tarball over the network (§6) — with the ~32 base apps in production, that's up to ~32
+  sequential network round-trips before every doc is rewritten.
+- **Per-app window**: until an app's `base-applications` doc is rewritten, its behavior differs by
+  which code a pod is running:
+  - **New pods** 404 on it — `api/src/applications/proxy.ts` and `api/src/app.js` (the `/app`
+    proxy) explicitly guard on `baseApp.artefactId`: a doc still on its legacy external url has no
+    `artefactId` yet, and the guard returns 404 rather than attempting to serve anything.
+  - **Old pods** error on it *after* it flips — once the migration rewrites the doc to the new
+    `/app-assets/<packageName>/<minor>/` url, an old pod's legacy proxy (`fetchHTML`) does a raw
+    HTTP GET of that url expecting `index.html`, but `/app-assets` (§3.2) rejects any path that
+    resolves to `index.html` with 404 — the old proxy has no other way to render the app, so the
+    request errors for every user still landed on an old pod.
+
+  So each app individually flips from "old pods work, new pods 404" to "new pods work, old pods
+  error" at the instant its doc is rewritten, and the whole window closes once the last new pod's
+  migration run finishes and the old pods are fully drained. It is bounded and self-healing — no
+  manual intervention needed once the rollout completes — but it is real, user-visible downtime per
+  app in the meantime, not just a theoretical race.
+- **Shrink the window**: pre-publish artefacts before the deploy so the migration script's slow
+  scrape/re-fetch path is skipped entirely — either drop a tarball at
+  `<dataDir>/base-apps-migration/<encodeURIComponent(artefactId)>.tgz` for each app (the escape
+  hatch, §6) or publish directly to the registry ahead of time. With the artefact already present,
+  the script only probes, patches metadata gaps, and rewrites references — seconds instead of
+  minutes across the whole fleet. Also prefer an off-peak deploy window, and, for federated/on-prem
+  installs, make sure the artefacts have already been mirrored into the local registry *before*
+  starting the upgrade (§6, "Ops runbook" above) — that requirement predates this release note and
+  still applies.
+- **Boot-crash hazard, scrub deployment config first**: `api/config/type/schema.json` is
+  `additionalProperties: false` and validated at import, and this release deletes the `applications`,
+  `applicationsDirectories`, and `applicationsPrivateMapping` keys from it — a deployment config
+  **file** that still sets any of them fails validation and crashes the new pod at startup before it
+  can even reach the upgrade step. Separately, `api/src/app.js` now asserts eagerly at boot that
+  `config.privateRegistryUrl` and `config.secretKeys.registry` are both set, and crashes immediately
+  if either is missing (previously this would only have surfaced lazily on the first app-serving
+  request). **Before rolling this release out, scrub `applications`/`applicationsDirectories`/
+  `applicationsPrivateMapping` out of every deployment config file and make sure
+  `privateRegistryUrl`/`secretKeys.registry` are set.** Stale *environment variables* for the three
+  removed keys are harmless and don't need cleaning up first — their `custom-environment-variables.cjs`
+  mappings (`APPLICATIONS`, `APPLICATIONS_DIRECTORIES`, `APPLICATIONS_PRIVATE_MAPPING`) were deleted
+  in the same change, so those env vars are simply no longer read into config at all.
+
 ## 7. Where to look in the code
 
 | Concern                                        | File                                                              |
