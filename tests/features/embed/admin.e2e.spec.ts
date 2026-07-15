@@ -49,10 +49,18 @@ test.describe('admin pages', () => {
     await expect(page.getByText('Data Fair - Back Office')).toBeVisible({ timeout: 10000 })
   })
 
-  test('displays errors page with empty state messages', async ({ page, goToAsAdmin }) => {
+  test('displays errors page and the suite leaves no test-owned resource in error', async ({ page, goToAsAdmin }) => {
     await goToAsAdmin('/data-fair/admin/errors')
-    await expect(page.getByText('Aucun jeu de données en erreur')).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Aucune application en erreur')).toBeVisible({ timeout: 10000 })
+    // the endpoints are global (superadmin), and a dev environment legitimately carries
+    // deliberately-in-error demo datasets (dev_fixtures org, e.g. the unicity-constraint
+    // showcase) — so a globally-empty state cannot be asserted. Per resource type the page
+    // renders either the empty-state message or the error list; the suite's own invariant is
+    // that it leaves no test-owned resource in error (rows show "title (owner name)").
+    await expect(page.getByText('Aucun jeu de données en erreur')
+      .or(page.getByRole('heading', { name: 'Jeux de données en erreur' }))).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Aucune application en erreur')
+      .or(page.getByRole('heading', { name: 'Applications en erreur' }))).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.v-list-item-title').filter({ hasText: /\(test/i })).toHaveCount(0)
   })
 
   test('displays owners page with title', async ({ page, goToAsAdmin }) => {
