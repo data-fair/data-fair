@@ -173,6 +173,8 @@ const datasetOverrides: Record<string, OpOverride> = {
   writeExports: { title: L('Gérer les exports', 'Manage exports') },
   setReadApiKey: { title: L("Gérer la clé d'API de lecture", 'Manage the read API key') },
   writePartOf: { title: L('Gérer la ressource parente', 'Manage the parent resource') },
+  readIntegrity: { title: L("Lire l'état d'intégrité", 'Read the integrity state') },
+  readIntegrityRevisions: { title: L("Lister les révisions d'intégrité", 'List the integrity revisions') },
 
   manageMasterData: { title: L('Utiliser comme données de référence', 'Use as master-data'), routeless: true },
   post: { title: L('Créer un jeu de données', 'Create a dataset') },
@@ -188,7 +190,10 @@ const datasetOverrides: Record<string, OpOverride> = {
   reindex: { title: L('Forcer la réindexation', 'Force reindexing') },
   refinalize: { title: L('Forcer la refinalisation', 'Force refinalization') },
   syncAttachmentsLines: { title: L('Forcer la resynchronisation', 'Force resynchronization') },
-  deleteLocks: { title: L('Supprimer les locks', 'Delete the locks') }
+  deleteLocks: { title: L('Supprimer les locks', 'Delete the locks') },
+  writeIntegrity: { title: L("Activer/désactiver le contrôle d'intégrité", 'Enable/disable integrity checking') },
+  checkIntegrity: { title: L("Contrôler l'intégrité", 'Run an integrity check') },
+  fixIntegrity: { title: L("Réconcilier l'intégrité", 'Reconcile integrity') }
 }
 
 const datasetOperations: OperationDescriptor[] = [
@@ -198,12 +203,12 @@ const datasetOperations: OperationDescriptor[] = [
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
     write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
     manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
-    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'writePartOf']
+    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'writePartOf', 'readIntegrity', 'readIntegrityRevisions']
   }, datasetOverrides),
   ...expand('datasets', { manageMasterData: ['manageMasterData'] }, datasetOverrides, 'ownerAdmin'),
   ...expand('datasets', { post: ['post'] }, datasetOverrides, 'contrib'),
   ...expand('datasets', { documented: ['downloadConvertedData', 'getValuesLabels', 'readThumbnail'] }, datasetOverrides, 'documented'),
-  ...expand('datasets', { superadmin: ['diagnose', 'reindex', 'refinalize', 'syncAttachmentsLines', 'deleteLocks'] }, datasetOverrides, 'superadmin')
+  ...expand('datasets', { superadmin: ['diagnose', 'reindex', 'refinalize', 'syncAttachmentsLines', 'deleteLocks', 'writeIntegrity', 'checkIntegrity', 'fixIntegrity'] }, datasetOverrides, 'superadmin')
 ]
 
 const applicationOverrides: Record<string, OpOverride> = {

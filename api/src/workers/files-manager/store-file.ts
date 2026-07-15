@@ -3,7 +3,7 @@ import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.ts'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'
-import chardet from 'chardet'
+import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import JSONStream from 'JSONStream'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
@@ -91,8 +91,7 @@ export default async function (dataset: DatasetInternal) {
     } else {
       const fileSample = await filesStorage.fileSample(loadedFilePath)
       debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
-      const encoding = chardet.detect(fileSample)
-      if (encoding) datasetFile.encoding = encoding
+      datasetFile.encoding = detectEncoding(fileSample)
       debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
     }
 

@@ -27,7 +27,7 @@ import * as findUtils from '../../misc/utils/find.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
-import { streamJson, streamCsv, streamGeojson, collect } from './lines-pipeline.ts'
+import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
 
 // Formats that can consume a streamed source (serialize row-by-row + res.send). json/csv and geojson
@@ -192,7 +192,7 @@ const readLines: RequestHandler = async (req, res) => {
   // request (ineligible) stays on the buffered search that yields a concrete esResponse consumed directly by
   // the geo/wkt/tile branches below.
   //
-  // TODO (shelved optimization): `res.send` already gives every /lines response a strong ETag + `304`. To
+  // TODO (shelved optimization): every /lines response already has a (weak, Express-default) ETag + `304`. To
   // also skip the ES query on a cache hit, compute a synthetic validator from what fully determines the body
   // (dataset.finalizedAt + normalized query + shaping params: select/html/thumbnail/truncate/arrays/format),
   // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
@@ -210,6 +210,8 @@ const readLines: RequestHandler = async (req, res) => {
   let rawTileBuffer: Buffer | undefined
   let rawShpBuffer: Buffer | undefined
   let rawShpBbox: any
+  let rawWktBuffer: Buffer | undefined
+  let rawSheetBuffer: Buffer | undefined
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
   if (eligible) {
@@ -234,6 +236,27 @@ const readLines: RequestHandler = async (req, res) => {
         esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext),
         esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
       ])
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (query.format === 'wkt') {
+    // Zero-copy wkt path (mirror of the shp path above): the render worker parses the raw bytes and
+    // serializes the whole page to WKT off the main thread (~220ms of sync CPU for a 10k-polygon page).
+    // wkt outputs only geometries (select is forced to _geoshape), so the _attachment_url rewrite that
+    // forces shp's buffered fallback cannot occur — every wkt request takes this path.
+    try {
+      observe.readLinesMode(req, 'raw-worker')
+      rawWktBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (query.format === 'xlsx' || query.format === 'ods') {
+    // Zero-copy sheet path: the sheet worker parses the raw bytes and runs the per-hit preparation
+    // in-worker (ctx.rewriteAttachmentUrl reproduces search()'s _attachment_url rewrite — the same
+    // shared-function contract the streamed json/csv/geojson modes rely on), so no fallback is needed.
+    try {
+      observe.readLinesMode(req, 'raw-worker')
+      rawSheetBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -285,11 +308,11 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchDurationMs = Date.now() - esSearchStart
   observe.reqStep(req, 'search')
 
-  // buffered source over the ES response: geo/wkt/tile branches keep consuming esResponse directly,
-  // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
-  // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
-  // In the zero-copy tile path esResponse stays undefined (the raw bytes go straight to the worker) and the
-  // vector-tile branch below returns before `source` is consumed, so skip building a buffered source then.
+  // buffered source over the ES response: geo/tile branches keep consuming esResponse directly, while
+  // json/csv route through the shared pipeline (streamJson/streamCsv). In streamed mode the source is
+  // the incremental one and esResponse stays undefined (never reached by geo/tile). In the zero-copy
+  // paths (tiles/shp/wkt/xlsx/ods) esResponse also stays undefined (the raw bytes go straight to the
+  // worker) and those branches return before `source` is consumed, so no buffered source is built then.
   const source: LinesSource | undefined = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined)
 
   // Pagination (search_after) Link header for the HARD formats only: geojson/shp/wkt/tiles read esResponse
@@ -344,8 +367,14 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   if (query.format === 'wkt') {
-    const wkt = geo.result2wkt(esResponse)
+    const { wkt, count, lastHitSort } = await outputs.result2wktFromBuffer(rawWktBuffer!)
     observe.reqStep(req, 'result2wkt')
+    // reproduce the Link header the buffered path set from esResponse (the shared block above is skipped
+    // because esResponse is undefined on this path)
+    if (size && lastHitSort) {
+      const href = nextLinkHref({ size, query, publicBaseUrl, datasetId: dataset.id as string }, count, { sort: lastHitSort })
+      if (href) res.set('Link', linkHeaderValue(href))
+    }
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.wkt'))
     res.type('text/plain')
     return res.status(200).send(wkt)
@@ -389,31 +418,21 @@ const readLines: RequestHandler = async (req, res) => {
     return
   }
 
-  // xlsx/ods cannot be produced incrementally: materialize the rows through the same per-hit transform
-  // the buffered path used, then hand them to results2sheet unchanged. Yield to the event loop every
-  // 500 items (setImmediate) so a very large xlsx/ods export does not block the event loop more than
-  // the pre-refactor path did (pre-refactor code yielded every 500 hits during the per-hit build).
+  // xlsx/ods cannot be produced incrementally: the sheet worker parses the transferred raw ES bytes,
+  // runs the same per-hit transform the buffered path ran here (identical rows via the shared
+  // ctx.rewriteAttachmentUrl contract) and builds the workbook — the per-row prep AND the structured
+  // clone of the prepared rows array both leave the main thread.
   if (query.format === 'xlsx' || query.format === 'ods') {
-    const flatten = getFlatten(dataset, req.query.arrays === 'true')
-    const resultCtx = esUtils.prepareResultContext(dataset, query)
-    const hits = await collect(source!)
-    const rows: any[] = []
-    for (let i = 0; i < hits.length; i++) {
-      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      rows.push(esUtils.prepareResultItem(hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
+    const { sheet, count, lastHitSort } = await outputs.results2sheetFromBuffer(req as outputs.ReqWithDataset, rawSheetBuffer!, query.format)
+    observe.reqStep(req, query.format === 'xlsx' ? 'results2xlsx' : 'results2ods')
+    // reproduce the Link header the buffered path set from esResponse (the shared block above is skipped
+    // because esResponse is undefined on this path)
+    if (size && lastHitSort) {
+      const href = nextLinkHref({ size, query, publicBaseUrl, datasetId: dataset.id as string }, count, { sort: lastHitSort })
+      if (href) res.set('Link', linkHeaderValue(href))
     }
-    observe.reqStep(req, 'prepareResultItems')
-    if (query.format === 'xlsx') {
-      const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows)
-      observe.reqStep(req, 'results2xlsx')
-      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
-      res.type('xlsx')
-      return res.status(200).send(sheet)
-    }
-    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows, 'ods')
-    observe.reqStep(req, 'results2ods')
-    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.ods'))
-    res.type('ods')
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.' + query.format))
+    res.type(query.format)
     return res.status(200).send(sheet)
   }
 
@@ -621,6 +640,8 @@ export const registerReadRoutes = (router: Router) => {
     } catch (err) {
       await manageESError(req, err)
     }
+    // correctness hint only (simple_metrics_agg does not time the ES step); perf advice stays off at duration 0
+    result = attachQueryHint(req, 0, result)
     res.status(200).send(result)
   })
 

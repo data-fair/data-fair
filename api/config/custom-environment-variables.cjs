@@ -350,6 +350,10 @@ module.exports = {
     __name: 'EXTENSION_UPDATE_DELAY',
     __format: 'json'
   },
+  extensionsBatchSize: {
+    __name: 'EXTENSIONS_BATCH_SIZE',
+    __format: 'json'
+  },
   compatODS: {
     __name: 'COMPAT_ODS',
     __format: 'json'

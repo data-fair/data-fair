@@ -97,6 +97,16 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
+// Patch a dataset document directly in MongoDB (test-only)
+router.post('/patch-dataset/:datasetId', async (req, res, next) => {
+  try {
+    await mongo.datasets.updateOne({ id: req.params.datasetId }, { $set: req.body })
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Return the raw MongoDB document for a dataset (including draft field)
 router.get('/raw-dataset/:id', async (req, res, next) => {
   try {
@@ -231,6 +241,17 @@ router.post('/settings-update-one', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+// Tamper a dataset's stored original file out-of-band (test-only, for integrity breach tests)
+router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
+  const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+  if (!dataset) return res.status(404).send()
+  const datasetUtils = await import('../../datasets/utils/index.ts')
+  const { filesStorage } = await import('../../files-storage/index.ts')
+  if (req.body?.delete) await filesStorage.removeFile(datasetUtils.originalFilePath(dataset))
+  else await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
+  res.status(204).send()
 })
 
 // Trigger the api-keys expiration cron task on demand (test-only)

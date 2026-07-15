@@ -26,6 +26,14 @@ import { configRefIds } from '@data-fair/data-fair-shared/application/config-ref
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
+// applications-keys only needs the owner parts used by the application-key middleware
+// filter (type/id/department) — see api/src/misc/utils/application-key.ts
+const applicationKeyOwner = (owner: { type: string, id: string, department?: string }) => {
+  const keyOwner: { type: string, id: string, department?: string } = { type: owner.type, id: owner.id }
+  if (owner.department) keyOwner.department = owner.department
+  return keyOwner
+}
+
 const filterFields = {
   url: 'url',
   'base-application': 'url',
@@ -145,13 +153,13 @@ export const syncDatasets = async (newApp: any, oldApp: any = {}) => {
   }
 }
 
-export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string, name: string }, id?: string) => {
+export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string }, id?: string) => {
   const application = { ...body }
   if (id) application.id = id
   application.owner = owner
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
-  application.createdBy = application.updatedBy = { id: user.id, name: user.name }
+  application.createdBy = application.updatedBy = { id: user.id }
   application.permissions = []
   await curateApplication(application)
   return application
@@ -240,7 +248,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   if ('partOf' in existingApplication) newApplication.partOf = (existingApplication as any).partOf
   else delete newApplication.partOf
   newApplication.updatedAt = moment().toISOString()
-  newApplication.updatedBy = { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name }
+  newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
 
   if (!isNew) {
@@ -297,7 +305,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   }
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name }
+  patch.updatedBy = { id: ctx.sessionState.user.id }
   patch.id = application.id
   patch.slug = patch.slug || application.slug
   await curateApplication(patch)
@@ -349,7 +357,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
 
   const patch: any = {
     owner: newOwner,
-    updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+    updatedBy: { id: sessionState.user.id },
     updatedAt: moment().toISOString()
   }
   const sameOrg = application.owner.type === 'organization' && application.owner.type === newOwner.type && application.owner.id === newOwner.id
@@ -382,7 +390,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   // with an ownerFilter built from the dataset's owner, so a stale owner here silently breaks
   // existing protected links after an ownership transfer
   await mongo.applicationsKeys
-    .updateOne({ _id: application.id }, { $set: { owner: patch.owner } })
+    .updateOne({ _id: application.id }, { $set: { owner: applicationKeyOwner(patch.owner) } })
   clearApplicationKeysCaches()
 
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
@@ -512,7 +520,7 @@ export const writeApplicationConfig = async (ctx: ApplicationWriteContext, appli
       $set: {
         configuration: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name },
+        updatedBy: { id: ctx.sessionState.user.id },
         lastConfigured: moment().toISOString(),
         status: 'configured'
       }
@@ -536,7 +544,7 @@ export const writeConfigDraft = async (ctx: ApplicationWriteContext, application
       $set: {
         configurationDraft: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name },
+        updatedBy: { id: ctx.sessionState.user.id },
         status: 'configured-draft'
       }
     }
@@ -556,7 +564,7 @@ export const deleteConfigDraft = async (ctx: ApplicationWriteContext, applicatio
       },
       $set: {
         updatedAt: moment().toISOString(),
-        updatedBy: { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name },
+        updatedBy: { id: ctx.sessionState.user.id },
         status: application.configuration ? 'configured' : 'created'
       }
     }
@@ -601,7 +609,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
     if (!key.id) key.id = nanoid()
   }
   // replaceOne with custom schema shape — the runtime doc has {_id, keys, owner} which doesn't match ApplicationKey's id/title fields
-  await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: application.owner } as any, { upsert: true })
+  await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: applicationKeyOwner(application.owner) } as any, { upsert: true })
   clearApplicationKeysCaches()
 
   eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })

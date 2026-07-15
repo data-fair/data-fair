@@ -250,7 +250,11 @@ export const run = async () => {
     server.requestTimeout = (15 * 60 * 1000)
 
     if (!config.listenWhenReady) {
-      server.listen(config.port)
+      // deep accept backlog: a single thread does both accept() and request work, so any event-loop hitch
+      // pauses accepting and connections queue in the kernel. The default 511 overflowed in production
+      // (TcpExt ListenOverflows) under connection bursts, dropping SYNs incl. the liveness probe's.
+      // Requires net.core.somaxconn >= 4096 on the node (checked: 4096), the kernel clamps silently otherwise.
+      server.listen({ port: config.port, backlog: 4096 })
       await eventPromise(server, 'listening')
     }
   }
@@ -278,6 +282,10 @@ export const run = async () => {
     })
     const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
     apiKeysExpirationWorker.start()
+    if (config.integrity?.active) {
+      const integrityChecker = await import('./integrity/checker.ts')
+      integrityChecker.start()
+    }
   }
 
   if (config.mode.includes('server')) {
@@ -327,7 +335,8 @@ export const run = async () => {
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {
-      server.listen(config.port)
+      // see the early listen above for the backlog rationale
+      server.listen({ port: config.port, backlog: 4096 })
       await eventPromise(server, 'listening')
     }
   }
@@ -353,6 +362,9 @@ export const stop = async () => {
   if (config.mode.includes('worker')) {
     await (await import('./workers/index.ts')).stop()
     await (await import('./settings/api-keys-expiration-worker.ts')).stop()
+    if (config.integrity?.active) {
+      await (await import('./integrity/checker.ts')).stop()
+    }
   }
 
   await locks.stop()

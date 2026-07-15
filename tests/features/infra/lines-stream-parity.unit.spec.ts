@@ -82,14 +82,19 @@ const gen = (seed: number) => {
 // A Node Readable that emits the buffer in fixed-size chunks (drives the splitter across boundaries).
 const chunked = (buf: Buffer, size: number) => Readable.from((function * () { for (let i = 0; i < buf.length; i += size) yield buf.subarray(i, i + size) })())
 
-// A real Writable with the express Response chaining helpers bolted on (mirrors lines-pipeline.unit.spec).
+// A real Writable with the express Response chaining helpers bolted on, including a header map —
+// sendPreparedParts reads back Content-Type and sets the ETag (mirrors lines-pipeline.unit.spec);
+// endParts is the write-the-parts contract res.throttleEnd installs in production.
 const fakeRes = () => {
   const res: any = new PassThrough()
-  res.type = function () { return this }
+  res._headers = {}
+  res.type = function (t: string) { this._headers['content-type'] = 'application/' + t; return this }
   res.status = function () { return this }
-  res.setHeader = function () { return this }
-  res.set = function () { return this }
+  res.setHeader = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.set = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.get = function (k: string) { return this._headers[k.toLowerCase()] }
   res.send = function (body: any) { this.end(body); return this }
+  res.endParts = function (parts: Buffer[]) { for (const part of parts) this.write(part); this.end() }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
   res._done = new Promise<Buffer>(resolve => res.on('end', () => resolve(Buffer.concat(chunks))))

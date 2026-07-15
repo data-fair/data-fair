@@ -17,6 +17,7 @@ import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.t
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
+import { checkConstraints } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
@@ -25,11 +26,11 @@ import { getDatasetCacheKey } from './operations.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
-import md5File from 'md5-file'
 import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
+import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
 const debugMasterData = debugLib('master-data')
@@ -127,7 +128,23 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     }
   }
 
-  const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  // Integrity breaches are surfaced under the existing `error` status filter without mutating the
+  // dataset's real `status` (a breached dataset stays `finalized`). Build the result/count query from a
+  // reqQuery copy with `status` removed, then OR the breach condition in. facetsQuery/sumsQuery below keep
+  // using the original reqQuery + extraFilters so the generic facet machinery is unaffected.
+  const reqQueryForResults = { ...reqQuery }
+  let statusBreachOr: any | undefined
+  if (reqQuery.status && reqQuery.status.split(',').includes('error')) {
+    delete reqQueryForResults.status
+    statusBreachOr = {
+      $or: [
+        { status: { $in: reqQuery.status.split(',') } },
+        { 'integrity.lastCheck.status': 'breach' }
+      ]
+    }
+  }
+  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  if (statusBreachOr) (query.$and ||= []).push(statusBreachOr)
   const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
@@ -291,7 +308,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
-  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
+  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
@@ -300,6 +317,9 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
     dataset.schema = await prepareExtensionsSchema(dataset.schema, dataset.extensions)
   }
   await fixConcepts(dataset, dataset.schema)
+  if (dataset.constraints?.length) {
+    checkConstraints(await datasetUtils.extendedSchema(db, dataset), dataset.constraints, dataset)
+  }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
@@ -312,7 +332,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
-    const md5 = await md5File(datasetFile.path)
+    const md5 = datasetFile.md5
     const filePatch: any = {
       status: 'created',
       dataUpdatedBy: dataset.updatedBy,
@@ -438,7 +458,7 @@ export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'ap
 export const changeDatasetOwner = async (dataset: any, newOwner: any, sessionState: SessionStateAuthenticated) => {
   const patch: any = {
     owner: newOwner,
-    updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+    updatedBy: { id: sessionState.user.id },
     updatedAt: new Date().toISOString()
   }
 
@@ -536,6 +556,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         { $unset: unset }
       )
     }
+  }
+
+  if (isRestDataset(dataset) && 'constraints' in patch) {
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
   }
 
   if (removedRestProps && removedRestProps.length) {

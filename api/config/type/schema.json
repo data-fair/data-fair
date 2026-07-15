@@ -49,6 +49,7 @@
     "assertImmutable",
     "remoteAttachmentCacheDuration",
     "extensionUpdateDelay",
+    "extensionsBatchSize",
     "apiKeysMaxDuration",
     "apiKeysExpirationCron"
   ],
@@ -100,6 +101,33 @@
         "multipartChunkSize": { "type": "number" }
       }
     },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "active": { "type": "boolean" },
+        "s3": {
+          "type": "object",
+          "properties": {
+            "region": { "type": "string" },
+            "endpoint": { "type": "string" },
+            "bucket": { "type": "string" },
+            "credentials": {
+              "type": "object",
+              "properties": {
+                "accessKeyId": { "type": "string" },
+                "secretAccessKey": { "type": "string" }
+              }
+            },
+            "forcePathStyle": { "type": "boolean" }
+          }
+        },
+        "retention": {
+          "type": "object",
+          "properties": { "days": { "type": "number" } }
+        }
+      }
+    },
+    "integrityCheckCron": { "type": "string" },
     "sessionDomain": {
       "type": ["string", "null"]
     },
@@ -447,6 +475,9 @@
       "type": "number"
     },
     "extensionUpdateDelay": {
+      "type": "number"
+    },
+    "extensionsBatchSize": {
       "type": "number"
     },
     "compatODS": {

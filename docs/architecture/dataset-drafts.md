@@ -33,7 +33,7 @@ flowchart TD
     Validate --> MergePublish["Merge draft → published\nSwap ES index aliases\nRemove draft directory"]
     MergePublish --> Live[Dataset is live]
 
-    Cancel --> Discard["Remove draft files\nDelete draft ES index\nUnset dataset.draft"]
+    Cancel --> Discard["Remove draft files\nDelete draft ES index\nUnset dataset.draft\nClear task progress"]
     Discard --> Reverted["Reverted to published version"]
 
     style NewDraft fill:#e3f2fd

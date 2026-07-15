@@ -66,6 +66,16 @@
           />
         </v-tabs-window-item>
 
+        <v-tabs-window-item value="constraints">
+          <dataset-constraints
+            v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly"
+            :model-value="structureEditFetch.data.value.constraints"
+            :dataset-schema="structureEditFetch.data.value.schema"
+            :editable="true"
+            @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
+          />
+        </v-tabs-window-item>
+
         <v-tabs-window-item value="extensions">
           <dataset-extension
             v-if="structureEditFetch.data.value"
@@ -326,6 +336,12 @@
               resource-type="dataset"
             />
           </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="canReadIntegrity"
+            value="integrity"
+          >
+            <dataset-integrity />
+          </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
@@ -556,6 +572,7 @@ fr:
   metadata: Métadonnées
   informations: Informations
   schema: Schéma
+  constraints: Contraintes
   attachments: Pièces jointes
   save: Enregistrer
   cancel: Annuler
@@ -582,6 +599,7 @@ fr:
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
+  integrity: Intégrité
   diagnose: Diagnostic
   diagnoseSubtitle: Informations techniques pour les administrateurs.
   diagnoseTabEs: Elasticsearch
@@ -619,6 +637,7 @@ en:
   metadata: Metadata
   informations: Information
   schema: Schema
+  constraints: Constraints
   attachments: Attachments
   save: Save
   cancel: Cancel
@@ -645,6 +664,7 @@ en:
   traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
+  integrity: Integrity
   diagnose: Diagnose
   diagnoseSubtitle: Technical information for superadmins.
   diagnoseTabEs: Elasticsearch
@@ -683,7 +703,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -709,6 +729,9 @@ const { sendUiNotif } = useUiNotif()
 const { accountRole } = useSessionAuthenticated()
 const session = useSession()
 const adminMode = computed(() => !!session.state.user?.adminMode)
+// integrity reads (status + revision history) are open to the owner's admins; the enable/disable
+// and check/fix actions inside the tab stay superadmin-only (gated in dataset-integrity.vue)
+const canReadIntegrity = computed(() => adminMode.value || !!dataset.value?.userPermissions?.includes('readIntegrity'))
 const { canContribDep } = usePermissions()
 const { height: windowHeight } = useWindowSize()
 
@@ -972,6 +995,13 @@ const schemaHasDiff = computed(() => {
     !equal(d.conformsTo, s.conformsTo)
 })
 
+const constraintsHasDiff = computed(() => {
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.constraints ?? [], s.constraints ?? [])
+})
+
 const extensionsHasDiff = computed(() => {
   const d = structureEditFetch.data.value
   const s = structureEditFetch.serverData.value
@@ -1016,7 +1046,7 @@ const virtualHasDiff = computed(() => {
   return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
 })
 
-const structureHasRealDiff = computed(() => schemaHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
+const structureHasRealDiff = computed(() => schemaHasDiff.value || constraintsHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
 
 // Leave guards for unsaved changes
 useLeaveGuard(structureHasRealDiff, { locale })
@@ -1045,6 +1075,13 @@ const sections = computedDeepDiff(() => {
     }]
 
     if (!d.isVirtual && !d.isMetaOnly) {
+      structureTabs.push({
+        key: 'constraints',
+        title: t('constraints'),
+        icon: mdiFingerprint,
+        color: constraintsHasDiff.value ? 'accent' : undefined,
+        agentDesc: 'Dataset-level unicity constraints: each constraint selects a combination of columns whose values must be unique across all rows. Not available on virtual and metaOnly datasets. Saving a change re-validates the data: file datasets are reprocessed (violations put the dataset in error with a diagnostic file), REST datasets get a unique index (addition is rejected if existing data violates it).'
+      })
       structureTabs.push({
         key: 'extensions',
         title: t('extensions'),
@@ -1158,6 +1195,13 @@ const sections = computedDeepDiff(() => {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
+  }
+  // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.
+  // Reads (status + revision history) are visible to the owner's admins; the enable/disable and
+  // reconcile (fix) actions inside the panel remain superadmin-only.
+  if (canReadIntegrity.value) {
+    activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, agentDesc: 'Data-integrity panel: tamper-detection status, last check and revision history — readable by the owner account admins. The enable/disable and reconcile (fix) actions are superadmin-only.' })
+    result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
 
   // Diagnose section (superadmin only)

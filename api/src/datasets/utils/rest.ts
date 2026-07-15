@@ -28,6 +28,7 @@ import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
@@ -38,7 +39,7 @@ import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UpdateFilter } from 'mongodb'
+import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
@@ -186,6 +187,55 @@ export const initDataset = async (dataset: RestDataset) => {
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
     c.createIndex({ _i: -1 }, { unique: true })
   ])
+  await configureConstraintIndexes(dataset)
+}
+
+// index names are derived from the constraint's content (declared property order), not its
+// position in the array, so that removing/reordering a constraint never makes a survivor's
+// name collide with a stale index of a different keySpec (MongoDB IndexKeySpecsConflict, code 86)
+const constraintIndexName = (constraint: any) =>
+  `${CONSTRAINT_INDEX_PREFIX}${crc.crc32(JSON.stringify(constraint.properties)).toString(16)}`
+
+export const configureConstraintIndexes = async (dataset: RestDataset) => {
+  const c = collection(dataset)
+  const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
+  const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
+
+  // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
+  // Doing this before dropping stale indexes means that if a createIndex throws 11000
+  // (existing data violates a new/changed constraint) and the PATCH aborts, no surviving
+  // constraint's index has been dropped yet — it stays enforced.
+  for (const constraint of constraints) {
+    const keySpec: Record<string, 1> = {}
+    const partial: Record<string, any> = { _deleted: false }
+    for (const key of constraint.properties) {
+      keySpec[key] = 1
+      partial[key] = { $exists: true }
+    }
+    try {
+      await c.createIndex(keySpec, {
+        unique: true,
+        name: constraintIndexName(constraint),
+        partialFilterExpression: partial
+      })
+    } catch (err: any) {
+      if (err.code === 11000) {
+        throw httpError(400, `Les données existantes du jeu de données violent la contrainte d'unicité sur (${constraint.properties.join(', ')}).`)
+      }
+      throw err
+    }
+  }
+
+  // drop constraint indexes that no longer correspond to a current constraint
+  let existing: any[] = []
+  try { existing = await c.indexes() } catch { existing = [] }
+  for (const idx of existing) {
+    if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
+      await c.dropIndex(idx.name).catch((err: any) => {
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+      })
+    }
+  }
 }
 
 export const configureHistory = async (dataset: RestDataset) => {
@@ -435,10 +485,21 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
+  // index for the result-completion loops below (operations.find was an O(N) scan per mongo result,
+  // O(N²) per chunk); chunks are deduplicated upstream but keep the FIRST occurrence per _id to match
+  // operations.find semantics exactly
+  const operationsById = new Map<string, Operation>()
+  for (const op of operations) {
+    if (!operationsById.has(op._id)) operationsById.set(op._id, op)
+  }
+
   // fill data with previous bodies for patch operations
   if (patchPreviousFilters.length) {
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
+    let pp = 0
     for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
+      // per-result separator pass + body spreads + getLineHash add up, so yield like the build loop above
+      if (++pp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
       // manage the case of older data that was stored when we didn't apply the separator before storing lines
       for (const f of dataset.schema) {
@@ -451,7 +512,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           operation.body = { ...previousBody, ...operation.body }
           Object.assign(operation.fullBody, operation.body)
@@ -469,7 +530,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingPatchPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -480,18 +541,20 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // check delete operations and complete their primary key info
   if (deletePreviousFilters.length) {
     const missingDeletePrevious = new Set(deletePreviousFilters.map(f => f._id))
+    let dp = 0
     for await (const deletePrevious of c.find({ $or: deletePreviousFilters }).project(primaryKeyProjection)) {
+      if (++dp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = deletePrevious
       if (!_deleted) {
         missingDeletePrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           Object.assign(operation.fullBody, previousBody)
         }
       }
     }
     for (const _id of missingDeletePrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -571,11 +634,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // untouched here — overwriting their _status would let the failing line be persisted.
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
+    let cp = 0
     for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
+      if (++cp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted } = checkPrevious
       if (!_deleted) {
         missingCheckPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation && !operation._error) {
           if (operation._action === 'create') {
             operation._status = 409
@@ -591,7 +656,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingCheckPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation && !operation._error) {
         if (operation._action === 'create') {
           operation._status = 201
@@ -627,7 +692,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       for (const writeError of err.writeErrors) {
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
-          if (writeError.err.errmsg?.includes('_i_')) {
+          if (writeError.err.errmsg?.includes(CONSTRAINT_INDEX_PREFIX)) {
+            operation._status = 409
+            // the errmsg names the violated index (constraint_unique_<hash>), map it back to
+            // the constraint so the message can name the columns
+            const failedConstraint = (dataset.constraints ?? []).find(ct => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            operation._error = failedConstraint
+              ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
+              : "valeur en double sur une contrainte d'unicité"
+          } else if (writeError.err.errmsg?.includes('_i_')) {
             console.error(writeError)
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
@@ -685,7 +758,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       {
         $set: {
           dataUpdatedAt: updatedAt.toISOString(),
-          dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+          dataUpdatedBy: { id: sessionState.user.id },
           _modified: computeModified({ ...dataset, dataUpdatedAt: updatedAt.toISOString() })
         }
       })
@@ -1327,6 +1400,14 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
   const c = collection(dataset)
+  // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
+  let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
+  const flush = async () => {
+    if (!bulkOps.length) return
+    const ops = bulkOps
+    bulkOps = []
+    await c.bulkWrite(ops, { ordered: false })
+  }
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
@@ -1336,7 +1417,16 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
           if (key in item && patch.$set) patch.$set[key] = item[key]
           else if (patch.$unset) patch.$unset[key] = item[key]
         }
-        await c.updateOne({ _id: item._id }, patch)
+        bulkOps.push({ updateOne: { filter: { _id: item._id }, update: patch } })
+        if (bulkOps.length >= config.mongo.maxBulkOps) await flush()
+        cb()
+      } catch (err: any) {
+        cb(err)
+      }
+    },
+    async final (cb) {
+      try {
+        await flush()
         cb()
       } catch (err: any) {
         cb(err)

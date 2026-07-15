@@ -23,7 +23,7 @@
         />
 
         <!-- show help -->
-        <template v-if="!!header.tooltip">
+        <template v-if="!!header.tooltip || timeZoneLabel">
           <v-list-item
             :active="showHelp"
             :title="t('showHelp')"
@@ -48,8 +48,18 @@
             class="mt-0 mb-2 pa-2 description-alert"
             rounded="0"
             variant="text"
-            v-html="/*eslint-disable-line vue/no-v-html vue/no-v-text-v-html-on-component*/header.tooltip"
-          />
+          >
+            <div
+              v-if="header.tooltip"
+              v-html="/*eslint-disable-line vue/no-v-html*/header.tooltip"
+            />
+            <div
+              v-if="timeZoneLabel"
+              :class="{ 'mt-2': !!header.tooltip }"
+            >
+              {{ t('timesInZone', { zone: timeZoneLabel }) }}
+            </div>
+          </v-alert>
           <v-divider />
         </template>
 
@@ -652,6 +662,7 @@ fr:
   applyFilter: Appliquer le filtre
   fixLeft: "Fixer la colonne à gauche"
   showHelp: "Description"
+  timesInZone: "Les horodatages sont affichés dans le fuseau horaire de la donnée : {zone}."
   searchFilter: Recherche texte libre
   eqFilter: Égal à une valeur
   neqFilter: Différent d'une valeur
@@ -675,6 +686,7 @@ en:
   applyFilter: Apply filter
   fixLeft: "Fix the column to the left"
   showHelp: "Description"
+  timesInZone: "Times are shown in the data's own timezone: {zone}."
   searchFilter: Free text search
   eqFilter: Equal to a value
   neqFilter: Different from a value
@@ -707,7 +719,9 @@ const { header, localEnum, filters, closeOnFilter } = defineProps({
   activator: { type: String, required: true },
   noFix: { type: Boolean, default: false },
   localEnum: { type: Array, required: false, default: null },
-  closeOnFilter: { type: Boolean, default: false }
+  closeOnFilter: { type: Boolean, default: false },
+  // for date-time columns: the timezone their values are displayed in (e.g. "Europe/Paris (UTC+1)")
+  timeZoneLabel: { type: String as () => string | undefined, default: undefined }
 })
 
 const sort = defineModel<1 | -1>('sort')

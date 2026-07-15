@@ -267,6 +267,97 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
   return esProp
 }
 
+// ---- metric aggregations (metric_agg, simple_metrics_agg, values_agg/geo_agg metric params) ----
+
+export const acceptedMetricAggsByType: Record<string, string[]> = {
+  number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  string: ['min', 'max', 'cardinality', 'value_count'],
+  other: ['value_count']
+}
+export const acceptedMetricAggs: string[] = []
+for (const metrics of Object.values(acceptedMetricAggsByType)) {
+  for (const metric of metrics) {
+    if (!acceptedMetricAggs.includes(metric)) acceptedMetricAggs.push(metric)
+  }
+}
+export const defaultMetricAggsByType: Record<string, string[]> = {
+  number: ['min', 'max'],
+  string: ['cardinality'],
+  other: []
+}
+
+export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+  if (field.type === 'integer' || field.type === 'number') {
+    return 'number'
+  } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
+    return 'number'
+  } else if (field.type === 'string') {
+    return 'string'
+  } else {
+    return 'other'
+  }
+}
+
+// ES types that can serve the doc-values based metric aggregations. Geo types, object/nested
+// and disabled mappings cannot.
+const METRIC_AGGREGATABLE_ES_TYPES = new Set(['long', 'integer', 'double', 'boolean', 'date', 'keyword', 'wildcard'])
+
+// Whether metric aggregations can run at all on the column. Derived from the actual ES mapping
+// (esProperty) so it cannot drift from it: geometry-concept columns are mapped
+// {type: keyword, doc_values: false}, `values: false` columns lose their doc_values, the geo
+// calculated columns are geo_point / geo_shape, etc. Aggregating on any of those makes ES fail
+// the whole request ("all shards failed" / fielddata errors).
+export const isMetricAggregatable = (prop: any): boolean => {
+  const esProp = esProperty(prop, '')
+  if (!esProp?.type || !METRIC_AGGREGATABLE_ES_TYPES.has(esProp.type)) return false
+  return esProp.doc_values !== false
+}
+
+export const assertMetricAccepted = (field: any, metric: string): void => {
+  const acceptedAggs = acceptedMetricAggsByType[getMetricType(field)]
+  if (!acceptedAggs?.includes(metric)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+  }
+  if (!isMetricAggregatable(field)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. Ce champ ne supporte pas les agrégations de métriques.`)
+  }
+}
+
+// The effective columns list of /simple_metrics_agg — shared by the aggregations builder
+// (metric-agg.ts) and the per-request hint (query-advice.ts) so they always agree.
+// Explicit `fields` values are strictly validated (400 before any ES call); the default list
+// keeps only the columns that can actually serve the requested (or default) metrics, so it
+// never produces an ES-level failure.
+export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>): string[] => {
+  const globalMetrics: string[] | undefined = query.metrics ? String(query.metrics).split(',') : undefined
+  if (globalMetrics) {
+    for (const metric of globalMetrics) {
+      if (!acceptedMetricAggs.includes(metric)) throw httpError(400, `La métrique "${metric}" n'existe pas.`)
+    }
+  }
+  if (query.fields) {
+    const fields: string[] = String(query.fields).split(',')
+    for (const key of fields) {
+      const field = dataset.schema.find((f: any) => f.key === key)
+      if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!hasCapability(field, 'values')) {
+        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+      }
+      if (!isMetricAggregatable(field)) {
+        throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}. Ce champ ne supporte pas les agrégations de métriques.`)
+      }
+      if (globalMetrics) {
+        for (const metric of globalMetrics) assertMetricAccepted(field, metric)
+      }
+    }
+    return fields
+  }
+  return dataset.schema
+    .filter((f: any) => !f['x-calculated'] && hasCapability(f, 'values') && isMetricAggregatable(f))
+    .filter((f: any) => !globalMetrics || globalMetrics.every(m => acceptedMetricAggsByType[getMetricType(f)].includes(m)))
+    .map((f: any) => f.key)
+}
+
 // A dataset whose `q` query would otherwise expand into a huge `fields` array is given a
 // `_search` catch-all field, and its `q` query targets `_search` plus the small handful of
 // boost-eligible columns (label / description / DefinedTermSet) as per-field entries with
@@ -510,6 +601,41 @@ export const escapeFilter = (val: any): any => {
     ) return '\\' + char
     else return char
   }).join('')
+}
+
+/**
+ * ES field to aggregate on for a schema property in a unique constraint.
+ * String columns use the base keyword field, or the length-safe `.wildcard`
+ * sub-field when the wildcard capability is enabled (avoids ignore_above:200
+ * silently dropping long values from the aggregation).
+ */
+export const unicityAggField = (prop: any): string => {
+  if (isLengthLimitedKeyword(prop) && hasCapability(prop, 'wildcard')) return `${prop.key}.wildcard`
+  return prop.key
+}
+
+/**
+ * Human-readable label for one part of a unicity duplicate-group composite key (used to build
+ * `DuplicateGroup.keyLabel`, itself written as `raw_value` in the validation diagnostic CSV).
+ * ES composite `terms` sources on `date`/`date-time` columns return the raw epoch-millis bucket
+ * key, which is meaningless to a user reading the CSV — convert it to the date the user would
+ * recognize: `YYYY-MM-DD` for `format: 'date'` (mirrors the slicing convention already used for
+ * date buckets in `es/values.ts`), full ISO 8601 for `format: 'date-time'`. Every other column
+ * type (string, number, boolean, …) is passed through as its string form, unchanged.
+ * Defensive: composite `terms` sources never enable `missing_bucket`, and ES always emits a
+ * finite numeric key for a `date`-mapped field, so a null/undefined/non-finite/non-numeric key
+ * should never reach here — but a stray one must never crash the indexer, so it degrades to ''
+ * / the raw string instead of throwing (a bad `Date` would otherwise throw a RangeError on
+ * NaN/±Infinity, or silently produce "Invalid Date").
+ */
+export const unicityKeyPartLabel = (prop: any, value: any): string => {
+  if (value === null || value === undefined) return ''
+  const isDateColumn = prop?.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')
+  if (isDateColumn && Number.isFinite(value)) {
+    const iso = new Date(value).toISOString()
+    return prop.format === 'date' ? iso.slice(0, 10) : iso
+  }
+  return String(value)
 }
 
 /**

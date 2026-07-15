@@ -20,6 +20,21 @@ module.exports = {
     maxSingleCopySize: 5 * 1024 * 1024 * 1024, // 5GB - threshold for using multipart copy
     multipartChunkSize: 100 * 1024 * 1024, // 100MB - chunk size for multipart copy
   },
+  integrity: {
+    active: false,
+    s3: {
+      region: '',
+      endpoint: '',
+      bucket: '',
+      credentials: {
+        accessKeyId: '',
+        secretAccessKey: '',
+      },
+      forcePathStyle: true,
+    },
+    retention: { days: 365 },
+  },
+  integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
@@ -315,6 +330,10 @@ module.exports = {
   assertImmutable: false,
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
+  // lines per request to a remote service (and per extensions-cache bulk read/write) when
+  // applying extensions. Large enough that the per-batch fixed costs (HTTP request, cache
+  // round-trips) stay marginal, small enough to bound the lines held in memory per batch.
+  extensionsBatchSize: 250,
   compatODS: false,
   apiKeysMaxDuration: 2 * 365, // in days
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J

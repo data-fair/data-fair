@@ -173,8 +173,11 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
         } else {
           await journals.log(type, newResource as any, { type: task.eventsPrefix + '-end' } as any, noStoreEvent)
         }
+        // special case of a draft auto-cancelled during the task: 'validate' (process-file
+        // validation/extension errors) and 'index' (unicity gate) can both end with the draft
+        // cancelled and the dataset reverted to its published (final) state
         finalTask = task.eventsPrefix === 'finalize' ||
-          (task.eventsPrefix === 'validate' && resource.draftReason && !newResource.draft && newResource.status) // special case of cancelled draft
+          ((task.eventsPrefix === 'validate' || task.eventsPrefix === 'index') && resource.draftReason && !newResource.draft && newResource.status)
       }
       await progress?.end(false, finalTask)
     }
