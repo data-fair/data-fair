@@ -18,6 +18,7 @@ import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
+import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -195,9 +196,11 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
     // clean up the metadata off datasets when its definition was removed from the settings
     if (!newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
-      await mongo.datasets.updateMany(
-        { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } },
-        { $unset: { [`customMetadata.${oldMeta.key}`]: 1 } })
+      const customMetadataFilter = { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } }
+      // stamp BEFORE the $unset: the unset removes the very key this filter's $exists checks,
+      // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)
+      await stampHistorizeMany(customMetadataFilter)
+      await mongo.datasets.updateMany(customMetadataFilter, { $unset: { [`customMetadata.${oldMeta.key}`]: 1 } })
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
@@ -315,6 +318,10 @@ export const deletePublicationSite = async (ctx: SettingsWriteContext, siteType:
   validateSettings(settings)
   await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   const ref = `${siteType}:${siteId}`
-  await mongo.datasets.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
+  const publicationSitesFilter = { publicationSites: ref }
+  // stamp BEFORE the $pull: the pull removes the very element this filter matches, so stamping
+  // after would match nothing (over-stamping here is harmless, the relay dedupes)
+  await stampHistorizeMany(publicationSitesFilter)
+  await mongo.datasets.updateMany(publicationSitesFilter, { $pull: { publicationSites: ref } })
   await mongo.applications.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
 }
