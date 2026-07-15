@@ -21,6 +21,19 @@
           @keypress.enter="baseAppsFetch.refresh()"
         />
       </v-col>
+      <v-col
+        cols="12"
+        sm="6"
+        class="d-flex align-center justify-end"
+      >
+        <v-btn
+          color="primary"
+          :loading="syncBaseApps.loading.value"
+          @click="syncBaseApps.execute()"
+        >
+          {{ t('sync') }}
+        </v-btn>
+      </v-col>
     </v-row>
 
     <v-sheet v-if="baseApps">
@@ -110,6 +123,14 @@
         <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
           <v-card-text>
             <p>URL : {{ currentBaseApp.url }}</p>
+            <p>{{ t('artefactId') }} : {{ currentBaseApp.artefactId }}</p>
+            <v-alert
+              type="info"
+              density="compact"
+              class="mb-2"
+            >
+              {{ t('registrySyncedFieldsHint') }}
+            </v-alert>
             <v-checkbox
               v-model="patch.deprecated"
               :label="t('deprecated')"
@@ -189,10 +210,13 @@
 fr:
   baseApps: Modèles d'application
   search: Rechercher
+  sync: Synchroniser depuis le registre
   other: autre
   nbApplications: "{count} application | {count} application | {count} applications"
   datasets: Jeux de données
   editTitle: Édition de {title}
+  artefactId: Artefact
+  registrySyncedFieldsHint: Le titre, la description, la visibilité publique, les accès privés et la dépréciation sont resynchronisés depuis le registre. Pour les modifier, rendez-vous sur la page d'administration du registre (/admin/registry).
   deprecated: Dépréciée
   applicationName: Identifiant d'application
   version: Version d'application
@@ -206,10 +230,13 @@ fr:
 en:
   baseApps: Application templates
   search: Search
+  sync: Sync from registry
   other: other
   nbApplications: "{count} application | {count} application | {count} applications"
   datasets: Datasets
   editTitle: Edit {title}
+  artefactId: Artefact
+  registrySyncedFieldsHint: Title, description, public visibility, private access and deprecation are re-synced from the registry. To change them, go to the registry admin page (/admin/registry).
   deprecated: Deprecated
   applicationName: Application identifier
   version: Application version
@@ -240,6 +267,10 @@ const baseAppsFetch = useFetch<{ results: BaseApp[] }>($apiPath + '/admin/base-a
 baseAppsFetch.refresh()
 const baseApps = computed(() => {
   return baseAppsFetch.data.value?.results.sort((ba1, ba2) => ba1.title!.localeCompare(ba2.title!))
+})
+const syncBaseApps = useAsyncAction(async () => {
+  await $fetch('base-applications/_sync', { method: 'POST' })
+  await baseAppsFetch.refresh()
 })
 const newPatch = (baseApp: BaseApp) => {
   return {
