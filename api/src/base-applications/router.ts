@@ -34,7 +34,7 @@ router.patch('/:id', async (req, res) => {
   res.send(storedBaseApp)
 })
 
-const getQuery = (req, showAll = false) => {
+const getQuery = (req: Request, showAll = false) => {
   const query: any = { $and: [{ deprecated: { $ne: true } }] }
   const accessFilter: any[] = []
 
@@ -89,7 +89,7 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
     const account = sessionState.account
     if (!account) throw httpError(403, 'dataset parameter requires authentication')
     let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
-    const vocabulary = i18nUtils.vocabulary[req.getLocale()]
+    const vocabulary = i18nUtils.vocabulary[req.getLocale() as 'en' | 'fr']
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
       const filter = { 'owner.type': account.type, 'owner.id': account.id }
@@ -105,8 +105,8 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
         { $unwind: '$schema' },
         { $facet: facet }]).toArray()
 
-      datasetTypes = facetResults[0]?.types.map(t => t._id.type) ?? []
-      datasetVocabulary = facetResults[0]?.concepts.map(t => t._id.concept).filter(c => !!c) ?? []
+      datasetTypes = facetResults[0]?.types.map((t: any) => t._id.type) ?? []
+      datasetVocabulary = facetResults[0]?.concepts.map((t: any) => t._id.concept).filter((c: any) => !!c) ?? []
     } else {
       // match constraints against a specific dataset
       datasetCount = 1
@@ -152,7 +152,7 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
               }
             }
             const fieldTypes = filter['field-type'] as string[]
-            if (fieldTypes && !datasetTypes.find(t => fieldTypes.includes(t))) {
+            if (fieldTypes && !datasetTypes.find((t: any) => fieldTypes.includes(t))) {
               if (fieldTypes.length === 1) {
                 requirements.push(req.__('appRequire.aType', { type: fieldTypes[0] }))
               } else {
@@ -171,7 +171,8 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
   res.send({ count, results })
 })
 
-router.get('/:id/icon', async (req, res, next) => {
+router.get('/:id/icon', async (_req, res, next) => {
+  const req = _req as Request
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
@@ -183,7 +184,8 @@ router.get('/:id/icon', async (req, res, next) => {
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
 })
-router.get('/:id/thumbnail', async (req, res, next) => {
+router.get('/:id/thumbnail', async (_req, res, next) => {
+  const req = _req as Request
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })

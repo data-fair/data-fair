@@ -70,9 +70,15 @@ export function deriveDatasetsFilters (configSchema: any): any[] {
   const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
   let datasetsFetches: { fromUrl: string, properties: Record<string, any> }[] = []
   if (datasetsDefinition) {
-    if (datasetsDefinition.items && getFragmentFetchUrl(datasetsDefinition)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition), properties: datasetsDefinition.items.properties }]
-    if (getFragmentFetchUrl(datasetsDefinition.items)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition.items), properties: datasetsDefinition.items.properties }]
-    if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.filter(item => getFragmentFetchUrl(item)).map(item => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
+    const definitionFetchUrl = getFragmentFetchUrl(datasetsDefinition)
+    if (datasetsDefinition.items && definitionFetchUrl) datasetsFetches = [{ fromUrl: definitionFetchUrl, properties: datasetsDefinition.items.properties }]
+    const itemsFetchUrl = getFragmentFetchUrl(datasetsDefinition.items)
+    if (itemsFetchUrl) datasetsFetches = [{ fromUrl: itemsFetchUrl, properties: datasetsDefinition.items.properties }]
+    if (Array.isArray(datasetsDefinition.items)) {
+      datasetsFetches = datasetsDefinition.items
+        .map((item: any) => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
+        .filter((fetch: { fromUrl: string | null }): fetch is { fromUrl: string, properties: Record<string, any> } => !!fetch.fromUrl)
+    }
   }
   const datasetsFilters: any[] = []
   for (const datasetFetch of datasetsFetches) {

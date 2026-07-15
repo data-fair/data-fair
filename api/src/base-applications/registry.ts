@@ -17,6 +17,13 @@ export const baseAppUrl = (artefactId: string) => {
 
 const cacheDir = config.registryCacheDir ?? path.join(tmpDir, 'registry-cache')
 
+// privateRegistryUrl / secretKeys.registry are nullable in the config type but boot-asserted
+// non-null in api/src/app.js before this module's functions ever run (base apps are served
+// exclusively from the registry) - narrow the nullable config type here rather than threading
+// an assertion through every call site.
+const privateRegistryUrl = config.privateRegistryUrl as string
+const registrySecretKey = config.secretKeys.registry as string
+
 // last successful ensure per artefact, kept as a stale-but-available fallback: memoizee
 // does not cache rejections, so without this a registry outage takes down all app serving
 // as soon as the 30s memoize window of every artefact expires, even though a perfectly
@@ -26,8 +33,8 @@ const lastKnownGood = new Map<string, { dir: string, version: string }>()
 const doEnsure = async (artefactId: string): Promise<{ dir: string, version: string }> => {
   try {
     const { path: dir, version } = await ensureArtefact({
-      registryUrl: config.privateRegistryUrl,
-      secretKey: config.secretKeys.registry,
+      registryUrl: privateRegistryUrl,
+      secretKey: registrySecretKey,
       artefactId,
       cacheDir
     })

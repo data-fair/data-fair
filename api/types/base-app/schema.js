@@ -39,8 +39,24 @@ export default {
     datasetsFilters: {
       type: 'array',
       items: {
-        type: 'object'
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          fromUrl: { type: 'string' },
+          properties: { type: 'object', additionalProperties: true },
+          bbox: { type: 'array', items: { type: 'string' } },
+          concepts: { type: 'array', items: { type: 'string' } },
+          'field-type': { type: 'array', items: { type: 'string' } },
+          select: { type: 'array', items: { type: 'string' } }
+        }
       }
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time'
+    },
+    hasConfigSchema: {
+      type: 'boolean'
     },
     deprecated: {
       type: 'boolean'

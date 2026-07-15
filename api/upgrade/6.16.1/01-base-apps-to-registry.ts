@@ -14,9 +14,9 @@ const TEXT_EXTS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.map', '.sv
 // files fetched even when nothing references them (data-fair conventions)
 const CONVENTIONAL_FILES = ['config-schema.json', 'icon.png', 'thumbnail.png', 'favicon.ico', 'favicon.png']
 
-const registryAx = () => axiosBuilder({
-  baseURL: config.privateRegistryUrl,
-  headers: { 'x-secret-key': config.secretKeys.registry }
+const registryAx = (registryUrl: string, secretKey: string) => axiosBuilder({
+  baseURL: registryUrl,
+  headers: { 'x-secret-key': secretKey }
 })
 
 const fetchBinary = async (url: string): Promise<Buffer | null> => {
@@ -167,7 +167,7 @@ const fillThumbnailGap = async (ax: ReturnType<typeof registryAx>, artefactId: s
   const thumbnail = await fetchBinary(baseApp.image || baseApp.url + 'thumbnail.png')
   if (!thumbnail) return
   const thumbForm = new FormData()
-  thumbForm.append('file', new Blob([thumbnail]), 'thumbnail.png')
+  thumbForm.append('file', new Blob([new Uint8Array(thumbnail)]), 'thumbnail.png')
   await ax.post(`/api/v1/artefacts/${encodeURIComponent(artefactId)}/thumbnail`, thumbForm, { validateStatus: s => s < 300 })
   debug(`filled thumbnail gap for ${artefactId}`)
 }
@@ -178,7 +178,9 @@ const upgradeScript: UpgradeScript = {
     if (!config.privateRegistryUrl || !config.secretKeys.registry) {
       throw new Error('privateRegistryUrl and secretKeys.registry are required for the base-apps migration')
     }
-    const ax = registryAx()
+    const registryUrl = config.privateRegistryUrl
+    const registrySecretKey = config.secretKeys.registry
+    const ax = registryAx(registryUrl, registrySecretKey)
     const failures: { url: string, error: string }[] = []
     const baseApps = await db.collection('base-applications').find({}).toArray()
     for (const baseApp of baseApps) {
@@ -196,7 +198,7 @@ const upgradeScript: UpgradeScript = {
         if (existing.status === 404) {
           // ops escape hatch: a hand-built tarball placed in dataDir wins over scraping
           const overridePath = path.join(config.dataDir, 'base-apps-migration', encodeURIComponent(artefactId) + '.tgz')
-          let tarball = await fsp.readFile(overridePath).catch(() => null)
+          let tarball: Buffer | null = await fsp.readFile(overridePath).catch(() => null)
           let version = `${minor}.0`
           if (!tarball) {
             let files: Record<string, Buffer> | null = null
@@ -216,7 +218,7 @@ const upgradeScript: UpgradeScript = {
           }
           const form = new FormData()
           form.append('category', 'application')
-          form.append('file', new Blob([tarball]), 'app.tgz')
+          form.append('file', new Blob([new Uint8Array(tarball)]), 'app.tgz')
           await ax.post(`/api/v1/artefacts/npm/${encodeURIComponent(artefactId)}`, form, { validateStatus: s => s === 201 })
           // metadata from the legacy doc (fresh publish: nothing upstream yet, so every field applies)
           const meta = buildMetaPatch(baseApp)
