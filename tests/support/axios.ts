@@ -1,3 +1,4 @@
+import http from 'node:http'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import _slug from 'slugify'
@@ -82,6 +83,25 @@ export const config = {
   secretKeys: { identities: 'identities-test-key', limits: 'limits-test-key' },
   cache: { publicMaxAge: 1, timestampedPublicMaxAge: 604800 },
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
+}
+
+/** Raw HTTP GET that preserves literal "." path segments, unlike axios/fetch/any client
+ * built on WHATWG URL parsing: `new URL('.../0.1/./index.html').pathname` normalizes away
+ * the "./" segment before the request line is even built, so a bug that only manifests
+ * for a raw/curl-style request (e.g. a dot-segment bypass of a literal path === check)
+ * can't be reproduced through axios's own `.get(url)`. Used only by the specs regression
+ * -testing that class of bug. */
+export const rawGet = (targetUrl: string, rawPath: string, cookie?: string): Promise<{ status: number, body: string }> => {
+  const { hostname, port } = new URL(targetUrl)
+  return new Promise((resolve, reject) => {
+    const req = http.request({ hostname, port, path: rawPath, method: 'GET', headers: cookie ? { Cookie: cookie } : undefined }, res => {
+      let body = ''
+      res.on('data', d => { body += d })
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, body }))
+    })
+    req.on('error', reject)
+    req.end()
+  })
 }
 
 export const checkPendingTasks = async () => {

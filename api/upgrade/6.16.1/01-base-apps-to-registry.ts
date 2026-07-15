@@ -249,10 +249,23 @@ const upgradeScript: UpgradeScript = {
         const unset: Record<string, ''> = {}
         if (baseApp.image === oldUrl + 'thumbnail.png') unset.image = ''
 
+        // Rewrite application references BEFORE touching the base-applications doc itself.
+        // These updateMany calls only ever match on the OLD url, so they're idempotent on
+        // re-run (a no-op once already rewritten) - unlike the base-applications re-key below,
+        // which changes the very key (`mapUrlToArtefact(baseApp.url)`) a re-run uses to find
+        // this doc again. Doing the re-key first would mean a crash between it and these two
+        // calls leaves the matching `applications` docs permanently orphaned on the old url:
+        // the next run's `mapUrlToArtefact(baseApp.url)` no longer matches the (already
+        // rewritten) base-applications doc, so `baseApp.url` here would never come up again.
+        // With the re-key last, a crash anywhere before it just gets replayed identically.
+        await db.collection('applications').updateMany({ url: oldUrl }, { $set: { url: newUrl, 'baseApp.url': newUrl, 'baseApp.id': newId } })
+        await db.collection('applications').updateMany({ urlDraft: oldUrl }, { $set: { urlDraft: newUrl, 'baseAppDraft.url': newUrl, 'baseAppDraft.id': newId } })
+        debug(`rewrote references ${oldUrl} -> ${newUrl}`)
+
         // Guard idempotency: the boot sync may have already upserted a doc at newId (e.g. it ran
         // between two executions of this script, or on a federated instance). Re-keying the legacy
         // doc onto that same id would collide with the unique index, so the synced doc wins - drop
-        // the legacy doc instead and only rewrite the application references.
+        // the legacy doc instead (references were already rewritten above regardless of this branch).
         const collision = await db.collection('base-applications').findOne({ id: newId })
         if (collision && collision._id.toString() !== baseApp._id.toString()) {
           await db.collection('base-applications').deleteOne({ _id: baseApp._id })
@@ -263,9 +276,6 @@ const upgradeScript: UpgradeScript = {
               ? { $set: { url: newUrl, artefactId, id: newId }, $unset: unset }
               : { $set: { url: newUrl, artefactId, id: newId } })
         }
-        await db.collection('applications').updateMany({ url: oldUrl }, { $set: { url: newUrl, 'baseApp.url': newUrl, 'baseApp.id': newId } })
-        await db.collection('applications').updateMany({ urlDraft: oldUrl }, { $set: { urlDraft: newUrl, 'baseAppDraft.url': newUrl, 'baseAppDraft.id': newId } })
-        debug(`rewrote references ${oldUrl} -> ${newUrl}`)
       } catch (err: any) {
         failures.push({ url: baseApp.url, error: err.message })
         debug(`FAILED ${baseApp.url}: ${err.message}`)

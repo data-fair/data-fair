@@ -5,7 +5,7 @@ import fsp from 'node:fs/promises'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import mongo from '#mongo'
 import pump from '../misc/utils/pipe.ts'
-import { parseAssetsPath, ensureBaseAppDir } from './registry.ts'
+import { parseAssetsPath, ensureBaseAppDir, refreshBaseAppDir } from './registry.ts'
 
 // Public, permission-free serving of base-app static files, shared by every
 // application configured on the same base app. Two tiers:
@@ -44,7 +44,17 @@ export const MIME: Record<string, string> = {
 router.get('/*assetPath', async (req, res) => {
   const segments = (req.params.assetPath ?? []) as unknown as string[]
   const parsed = parseAssetsPath([...segments])
-  if (!parsed || !parsed.filePath || parsed.filePath === 'index.html') {
+  if (!parsed || !parsed.filePath) {
+    res.status(404).send('unknown asset path')
+    return
+  }
+  // normalize BEFORE any guard: resolve-path allows "." segments through (it only blocks
+  // escaping the base dir), so a literal `filePath === 'index.html'` comparison can be
+  // bypassed with e.g. "./index.html". Collapse "." segments first, then reject anything
+  // that normalizes to empty, still starts with a dot segment (".", "..", "../x", hidden
+  // files), or resolves to the never-served-raw index.html.
+  const filePath = path.posix.normalize(parsed.filePath)
+  if (!filePath || filePath.startsWith('.') || filePath === 'index.html') {
     res.status(404).send('unknown asset path')
     return
   }
@@ -57,22 +67,21 @@ router.get('/*assetPath', async (req, res) => {
   if (parsed.version && parsed.version !== version) {
     // rolling-deploy self-heal: this pod may hold a stale extract while another
     // pod already serves a fresher patch; re-check the registry once
-    ensureBaseAppDir.delete(parsed.artefactId)
-    ;({ dir, version } = await ensureBaseAppDir(parsed.artefactId))
+    ;({ dir, version } = await refreshBaseAppDir(parsed.artefactId))
   }
-  let filePath: string
+  let resolvedPath: string
   try {
-    filePath = resolvePath(dir, parsed.filePath)
+    resolvedPath = resolvePath(dir, filePath)
   } catch {
     res.status(404).send('unknown asset path')
     return
   }
-  const stats = await fsp.stat(filePath).catch(() => null)
+  const stats = await fsp.stat(resolvedPath).catch(() => null)
   if (!stats || !stats.isFile()) {
     res.status(404).send('unknown asset path')
     return
   }
-  const ext = path.extname(parsed.filePath).toLowerCase()
+  const ext = path.extname(filePath).toLowerCase()
   res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream')
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Accel-Buffering', 'yes')
@@ -84,5 +93,5 @@ router.get('/*assetPath', async (req, res) => {
   const servedAsRequestedVersion = !!parsed.version && parsed.version === version
   if (servedAsRequestedVersion) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
   else res.setHeader('Cache-Control', 'public, max-age=300')
-  await pump(createReadStream(filePath), res)
+  await pump(createReadStream(resolvedPath), res)
 })

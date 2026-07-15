@@ -205,6 +205,21 @@ export async function syncRegistryBaseApps () {
   const artefacts = await listAllRegistryAppArtefacts()
   for (const artefact of artefacts) {
     try {
+      if (artefact.deprecated) {
+        // do not resurrect a deprecated artefact that has no local doc and no application
+        // referencing it: removeDeprecated() (called from init(), right before this sync)
+        // would delete such a doc on the very next boot, so inserting it here is pure churn
+        // that undoes the cleanup within the same boot cycle. Existing docs are still
+        // updated below (skip `continue`s only the insert case) so deprecation keeps
+        // propagating onto applications that do reference an already-synced doc.
+        const url = baseAppUrl(artefact._id)
+        const id = slug(url, { lower: true })
+        const [existing, nbApps] = await Promise.all([
+          mongo.baseApplications.findOne({ id }, { projection: { _id: 1 } }),
+          mongo.applications.countDocuments({ url })
+        ])
+        if (!existing && nbApps === 0) continue
+      }
       const baseApp = await initBaseAppFromArtefact(artefact._id)
       await syncBaseApp(baseApp)
       synced++

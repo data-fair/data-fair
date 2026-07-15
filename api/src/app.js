@@ -40,6 +40,13 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
+    // base applications are served exclusively from registry artefacts (no more external-url
+    // fallback) - a null value here boots fine and only fails at first app-serving request, so
+    // assert it eagerly and crash the process at startup instead.
+    if (!config.privateRegistryUrl || !config.secretKeys.registry) {
+      throw new Error('privateRegistryUrl and secretKeys.registry are required (base applications are served from the registry)')
+    }
+
     const limits = await import('./limits/router.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')

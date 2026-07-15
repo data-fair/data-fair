@@ -120,11 +120,8 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   // (e.g. left over from the removed external-url system) has no content to serve
   if (!baseApp.artefactId) return res.status(404).send(req.__('errors.missingBaseApp'))
 
-  // merge incoming an target URL elements
-  const incomingUrl = new URL('http://host' + req.url)
   const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
-  const wantsIndex = extraPathParts.length === 0 || (extraPathParts.length === 1 && extraPathParts[0] === 'index.html') ||
-    (incomingUrl.pathname.endsWith('/') && extraPathParts.length === 0)
+  const wantsIndex = extraPathParts.length === 0 || (extraPathParts.length === 1 && extraPathParts[0] === 'index.html')
 
   const { dir, version } = await ensureBaseAppDir(baseApp.artefactId)
   if (!wantsIndex && extraPathParts.length) {
@@ -137,7 +134,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const rawHtml = await fsp.readFile(path.join(dir, 'index.html'), 'utf8')
   const { packageName, minor } = parseArtefactId(baseApp.artefactId)
   const basePath = new URL(reqPublicBaseUrl(req)).pathname.replace(/\/$/, '')
-  const assetsBase: string | null = `${basePath}/app-assets/${packageName}/${minor}/${version}/`
+  const assetsBase = `${basePath}/app-assets/${packageName}/${minor}/${version}/`
 
   res.setHeader('x-resource', JSON.stringify({ type: permissions.reqResourceType(req), id: permissions.reqResource(req).id, title: encodeURIComponent(permissions.reqResource(req).title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
@@ -153,16 +150,14 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
 
   // point the app's own relative asset refs at the shared immutable assets mount
-  if (assetsBase) {
-    const rewriteRef = (value: string) => {
-      if (/^(https?:)?\/\//.test(value) || value.startsWith('/') || value.startsWith('data:') || value.startsWith('#')) return value
-      return assetsBase + value.replace(/^\.\//, '')
-    }
-    for (const node of [...head.childNodes, ...body.childNodes]) {
-      for (const attrName of ['src', 'href']) {
-        const attr = node.attrs?.find((a: any) => a.name === attrName)
-        if (attr?.value) attr.value = rewriteRef(attr.value)
-      }
+  const rewriteRef = (value: string) => {
+    if (/^(https?:)?\/\//.test(value) || value.startsWith('/') || value.startsWith('data:') || value.startsWith('#')) return value
+    return assetsBase + value.replace(/^\.\//, '')
+  }
+  for (const node of [...head.childNodes, ...body.childNodes]) {
+    for (const attrName of ['src', 'href']) {
+      const attr = node.attrs?.find((a: any) => a.name === attrName)
+      if (attr?.value) attr.value = rewriteRef(attr.value)
     }
   }
 
@@ -296,7 +291,17 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   res.send(parse5.serialize(document))
 })
 
-const serveBaseAppFile = async (res: express.Response, dir: string, filePath: string) => {
+const serveBaseAppFile = async (res: express.Response, dir: string, rawFilePath: string) => {
+  // normalize BEFORE any guard: resolve-path allows "." segments through (it only blocks
+  // escaping the base dir), so a raw file path of "./index.html" would otherwise resolve
+  // straight to the untransformed index.html (which still holds the %APPLICATION%
+  // placeholder). This fallback only ever serves bundle files, never the raw index — the
+  // transformed index is served separately by the wantsIndex branch above.
+  const filePath = path.posix.normalize(rawFilePath)
+  if (!filePath || filePath.startsWith('.') || filePath === 'index.html') {
+    res.status(404).type('text/plain').send()
+    return
+  }
   let resolved: string
   try {
     resolved = resolvePath(dir, filePath)

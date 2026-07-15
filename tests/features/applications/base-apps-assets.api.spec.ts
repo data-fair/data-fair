@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { test } from '@playwright/test'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
-import { axiosAuth, apiUrl } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, rawGet } from '../../support/axios.ts'
 import { publishMockApps } from '../../support/registry.ts'
 
 // nginx (dev/resources/nginx.conf.template) does not know about /app-assets yet
@@ -37,6 +37,14 @@ test.describe('base app assets serving', () => {
     // raw index.html is never exposed (contains the %APPLICATION% placeholder)
     await assert.rejects(anonymous.get('/app-assets/@test/monapp1/0.1/index.html'), (err: any) => err.status === 404)
     await assert.rejects(anonymous.get('/app-assets/@test/monapp1/0.1/0.1.0/index.html'), (err: any) => err.status === 404)
+    // dot-segment bypass of the raw-index.html block: resolve-path allows "." path
+    // segments, so a literal "=== 'index.html'" guard can be defeated with "./index.html".
+    // axios/URL parsing normalizes "./" away client-side, so this needs a raw request
+    // (curl --path-as-is style) to actually exercise the bug.
+    let raw = await rawGet(apiUrl, '/app-assets/@test/monapp1/0.1/./index.html')
+    assert.equal(raw.status, 404)
+    raw = await rawGet(apiUrl, '/app-assets/@test/monapp1/0.1/0.1.0/./index.html')
+    assert.equal(raw.status, 404)
     // directory root too
     await assert.rejects(anonymous.get('/app-assets/@test/monapp1/0.1/'), (err: any) => err.status === 404)
     // unknown artefact
