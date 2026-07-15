@@ -12,11 +12,17 @@ import { stampHistorizeMany } from '../integrity/outbox.ts'
 export type Identity = { type: string, id: string, name?: string }
 type Department = { id: string, name: string }
 
-const collectionNames = ['applications', 'datasets', 'catalogs', 'applications-keys', 'journals']
+// resources displayed with their owner name and carrying user permissions
+const resourceCollectionNames = ['applications', 'datasets', 'catalogs']
+// all collections holding owned documents (deleted along with the identity);
+// applications-keys and journals only store the owner type/id(/department) for filtering, no names
+const ownedCollectionNames = [...resourceCollectionNames, 'applications-keys', 'journals']
+// superadmin-managed resources carrying privateAccess grants (and permissions for remote-services)
+const privateAccessCollectionNames = ['remote-services', 'base-applications']
 
 // notify a name change across all resources owned by, shared with or authored by an identity
 export const renameIdentity = async (identity: Identity, departments?: Department[]) => {
-  for (const c of collectionNames) {
+  for (const c of resourceCollectionNames) {
     const collection = mongo.db.collection(c)
     const ownerFilter = { 'owner.type': identity.type, 'owner.id': identity.id }
     await collection.updateMany(ownerFilter, { $set: { 'owner.name': identity.name } })
@@ -40,8 +46,11 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
       if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
+  }
 
-    // privateAccess
+  // privateAccess grants live on superadmin-managed resources
+  for (const c of privateAccessCollectionNames) {
+    const collection = mongo.db.collection(c)
     const cursor2 = collection.find({ privateAccess: { $elemMatch: { type: identity.type, id: identity.id } } })
     for await (const doc of cursor2) {
       for (const privateAccess of doc.privateAccess) {
@@ -51,12 +60,6 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       }
       await collection.updateOne({ id: doc.id }, { $set: { privateAccess: doc.privateAccess } })
       if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
-    }
-
-    // created/updated events
-    if (identity.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { createdBy: { id: identity.id, name: identity.name } } })
-      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { updatedBy: { id: identity.id, name: identity.name } } })
     }
   }
 
@@ -86,10 +89,13 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
     await datasetsService.deleteDataset(app, dataset)
   }
 
-  for (const c of collectionNames) {
+  for (const c of ownedCollectionNames) {
     const collection = mongo.db.collection(c)
     await collection.deleteMany({ 'owner.type': identity.type, 'owner.id': identity.id })
+  }
 
+  for (const c of resourceCollectionNames) {
+    const collection = mongo.db.collection(c)
     // permissions
     const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
     for await (const doc of cursor) {
@@ -97,12 +103,18 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
       await collection.updateOne({ id: doc.id }, { $set: { permissions } })
       if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
+  }
 
-    // created/updated events
-    if (identity.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { createdBy: { id: identity.id, name: null } } })
-      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { updatedBy: { id: identity.id, name: null } } })
-    }
+  // remove grants on superadmin-managed resources too
+  await mongo.db.collection('remote-services').updateMany(
+    { permissions: { $elemMatch: { type: identity.type, id: identity.id } } },
+    { $pull: { permissions: { type: identity.type, id: identity.id } } } as any
+  )
+  for (const c of privateAccessCollectionNames) {
+    await mongo.db.collection(c).updateMany(
+      { privateAccess: { $elemMatch: { type: identity.type, id: identity.id } } },
+      { $pull: { privateAccess: { type: identity.type, id: identity.id } } } as any
+    )
   }
 
   // settings and limits

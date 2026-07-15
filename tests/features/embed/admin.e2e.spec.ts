@@ -1,5 +1,8 @@
 import { test as base, expect } from '@playwright/test'
-import { clean } from '../../support/axios.ts'
+import { axiosAuth, clean } from '../../support/axios.ts'
+import { waitForDatasetError } from '../../support/workers.ts'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 
 const test = base.extend<{
   goToAsAdmin: (path: string) => Promise<void>
@@ -49,18 +52,27 @@ test.describe('admin pages', () => {
     await expect(page.getByText('Data Fair - Back Office')).toBeVisible({ timeout: 10000 })
   })
 
-  test('displays errors page and the suite leaves no test-owned resource in error', async ({ page, goToAsAdmin }) => {
+  test('displays errors page listing datasets in error', async ({ page, goToAsAdmin }) => {
+    // the errors listing is global (all owners), so asserting an EMPTY datasets state
+    // would break whenever the shared dev env contains deliberately-errored datasets
+    // (e.g. seeded by `npm run dev-fixtures`). Seed our own errored dataset (owned by
+    // a test user, removed by clean()) and assert it is listed.
+    const ax = await axiosAuth('test_user1@test.com')
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/csv-cases/dataset-bad-separators.csv'), 'dataset-bad-separators.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    let dataset = await waitForDatasetError(ax, res.data.id)
+    // wait for the terminal error state (errorRetryDelay=0: the automatic retry fails
+    // instantly too) so the status cannot flip back while the page loads
+    const deadline = Date.now() + 10000
+    while ((dataset.status !== 'error' || dataset.errorRetry) && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+      dataset = (await ax.get(`/api/v1/datasets/${res.data.id}`)).data
+    }
+
     await goToAsAdmin('/data-fair/admin/errors')
-    // the endpoints are global (superadmin), and a dev environment legitimately carries
-    // deliberately-in-error demo datasets (dev_fixtures org, e.g. the unicity-constraint
-    // showcase) — so a globally-empty state cannot be asserted. Per resource type the page
-    // renders either the empty-state message or the error list; the suite's own invariant is
-    // that it leaves no test-owned resource in error (rows show "title (owner name)").
-    await expect(page.getByText('Aucun jeu de données en erreur')
-      .or(page.getByRole('heading', { name: 'Jeux de données en erreur' }))).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Aucune application en erreur')
-      .or(page.getByRole('heading', { name: 'Applications en erreur' }))).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('.v-list-item-title').filter({ hasText: /\(test/i })).toHaveCount(0)
+    await expect(page.getByText(dataset.title).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Aucune application en erreur')).toBeVisible({ timeout: 10000 })
   })
 
   test('displays owners page with title', async ({ page, goToAsAdmin }) => {

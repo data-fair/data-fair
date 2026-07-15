@@ -1,5 +1,8 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
 import {
   prepareEsQuery,
   completeSort,
@@ -10,6 +13,9 @@ import {
   sortBuckets,
   prepareBucketResult
 } from '../../../../api/src/api-compat/ods/operations.ts'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 // pinning tests for the pure ODS → ES query translation + result shaping extracted from
 // api-compat/ods/index.ts (Phase 7). The PEG parsers themselves are covered in compat-ods.unit.spec.ts.
@@ -186,5 +192,32 @@ test.describe('prepareBucketResult', () => {
     assert.deepEqual(prepareBucketResult({}, { key: 'k', m: { value: 1 } }, { m: {} }, false), { key: 'k', m: 1 })
     const r = prepareBucketResult({}, { key: 0, from_as_string: '2020-01-01T00:00:00Z', to_as_string: '2021-01-01T00:00:00Z' }, {}, false)
     assert.equal(r.key, '[2020-01-01T00:00:00.000Z, 2021-01-01T00:00:00.000Z[')
+  })
+})
+
+test.describe('transforms.date_transform', () => {
+  // reference = the historical implementation (dayjs.tz per value) — the optimized version must be
+  // byte-identical across timezones (incl. DST boundaries and half-hour offsets) and format tokens
+  const referenceDateTransform = (dateStr: string, tz?: string, format?: string) => {
+    const dayjsFormat = format?.replace(/yy/g, 'YY').replace(/d/g, 'D')
+    return dayjs(dateStr).tz(tz ?? 'utc').format(dayjsFormat)
+  }
+
+  test('matches the historical dayjs.tz output', () => {
+    const dates = [
+      '2024-01-15T10:30:45.123Z', '2024-06-15T23:45:00Z',
+      '2024-03-31T00:30:00Z', '2024-03-31T01:30:00Z', // Europe/Paris DST spring-forward
+      '2024-10-27T00:30:00Z', '2024-11-03T05:30:00Z', // fall-back (Paris + New York)
+      '1969-12-31T23:59:59Z'
+    ]
+    const timezones = [undefined, 'utc', 'UTC', 'Europe/Paris', 'America/New_York', 'Asia/Kolkata'] // Kolkata = +05:30
+    const formats = [undefined, 'yyyy-MM-dd', 'dd/MM/yy HH:mm:ss', 'YYYY [d] HH', 'd MMM YYYY, Z']
+    for (const d of dates) {
+      for (const tz of timezones) {
+        for (const f of formats) {
+          assert.equal(transforms.date_transform(d, tz, f), referenceDateTransform(d, tz, f), `${d} ${tz} ${f}`)
+        }
+      }
+    }
   })
 })

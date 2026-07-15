@@ -39,7 +39,7 @@ import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UpdateFilter } from 'mongodb'
+import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
@@ -485,10 +485,21 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
+  // index for the result-completion loops below (operations.find was an O(N) scan per mongo result,
+  // O(N²) per chunk); chunks are deduplicated upstream but keep the FIRST occurrence per _id to match
+  // operations.find semantics exactly
+  const operationsById = new Map<string, Operation>()
+  for (const op of operations) {
+    if (!operationsById.has(op._id)) operationsById.set(op._id, op)
+  }
+
   // fill data with previous bodies for patch operations
   if (patchPreviousFilters.length) {
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
+    let pp = 0
     for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
+      // per-result separator pass + body spreads + getLineHash add up, so yield like the build loop above
+      if (++pp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
       // manage the case of older data that was stored when we didn't apply the separator before storing lines
       for (const f of dataset.schema) {
@@ -501,7 +512,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           operation.body = { ...previousBody, ...operation.body }
           Object.assign(operation.fullBody, operation.body)
@@ -519,7 +530,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingPatchPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -530,18 +541,20 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // check delete operations and complete their primary key info
   if (deletePreviousFilters.length) {
     const missingDeletePrevious = new Set(deletePreviousFilters.map(f => f._id))
+    let dp = 0
     for await (const deletePrevious of c.find({ $or: deletePreviousFilters }).project(primaryKeyProjection)) {
+      if (++dp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = deletePrevious
       if (!_deleted) {
         missingDeletePrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           Object.assign(operation.fullBody, previousBody)
         }
       }
     }
     for (const _id of missingDeletePrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -621,11 +634,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // untouched here — overwriting their _status would let the failing line be persisted.
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
+    let cp = 0
     for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
+      if (++cp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted } = checkPrevious
       if (!_deleted) {
         missingCheckPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation && !operation._error) {
           if (operation._action === 'create') {
             operation._status = 409
@@ -641,7 +656,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingCheckPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation && !operation._error) {
         if (operation._action === 'create') {
           operation._status = 201
@@ -743,7 +758,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       {
         $set: {
           dataUpdatedAt: updatedAt.toISOString(),
-          dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+          dataUpdatedBy: { id: sessionState.user.id },
           _modified: computeModified({ ...dataset, dataUpdatedAt: updatedAt.toISOString() })
         }
       })
@@ -1385,6 +1400,14 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
   const c = collection(dataset)
+  // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
+  let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
+  const flush = async () => {
+    if (!bulkOps.length) return
+    const ops = bulkOps
+    bulkOps = []
+    await c.bulkWrite(ops, { ordered: false })
+  }
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
@@ -1394,7 +1417,16 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
           if (key in item && patch.$set) patch.$set[key] = item[key]
           else if (patch.$unset) patch.$unset[key] = item[key]
         }
-        await c.updateOne({ _id: item._id }, patch)
+        bulkOps.push({ updateOne: { filter: { _id: item._id }, update: patch } })
+        if (bulkOps.length >= config.mongo.maxBulkOps) await flush()
+        cb()
+      } catch (err: any) {
+        cb(err)
+      }
+    },
+    async final (cb) {
+      try {
+        await flush()
         cb()
       } catch (err: any) {
         cb(err)

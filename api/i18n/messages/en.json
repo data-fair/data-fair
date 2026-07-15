@@ -26,6 +26,7 @@
 		"queryAdviceConceptUnknown": "%s was ignored — the _c_ prefix is for concept filters and matched no concept in this dataset",
 		"queryAdviceUnknownParam": "%s is not a recognized query parameter and was ignored",
 		"queryAdviceUncertainFilter": "\"%s\"",
+		"queryAdviceTruncatedMetricsIntro": "some metrics may be computed on incomplete data: values longer than %s characters are not taken into account on the following column(s)",
 		"exceedAnonymousRateLimiting": "Trop many messages in a short interval. Please wait and try again.",
 		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
 		"requireAnonymousToken": "An anonymous token is required.",

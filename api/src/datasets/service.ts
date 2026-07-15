@@ -25,7 +25,6 @@ import * as integrityOps from '../integrity/operations.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
-import md5File from 'md5-file'
 import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -286,7 +285,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   dataset.owner = owner
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
-  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
+  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
@@ -310,7 +309,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
-    const md5 = await md5File(datasetFile.path)
+    const md5 = datasetFile.md5
     const filePatch: any = {
       status: 'created',
       dataUpdatedBy: dataset.updatedBy,

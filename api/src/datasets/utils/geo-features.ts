@@ -2,6 +2,7 @@
 // contexts (the streamed geojson pipeline and the geojson2pbf render worker) WITHOUT pulling in geo.ts's
 // heavy deps (config/turf/proj4/child-process). geo.ts re-exports them so existing importers
 // (shp/tiles/wkt) keep working unchanged.
+import { geojsonToWKT } from '@terraformer/wkt'
 import { getFlatten } from './flatten.ts'
 
 // Per-hit GeoJSON Feature builder — shared by result2geojson (buffered: geojson2shp, vector tiles) and the
@@ -38,4 +39,30 @@ export const result2geojson = (esResponse: any, flatten: (o: Record<string, any>
 export const rawEsBuffer2geojson = (rawBuffer: Uint8Array, dataset: any): { esResponse: any, geojson: any } => {
   const esResponse = JSON.parse(Buffer.from(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.byteLength).toString())
   return { esResponse, geojson: result2geojson(esResponse, getFlatten(dataset, true)) }
+}
+
+// format=wkt page builder — config-free so the render worker (threads/geojson2shp.ts `wkt` export) and
+// unit tests can import it without geo.ts's heavy deps. geo.ts re-exports result2wkt for compatibility.
+export const result2wkt = (esResponse: any): string => {
+  const geometryCollection = {
+    type: 'GeometryCollection',
+    geometries: esResponse.hits.hits.map((hit: any) => {
+      let geometry = hit._source._geoshape
+      if (!geometry && hit._source._geopoint) {
+        const [lat, lon] = hit._source._geopoint.split(',')
+        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+      }
+      return geometry
+    }).filter((geometry: any) => !!geometry)
+  }
+  return geojsonToWKT(geometryCollection)
+}
+
+// Zero-copy format=wkt prelude: wrap the TRANSFERRED bytes without copying (see rawEsBuffer2geojson),
+// parse, serialize the page to WKT. count + lastHitSort go back to read.ts so it reproduces the exact
+// Link header the buffered path built from esResponse.
+export const rawEsBuffer2wkt = (rawBuffer: Uint8Array): { wkt: Buffer, count: number, lastHitSort?: any[] } => {
+  const esResponse = JSON.parse(Buffer.from(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.byteLength).toString())
+  const hits = esResponse.hits.hits
+  return { wkt: Buffer.from(result2wkt(esResponse)), count: hits.length, lastHitSort: hits[hits.length - 1]?.sort }
 }
