@@ -1,7 +1,10 @@
 # Scaleway lock-prolongation validation spike — design
 
-> Status: approved design, spike not yet run. Companion to
-> [docs/architecture/integrity.md](../architecture/integrity.md) §3.4 / §12.
+> Status: spike run 2026-07-16 — **PASS on all cases** (prolongation works on Scaleway;
+> the reported bug did not reproduce). Results in
+> [the runbook](2026-07-16-scaleway-lock-prolongation-spike-runbook.md); verdict recorded
+> in [integrity.md](../architecture/integrity.md) §3.4 / §10 / §12. Cleanup of the
+> throwaway bucket pending (block 6, after 2026-07-18T12:24:21Z).
 
 ## Goal
 

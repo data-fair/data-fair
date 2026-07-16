@@ -184,10 +184,12 @@ such as Veeam/Kopia use). Owned by the sliding checker (§3.3): when a long-live
 check passes and its horizon nears expiry, the checker extends the anchor's lock; on a
 mismatch it raises a breach instead.
 
-> **Dependency:** this relies on the lock-prolongation operation working on the target
-> provider — exactly the operation flagged as buggy on Scaleway (§12). That makes the
-> validation spike a **blocking dependency**, not a nice-to-have. If it cannot be made to
-> work, fall back to Option A.
+> **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
+> (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
+> without version-id, Standard and Glacier classes — see
+> `docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is
+> confirmed as the primary renewal model; Option A remains a documented fallback for
+> providers without prolongation.
 
 **Degraded fallback — re-anchoring (Option A), added later if needed.** Instead of extending
 the lock, write a fresh revision of the still-current state (operation type `reanchor`) with
@@ -456,10 +458,11 @@ speculative framework.
    ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current state stays
    protected indefinitely, and surfacing a loud `lastRenewal: failed` state (alert + UI warning) if
    a provider rejects the prolongation. The superadmin enable/disable/check/fix API plus the admin
-   UI panel (§7) are wired end to end. **Immediate next steps for this target:** *level 2 (repair)*
-   — copy the file into the historized bucket, size-gated; and **re-anchoring (§3.4 Option A)** as
-   the deferred fallback for providers that cannot prolong a lock (the Scaleway prolongation bug,
-   §12) — implemented only if that bug is confirmed to still block us.
+   UI panel (§7) are wired end to end. Lock prolongation is **validated on Scaleway** (spike,
+   2026-07-16 — §12), so renewal-by-extension stands as the primary model on the target provider.
+   **Immediate next step for this target:** *level 2 (repair)* — copy the file into the historized
+   bucket, size-gated. Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a
+   portability note for providers that cannot prolong a lock.
 2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets.**
    The revision store is now **class-segmented** (§3.1): a dataset carries independent `file`
    and `metadata` anchor sequences, revision histories and verdicts under one
@@ -498,12 +501,14 @@ the portable baseline for the OSS/Garage story.
 
 ## 12. Open questions / risks
 
-- **Scaleway "prolong lock" bug — BLOCKING.** A reported defect breaks *prolonging* an
-  existing lock (the Veeam incompatibility). Our primary lock-renewal model (extension,
-  §3.4 Option B) depends on exactly this operation — and dataset files/metadata are
-  **long-lived** resources that need renewal — so a **validation spike is a blocking
-  prerequisite**: if prolongation cannot be made to work on Scaleway, the primary model is
-  not viable and we fall back to re-anchoring (§3.4 Option A).
+- **Scaleway "prolong lock" bug — RESOLVED (2026-07-16).** A reported defect (the Veeam
+  incompatibility) supposedly broke *prolonging* an existing lock — the exact operation our
+  primary lock-renewal model (extension, §3.4 Option B) depends on. The validation spike
+  **did not reproduce it**: `PutObjectRetention` (COMPLIANCE, later retain-until) works on
+  Scaleway fr-par with and without version-id, on inline and default-retention locks, on
+  Standard and Glacier classes, while shortening/deleting are correctly refused
+  (`docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is no
+  longer blocked; re-anchoring (Option A) stays a portability fallback only.
 - **Editable-dataset hashing — reframed, far narrower than first feared (§5).** ES drops out
   (rebuildable projection); only the Mongo lines collection is a target; level 1 is an *exact*
   fold over the precomputed `_hash` (sampling only past a threshold); level 2 is the §3.5 per-line
