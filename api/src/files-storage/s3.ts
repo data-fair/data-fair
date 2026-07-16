@@ -13,6 +13,7 @@ import { S3ReadStream } from 's3-readstream'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
 import { HttpAgent, HttpsAgent } from 'agentkeepalive'
 import { retryOnMissing } from './s3-retry.ts'
+import { redactS3Config } from './operations.ts'
 
 const debug = debugModule('s3')
 
@@ -28,7 +29,7 @@ export class S3Backend implements FileBackend {
   private metadataClient: S3Client
 
   constructor () {
-    debug('create client', config.s3)
+    debug('create client', redactS3Config(config.s3))
     // Customizing the handler for high throughput
     // and splitting data and metadata client so that long running queries do not block short metadata queries
     // TODO: monitor the sockets like we do in @data-fair/lib-node/http-agents ?

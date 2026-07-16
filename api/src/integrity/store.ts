@@ -2,7 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, Put
 import type { RevisionContext } from './operations.ts'
 
 export type RevisionBody = {
-  hash: { md5: string }
+  hash: { md5?: string, sha256?: string }
   context: RevisionContext
   dataset: { id: string, slug?: string }
 }
@@ -39,15 +39,15 @@ export class IntegrityStore {
     }))
   }
 
-  async listRevisionKeys (prefix: string): Promise<string[]> {
-    const keys: string[] = []
+  async listRevisions (prefix: string): Promise<{ key: string, lastModified?: Date }[]> {
+    const revisions: { key: string, lastModified?: Date }[] = []
     let ContinuationToken: string | undefined
     do {
       const res = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken }))
-      for (const o of res.Contents ?? []) if (o.Key) keys.push(o.Key)
+      for (const o of res.Contents ?? []) if (o.Key) revisions.push({ key: o.Key, lastModified: o.LastModified })
       ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
     } while (ContinuationToken)
-    return keys
+    return revisions
   }
 
   async getRevision (key: string): Promise<RevisionBody> {
