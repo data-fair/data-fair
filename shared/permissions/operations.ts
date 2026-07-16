@@ -172,7 +172,7 @@ const datasetOverrides: Record<string, OpOverride> = {
   writePublicationSites: { title: L('Gérer les sites de publication', 'Manage publication sites') },
   writeExports: { title: L('Gérer les exports', 'Manage exports') },
   setReadApiKey: { title: L("Gérer la clé d'API de lecture", 'Manage the read API key') },
-  writePartOf: { title: L('Gérer la ressource parente', 'Manage the parent resource') },
+  writePartOf: { title: L("Gérer l'attribut enfant", 'Manage the child attribute') },
   readIntegrity: { title: L("Lire l'état d'intégrité", 'Read the integrity state') },
   readIntegrityRevisions: { title: L("Lister les révisions d'intégrité", 'List the integrity revisions') },
   'realtime-integrity': { title: L("Suivre l'état d'intégrité en temps réel", 'Track the integrity state in real time') },
@@ -234,7 +234,7 @@ const applicationOverrides: Record<string, OpOverride> = {
   setKeys: { title: L('Modifier les clés', 'Update the keys') },
   writePublications: { title: L('Gérer les publications', 'Manage publications') },
   writePublicationSites: { title: L('Gérer les sites de publication', 'Manage publication sites') },
-  writePartOf: { title: L("Gérer l'application parente", 'Manage the parent application') },
+  writePartOf: { title: L("Gérer l'attribut enfant", 'Manage the child attribute') },
   post: { title: L('Créer une application', 'Create an application') }
 }
 

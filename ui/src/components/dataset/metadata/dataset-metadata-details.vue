@@ -151,7 +151,7 @@
             {{ t('partOfLabel') }}
           </div>
           <div>
-            <router-link :to="`/${dataset.partOf.type === 'dataset' ? 'dataset' : 'application'}/${dataset.partOf.id}`">
+            <router-link :to="`/${dataset.partOf.type}/${dataset.partOf.id}`">
               {{ dataset.partOf.title }}
             </router-link>
           </div>

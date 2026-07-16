@@ -3,6 +3,7 @@ import eventBy from '../../contract/event-by.js'
 import capabilities from '../../contract/capabilities.js'
 import _publicationSchema from '../../contract/publication.js'
 import * as masterData from '../../contract/master-data.js'
+import partOf from '../../contract/part-of.js'
 
 const publicationSchema = JSON.parse(JSON.stringify(_publicationSchema))
 
@@ -820,26 +821,9 @@ const datasetProperties = {
     }
   },
   partOf: {
-    type: 'object',
+    ...partOf,
     title: 'Jeu de données enfant',
-    description: 'Si renseigné, ce jeu de données n\'existe que pour servir une ressource parente (un jeu de données virtuel dont il est membre, une application qui l\'alimente,...). Il est alors masqué des listes par défaut.',
-    additionalProperties: false,
-    required: ['type', 'id'],
-    properties: {
-      type: {
-        type: 'string',
-        title: 'Type de la ressource parente',
-        enum: ['dataset', 'application']
-      },
-      id: {
-        type: 'string',
-        title: 'Identifiant de la ressource parente'
-      },
-      title: {
-        type: 'string',
-        title: 'Titre de la ressource parente'
-      }
-    }
+    description: 'Si renseigné, ce jeu de données n\'existe que pour servir une ressource parente. Il est alors masqué des listes par défaut.'
   },
   thumbnails: {
     type: 'object',

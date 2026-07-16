@@ -89,5 +89,6 @@ const { t } = useI18n()
 const showDialog = ref(false)
 
 const isDataset = computed(() => props.resourceType === 'datasets')
-const parentLink = computed(() => `/${props.resource.partOf?.type === 'dataset' ? 'dataset' : 'application'}/${props.resource.partOf?.id}`)
+// the detail routes are the singular of the resource type, which is exactly what partOf.type holds
+const parentLink = computed(() => `/${props.resource.partOf?.type}/${props.resource.partOf?.id}`)
 </script>

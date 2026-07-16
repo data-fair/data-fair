@@ -169,10 +169,8 @@ const showDialog = defineModel<boolean>({ default: false })
 
 const isDataset = computed(() => props.resourceType === 'datasets')
 
-const parentLink = computed(() => {
-  const type = props.resource.partOf?.type === 'dataset' ? 'dataset' : 'application'
-  return `/${type}/${props.resource.partOf?.id}`
-})
+// the detail routes are the singular of the resource type, which is exactly what partOf.type holds
+const parentLink = computed(() => `/${props.resource.partOf?.type}/${props.resource.partOf?.id}`)
 
 const save = useAsyncAction(
   async () => {

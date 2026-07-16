@@ -1,6 +1,7 @@
 import owner from '../../contract/owner.js'
 import eventBy from '../../contract/event-by.js'
 import publicationSchema from '../../contract/publication.js'
+import partOf from '../../contract/part-of.js'
 
 const baseAppReference = {
   type: 'object',
@@ -183,28 +184,9 @@ export default {
       }
     },
     partOf: {
-      type: 'object',
+      ...partOf,
       title: 'Application enfant',
-      description: 'Si renseigné, cette application n\'existe que pour être embarquée dans une application parente (par exemple un tableau de bord). Elle est alors masquée des listes par défaut.',
-      additionalProperties: false,
-      required: ['type', 'id'],
-      properties: {
-        type: {
-          type: 'string',
-          title: 'Type de la ressource parente',
-          // always 'application' (an application can only be the child of another application):
-          // the constant discriminator is kept so both resource types share the same partOf modeling
-          enum: ['application']
-        },
-        id: {
-          type: 'string',
-          title: 'Identifiant de l\'application parente'
-        },
-        title: {
-          type: 'string',
-          title: 'Titre de l\'application parente'
-        }
-      }
+      description: 'Si renseigné, cette application n\'existe que pour servir une ressource parente. Elle est alors masquée des listes par défaut.'
     },
     permissions: { $ref: 'https://github.com/data-fair/data-fair/permissions' }
   }
