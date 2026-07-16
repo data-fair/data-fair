@@ -12,7 +12,7 @@ import { checkConstraints } from './constraints.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import { isMasterData } from '../../../contract/master-data.js'
-import { isSameOwner } from '../../misc/utils/part-of.ts'
+import * as partOfUtils from '../../misc/utils/part-of.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -177,46 +177,18 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch._readApiKey = null
   }
 
-  // a reference (master-data) dataset exists to be reused across many contexts, so it cannot be
-  // defined as a child of a single parent — and, reciprocally, a dataset already defined as a child
-  // cannot be turned into reference data. Only guard the patch that actively establishes one of the
-  // two states, checking it against the effective value of the other.
-  const effectiveMasterData = 'masterData' in patch ? patch.masterData : dataset.masterData
+  // a dataset already defined as a child cannot be turned into reference data; the reciprocal rule
+  // (a reference dataset cannot become a child) belongs to the child-eligibility rules applied by
+  // prepareAtDefinition below. Only guard the patch that actively establishes the state, checked
+  // against the effective value of the other side: a naive "both present → 400" would lock every
+  // unrelated patch on a legacy document holding both.
   const effectivePartOf = 'partOf' in patch ? patch.partOf : dataset.partOf
-  if ('partOf' in patch && patch.partOf && isMasterData(effectiveMasterData)) {
-    throw httpError(400, 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource')
-  }
   if ('masterData' in patch && isMasterData(patch.masterData) && effectivePartOf) {
     throw httpError(400, 'Un jeu de données défini comme enfant d\'une autre ressource ne peut pas devenir une donnée de référence')
   }
 
-  if (patch.partOf) {
-    if (patch.partOf.id === dataset.id) throw httpError(400, 'Un jeu de données ne peut pas être défini comme son propre enfant')
-    // only file, editable and metaOnly datasets are eligible: a virtual dataset can never be a
-    // child, which also prevents partOf chains on the datasets side (only virtual datasets can
-    // be parents of datasets)
-    if (dataset.isVirtual) throw httpError(400, 'Un jeu de données virtuel ne peut pas être défini comme enfant d\'une autre ressource')
-    // a dataset can only be defined as a child if it is used by exactly one parent resource — 0 or
-    // 2+ parents (virtual datasets and/or applications combined) makes the relationship ambiguous
-    const [virtualParents, appParents] = await Promise.all([
-      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1, partOf: 1, owner: 1 } }).toArray(),
-      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1, partOf: 1, owner: 1 } }).toArray()
-    ])
-    const parents = [
-      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title, partOf: d.partOf, owner: d.owner })),
-      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title, partOf: a.partOf, owner: a.owner }))
-    ]
-    if (parents.length !== 1) throw httpError(400, `Ce jeu de données ne peut être défini comme enfant que s'il est utilisé par une seule ressource parente (jeu de données virtuel ou application) ; il en compte actuellement ${parents.length}.`)
-    const [parent] = parents
-    if (parent.type !== patch.partOf.type || parent.id !== patch.partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique ressource qui utilise ce jeu de données.')
-    // a resource that is itself a child cannot be a parent: chains would leave silent orphans
-    // behind cascading deletions
-    if (parent.partOf) throw httpError(400, 'La ressource parente est elle-même définie comme enfant d\'une autre ressource, les chaînages ne sont pas autorisés')
-    // both always live in the same account, so that cascading deletions never reach another account
-    if (!isSameOwner(parent.owner, dataset.owner)) throw httpError(400, 'La ressource parente doit appartenir au même compte que la ressource enfant')
-    // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
-    patch.partOf.title = parent.title
-  }
+  // defining the dataset as a child is validated on its effective (patched) view
+  if (patch.partOf) await partOfUtils.prepareAtDefinition('dataset', { ...dataset, ...patch }, patch.partOf)
 
   const coordXProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
   const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')

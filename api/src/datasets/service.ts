@@ -6,8 +6,7 @@ import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { preparePartOfAtCreation } from '../misc/utils/part-of.ts'
-import { isMasterData } from '../../contract/master-data.js'
+import * as partOf from '../misc/utils/part-of.ts'
 import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
@@ -84,19 +83,11 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     extraFilters.push({ finalizedAt: { $ne: null } })
   }
 
-  // datasets that only exist to serve a parent resource are hidden by default: ?partOf=true reveals
-  // only the children, ?partOf=<parentId> reveals the children of that specific parent. A lookup by
-  // known unique ref (id/slug), or the "children" reverse-lookup (e.g. nbVirtualDatasets: which
-  // virtual datasets reference me as a member) is never filtered — those are targeted fetches, not
-  // browsing, and must keep working even when the referencing virtual dataset happens to itself be
-  // someone's child.
-  if (reqQuery.partOf === 'true') {
-    extraFilters.push({ 'partOf.id': { $exists: true } })
-  } else if (reqQuery.partOf) {
-    extraFilters.push({ 'partOf.id': reqQuery.partOf })
-  } else if (!reqQuery.id && !reqQuery.ids && !reqQuery.slug && !reqQuery.slugs && !reqQuery.children) {
-    extraFilters.push({ 'partOf.id': { $exists: false } })
-  }
+  // children are hidden by default (see partOf.listFilter); lookups by known id/slug and the
+  // "children" reverse-lookup (e.g. nbVirtualDatasets: which virtual datasets reference me as a
+  // member) are targeted fetches, not browsing, and are exempted
+  const partOfFilter = partOf.listFilter(reqQuery, ['id', 'ids', 'slug', 'slugs', 'children'])
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
   if (reqQuery.type) {
@@ -300,13 +291,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   const dataset = { ...body }
   dataset.owner = owner
 
-  if (dataset.partOf) {
-    // same eligibility conditions as the flag-time guards in preparePatch, minus the reference to
-    // the parent which cannot exist yet — the parent is expected to reference the child right after
-    if (dataset.isVirtual) throw httpError(400, 'Un jeu de données virtuel ne peut pas être défini comme enfant d\'une autre ressource')
-    if (isMasterData(dataset.masterData)) throw httpError(400, 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource')
-    await preparePartOfAtCreation(dataset.partOf, owner, sessionState)
-  }
+  // a dataset can be created directly as the child of the parent that will reference it right after
+  if (dataset.partOf) await partOf.prepareAtCreation('dataset', dataset, sessionState)
 
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
@@ -418,38 +404,6 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.masterData)
 
   return insertedDataset
-}
-
-// datasets with `partOf` defined and pointing at this virtual dataset or application (i.e. its children)
-export const countPartOfChildren = async (parentType: 'dataset' | 'application', parentId: string) => {
-  return mongo.datasets.countDocuments({ 'partOf.type': parentType, 'partOf.id': parentId })
-}
-
-export const listPartOfChildrenIds = async (parentType: 'dataset' | 'application', parentId: string) => {
-  const children = await mongo.datasets.find({ 'partOf.type': parentType, 'partOf.id': parentId }, { projection: { _id: 0, id: 1 } }).toArray()
-  return children.map(c => c.id)
-}
-
-export const listPartOfChildren = async (parentType: 'dataset' | 'application', parentId: string) => {
-  return mongo.datasets.find({ 'partOf.type': parentType, 'partOf.id': parentId }).toArray()
-}
-
-// called when deleting a resource that has partOf children, or editing its configuration in a way
-// that stops referencing some of them (childIds restricts the cascade to those orphans): either
-// cascade the deletion, or unflag them so they survive on their own.
-// No per-child permission check is performed: a child exists only to serve its parent and shares its
-// parent's lifecycle, so whoever can edit the parent to the point of no longer referencing the child
-// decides what becomes of it. Callers only have to authorize the parent operation.
-export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'application', parentId: string, action: 'delete' | 'unflag', childIds?: string[]) => {
-  const filter = { 'partOf.type': parentType, 'partOf.id': parentId, ...(childIds ? { id: { $in: childIds } } : {}) }
-  if (action === 'unflag') {
-    await mongo.datasets.updateMany(filter, { $unset: { partOf: 1 } })
-    return
-  }
-  const children = await mongo.datasets.find(filter).toArray()
-  for (const child of children) {
-    await deleteDataset(app, child)
-  }
 }
 
 /**

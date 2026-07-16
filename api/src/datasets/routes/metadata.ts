@@ -24,8 +24,9 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren, listPartOfChildrenIds, listPartOfChildren, changeDatasetOwner } from '../service.ts'
-import { requireChildrenAction } from '../../misc/utils/part-of.ts'
+import { findDatasets, applyPatch, deleteDataset, changeDatasetOwner } from '../service.ts'
+import * as partOf from '../../misc/utils/part-of.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -153,20 +154,11 @@ export const registerMetadataRoutes = (router: Router) => {
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
 
       // dropping members from a virtual dataset can orphan datasets still defined as its partOf
-      // children: mirror the deletion guard, restricted to the members actually removed. Detected
-      // (and refused) up-front, but applied only once the patch itself is persisted — the cascade is
-      // irreversible and preparePatch/applyPatch can still reject the request.
-      let orphans: string[] | undefined
-      let childrenAction: 'delete' | 'unflag' | undefined
-      if (dataset.isVirtual && patch.virtual) {
-        const childrenIds = await listPartOfChildrenIds('dataset', dataset.id)
-        const newChildren: string[] = patch.virtual.children ?? []
-        const detected = childrenIds.filter(id => !newChildren.includes(id))
-        if (detected.length) {
-          childrenAction = requireChildrenAction(req.query.childrenAction as string | undefined, `Cette modification retire ${detected.length} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-          orphans = detected
-        }
-      }
+      // children: detected (and refused) up-front, but applied only once the patch itself is
+      // persisted — the cascade is irreversible and preparePatch/applyPatch can still reject the request
+      const orphans = patch.virtual
+        ? await partOf.detectOrphans('dataset', dataset, patch.virtual, req.query.childrenAction as string | undefined)
+        : undefined
 
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
@@ -178,7 +170,7 @@ export const registerMetadataRoutes = (router: Router) => {
             throw httpError(400, req.__('errors.dupSlug'))
           })
 
-        if (orphans && childrenAction) await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction, orphans)
+        await partOf.applyOrphans({ app: req.app, sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
 
         if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
@@ -210,13 +202,8 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const sessionState = reqSessionAuthenticated(req)
 
-    // a child only exists to serve its parent, and both always live in the same account: it can only
-    // follow its parent, never move on its own
-    if (dataset.partOf) {
-      throw httpError(409, 'Ce jeu de données est défini comme enfant d\'une autre ressource, il ne peut pas changer de compte indépendamment de celle-ci.')
-    }
-    // only a virtual dataset can be the parent of datasets, no need to look for children otherwise
-    const children: any[] = dataset.isVirtual ? await listPartOfChildren('dataset', dataset.id) : []
+    partOf.assertOwnerChangeAllowed(dataset)
+    const children = (await partOf.listChildren('dataset', dataset)).map(child => child.resource)
     const movedDatasets = [dataset, ...children]
 
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
@@ -249,9 +236,7 @@ export const registerMetadataRoutes = (router: Router) => {
     }
 
     const patchedDataset = await changeDatasetOwner(dataset, req.body, sessionState)
-    for (const child of children) {
-      await syncRemoteService(await changeDatasetOwner(child, req.body, sessionState))
-    }
+    await partOf.changeChildrenOwner({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.body)
 
     const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
     const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
@@ -283,12 +268,8 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
 
-    // only a virtual dataset can be the parent of datasets, no need to look for children otherwise
-    const childrenCount = dataset.isVirtual ? await countPartOfChildren('dataset', dataset.id) : 0
-    if (childrenCount > 0) {
-      const childrenAction = requireChildrenAction(req.query.childrenAction as string | undefined, `Ce jeu de données virtuel a ${childrenCount} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-      await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction)
-    }
+    // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
+    await partOf.handleChildrenBeforeDeletion({ app: req.app, sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.query.childrenAction as string | undefined)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

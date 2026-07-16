@@ -5,7 +5,7 @@ import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { preparePartOfAtCreation, type PartOf } from '../misc/utils/part-of.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
@@ -112,7 +112,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
     // partOf is only meaningful on the creation branch: an update goes through replaceApplication,
     // which preserves the stored partOf and ignores the one carried by the body
     if (newApplication.partOf && !await mongo.applications.countDocuments({ id: newApplication.id })) {
-      await preparePartOfAtCreation(newApplication.partOf as PartOf, newApplication.owner, ctx.sessionState)
+      await partOf.prepareAtCreation('application', newApplication, ctx.sessionState)
     }
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {

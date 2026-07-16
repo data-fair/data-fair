@@ -12,8 +12,7 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
-import { countPartOfChildren, handlePartOfChildren } from '../datasets/service.ts'
-import { preparePartOfAtCreation, requireChildrenAction, type PartOf } from '../misc/utils/part-of.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -67,7 +66,7 @@ router.post('', async (req, res) => {
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   // an application can be created directly as the child of the parent it will be embedded in
-  if (application.partOf) await preparePartOfAtCreation(application.partOf as PartOf, application.owner, sessionState)
+  if (application.partOf) await partOf.prepareAtCreation('application', application, sessionState)
   const created = await service.createApplication(ctx, application)
   res.status(201).json(clean(created, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
@@ -91,9 +90,9 @@ router.put('/:applicationId', attemptInsert, readApplication, permissionMiddlewa
   // a full replace rewrites the configuration too: guard against orphaned partOf children
   const orphans = reqIsNewApplication(req)
     ? undefined
-    : await service.detectConfigOrphans(reqApplication(req), req.body.configuration, req.query.childrenAction as string | undefined)
+    : await partOf.detectOrphans('application', reqApplication(req), req.body.configuration, req.query.childrenAction as string | undefined)
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
-  await service.applyConfigOrphans(req.app, ctx, newApplication.id, orphans)
+  await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', newApplication.id, orphans)
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
@@ -117,7 +116,7 @@ router.patch('/:applicationId',
 
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
     const orphans = patch.configuration
-      ? await service.detectConfigOrphans(application, patch.configuration, req.query.childrenAction as string | undefined)
+      ? await partOf.detectOrphans('application', application, patch.configuration, req.query.childrenAction as string | undefined)
       : undefined
     let patched
     try {
@@ -126,7 +125,7 @@ router.patch('/:applicationId',
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
     }
-    await service.applyConfigOrphans(req.app, ctx, application.id, orphans)
+    await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', application.id, orphans)
     res.status(200).json(clean(patched, reqPublicBaseUrl(req), reqPublicationSite(req)))
   }
 )
@@ -135,11 +134,7 @@ router.patch('/:applicationId',
 router.put('/:applicationId/owner', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
 
-  // a child only exists to serve its parent, and both always live in the same account: it can only
-  // follow its parent, never move on its own
-  if (reqApplication(req).partOf) {
-    throw httpError(409, 'Cette application est définie comme enfant d\'une autre ressource, elle ne peut pas changer de compte indépendamment de celle-ci.')
-  }
+  partOf.assertOwnerChangeAllowed(reqApplication(req))
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
@@ -154,16 +149,8 @@ router.delete('/:applicationId', readApplication, permissionMiddleware('delete',
   const application = reqApplication(req)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
-  const [childDatasetsCount, childAppsCount] = await Promise.all([
-    countPartOfChildren('application', application.id),
-    service.countChildApplications(application.id)
-  ])
-  const childrenCount = childDatasetsCount + childAppsCount
-  if (childrenCount > 0) {
-    const childrenAction = requireChildrenAction(req.query.childrenAction as string | undefined, `Cette application a ${childrenCount} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-    await handlePartOfChildren(req.app, 'application', application.id, childrenAction)
-    await service.handleChildApplications(ctx, application.id, childrenAction)
-  }
+  // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
+  await partOf.handleChildrenBeforeDeletion({ ...ctx, app: req.app }, 'application', application, req.query.childrenAction as string | undefined)
 
   await service.deleteApplication(ctx, application)
   res.sendStatus(204)
@@ -183,9 +170,9 @@ const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
-  const orphans = await service.detectConfigOrphans(reqApplication(req), appConfig, req.query.childrenAction as string | undefined)
+  const orphans = await partOf.detectOrphans('application', reqApplication(req), appConfig, req.query.childrenAction as string | undefined)
   await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
-  await service.applyConfigOrphans(req.app, ctx, reqApplication(req).id, orphans)
+  await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', reqApplication(req).id, orphans)
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissionMiddleware('writeConfig', 'write'), writeConfig)
