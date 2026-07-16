@@ -7,6 +7,7 @@ import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import * as datasetsService from '../datasets/service.ts'
 import { ownerDir } from '../datasets/utils/files.ts'
+import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 export type Identity = { type: string, id: string, name?: string }
 type Department = { id: string, name: string }
@@ -23,10 +24,14 @@ const privateAccessCollectionNames = ['remote-services', 'base-applications']
 export const renameIdentity = async (identity: Identity, departments?: Department[]) => {
   for (const c of resourceCollectionNames) {
     const collection = mongo.db.collection(c)
-    await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id }, { $set: { 'owner.name': identity.name } })
+    const ownerFilter = { 'owner.type': identity.type, 'owner.id': identity.id }
+    await collection.updateMany(ownerFilter, { $set: { 'owner.name': identity.name } })
+    if (c === 'datasets') await stampHistorizeMany(ownerFilter)
     if (departments) {
       for (const department of departments) {
-        await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }, { $set: { 'owner.departmentName': department.name } })
+        const departmentFilter = { 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }
+        await collection.updateMany(departmentFilter, { $set: { 'owner.departmentName': department.name } })
+        if (c === 'datasets') await stampHistorizeMany(departmentFilter)
       }
     }
 
@@ -39,6 +44,7 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
+      if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
   }
 
@@ -53,6 +59,7 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await collection.updateOne({ id: doc.id }, { $set: { privateAccess: doc.privateAccess } })
+      if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
   }
 
@@ -70,6 +77,7 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await mongo.datasets.updateOne({ id: dataset.id }, { $set: { masterData: dataset.masterData } })
+      await stampHistorizeMany({ id: dataset.id })
     }
   }
 }
@@ -93,6 +101,7 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
     for await (const doc of cursor) {
       const permissions = doc.permissions.filter((permission: any) => permission.type !== identity.type || permission.id !== identity.id)
       await collection.updateOne({ id: doc.id }, { $set: { permissions } })
+      if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
   }
 

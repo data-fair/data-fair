@@ -175,6 +175,7 @@ const datasetOverrides: Record<string, OpOverride> = {
   writePartOf: { title: L('Gérer la ressource parente', 'Manage the parent resource') },
   readIntegrity: { title: L("Lire l'état d'intégrité", 'Read the integrity state') },
   readIntegrityRevisions: { title: L("Lister les révisions d'intégrité", 'List the integrity revisions') },
+  'realtime-integrity': { title: L("Suivre l'état d'intégrité en temps réel", 'Track the integrity state in real time') },
 
   manageMasterData: { title: L('Utiliser comme données de référence', 'Use as master-data'), routeless: true },
   post: { title: L('Créer un jeu de données', 'Create a dataset') },
@@ -203,7 +204,7 @@ const datasetOperations: OperationDescriptor[] = [
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
     write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
     manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
-    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'writePartOf', 'readIntegrity', 'readIntegrityRevisions']
+    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'writePartOf', 'readIntegrity', 'readIntegrityRevisions', 'realtime-integrity']
   }, datasetOverrides),
   ...expand('datasets', { manageMasterData: ['manageMasterData'] }, datasetOverrides, 'ownerAdmin'),
   ...expand('datasets', { post: ['post'] }, datasetOverrides, 'contrib'),
