@@ -124,8 +124,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     statusBreachOr = {
       $or: [
         { status: { $in: reqQuery.status.split(',') } },
-        { 'integrity.file.lastCheck.status': 'breach' },
-        { 'integrity.metadata.lastCheck.status': 'breach' }
+        { 'integrity.lastCheck.status': 'breach' }
       ]
     }
   }
@@ -500,18 +499,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   // integrity outbox (spec §4): a patch touching covered metadata fields must be anchored.
   // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
-  // Plain-$set of the sub-doc can overwrite a concurrently $addToSet-ed stamp between our read
-  // and this write — accepted narrow window, same fail-loud recovery as the relay's clear race.
-  if (dataset.integrity?.active && !dataset.draftReason) {
-    const coveredKeys = integrityOps.coveredPatchKeys(patch)
-    if (coveredKeys.length) {
-      const classes = new Set<integrityOps.IntegrityClass>(patch._needsHistorizing?.classes ?? dataset._needsHistorizing?.classes ?? [])
-      classes.add('metadata')
-      // preserve an explicitly provided context; otherwise default it from the patch's own
-      // updatedBy so the revision's originator reflects the actual user, not the historize worker
-      const context = patch._needsHistorizing?.context ??
-        (patch.updatedBy?.id ? { operation: 'update', originator: 'user:' + patch.updatedBy.id } : undefined)
-      patch._needsHistorizing = { classes: [...classes], ...(context ? { context } : {}) }
+  // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
+  // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
+  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing) {
+    if (integrityOps.coveredPatchKeys(patch).length) {
+      patch._needsHistorizing = { context: { operation: 'update', origin: 'user' } }
     }
   }
 
