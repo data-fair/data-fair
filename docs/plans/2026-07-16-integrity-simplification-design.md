@@ -1,7 +1,7 @@
 # Integrity simplification — design
 
-> Status: approved direction (complexity review of PRs #481/#499), design pending user
-> review. Companion to [docs/architecture/integrity.md](../architecture/integrity.md).
+> Status: implemented 2026-07-16 on feat-integrity3 (this plan). Companion to
+> [docs/architecture/integrity.md](../architecture/integrity.md).
 
 ## Goal
 
