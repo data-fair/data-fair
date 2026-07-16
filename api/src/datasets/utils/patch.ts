@@ -148,6 +148,17 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     removedRestProps.push({ key: '_updatedBy' })
     removedRestProps.push({ key: '_updatedByName' })
   }
+  if (dataset.isRest && dataset.rest?.lineOwnership && patch.rest && !patch.rest.lineOwnership) {
+    // getLineId derives _id from the primary key, so unsetting a column it reads would make the next
+    // write on an existing line compute a different _id and insert a duplicate instead of updating it.
+    // `'primaryKey' in patch` because a patch may drop the primary key altogether by setting it to null.
+    const primaryKey = 'primaryKey' in patch ? patch.primaryKey : dataset.primaryKey
+    if (primaryKey?.some((key: string) => key === '_owner' || key === '_ownerName')) {
+      throw httpError(400, 'Impossible de désactiver la propriété des lignes tant que les colonnes de propriété font partie de la clé primaire')
+    }
+    removedRestProps.push({ key: '_owner' })
+    removedRestProps.push({ key: '_ownerName' })
+  }
 
   // Re-publish publications (for catalogs in datafair)
   if (!patch.publications && dataset.publications && dataset.publications.length) {

@@ -70,11 +70,8 @@ const emit = defineEmits(['edit', 'delete'])
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
 
-const { can } = useDatasetStore()
 const { t } = useI18n()
-const { saving } = useDatasetEdition()
-
-const canDeleteLine = can('deleteLine')
-const canUpdateLine = can('updateLine')
-const canBulkLines = can('bulkLines')
+// canDelete/canUpdate/canBulk are resolved by the edition store to the own-lines classes when the
+// table runs in own-lines mode, so the row buttons appear for a plain manageOwnLines holder too
+const { saving, canUpdate: canUpdateLine, canDelete: canDeleteLine, canBulk: canBulkLines } = useDatasetEdition()
 </script>

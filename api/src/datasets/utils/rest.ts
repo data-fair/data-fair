@@ -306,7 +306,7 @@ const linesOwnerCols = (linesOwner: Account) => {
   if (linesOwner.department) cols._owner += ':' + linesOwner.department
   if (linesOwner.name) {
     cols._ownerName = linesOwner.name
-    if (linesOwner.departmentName) cols._ownerName += ` (${linesOwner.department})`
+    if (linesOwner.departmentName) cols._ownerName += ` (${linesOwner.departmentName})`
   }
   return cols
 }
@@ -431,6 +431,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       patchProjection[prop.key] = 1
     }
   }
+  // the ownership columns are x-calculated, so the loop above skipped them, but a patch must carry them
+  // over: lines are written with replaceOne(fullBody), and getLineId reads them when the owner is part
+  // of the primary key
+  if (dataset.rest?.lineOwnership) {
+    patchProjection._owner = 1
+    patchProjection._ownerName = 1
+  }
   const primaryKeyProjection = getPrimaryKeyProjection(dataset)
 
   // prepare future results that will be completed by the following loops
@@ -438,6 +445,10 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   let i = 0
   const patchPreviousFilters = []
   const deletePreviousFilters = []
+  // lines replaced from a route that carries no linesOwner (the /lines family): their ownership must be
+  // read back from the previous line, see the restoration pass below
+  const ownerPreviousFilters = []
+  const restoreOwnership = !!dataset.rest?.lineOwnership && !linesOwner
   const chunkRand = Math.random().toString().slice(2, 7)
   for (const transac of transacs) {
     const { _action, ...body } = transac
@@ -481,6 +492,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation.fullBody._deleted = false
       if (_action === 'patch') {
         patchPreviousFilters.push(operation.filter)
+      } else if (restoreOwnership && _action !== 'create' && body._owner === undefined) {
+        ownerPreviousFilters.push(operation.filter)
       }
     }
   }
@@ -558,6 +571,26 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
+      }
+    }
+  }
+
+  // restore the ownership of the lines being replaced. _owner/_ownerName are x-calculated, so a client
+  // never sends them back, and update/createOrUpdate persist the line with replaceOne(fullBody): without
+  // this pass the owner would be silently dropped. It also feeds getLineId below when the owner is part
+  // of the primary key. A caller that does send _owner is re-assigning the line and keeps precedence.
+  if (ownerPreviousFilters.length) {
+    let op = 0
+    for await (const ownerPrevious of c.find({ $or: ownerPreviousFilters }).project({ _id: 1, _deleted: 1, _owner: 1, _ownerName: 1 })) {
+      if (++op % 100 === 0) await new Promise(resolve => setImmediate(resolve))
+      if (ownerPrevious._deleted || ownerPrevious._owner === undefined) continue
+      const operation = operationsById.get(ownerPrevious._id)
+      if (!operation || operation.body._owner !== undefined) continue
+      operation.body._owner = ownerPrevious._owner
+      operation.fullBody._owner = ownerPrevious._owner
+      if (ownerPrevious._ownerName !== undefined) {
+        operation.body._ownerName = ownerPrevious._ownerName
+        operation.fullBody._ownerName = ownerPrevious._ownerName
       }
     }
   }
@@ -848,6 +881,9 @@ class TransactionStream extends Writable {
   async writePromise (chunk: DatasetLineAction) {
     chunk._action = chunk._action || 'createOrUpdate'
     delete chunk._i
+    // the owner has to be applied before the id is derived from the primary key, which may include it
+    // (applyTransactions injects it too, but only after this stream has assigned chunk._id)
+    if (this.options.linesOwner) Object.assign(chunk, linesOwnerCols(this.options.linesOwner))
     if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
       chunk._id = getLineId(chunk, this.options.dataset) || nanoid()
     } else if (!chunk._id) { // delete by primary key
@@ -892,6 +928,13 @@ const compileSchema = memoize((dataset: RestDataset, adminMode: boolean) => {
   const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
+  // _owner/_ownerName are x-calculated but still travel in the validated body: they are injected there
+  // by linesOwnerCols on the own/ routes, restored from the previous line elsewhere, and read by
+  // getLineId when the owner is part of the primary key
+  if (dataset.rest?.lineOwnership) {
+    schema.properties._owner = { type: 'string' }
+    schema.properties._ownerName = { type: 'string' }
+  }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
   return ajv.compile(schema)
@@ -1107,6 +1150,11 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
   try {
     const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
+    // dropping swaps the whole collection, so it is out of reach of the own/{owner} routes: their caller
+    // only holds manageOwnLines and would otherwise replace every line of the dataset with his own
+    if (drop && reqLinesOwnerOptional(req)) {
+      return res.status(400).type('text/plain').send('Le mode "drop" n\'est pas supporté pour les opérations sur ses propres lignes.')
+    }
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')

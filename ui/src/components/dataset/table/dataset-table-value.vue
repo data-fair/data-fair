@@ -26,14 +26,29 @@
       :style="`background-color:${extendedValue.raw}`"
     />
 
-    <!-- updatedByName / ownerName: show the user/owner avatar followed by their name (not the avatar URL) -->
-    <template v-if="(property.key === '_updatedByName' || property.key === '_ownerName') && extendedValue.formatted.startsWith($sdUrl)">
+    <!-- updatedBy / owner: the avatar of the account, captioned with its name, then the raw identifier -->
+    <template v-if="extendedValue.avatar">
+      <v-tooltip
+        v-if="extendedValue.avatarTitle"
+        location="top"
+      >
+        <template #activator="{props: tooltipProps}">
+          <v-avatar
+            :size="28"
+            :image="extendedValue.avatar"
+            class="me-2"
+            v-bind="tooltipProps"
+          />
+        </template>
+        {{ extendedValue.avatarTitle }}
+      </v-tooltip>
       <v-avatar
+        v-else
         :size="28"
-        :image="extendedValue.formatted"
+        :image="extendedValue.avatar"
         class="me-2"
       />
-      <span class="pr-2">{{ extendedValue.raw }}</span>
+      <span class="pr-2">{{ extendedValue.formatted }}</span>
     </template>
 
     <v-tooltip
