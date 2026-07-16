@@ -116,7 +116,7 @@ test.describe('remote-services', () => {
     // no tileserver-koumoul document exists in the test database: the redirect must not depend on it
     const res = await ax.get('/api/v1/remote-services/tileserver-koumoul/proxy/styles/klokantech-basic/style.json?foo=bar', {
       maxRedirects: 0,
-      validateStatus: (status) => status === 302
+      validateStatus: (status: number) => status === 302
     })
     assert.equal(res.headers.location, '/tileserver/styles/klokantech-basic/style.json?foo=bar')
     assert.ok(res.headers['cache-control']?.includes('max-age=3600'))
