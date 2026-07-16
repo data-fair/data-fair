@@ -37,10 +37,13 @@ export const waitForIntegrityRevisions = async (prefix: string, expected: number
   return keys
 }
 
-// waitForIntegrityRevisions only confirms one class's S3 object exists; the relay may still be
-// processing the other class (a single trailing mongo update unsets _needsHistorizing only once
-// BOTH classes are done). checkDataset treats a still-set _needsHistorizing as "pending" ('unknown'),
-// so a check run in that window would race a real verdict — wait for the flag to clear too.
+export const revisionsPrefix = (dataset: any): string =>
+  `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+
+// waitForIntegrityRevisions only confirms the S3 object exists; the relay may still be writing its
+// trailing mongo update (integrity.lastRevision + unsetting _needsHistorizing). checkDataset treats
+// a still-set _needsHistorizing as "pending" ('unknown'), so a check run in that window would race
+// a real verdict — wait for the flag to clear too.
 export const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000): Promise<any> => {
   const start = Date.now()
   let raw = await getRawDataset(datasetId)
