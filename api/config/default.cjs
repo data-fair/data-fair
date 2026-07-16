@@ -257,11 +257,6 @@ module.exports = {
   }, {
     title: 'Cadastre',
     url: 'https://koumoul.com/s/cadastre/api-docs.json'
-  }, {
-    title: 'Service de données cartographiques',
-    id: 'tileserver-koumoul',
-    description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
-    server: 'https://koumoul.com/s/tileserver'
   }],
   remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   catalogs: [{
