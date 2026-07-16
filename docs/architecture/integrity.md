@@ -100,8 +100,10 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   `‹class›` segment — the file and metadata parts share a **single revision sequence** indexed
   from `0`, since they always enable, anchor and check together (per-class enable was never
   exposed). Zero-padding makes the keys sort lexically == numerically, so "latest" is the
-  lexical-max key and a revisions page maps to a computed index range. The goal is to retrieve a
-  dataset's history from its id, not to browse — minimal traversability is fine. The per-owner
+  lexical-max key, and the revisions endpoint pages by listing all keys under the dataset's
+  prefix, sorting/slicing them in memory, then `GET`-ing only the requested page's items. The
+  goal is to retrieve a dataset's history from its id, not to browse — minimal traversability is
+  fine. The per-owner
   prefix makes storage accounting a simple prefix-size query (feeds storage accounting, §9) and
   enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the

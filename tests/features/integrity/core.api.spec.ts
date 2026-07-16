@@ -51,7 +51,8 @@ test('writeRevision stores a compliance-locked object that can be read back and 
   const revisions = await store.listRevisions('data-fair/test-store/')
   const keys = revisions.map(r => r.key)
   expect(keys).toContain(key)
-  // the revisions endpoint's merge-sort across classes depends on lastModified being present
+  // listRevisions surfaces the S3 object's LastModified metadata as-is; the revisions endpoint
+  // itself sorts lexically by key today, but this keeps the field available for diagnostics
   const entry = revisions.find(r => r.key === key)
   expect(entry?.lastModified).toBeInstanceOf(Date)
 })
