@@ -30,7 +30,7 @@
         </template>
       </v-tooltip>
       <v-tooltip
-        v-if="dataset.integrity?.file?.lastCheck?.status === 'breach' || dataset.integrity?.metadata?.lastCheck?.status === 'breach'"
+        v-if="dataset.integrity?.lastCheck?.status === 'breach'"
         :text="t('integrityBreach')"
       >
         <template #activator="{ props: tooltipProps }">
