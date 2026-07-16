@@ -68,12 +68,9 @@ revision stores both hashes.
 **Cost accepted.** A metadata-only edit re-records the file md5 in the new revision (a few
 bytes at L1; at L2 payload dedupe by hash avoids re-copying files).
 
-**Migration.** Clean cut, no legacy-key fallback (mirrors the target-2 precedent): an
-upgrade script clears per-class state (`$unset integrity.file, integrity.metadata`) and
-stamps every `integrity.active` dataset so the relay re-anchors under the new un-segmented
-keys; old class-segmented anchors age out at their retention. Enrollment is recent,
-superadmin-only and small, so re-anchoring is cheap; the trail's history restarts at `0`
-(the old anchors stay readable in the bucket until expiry if forensics ever need them).
+**Migration.** None — nothing is enrolled in production yet, so this is a clean cut with
+no legacy-key fallback and no upgrade script. Dev/test environments re-seed their fixtures;
+any stray class-segmented anchors in dev buckets age out at their retention.
 
 ## D3 — Depersonalized revision context (trail/journal split)
 
@@ -154,8 +151,7 @@ panel; the panel shows it on next load. Breach verdicts from the nightly sweep l
 
 D2 (joint anchor) first — it reshapes every surface the others touch; then D3 + D4
 (both shrink context/flow plumbing), then D1 (projection + stamp deletions), then D5
-(tests/fixtures/UI last, once shapes are final). One PR, commits per decision, plus the
-upgrade script (D2 migration) written with the repo's upgrade-scripts conventions.
+(tests/fixtures/UI last, once shapes are final). One PR, commits per decision.
 
 integrity.md is updated in the same PR: §3.1 (key layout), §3.2 (outbox shape), §5
 (projection normalization), §7 (drop realtime-integrity), §1/§8 (trail/journal split),
