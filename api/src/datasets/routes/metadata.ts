@@ -157,7 +157,7 @@ export const registerMetadataRoutes = (router: Router) => {
       // children: detected (and refused) up-front, but applied only once the patch itself is
       // persisted — the cascade is irreversible and preparePatch/applyPatch can still reject the request
       const orphans = patch.virtual
-        ? await partOf.detectOrphans('dataset', dataset, patch.virtual, req.query.childrenAction as string | undefined)
+        ? await partOf.detectOrphans('dataset', dataset, { ...dataset, ...patch }, req.query.childrenAction as string | undefined)
         : undefined
 
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)

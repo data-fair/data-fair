@@ -104,8 +104,12 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import { type ResourceType } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { fetchChildRefs } from '~/utils/part-of'
+
 const props = defineProps<{
-  resource: { id: string, owner: Record<string, any> }
+  // the whole resource: the links to its children are resolved from its own content
+  resource: Record<string, any> & { id: string, owner: Record<string, any> }
   resourceType: 'datasets' | 'applications'
 }>()
 
@@ -118,17 +122,14 @@ const { t } = useI18n()
 const showDialog = defineModel<boolean>({ default: false })
 const newOwner = ref<Record<string, any> | null>({ ...props.resource.owner })
 
-// partOf children follow their parent into the new account, warn about the ones that will move.
-// Only an application can have child applications, a dataset parent only aggregates datasets.
+// the api exposes each resource type as the collection of its plural
+const parentType = props.resourceType.slice(0, -1) as ResourceType
+
+// partOf children follow their parent into the new account, warn about the ones that will move
 const childrenCount = ref(0)
 watch(showDialog, async (visible) => {
   if (!visible) return
-  const query = { partOf: props.resource.id, size: 0 }
-  const counts = await Promise.all([
-    $fetch<{ count: number }>('datasets', { query }),
-    ...(props.resourceType === 'applications' ? [$fetch<{ count: number }>('applications', { query })] : [])
-  ])
-  childrenCount.value = counts.reduce((sum, res) => sum + res.count, 0)
+  childrenCount.value = (await fetchChildRefs(parentType, props.resource)).length
 })
 
 const changeOwner = useAsyncAction(

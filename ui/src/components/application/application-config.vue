@@ -166,7 +166,8 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
-import { configRefIds, type ConfigRef } from '@data-fair/data-fair-shared/application/config-refs.ts'
+import { orphanRefs } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { fetchChildRefs } from '~/utils/part-of'
 import { setProperty } from 'dot-prop'
 import equal from 'fast-deep-equal'
 import Debug from 'debug'
@@ -340,17 +341,8 @@ const validateDraft = useAsyncAction(async (childrenAction?: 'delete' | 'unflag'
     // validating the draft rewrites the production configuration, which can orphan resources
     // still defined as partOf children of this application: offer the same delete-vs-unflag
     // choice as the deletion flow first
-    const [childDatasets, childApps] = await Promise.all([
-      $fetch<{ results: { id: string }[] }>('datasets', { query: { partOf: application.value?.id, size: 1000, select: 'id' } }),
-      $fetch<{ results: { id: string }[] }>('applications', { query: { partOf: application.value?.id, size: 1000, select: 'id' } })
-    ])
-    // the app config schema types these as unknown, they are the same refs the API reads
-    const newDatasetIds = configRefIds(configDraft.value.datasets as ConfigRef[])
-    const newAppIds = configRefIds(configDraft.value.applications as ConfigRef[])
-    const orphans = [
-      ...childDatasets.results.filter(c => !newDatasetIds.includes(c.id)),
-      ...childApps.results.filter(c => !newAppIds.includes(c.id))
-    ]
+    const children = await fetchChildRefs('application', application.value!)
+    const orphans = orphanRefs(children, 'application', { ...application.value, configuration: configDraft.value })
     if (orphans.length) {
       orphansCount.value = orphans.length
       showOrphansDialog.value = true

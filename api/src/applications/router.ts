@@ -90,7 +90,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissionMiddlewa
   // a full replace rewrites the configuration too: guard against orphaned partOf children
   const orphans = reqIsNewApplication(req)
     ? undefined
-    : await partOf.detectOrphans('application', reqApplication(req), req.body.configuration, req.query.childrenAction as string | undefined)
+    : await partOf.detectOrphans('application', reqApplication(req), { ...reqApplication(req), configuration: req.body.configuration }, req.query.childrenAction as string | undefined)
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
   await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', newApplication.id, orphans)
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
@@ -116,7 +116,7 @@ router.patch('/:applicationId',
 
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
     const orphans = patch.configuration
-      ? await partOf.detectOrphans('application', application, patch.configuration, req.query.childrenAction as string | undefined)
+      ? await partOf.detectOrphans('application', application, { ...application, configuration: patch.configuration }, req.query.childrenAction as string | undefined)
       : undefined
     let patched
     try {
@@ -170,7 +170,7 @@ const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
-  const orphans = await partOf.detectOrphans('application', reqApplication(req), appConfig, req.query.childrenAction as string | undefined)
+  const orphans = await partOf.detectOrphans('application', reqApplication(req), { ...reqApplication(req), configuration: appConfig }, req.query.childrenAction as string | undefined)
   await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
   await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', reqApplication(req).id, orphans)
   res.status(200).json(req.body)

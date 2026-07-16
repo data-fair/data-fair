@@ -721,6 +721,8 @@ import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-propert
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
 import { isMasterData } from '~/../../api/contract/master-data.js'
+import { childRefs, orphanRefs } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { fetchChildRefs } from '~/utils/part-of'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -935,12 +937,13 @@ const showVirtualOrphansDialog = ref(false)
 const virtualOrphansCount = ref(0)
 
 const saveStructure = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
-  if (!childrenAction && dataset.value?.isVirtual) {
-    const newChildren: string[] = structureEditFetch.data.value?.virtual?.children ?? []
-    const serverChildren: string[] = structureEditFetch.serverData.value?.virtual?.children ?? []
-    if (!equal(newChildren, serverChildren)) {
-      const partOfChildren = await $fetch<{ results: { id: string }[] }>('datasets', { query: { partOf: id, size: 1000, select: 'id' } })
-      const orphans = partOfChildren.results.filter(c => !newChildren.includes(c.id))
+  if (!childrenAction && dataset.value) {
+    // saving can orphan datasets still defined as partOf children of this one, but only if it
+    // changes the resources it references at all
+    const newVersion = { ...dataset.value, ...structureEditFetch.data.value }
+    const savedVersion = { ...dataset.value, ...structureEditFetch.serverData.value }
+    if (!equal(childRefs('dataset', newVersion), childRefs('dataset', savedVersion))) {
+      const orphans = orphanRefs(await fetchChildRefs('dataset', dataset.value), 'dataset', newVersion)
       if (orphans.length) {
         virtualOrphansCount.value = orphans.length
         showVirtualOrphansDialog.value = true
