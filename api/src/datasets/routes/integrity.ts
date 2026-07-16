@@ -47,6 +47,9 @@ export const registerIntegrityRoutes = (router: Router) => {
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
     // synchronous re-anchor + verify: the reconcile action responds with a fresh verdict
     await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason: typeof req.body?.reason === 'string' ? req.body.reason : undefined })
+    // the synchronous anchor above just serviced whatever a pending stamp requested: clear it so
+    // checkDataset's pending guard doesn't force an 'unknown' verdict on the fresh read below
+    await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
     const checker = await import('../../integrity/checker.ts')
     const fresh = await mongo.datasets.findOne({ id: dataset.id })
     res.json(await checker.checkDataset(fresh as any))
