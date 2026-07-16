@@ -82,4 +82,6 @@ Update `docs/architecture/integrity.md`:
 - on FAIL: §10's target-1 next-steps line promotes Option A (re-anchoring) from
   "implemented only if the bug is confirmed to still block us" to required work.
 
-The raw runbook outputs are appended to this document as a results section.
+The raw runbook outputs are recorded verbatim in the runbook's own Results section
+(`2026-07-16-scaleway-lock-prolongation-spike-runbook.md`); this document's status line is
+updated to point at them.
