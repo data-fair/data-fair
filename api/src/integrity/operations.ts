@@ -5,23 +5,15 @@ export const INDEX_WIDTH = 9
 
 export const padIndex = (i: number): string => String(i).padStart(INDEX_WIDTH, '0')
 
-export type IntegrityClass = 'file' | 'metadata'
-export const INTEGRITY_CLASSES: IntegrityClass[] = ['file', 'metadata']
+export const revisionPrefix = (owner: { type: string, id: string }, datasetId: string): string =>
+  `data-fair/${owner.type}-${owner.id}/${datasetId}/`
 
-export const revisionPrefix = (owner: { type: string, id: string }, datasetId: string, cls: IntegrityClass): string =>
-  `data-fair/${owner.type}-${owner.id}/${datasetId}/${cls}/`
-
-export const revisionKey = (owner: { type: string, id: string }, datasetId: string, cls: IntegrityClass, i: number): string =>
-  `${revisionPrefix(owner, datasetId, cls)}${padIndex(i)}`
+export const revisionKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
+  `${revisionPrefix(owner, datasetId)}${padIndex(i)}`
 
 export const parseRevisionIndex = (key: string): number => {
   const last = key.split('/').pop() ?? ''
   return parseInt(last, 10)
-}
-
-export const parseRevisionClass = (key: string): IntegrityClass | undefined => {
-  const cls = key.split('/').at(-2)
-  return cls === 'file' || cls === 'metadata' ? cls : undefined
 }
 
 // The covered projection (spec §2): the whole doc minus underscore-prefixed fields and the
@@ -57,6 +49,20 @@ export const coveredMetadata = (dataset: Record<string, any>): Record<string, an
     const { expiresAt, renewAt, ...readApiKey } = covered.readApiKey
     covered.readApiKey = readApiKey
   }
+  // D1 (simplification design): denormalized display names are synced wholesale from their
+  // authoritative sources (simple-directory, settings.topics) — hash the identifying keys only,
+  // so a name propagation is not a covered change and needs no outbox stamp
+  if (covered.owner) {
+    const { type, id, department } = covered.owner
+    covered.owner = { type, id, ...(department ? { department } : {}) }
+  }
+  if (Array.isArray(covered.topics)) covered.topics = covered.topics.map(({ id }: any) => ({ id }))
+  if (Array.isArray(covered.permissions)) {
+    covered.permissions = covered.permissions.map(({ name, ...rest }: any) => rest)
+  }
+  if (Array.isArray(covered.masterData?.shareOrgs)) {
+    covered.masterData = { ...covered.masterData, shareOrgs: covered.masterData.shareOrgs.map(({ id }: any) => ({ id })) }
+  }
   return covered
 }
 
@@ -78,29 +84,20 @@ export const latestKey = (keys: string[]): string | undefined => {
 }
 
 export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity'
-export type RevisionContext = { operation: RevisionOperation, originator: string, date: string, reason?: string }
-
-export const buildContext = (
-  operation: RevisionOperation,
-  originator: string,
-  date: string,
-  reason?: string
-): RevisionContext => ({ operation, originator, date, ...(reason ? { reason } : {}) })
-
-export type HistorizeContextHint = { operation: RevisionOperation, originator: string, reason?: string }
+// actor CATEGORY, never an identity: user ids are personal data and must not enter the
+// undeletable WORM store — identity-level attribution lives in the events/journal system
+export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+export type RevisionContext = { operation: RevisionOperation, origin: RevisionOrigin, date: string, reason?: string }
+export type HistorizeContextHint = { operation: RevisionOperation, origin: RevisionOrigin, reason?: string }
 
 // Merge the transactional-outbox stamp (spec §4) into a writer's own Mongo update, keeping the
-// write single-document atomic. $addToSet creates the sub-doc on first touch.
+// write single-document atomic. A stamp means "re-anchor this dataset" (every anchor covers both
+// the file and metadata hashes since the joint-anchor simplification).
 export const stampHistorize = (
-  update: { $set?: Record<string, any>, $addToSet?: Record<string, any>, [k: string]: any },
-  classes: IntegrityClass[],
+  update: { $set?: Record<string, any>, [k: string]: any },
   context?: HistorizeContextHint
 ) => {
-  // an empty-classes stamp would be invisible to both the relay's filter ('_needsHistorizing.classes.0')
-  // and the checker's sweep (no class ever anchored) — guard rather than write a dead stamp
-  if (!classes.length) return update
-  update.$addToSet = { ...update.$addToSet, '_needsHistorizing.classes': { $each: classes } }
-  if (context) update.$set = { ...update.$set, '_needsHistorizing.context': context }
+  update.$set = { ...update.$set, _needsHistorizing: context ? { context } : {} }
   return update
 }
 
