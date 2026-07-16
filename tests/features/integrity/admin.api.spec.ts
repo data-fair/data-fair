@@ -133,6 +133,34 @@ test('disabling integrity clears the breach state and error-filter listing', asy
   expect(list.results.find((d: any) => d.id === dataset.id)).toBeUndefined()
 })
 
+// Regression: PUT _integrity {active:false} replaces the whole integrity object (wiping
+// lastRevision); a subsequent re-enable with unchanged content dedupes against the still-locked
+// anchor and must restore that mirror, or it stays unset forever and the checker's renewal gate
+// (needsRenewal(undefined) === false) silently stops protecting the anchor.
+test('disable then re-enable with unchanged content restores lastRevision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  const before = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(before.lastRevision).toBeTruthy()
+  const i = before.lastRevision.i
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  // re-enable with the exact same file/metadata → the relay dedupes against the untouched anchor
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  const after = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(after.lastRevision).toBeTruthy()
+  expect(after.lastRevision.i).toBe(i)
+  expect(after.lastRevision.retainUntil).toBeTruthy()
+  // dedupe wrote no new revision
+  const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
+  expect(revisions.count).toBe(1)
+  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+})
+
 test('internal historize fields are stripped from API responses', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)

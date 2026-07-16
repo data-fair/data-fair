@@ -38,8 +38,22 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   const keys = (await store.listRevisions(prefix)).map((r) => r.key)
   const latest = ops.latestKey(keys)
   if (latest) {
-    const latestHash = (await store.getRevision(latest)).hash
-    if (latestHash.md5 === hash.md5 && latestHash.sha256 === hash.sha256) return // already anchored
+    const latestRevision = await store.getRevision(latest)
+    const latestHash = latestRevision.hash
+    if (latestHash.md5 === hash.md5 && latestHash.sha256 === hash.sha256) {
+      // disable→re-enable dedupe constraint: PUT _integrity {active:false} replaces the whole
+      // integrity object (wiping integrity.lastRevision); a later re-enable that dedupes against
+      // this unchanged anchor must still restore that mirror, or it stays unset forever and the
+      // checker's renewal gate (needsRenewal(undefined) === false) silently stops protecting the lock
+      if (!fresh.integrity?.lastRevision) {
+        const i = ops.parseRevisionIndex(latest)
+        const retainUntil = await store.getRetention(latest)
+        await mongo.datasets.updateOne({ id: dataset.id }, {
+          $set: { 'integrity.lastRevision': { i, hash: latestHash, date: latestRevision.context.date, retainUntil: retainUntil?.toISOString() } }
+        })
+      }
+      return // already anchored
+    }
   }
 
   const i = ops.nextIndex(keys)
