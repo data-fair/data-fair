@@ -11,7 +11,7 @@ import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { can } from './permissions.ts'
 import { type LogContext } from './req-context.ts'
-import { childTypes, parentFilters, orphanRefs, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { resourceTypes, parentFilters, orphanRefs, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/resources/parent-children.ts'
 import { isMasterData } from '../../../contract/master-data.js'
 import type { Collection } from 'mongodb'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -28,14 +28,12 @@ export type PartOfDeletionContext = PartOfContext & { app: any }
 
 /**
  * The only constraint partOf adds per resource type: which resources may not be subordinated to a
- * parent at all. These are rules of the annotation itself, decided on the spec — unlike everything
- * below, which applies to any resource type.
+ * parent at all. Nothing here restricts what a child or a parent may be — any resource can be the
+ * child of any other. Reference data is the one exception, because it exists to be reused across
+ * many contexts rather than to serve a single parent.
  */
 const cannotBeChild: Record<ResourceType, (resource: any) => string | undefined> = {
   dataset: (dataset) => {
-    // a virtual dataset aggregates other datasets, it is not a detail of a single parent
-    if (dataset.isVirtual) return 'Un jeu de données virtuel ne peut pas être défini comme enfant d\'une autre ressource'
-    // reference data exists to be reused across many contexts, not to serve a single parent
     if (isMasterData(dataset.masterData)) return 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource'
   },
   application: () => undefined
@@ -89,26 +87,26 @@ const childrenFilter = (parent: ResourceRef, onlyIds?: string[]) =>
 /** The children of a parent resource, whatever their type, as full documents. */
 export const listChildren = async (parentType: ResourceType, parent: any): Promise<{ type: ResourceType, resource: any }[]> => {
   const children: { type: ResourceType, resource: any }[] = []
-  for (const childType of childTypes(parentType, parent)) {
+  for (const childType of resourceTypes) {
     const found = await collection(childType).find(childrenFilter({ type: parentType, id: parent.id })).toArray()
     children.push(...found.map(resource => ({ type: childType, resource })))
   }
   return children
 }
 
-const listChildrenRefs = async (parentType: ResourceType, parent: any): Promise<ResourceRef[]> => {
+const listChildrenRefs = async (parentType: ResourceType, parentId: string): Promise<ResourceRef[]> => {
   const refs: ResourceRef[] = []
-  for (const childType of childTypes(parentType, parent)) {
-    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parent.id }), { projection: { _id: 0, id: 1 } }).toArray()
+  for (const childType of resourceTypes) {
+    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parentId }), { projection: { _id: 0, id: 1 } }).toArray()
     refs.push(...found.map(child => ({ type: childType, id: child.id })))
   }
   return refs
 }
 
-export const countChildren = async (parentType: ResourceType, parent: any): Promise<number> => {
+export const countChildren = async (parentType: ResourceType, parentId: string): Promise<number> => {
   let count = 0
-  for (const childType of childTypes(parentType, parent)) {
-    count += await collection(childType).countDocuments(childrenFilter({ type: parentType, id: parent.id }))
+  for (const childType of resourceTypes) {
+    count += await collection(childType).countDocuments(childrenFilter({ type: parentType, id: parentId }))
   }
   return count
 }
@@ -142,7 +140,7 @@ const handleChildren = async (ctx: PartOfDeletionContext, parent: ResourceRef, a
  * unless childrenAction says what becomes of them, then applies that cascade first.
  */
 export const handleChildrenBeforeDeletion = async (ctx: PartOfDeletionContext, parentType: ResourceType, parent: any, childrenAction?: string) => {
-  const children = await listChildrenRefs(parentType, parent)
+  const children = await listChildrenRefs(parentType, parent.id)
   if (!children.length) return
   const action = requireChildrenAction(childrenAction, `Cette ressource a ${children.length} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
   await handleChildren(ctx, { type: parentType, id: parent.id }, action, children)
@@ -158,7 +156,7 @@ export type Orphans = { action: ChildrenAction, refs: ResourceRef[] }
  * still be rejected).
  */
 export const detectOrphans = async (parentType: ResourceType, parent: any, newParent: any, childrenAction?: string): Promise<Orphans | undefined> => {
-  const refs = orphanRefs(await listChildrenRefs(parentType, parent), parentType, newParent)
+  const refs = orphanRefs(await listChildrenRefs(parentType, parent.id), parentType, newParent)
   if (!refs.length) return
   const action = requireChildrenAction(childrenAction, `Cette modification retire ${refs.length} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
   return { action, refs }
@@ -182,7 +180,7 @@ export const prepareAtDefinition = async (childType: ResourceType, resource: any
   assertCanBeChild(childType, resource)
   // a resource that has partOf children of its own cannot itself become a child: chains would leave
   // silent orphans behind cascading deletions
-  if (await countChildren(childType, resource) > 0) throw httpError(400, 'Une ressource qui a des ressources enfants ne peut pas être elle-même définie comme enfant, les chaînages ne sont pas autorisés')
+  if (await countChildren(childType, resource.id) > 0) throw httpError(400, 'Une ressource qui a des ressources enfants ne peut pas être elle-même définie comme enfant, les chaînages ne sont pas autorisés')
   const parents = await findReferencingParents({ type: childType, id: resource.id })
   if (parents.length !== 1) throw httpError(400, `Cette ressource ne peut être définie comme enfant que si elle est utilisée par une seule ressource parente ; elle en compte actuellement ${parents.length}.`)
   const parent = parents[0]
@@ -221,10 +219,6 @@ export const prepareAtCreation = async (childType: ResourceType, resource: any, 
   const parent = await collection(partOf.type).findOne({ id: partOf.id })
   if (!parent) throw httpError(400, 'La ressource parente indiquée n\'existe pas')
   assertEligibleParent(parent, resource.owner)
-  // the parent cannot reference the child yet, but it must at least be able to
-  if (!childTypes(partOf.type, parent).includes(childType)) {
-    throw httpError(400, 'La ressource parente indiquée ne peut pas référencer une ressource enfant de ce type')
-  }
   if (!canReferenceChild(parent, partOf.type, sessionState)) {
     throw httpError(403, 'Vous n\'avez pas la permission de modifier cette ressource parente pour qu\'elle référence une ressource enfant')
   }

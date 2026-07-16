@@ -341,7 +341,7 @@ const validateDraft = useAsyncAction(async (childrenAction?: 'delete' | 'unflag'
     // validating the draft rewrites the production configuration, which can orphan resources
     // still defined as partOf children of this application: offer the same delete-vs-unflag
     // choice as the deletion flow first
-    const children = await fetchChildRefs('application', application.value!)
+    const children = await fetchChildRefs(application.value!)
     const orphans = orphanRefs(children, 'application', { ...application.value, configuration: configDraft.value })
     if (orphans.length) {
       orphansCount.value = orphans.length

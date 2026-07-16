@@ -104,7 +104,6 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { type ResourceType } from '@data-fair/data-fair-shared/resources/parent-children.ts'
 import { fetchChildRefs } from '~/utils/part-of'
 
 const props = defineProps<{
@@ -122,14 +121,11 @@ const { t } = useI18n()
 const showDialog = defineModel<boolean>({ default: false })
 const newOwner = ref<Record<string, any> | null>({ ...props.resource.owner })
 
-// the api exposes each resource type as the collection of its plural
-const parentType = props.resourceType.slice(0, -1) as ResourceType
-
 // partOf children follow their parent into the new account, warn about the ones that will move
 const childrenCount = ref(0)
 watch(showDialog, async (visible) => {
   if (!visible) return
-  childrenCount.value = (await fetchChildRefs(parentType, props.resource)).length
+  childrenCount.value = (await fetchChildRefs(props.resource)).length
 })
 
 const changeOwner = useAsyncAction(

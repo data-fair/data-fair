@@ -4,6 +4,12 @@ export type ResourceType = 'dataset' | 'application'
 export type ResourceRef = { type: ResourceType, id: string }
 
 /**
+ * Any resource can be declared the child of any other, so the children of a resource are looked up
+ * in all of these — never in the sole collections it happens to be able to reference.
+ */
+export const resourceTypes: ResourceType[] = ['dataset', 'application']
+
+/**
  * A way for a resource to reference the child resources it uses. This table is the only place that
  * knows about `virtual` or `configuration`: it follows the features that relate resources to each
  * other and changes with them, while the links themselves are resolved generically through the
@@ -46,14 +52,6 @@ const links: ResourceLink[] = [
     filterPath: 'configuration.applications.id'
   }
 ]
-
-/**
- * The types of resources a given resource can reference as children — a dataset can reference
- * datasets only when it is virtual. Callers use it to know which collections may hold its children,
- * and to skip the ones that never can.
- */
-export const childTypes = (parentType: ResourceType, parent: any): ResourceType[] =>
-  [...new Set(links.filter(link => link.parentType === parentType && link.isAvailable(parent)).map(link => link.childType))]
 
 /**
  * The child resources a resource references. It reads the resource itself, so it applies as well to

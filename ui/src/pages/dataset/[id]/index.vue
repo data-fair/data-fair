@@ -894,9 +894,8 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
-// a virtual dataset can never be defined as a child, don't offer the parent-resource section
-// a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see preparePatch guard)
-const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual && !isMasterData(dataset.value?.masterData))
+// a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see the cannotBeChild rule)
+const showPartOfSection = computed(() => can('writePartOf').value && !isMasterData(dataset.value?.masterData))
 
 // a child always lives in the same account as its parent, it can only follow it (see the API guard)
 const showChangeOwnerSection = computed(() => can('changeOwner').value && !dataset.value?.partOf)
@@ -943,7 +942,7 @@ const saveStructure = useAsyncAction(async (childrenAction?: 'delete' | 'unflag'
     const newVersion = { ...dataset.value, ...structureEditFetch.data.value }
     const savedVersion = { ...dataset.value, ...structureEditFetch.serverData.value }
     if (!equal(childRefs('dataset', newVersion), childRefs('dataset', savedVersion))) {
-      const orphans = orphanRefs(await fetchChildRefs('dataset', dataset.value), 'dataset', newVersion)
+      const orphans = orphanRefs(await fetchChildRefs(dataset.value), 'dataset', newVersion)
       if (orphans.length) {
         virtualOrphansCount.value = orphans.length
         showVirtualOrphansDialog.value = true

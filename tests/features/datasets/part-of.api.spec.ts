@@ -48,7 +48,7 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
-  test('cannot define a virtual dataset as a child, even when it has a single parent', async () => {
+  test('a virtual dataset can be defined as a child, its own nature does not matter', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const innerRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'inner virtual', virtual: { children: [dataset.id] } })
@@ -56,14 +56,10 @@ test.describe('dataset partOf attribute', () => {
     const outerRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'outer virtual', virtual: { children: [innerVirtual.id] } })
     await waitForFinalize(ax, outerRes.data.id)
 
-    // innerVirtual is used by exactly one parent, but virtual datasets can never be children
-    await assert.rejects(
-      ax.patch(`/api/v1/datasets/${innerVirtual.id}`, { partOf: { type: 'dataset', id: outerRes.data.id } }),
-      (err: any) => {
-        assert.equal(err.status, 400)
-        return true
-      }
-    )
+    // innerVirtual is aggregated by exactly one parent, that is the only condition
+    const res = await ax.patch(`/api/v1/datasets/${innerVirtual.id}`, { partOf: { type: 'dataset', id: outerRes.data.id } })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: outerRes.data.id, title: 'outer virtual' })
   })
 
   test('cannot define a dataset as a child of an application that is itself a child', async () => {
@@ -474,27 +470,21 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
-  test('cannot create a virtual dataset as a child, nor a child of a non-virtual dataset', async () => {
+  test('a virtual dataset can be created as a child, and any dataset can be the designated parent', async () => {
     const ax = testUser1
     const member = await sendDataset('datasets/dataset1.csv', ax)
     const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [member.id] } })
     await waitForFinalize(ax, virtualRes.data.id)
 
-    await assert.rejects(
-      ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual child', virtual: { children: [member.id] }, partOf: { type: 'dataset', id: virtualRes.data.id } }),
-      (err: any) => {
-        assert.equal(err.status, 400)
-        return true
-      }
-    )
-    // a plain file/rest dataset can never be a parent of a dataset, only a virtual one can
-    await assert.rejects(
-      ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: member.id } }),
-      (err: any) => {
-        assert.equal(err.status, 400)
-        return true
-      }
-    )
+    const virtualChild = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual child', virtual: { children: [member.id] }, partOf: { type: 'dataset', id: virtualRes.data.id } })
+    assert.equal(virtualChild.status, 201)
+    assert.equal(virtualChild.data.partOf.id, virtualRes.data.id)
+
+    // partOf is a plain annotation: the api does not require the parent to be able to reference the
+    // child back, it only checks the permission to make it do so
+    const plainParentChild = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: member.id } })
+    assert.equal(plainParentChild.status, 201)
+    assert.equal(plainParentChild.data.partOf.id, member.id)
   })
 
   test('an organization contributor cannot flag an existing dataset as a child, that stays admin-only', async () => {
