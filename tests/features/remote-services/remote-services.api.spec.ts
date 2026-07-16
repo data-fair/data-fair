@@ -111,6 +111,17 @@ test.describe('remote-services', () => {
     )
   })
 
+  test('Redirect the legacy tileserver remote-service proxy to the local tileserver', async () => {
+    const ax = anonymous
+    // no tileserver-koumoul document exists in the test database: the redirect must not depend on it
+    const res = await ax.get('/api/v1/remote-services/tileserver-koumoul/proxy/styles/klokantech-basic/style.json?foo=bar', {
+      maxRedirects: 0,
+      validateStatus: (status) => status === 302
+    })
+    assert.equal(res.headers.location, '/tileserver/styles/klokantech-basic/style.json?foo=bar')
+    assert.ok(res.headers['cache-control']?.includes('max-age=3600'))
+  })
+
   test('Get unpacked actions inside remote services', async () => {
     const ax = anonymous
     let res = await ax.get('/api/v1/remote-services-actions')

@@ -215,6 +215,16 @@ async function getAppOwner (req) {
   return refererApp.owner
 }
 
+// the tileserver used to be consumed as a remote service pointing at koumoul.com/s/tileserver,
+// it is now a standard member of the stack exposed at /tileserver on the same origin
+// redirect requests coming from the stored configurations of older map applications
+router.get('/tileserver-koumoul/proxy/*proxyPath', (req, res) => {
+  const searchIndex = req.url.indexOf('?')
+  const search = searchIndex === -1 ? '' : req.url.slice(searchIndex)
+  res.set('cache-control', 'public, max-age=3600')
+  res.redirect(302, '/tileserver/' + req.params.proxyPath.join('/') + search)
+})
+
 // Use the proxy as a user of an application
 // always apply restrictive rate limiting to remote services, privileged access does not go through here
 router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
