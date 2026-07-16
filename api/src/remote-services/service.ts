@@ -111,7 +111,7 @@ export const init = async () => {
   const existingServices = await mongo.remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
   const servicesToAdd: { url: string }[] = config.remoteServices
-    .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
+    .filter(s => !existingServices.find(es => es.url === s.url))
 
   const apisToFetch = new Set(servicesToAdd.map(s => s.url).filter(Boolean))
   const apis: { url: string, api: any }[] = []
@@ -137,21 +137,6 @@ export const init = async () => {
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
 
-  for (const service of servicesToAdd) {
-    if (!service.url && service.server && service.id) {
-      servicesToInsert.push({
-        id: service.id,
-        title: service.title,
-        description: service.description ?? '',
-        url: null,
-        apiDoc: null,
-        server: service.server,
-        actions: [],
-        public: true,
-        privateAccess: []
-      })
-    }
-  }
   if (servicesToInsert.length) {
     debugMasterData('insert default remote services', servicesToInsert)
     await mongo.remoteServices.insertMany(servicesToInsert)
