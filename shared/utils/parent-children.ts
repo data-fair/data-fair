@@ -1,4 +1,4 @@
-import { configRefIds, type ConfigRef } from '../application/config-refs.ts'
+import { configRefIds, type ConfigRef } from './config-refs.ts'
 
 export type ResourceType = 'dataset' | 'application'
 export type ResourceRef = { type: ResourceType, id: string }

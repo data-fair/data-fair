@@ -721,7 +721,7 @@ import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-propert
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
 import { isMasterData } from '~/../../api/contract/master-data.js'
-import { childRefs, orphanRefs } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { childRefs, orphanRefs } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 import { fetchChildRefs } from '~/utils/part-of'
 
 const { t, locale } = useI18n()

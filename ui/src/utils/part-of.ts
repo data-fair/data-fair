@@ -1,5 +1,5 @@
 import { $fetch } from '~/context'
-import { resourceTypes, type ResourceRef } from '@data-fair/data-fair-shared/resources/parent-children.ts'
+import { resourceTypes, type ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 
 /**
  * The resources defined as the partOf children of a resource. Pages compare this list against the
