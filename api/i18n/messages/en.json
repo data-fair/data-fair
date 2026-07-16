@@ -164,13 +164,9 @@
 				"title": "Draft cancelled {{label}}",
 				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
 			},
-			"integrity-breach-file": {
-				"title": "Integrity breach on dataset {{label}}",
-				"body": "The data file of dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check)."
-			},
-			"integrity-breach-metadata": {
-				"title": "Integrity breach on dataset {{label}}",
-				"body": "The metadata of dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check)."
+			"integrity-breach": {
+				"title": "Integrity breach",
+				"body": "Dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check on its data file or metadata)."
 			}
 		},
 		"applications": {
