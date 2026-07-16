@@ -2,6 +2,7 @@ import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './.type/index.js'
 import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
+import type { HistorizeContextHint } from '../../src/integrity/operations.js'
 export * from './.type/index.js'
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
@@ -39,10 +40,7 @@ export type DatasetInternal = Dataset & {
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
-  _needsHistorizing?: {
-    classes: ('file' | 'metadata')[],
-    context?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
-  }
+  _needsHistorizing?: { context?: HistorizeContextHint }
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
 }
