@@ -30,10 +30,10 @@ import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
 
-// Formats that can consume a streamed source (serialize row-by-row + res.send). json/csv and geojson
-// qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still needs the
-// whole geojson materialized for the zip, vector tiles need all features spatially indexed, and xlsx/ods
-// build a sheet from all rows — those stay on the buffered search. When unsure → buffered.
+// Formats that consume a streamed ES source (serialize row-by-row, then send the assembled body). json/csv
+// and geojson qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still
+// needs the whole geojson materialized for the zip, vector tiles need all features spatially indexed, and
+// xlsx/ods build a sheet from all rows — those stay on the buffered search. When unsure → buffered.
 const streamEligible = (query: any): boolean =>
   !query.format || query.format === 'json' || query.format === 'csv' || query.format === 'geojson'
 
@@ -184,27 +184,19 @@ const readLines: RequestHandler = async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, size] = findUtils.pagination(query)
 
-  // Mode selection: eligible json/csv responses read ES with `asStream` (the splitter parses hits
-  // incrementally so the raw response is never held whole), under the experimental flag or the non-prod
-  // ?_stream opt-in. The json/csv pipeline serializes rows on the fly and `res.send`s the assembled body, so
-  // the source choice (streamed vs the buffered esResponse from search()) is purely internal — it changes
-  // peak memory, never the observable response (same Link/ETag/next/Content-Length). Every geo/tile/sheet
-  // request (ineligible) stays on the buffered search that yields a concrete esResponse consumed directly by
-  // the geo/wkt/tile branches below.
+  // Mode selection: eligible json/csv/geojson responses read ES with `asStream` (the splitter parses hits
+  // incrementally so the raw response is never held whole). The pipeline serializes rows on the fly and
+  // sends the assembled body, so the source choice (streamed vs the buffered esResponse from search()) is
+  // purely internal — it changes peak memory, never the observable response (same
+  // Link/ETag/next/Content-Length). Every geo/tile/sheet request (ineligible) stays on the buffered search
+  // that yields a concrete esResponse consumed directly by the geo/wkt/tile branches below.
   //
   // TODO (shelved optimization): every /lines response already has a (weak, Express-default) ETag + `304`. To
   // also skip the ES query on a cache hit, compute a synthetic validator from what fully determines the body
   // (dataset.finalizedAt + normalized query + shaping params: select/html/thumbnail/truncate/arrays/format),
   // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
   // on top of the existing `finalizedAt`/`Last-Modified` pre-query 304 in the resourceBased middleware.
-  const forceStream = process.env.NODE_ENV !== 'production' && query._stream === 'true'
-  const streamOn = config.experimental?.streamReadLines === true || forceStream
-  const eligible = streamOn && streamEligible(query)
-  // `_stream` is an internal, non-prod opt-in — never a public API param. Drop it from the `query` copy
-  // once consumed so it does not leak into the `next` pagination link (built from `query`), keeping the
-  // streamed link byte-identical to the buffered one. (The hint is kept identical separately: `_stream`
-  // is a RECOGNIZED_PARAM so ignoredParamsAdvice never flags it — see misc/utils/query-advice.ts.)
-  delete query._stream
+  const eligible = streamEligible(query)
 
   let esResponse: any
   let rawTileBuffer: Buffer | undefined
@@ -308,9 +300,10 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchDurationMs = Date.now() - esSearchStart
   observe.reqStep(req, 'search')
 
-  // buffered source over the ES response: geo/tile branches keep consuming esResponse directly, while
-  // json/csv route through the shared pipeline (streamJson/streamCsv). In streamed mode the source is
-  // the incremental one and esResponse stays undefined (never reached by geo/tile). In the zero-copy
+  // json/csv/geojson (eligible) always carry the incremental streamedSource into the shared pipeline
+  // (streamJson/streamCsv/streamGeojson) and esResponse stays undefined. The buffered source only exists
+  // for ineligible formats: geo/tile branches consume esResponse directly, and an unrecognized `format`
+  // value falls through to streamJson over the buffered source (json output, as before). In the zero-copy
   // paths (tiles/shp/wkt/xlsx/ods) esResponse also stays undefined (the raw bytes go straight to the
   // worker) and those branches return before `source` is consumed, so no buffered source is built then.
   const source: LinesSource | undefined = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined)

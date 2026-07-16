@@ -5,8 +5,8 @@ import { createHash } from 'node:crypto'
 import LinkHeader from 'http-link-header'
 
 // Inputs needed to build the `next` pagination link (all optional — omitted in unit tests that don't
-// exercise pagination; read.ts always passes them together). `query` is read.ts's query copy (owner added,
-// `_stream` dropped) so the link is byte-identical to the pre-refactor one.
+// exercise pagination; read.ts always passes them together). `query` is read.ts's query copy (owner added)
+// so the link is byte-identical to the pre-refactor one.
 export interface NextContext {
   size?: number
   query?: Record<string, any>
