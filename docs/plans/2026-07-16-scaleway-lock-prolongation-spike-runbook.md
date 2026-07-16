@@ -155,15 +155,143 @@ retry later.
 
 ## Results
 
-(filled during the run — raw outputs, verbatim)
+Run 2026-07-16 (~12:20–12:25 UTC), aws-cli/2.32.34, profile `scw-staging`,
+endpoint `s3.fr-par.scw.cloud`. Raw outputs, verbatim.
 
-- Block 0/1 (setup): _pending_
-- Case A (inline lock, extend without/with version-id): _pending_
-- Case A′ (shorten + delete refused): _pending_
-- Case B (default-retention lock, extend): _pending_
-- Case C (Glacier, extend): _pending_
-- Cleanup: _pending_
+### Block 0/1 (setup) — OK
+
+```
+aws-cli/2.32.34 Python/3.13.11 Linux/6.17.0-35-generic exe/x86_64.ubuntu.24
+{
+    "Location": "/staging-integrity-lock-spike"
+}
+{
+    "ObjectLockConfiguration": {
+        "ObjectLockEnabled": "Enabled",
+        "Rule": {
+            "DefaultRetention": {
+                "Mode": "COMPLIANCE",
+                "Days": 1
+            }
+        }
+    }
+}
+{
+    "Status": "Enabled"
+}
+```
+
+### Case A (inline lock, extend without/with version-id) — **PASS**
+
+```
+{
+    "ETag": "\"2029d88d9eef02c37ffc110b263d956e\"",
+    "ChecksumCRC64NVME": "OlTDHeZPb3o=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "1784204507848441"
+}
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-16T13:21:47+00:00"
+    }
+}
+extended retain-until: 2026-07-16T14:21:53Z
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-16T14:21:53+00:00"
+    }
+}
+version id: 1784204507848441
+re-extended retain-until: 2026-07-16T15:21:54Z
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-16T15:21:54+00:00"
+    }
+}
+```
+
+Both extends succeeded and the read-back `RetainUntilDate` equals the
+requested date each time — including the no-`--version-id` form that
+`IntegrityStore.extendRetention()` uses.
+
+### Case A′ (shorten + delete refused) — **PASS**
+
+```
+An error occurred (AccessDenied) when calling the PutObjectRetention operation: Access Denied because object protected by object lock.
+
+An error occurred (AccessDenied) when calling the DeleteObject operation: Access Denied because object protected by object lock.
+```
+
+Both the shorten attempt and the version delete were refused: the lock is a
+real compliance lock, so case A's successful extends are meaningful.
+
+### Case B (default-retention lock, extend) — **PASS**
+
+```
+{
+    "ETag": "\"86dd0caed73a4fc7bda9bb329eb92ae0\"",
+    "ChecksumCRC64NVME": "hxYeySoenao=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "1784204659200242"
+}
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-17T12:24:19.200000+00:00"
+    }
+}
+extended retain-until: 2026-07-18T12:24:21Z
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-18T12:24:21+00:00"
+    }
+}
+```
+
+The lock inherited from the bucket's `DefaultRetention` rule (no inline lock
+on the put) extends just like an inline one.
+
+### Case C (Glacier, extend) — **PASS**
+
+```
+{
+    "ETag": "\"986d0ef835422ea1d4802a37e64ed653\"",
+    "ChecksumCRC64NVME": "AGC3tFmjQsM=",
+    "ChecksumType": "FULL_OBJECT",
+    "VersionId": "1784204695087103"
+}
+{
+    "StorageClass": "GLACIER",
+    "Mode": "COMPLIANCE",
+    "RetainUntil": "2026-07-16T13:24:54+00:00"
+}
+extended retain-until: 2026-07-16T14:24:56Z
+{
+    "Retention": {
+        "Mode": "COMPLIANCE",
+        "RetainUntilDate": "2026-07-16T14:24:56+00:00"
+    }
+}
+```
+
+The compliance lock applies and extends on a GLACIER-class object.
+
+### Cleanup — _pending_
+
+Run block 6 after 2026-07-18T12:24:21Z (case B's extended retention, the
+latest lock in the bucket).
 
 ## Verdict
 
-_pending — PASS/FAIL per case, overall conclusion for integrity.md §3.4/§12_
+**PASS on all cases — the reported Scaleway lock-prolongation bug does not
+reproduce (2026-07-16, fr-par).** `PutObjectRetention` with
+`Mode: COMPLIANCE` and a later `RetainUntilDate` works with and without
+`--version-id`, on inline and default-retention locks, on Standard and
+Glacier storage classes; shortening and deleting are correctly refused.
+Option B (lock renewal by extension, integrity.md §3.4) is validated as the
+primary renewal model on the target provider; Option A (re-anchoring)
+remains a documented fallback for providers without prolongation.
