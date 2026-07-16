@@ -5,7 +5,7 @@
 Dataset maps (UI map components under `ui/src/components/dataset/map/`)
 render a MapLibre base layer whose style URL comes from the `map.style`
 config key (`api/config/default.cjs`), shipped to the SPA through
-`ui-config.ts` as `$uiConfig.map`.
+`api/src/ui-config.ts` as `$uiConfig.map`.
 
 - A value starting with `./` is resolved against the **site root**:
   `useMapStyle()` (`ui/src/components/dataset/map/use-map-style.ts`) rewrites
@@ -32,11 +32,13 @@ from their stored configurations.
 
 A dedicated route in `api/src/remote-services/router.js` answers
 `GET /api/v1/remote-services/tileserver-koumoul/proxy/*` with a **302** to
-the root-relative `/tileserver/*` (query string preserved,
-`Cache-Control: public, max-age=3600`). It is registered before the generic
-proxy handler, needs no Mongo document, and skips rate limiting. The
+`{sitePath}/tileserver/*` — the publication site's path prefix (empty on
+domain-rooted sites) followed by the tileserver path, query string
+preserved, `Cache-Control: public, max-age=3600` — consistent with the UI
+resolving `map.style` against the site root. It is registered before the
+generic proxy handler, needs no Mongo document, and skips rate limiting. The
 `remote-services` documents themselves were deleted by the
-`upgrade/6.16.1/remove-tileserver-remote-service.ts` upgrade script, and
+`api/upgrade/6.16.1/remove-tileserver-remote-service.ts` upgrade script, and
 `init()` no longer supports config entries without an OpenAPI `url`.
 
 **When can the redirect be removed?** Once stored application configurations

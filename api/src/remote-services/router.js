@@ -18,7 +18,7 @@ import { clean, validateOpenApi, initNew, computeActions } from './operations.ts
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqSession, reqAdminMode } from '@data-fair/lib-express'
+import { reqSession, reqAdminMode, reqSitePathSafe } from '@data-fair/lib-express'
 import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
@@ -216,13 +216,12 @@ async function getAppOwner (req) {
 }
 
 // the tileserver used to be consumed as a remote service pointing at koumoul.com/s/tileserver,
-// it is now a standard member of the stack exposed at /tileserver on the same origin
+// it is now a standard member of the stack exposed at /tileserver next to /data-fair on every site
 // redirect requests coming from the stored configurations of older map applications
 router.get('/tileserver-koumoul/proxy/*proxyPath', (req, res) => {
-  const searchIndex = req.url.indexOf('?')
-  const search = searchIndex === -1 ? '' : req.url.slice(searchIndex)
   res.set('cache-control', 'public, max-age=3600')
-  res.redirect(302, '/tileserver/' + req.params.proxyPath.join('/') + search)
+  // req.url is the raw still-encoded path + query string after the router's mount point
+  res.redirect(302, reqSitePathSafe(req) + '/tileserver' + req.url.slice('/tileserver-koumoul/proxy'.length))
 })
 
 // Use the proxy as a user of an application
