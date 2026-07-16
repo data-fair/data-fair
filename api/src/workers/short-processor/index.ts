@@ -77,9 +77,6 @@ export const finalize = async function (dataset: Dataset) {
 
 export const historize = async function (dataset: Dataset) {
   await mongo.connect(true)
-  // the relay (and the checker it runs for a fixIntegrity stamp) pushes realtime
-  // updates to the integrity panel — the emitter must be initialized in this task too
-  await wsEmitter.init(mongo.db)
   const relay = await import('../../integrity/relay.ts')
   await relay.historize(dataset as any)
 }
