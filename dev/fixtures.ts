@@ -223,6 +223,11 @@ async function ensureBreachState () {
     check = await runCheck(id)
   }
   console.log(`${id}: breach state (status=${check.status}, breach=${check.breach?.join(',') || 'none'})`)
+  // level 2: every anchor revision (including revision 0) carries the full
+  // payload, so the breach can be diffed and repaired from the UI or the API —
+  // not auto-demoed here, the fixture keeps showing the breach state as-is
+  console.log(`  level 2: la révision 0 porte le payload complet — diff/téléchargement dans l'onglet intégrité,`)
+  console.log(`  restauration superadmin: POST /api/v1/datasets/${id}/_integrity/_restore {"i": 0}`)
 }
 
 /** CSV file dataset: tabular reference data (product catalog). */

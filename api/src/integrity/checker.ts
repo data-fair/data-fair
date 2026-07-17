@@ -56,9 +56,10 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const latest = ops.latestKey((await store.listRevisions(prefix)).map((r) => r.key))
   if (!latest) {
-    // no anchor written yet (e.g. right after an owner transfer, before the re-anchor lands under
-    // the new prefix): persist the verdict so a stale pre-transfer 'ok' cannot linger and the
-    // sweep cursor (sorted on lastCheck.date) advances past this dataset
+    // no anchor written yet (e.g. enable succeeded — integrity.active is set — but the inline
+    // anchor write then failed, S3 down, before any revision landed): persist the verdict so a
+    // stale 'ok' cannot linger and the sweep cursor (sorted on lastCheck.date) advances past this
+    // dataset
     const date = new Date().toISOString()
     await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
     return { status: 'unknown', date }
