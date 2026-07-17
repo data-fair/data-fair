@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, getRawDataset, collectNotifications } from '../../support/workers.ts'
-import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
@@ -366,6 +366,51 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   // and the tamper is still detectable
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
+})
+
+test('restore heals a tampered metadata field synchronously and appends a restore revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // out-of-band tamper (no outbox stamp)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo tamper' })).data
+  expect(res.status).toBe('ok') // synchronous: responds with the fresh verdict
+
+  const raw = await getRawDataset(dataset.id)
+  expect(raw.description ?? '').not.toBe('tampered-oob')
+
+  // the restore appended a new revision with the restore context
+  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).sort()
+  const latest = await integrityTestStore.getRevision(keys.at(-1)!)
+  expect(latest.context.operation).toBe('restore')
+  expect(latest.context.origin).toBe('superadmin')
+  expect(latest.context.reason).toBe('undo tamper')
+})
+
+test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_superadmin@test.com', undefined, false)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).rejects.toMatchObject({ status: 400 }) // inactive
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await expect(user.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).rejects.toMatchObject({ status: 403 })
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 99 })).rejects.toMatchObject({ status: 404 })
+
+  // an L1-era (payload-less) revision is not restorable
+  await integrityTestStore.writeRevision(`${prefix}000000001`, {
+    hash: (await integrityTestStore.getRevision(`${prefix}000000000`)).hash,
+    context: { operation: 'update', origin: 'worker', date: new Date().toISOString() },
+    dataset: { id: dataset.id }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 1 })).rejects.toMatchObject({ status: 400 })
 })
 
 test('owner transfer is refused while integrity is active', async () => {

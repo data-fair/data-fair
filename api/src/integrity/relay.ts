@@ -12,8 +12,8 @@ import * as ops from './operations.ts'
 // Compute both hashes from the authoritative sources (stored file bytes + fresh Mongo doc),
 // dedupe against the latest anchor, write the next locked revision and persist the
 // integrity.lastRevision hint. Shared by the async relay (organic writes) and the synchronous
-// admin routes (enable / fixIntegrity).
-export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.HistorizeContextHint): Promise<void> => {
+// admin routes (enable / fixIntegrity / restore).
+export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.HistorizeContextHint, opts?: { force?: boolean }): Promise<void> => {
   const store = integrityStore()
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + (config.integrity!.retention?.days ?? 365) * 24 * 3600 * 1000)
@@ -39,7 +39,11 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const keys = (await store.listRevisions(prefix)).map((r) => r.key)
   const latest = ops.latestKey(keys)
-  if (latest) {
+  // restore bypasses the dedupe: it is a rare, explicitly-reasoned remediation action that must
+  // always leave its own auditable 'restore' revision, even when it lands back on a state that is
+  // byte-identical to a prior anchor (e.g. undoing an out-of-band tamper restores the exact
+  // pre-tamper metadata) — otherwise the action would silently vanish from the revision history.
+  if (latest && !opts?.force) {
     const latestRevision = await store.getRevision(latest)
     const latestHash = latestRevision.hash
     // level 2: only a payload-bearing anchor is a valid dedupe target — an L1-era anchor

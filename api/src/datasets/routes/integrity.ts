@@ -7,7 +7,7 @@ import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
-import { revisionPrefix, parseRevisionIndex, isPayloadKey } from '../../integrity/operations.ts'
+import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 
 export const registerIntegrityRoutes = (router: Router) => {
@@ -53,6 +53,46 @@ export const registerIntegrityRoutes = (router: Router) => {
     const checker = await import('../../integrity/checker.ts')
     const fresh = await mongo.datasets.findOne({ id: dataset.id })
     res.json(await checker.checkDataset(fresh as any))
+  })
+
+  router.post('/:datasetId/_integrity/_restore', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    const i = req.body?.i
+    if (!Number.isInteger(i) || i < 0) throw httpError(400, 'missing or invalid revision index "i"')
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined
+    const store = integrityStore()
+    const revision = await store.getRevision(revisionKey(dataset.owner, dataset.id, i)).catch((err: any) => {
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) throw httpError(404, 'unknown revision')
+      throw err
+    })
+    if (!revision.payload) throw httpError(400, 'this revision has no payload (level-1 anchor): not restorable')
+
+    // metadata part: write back only the genuinely diverging covered keys
+    const fresh = await mongo.datasets.findOne({ id: dataset.id })
+    if (!fresh) throw httpError(404, 'dataset not found')
+    const { $set, $unset } = restoreUpdate(fresh, revision.payload.metadata)
+    if ($set.topics) {
+      const settings = await mongo.db.collection('settings').findOne({ type: dataset.owner.type, id: dataset.owner.id })
+      $set.topics = rehydrateTopics($set.topics, settings?.topics ?? [])
+    }
+    if (Object.keys($set).length || Object.keys($unset).length) {
+      const update: any = { $set: { ...$set, updatedAt: new Date().toISOString() } }
+      if (Object.keys($unset).length) update.$unset = $unset
+      await mongo.datasets.updateOne({ id: dataset.id }, update)
+    }
+
+    // metadata-only restore (file part comes in the next iteration of this route): re-anchor
+    // synchronously with the restore context and respond with the fresh verdict, like _fix.
+    // force: true — restore must always leave its own auditable revision, even when the
+    // corrected state lands back on one identical to a prior anchor (anchorDataset's normal
+    // dedupe would otherwise silently swallow the remediation, see relay.ts for detail)
+    await anchorDataset(dataset, { operation: 'restore', origin: 'superadmin', reason }, { force: true })
+    await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
+    const checker = await import('../../integrity/checker.ts')
+    const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
+    res.json(await checker.checkDataset(freshAfter as any))
   })
 
   router.post('/:datasetId/_integrity/_check', readDataset({ noCache: true }), async (req, res) => {
