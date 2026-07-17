@@ -7,7 +7,7 @@ import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
-import { revisionPrefix, parseRevisionIndex } from '../../integrity/operations.ts'
+import { revisionPrefix, parseRevisionIndex, isPayloadKey } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 
 export const registerIntegrityRoutes = (router: Router) => {
@@ -68,7 +68,8 @@ export const registerIntegrityRoutes = (router: Router) => {
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
     const store = integrityStore()
     // zero-padded indices sort lexically == numerically; newest first = reversed
-    const keys = (await store.listRevisions(revisionPrefix(dataset.owner, dataset.id))).map((r) => r.key).sort().reverse()
+    const keys = (await store.listRevisions(revisionPrefix(dataset.owner, dataset.id))).map((r) => r.key)
+      .filter((k) => !isPayloadKey(k)).sort().reverse()
     const count = keys.length
     const size = Math.min(parseInt(String(req.query.size ?? '20'), 10) || 20, 100)
     const page = parseInt(String(req.query.page ?? '1'), 10) || 1

@@ -22,7 +22,8 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
 
   // enable is synchronous: the anchor exists as soon as the PUT returns, no wait needed
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  // 2 raw keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 
   const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(status.active).toBe(true)
@@ -42,11 +43,11 @@ test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
   // _fix is synchronous too
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
   // unchanged state → dedupe → still exactly one revision
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 })
 
 test('revisions endpoint lists revisions newest-first and is readable by the owner admin', async () => {
@@ -60,7 +61,8 @@ test('revisions endpoint lists revisions newest-first and is readable by the own
   await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`) // revision 1
 
-  expect((await listIntegrityKeys(prefix)).length).toBe(2)
+  // raw store has 4 keys (2 revisions × JSON + .file); the revisions endpoint filters payloads out
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2)
   const res = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
   expect(res.count).toBe(2)
   expect(res.results.length).toBe(2)
@@ -89,7 +91,7 @@ test('integrity reads are allowed to the owner admin, writes stay superadmin-onl
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 
   // owner (admin of the owner account) can read status and revisions
   expect((await owner.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.active).toBe(true)
@@ -158,7 +160,7 @@ test('disable then re-enable with unchanged content restores lastRevision', asyn
   // dedupe wrote no new revision
   const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
   expect(revisions.count).toBe(1)
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 })
 
 test('internal historize fields are stripped from API responses', async () => {
@@ -233,7 +235,7 @@ test('an out-of-band write to an EXCLUDED field neither breaches nor creates a r
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 })
 
 test('a legitimate metadata PATCH historizes a new revision', async () => {
@@ -244,8 +246,9 @@ test('a legitimate metadata PATCH historizes a new revision', async () => {
 
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'legitimate new description' })
 
-  const keys = await waitForIntegrityRevisions(prefix, 2)
-  expect(keys.length).toBe(2)
+  // 4 raw keys: 2 revisions × (JSON + .file payload)
+  const keys = await waitForIntegrityRevisions(prefix, 4)
+  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -265,7 +268,7 @@ test('a permissions change historizes a new revision', async () => {
 
   await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
 
-  expect((await waitForIntegrityRevisions(prefix, 2)).length).toBe(2)
+  expect((await waitForIntegrityRevisions(prefix, 4)).filter(k => !k.endsWith('.file')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -287,7 +290,7 @@ test('a topic removed from owner settings historizes a new revision', async () =
 
   // topics is a covered field: assigning it to the dataset is itself a legitimate PATCH that historizes
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Integrity topic' }] })
-  expect((await waitForIntegrityRevisions(prefix, 2)).length).toBe(2)
+  expect((await waitForIntegrityRevisions(prefix, 4)).filter(k => !k.endsWith('.file')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
 
   // renaming the topic in settings propagates the display name, but topics are hashed as ids only
@@ -297,15 +300,15 @@ test('a topic removed from owner settings historizes a new revision', async () =
     topics: beforeRename.map((t: any) => t.id === topicId ? { ...t, title: 'Renamed integrity topic' } : t)
   })
   await waitForFlagCleared(dataset.id)
-  expect((await listIntegrityKeys(prefix)).length).toBe(2) // unchanged: rename is not covered
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2) // unchanged: rename is not covered
 
   // now remove the topic from the owner settings — this fires the propagation $pull on the dataset
   const settingsBeforeRemoval = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsBeforeRemoval.filter((t: any) => t.id !== topicId) })
 
   await waitForFlagCleared(dataset.id)
-  const keys = await waitForIntegrityRevisions(prefix, 3)
-  expect(keys.length).toBe(3)
+  const keys = await waitForIntegrityRevisions(prefix, 6)
+  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
 })
@@ -323,15 +326,15 @@ test('deleting a publication site historizes a new revision', async () => {
 
   // publicationSites is a covered field: assigning it to the dataset is itself a legitimate PATCH
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [`data-fair-portals:${siteId}`] })
-  expect((await waitForIntegrityRevisions(prefix, 2)).length).toBe(2)
+  expect((await waitForIntegrityRevisions(prefix, 4)).filter(k => !k.endsWith('.file')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
 
   // deleting the publication site fires the propagation $pull on the dataset
   await admin.delete(`/api/v1/settings/user/test_superadmin/publication-sites/data-fair-portals/${siteId}`)
 
   await waitForFlagCleared(dataset.id)
-  const keys = await waitForIntegrityRevisions(prefix, 3)
-  expect(keys.length).toBe(3)
+  const keys = await waitForIntegrityRevisions(prefix, 6)
+  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
 })
@@ -349,7 +352,7 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   const existingTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Unchanged topic' }] })
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Unchanged topic' }] })
-  await waitForIntegrityRevisions(prefix, 2)
+  await waitForIntegrityRevisions(prefix, 4)
   await waitForFlagCleared(dataset.id)
 
   // tamper out-of-band, then save settings with the SAME topics: the propagation must NOT
@@ -359,7 +362,7 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsTopics })
   await new Promise(resolve => setTimeout(resolve, 2000)) // settle: give a wrongly-stamped relay time to run
   expect((await getRawDataset(dataset.id))._needsHistorizing).toBeUndefined()
-  expect((await listIntegrityKeys(prefix)).length).toBe(2)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2)
   // and the tamper is still detectable
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')

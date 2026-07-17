@@ -1,10 +1,12 @@
 import mongo from '#mongo'
 import config from '#config'
+import filesStorage from '#files-storage'
 import type { DatasetInternal } from '#types'
 import { isFileDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import { integrityStore } from './store-factory.ts'
-import { md5OfStorageFile } from './hash.ts'
+import { md5OfStorageFile, md5Tee } from './hash.ts'
+import type { RevisionBody } from './store.ts'
 import * as ops from './operations.ts'
 
 // Compute both hashes from the authoritative sources (stored file bytes + fresh Mongo doc),
@@ -40,7 +42,9 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   if (latest) {
     const latestRevision = await store.getRevision(latest)
     const latestHash = latestRevision.hash
-    if (latestHash.md5 === hash.md5 && latestHash.sha256 === hash.sha256) {
+    // level 2: only a payload-bearing anchor is a valid dedupe target — an L1-era anchor
+    // with matching hashes still gets a fresh revision, so the store self-heals to level 2
+    if (latestHash.md5 === hash.md5 && latestHash.sha256 === hash.sha256 && latestRevision.payload) {
       // disable→re-enable dedupe constraint: PUT _integrity {active:false} replaces the whole
       // integrity object (wiping integrity.lastRevision); a later re-enable that dedupes against
       // this unchanged anchor must still restore that mirror, or it stays unset forever and the
@@ -64,10 +68,24 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
     date,
     ...(hint?.reason ? { reason: hint.reason } : {})
   }
+  // payload FIRST, revision JSON second: a crash in between leaves an orphan .file that ages
+  // out harmlessly — the reverse would leave a revision claiming a payload it doesn't have
+  const payload: NonNullable<RevisionBody['payload']> = { metadata: ops.coveredMetadata(fresh) }
+  if (hash.md5) {
+    const { body, size } = await filesStorage.readStream(datasetUtils.originalFilePath(dataset))
+    const tee = md5Tee()
+    body.on('error', (err) => tee.stream.destroy(err))
+    await store.writePayload(ops.payloadKey(dataset.owner, dataset.id, i), body.pipe(tee.stream), retainUntil)
+    // the file may have changed since the dedupe-check read: the anchor must describe the
+    // payload's actual bytes, so the teed md5 wins over the first-pass one
+    hash.md5 = tee.digest()
+    payload.file = { size }
+  }
   await store.writeRevision(ops.revisionKey(dataset.owner, dataset.id, i), {
     hash,
     context,
-    dataset: { id: dataset.id, slug: dataset.slug }
+    dataset: { id: dataset.id, slug: dataset.slug },
+    payload
   }, retainUntil)
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: { 'integrity.lastRevision': { i, hash, date, retainUntil: retainUntil.toISOString() } }
