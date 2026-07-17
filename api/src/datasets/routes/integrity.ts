@@ -1,6 +1,7 @@
 import { type Router } from 'express'
 import path from 'node:path'
 import mime from 'mime-types'
+import contentDisposition from 'content-disposition'
 import { reqAdminMode, reqSessionAuthenticated } from '@data-fair/lib-express'
 import clone from '@data-fair/lib-utils/clone.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -15,9 +16,10 @@ import { fallbackMimeTypes } from '../utils/upload.ts'
 import { applyPatch } from '../service.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
-import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
+import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics, coveredMetadata } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 import { md5OfStorageFile } from '../../integrity/hash.ts'
+import pump from '../../misc/utils/pipe.ts'
 
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
@@ -171,9 +173,44 @@ export const registerIntegrityRoutes = (router: Router) => {
         date: rev.context.date,
         operation: rev.context.operation,
         origin: rev.context.origin,
-        ...(rev.context.reason ? { reason: rev.context.reason } : {})
+        ...(rev.context.reason ? { reason: rev.context.reason } : {}),
+        hasPayload: !!rev.payload,
+        ...(rev.payload?.file ? { fileSize: rev.payload.file.size } : {})
       }
     }))
     res.json({ count, results })
+  })
+
+  router.get('/:datasetId/_integrity/revisions/:i', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    const i = parseInt(req.params.i as string, 10)
+    if (Number.isNaN(i) || i < 0) throw httpError(400, 'invalid revision index')
+    const store = integrityStore()
+    const rev = await store.getRevision(revisionKey(dataset.owner, dataset.id, i)).catch((err: any) => {
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) throw httpError(404, 'unknown revision')
+      throw err
+    })
+    const fresh = await mongo.datasets.findOne({ id: dataset.id })
+    // `current` is the live covered projection so the UI can render the metadata diff in one call
+    res.json({ i, hash: rev.hash, context: rev.context, payload: rev.payload, current: fresh ? coveredMetadata(fresh) : undefined })
+  })
+
+  router.get('/:datasetId/_integrity/revisions/:i/file', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    const i = parseInt(req.params.i as string, 10)
+    if (Number.isNaN(i) || i < 0) throw httpError(400, 'invalid revision index')
+    const store = integrityStore()
+    const rev = await store.getRevision(revisionKey(dataset.owner, dataset.id, i)).catch((err: any) => {
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) throw httpError(404, 'unknown revision')
+      throw err
+    })
+    if (!rev.payload?.file) throw httpError(404, 'this revision has no file payload')
+    const { body, size } = await store.readPayload(payloadKey(dataset.owner, dataset.id, i))
+    res.setHeader('content-disposition', contentDisposition(rev.payload.metadata.originalFile?.name ?? `${dataset.slug}-revision-${i}`))
+    res.setHeader('content-type', rev.payload.metadata.originalFile?.mimetype ?? 'application/octet-stream')
+    if (size !== undefined) res.setHeader('content-length', String(size))
+    await pump(body, res)
   })
 }

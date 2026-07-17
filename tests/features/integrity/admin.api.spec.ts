@@ -478,6 +478,31 @@ test('restore guards: inactive, unknown index, payload-less revision, non-admin'
   await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 1 })).rejects.toMatchObject({ status: 400 })
 })
 
+test('revision detail returns snapshot + current projection; file endpoint streams the payload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'edited legitimately' })
+  await waitForFlagCleared(dataset.id)
+
+  const list = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
+  expect(list.results[0].hasPayload).toBe(true)
+  expect(list.results[0].fileSize).toBeGreaterThan(0)
+
+  const detail = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/0`)).data
+  expect(detail.i).toBe(0)
+  expect(detail.payload.metadata.description ?? '').not.toBe('edited legitimately') // the old snapshot
+  expect(detail.current.description).toBe('edited legitimately') // the live projection
+
+  const file = await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/0/file`, { responseType: 'arraybuffer' })
+  const { createHash } = await import('node:crypto')
+  expect(createHash('md5').update(Buffer.from(file.data)).digest('hex')).toBe(detail.hash.md5)
+  expect(file.headers['content-disposition']).toContain(dataset.originalFile.name)
+
+  // reads follow the readIntegrityRevisions permission (same as the list endpoint)
+  await expect(anonymousAx.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/0`)).rejects.toMatchObject({ status: 403 })
+})
+
 test('owner transfer is refused while integrity is active', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
