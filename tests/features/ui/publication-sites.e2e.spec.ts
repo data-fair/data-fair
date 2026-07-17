@@ -139,6 +139,21 @@ test.describe('dataset publication sites', () => {
     }, { timeout: 5000 }).toBeTruthy()
   })
 
+  test('conflicting slug surfaces an error notification', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const taken = (await ax.post('/api/v1/datasets', { isRest: true, title: 'taken slug ds', schema: [] })).data
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'other ds', schema: [] })).data
+
+    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id)
+    await page.getByRole('button', { name: /Modifier l'identifiant de publication/ }).click()
+    await page.getByLabel('Nouvel identifiant de publication').fill(taken.slug)
+    await page.getByRole('button', { name: 'Valider' }).click()
+
+    await expect(page.locator('.v-snackbar').getByText(/Ce slug est déjà utilisé/)).toBeVisible({ timeout: 10000 })
+    // the slug must be left untouched by the rejected patch
+    expect((await ax.get(`/api/v1/datasets/${dataset.id}`)).data.slug).toBe('other-ds')
+  })
+
   test('department admin sees and uses a portal shared with their department', async ({ page, goToWithAuth }) => {
     const orgAx = await axiosAuth('test_user1@test.com', 'test_org1')
     await orgAx.post('/api/v1/settings/organization/test_org1/publication-sites', {
@@ -204,5 +219,20 @@ test.describe('application publication sites', () => {
     }, { timeout: 5000 }).toBeTruthy()
 
     await expect(page.getByLabel('privilégier un rendu large')).toBeVisible()
+  })
+
+  test('conflicting slug surfaces an error notification', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const taken = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'taken slug app' })).data
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other app' })).data
+
+    await goToPublicationSitesTab(page, goToWithAuth, 'application', app.id)
+    await page.getByRole('button', { name: /Modifier l'identifiant de publication/ }).click()
+    await page.getByLabel('Nouvel identifiant de publication').fill(taken.slug)
+    await page.getByRole('button', { name: 'Valider' }).click()
+
+    await expect(page.locator('.v-snackbar').getByText(/Ce slug est déjà utilisé/)).toBeVisible({ timeout: 10000 })
+    // the slug must be left untouched by the rejected patch
+    expect((await ax.get(`/api/v1/applications/${app.id}`)).data.slug).toBe('other-app')
   })
 })

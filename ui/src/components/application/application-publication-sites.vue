@@ -3,7 +3,7 @@
     <slug-edit-dialog
       :slug="application.slug ?? application.id"
       :can-edit="can('writeDescription')"
-      @update:slug="slug => patch({ slug })"
+      @update:slug="patchSlug.execute"
     />
 
     <df-tutorial-alert
@@ -174,6 +174,8 @@ const canPublish = (site: any) => {
 const canRequestPublication = (_site: any) => {
   return can('writeDescription')
 }
+
+const patchSlug = useAsyncAction(async (slug: string) => { await patch({ slug }) })
 
 const togglePublish = async (site: any, publish: boolean) => {
   if (!application.value) return
