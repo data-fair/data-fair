@@ -41,8 +41,8 @@
           color="accent"
           variant="flat"
           :disabled="!masterDataFormValid || hasInvalidExtension"
-          :loading="structureEditFetch.save.loading.value"
-          @click="structureEditFetch.save.execute()"
+          :loading="structureEditFetch.save.loading.value || saveStructure.loading.value"
+          @click="saveStructure.execute()"
         >
           {{ t('save') }}
         </v-btn>
@@ -389,7 +389,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('changeOwner').value"
+            v-if="showChangeOwnerSection"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -411,7 +411,19 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('changeOwner').value && (canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="showChangeOwnerSection && (showPartOfSection || canDeleteAllLines || can('delete').value)" />
+
+          <part-of-section
+            v-if="showPartOfSection && dataset"
+            resource-type="datasets"
+            :resource="dataset"
+            :candidates="partOfCandidates"
+            :candidates-loading="partOfCandidatesLoading"
+            @open="openPartOfDialog"
+            @changed="store.datasetFetch.refresh()"
+          />
+
+          <v-divider v-if="showPartOfSection && (canDeleteAllLines || can('delete').value)" />
 
           <v-list-item
             v-if="canDeleteAllLines"
@@ -456,7 +468,8 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="showDeleteDialog = true"
+                :loading="openDeleteDialog.loading.value"
+                @click="openDeleteDialog.execute()"
               >
                 {{ t('deleteDataset') }}
               </v-btn>
@@ -467,43 +480,34 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('changeOwner').value"
+      v-if="showChangeOwnerSection"
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
       @changed="store.datasetFetch.refresh()"
     />
 
-    <v-dialog
+    <children-action-dialog
       v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card
-        :title="t('deleteDataset')"
-        :loading="confirmRemove.loading.value ? 'warning' : undefined"
-      >
-        <v-card-text class="pb-0">
-          {{ t('deleteMsg', { title: dataset?.title }) }}
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            :disabled="confirmRemove.loading.value"
-            @click="showDeleteDialog = false"
-          >
-            {{ t('no') }}
-          </v-btn>
-          <v-btn
-            color="warning"
-            variant="flat"
-            :loading="confirmRemove.loading.value"
-            @click="confirmRemove.execute()"
-          >
-            {{ t('yes') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      :title="t('deleteDataset')"
+      :message="t('deleteMsg', { title: dataset?.title })"
+      :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
+      kind="resources"
+      :loading="confirmRemove.loading.value"
+      @confirm="action => confirmRemove.execute(action)"
+    />
+
+    <children-action-dialog
+      v-model="showVirtualOrphansDialog"
+      :title="t('virtualOrphansTitle')"
+      :message="t('virtualOrphansMsg')"
+      :warning="t('virtualOrphansWarning', virtualOrphansCount)"
+      kind="datasets"
+      :loading="structureEditFetch.save.loading.value"
+      :cancel-label="t('cancel')"
+      :confirm-label="t('save')"
+      @confirm="action => saveStructure.execute(action)"
+    />
 
     <v-dialog
       v-model="showDeleteAllLinesDialog"
@@ -612,6 +616,10 @@ fr:
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  childrenWarning: aucune ressource enfant | Ce jeu de données a une ressource enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} ressources enfants qui n'existent que dans ce cadre.
+  virtualOrphansTitle: Jeux de données enfants
+  virtualOrphansMsg: Cette modification retire des jeux de données définis comme enfants de ce jeu virtuel, ils n'existent que dans ce cadre.
+  virtualOrphansWarning: aucun jeu de données enfant retiré | Un jeu de données enfant est retiré des jeux de données agrégés. | {count} jeux de données enfants sont retirés des jeux de données agrégés.
   deleteDatasetSuccess: Le jeu de données a bien été supprimé.
   deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
@@ -673,6 +681,10 @@ en:
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
+  childrenWarning: no child resource | This dataset has a child resource that only exists within this context. | This dataset has {count} child resources that only exist within this context.
+  virtualOrphansTitle: Child datasets
+  virtualOrphansMsg: This change removes datasets defined as children of this virtual dataset, they only exist within this context.
+  virtualOrphansWarning: no child dataset removed | A child dataset is removed from the aggregated datasets. | {count} child datasets are removed from the aggregated datasets.
   deleteDatasetSuccess: Dataset was deleted successfully.
   deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
@@ -708,6 +720,9 @@ import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schem
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
+import { isMasterData } from '~/../../api/contract/master-data.js'
+import { childRefs, orphanRefs } from '@data-fair/data-fair-shared/utils/parent-children.ts'
+import { fetchChildRefs } from '~/utils/part-of'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -735,7 +750,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, virtualDatasetsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
 
@@ -879,8 +894,33 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
-const confirmRemove = useAsyncAction(async () => {
-  await remove()
+// a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see the cannotBeChild rule)
+const showPartOfSection = computed(() => can('writePartOf').value && !isMasterData(dataset.value?.masterData))
+
+// a child always lives in the same account as its parent, it can only follow it (see the API guard)
+const showChangeOwnerSection = computed(() => can('changeOwner').value && !dataset.value?.partOf)
+
+const partOfCandidates = computed(() => [
+  ...(virtualDatasetsFetch.data.value?.results ?? []).map(d => ({ type: 'dataset' as const, id: d.id, title: d.title })),
+  ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
+])
+const partOfCandidatesLoading = computed(() => virtualDatasetsFetch.loading.value || applicationsFetch.loading.value)
+// both fetches feed the candidate list, refresh them so it reflects the current parents
+const openPartOfDialog = () => {
+  virtualDatasetsFetch.refresh()
+  applicationsFetch.refresh()
+}
+
+// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
+// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
+const childrenCount = ref(0)
+const openDeleteDialog = useAsyncAction(async () => {
+  childrenCount.value = (await fetchChildRefs({ id })).length
+  showDeleteDialog.value = true
+})
+
+const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  await remove(childrenAction)
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
 
@@ -888,6 +928,31 @@ const confirmDeleteAllLines = useAsyncAction(async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
 }, { success: t('deleteAllLinesSuccess') })
+
+// saving the structure of a virtual dataset can drop members that are still defined as its partOf
+// children: offer the same delete-vs-unflag choice as the deletion flow before persisting, otherwise
+// the API rightfully refuses the patch with a 409
+const showVirtualOrphansDialog = ref(false)
+const virtualOrphansCount = ref(0)
+
+const saveStructure = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  if (!childrenAction && dataset.value) {
+    // saving can orphan datasets still defined as partOf children of this one, but only if it
+    // changes the resources it references at all
+    const newVersion = { ...dataset.value, ...structureEditFetch.data.value }
+    const savedVersion = { ...dataset.value, ...structureEditFetch.serverData.value }
+    if (!equal(childRefs('dataset', newVersion), childRefs('dataset', savedVersion))) {
+      const orphans = orphanRefs(await fetchChildRefs(dataset.value), 'dataset', newVersion)
+      if (orphans.length) {
+        virtualOrphansCount.value = orphans.length
+        showVirtualOrphansDialog.value = true
+        return
+      }
+    }
+  }
+  await structureEditFetch.save.execute(childrenAction ? { childrenAction } : undefined)
+  showVirtualOrphansDialog.value = false
+})
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -1048,7 +1113,8 @@ const sections = computedDeepDiff(() => {
       })
     }
 
-    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    // reciprocally, a dataset defined as a child of another resource cannot be turned into reference data (see preparePatch guard)
+    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin' && !d.partOf) {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),
@@ -1158,8 +1224,8 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('changeOwner').value || canDeleteAllLines.value || can('delete').value) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible operations: change owner, delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
+  if (showChangeOwnerSection.value || showPartOfSection.value || canDeleteAllLines.value || can('delete').value) {
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible or sensitive operations: change owner, define/remove this dataset as a child of a parent resource (partOf), delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 
   return result

@@ -12,12 +12,14 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { checkStorage } from '../datasets/middlewares.ts'
+import { checkMoveLimits } from '../datasets/utils/storage.ts'
 import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
@@ -64,6 +66,8 @@ router.post('', async (req, res) => {
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  // an application can be created directly as the child of the parent it will be embedded in
+  if (application.partOf) await partOf.prepareAtCreation('application', application, sessionState)
   const created = await service.createApplication(ctx, application)
   res.status(201).json(clean(created, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
@@ -84,17 +88,24 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
 // PUT used to create or update
 router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  // a full replace rewrites the configuration too: guard against orphaned partOf children
+  const orphans = reqIsNewApplication(req)
+    ? undefined
+    : await partOf.detectOrphans('application', reqApplication(req), { ...reqApplication(req), configuration: req.body.configuration }, req.query.childrenAction as string | undefined)
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
+  await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', newApplication.id, orphans)
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 const permissionsWritePublications = permissionMiddleware('writePublications', 'admin')
+const permissionsWritePartOf = permissionMiddleware('writePartOf', 'admin')
 
 // Update an application configuration
 router.patch('/:applicationId',
   readApplication,
   permissionMiddleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  (req, res, next) => ('partOf' in req.body) ? permissionsWritePartOf(req, res, next) : next(),
   async (req, res) => {
     const application = reqApplication(req)
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
@@ -105,6 +116,9 @@ router.patch('/:applicationId',
     }
 
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+    const orphans = patch.configuration
+      ? await partOf.detectOrphans('application', application, { ...application, configuration: patch.configuration }, req.query.childrenAction as string | undefined)
+      : undefined
     let patched
     try {
       patched = await service.patchApplication(ctx, application, patch)
@@ -112,6 +126,7 @@ router.patch('/:applicationId',
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
     }
+    await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', application.id, orphans)
     res.status(200).json(clean(patched, reqPublicBaseUrl(req), reqPublicationSite(req)))
   }
 )
@@ -119,19 +134,33 @@ router.patch('/:applicationId',
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
+  const application = reqApplication(req)
+
+  partOf.assertOwnerChangeAllowed(application)
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
+  // the child datasets follow their parent application, they consume the new owner's dataset limits
+  if (req.body.type !== application.owner.type || req.body.id !== application.owner.id) {
+    const children = await partOf.listChildren('application', application.id)
+    await checkMoveLimits(req.getLocale(), req.body, children.filter(child => child.type === 'dataset').map(child => child.resource))
+  }
+
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
-  const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
+  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body)
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
+  const application = reqApplication(req)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
-  await service.deleteApplication(ctx, reqApplication(req))
+
+  // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
+  await partOf.handleChildrenBeforeDeletion({ ...ctx, app: req.app }, 'application', application, req.query.childrenAction as string | undefined)
+
+  await service.deleteApplication(ctx, application)
   res.sendStatus(204)
 })
 
@@ -149,7 +178,9 @@ const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const orphans = await partOf.detectOrphans('application', reqApplication(req), { ...reqApplication(req), configuration: appConfig }, req.query.childrenAction as string | undefined)
   await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
+  await partOf.applyOrphans({ ...ctx, app: req.app }, 'application', reqApplication(req).id, orphans)
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissionMiddleware('writeConfig', 'write'), writeConfig)

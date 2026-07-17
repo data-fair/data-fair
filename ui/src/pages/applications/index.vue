@@ -226,6 +226,9 @@ const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPubl
 // Parent applications filter (applications using a specific application)
 const parentApp = useStringSearchParam('application')
 
+// Reveal child applications (hidden by default): ?partOf=true or ?partOf=<parentId>
+const partOf = useStringSearchParam('partOf')
+
 // Include shared applications for a given owner
 const shared = useStringSearchParam('shared')
 
@@ -260,6 +263,7 @@ const applicationsQuery = computed(() => {
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (parentApp.value) params.application = parentApp.value
+  if (partOf.value) params.partOf = partOf.value
   if (shared.value) params.shared = shared.value
   else if (showAll.value !== 'true') params.shared = 'false'
   return params

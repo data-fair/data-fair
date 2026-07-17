@@ -300,7 +300,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('delete')"
+            v-if="showChangeOwnerSection"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -322,7 +322,19 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('delete')" />
+          <v-divider v-if="showChangeOwnerSection || can('writePartOf')" />
+
+          <part-of-section
+            v-if="can('writePartOf') && application"
+            resource-type="applications"
+            :resource="application"
+            :candidates="partOfCandidates"
+            :candidates-loading="partOfCandidatesLoading"
+            @open="openPartOfDialog"
+            @changed="store.applicationFetch.refresh()"
+          />
+
+          <v-divider v-if="can('writePartOf') && can('delete')" />
 
           <v-list-item
             v-if="can('delete')"
@@ -340,7 +352,8 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="showDeleteDialog = true"
+                :loading="openDeleteDialog.loading.value"
+                @click="openDeleteDialog.execute()"
               >
                 {{ t('deleteApp') }}
               </v-btn>
@@ -351,41 +364,22 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('delete')"
+      v-if="showChangeOwnerSection"
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
       @changed="store.applicationFetch.refresh()"
     />
 
-    <v-dialog
+    <children-action-dialog
       v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card
-        :title="t('deleteApp')"
-        :loading="confirmRemove.loading.value ? 'warning' : undefined"
-      >
-        <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            :disabled="confirmRemove.loading.value"
-            @click="showDeleteDialog = false"
-          >
-            {{ t('no') }}
-          </v-btn>
-          <v-btn
-            color="warning"
-            variant="flat"
-            :loading="confirmRemove.loading.value"
-            @click="confirmRemove.execute()"
-          >
-            {{ t('yes') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      :title="t('deleteApp')"
+      :message="t('deleteMsg', { title: application?.title })"
+      :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
+      kind="resources"
+      :loading="confirmRemove.loading.value"
+      @confirm="action => confirmRemove.execute(action)"
+    />
 
     <df-navigation-right>
       <application-actions />
@@ -435,6 +429,7 @@ fr:
   deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
+  childrenWarning: aucune ressource enfant | Cette application a une ressource enfant qui n'existe que dans ce cadre. | Cette application a {count} ressources enfants qui n'existent que dans ce cadre.
   yes: Oui
   no: Non
 en:
@@ -477,6 +472,7 @@ en:
   deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
+  childrenWarning: no child resource | This application has a child resource that only exists within this context. | This application has {count} child resources that only exist within this context.
   yes: Yes
   no: No
 </i18n>
@@ -498,6 +494,7 @@ import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
 import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
+import { fetchChildRefs } from '~/utils/part-of'
 import { $uiConfig, $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
@@ -511,7 +508,7 @@ const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = useApplicationStore()
-const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, parentAppsFetch, permissions, permissionsFetch, savePermissions } = store
 
 const { sendUiNotif } = useUiNotif()
 
@@ -561,8 +558,16 @@ const cancelMetadata = () => {
 
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
+// a child always lives in the same account as its parent, it can only follow it (see the API guard)
+const showChangeOwnerSection = computed(() => can('delete') && !application.value?.partOf)
 const showDeleteDialog = ref(false)
 const upgrading = ref(false)
+
+const partOfCandidates = computed(() => (parentAppsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title })))
+const partOfCandidatesLoading = computed(() => parentAppsFetch.loading.value)
+const openPartOfDialog = () => {
+  parentAppsFetch.refresh()
+}
 
 // Fetch additional data once application is loaded
 watch(application, (app) => {
@@ -613,8 +618,16 @@ const confirmUpgrade = async () => {
   }
 }
 
-const confirmRemove = useAsyncAction(async () => {
-  await remove()
+// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
+// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
+const childrenCount = ref(0)
+const openDeleteDialog = useAsyncAction(async () => {
+  childrenCount.value = (await fetchChildRefs({ id: route.params.id })).length
+  showDeleteDialog.value = true
+})
+
+const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  await remove(childrenAction)
   await router.push('/applications')
 }, { success: t('deleteAppSuccess') })
 
@@ -677,8 +690,8 @@ const sections = computedDeepDiff(() => {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Activity tracking for this application.' }
   }
 
-  if (can('delete')) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive operations: change owner, delete the application.' }
+  if (can('delete') || can('writePartOf')) {
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive or sensitive operations: change owner, define/remove this application as a child of a parent application (partOf), delete the application.' }
   }
 
   return result

@@ -113,6 +113,17 @@
                 {{ t('validate') }}
               </v-btn>
             </div>
+            <children-action-dialog
+              v-model="showOrphansDialog"
+              :title="t('orphansTitle')"
+              :message="t('orphansMsg')"
+              :warning="t('orphansWarning', orphansCount)"
+              kind="resources"
+              :loading="validateDraft.loading.value"
+              :cancel-label="t('cancel')"
+              :confirm-label="t('validate')"
+              @confirm="action => validateDraft.execute(action)"
+            />
           </v-form>
         </v-defaults-provider>
       </v-col>
@@ -129,6 +140,9 @@ fr:
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
   appConfig: Configuration d'application
   configurePrompt: Aide-moi à configurer cette application
+  orphansTitle: Ressources enfants
+  orphansMsg: Cette configuration ne référence plus des ressources définies comme enfants de cette application, elles n'existent que dans ce cadre.
+  orphansWarning: aucune ressource enfant retirée | Une ressource enfant n'est plus référencée. | {count} ressources enfants ne sont plus référencées.
 en:
   changeVersion: Change version
   validate: Validate
@@ -137,6 +151,9 @@ en:
   removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
   appConfig: Application configuration
   configurePrompt: Help me configure this application
+  orphansTitle: Child resources
+  orphansMsg: This configuration no longer references resources defined as children of this application, they only exist within this context.
+  orphansWarning: no child resource removed | A child resource is no longer referenced. | {count} child resources are no longer referenced.
 </i18n>
 
 <script setup lang="ts">
@@ -149,6 +166,8 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
+import { orphanRefs } from '@data-fair/data-fair-shared/utils/parent-children.ts'
+import { fetchChildRefs } from '~/utils/part-of'
 import { setProperty } from 'dot-prop'
 import equal from 'fast-deep-equal'
 import Debug from 'debug'
@@ -313,12 +332,28 @@ const cancelDraft = useAsyncAction(async () => {
   draftPreviewInc.value++
 })
 
-const validateDraft = useAsyncAction(async () => {
+const showOrphansDialog = ref(false)
+const orphansCount = ref(0)
+
+const validateDraft = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
   if (!canWriteConfig.value || !configDraft.value) return
+  if (childrenAction === undefined) {
+    // validating the draft rewrites the production configuration, which can orphan resources
+    // still defined as partOf children of this application: offer the same delete-vs-unflag
+    // choice as the deletion flow first
+    const children = await fetchChildRefs(application.value!)
+    const orphans = orphanRefs(children, 'application', { ...application.value, configuration: configDraft.value })
+    if (orphans.length) {
+      orphansCount.value = orphans.length
+      showOrphansDialog.value = true
+      return
+    }
+  }
   if (application.value?.urlDraft) {
     await patch({ url: application.value?.urlDraft, urlDraft: '' })
   }
-  await writeConfig(configDraft.value)
+  await writeConfig(configDraft.value, childrenAction)
+  showOrphansDialog.value = false
   draftPreviewInc.value++
 })
 

@@ -3,6 +3,7 @@ import eventBy from '../../contract/event-by.js'
 import capabilities from '../../contract/capabilities.js'
 import _publicationSchema from '../../contract/publication.js'
 import * as masterData from '../../contract/master-data.js'
+import partOf from '../../contract/part-of.js'
 
 const publicationSchema = JSON.parse(JSON.stringify(_publicationSchema))
 
@@ -849,6 +850,11 @@ const datasetProperties = {
       }
     }
   },
+  partOf: {
+    ...partOf,
+    title: 'Jeu de données enfant',
+    description: 'Si renseigné, ce jeu de données n\'existe que pour servir une ressource parente. Il est alors masqué des listes par défaut.'
+  },
   thumbnails: {
     type: 'object',
     properties: {
@@ -966,6 +972,7 @@ const dataset = {
         publications: datasetProperties.publications,
         publicationSites: datasetProperties.publicationSites,
         virtual: datasetProperties.virtual,
+        partOf: datasetProperties.partOf,
         rest: datasetProperties.rest,
         extras: datasetProperties.extras,
         attachmentsAsImage: datasetProperties.attachmentsAsImage,

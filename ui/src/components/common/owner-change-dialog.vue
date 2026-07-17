@@ -21,6 +21,15 @@
           other-accounts
         />
         <v-alert
+          v-if="childrenCount > 0"
+          type="info"
+          variant="outlined"
+          density="compact"
+          class="mt-4"
+        >
+          {{ t('childrenWarning', childrenCount) }}
+        </v-alert>
+        <v-alert
           type="warning"
           variant="outlined"
           class="mt-4"
@@ -72,6 +81,7 @@ fr:
   warningApiKeys: la ressource est-elle utilisée par des programmes qui utilisent une clé d'API du compte propriétaire ?
   warningProcessings: la ressource est-elle associée à un traitement automatisé ?
   warningOutro: Après la confirmation vérifiez de nouveau tous ces aspects et effectuez les corrections nécessaires.
+  childrenWarning: aucune ressource enfant | Cette ressource a une ressource enfant, qui changera de propriétaire avec elle. | Cette ressource a {count} ressources enfants, qui changeront de propriétaire avec elle.
   cancel: Annuler
   confirm: Confirmer
   successMsg: Propriétaire modifié avec succès
@@ -86,6 +96,7 @@ en:
   warningApiKeys: is the resource used by programs that use an API key from the owner account?
   warningProcessings: is the resource associated with an automated processing?
   warningOutro: After confirmation, review all these aspects again and make the necessary corrections.
+  childrenWarning: no child resource | This resource has a child resource, which will change owner along with it. | This resource has {count} child resources, which will change owner along with it.
   cancel: Cancel
   confirm: Confirm
   successMsg: Owner successfully changed
@@ -93,8 +104,11 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import { fetchChildRefs } from '~/utils/part-of'
+
 const props = defineProps<{
-  resource: { id: string, owner: Record<string, any> }
+  // the whole resource: the links to its children are resolved from its own content
+  resource: Record<string, any> & { id: string, owner: Record<string, any> }
   resourceType: 'datasets' | 'applications'
 }>()
 
@@ -106,6 +120,13 @@ const { t } = useI18n()
 
 const showDialog = defineModel<boolean>({ default: false })
 const newOwner = ref<Record<string, any> | null>({ ...props.resource.owner })
+
+// partOf children follow their parent into the new account, warn about the ones that will move
+const childrenCount = ref(0)
+watch(showDialog, async (visible) => {
+  if (!visible) return
+  childrenCount.value = (await fetchChildRefs(props.resource)).length
+})
 
 const changeOwner = useAsyncAction(
   async () => {

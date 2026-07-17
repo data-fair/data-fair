@@ -278,6 +278,18 @@ Exemple: ma_colonne,-ma_colonne2`
   }
 }
 
+/**
+ * Checking if the dataset is a masterData.
+ * @param {any} masterData
+ */
+export const isMasterData = (masterData) => !!masterData && !!(
+  masterData.shareOrgs?.length ||
+  masterData.singleSearchs?.length ||
+  masterData.bulkSearchs?.length ||
+  masterData.virtualDatasets?.active ||
+  masterData.standardSchema?.active
+)
+
 export const endpoints = (dataset) => {
   const endpoints = {}
   if (!dataset.masterData) return endpoints

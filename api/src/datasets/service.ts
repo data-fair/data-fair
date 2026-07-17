@@ -6,6 +6,7 @@ import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
@@ -81,6 +82,12 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
   }
+
+  // children are hidden by default (see partOf.listFilter); lookups by known id/slug and the
+  // "children" reverse-lookup (e.g. nbVirtualDatasets: which virtual datasets reference me as a
+  // member) are targeted fetches, not browsing, and are exempted
+  const partOfFilter = partOf.listFilter(reqQuery, ['id', 'ids', 'slug', 'slugs', 'children'])
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
   if (reqQuery.type) {
@@ -282,6 +289,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   const dataset = { ...body }
   dataset.owner = owner
+
+  // a dataset can be created directly as the child of the parent that will reference it right after
+  if (dataset.partOf) await partOf.prepareAtCreation('dataset', dataset, sessionState)
+
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
   dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
@@ -392,6 +403,59 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.masterData)
 
   return insertedDataset
+}
+
+/**
+ * Moves a dataset to another account: resets what is account-scoped (publication sites, permissions)
+ * and moves its files. Shared by the change-owner route and the cascade that keeps the partOf
+ * children of a parent in the same account as their parent.
+ */
+export const changeDatasetOwner = async (dataset: any, newOwner: any, sessionState: SessionStateAuthenticated) => {
+  const patch: any = {
+    owner: newOwner,
+    updatedBy: { id: sessionState.user.id },
+    updatedAt: new Date().toISOString()
+  }
+
+  const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === newOwner.type && dataset.owner.id === newOwner.id
+  if (sameOrg && !dataset.owner.department && newOwner.department) {
+    // moving from org root to a department, we keep the publicationSites
+  } else {
+    patch.publicationSites = []
+  }
+  if (!sameOrg && newOwner.publications) {
+    patch.publications = []
+  }
+
+  const preservePermissions = (dataset.permissions || []).filter((p: any) => {
+    // keep public permissions
+    if (!p.type) return true
+    if (sameOrg) {
+      // keep individual user permissions (user partners)
+      if (p.type === 'user') return true
+      // keep permissions to external org (org partners)
+      if (p.type === 'organization' && p.id !== dataset.owner.id) return true
+    }
+    return false
+  })
+  await permissions.initResourcePermissions(patch, preservePermissions)
+
+  const changeOwnerUpdate: any = { $set: patch }
+  // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer
+  // there is no anchor under the new prefix, so a re-anchor must be stamped
+  if (dataset.integrity?.active) integrityOps.stampHistorize(changeOwnerUpdate, { operation: 'update', origin: 'user' })
+  const patchedDataset: any = await mongo.db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
+
+  if (dir(dataset) !== dir(patchedDataset)) {
+    try {
+      await filesStorage.moveDir(dir(dataset), dir(patchedDataset))
+    } catch (err) {
+      console.warn('Error while moving dataset directory', err)
+    }
+  }
+
+  return patchedDataset
 }
 
 export const deleteDataset = async (app: any, dataset: any) => {

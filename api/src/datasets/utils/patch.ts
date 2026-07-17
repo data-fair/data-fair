@@ -11,6 +11,8 @@ import * as extensions from './extensions.ts'
 import { checkConstraints } from './constraints.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
+import { isMasterData } from '../../../contract/master-data.js'
+import * as partOfUtils from '../../misc/utils/part-of.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -174,6 +176,19 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   if (patch.readApiKey === null) {
     patch._readApiKey = null
   }
+
+  // a dataset already defined as a child cannot be turned into reference data; the reciprocal rule
+  // (a reference dataset cannot become a child) belongs to the child-eligibility rules applied by
+  // prepareAtDefinition below. Only guard the patch that actively establishes the state, checked
+  // against the effective value of the other side: a naive "both present → 400" would lock every
+  // unrelated patch on a legacy document holding both.
+  const effectivePartOf = 'partOf' in patch ? patch.partOf : dataset.partOf
+  if ('masterData' in patch && isMasterData(patch.masterData) && effectivePartOf) {
+    throw httpError(400, 'Un jeu de données défini comme enfant d\'une autre ressource ne peut pas devenir une donnée de référence')
+  }
+
+  // defining the dataset as a child is validated on its effective (patched) view
+  if (patch.partOf) await partOfUtils.prepareAtDefinition('dataset', { ...dataset, ...patch }, patch.partOf)
 
   const coordXProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
   const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
