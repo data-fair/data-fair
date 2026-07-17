@@ -43,6 +43,17 @@ bandwidth throttling. The old 2×-body concat transient is gone **and memory dec
 instead of pinning ~1× body for the duration of a slow-client throttled download (the prod heap
 profile's "transient assemble-then-send body/Buffer" spike, ~1.2 GB external).
 
+One teardown subtlety (a post-release prod incident): the client can disconnect while the body is still
+being *assembled*, so `res` may already be destroyed when `res.endParts` runs — and on node ≥ 24
+`pipeline()` into a closed stream throws `ERR_STREAM_UNABLE_TO_PIPE` *synchronously*, bypassing its
+callback. Unhandled, that both surfaced as internal errors and permanently leaked the send slot
+`res.throttle()` had just acquired (the Throttle is never wired, so the `'close'` that releases the slot
+never fires) — after `maxPendingSends` aborted requests the client's bucket was saturated and the
+queue-full guard tore down every later response. `res.endParts` therefore drops the parts up front when
+`res` is already destroyed/closed/ended, and wraps the `pipeline()` call to destroy the throttle (freeing
+the slot) on any residual synchronous throw (e.g. the queue-full teardown returns an already-destroyed
+stream). Pinned by `rate-limiting-end-parts.unit.spec.ts`, which drives the real middleware.
+
 Peak drops to ~1× the payload at assembly time (bounded per request by `maxPageSize`), decaying during
 the send. Going lower would require true output streaming, i.e. giving up the response contract — the
 deliberate trade is to stop at ~1×.
