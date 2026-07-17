@@ -108,10 +108,11 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
   historized store, since it is not on the hot read path.
-- Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment): an owner transfer therefore
-  re-anchors the dataset under the new owner's prefix (one stamp re-anchors the joint sequence —
-  both hashes), since the old-prefix anchors do not carry over. The old prefix's anchors simply
-  age out at their existing retention — they are not migrated or deleted.
+- Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment). Owner transfer is
+  **forbidden while integrity is active** (the transfer route returns 400): a transfer would
+  orphan the anchor sequence under the old prefix. To transfer, a superadmin disables
+  integrity (anchors age out at their existing retention), transfers, and re-enables — a
+  deliberate simplification over re-anchoring under the new prefix.
 
 ### 3.2 The inline write wrapper — *this is the definition of a legitimate write*
 

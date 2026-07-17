@@ -367,3 +367,17 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
 })
+
+test('owner transfer is refused while integrity is active', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  await expect(admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }))
+    .rejects.toMatchObject({ status: 400 })
+
+  // disabling integrity unblocks the transfer
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  const res = await admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+  expect(res.status).toBe(200)
+})

@@ -27,7 +27,6 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
-import { stampHistorize } from '../../integrity/operations.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -191,6 +190,12 @@ export const registerMetadataRoutes = (router: Router) => {
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
 
+    // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
+    // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
+    if (dataset.integrity?.active) {
+      return res.status(400).type('text/plain').send('Le contrôle d\'intégrité doit être désactivé avant un changement de propriétaire')
+    }
+
     const sessionState = reqSessionAuthenticated(req)
 
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
@@ -251,9 +256,6 @@ export const registerMetadataRoutes = (router: Router) => {
     await permissions.initResourcePermissions(patch, preservePermissions)
 
     const changeOwnerUpdate: any = { $set: patch }
-    // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer
-    // there is no anchor under the new prefix, so a re-anchor must be stamped
-    if (dataset.integrity?.active) stampHistorize(changeOwnerUpdate, { operation: 'update', origin: 'user' })
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
