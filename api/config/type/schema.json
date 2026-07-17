@@ -61,9 +61,6 @@
     "port": {
       "type": "number"
     },
-    "listenWhenReady": {
-      "type": "boolean"
-    },
     "publicUrl": {
       "type": "string"
     },

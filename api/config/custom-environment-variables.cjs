@@ -229,10 +229,6 @@ module.exports = {
       __format: 'json'
     },
   },
-  listenWhenReady: {
-    __name: 'LISTEN_WHEN_READY',
-    __format: 'json'
-  },
   applications: {
     __name: 'APPLICATIONS',
     __format: 'json'
