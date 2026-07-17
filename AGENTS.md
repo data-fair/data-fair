@@ -81,7 +81,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Code conventions](docs/architecture/code-conventions.md) — module file roles (router/middlewares/service/operations), request-context accessors, typing ratchet. **Read before refactoring or adding API code.**
 - [Date management](docs/architecture/date-management.md) — the date / date-time strategy end to end: French-first sniffing, offset-preserving storage, timezone-aware filters & aggregations, and display in the data's own timezone (not the viewer's). **Read before touching date parsing, storage, or display.**
 - [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**
-- [Base Applications](docs/architecture/base-applications.md) — base apps as registry artefacts: per-minor versioning, download-on-demand, the two serving tiers (`/app/:id` + `/app-assets`), caching, sync and the 6.16.1 migration. **Read before touching base-app serving or the application proxy.**
+- [Base Applications](docs/architecture/base-applications.md) — base apps as registry artefacts: per-minor versioning, download-on-demand, the two serving tiers (`/app/:id` + `/app-assets`), caching, sync and the 6.17.1 migration. **Read before touching base-app serving or the application proxy.**
 
 ## Common Development Tasks
 

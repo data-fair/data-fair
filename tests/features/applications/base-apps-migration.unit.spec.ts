@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 
 // pure helpers, no #config import -> safe to statically import.
-// Lives in src/base-applications/ (NOT inside api/upgrade/6.16.1/): the upgrade-scripts
+// Lives in src/base-applications/ (NOT inside api/upgrade/6.17.1/): the upgrade-scripts
 // runner treats every file directly under a version folder as a script and calls
 // `.default.description`/`.exec()` on it with no filtering, so a non-script helper module
 // placed there crashes the runner (confirmed against the dev stack: TypeError reading

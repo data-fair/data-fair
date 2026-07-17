@@ -11,7 +11,7 @@ url. Since the 6.16 registry migration, **base apps are npm artefacts stored in 
 [registry](https://github.com/data-fair/registry) service**, downloaded on demand and served by
 data-fair itself. This document describes that model end to end: the artefact convention, the
 sync into the `base-applications` collection, the two public serving tiers, the asset-ref rewrite
-rules, the CI publishing workflow, and the 6.16.1 migration/ops runbook.
+rules, the CI publishing workflow, and the 6.17.1 migration/ops runbook.
 
 ## 1. The artefact model
 
@@ -222,9 +222,9 @@ A base app's CI publishes its build output to the registry as follows:
 packs each fixture under `tests/fixtures/base-apps/<name>/` as an npm-shaped tarball and posts it
 to `@test/<name>@0.1`, then patches `public`/`title` — a minimal, runnable example of steps 2-3.
 
-## 6. The 6.16.1 migration and its ops runbook
+## 6. The 6.17.1 migration and its ops runbook
 
-`api/upgrade/6.16.1/01-base-apps-to-registry.ts` (helpers in
+`api/upgrade/6.17.1/01-base-apps-to-registry.ts` (helpers in
 `api/src/base-applications/base-apps-migration-utils.ts`) is a one-time upgrade script
 (`@data-fair/lib-node/upgrade-scripts`) that moves every pre-existing `base-applications` document
 off its legacy external url onto a registry artefact, and rewrites every `applications` document
@@ -319,7 +319,7 @@ legacy url for manual follow-up.
 
 ### Rolling deploy of the migration release
 
-The 6.16.1 release both flips base apps over to the registry-only model and ships the migration
+The 6.17.1 release both flips base apps over to the registry-only model and ships the migration
 script above, so it rolls out like any other deploy — new pods start alongside old ones and take
 over gradually — but with a wider, user-visible transition window than usual.
 
@@ -381,7 +381,7 @@ over gradually — but with a wider, user-visible transition window than usual.
 | `/app/:id` proxy, transform, extraPath fallback  | `api/src/applications/proxy.ts`                                    |
 | Base app schema                                  | `api/types/base-app/schema.js`                                     |
 | Registry client library                          | `node_modules/@data-fair/lib-node-registry` (`ensureArtefact`)     |
-| 6.16.1 migration script                          | `api/upgrade/6.16.1/01-base-apps-to-registry.ts`                   |
+| 6.17.1 migration script                          | `api/upgrade/6.17.1/01-base-apps-to-registry.ts`                   |
 | Migration pure helpers (unit-tested)             | `api/src/base-applications/base-apps-migration-utils.ts`           |
 | Dev/test registry publishing                     | `tests/support/registry.ts`, `tests/state-setup.ts`                |
 | Dev/test registry container                      | `docker-compose.yaml` (`registry` service)                         |
