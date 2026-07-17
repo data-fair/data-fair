@@ -4,6 +4,14 @@ import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
 export * from './.type/index.js'
 
+// mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
+// package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+type HistorizeContextHint = {
+  operation: 'create' | 'update' | 'enable' | 'fixIntegrity'
+  origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+  reason?: string
+}
+
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
 
 export type RestDataset = Omit<Dataset, 'isRest' | 'rest' | 'schema'> & { isRest: true } & Required<Pick<Dataset, 'rest' | 'schema'>>
@@ -39,10 +47,7 @@ export type DatasetInternal = Dataset & {
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
-  _needsHistorizing?: {
-    classes: ('file' | 'metadata')[],
-    context?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
-  }
+  _needsHistorizing?: { context?: HistorizeContextHint }
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
 }

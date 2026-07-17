@@ -1202,9 +1202,9 @@ const sections = computedDeepDiff(() => {
   // Reads (status + revision history) are visible to the owner's admins; the enable/disable and
   // reconcile (fix) actions inside the panel remain superadmin-only.
   if (canReadIntegrity.value) {
-    // breach verdicts ride the dataset doc itself (per-class integrity field, stripped by
-    // clean() for readers without readIntegrity) — no extra request needed to color the tab
-    const integrityBreach = d.integrity?.file?.lastCheck?.status === 'breach' || d.integrity?.metadata?.lastCheck?.status === 'breach'
+    // breach verdicts ride the dataset doc itself (integrity field, stripped by clean() for
+    // readers without readIntegrity) — no extra request needed to color the tab
+    const integrityBreach = d.integrity?.lastCheck?.status === 'breach'
     activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, color: integrityBreach ? 'error' : undefined, agentDesc: 'Data-integrity panel: tamper-detection status, last check and revision history — readable by the owner account admins. The enable/disable and reconcile (fix) actions are superadmin-only.' })
     result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }

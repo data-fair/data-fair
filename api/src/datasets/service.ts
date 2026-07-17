@@ -131,8 +131,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     statusBreachOr = {
       $or: [
         { status: { $in: reqQuery.status.split(',') } },
-        { 'integrity.file.lastCheck.status': 'breach' },
-        { 'integrity.metadata.lastCheck.status': 'breach' }
+        { 'integrity.lastCheck.status': 'breach' }
       ]
     }
   }
@@ -442,10 +441,9 @@ export const changeDatasetOwner = async (dataset: any, newOwner: any, sessionSta
   await permissions.initResourcePermissions(patch, preservePermissions)
 
   const changeOwnerUpdate: any = { $set: patch }
-  // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer the
-  // file class has no anchor under the new prefix either, so both classes must be re-stamped
-  // (not just metadata) or the file class would be silently orphaned with no anchor to check against
-  if (dataset.integrity?.active) integrityOps.stampHistorize(changeOwnerUpdate, [...integrityOps.INTEGRITY_CLASSES], { operation: 'update', originator: `user:${sessionState.user.id}` })
+  // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer
+  // there is no anchor under the new prefix, so a re-anchor must be stamped
+  if (dataset.integrity?.active) integrityOps.stampHistorize(changeOwnerUpdate, { operation: 'update', origin: 'user' })
   const patchedDataset: any = await mongo.db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -565,18 +563,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   // integrity outbox (spec §4): a patch touching covered metadata fields must be anchored.
   // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
-  // Plain-$set of the sub-doc can overwrite a concurrently $addToSet-ed stamp between our read
-  // and this write — accepted narrow window, same fail-loud recovery as the relay's clear race.
-  if (dataset.integrity?.active && !dataset.draftReason) {
-    const coveredKeys = integrityOps.coveredPatchKeys(patch)
-    if (coveredKeys.length) {
-      const classes = new Set<integrityOps.IntegrityClass>(patch._needsHistorizing?.classes ?? dataset._needsHistorizing?.classes ?? [])
-      classes.add('metadata')
-      // preserve an explicitly provided context; otherwise default it from the patch's own
-      // updatedBy so the revision's originator reflects the actual user, not the historize worker
-      const context = patch._needsHistorizing?.context ??
-        (patch.updatedBy?.id ? { operation: 'update', originator: 'user:' + patch.updatedBy.id } : undefined)
-      patch._needsHistorizing = { classes: [...classes], ...(context ? { context } : {}) }
+  // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
+  // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
+  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing) {
+    if (integrityOps.coveredPatchKeys(patch).length) {
+      patch._needsHistorizing = { context: { operation: 'update', origin: 'user' } }
     }
   }
 

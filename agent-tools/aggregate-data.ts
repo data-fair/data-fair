@@ -70,7 +70,7 @@ export interface Params {
 
 export function buildQuery (params: Params): { path: string, query: Record<string, string> } {
   const query: Record<string, string> = {
-    field: params.groupByColumns.join(';')
+    field: params.groupByColumns.join(',')
   }
   if (params.metric && params.metric.type && params.metric.type !== 'count') {
     query.metric = params.metric.type

@@ -96,55 +96,48 @@ async function waitForFinalized (id: string, timeoutMs = 60000) {
   throw new Error(`timeout waiting for ${id} to finalize`)
 }
 
-/** Current revision index of one integrity class recorded on the dataset
- * (-1 if none yet). The `_integrity` response is per-class
- * (`{ active, file?, metadata? }`). */
-async function currentRevisionIndex (id: string, cls: 'file' | 'metadata' = 'file'): Promise<number> {
+/** Current revision index recorded on the dataset (-1 if none yet). The
+ * `_integrity` response is unified across classes
+ * (`{ active, lastRevision?: { i, hash }, lastCheck?, lastRenewal? }`). */
+async function currentRevisionIndex (id: string): Promise<number> {
   const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
-  return typeof data[cls]?.lastRevision?.i === 'number' ? data[cls].lastRevision.i : -1
+  return typeof data.lastRevision?.i === 'number' ? data.lastRevision.i : -1
 }
 
-/** Wait until the relay worker writes a revision of the given class strictly
- * newer than `afterIndex`, returning the new index. Relative (not absolute)
- * on purpose: the relay keys revisions by max-index+1 within a per-dataset
- * prefix and dedupes by hash, so prior runs' still-WORM-locked revisions
- * under the same prefix would shift the index — a relative wait tolerates
- * that. */
-async function waitForNewRevision (id: string, afterIndex: number, cls: 'file' | 'metadata' = 'file', timeoutMs = 90000): Promise<number> {
+/** Wait until the relay worker writes a revision strictly newer than
+ * `afterIndex`, returning the new index. Relative (not absolute) on purpose:
+ * the relay keys revisions by max-index+1 within a per-dataset prefix and
+ * dedupes by hash, so prior runs' still-WORM-locked revisions under the same
+ * prefix would shift the index — a relative wait tolerates that. */
+async function waitForNewRevision (id: string, afterIndex: number, timeoutMs = 90000): Promise<number> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
-    const i = await currentRevisionIndex(id, cls)
+    const i = await currentRevisionIndex(id)
     if (i > afterIndex) return i
     await sleep(500)
   }
-  throw new Error(`timeout waiting for ${id} ${cls} revision after ${afterIndex}`)
+  throw new Error(`timeout waiting for ${id} revision after ${afterIndex}`)
 }
 
-/** Turn integrity on (admin mode); this flags the dataset for historizing, so
- * the worker writes the first anchor revision. */
+/** Turn integrity on (admin mode). Enabling is now synchronous: the initial
+ * anchor revision already exists by the time this call returns — no
+ * follow-up wait needed. */
 async function enableIntegrity (id: string) {
   await dfAdminAx.put(`/api/v1/datasets/${id}/_integrity`, { active: true })
 }
 
-/** Worst-of-classes verdict: the `_check` response is per-class
- * (`{ file?: ClassCheck, metadata?: ClassCheck }`) — a breach on either class
- * outranks an ok/unknown on the other. */
-const worst = (d: any) => d.file?.status === 'breach' || d.metadata?.status === 'breach' ? 'breach' : (d.file?.status ?? 'unknown')
-
-/** Run an on-demand integrity check; returns the per-class verdicts
- * (`{ file?, metadata? }`, each with a `status`). The breach path persists
- * integrity.<class>.lastCheck before sending the breach notification, so if
- * that fire-and-forget send errors we still read the already-stored verdicts
- * instead of failing the fixture. Use `worst(...)` on the result for a single
- * 'ok' | 'breach' | 'unknown' verdict. */
-async function runCheck (id: string): Promise<{ file?: { status: string }, metadata?: { status: string } }> {
+/** Run an on-demand integrity check; returns `{ status, breach? }` where
+ * `breach` lists the affected classes (`'file' | 'metadata'`) when
+ * status === 'breach'. The breach path persists integrity.lastCheck before
+ * sending the breach notification, so if that fire-and-forget send errors we
+ * still read the already-stored verdict instead of failing the fixture. */
+async function runCheck (id: string): Promise<{ status: string, breach?: string[] }> {
   try {
     const { data } = await dfAdminAx.post(`/api/v1/datasets/${id}/_integrity/_check`)
     return data
   } catch (err: any) {
     const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
-    const lastChecks = { file: data.file?.lastCheck, metadata: data.metadata?.lastCheck }
-    if (lastChecks.file?.status || lastChecks.metadata?.status) return lastChecks
+    if (data.lastCheck?.status) return data.lastCheck
     throw err
   }
 }
@@ -176,8 +169,6 @@ const datasetTopics: Record<string, string[]> = {
   'fixtures-equipements': ['demo-geo'],
   'fixtures-integrite-ok': ['demo-integrite'],
   'fixtures-integrite-breach': ['demo-integrite'],
-  'fixtures-integrite-breach-meta': ['demo-integrite'],
-  'fixtures-integrite-reconcilie': ['demo-integrite'],
   'fixtures-horaires-fuseaux': ['demo-dates'],
   'fixtures-ignore-above': ['demo-recherche'],
   'fixtures-unicite-rest': ['demo-unicite', 'demo-editable'],
@@ -209,33 +200,29 @@ async function ensureDatasetTopics () {
     const currentIds = (current.topics ?? []).map((t: any) => t.id).sort().join(',')
     if (currentIds === [...topicIds].sort().join(',')) continue
     const integrityActive = !!current.integrity?.active
-    const metaAnchor = integrityActive ? await currentRevisionIndex(id, 'metadata') : -1
+    const anchor = integrityActive ? await currentRevisionIndex(id) : -1
     await dfAx.patch(`/api/v1/datasets/${id}`, { topics: topicIds.map(tid => fixtureTopics.find(t => t.id === tid)) })
-    if (integrityActive) await waitForNewRevision(id, metaAnchor, 'metadata')
+    if (integrityActive) await waitForNewRevision(id, anchor)
     console.log(`${id}: topics set (${topicIds.join(', ')})`)
   }
 }
 
-/** The two breach demos must STAY breached: any legitimate covered-field
- * write (topics tagging, a future fixture pass…) re-anchors the current
- * metadata and silently heals them. Re-assert the breach on every run:
- * check, and if metadata comes back ok, re-tamper out-of-band with a
- * timestamped string (guaranteed to differ from the latest anchor) and
- * check again to persist the verdict. */
+/** The breach demo must STAY breached: any legitimate covered-field write
+ * (topics tagging, a future fixture pass…) re-anchors the current metadata
+ * and silently heals the metadata half of the breach (the tampered file stays
+ * breached regardless). Re-assert on every run: check, and if the metadata
+ * class comes back healed, re-tamper out-of-band with a timestamped string
+ * (guaranteed to differ from the latest anchor) and check again to persist
+ * the verdict. */
 async function ensureBreachState () {
-  const tamperBase: Record<string, string> = {
-    'fixtures-integrite-breach': 'description modifiée hors circuit (démo intégrité)',
-    'fixtures-integrite-breach-meta': 'description falsifiée hors circuit (démo intégrité par classe)'
+  const id = 'fixtures-integrite-breach'
+  if (!await datasetExists(id)) return
+  let check = await runCheck(id)
+  if (!check.breach?.includes('metadata')) {
+    await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: `description modifiée hors circuit (démo intégrité) — ${new Date().toISOString()}` })
+    check = await runCheck(id)
   }
-  for (const [id, base] of Object.entries(tamperBase)) {
-    if (!await datasetExists(id)) continue
-    let check = await runCheck(id)
-    if (check.metadata?.status !== 'breach') {
-      await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: `${base} — ${new Date().toISOString()}` })
-      check = await runCheck(id)
-      console.log(`${id}: metadata breach re-asserted (check: file=${check.file?.status} metadata=${check.metadata?.status})`)
-    }
-  }
+  console.log(`${id}: breach state (status=${check.status}, breach=${check.breach?.join(',') || 'none'})`)
 }
 
 /** CSV file dataset: tabular reference data (product catalog). */
@@ -331,29 +318,32 @@ async function seedIntegriteOk () {
   }
   await uploadCsv(id, 'deliberations.csv', body, v1)
   await waitForFinalized(id)
-  // enable → first anchor revision over the v1 file
+  // enable is synchronous: the first anchor revision (over the v1 file) already
+  // exists by the time this call returns — no wait needed
   await enableIntegrity(id)
-  const anchor = await waitForNewRevision(id, -1)
+  const anchor = await currentRevisionIndex(id)
   // a schema-compatible update with ?draft=compatible auto-validates the draft
   // (process-file.ts: validationMode !== 'never' ⇒ auto-publish), so the
   // published file changes and the relay historizes a second revision
+  // asynchronously (organic writes still go through the async relay)
   const v2 = v1 + 'DEL-2026-004,2026-04-23,Acquisition foncière,adopté\n'
   await uploadCsv(id, 'deliberations.csv', body, v2, '?draft=compatible')
-  await waitForNewRevision(id, anchor)
-  // legitimate metadata edit through the API → a metadata-class revision
-  // attributed to the editing user (originator "user:…" in the history tab),
-  // demonstrating the instrumented write path (applyPatch outbox stamp)
-  const metaAnchor = await currentRevisionIndex(id, 'metadata')
+  const afterFile = await waitForNewRevision(id, anchor)
+  // legitimate metadata edit through the API → another revision, attributed to
+  // the editing user (originator "user:…" in the history tab), demonstrating
+  // the instrumented write path (applyPatch outbox stamp) — also relayed async
   await dfAx.patch(`/api/v1/datasets/${id}`, {
     description: body.description + ' Dernière révision des métadonnées effectuée via l’API (tracée dans l’historique).'
   })
-  await waitForNewRevision(id, metaAnchor, 'metadata')
-  const status = worst(await runCheck(id))
-  console.log(`${id}: seeded (integrity active, file+metadata revision history, check=${status})`)
+  await waitForNewRevision(id, afterFile)
+  const { status } = await runCheck(id)
+  console.log(`${id}: seeded (integrity active, revision history, check=${status})`)
 }
 
-/** Integrity demo — breach: integrity on, then the stored file is tampered
- * out-of-band so the check detects an alteration and raises an alert. */
+/** Integrity demo — breach: integrity on, then BOTH the stored file (dev-only
+ * tamper endpoint) and the metadata document (raw mongo write, no outbox
+ * stamp) are altered out-of-band, so the check detects both classes at once
+ * and reports `breach: ['file', 'metadata']` — the panel's per-part detail. */
 async function seedIntegriteBreach () {
   const id = 'fixtures-integrite-breach'
   if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
@@ -364,69 +354,16 @@ async function seedIntegriteBreach () {
   ].join('\n') + '\n'
   await uploadCsv(id, 'ecritures.csv', {
     title: 'Registre comptable (altéré)',
-    description: 'Jeu de données fichier avec intégrité activée, dont le fichier stocké a été falsifié hors du circuit applicatif : le contrôle détecte une atteinte à l’intégrité.'
+    description: 'Jeu de données fichier avec intégrité activée, dont le fichier stocké et la fiche (métadonnées) ont été falsifiés hors du circuit applicatif : le contrôle détecte une atteinte à l’intégrité sur les deux volets.'
   }, csv)
   await waitForFinalized(id)
+  // enable is synchronous: the anchor revision already exists when this returns
   await enableIntegrity(id)
-  await waitForNewRevision(id, -1)
   await tamperFile(id)
   // metadata tamper: a raw mongo write with no outbox stamp (test-env patch-dataset)
   await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: 'description modifiée hors circuit (démo intégrité)' })
-  const status = worst(await runCheck(id))
-  console.log(`${id}: seeded (integrity active, file+metadata tampered, check=${status})`)
-}
-
-/** Integrity demo — per-class independence: only the METADATA document is
- * tampered out-of-band (raw mongo write), the stored file is untouched. The
- * integrity panel shows the metadata class breached while the file class
- * stays ok — the two verdicts are independent. */
-async function seedIntegriteBreachMeta () {
-  const id = 'fixtures-integrite-breach-meta'
-  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
-  const csv = 'organisme,type,commune,convention\n' + [
-    'Association sportive du Vallon,association,Rennes,CONV-2026-011',
-    'Compagnie théâtrale Horizon,association,Nantes,CONV-2026-014',
-    'Club informatique seniors,association,Brest,CONV-2026-019'
-  ].join('\n') + '\n'
-  await uploadCsv(id, 'partenaires.csv', {
-    title: 'Annuaire des partenaires (métadonnées altérées)',
-    description: 'Jeu de données fichier avec intégrité activée, dont la fiche (métadonnées) a été modifiée hors du circuit applicatif : le contrôle signale l’atteinte sur les métadonnées tandis que le fichier reste conforme.'
-  }, csv)
-  await waitForFinalized(id)
-  await enableIntegrity(id)
-  await waitForNewRevision(id, -1, 'metadata') // both classes anchored by enable; wait on the one we tamper
-  await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: 'description falsifiée hors circuit (démo intégrité par classe)' })
-  const check = await runCheck(id)
-  console.log(`${id}: seeded (metadata tampered only, check: file=${check.file?.status} metadata=${check.metadata?.status})`)
-}
-
-/** Integrity demo — reconciliation: a breach is detected, then a superadmin
- * accepts the current state as legitimate via _fix. The history keeps the
- * full trail (anchor → breach → fixIntegrity re-anchor) and the check is ok
- * again. */
-async function seedIntegriteReconcilie () {
-  const id = 'fixtures-integrite-reconcilie'
-  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
-  const csv = 'parcelle,section,surface_m2,zonage\n' + [
-    'P-0142,AB,1250,UB',
-    'P-0198,AB,860,UB',
-    'P-0233,AC,2140,N'
-  ].join('\n') + '\n'
-  await uploadCsv(id, 'parcelles.csv', {
-    title: 'Registre parcellaire (réconcilié)',
-    description: 'Jeu de données fichier dont une altération a été détectée puis réconciliée par un superadministrateur : l’historique conserve la trace complète (ancre initiale, réconciliation) et le contrôle est de nouveau conforme.'
-  }, csv)
-  await waitForFinalized(id)
-  await enableIntegrity(id)
-  const anchor = await waitForNewRevision(id, -1)
-  await tamperFile(id)
-  const breached = worst(await runCheck(id))
-  // superadmin reviews the alert and accepts the stored bytes as legitimate →
-  // _fix re-anchors the current state with a traced fixIntegrity revision
-  await dfAdminAx.post(`/api/v1/datasets/${id}/_integrity/_fix`)
-  await waitForNewRevision(id, anchor)
-  const status = worst(await runCheck(id))
-  console.log(`${id}: seeded (breach detected=${breached}, after _fix check=${status})`)
+  const { status, breach } = await runCheck(id)
+  console.log(`${id}: seeded (integrity active, file+metadata tampered, check=${status}, breach=${breach?.join(',') || 'none'})`)
 }
 
 /** REST dataset highlighting date / date-time display behaviour:
@@ -728,8 +665,6 @@ async function main () {
   await seedEquipements()
   await seedIntegriteOk()
   await seedIntegriteBreach()
-  await seedIntegriteBreachMeta()
-  await seedIntegriteReconcilie()
   await seedHorairesFuseaux()
   await seedIgnoreAbove()
   await seedUniciteRest()
@@ -741,7 +676,7 @@ async function main () {
   await ensureBreachState()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-breach-meta', 'fixtures-integrite-reconcilie', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')

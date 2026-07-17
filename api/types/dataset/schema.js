@@ -438,12 +438,42 @@ const datasetProperties = {
   integrity: {
     type: 'object',
     readOnly: true,
-    description: 'Tamper-detection state for the dataset (file + metadata classes), managed by the integrity checker. Only present in responses to the owner account admins and superadmins.',
+    description: 'Tamper-detection state for the dataset (data file + metadata), managed by the integrity checker. Only present in responses to the owner account admins and superadmins.',
     required: ['active'],
     properties: {
       active: { type: 'boolean' },
-      file: { $ref: '#/$defs/integrityClassState' },
-      metadata: { $ref: '#/$defs/integrityClassState' }
+      lastCheck: {
+        type: 'object',
+        required: ['date', 'status'],
+        properties: {
+          date: { type: 'string', format: 'date-time' },
+          status: { type: 'string', enum: ['ok', 'breach', 'unknown'] },
+          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata'] } }
+        }
+      },
+      lastRevision: {
+        type: 'object',
+        required: ['i', 'hash', 'date'],
+        properties: {
+          i: { type: 'number' },
+          hash: {
+            type: 'object',
+            properties: { md5: { type: 'string' }, sha256: { type: 'string' } }
+          },
+          date: { type: 'string', format: 'date-time' },
+          retainUntil: { type: 'string', format: 'date-time' }
+        }
+      },
+      lastRenewal: {
+        type: 'object',
+        required: ['date', 'status'],
+        properties: {
+          date: { type: 'string', format: 'date-time' },
+          status: { type: 'string', enum: ['ok', 'failed'] },
+          retainUntil: { type: 'string', format: 'date-time' },
+          error: { type: 'string' }
+        }
+      }
     }
   },
   primaryKey: {
@@ -962,42 +992,6 @@ const dataset = {
     }
   },
   $defs: {
-    integrityClassState: {
-      type: 'object',
-      properties: {
-        lastCheck: {
-          type: 'object',
-          required: ['date', 'status'],
-          properties: {
-            date: { type: 'string', format: 'date-time' },
-            status: { type: 'string', enum: ['ok', 'breach', 'unknown'] }
-          }
-        },
-        lastRevision: {
-          type: 'object',
-          required: ['i', 'hash', 'date'],
-          properties: {
-            i: { type: 'number' },
-            hash: {
-              type: 'object',
-              properties: { md5: { type: 'string' }, sha256: { type: 'string' } }
-            },
-            date: { type: 'string', format: 'date-time' },
-            retainUntil: { type: 'string', format: 'date-time' }
-          }
-        },
-        lastRenewal: {
-          type: 'object',
-          required: ['date', 'status'],
-          properties: {
-            date: { type: 'string', format: 'date-time' },
-            status: { type: 'string', enum: ['ok', 'failed'] },
-            retainUntil: { type: 'string', format: 'date-time' },
-            error: { type: 'string' }
-          }
-        }
-      }
-    },
     normalizeOptions: {
       type: 'object',
       description: 'Normalize options specific to the original file format',

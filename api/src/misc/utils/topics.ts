@@ -15,16 +15,12 @@ const topicReferenceOf = (topic: any) => {
 export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTopics: Topics) => {
   for (const topic of newTopics) {
     const topicReference = topicReferenceOf(topic)
-    // unchanged topic → no propagation and, crucially, no outbox stamp: every settings save
-    // (even a single unrelated key through PATCH) flows through here with old == new, and
-    // blanket re-anchoring integrity-active datasets would silently legitimize any
-    // not-yet-detected out-of-band metadata tamper
+    // unchanged topic → no propagation write needed
     const oldTopic = oldTopics.find(t => t.id === topic.id)
     if (oldTopic && equal(topicReference, topicReferenceOf(oldTopic))) continue
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': topic.id }
     const patch = { $set: { 'topics.$': topicReference } }
     await mongo.datasets.updateMany(filter, patch)
-    await stampHistorizeMany(filter)
     await mongo.applications.updateMany(filter, patch)
   }
   for (const oldTopic of oldTopics) {

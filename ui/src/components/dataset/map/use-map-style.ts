@@ -6,7 +6,8 @@ export const useMapStyle = () => {
   const primary = theme.current.value.colors.primary as string
   const accent = theme.current.value.colors.accent as string
 
-  const style = $uiConfig.map.style.replace('./', `${$siteUrl}/data-fair/`)
+  // a relative "./" prefix is resolved against the site root, an absolute URL is used as is
+  const style = $uiConfig.map.style.replace('./', `${$siteUrl}/`)
 
   const polygonFilter: LegacyFilterSpecification = ['==', '$type', 'Polygon']
   const lineStringFilter: LegacyFilterSpecification = ['==', '$type', 'LineString']

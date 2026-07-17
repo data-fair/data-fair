@@ -26,12 +26,10 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
     const collection = mongo.db.collection(c)
     const ownerFilter = { 'owner.type': identity.type, 'owner.id': identity.id }
     await collection.updateMany(ownerFilter, { $set: { 'owner.name': identity.name } })
-    if (c === 'datasets') await stampHistorizeMany(ownerFilter)
     if (departments) {
       for (const department of departments) {
         const departmentFilter = { 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }
         await collection.updateMany(departmentFilter, { $set: { 'owner.departmentName': department.name } })
-        if (c === 'datasets') await stampHistorizeMany(departmentFilter)
       }
     }
 
@@ -44,7 +42,6 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
-      if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
   }
 
@@ -59,7 +56,6 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await collection.updateOne({ id: doc.id }, { $set: { privateAccess: doc.privateAccess } })
-      if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
     }
   }
 
@@ -77,7 +73,6 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         }
       }
       await mongo.datasets.updateOne({ id: dataset.id }, { $set: { masterData: dataset.masterData } })
-      await stampHistorizeMany({ id: dataset.id })
     }
   }
 }

@@ -23,7 +23,7 @@ test.describe('shared permission operations / picker', () => {
     const all = idsOf(picker)
 
     // admin operations appear with their true class, including those that have no documented route
-    assert.deepEqual(picker.admin.map((o) => o.id).sort(), ['changeOwner', 'delete', 'getPermissions', 'setPermissions', 'setReadApiKey', 'writeExports', 'writePartOf', 'writePublicationSites', 'writePublications', 'readIntegrity', 'readIntegrityRevisions', 'realtime-integrity'].sort())
+    assert.deepEqual(picker.admin.map((o) => o.id).sort(), ['changeOwner', 'delete', 'getPermissions', 'setPermissions', 'setReadApiKey', 'writeExports', 'writePartOf', 'writePublicationSites', 'writePublications', 'readIntegrity', 'readIntegrityRevisions'].sort())
     // REST-only write operations
     assert.ok(all.includes('createLine') && all.includes('bulkLines'))
     assert.ok(all.includes('simulateExtension')) // extensions present
