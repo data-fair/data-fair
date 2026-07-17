@@ -16,6 +16,15 @@ export const parseRevisionIndex = (key: string): number => {
   return parseInt(last, 10)
 }
 
+// Level-2 file payloads are sibling objects `{revisionKey}.file` under the dataset prefix;
+// every consumer of a prefix listing must distinguish them from revision JSONs.
+export const PAYLOAD_SUFFIX = '.file'
+
+export const payloadKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
+  revisionKey(owner, datasetId, i) + PAYLOAD_SUFFIX
+
+export const isPayloadKey = (key: string): boolean => key.endsWith(PAYLOAD_SUFFIX)
+
 // The covered projection (spec §2): the whole doc minus underscore-prefixed fields and the
 // operational denylist; a field added to the model later is covered by default (fail-loud).
 const EXCLUDED_TOP_LEVEL = new Set([
@@ -72,6 +81,7 @@ export const metadataHash = (dataset: Record<string, any>): string =>
 export const nextIndex = (keys: string[]): number => {
   let max = -1
   for (const k of keys) {
+    if (isPayloadKey(k)) continue
     const i = parseRevisionIndex(k)
     if (!Number.isNaN(i) && i > max) max = i
   }
@@ -79,8 +89,9 @@ export const nextIndex = (keys: string[]): number => {
 }
 
 export const latestKey = (keys: string[]): string | undefined => {
-  if (!keys.length) return undefined
-  return [...keys].sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
+  const revisionKeys = keys.filter((k) => !isPayloadKey(k))
+  if (!revisionKeys.length) return undefined
+  return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
 export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity'

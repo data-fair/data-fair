@@ -188,3 +188,19 @@ test('coveredMetadata strips readApiKey renewal churn but keeps active/interval'
   const disabled = { id: 'ds1', readApiKey: { ...base.readApiKey, active: false } }
   expect(ops.metadataHash(base)).not.toBe(ops.metadataHash(disabled))
 })
+
+test('payloadKey appends the .file suffix to the revision key', () => {
+  expect(ops.payloadKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007.file')
+  expect(ops.isPayloadKey('data-fair/organization-acme/ds1/000000007.file')).toBe(true)
+  expect(ops.isPayloadKey('data-fair/organization-acme/ds1/000000007')).toBe(false)
+})
+
+test('latestKey and nextIndex ignore payload keys', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000000',
+    'data-fair/organization-acme/ds1/000000001',
+    'data-fair/organization-acme/ds1/000000001.file'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
