@@ -85,10 +85,10 @@ const childrenFilter = (parent: ResourceRef, onlyIds?: string[]) =>
   ({ 'partOf.type': parent.type, 'partOf.id': parent.id, ...(onlyIds ? { id: { $in: onlyIds } } : {}) })
 
 /** The children of a parent resource, whatever their type, as full documents. */
-export const listChildren = async (parentType: ResourceType, parent: any): Promise<{ type: ResourceType, resource: any }[]> => {
+export const listChildren = async (parentType: ResourceType, parentId: string): Promise<{ type: ResourceType, resource: any }[]> => {
   const children: { type: ResourceType, resource: any }[] = []
   for (const childType of resourceTypes) {
-    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parent.id })).toArray()
+    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parentId })).toArray()
     children.push(...found.map(resource => ({ type: childType, resource })))
   }
   return children
@@ -239,9 +239,9 @@ export const assertOwnerChangeAllowed = (resource: any) => {
  * of a child do not exist and the recursion through changeApplicationOwner terminates immediately.
  * Returns the number of moved datasets so the caller can refresh the accounts' storage totals.
  */
-export const changeChildrenOwner = async (ctx: PartOfContext, parentType: ResourceType, parent: any, newOwner: any): Promise<{ movedDatasets: number }> => {
+export const changeChildrenOwner = async (ctx: PartOfContext, parentType: ResourceType, parentId: string, newOwner: any): Promise<{ movedDatasets: number }> => {
   let movedDatasets = 0
-  for (const child of await listChildren(parentType, parent)) {
+  for (const child of await listChildren(parentType, parentId)) {
     if (child.type === 'dataset') {
       const patched = await (await import('../../datasets/service.ts')).changeDatasetOwner(child.resource, newOwner, ctx.sessionState)
       // a child cannot be reference data, the sync only cleans up a possible stale remote service

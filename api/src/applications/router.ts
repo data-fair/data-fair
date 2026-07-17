@@ -19,6 +19,7 @@ import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { checkStorage } from '../datasets/middlewares.ts'
+import { checkMoveLimits } from '../datasets/utils/storage.ts'
 import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
@@ -133,14 +134,21 @@ router.patch('/:applicationId',
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
+  const application = reqApplication(req)
 
-  partOf.assertOwnerChangeAllowed(reqApplication(req))
+  partOf.assertOwnerChangeAllowed(application)
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
+  // the child datasets follow their parent application, they consume the new owner's dataset limits
+  if (req.body.type !== application.owner.type || req.body.id !== application.owner.id) {
+    const children = await partOf.listChildren('application', application.id)
+    await checkMoveLimits(req.getLocale(), req.body, children.filter(child => child.type === 'dataset').map(child => child.resource))
+  }
+
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
-  const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
+  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body)
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 

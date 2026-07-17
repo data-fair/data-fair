@@ -112,8 +112,8 @@
 <i18n lang="yaml">
 fr:
   title: Ressource parente
-  descriptionDataset: Si ce jeu de données n'existe que pour servir une ressource parente (un jeu de données virtuel dont il est l'unique membre, ou une application qui l'utilise seule), vous pouvez le définir comme enfant. Il sera alors masqué des listes par défaut.
-  descriptionApplication: Si cette application n'existe que pour servir une application parente qui l'utilise seule (par exemple un tableau de bord), vous pouvez la définir comme enfant. Elle sera alors masquée des listes par défaut.
+  descriptionDataset: Si ce jeu de données n'existe que pour servir la seule ressource qui l'utilise (un jeu de données virtuel qui l'agrège, ou une application qui l'affiche), vous pouvez le définir comme son enfant. Il n'apparaîtra alors plus dans la liste des jeux de données, et restera accessible depuis sa ressource parente.
+  descriptionApplication: Si cette application n'existe que pour servir la seule application qui l'utilise (par exemple un tableau de bord qui l'intègre), vous pouvez la définir comme son enfant. Elle n'apparaîtra alors plus dans la liste des applications, et restera accessible depuis son application parente.
   currentParent: "Actuellement défini comme enfant de : {title}"
   noCandidateDataset: Ce jeu de données n'est utilisé par aucun jeu de données virtuel ni aucune application, il est donc impossible de le définir comme enfant.
   noCandidateApplication: Cette application n'est utilisée par aucune autre application, il est donc impossible de la définir comme enfant.
@@ -129,8 +129,8 @@ fr:
   errorMsg: Échec de la mise à jour de la ressource parente
 en:
   title: Parent resource
-  descriptionDataset: If this dataset only exists to serve a parent resource (a virtual dataset it is the sole member of, or an application that solely uses it), you can define it as a child. It will then be hidden from default lists.
-  descriptionApplication: If this application only exists to serve a parent application that solely uses it (e.g. a dashboard), you can define it as a child. It will then be hidden from default lists.
+  descriptionDataset: If this dataset only exists to serve the single resource that uses it (a virtual dataset that aggregates it, or an application that displays it), you can define it as its child. It will no longer appear in the dataset list, and will stay reachable from its parent resource.
+  descriptionApplication: If this application only exists to serve the single application that uses it (e.g. a dashboard that embeds it), you can define it as its child. It will no longer appear in the application list, and will stay reachable from its parent application.
   currentParent: "Currently defined as a child of: {title}"
   noCandidateDataset: This dataset is not used by any virtual dataset nor any application, so it cannot be defined as a child.
   noCandidateApplication: This application is not used by any other application, so it cannot be defined as a child.
@@ -147,15 +147,14 @@ en:
 </i18n>
 
 <script setup lang="ts">
-// candidates are built by the caller from freshly fetched resources, title is always populated
-type Candidate = { type: 'dataset' | 'application', id: string, title: string }
-// the currently stored partOf comes straight from the resource's generated type, `title` is optional in the schema
-type CurrentPartOf = { type: 'dataset' | 'application', id: string, title?: string }
+import type { ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  resource: { id: string, partOf?: CurrentPartOf | null }
-  candidates: Candidate[]
+  // `title` is optional on the stored partOf, the api denormalizes it
+  resource: { id: string, partOf?: ResourceRef & { title?: string } | null }
+  // candidates are built by the caller from freshly fetched resources, their title is always populated
+  candidates: (ResourceRef & { title: string })[]
   candidatesLoading?: boolean
 }>()
 

@@ -96,7 +96,7 @@ en:
   warningApiKeys: is the resource used by programs that use an API key from the owner account?
   warningProcessings: is the resource associated with an automated processing?
   warningOutro: After confirmation, review all these aspects again and make the necessary corrections.
-  childrenWarning: no child resource | This resource has a child resource, which will change owner along with it. | This resource has {count} child resources, which will change owner along with them.
+  childrenWarning: no child resource | This resource has a child resource, which will change owner along with it. | This resource has {count} child resources, which will change owner along with it.
   cancel: Cancel
   confirm: Confirm
   successMsg: Owner successfully changed

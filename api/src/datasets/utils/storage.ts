@@ -50,6 +50,31 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
   }
 }
 
+/**
+ * Datasets moving to another account start consuming its limits: the one being transferred, plus the
+ * partOf children a parent takes along with it. Shared by the dataset and application change-owner
+ * routes, both of which can move several datasets at once.
+ */
+export const checkMoveLimits = async (locale: string, newOwner: AccountKeys, datasets: any[]) => {
+  if (!datasets.length) return
+  const remaining = await limits.remaining(newOwner)
+  const debugInfo = { owner: newOwner, remaining, nbMovedDatasets: datasets.length }
+  if (remaining.nbDatasets !== -1 && remaining.nbDatasets < datasets.length) {
+    debugLimits('exceedLimitNbDatasets/changeOwner', debugInfo)
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitNbDatasets' }))
+  }
+  const movedSize = datasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
+  if (remaining.storage !== -1 && remaining.storage < movedSize) {
+    debugLimits('exceedLimitStorage/changeOwner', { ...debugInfo, movedSize })
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitStorage' }))
+  }
+  const movedIndexed = datasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
+  if (remaining.indexed !== -1 && movedIndexed && remaining.indexed < movedIndexed) {
+    debugLimits('exceedLimitIndexed/changeOwner', { ...debugInfo, movedIndexed })
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitIndexed' }))
+  }
+}
+
 export const storage = async (dataset: Dataset) => {
   // TODO: apply Storage type
   const storage: any = {

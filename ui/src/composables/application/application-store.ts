@@ -1,5 +1,6 @@
 import type { Application, BaseApp, AppConfig, Event, Dataset, Permission } from '#api/types'
 import { provide } from 'vue'
+import { configRefIds, type ConfigRef } from '@data-fair/data-fair-shared/utils/config-refs.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('application-store')
@@ -104,19 +105,13 @@ const createApplicationStore = (id: string) => {
   const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
 
-  type ConfigRef = { id?: string, href?: string, [k: string]: unknown } | null
-  const extractIds = (items: ConfigRef[] | undefined) =>
-    (items || [])
-      .map((d) => d?.id || d?.href?.split('/').pop())
-      .filter(Boolean) as string[]
-
   const datasetsFetch = useFetch<{ results: Dataset[] }>(() => {
-    const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
+    const datasetsIds = configRefIds(config.value?.datasets as ConfigRef[])
     if (!datasetsIds.length) return null
     return `${$apiPath}/datasets`
   }, {
     query: computed(() => {
-      const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
+      const datasetsIds = configRefIds(config.value?.datasets as ConfigRef[])
       return {
         id: datasetsIds.join(','),
         size: 10000,
@@ -129,12 +124,12 @@ const createApplicationStore = (id: string) => {
   })
 
   const childrenAppsFetch = useFetch<{ results: Application[] }>(() => {
-    const appIds = extractIds(config.value?.applications as ConfigRef[])
+    const appIds = configRefIds(config.value?.applications as ConfigRef[])
     if (!appIds.length) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => {
-      const appIds = extractIds(config.value?.applications as ConfigRef[])
+      const appIds = configRefIds(config.value?.applications as ConfigRef[])
       return {
         id: appIds.join(','),
         size: 10000,

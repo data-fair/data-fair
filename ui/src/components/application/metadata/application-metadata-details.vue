@@ -100,7 +100,7 @@
             {{ t('partOfLabel') }}
           </div>
           <div>
-            <router-link :to="`/application/${application.partOf.id}`">
+            <router-link :to="`/${application.partOf.type}/${application.partOf.id}`">
               {{ application.partOf.title }}
             </router-link>
           </div>

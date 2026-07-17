@@ -494,6 +494,7 @@ import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
 import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
+import { fetchChildRefs } from '~/utils/part-of'
 import { $uiConfig, $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
@@ -621,11 +622,7 @@ const confirmUpgrade = async () => {
 // shown once the count is known — otherwise a quick confirm would delete without a childrenAction
 const childrenCount = ref(0)
 const openDeleteDialog = useAsyncAction(async () => {
-  const [childDatasets, childApps] = await Promise.all([
-    $fetch<{ count: number }>('datasets', { query: { partOf: route.params.id, size: 0 } }),
-    $fetch<{ count: number }>('applications', { query: { partOf: route.params.id, size: 0 } })
-  ])
-  childrenCount.value = childDatasets.count + childApps.count
+  childrenCount.value = (await fetchChildRefs({ id: route.params.id })).length
   showDeleteDialog.value = true
 })
 

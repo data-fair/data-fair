@@ -377,7 +377,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
 
   // a parent takes its children along: a child only exists to serve its parent, and both always
   // live in the same account (the children of a child do not exist, chains are forbidden)
-  const { movedDatasets } = await partOf.changeChildrenOwner(ctx, 'application', application, newOwner)
+  const { movedDatasets } = await partOf.changeChildrenOwner(ctx, 'application', application.id, newOwner)
   if (movedDatasets) {
     await updateTotalStorage(application.owner)
     await updateTotalStorage(newOwner)

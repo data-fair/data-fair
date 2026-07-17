@@ -492,7 +492,7 @@
       :title="t('deleteDataset')"
       :message="t('deleteMsg', { title: dataset?.title })"
       :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
-      kind="datasets"
+      kind="resources"
       :loading="confirmRemove.loading.value"
       @confirm="action => confirmRemove.execute(action)"
     />
@@ -616,7 +616,7 @@ fr:
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-  childrenWarning: aucun jeu de données enfant | Ce jeu de données a un jeu de données enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} jeux de données enfants qui n'existent que dans ce cadre.
+  childrenWarning: aucune ressource enfant | Ce jeu de données a une ressource enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} ressources enfants qui n'existent que dans ce cadre.
   virtualOrphansTitle: Jeux de données enfants
   virtualOrphansMsg: Cette modification retire des jeux de données définis comme enfants de ce jeu virtuel, ils n'existent que dans ce cadre.
   virtualOrphansWarning: aucun jeu de données enfant retiré | Un jeu de données enfant est retiré des jeux de données agrégés. | {count} jeux de données enfants sont retirés des jeux de données agrégés.
@@ -681,7 +681,7 @@ en:
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
-  childrenWarning: no child dataset | This dataset has a child dataset that only exists within this context. | This dataset has {count} child datasets that only exist within this context.
+  childrenWarning: no child resource | This dataset has a child resource that only exists within this context. | This dataset has {count} child resources that only exist within this context.
   virtualOrphansTitle: Child datasets
   virtualOrphansMsg: This change removes datasets defined as children of this virtual dataset, they only exist within this context.
   virtualOrphansWarning: no child dataset removed | A child dataset is removed from the aggregated datasets. | {count} child datasets are removed from the aggregated datasets.
@@ -905,17 +905,17 @@ const partOfCandidates = computed(() => [
   ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
 ])
 const partOfCandidatesLoading = computed(() => virtualDatasetsFetch.loading.value || applicationsFetch.loading.value)
+// both fetches feed the candidate list, refresh them so it reflects the current parents
 const openPartOfDialog = () => {
   virtualDatasetsFetch.refresh()
-  if (!applicationsFetch.initialized.value) applicationsFetch.refresh()
+  applicationsFetch.refresh()
 }
 
 // the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
 // shown once the count is known — otherwise a quick confirm would delete without a childrenAction
 const childrenCount = ref(0)
 const openDeleteDialog = useAsyncAction(async () => {
-  const res = await $fetch<{ count: number }>('datasets', { query: { partOf: id, size: 0 } })
-  childrenCount.value = res.count
+  childrenCount.value = (await fetchChildRefs({ id })).length
   showDeleteDialog.value = true
 })
 

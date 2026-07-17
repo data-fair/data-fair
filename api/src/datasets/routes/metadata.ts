@@ -20,7 +20,6 @@ import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
-import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
@@ -30,10 +29,9 @@ import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
-import { updateTotalStorage } from '../utils/storage.ts'
+import { updateTotalStorage, checkMoveLimits } from '../utils/storage.ts'
 
 const clean = datasetUtils.clean
-const debugLimits = debugModule('limits')
 const debugBreakingChanges = debugModule('breaking-changes')
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -203,8 +201,9 @@ export const registerMetadataRoutes = (router: Router) => {
     const sessionState = reqSessionAuthenticated(req)
 
     partOf.assertOwnerChangeAllowed(dataset)
-    const children = (await partOf.listChildren('dataset', dataset)).map(child => child.resource)
-    const movedDatasets = [dataset, ...children]
+    // only the dataset children weigh on the dataset limits checked below, but they all follow their parent
+    const children = await partOf.listChildren('dataset', dataset.id)
+    const movedDatasets = [dataset, ...children.filter(child => child.type === 'dataset').map(child => child.resource)]
 
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
     if (!sessionState.user.adminMode) {
@@ -217,26 +216,11 @@ export const registerMetadataRoutes = (router: Router) => {
     }
 
     if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
-      // the children move along with their parent, they all consume the new owner's limits
-      const remaining = await limits.remaining(req.body)
-      if (remaining.nbDatasets !== -1 && remaining.nbDatasets < movedDatasets.length) {
-        debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
-        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
-      }
-      const movedSize = movedDatasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
-      const movedIndexed = movedDatasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
-      if (remaining.storage !== -1 && remaining.storage < movedSize) {
-        debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
-      }
-      if (remaining.indexed !== -1 && movedIndexed && remaining.indexed < movedIndexed) {
-        debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
-      }
+      await checkMoveLimits(req.getLocale(), req.body, movedDatasets)
     }
 
     const patchedDataset = await changeDatasetOwner(dataset, req.body, sessionState)
-    await partOf.changeChildrenOwner({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.body)
+    await partOf.changeChildrenOwner({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, req.body)
 
     const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
     const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`

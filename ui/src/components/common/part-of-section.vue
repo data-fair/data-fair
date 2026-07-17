@@ -68,13 +68,12 @@ en:
 
 <script setup lang="ts">
 import { mdiFamilyTree } from '@mdi/js'
-
-type PartOf = { type: 'dataset' | 'application', id: string, title?: string }
+import type { ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  resource: { id: string, partOf?: PartOf | null }
-  candidates: { type: 'dataset' | 'application', id: string, title: string }[]
+  resource: { id: string, partOf?: ResourceRef & { title?: string } | null }
+  candidates: (ResourceRef & { title: string })[]
   candidatesLoading?: boolean
 }>()
 

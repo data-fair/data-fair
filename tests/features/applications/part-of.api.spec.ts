@@ -409,14 +409,14 @@ test.describe('application partOf attribute', () => {
     assert.deepEqual((await axAdmin.get(`/api/v1/datasets/${childDataset.id}`)).data.owner, newOwner)
   })
 
-  test('partOf must carry the constant application type', async () => {
+  test('partOf must designate its parent by type and id', async () => {
     const ax = testUser1
     const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
     const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
 
-    // missing type: rejected by schema validation
+    // missing type: rejected by schema validation, it is required
     await assert.rejects(
       ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parentApp.id } }),
       (err: any) => {
@@ -424,7 +424,8 @@ test.describe('application partOf attribute', () => {
         return true
       }
     )
-    // wrong type value: rejected by schema validation
+    // the type is part of the ref: 'dataset' passes schema validation (no type is forbidden a priori)
+    // but designates a resource that does not use this one
     await assert.rejects(
       ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'dataset', id: parentApp.id } }),
       (err: any) => {
@@ -432,6 +433,10 @@ test.describe('application partOf attribute', () => {
         return true
       }
     )
+    // the designated parent is the one that references it
+    const res = await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
   })
 
   test('an organization contributor can create an application as a child of a parent it can configure', async () => {
