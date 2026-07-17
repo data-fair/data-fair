@@ -1,5 +1,6 @@
 import { type Router } from 'express'
 import path from 'node:path'
+import mime from 'mime-types'
 import { reqAdminMode, reqSessionAuthenticated } from '@data-fair/lib-express'
 import clone from '@data-fair/lib-utils/clone.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -16,6 +17,18 @@ import { integrityStore } from '../../integrity/store-factory.ts'
 import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 import { md5OfStorageFile } from '../../integrity/hash.ts'
+
+// mirrors upload.ts's fileFilter mimetype detection (mime type is broken on windows it seems ..
+// detect based on extension instead), so the synthetic `files` descriptor built for a restore
+// re-ingestion matches what a real multipart upload would have produced
+const fallbackMimeTypes: Record<string, string> = {
+  dbf: 'application/dbase',
+  dif: 'text/plain',
+  fods: 'application/vnd.oasis.opendocument.spreadsheet',
+  gpkg: 'application/geopackage+sqlite3',
+  jsonl: 'application/x-ndjson',
+  ndjson: 'application/x-ndjson',
+}
 
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
@@ -76,6 +89,25 @@ export const registerIntegrityRoutes = (router: Router) => {
     })
     if (!revision.payload) throw httpError(400, 'this revision has no payload (level-1 anchor): not restorable')
 
+    // file part: the stored file's actual bytes vs the revision's md5 (metadata fields can lie).
+    // Computed and gated up front, BEFORE the metadata write below: a file restore refused with 409
+    // must not have already applied its metadata $set/$unset. Metadata-only restores (no file
+    // divergence) stay ungated.
+    const currentMd5 = isFileDataset(dataset)
+      ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
+        if (err.status === 404) return undefined
+        throw err
+      })
+      : undefined
+    const needsFileRestore = !!(revision.payload.file && revision.hash.md5 !== currentMd5)
+    if (needsFileRestore) {
+      // re-ingesting mutates the dataset through the full pipeline; refuse while it is mid-processing
+      // (only a settled finalized/error dataset is safe to route a fresh file replacement through)
+      if (dataset.status !== 'finalized' && dataset.status !== 'error') {
+        throw httpError(409, 'dataset is not in a stable state (finalized/error) for a file restore')
+      }
+    }
+
     // metadata part: write back only the genuinely diverging covered keys
     const fresh = await mongo.datasets.findOne({ id: dataset.id })
     if (!fresh) throw httpError(404, 'dataset not found')
@@ -90,19 +122,7 @@ export const registerIntegrityRoutes = (router: Router) => {
       await mongo.datasets.updateOne({ id: dataset.id }, update)
     }
 
-    // file part: the stored file's actual bytes vs the revision's md5 (metadata fields can lie)
-    const currentMd5 = isFileDataset(dataset)
-      ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
-        if (err.status === 404) return undefined
-        throw err
-      })
-      : undefined
-    if (revision.payload.file && revision.hash.md5 !== currentMd5) {
-      // re-ingesting mutates the dataset through the full pipeline; refuse while it is mid-processing
-      // (only a settled finalized/error dataset is safe to route a fresh file replacement through)
-      if (dataset.status !== 'finalized' && dataset.status !== 'error') {
-        throw httpError(409, 'dataset is not in a stable state (finalized/error) for a file restore')
-      }
+    if (needsFileRestore) {
       // re-ingest through the standard file-replacement path (spec §C): the payload lands in the
       // loading dir exactly as an upload would, preparePatch/applyPatch route it through the
       // draft pipeline, and finalize re-anchors with the restore context riding the draft
@@ -112,7 +132,9 @@ export const registerIntegrityRoutes = (router: Router) => {
       const { body } = await store.readPayload(payloadKey(dataset.owner, dataset.id, i))
       await filesStorage.writeStream(body, finalPath)
       const stats = await filesStorage.fileStats(finalPath)
-      const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: revision.hash.md5 }]
+      // mime type is broken on windows it seems.. detect based on extension instead (mirrors upload.ts's fileFilter)
+      const mimetype = mime.lookup(filename) || fallbackMimeTypes[filename.split('.').pop() as string] || filename.split('.').pop()
+      const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: revision.hash.md5, mimetype }]
 
       const patch: any = { _needsHistorizing: { context: { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) } } }
       const datasetClone: any = clone(dataset)

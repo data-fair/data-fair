@@ -419,6 +419,45 @@ test('restore re-ingests a tampered file through the pipeline and anchors with r
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 })
 
+// Regression: the file branch's synthetic `files` descriptor omitted `mimetype`, so
+// originalFile.mimetype ended up undefined after re-ingestion. normalize.ts branches strictly on
+// that field, so any non-basic format (xlsx, ods, ical, plain json, zipped shapefile, gzip, gpx)
+// fails with "format not supported" — silently, since the _restore route already answered
+// {status: 'restoring'}. A plain CSV restore does not catch this: csv's mimetype is a basicType,
+// and a stale fallback in the normalizeFile task filter (tasks.ts isNormalizedMongoFilter, the
+// 'draft.originalFile: {$exists:false}' branch) reads the PARENT (pre-restore) dataset's
+// originalFile.mimetype instead of the draft's, so the missing mimetype on the draft's own
+// descriptor goes unnoticed for csv. xlsx has no such accidental cover.
+test('restore re-ingests a tampered non-basic-format (xlsx) file through the pipeline and carries mimetype', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/misc.xlsx', admin)
+  const prefix = revisionsPrefix(dataset)
+  expect(dataset.originalFile.mimetype).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const originalMd5 = dataset.originalFile.md5
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo file tamper' })).data
+  expect(res.status).toBe('restoring')
+
+  // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
+  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const raw = await waitForFlagCleared(dataset.id)
+  expect(raw.originalFile.md5).toBe(originalMd5)
+  // proves normalization actually ran on the restored xlsx bytes instead of erroring the draft out
+  expect(raw.originalFile.mimetype).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  expect(raw.status).toBe('finalized')
+
+  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
+  expect(latest.context.operation).toBe('restore')
+  expect(latest.context.origin).toBe('superadmin')
+
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+})
+
 test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const user = await axiosAuth('test_superadmin@test.com', undefined, false)
