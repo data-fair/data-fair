@@ -1,7 +1,6 @@
 module.exports = {
   mode: 'server_worker', // can be server_worker, server or worker
   port: 8080,
-  listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
   oldPublicUrl: '', // special case when changing path of data-fair
   wsPublicUrl: 'ws://localhost:8080',
@@ -58,9 +57,9 @@ module.exports = {
     options: {} // optional mongo client options
   },
   map: {
-    // A mapbox style to display geo data
-    // style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',
-    style: './api/v1/remote-services/tileserver-koumoul/proxy/styles/klokantech-basic/style.json',
+    // a maplibre style to display geo data
+    // a relative "./" prefix is resolved against the site root, an absolute URL is used as is
+    style: './tileserver/styles/klokantech-basic/style.json',
     // The layer before which ou data layers will be inserted (empty to add layer on top of everything)
     beforeLayer: 'poi_label'
   },
@@ -247,11 +246,6 @@ module.exports = {
   }, {
     title: 'Cadastre',
     url: 'https://koumoul.com/s/cadastre/api-docs.json'
-  }, {
-    title: 'Service de données cartographiques',
-    id: 'tileserver-koumoul',
-    description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
-    server: 'https://koumoul.com/s/tileserver'
   }],
   remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   catalogs: [{
@@ -327,7 +321,4 @@ module.exports = {
   compatODS: false,
   apiKeysMaxDuration: 2 * 365, // in days
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
-  experimental: {
-    streamReadLines: false                   // read /lines json/csv hits with asStream (splitter) so the raw ES response is never held whole — collapses peak memory / old-gen GC. Output is still assembled + res.send, so no observable change. See docs/architecture/read-lines-efficiency.md
-  },
 }

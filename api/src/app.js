@@ -86,10 +86,6 @@ export const run = async () => {
     })
 
     app.use((await import('cors')).default())
-    app.use((req, res, next) => {
-      if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-      else next()
-    })
 
     const bodyParser = express.json({ limit: '1000kb' })
     app.use((req, res, next) => {
@@ -256,15 +252,6 @@ export const run = async () => {
     server.keepAliveTimeout = (60 * 1000) + 1000
     server.headersTimeout = (60 * 1000) + 2000
     server.requestTimeout = (15 * 60 * 1000)
-
-    if (!config.listenWhenReady) {
-      // deep accept backlog: a single thread does both accept() and request work, so any event-loop hitch
-      // pauses accepting and connections queue in the kernel. The default 511 overflowed in production
-      // (TcpExt ListenOverflows) under connection bursts, dropping SYNs incl. the liveness probe's.
-      // Requires net.core.somaxconn >= 4096 on the node (checked: 4096), the kernel clamps silently otherwise.
-      server.listen({ port: config.port, backlog: 4096 })
-      await eventPromise(server, 'listening')
-    }
   }
 
   await mongo.init()
@@ -332,21 +319,14 @@ export const run = async () => {
         return permissions.can(type, resource, `realtime-${subject}`, sessionState, bypassPermissions)
       })
     ])
-    // At this stage the server is ready to respond to API requests
-    app.set('api-ready', true)
 
-    app.use((req, res, next) => {
-      if (!req.app.get('ui-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-      else next()
-    })
-
-    app.set('ui-ready', true)
-
-    if (config.listenWhenReady) {
-      // see the early listen above for the backlog rationale
-      server.listen({ port: config.port, backlog: 4096 })
-      await eventPromise(server, 'listening')
-    }
+    // at this stage the server is fully ready to respond to requests, we can open the port
+    // deep accept backlog: a single thread does both accept() and request work, so any event-loop hitch
+    // pauses accepting and connections queue in the kernel. The default 511 overflowed in production
+    // (TcpExt ListenOverflows) under connection bursts, dropping SYNs incl. the liveness probe's.
+    // Requires net.core.somaxconn >= 4096 on the node (checked: 4096), the kernel clamps silently otherwise.
+    server.listen({ port: config.port, backlog: 4096 })
+    await eventPromise(server, 'listening')
   }
 
   if (config.observer.active) {

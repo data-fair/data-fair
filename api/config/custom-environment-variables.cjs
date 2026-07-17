@@ -229,10 +229,6 @@ module.exports = {
       __format: 'json'
     },
   },
-  listenWhenReady: {
-    __name: 'LISTEN_WHEN_READY',
-    __format: 'json'
-  },
   baseAppsCategories: {
     __name: 'BASE_APPS_CATEGORIES',
     __format: 'json'
@@ -345,8 +341,5 @@ module.exports = {
   compatODS: {
     __name: 'COMPAT_ODS',
     __format: 'json'
-  },
-  experimental: {
-    streamReadLines: { __name: 'EXPERIMENTAL_STREAM_READ_LINES', __format: 'json' }
   }
 }

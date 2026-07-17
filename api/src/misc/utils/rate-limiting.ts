@@ -250,14 +250,32 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     res.endParts = (parts: Buffer[]) => {
       if (endPartsCalled) return // mirror the wrapped res.end's reentrancy protection
       endPartsCalled = true
+      // the client may have disconnected while the body was being assembled: drop the parts. pipeline()
+      // into an already-closed res throws ERR_STREAM_UNABLE_TO_PIPE SYNCHRONOUSLY (bypassing `done`) and
+      // would leak the send slot acquired by res.throttle (the Throttle is never wired into the pipeline,
+      // so the 'close' that releases the slot never fires) — leaked slots saturate the client's bucket
+      // until the queue-full guard tears down every one of its responses
+      if (res.destroyed || res.closed || res.writableEnded) return
       const source = Readable.from((function * () { while (parts.length) yield parts.shift()! })())
       const done = (err: NodeJS.ErrnoException | null) => {
         // teardowns are expected, not actionable: client aborts surface as premature-close, and a
         // queue-full res.destroy() (inside res.throttle) is already counted + debug-logged there
         if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE' && !res.destroyed) console.warn('failed to send response parts', err)
       }
-      if (ignoreRateLimiting) pipeline(source, res, done)
-      else pipeline(source, res.throttle(bandwidthType), res, done)
+      if (ignoreRateLimiting) {
+        pipeline(source, res, done)
+        return
+      }
+      const throttle = res.throttle(bandwidthType)
+      try {
+        pipeline(source, throttle, res, done)
+      } catch (err) {
+        // pipeline() can still throw synchronously instead of reporting through `done` (e.g. the
+        // queue-full teardown inside res.throttle returns an already-destroyed stream): destroy the
+        // throttle so its send slot is released, and route the error like the async failures
+        throttle.destroy()
+        done(err as NodeJS.ErrnoException)
+      }
     }
 
     if (ignoreRateLimiting) return // res.end stays original; endParts above skips the throttle

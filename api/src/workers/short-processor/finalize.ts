@@ -40,7 +40,7 @@ export default async function (_dataset: DatasetInternal) {
   //  - draft validation → applyPatch(datasetFull) (the published doc, no draftReason) → top-level
   //    `_needsHistorizing` → the published file IS anchored.
   // A `!dataset.draftReason` guard would wrongly skip the validation case (dataset is the draft there).
-  if (dataset.integrity?.active) result._needsHistorizing = true
+  if (dataset.integrity?.active) result._needsHistorizing = { classes: ['file', 'metadata'] }
 
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)

@@ -24,13 +24,13 @@ const pollFor = async <T>(fn: () => Promise<T>, timeoutMs = 15000): Promise<T | 
 test('the relay persists the anchor retain-until on integrity.lastRevision', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
-  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/file/`
 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForIntegrityRevisions(prefix, 1)
 
   const retainUntil = await pollFor(async () =>
-    (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.lastRevision?.retainUntil as string | undefined)
+    (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.file?.lastRevision?.retainUntil as string | undefined)
   expect(retainUntil).toBeTruthy()
   // dev/test retention is 1 day → ~23–25h out
   const remainingH = (new Date(retainUntil!).getTime() - Date.now()) / 3600000
@@ -41,10 +41,10 @@ test('the relay persists the anchor retain-until on integrity.lastRevision', asy
 // helper: enable integrity on a fresh dataset and wait until lastRevision.retainUntil is persisted
 const enabledDataset = async (admin: any) => {
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
-  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/file/`
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForIntegrityRevisions(prefix, 1)
-  await pollFor(async () => (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.lastRevision?.retainUntil)
+  await pollFor(async () => (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.file?.lastRevision?.retainUntil)
   return { dataset, prefix, latestKey: `${prefix}000000000` }
 }
 
@@ -54,28 +54,28 @@ test('a due anchor is renewed on check: retain-until advances and lastRenewal is
 
   // force the persisted anchor to look old (due): retain-until ~1h out (< 22h)
   const soon = new Date(Date.now() + 3600 * 1000).toISOString()
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.file.lastRevision.retainUntil': soon })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
-  expect(check.status).toBe('ok')
+  expect(check.file.status).toBe('ok')
 
   const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   // pushed back to ~ now + 1 day, well beyond the patched 1h
-  expect((new Date(state.lastRevision.retainUntil).getTime() - Date.now()) / 3600000).toBeGreaterThan(22)
-  expect(state.lastRenewal?.status).toBe('ok')
+  expect((new Date(state.file.lastRevision.retainUntil).getTime() - Date.now()) / 3600000).toBeGreaterThan(22)
+  expect(state.file.lastRenewal?.status).toBe('ok')
 })
 
 test('a fresh anchor is not renewed by a check', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
-  const before = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.lastRevision.retainUntil
+  const before = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.file.lastRevision.retainUntil
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
-  expect(check.status).toBe('ok')
+  expect(check.file.status).toBe('ok')
 
   const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
-  expect(state.lastRevision.retainUntil).toBe(before) // unchanged: not due
-  expect(state.lastRenewal).toBeUndefined()
+  expect(state.file.lastRevision.retainUntil).toBe(before) // unchanged: not due
+  expect(state.file.lastRenewal).toBeUndefined()
 })
 
 test('a breached check does not renew the lock', async () => {
@@ -83,16 +83,16 @@ test('a breached check does not renew the lock', async () => {
   const { dataset } = await enabledDataset(admin)
 
   // due + tampered
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.file.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
   await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
-  expect(check.status).toBe('breach')
+  expect(check.file.status).toBe('breach')
 
   const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
-  expect(state.lastRenewal?.status).not.toBe('ok') // renewal skipped on breach
+  expect(state.file.lastRenewal?.status).not.toBe('ok') // renewal skipped on breach
   // retain-until stays the patched near-now value (not pushed forward)
-  expect((new Date(state.lastRevision.retainUntil).getTime() - Date.now()) / 3600000).toBeLessThan(2)
+  expect((new Date(state.file.lastRevision.retainUntil).getTime() - Date.now()) / 3600000).toBeLessThan(2)
 })
 
 test('a failed lock extension is recorded as lastRenewal.failed and does not fail the check', async () => {
@@ -103,13 +103,13 @@ test('a failed lock extension is recorded as lastRenewal.failed and does not fai
   // forbidden shortening → the provider rejects it → the checker records a failure
   await integrityTestStore.extendRetention(latestKey, new Date(Date.now() + 10 * 24 * 3600 * 1000))
   // make the persisted mirror look due
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.file.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
-  expect(check.status).toBe('ok') // a renewal failure does not fail the integrity check
+  expect(check.file.status).toBe('ok') // a renewal failure does not fail the integrity check
 
   const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
-  expect(state.lastRenewal?.status).toBe('failed')
+  expect(state.file.lastRenewal?.status).toBe('failed')
   // the real lock is untouched (extend was rejected)
   const got = await integrityTestStore.getRetention(latestKey)
   expect((got!.getTime() - Date.now()) / (24 * 3600000)).toBeGreaterThan(9)

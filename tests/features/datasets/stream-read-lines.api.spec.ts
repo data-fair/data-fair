@@ -3,11 +3,12 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-// Api equivalence for the streamed `/lines` path. `?_stream=true` (a non-prod opt-in, equivalent to the
-// production `experimental.streamReadLines` flag) reads ES with asStream + the splitter for json/csv; the
-// pipeline then serializes rows on the fly and res.sends the assembled body. The source (streamed vs the
-// buffered esResponse from search()) is INTERNAL only — the response MUST be identical either way: same
-// results/total, same body `next`, same Link header, same bytes (json deep-equal / csv byte-equal).
+// Regression coverage for the streamed `/lines` read path — since the experimental flag was retired,
+// json/csv/geojson requests ALWAYS read ES with asStream + the splitter, and the pipeline serializes rows
+// on the fly before sending the assembled body. These tests pin the full response contract of that path
+// (envelope, pagination Link header + body `next`, collapse, count=false pages, error path) with absolute
+// assertions. Byte-parity between the streamed and buffered sources stays enforced at the unit level by
+// lines-stream-parity.unit.spec.ts (the buffered source still backs unrecognized `format` values).
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -18,7 +19,7 @@ const N = 2500
 const id = 'streamlines'
 
 // Deterministic rows: zero-padded `_id` so `sort=_id` is a stable total order; `grp` gives ~10 distinct
-// values for the collapse test; `lat`/`lon` make the geojson (hard-format) fallback exercise real geo.
+// values for the collapse test; `lat`/`lon` make the geojson format exercise real geo.
 const pad = (i: number) => String(i).padStart(5, '0')
 const rows = Array.from({ length: N }, (_, i) => ({
   _id: pad(i),
@@ -29,7 +30,7 @@ const rows = Array.from({ length: N }, (_, i) => ({
   n: i
 }))
 
-test.describe('streamed /lines: api equivalence with the buffered path', () => {
+test.describe('streamed /lines read path', () => {
   test.beforeAll(async () => {
     await clean()
     // the 2500 rows (~230KB) exceed the default store_bytes limit (200KB). Without an explicit limit the
@@ -63,65 +64,53 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
 
   const base = `/api/v1/datasets/${id}/lines`
 
-  test('json: streamed is identical to buffered (results + total + body next + Link header)', async () => {
-    const streamed = await testUser1.get(`${base}?format=json&size=2500&sort=_id&_stream=true`)
-    const buffered = await testUser1.get(`${base}?format=json&size=2500&sort=_id`)
+  test('json: full envelope (results + total + body next + Link header)', async () => {
+    const res = await testUser1.get(`${base}?format=json&size=2500&sort=_id`)
 
-    assert.equal(streamed.status, 200)
-    assert.equal(streamed.data.total, N)
-    assert.equal(streamed.data.total, buffered.data.total)
-    assert.equal(streamed.data.results.length, N)
-    assert.deepEqual(streamed.data.results, buffered.data.results)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, N)
+    assert.equal(res.data.results.length, N)
+    // strictly increasing _id ordering proves nothing was dropped/duplicated by the splitter
+    for (let i = 0; i < res.data.results.length; i++) assert.equal(res.data.results[i]._id, pad(i))
 
-    // full page (total === size) → both carry a body `next`. With `_stream` dropped once consumed, the
-    // streamed `next` is byte-identical to the buffered one.
-    assert.ok(buffered.data.next, 'buffered should carry a body next on a full page')
-    assert.equal(streamed.data.next, buffered.data.next)
-
-    // The source (streamed vs buffered) is internal only — since the body is assembled then res.send, the
-    // streamed response keeps the SAME Link:next header as the buffered one (no observable difference).
-    assert.ok(buffered.headers.link, 'buffered sets a Link:next header')
-    assert.equal(streamed.headers.link, buffered.headers.link, 'streamed sets the same Link header')
-    assert.equal(streamed.headers.link, `<${streamed.data.next}>; rel=next`)
+    // full page (total === size) → a body `next` AND the matching Link header
+    assert.ok(res.data.next, 'a full page carries a body next')
+    assert.ok(res.headers.link, 'a full page sets a Link:next header')
+    assert.equal(res.headers.link, `<${res.data.next}>; rel=next`)
   })
 
-  test('csv: streamed is byte-equal to buffered', async () => {
-    const streamed = await testUser1.get(`${base}?format=csv&size=2500&sort=_id&_stream=true`, { responseType: 'arraybuffer' })
-    const buffered = await testUser1.get(`${base}?format=csv&size=2500&sort=_id`, { responseType: 'arraybuffer' })
-    assert.equal(streamed.status, 200)
-    assert.equal(streamed.headers['content-type'], 'text/csv; charset=utf-8')
-    assert.equal(Buffer.from(streamed.data).length, Buffer.from(buffered.data).length)
-    assert.equal(Buffer.from(streamed.data).toString('hex'), Buffer.from(buffered.data).toString('hex'))
+  test('csv: header + all rows, csv content-type', async () => {
+    const res = await testUser1.get(`${base}?format=csv&size=2500&sort=_id`, { responseType: 'arraybuffer' })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'text/csv; charset=utf-8')
+    const body = Buffer.from(res.data).toString()
+    // prologue (header line) + N rows, each on its own line
+    const lines = body.split('\n').filter(l => l.length)
+    assert.equal(lines.length, N + 1)
+    assert.ok(lines[0].includes('str'), 'first line is the csv header')
+    // a value with comma + quotes survives the compiled serializer's escaping
+    assert.ok(body.includes('"has,comma ""0"""'), 'csv escaping of commas/quotes is intact')
   })
 
-  test('hint: streamed hint equals buffered hint', async () => {
-    const streamed = await testUser1.get(`${base}?format=json&size=2500&sort=_id&hint=true&_stream=true`)
-    const buffered = await testUser1.get(`${base}?format=json&size=2500&sort=_id&hint=true`)
-    assert.ok(streamed.data.hint, 'a hint=true large request should carry a hint')
-    assert.equal(streamed.data.hint, buffered.data.hint)
+  test('hint: a hint=true large request carries a hint', async () => {
+    const res = await testUser1.get(`${base}?format=json&size=2500&sort=_id&hint=true`)
+    assert.ok(res.data.hint, 'a hint=true large request should carry a hint')
   })
 
-  test('collapse: streamed totalCollapse present and equals buffered', async () => {
-    const streamed = await testUser1.get(`${base}?format=json&size=2500&sort=_id&collapse=grp&_stream=true`)
-    const buffered = await testUser1.get(`${base}?format=json&size=2500&sort=_id&collapse=grp`)
-    assert.ok(streamed.data.totalCollapse != null, 'streamed collapse carries totalCollapse')
-    assert.equal(streamed.data.totalCollapse, buffered.data.totalCollapse)
-    assert.equal(streamed.data.totalCollapse, 10) // 10 distinct grp values
-    assert.deepEqual(streamed.data.results, buffered.data.results)
+  test('collapse: totalCollapse is present in the envelope', async () => {
+    const res = await testUser1.get(`${base}?format=json&size=2500&sort=_id&collapse=grp`)
+    assert.equal(res.data.totalCollapse, 10) // 10 distinct grp values
+    assert.equal(res.data.results.length, 10) // one row per collapsed group
   })
 
-  test('geojson: streamed source is identical to buffered, incl the Link header', async () => {
-    const streamed = await testUser1.get(`${base}?format=geojson&size=100&sort=_id&_stream=true`)
-    const buffered = await testUser1.get(`${base}?format=geojson&size=100&sort=_id`)
-    assert.equal(streamed.status, 200)
-    assert.equal(streamed.data.type, 'FeatureCollection')
-    assert.equal(streamed.data.features.length, 100)
-    // geojson now consumes the streamed source (per-hit Feature → res.send), so it gets the same memory
-    // treatment as json/csv while staying byte-for-byte identical to the buffered path.
-    assert.deepEqual(streamed.data, buffered.data)
-    // full page (100 of 2500) → Link:next header, set from the last hit by streamGeojson, same either way
-    assert.ok(buffered.headers.link, 'buffered geojson sets a Link:next header')
-    assert.equal(streamed.headers.link, buffered.headers.link)
+  test('geojson: FeatureCollection with bbox and the Link header', async () => {
+    const res = await testUser1.get(`${base}?format=geojson&size=100&sort=_id`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 100)
+    assert.ok(Array.isArray(res.data.bbox), 'bboxAgg result is appended to the FeatureCollection')
+    // full page (100 of 2500) → Link:next header, set from the last hit by streamGeojson
+    assert.ok(res.headers.link, 'a full geojson page sets a Link:next header')
   })
 
   test('backpressure/abort: a large streamed response completes without truncation or hang', async () => {
@@ -130,38 +119,36 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
     // esAbortContext signal in search-stream.ts (verified by reasoning; not asserted here because a
     // deterministic mid-stream socket close against the live dev-api is flaky). This asserts the happy
     // path large-transfer completes, the concrete backpressure/no-loss guarantee.
-    const streamed = await testUser1.get(`${base}?format=json&size=2500&sort=_id&_stream=true`)
-    assert.equal(streamed.status, 200)
-    assert.equal(streamed.data.results.length, N) // no truncation
+    const res = await testUser1.get(`${base}?format=json&size=2500&sort=_id`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, N) // no truncation
     // strictly increasing _id ordering proves nothing was dropped/duplicated mid-stream
-    for (let i = 0; i < streamed.data.results.length; i++) assert.equal(streamed.data.results[i]._id, pad(i))
+    for (let i = 0; i < res.data.results.length; i++) assert.equal(res.data.results[i]._id, pad(i))
   })
 
-  test('count=false and a followed after= page: streamed equals buffered (no hits.total in the ES response)', async () => {
+  test('count=false and a followed after= page: incremental source without hits.total in the ES response', async () => {
     // count=false → track_total_hits:false → the ES envelope has NO hits.total; the streamed source must
-    // stay incremental (no total in the body either way) and byte-equivalent to the buffered path
-    const streamedP1 = await testUser1.get(`${base}?format=json&size=100&sort=_id&count=false&_stream=true`)
-    const bufferedP1 = await testUser1.get(`${base}?format=json&size=100&sort=_id&count=false`)
-    assert.equal(streamedP1.data.total, undefined)
-    assert.deepEqual(streamedP1.data, bufferedP1.data)
-    assert.equal(streamedP1.headers.link, bufferedP1.headers.link)
+    // stay incremental and omit total from the body
+    const p1 = await testUser1.get(`${base}?format=json&size=100&sort=_id&count=false`)
+    assert.equal(p1.data.total, undefined)
+    assert.equal(p1.data.results.length, 100)
+    assert.ok(p1.data.next, 'count=false full page still carries a next link')
+    assert.equal(p1.headers.link, `<${p1.data.next}>; rel=next`)
 
     // follow the next link — an `after=` page is ALSO track_total_hits:false server-side (the hot case:
     // every page ≥2 of the UI's large-download loop). The href is absolute (publicUrl-based), axios uses
     // it as-is, bypassing baseURL.
-    assert.ok(bufferedP1.data.next, 'count=false full page still carries a next link')
-    const streamedP2 = await testUser1.get(bufferedP1.data.next + '&_stream=true')
-    const bufferedP2 = await testUser1.get(bufferedP1.data.next)
-    assert.equal(streamedP2.data.results.length, 100)
-    assert.equal(streamedP2.data.results[0]._id, pad(100))
-    assert.deepEqual(streamedP2.data, bufferedP2.data)
-    assert.equal(streamedP2.headers.link, bufferedP2.headers.link)
+    const p2 = await testUser1.get(p1.data.next)
+    assert.equal(p2.data.total, undefined)
+    assert.equal(p2.data.results.length, 100)
+    assert.equal(p2.data.results[0]._id, pad(100))
+    assert.ok(p2.headers.link, 'the followed page carries its own Link:next header')
   })
 
-  // §C — the Task 6 ⚠️: a streamed request whose ES `_search` ERRORS must surface as a clean HTTP error
-  // BEFORE any partial body (never a 200 with a truncated/broken stream, never a hang). We delete the
-  // underlying ES index so the streamed `asStream` request gets a non-200 from ES; search-stream.ts must
-  // translate that into a proper HTTP error. Kept LAST because it destroys the dataset's index.
+  // §C: a streamed request whose ES `_search` ERRORS must surface as a clean HTTP error BEFORE any
+  // partial body (never a 200 with a truncated/broken stream, never a hang). We delete the underlying ES
+  // index so the streamed `asStream` request gets a non-200 from ES; search-stream.ts must translate that
+  // into a proper HTTP error. Kept LAST because it destroys the dataset's index.
   test('live error path: streamed ES error surfaces as a clean HTTP error, not a broken body', async () => {
     // resolve the concrete index behind the dataset alias and delete it
     const esAlias = `${indicesPrefix}-${id}`
@@ -170,7 +157,7 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
     await testUser1.delete(`http://${esHost}/${indexName}`)
 
     await assert.rejects(
-      testUser1.get(`${base}?format=json&size=2500&sort=_id&_stream=true`),
+      testUser1.get(`${base}?format=json&size=2500&sort=_id`),
       (err: any) => {
         // a clean HTTP status (axios rejects only on non-2xx) — i.e. the error resolved BEFORE the first
         // byte. A 200-with-truncated-body would have RESOLVED here, failing assert.rejects.

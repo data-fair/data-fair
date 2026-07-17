@@ -182,9 +182,9 @@ test.describe('aggregate_data buildQuery', () => {
     assert.equal(query.field, 'status')
   })
 
-  test('joins multiple group-by columns with semicolon', () => {
+  test('joins multiple group-by columns with comma', () => {
     const { query } = aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['city', 'status'] })
-    assert.equal(query.field, 'city;status')
+    assert.equal(query.field, 'city,status')
   })
 
   test('includes metric params when not count', () => {

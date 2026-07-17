@@ -43,14 +43,26 @@ bandwidth throttling. The old 2×-body concat transient is gone **and memory dec
 instead of pinning ~1× body for the duration of a slow-client throttled download (the prod heap
 profile's "transient assemble-then-send body/Buffer" spike, ~1.2 GB external).
 
+One teardown subtlety (a post-release prod incident): the client can disconnect while the body is still
+being *assembled*, so `res` may already be destroyed when `res.endParts` runs — and on node ≥ 24
+`pipeline()` into a closed stream throws `ERR_STREAM_UNABLE_TO_PIPE` *synchronously*, bypassing its
+callback. Unhandled, that both surfaced as internal errors and permanently leaked the send slot
+`res.throttle()` had just acquired (the Throttle is never wired, so the `'close'` that releases the slot
+never fires) — after `maxPendingSends` aborted requests the client's bucket was saturated and the
+queue-full guard tore down every later response. `res.endParts` therefore drops the parts up front when
+`res` is already destroyed/closed/ended, and wraps the `pipeline()` call to destroy the throttle (freeing
+the slot) on any residual synchronous throw (e.g. the queue-full teardown returns an already-destroyed
+stream). Pinned by `rate-limiting-end-parts.unit.spec.ts`, which drives the real middleware.
+
 Peak drops to ~1× the payload at assembly time (bounded per request by `maxPageSize`), decaying during
 the send. Going lower would require true output streaming, i.e. giving up the response contract — the
 deliberate trade is to stop at ~1×.
 
-Because the buffered↔streamed choice cannot change any client-visible output, it is safe behind a flag:
-`experimental.streamReadLines` (default off), with a non-prod `?_stream=true` opt-in for tests. Rollout is a
-staging memory/GC measurement, not a behavior gate. There is **no size threshold** — the splitter overhead
-is negligible for small responses, so eligible requests always stream.
+Because the buffered↔streamed choice cannot change any client-visible output, it was first shipped behind a
+flag (`experimental.streamReadLines`, with a non-prod `?_stream=true` opt-in for tests) so the rollout could
+be a staging memory/GC measurement rather than a behavior gate. That measurement passed and the flag was
+retired (2026-07): eligible formats now always read the streamed source. There is **no size threshold** —
+the splitter overhead is negligible for small responses, so eligible requests always stream.
 
 ## The streamed source
 
@@ -72,16 +84,18 @@ is negligible for small responses, so eligible requests always stream.
   byte-assembly in the config-free `lines-body.ts` so the output contract is unit-testable without config.
 
 Both sources flow through the **same single pipeline per format** — the source is the only difference, so
-byte-parity holds by construction. It is enforced by a 120-seed parity fuzz
-(`lines-stream-parity.unit.spec.ts`), a live api equivalence suite (`stream-read-lines.api.spec.ts`,
-including `count=false`/`after=` pages and the error path), and a `FORCE_STREAM=1` harness
-(`tests/support/axios.ts`) that pushes any api suite through the streamed source — run it before flipping
-the flag. That end-to-end harness caught a real bug static review missed: `_attachment_url` must be
-rewritten at the **top** of `prepareResultItem`, before derived fields (thumbnails) consume it.
+byte-parity holds by construction (the buffered source still backs an unrecognized `format` value, which
+falls through to json output as it always did). Parity is enforced by a 120-seed fuzz
+(`lines-stream-parity.unit.spec.ts`), and a live api suite (`stream-read-lines.api.spec.ts`) pins the
+streamed path's full response contract, including `count=false`/`after=` pages and the error path. During
+the flag-gated rollout, a `FORCE_STREAM=1` harness pushed every api suite through the streamed source; it
+caught a real bug static review missed — `_attachment_url` must be rewritten at the **top** of
+`prepareResultItem`, before derived fields (thumbnails) consume it — and was removed with the flag once
+streaming became the only mode.
 
 ## Per-format routing
 
-- **json / csv / geojson → streamed source** (flag-gated). Each hit maps independently to output; geojson's
+- **json / csv / geojson → streamed source** (always on). Each hit maps independently to output; geojson's
   `bbox` is a separate `bboxAgg` that runs concurrently with hit consumption; csv rows go through the same
   compiled serializer as the buffered export.
 - **pbf tiles (neighbors, non-vtPrepared), shp, wkt, xlsx / ods → zero-copy raw-buffer-to-worker** (always
@@ -120,7 +134,7 @@ piped through `createGunzip` (asStream bypasses auto-decompression).
 | Streaming/SIMD JSON parsers (`@streamparser/json`, `jsonparse`, `stream-json`, `simdjson`) | **Negative** | V8 allocates least and is fastest on total bytes — `benchmark/results/streaming-parse-bakeoff.md`. Total-bytes was the wrong axis; peak-live was the right one (same code, opposite conclusion). |
 | Rust napi hot path | **Negative** | v1 ~2.3× slower; `serde_json::Value` can't beat V8. |
 | Compiled fused `(hit)→jsonString` serializer | **Shelved** | ~1.41× on the plain slice only; rich requests are dominated by `marked`/`sanitize-html` — `benchmark/results/compiled-serializer.md`. |
-| Size threshold for streaming (500 KB content-length gate, `streamReadLinesMinBytes`) | **Dropped** | The gate was designed for the earlier streamed-*output* model, where streaming a response also changed its HTTP semantics — small responses were spared that plus streaming's *relative* CPU tax (~1.0–1.3× fat rows … ~2.7–4× tiny rows, `benchmark/results/streaming-threshold-sweep.md`). The assemble-then-send pivot removed the semantics difference entirely, and the only responses a threshold can exempt are small ones — where the absolute overhead is negligible. The relative tax on *large* tiny-row responses exists with or without a gate (it's the memory-for-CPU trade itself; watch CPU in the staging measurement). No gate also means one single code path per format once the flag is retired. |
+| Size threshold for streaming (500 KB content-length gate, `streamReadLinesMinBytes`) | **Dropped** | The gate was designed for the earlier streamed-*output* model, where streaming a response also changed its HTTP semantics — small responses were spared that plus streaming's *relative* CPU tax (~1.0–1.3× fat rows … ~2.7–4× tiny rows, `benchmark/results/streaming-threshold-sweep.md`). The assemble-then-send pivot removed the semantics difference entirely, and the only responses a threshold can exempt are small ones — where the absolute overhead is negligible. The relative tax on *large* tiny-row responses exists with or without a gate (it's the memory-for-CPU trade itself; CPU was watched in the staging measurement). No gate also means one single code path per format now that the flag is retired. |
 | Synthetic pre-query ETag (skip ES on `If-None-Match`) | **Shelved** | The pre-query `finalizedAt`/`Last-Modified` 304 already covers most of it. |
 | xlsx zero-copy worker | **Done (2026-07)** | Un-shelved by the stall audit: the rows-array clone measured 38–234ms of main-thread stall per export. Shipped as raw-buffer + in-worker `prepareResultItem` (not `aoa`-transfer): the worker parses the transferred ES bytes and preps rows itself, so the per-row cost leaves the loop too. |
 | pbf `max`/vtPrepared zero-copy | **Rejected (2026-07)** | Sequential `after` pagination needs the parsed last hit per page — raw-buffer transfer can't avoid the main-thread parse. Bounded at ~47ms by the 10 MB concat cap. |
@@ -147,9 +161,10 @@ goes through an optimized path, per format, in requests and in bytes:
 Durations per format remain on `df_req_step_seconds{routeName="…/lines?format=…", step}`. Grafana: row
 « Lectures de données (/lines) » in the koumoul dashboard (`infrastructure/manifests/misc/grafana-koumoul.yaml`).
 
-## Rollout
+## Rollout (done)
 
-Enable `experimental.streamReadLines` in staging, measure RSS / heap / GC overhead / event-loop lag under
-representative large responses (`/cpu-profile`, `/heap-profile`), keep it on if they improve without a
-latency regression — the `df_read_lines_*` metrics above give the before/after view per mode. The buffered
-source remains the default and the fallback regardless.
+The streamed source shipped behind `experimental.streamReadLines` (default off). Staging then ran with the
+flag on: RSS / heap / GC overhead / event-loop lag were measured under representative large responses
+(`/cpu-profile`, `/heap-profile`) and improved without a latency regression — the `df_read_lines_*` metrics
+above gave the before/after view per mode. The flag was retired (2026-07): json/csv/geojson always stream;
+the buffered search remains only for the ineligible formats listed in the per-format routing above.
