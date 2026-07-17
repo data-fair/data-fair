@@ -9,6 +9,8 @@ import type { DatasetInternal } from '#types'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
 import * as ops from './operations.ts'
+import { PAYLOAD_SUFFIX } from './operations.ts'
+import type { RevisionBody } from './store.ts'
 import { md5OfStorageFile } from './hash.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import * as notifications from '../misc/utils/notifications.ts'
@@ -22,13 +24,16 @@ export type Check = { status: 'ok' | 'breach' | 'unknown', date?: string, breach
 // anchor is "old" (per ops.needsRenewal), push its compliance retain-until forward in place so the
 // current state stays protected indefinitely. Failure is surfaced loudly, never thrown — the anchor
 // stays valid until its existing retain-until, leaving lead time to react.
-const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, latestKey: string): Promise<void> => {
+const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, latestKey: string, latestRevision: RevisionBody): Promise<void> => {
   const retentionDays = config.integrity?.retention?.days ?? 365
   if (!ops.needsRenewal((dataset.integrity as any)?.lastRevision?.retainUntil, Date.now(), retentionDays)) return
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
   try {
     await store.extendRetention(latestKey, retainUntil)
+    // the sliding anchor is the revision *pair*: a level-2 anchor's repairability dies with
+    // its payload's lock, so the .file sibling must slide forward too
+    if (latestRevision.payload?.file) await store.extendRetention(latestKey + PAYLOAD_SUFFIX, retainUntil)
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: {
         'integrity.lastRevision.retainUntil': retainUntil.toISOString(),
@@ -59,7 +64,8 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
     return { status: 'unknown', date }
   }
 
-  const expected = (await store.getRevision(latest)).hash
+  const latestRevision = await store.getRevision(latest)
+  const expected = latestRevision.hash
   const breach: Array<'file' | 'metadata'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
   const actualMd5 = isFileDataset(dataset)
@@ -82,7 +88,7 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   if (status === 'breach' && !wasBreach) {
     await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
   }
-  if (status === 'ok') await maybeRenew(dataset, store, latest)
+  if (status === 'ok') await maybeRenew(dataset, store, latest, latestRevision)
   return { status, date, ...(breach.length ? { breach } : {}) }
 }
 

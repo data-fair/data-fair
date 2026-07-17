@@ -444,3 +444,34 @@ test('a failed lock extension is recorded as lastRenewal.failed and does not fai
   const got = await integrityTestStore.getRetention(latestKey)
   expect((got!.getTime() - Date.now()) / (24 * 3600000)).toBeGreaterThan(9)
 })
+
+test('lock renewal extends the payload object too', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset, latestKey } = await enabledDataset(admin)
+  const payloadKey = latestKey + '.file'
+
+  // snapshot both real S3 locks right after the anchor write, before any renewal — dev retention
+  // is only 1 day (see development.cjs), so comparing against an absolute far-future threshold
+  // would not discriminate "renewed" from "just-created": both land ~1 day out. Comparing the
+  // before/after timestamps directly does discriminate, regardless of the configured retention length
+  const revBefore = await integrityTestStore.getRetention(latestKey)
+  const payloadBefore = await integrityTestStore.getRetention(payloadKey)
+
+  // force the persisted anchor to look old (due): retain-until ~1h out (< 22h) — same trick as
+  // 'a due anchor is renewed on check'
+  const soon = new Date(Date.now() + 3600 * 1000).toISOString()
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+
+  // both the revision JSON and its .file sibling must have slid forward — the payload's lock
+  // must not be left behind on its original, now-stale, retain-until
+  const revAfter = await integrityTestStore.getRetention(latestKey)
+  const payloadAfter = await integrityTestStore.getRetention(payloadKey)
+  expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
+  expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
+})
