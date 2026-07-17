@@ -2,8 +2,15 @@ import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './.type/index.js'
 import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
-import type { HistorizeContextHint } from '../../src/integrity/operations.js'
 export * from './.type/index.js'
+
+// mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
+// package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+type HistorizeContextHint = {
+  operation: 'create' | 'update' | 'enable' | 'fixIntegrity'
+  origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+  reason?: string
+}
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
 
