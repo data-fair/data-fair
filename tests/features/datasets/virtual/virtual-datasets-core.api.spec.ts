@@ -334,6 +334,8 @@ test.describe('virtual datasets core', () => {
 
     await assert.rejects(ax.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
       assert.equal(err.status, 501)
+      // the body is the user-facing message, not empty and not a stack trace
+      assert.equal(err.data, 'Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
       return true
     })
   })
@@ -367,10 +369,13 @@ test.describe('virtual datasets core', () => {
     const virtualDataset = res.data
     await waitForDatasetError(ax, virtualDataset.id)
 
-    await assert.rejects(
-      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`),
-      { status: 501 }
-    )
+    await assert.rejects(ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`), (err: any) => {
+      assert.equal(err.status, 501)
+      // the body is the user-facing message, without the worker-only [noretry] prefix
+      assert.ok(err.data.startsWith(`Le jeu de données virtuel "${virtualDataset.id}" ne peut pas être requêté`), err.data)
+      assert.ok(err.data.includes('des filtres (id)'), err.data)
+      return true
+    })
   })
 
   test('A virtual dataset is updated after a child schema changes', async () => {
@@ -481,6 +486,8 @@ test.describe('virtual datasets core', () => {
       // the error now pinpoints the exact child dataset that is not readable
       assert.ok(err.data.includes(dataset.id))
       assert.ok(err.data.includes('n\'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel'))
+      // the body is the user-facing message, not a stack trace with the worker-only [noretry] prefix
+      assert.ok(err.data.startsWith(`Le jeu de données virtuel "${res.data.id}" ne peut pas être requêté`), err.data)
       return true
     })
   })
