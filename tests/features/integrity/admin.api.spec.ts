@@ -393,6 +393,32 @@ test('restore heals a tampered metadata field synchronously and appends a restor
   expect(latest.context.reason).toBe('undo tamper')
 })
 
+test('restore re-ingests a tampered file through the pipeline and anchors with restore context', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const originalMd5 = dataset.originalFile.md5
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo file tamper' })).data
+  expect(res.status).toBe('restoring')
+
+  // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
+  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const raw = await waitForFlagCleared(dataset.id)
+  expect(raw.originalFile.md5).toBe(originalMd5)
+
+  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
+  expect(latest.context.operation).toBe('restore')
+  expect(latest.context.origin).toBe('superadmin')
+
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+})
+
 test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const user = await axiosAuth('test_superadmin@test.com', undefined, false)

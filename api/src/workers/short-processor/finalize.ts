@@ -37,7 +37,10 @@ export default async function (_dataset: DatasetInternal) {
   // with `draft.` based on its TARGET's draftReason, which routes this correctly: a plain draft
   // finalize persists `draft._needsHistorizing` (never matched by the relay filter → drafts are NOT
   // historized), while a draft validation patches the published doc → top-level flag → anchored.
-  if (dataset.integrity?.active) result._needsHistorizing = { context: { operation: 'update', origin: 'worker' } }
+  // preserve a caller-provided context (e.g. the _restore route rides its 'restore' context
+  // through the draft: mergeDraft overlays draft._needsHistorizing onto the working doc);
+  // default to the generic worker context otherwise
+  if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)

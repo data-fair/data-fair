@@ -107,7 +107,12 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
   // drop silently rather than anchoring an un-enrolled dataset
   if (!dataset.integrity?.active) { await clearFlag(); return }
 
-  await anchorDataset(dataset, dataset._needsHistorizing?.context)
+  // a 'restore' context reaching the async relay comes from the _restore route's file path
+  // (finalize preserved the context through the draft): force the anchor so the remediation
+  // always leaves its own auditable revision, even when the re-ingested bytes/metadata land
+  // back on a state byte-identical to a prior anchor — mirrors the metadata path's force:true
+  const context = dataset._needsHistorizing?.context
+  await anchorDataset(dataset, context, { force: context?.operation === 'restore' })
   // Known narrow window (accepted): a stamp written while this relay run is in-flight can be
   // cleared by this unconditional $unset and thus dropped. Fail-loud: the next sliding check
   // re-detects the mismatch and alerts; a follow-up _fix recovers.

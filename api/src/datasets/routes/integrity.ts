@@ -1,14 +1,21 @@
 import { type Router } from 'express'
-import { reqAdminMode } from '@data-fair/lib-express'
+import path from 'node:path'
+import { reqAdminMode, reqSessionAuthenticated } from '@data-fair/lib-express'
+import clone from '@data-fair/lib-utils/clone.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import config from '#config'
 import mongo from '#mongo'
+import filesStorage from '#files-storage'
 import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
+import * as datasetUtils from '../utils/index.ts'
+import { preparePatch } from '../utils/patch.ts'
+import { applyPatch } from '../service.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
-import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
+import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
+import { md5OfStorageFile } from '../../integrity/hash.ts'
 
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
@@ -83,7 +90,39 @@ export const registerIntegrityRoutes = (router: Router) => {
       await mongo.datasets.updateOne({ id: dataset.id }, update)
     }
 
-    // metadata-only restore (file part comes in the next iteration of this route): re-anchor
+    // file part: the stored file's actual bytes vs the revision's md5 (metadata fields can lie)
+    const currentMd5 = isFileDataset(dataset)
+      ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
+        if (err.status === 404) return undefined
+        throw err
+      })
+      : undefined
+    if (revision.payload.file && revision.hash.md5 !== currentMd5) {
+      // re-ingesting mutates the dataset through the full pipeline; refuse while it is mid-processing
+      // (only a settled finalized/error dataset is safe to route a fresh file replacement through)
+      if (dataset.status !== 'finalized' && dataset.status !== 'error') {
+        throw httpError(409, 'dataset is not in a stable state (finalized/error) for a file restore')
+      }
+      // re-ingest through the standard file-replacement path (spec §C): the payload lands in the
+      // loading dir exactly as an upload would, preparePatch/applyPatch route it through the
+      // draft pipeline, and finalize re-anchors with the restore context riding the draft
+      const filename = revision.payload.metadata.originalFile?.name ?? dataset.originalFile?.name ?? 'restored-file'
+      const destination = datasetUtils.loadingDir({ ...dataset, draftReason: true })
+      const finalPath = path.join(destination, filename)
+      const { body } = await store.readPayload(payloadKey(dataset.owner, dataset.id, i))
+      await filesStorage.writeStream(body, finalPath)
+      const stats = await filesStorage.fileStats(finalPath)
+      const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: revision.hash.md5 }]
+
+      const patch: any = { _needsHistorizing: { context: { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) } } }
+      const datasetClone: any = clone(dataset)
+      await preparePatch(req.app, patch, datasetClone, reqSessionAuthenticated(req), req.getLocale(), 'always', files)
+      await applyPatch(datasetClone, patch)
+      res.json({ status: 'restoring' })
+      return
+    }
+
+    // metadata-only restore (file part handled above): re-anchor
     // synchronously with the restore context and respond with the fresh verdict, like _fix.
     // force: true — restore must always leave its own auditable revision, even when the
     // corrected state lands back on one identical to a prior anchor (anchorDataset's normal
