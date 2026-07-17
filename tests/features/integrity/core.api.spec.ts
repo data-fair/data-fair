@@ -124,6 +124,39 @@ test('extendRetention cannot shorten a compliance lock', async () => {
   await expect(store.extendRetention(key, new Date(Date.now() + 24 * 3600 * 1000))).rejects.toThrow()
 })
 
+test('writePayload stores a compliance-locked binary sibling object', async () => {
+  const store = integrityTestStore
+  const base = `data-fair/test-store-payload/${Date.now()}/000000000`
+  const retainUntil = new Date(Date.now() + 24 * 3600 * 1000)
+  const { Readable } = await import('node:stream')
+  await store.writePayload(base + '.file', Readable.from(Buffer.from('payload-bytes')), retainUntil)
+
+  const { body, size } = await store.readPayload(base + '.file')
+  const chunks: Buffer[] = []
+  for await (const c of body) chunks.push(c as Buffer)
+  expect(Buffer.concat(chunks).toString()).toBe('payload-bytes')
+  expect(size).toBe('payload-bytes'.length)
+
+  // WORM: the locked payload version cannot be destroyed within retention
+  const versionId = await originalVersionId(base + '.file')
+  await expect(integrityTestClient.send(new DeleteObjectCommand({ Bucket: store.bucket, Key: base + '.file', VersionId: versionId })))
+    .rejects.toThrow()
+})
+
+test('a revision body can carry an inline metadata payload', async () => {
+  const store = integrityTestStore
+  const key = `data-fair/test-store-meta/${Date.now()}/000000000`
+  await store.writeRevision(key, {
+    hash: { md5: 'abc', sha256: 'def' },
+    context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
+    dataset: { id: 'ds-meta' },
+    payload: { metadata: { title: 'snap' }, file: { size: 13 } }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+  const back = await store.getRevision(key)
+  expect(back.payload?.metadata.title).toBe('snap')
+  expect(back.payload?.file?.size).toBe(13)
+})
+
 // ---------------------------------------------------------------------------------------------
 // relay: the async historize worker, driven by the _needsHistorizing outbox flag
 // ---------------------------------------------------------------------------------------------

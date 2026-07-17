@@ -1,10 +1,15 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
+import type { Readable } from 'node:stream'
 import type { RevisionContext } from './operations.ts'
 
 export type RevisionBody = {
   hash: { md5?: string, sha256?: string }
   context: RevisionContext
   dataset: { id: string, slug?: string }
+  // level 2: the full covered-metadata projection, and the descriptor of the sibling
+  // `{key}.file` locked object when the revision carries a file copy
+  payload?: { metadata: Record<string, any>, file?: { size: number } }
 }
 
 export type IntegrityS3Options = {
@@ -69,5 +74,27 @@ export class IntegrityStore {
   async getRetention (key: string): Promise<Date | undefined> {
     const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
     return res.ObjectLockRetainUntilDate
+  }
+
+  // Level-2 file payload: a sibling `{revisionKey}.file` object under the same compliance
+  // lock, streamed via multipart upload (files can be many GB).
+  async writePayload (key: string, body: Readable, retainUntil: Date): Promise<void> {
+    const upload = new Upload({
+      client: this.client,
+      params: {
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: 'application/octet-stream',
+        ObjectLockMode: 'COMPLIANCE',
+        ObjectLockRetainUntilDate: retainUntil
+      }
+    })
+    await upload.done()
+  }
+
+  async readPayload (key: string): Promise<{ body: Readable, size?: number }> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
+    return { body: res.Body as Readable, size: res.ContentLength }
   }
 }
