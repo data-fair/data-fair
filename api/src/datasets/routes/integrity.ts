@@ -11,24 +11,13 @@ import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { preparePatch } from '../utils/patch.ts'
+import { fallbackMimeTypes } from '../utils/upload.ts'
 import { applyPatch } from '../service.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
 import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 import { md5OfStorageFile } from '../../integrity/hash.ts'
-
-// mirrors upload.ts's fileFilter mimetype detection (mime type is broken on windows it seems ..
-// detect based on extension instead), so the synthetic `files` descriptor built for a restore
-// re-ingestion matches what a real multipart upload would have produced
-const fallbackMimeTypes: Record<string, string> = {
-  dbf: 'application/dbase',
-  dif: 'text/plain',
-  fods: 'application/vnd.oasis.opendocument.spreadsheet',
-  gpkg: 'application/geopackage+sqlite3',
-  jsonl: 'application/x-ndjson',
-  ndjson: 'application/x-ndjson',
-}
 
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
