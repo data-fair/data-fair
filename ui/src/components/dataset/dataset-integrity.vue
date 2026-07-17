@@ -121,8 +121,9 @@
                 :icon="mdiFileCompare"
                 variant="text"
                 size="x-small"
+                :loading="openDiff.loading.value"
                 :title="t('viewDiff')"
-                @click="openDiff(item.i)"
+                @click="openDiff.execute(item.i)"
               />
               <v-btn
                 v-if="item.fileSize"
@@ -130,6 +131,7 @@
                 variant="text"
                 size="x-small"
                 :title="t('downloadPayload')"
+                download
                 :href="`${$apiPath}/datasets/${dataset!.id}/_integrity/revisions/${item.i}/file`"
               />
               <v-btn
@@ -415,10 +417,10 @@ const diffKeys = computed(() => {
   return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
     .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
 })
-const openDiff = async (i: number) => {
+const openDiff = useAsyncAction(async (i: number) => {
   diffData.value = await $fetch<RevisionDetail>(`datasets/${dataset.value!.id}/_integrity/revisions/${i}`)
   diffOpen.value = true
-}
+})
 
 const restoreTarget = ref<number | null>(null)
 const restoreReason = ref('')
