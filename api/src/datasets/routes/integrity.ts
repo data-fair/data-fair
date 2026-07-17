@@ -128,7 +128,14 @@ export const registerIntegrityRoutes = (router: Router) => {
       const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: revision.hash.md5, mimetype }]
 
       const patch: any = { _needsHistorizing: { context: { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) } } }
-      const datasetClone: any = clone(dataset)
+      // the metadata $set/$unset above may have just restored `file`/`originalFile` on the Mongo
+      // doc (both are covered fields a metadata tamper can unset); preparePatch/applyPatch must
+      // see that post-restore state, not the stale route-entry `dataset` — otherwise a healed
+      // `file` still reads as absent on the clone and preparePatch's file-based guard throws 400
+      // even though the metadata write already landed.
+      const postMetadataDataset = await mongo.datasets.findOne({ id: dataset.id })
+      if (!postMetadataDataset) throw httpError(404, 'dataset not found')
+      const datasetClone: any = clone(postMetadataDataset)
       await preparePatch(req.app, patch, datasetClone, reqSessionAuthenticated(req), req.getLocale(), 'always', files)
       await applyPatch(datasetClone, patch)
       res.json({ status: 'restoring' })

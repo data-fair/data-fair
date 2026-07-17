@@ -458,6 +458,42 @@ test('restore re-ingests a tampered non-basic-format (xlsx) file through the pip
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 })
 
+// Regression: `file`/`originalFile` are covered fields, so an out-of-band tamper that UNSETS
+// `file` is exactly what the metadata restore heals. Before the fix, the file branch fed
+// preparePatch/applyPatch the STALE route-entry `dataset` clone (still missing `file`) instead of
+// re-reading the doc after the metadata $set/$unset landed, so preparePatch's file-based guard
+// ("this dataset is not file based") threw a 400 even though the metadata write had already healed
+// `file` on Mongo. The stored bytes are also corrupted here so the restore must genuinely
+// re-ingest through the pipeline, not just rely on the metadata heal.
+test('restore heals a tampered doc whose `file` field was unset out-of-band (stale-clone regression)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const originalMd5 = dataset.originalFile.md5
+
+  // out-of-band tamper: unset the covered `file` field (the metadata restore itself would heal
+  // this key) AND corrupt the stored bytes, so the file branch must actually re-ingest.
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { file: '' } })
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo unset-file tamper' })).data
+  expect(res.status).toBe('restoring') // NOT a 400 — the pipeline must be fed the post-restore doc
+
+  // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
+  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const raw = await waitForFlagCleared(dataset.id)
+  expect(raw.originalFile.md5).toBe(originalMd5)
+  expect(raw.file).toBeTruthy()
+
+  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
+  expect(latest.context.operation).toBe('restore')
+  expect(latest.context.origin).toBe('superadmin')
+
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+})
+
 test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const user = await axiosAuth('test_superadmin@test.com', undefined, false)

@@ -219,6 +219,11 @@ preferred precisely because it eliminates this gap.
   refuses with 409 if the dataset isn't in a stable `finalized`/`error` state, and the `restore`
   context rides the draft's `_needsHistorizing` stamp through to `finalize`, which the async relay
   then anchors with `force: true` for the same reason.
+- **Accepted transient-breach window on file restore.** Between the synchronous metadata write
+  and the draft's validation landing at `finalize`, the hot doc reflects healed metadata over
+  still-stale (or mid-reprocessing) file bytes; a sliding-checker pass or a manual check that lands
+  in that narrow window can compare against the old anchor and record a transient breach — an
+  accepted window, resolved once the anchor written at finalize supersedes it.
 - Automatic re-push into the history is **not** done initially, but is possible by API.
 - **No realtime channel.** The admin actions (enable / check / fix) are synchronous and their
   response carries the fresh state, so the panel updates on the action's own await — there is no
@@ -374,7 +379,7 @@ once per environment; on a fresh environment both datasets seed automatically.
 
 | Resource class | Level 1 (detect) | Level 2 (repair) | Hashing |
 |---|---|---|---|
-| Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
+| Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred — note the metadata half rides the file-class joint anchor, so **enrollment itself is gated on a finalized file dataset** (the `_integrity` enable check, §3): a non-file dataset cannot enroll today, even for metadata-only protection | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
 | Data files | trivial (md5 already stored) | ✅ **delivered — always-on, no size gate** | reuse existing `md5` |
 | Editable (REST) dataset — **Mongo lines** (source of truth) | feasible (see below) | size/cardinality-gated | exact fold over the precomputed per-line `_hash`, sorted by `_i` |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
@@ -553,6 +558,11 @@ No separate billing surface. Historized storage is **counted toward the owner's 
 static-content / storage quota**: the per-owner historized prefix size (§3.1) is added to what
 data-fair already meters. Activating integrity for an owner is a setting, not a separately
 priced product.
+
+The dominant cost driver is level 2's payload retention: it stores a full locked file copy per
+revision (N revisions × file size, within the retention window) — including revisions triggered
+by metadata-only edits, since every anchor is a joint one — and that accumulated size is metered
+into the owner's storage consumption.
 
 ## 10. Decomposition & build order
 
