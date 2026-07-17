@@ -166,13 +166,9 @@
 				"title": "Brouillon annulé {{label}}",
 				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
 			},
-			"integrity-breach-file": {
-				"title": "Atteinte à l'intégrité du jeu de données {{label}}",
-				"body": "Le fichier du jeu de données {{label}} a été modifié hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité)."
-			},
-			"integrity-breach-metadata": {
-				"title": "Atteinte à l'intégrité du jeu de données {{label}}",
-				"body": "Les métadonnées du jeu de données {{label}} ont été modifiées hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité)."
+			"integrity-breach": {
+				"title": "Atteinte à l'intégrité",
+				"body": "Le jeu de données {{label}} a été modifié hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité sur son fichier de données ou ses métadonnées)."
 			}
 		},
 		"applications": {

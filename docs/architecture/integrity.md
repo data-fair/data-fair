@@ -1,14 +1,18 @@
 # Data integrity & traceability
 
 > Status: **target 1 (dataset files) — level 1 detection delivered; target 2 (dataset
-> metadata) — level 1 detection delivered.** The shared core (locked-revision store,
-> transactional-outbox relay, sliding checker) is now **class-segmented** — file and metadata
-> anchors live side by side under the same dataset, each with its own revision history, verdict
-> and API/UI surface — plus its superadmin API and admin UI ship in this iteration;
+> metadata) — level 1 detection delivered**, then **simplified** (joint anchor, depersonalized
+> context, synchronous admin actions — see
+> [docs/plans/2026-07-16-integrity-simplification-design.md](../plans/2026-07-16-integrity-simplification-design.md)).
+> The shared core (locked-revision store, transactional-outbox relay, sliding checker) uses a
+> **single joint anchor per dataset**: one revision sequence records **both** the file md5 and the
+> covered-metadata sha256 on every revision, with one verdict, one outbox stamp and one API/UI
+> surface — the file and metadata parts are named inside a breach, not carried as separate anchor
+> classes. The superadmin API and admin UI ship in this iteration;
 > [§10](#10-decomposition--build-order) records precisely what is built vs. what remains (level
-> 2 repair for both classes, applications/settings metadata, target 3). This document describes
-> a focused **data-fair feature**, delivered as **three progressive targets** (dataset files →
-> dataset metadata → editable-dataset collections); target 3 and level 2 each get their own
+> 2 repair, applications/settings metadata, target 3). This document describes a focused
+> **data-fair feature**, delivered as **three progressive targets** (dataset files → dataset
+> metadata → editable-dataset collections); target 3 and level 2 each get their own
 > spec → plan → implementation cycle next. Scope deliberately left out for now —
 > generalization beyond data-fair, an immutable append-only **log posture** (events, HTTP
 > logs), and a central integrity service — is parked in
@@ -39,13 +43,27 @@ a mark, and rolling back to an earlier verified revision is always possible — 
 + repair*, not cryptographic non-repudiation. This scoping is exactly why per-revision
 hash-chaining and signatures are out of scope (§13).
 
+**Trail vs. journal — the locked trail records a *kind*, not a *who*.** A revision's context
+names the **category** of legitimate write (`operation` + an actor category `origin` —
+`user | superadmin | worker | propagation | upgrade`), never a user identity. The reason is that
+a revision is an **undeletable, compliance-locked object**: a `user:‹id›` copied into it is
+personal data (pseudonymized ≠ anonymized) that a user-erasure request could no longer reach while
+the dataset lives on — §8's wait-out only covers *dataset* deletion. **Identity-level attribution
+lives entirely in the mutable events/journal system**, which is already anonymized when an identity
+is deleted; joining the trail to the journal by date answers "*which* user" within the journal's
+own lifecycle, while the locked trail answers "was this a legitimate *kind* of write" for as long
+as the anchor exists. This keeps the WORM store free of personal data by construction (§8) without
+losing the forensic value — legitimacy review scans the revision list for unexpected
+operation/origin combinations, which needs the write *category*, not the identity.
+
 ## 2. Core model: one mechanism, three levels
 
 There is **a single underlying mechanism**, parameterized by *level*. Levels 1 and 2 share
 the same machinery; they differ only in what each revision stores.
 
 - **Level 1 — Detection.** Every legitimate write records, in a locked S3 store, a
-  **hash + traceability context** (user/process, operation, timestamp, reason). An integrity
+  **hash + traceability context** (operation, actor *category*, timestamp, optional reason —
+  no user identity, see §1's trail/journal split). An integrity
   check recomputes the hot resource's hash and compares it to the latest stored hash; any
   divergence means something wrote out-of-band → breach. Cheap. **Baseline goal for every
   sensitive resource.**
@@ -66,25 +84,34 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
 
 - A dedicated S3 bucket with **versioning enabled** and **object-lock in compliance mode**,
   with a **default bucket-level retention** so the writer need not set retention per object.
-- A **revision** object is `{ hash, context, [payload] }` where:
-  - `hash` — the resource's content hash (see §5 for per-class hashing).
-  - `context` — user or process identity, operation type, timestamp, optional reason. This
-    is **retained** even under GDPR pressure; dropping it would gut the forensic value.
-  - `payload` — present only at level 2 (the full document/file copy).
-- **Key layout (flat, id-keyed, class-segmented):**
-  `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹class›/‹i›`. The `‹class›` segment
-  (`file`, `metadata`, …) keeps each resource class's revision sequence independent — a
-  dataset's file anchors and metadata anchors are siblings under the same `resourceId`
-  prefix, each indexed from `0`, so enabling/checking one class never perturbs the other's
-  index. The goal is to retrieve a resource's history from its id, not to browse — minimal
-  traversability is fine. The per-owner prefix makes storage accounting a simple
-  prefix-size query (feeds storage accounting, §9) and enables per-owner access scoping (§7).
+- A **revision** object is `{ hash, context, dataset, [payload] }` where:
+  - `hash` — `{ md5?, sha256 }`: the md5 of the stored file (absent for non-file datasets) and
+    the sha256 of the covered metadata (§5). A dataset has **one joint anchor**, so both hashes
+    are recorded on **every** revision; the breach verdict names which part diverged (file /
+    metadata) by comparing each half against the latest anchor's pair.
+  - `context` — `{ operation, origin, date, reason? }`: the operation type, the actor
+    **category** (`origin`: `user | superadmin | worker | propagation | upgrade`), a timestamp,
+    and an optional free-text reason (on `fixIntegrity` only). It carries **no user identity**
+    by construction (§1's trail/journal split), so it holds no personal data — see §8.
+  - `dataset` — `{ id, slug }`, a small denormalized descriptor of the anchored dataset.
+  - `payload` — present only at level 2 (the full covered projection / file copy).
+- **Key layout (flat, id-keyed, one joint sequence per dataset):**
+  `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹i›` (zero-padded `‹i›`). There is no
+  `‹class›` segment — the file and metadata parts share a **single revision sequence** indexed
+  from `0`, since they always enable, anchor and check together (per-class enable was never
+  exposed). Zero-padding makes the keys sort lexically == numerically, so "latest" is the
+  lexical-max key, and the revisions endpoint pages by listing all keys under the dataset's
+  prefix, sorting/slicing them in memory, then `GET`-ing only the requested page's items. The
+  goal is to retrieve a dataset's history from its id, not to browse — minimal traversability is
+  fine. The per-owner
+  prefix makes storage accounting a simple prefix-size query (feeds storage accounting, §9) and
+  enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
   historized store, since it is not on the hot read path.
 - Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment): an owner transfer therefore
-  re-anchors **both** classes under the new owner's prefix (`changeOwner` stamps `[file, metadata]`,
-  not just `metadata`), since the old-prefix anchors do not carry over. The old prefix's anchors
-  simply age out at their existing retention — they are not migrated or deleted.
+  re-anchors the dataset under the new owner's prefix (one stamp re-anchors the joint sequence —
+  both hashes), since the old-prefix anchors do not carry over. The old prefix's anchors simply
+  age out at their existing retention — they are not migrated or deleted.
 
 ### 3.2 The inline write wrapper — *this is the definition of a legitimate write*
 
@@ -104,15 +131,23 @@ periodic check is meant to surface.
 **Primary — transactional outbox (flag-on-the-document).** The cleanest way to honour that
 ordering with no residual gap is to exploit the one transaction we do have (Mongo's): in a
 **single-document** write, record the resource change **and** mark it pending historization via
-an embedded outbox sub-doc, **`_needsHistorizing: { classes, context }`** — `classes` is the set
-of resource classes this write touched (e.g. `['file']`, `['metadata']`, or both), `context` the
-single traceability record (`operation`, `originator`, `reason?`) applied to every class in that
-set. One sub-doc, not one per class: a writer that touches both file and metadata in the same
-update (e.g. enabling integrity) stamps both classes atomically with one `$addToSet` +
-one context write. A background **relay** then ships each pending `{class, revision}` as
-`{ hash, context, payload? }` to the class-segmented locked S3 store (§3.1) and clears the flag —
-**retrying forward, never rolling back**. The write is atomic with no multi-document transaction,
-and the relay only ever acts on already-committed state (ordering preserved).
+an embedded outbox sub-doc, **`_needsHistorizing: { context? }`**. A stamp simply means
+"**re-anchor this dataset**": there is no `classes` set — the joint anchor always covers both the
+file and metadata hashes, so a writer that touches either (or both) stamps the same single flag.
+The optional `context` is the traceability hint (`operation`, `origin`, `reason?`) the relay puts
+on the revision; absent, the relay defaults to `operation: create|update`, `origin: worker`. A
+background **relay** (`anchorDataset()`) then recomputes both hashes from the authoritative
+sources (stored file bytes + fresh Mongo doc), dedupes against the latest anchor's hash pair,
+writes the next revision `{ hash, context, dataset, payload? }` to the locked S3 store (§3.1),
+updates the `integrity.lastRevision` hint and clears the flag — **retrying forward, never rolling
+back** (the relay's filter is simply `{ _needsHistorizing: { $exists: true } }`). The write is
+atomic with no multi-document transaction, and the relay only ever acts on already-committed state
+(ordering preserved).
+
+**The outbox is only for *organic* writes.** The rare superadmin actions — `PUT _integrity`
+(enable) and `POST _integrity/_fix` (reconcile) — **bypass the outbox and anchor inline** in the
+request, calling the same `anchorDataset()` the relay uses (§3.3). The outbox/relay path remains
+where async is genuinely needed: `applyPatch`, finalize, and the bulk propagation stamps (§5).
 
 - data-fair already runs exactly this pattern for Mongo→ES projection — a `_needsIndexing` flag
   cleared by a worker (`commitLines`); `_needsHistorizing` reuses the same machinery.
@@ -146,15 +181,18 @@ preferred precisely because it eliminates this gap.
   path. At scale we cannot check everything all the time, hence "sliding" coverage.
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
 - On a confirmed divergence: alert; show a **diff** (level 2 only — requires the stored
-  payload); allow a superadmin `fixIntegrity` for legitimate-but-untracked edits. A
-  `fixIntegrity` stamp makes the relay **re-anchor then verify** (it runs the check itself
-  after anchoring), so the reconcile action completes with a fresh verdict instead of waiting
-  for the next sweep.
+  payload); allow a superadmin `fixIntegrity` for legitimate-but-untracked edits. `POST
+  _integrity/_fix` is **synchronous**: it re-anchors the current state inline
+  (`anchorDataset()`), then runs `checkDataset()` and **responds with the fresh verdict** — the
+  reconcile action completes on its own await, with no outbox stamp and no waiting for the next
+  sweep.
 - Automatic re-push into the history is **not** done initially, but is possible by API.
-- **Realtime feedback:** the relay and checker push `{ historized }` / `{ checked }` events
-  on the `datasets/{id}/integrity` websocket channel (gated by the admin-class
-  `realtime-integrity` operation), which the integrity panel uses to refresh itself — the
-  async outbox flow stays observable without polling.
+- **No realtime channel.** The admin actions (enable / check / fix) are synchronous and their
+  response carries the fresh state, so the panel updates on the action's own await — there is no
+  websocket channel or subscription. Anchoring driven by *organic* writes (the async relay) and
+  breach verdicts from the *nightly sweep* are not observable live; the panel shows them on next
+  load. (This dropped the `realtime-integrity` operation, the `datasets/{id}/integrity` WS
+  channel and the UI subscription — see the simplification design, D4.)
 - The checker also **owns lock renewal** for long-lived resources — extending the anchor's
   lock (primary) or re-anchoring (fallback); see §3.4.
 
@@ -184,10 +222,12 @@ such as Veeam/Kopia use). Owned by the sliding checker (§3.3): when a long-live
 check passes and its horizon nears expiry, the checker extends the anchor's lock; on a
 mismatch it raises a breach instead.
 
-> **Dependency:** this relies on the lock-prolongation operation working on the target
-> provider — exactly the operation flagged as buggy on Scaleway (§12). That makes the
-> validation spike a **blocking dependency**, not a nice-to-have. If it cannot be made to
-> work, fall back to Option A.
+> **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
+> (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
+> without version-id, Standard and Glacier classes — see
+> `docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is
+> confirmed as the primary renewal model; Option A remains a documented fallback for
+> providers without prolongation.
 
 **Degraded fallback — re-anchoring (Option A), added later if needed.** Instead of extending
 the lock, write a fresh revision of the still-current state (operation type `reanchor`) with
@@ -268,31 +308,30 @@ is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` side
 is `true` with a 1-day retention, so the capability is on by default — but it is still
 opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds four datasets in the `dev_fixtures` org that demonstrate the
+`npm run dev-fixtures` seeds **two** datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end:
 
-- `fixtures-integrite-ok` — integrity enabled (both classes anchored), a compatible published
-  update historizes a second **file**-class revision, and a legitimate metadata PATCH through
-  the API historizes a **metadata**-class revision attributed to the editing user
-  (`originator: user:…` in the history tab); on-demand check returns `ok` for both classes
-- `fixtures-integrite-breach` — integrity enabled, then **both classes** are tampered
-  out-of-band: the stored file via the dev-only `test-env/tamper-dataset-file` endpoint, and
-  the metadata via a raw `test-env/patch-dataset` write (no outbox stamp) that changes
-  `description` — so the check reports a `breach` on both `file` and `metadata`
-- `fixtures-integrite-breach-meta` — **per-class independence**: only the metadata document is
-  tampered (raw write); the check reports `metadata: breach` while `file: ok`
-- `fixtures-integrite-reconcilie` — the **reconciliation flow**: a file tamper is detected
-  (`breach`), then a superadmin `_fix` re-anchors the current state with a traced
-  `fixIntegrity` revision and the check returns to `ok`
+- `fixtures-integrite-ok` — integrity enabled (one joint anchor), a compatible published update
+  historizes a second revision (new file md5), and a legitimate metadata PATCH through the API
+  historizes a further revision (new metadata sha256); the history tab shows the write category
+  (`operation` / `origin`), not a user identity; on-demand check returns `ok`
+- `fixtures-integrite-breach` — integrity enabled, then **both parts** are tampered out-of-band:
+  the stored file via the dev-only `test-env/tamper-dataset-file` endpoint, and the metadata via
+  a raw `test-env/patch-dataset` write (no outbox stamp) that changes `description` — so the check
+  reports `status: 'breach'` with `breach: ['file', 'metadata']`. The reconcile flow is
+  demonstrated in this fixture's comments: the demo re-tampers the metadata on every run because a
+  legitimate covered-field write would silently re-anchor and heal the metadata half — a
+  superadmin `_fix` would likewise re-anchor and return the verdict to `ok`.
 
-The on-demand check's response is per-class (`{ file?: { status }, metadata?: { status } }`);
-the fixtures script logs the **worst-of-classes** verdict (a breach on either class outranks an
-ok/unknown on the other), except the per-class demo which logs both verdicts.
+The on-demand check's response is the joint verdict `{ status, breach?: ('file'|'metadata')[] }`;
+the fixtures script logs `status` plus the diverged parts. (The former per-class-independence and
+reconcile demos lost their purpose with the joint anchor and synchronous fix — see the
+simplification design, D5.)
 
 Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
 for a day (compliance lock), so re-creating a dataset with the same id and identical content
 dedupes against the still-locked revision. The fixtures are `skip-if-exists` and thus run
-once per environment; on a fresh environment all four datasets seed automatically.
+once per environment; on a fresh environment both datasets seed automatically.
 
 ## 5. Resource taxonomy & per-class feasibility
 
@@ -311,14 +350,38 @@ once per environment; on a fresh environment all four datasets seed automaticall
   `errorRetry`, `loaded`, `descendants`. These are fields that legitimately churn under normal
   operation (worker-maintained bookkeeping, cache/derived state) without representing a
   meaningful metadata edit — hashing them would produce false breaches on ordinary background
-  activity. Three nested strips remove the same kind of churn one level down:
+  activity. Nested strips remove the same kind of churn one level down:
   `extensions[].needsUpdate` / `extensions[].nextUpdate` (autoUpdateExtension), `rest.ttl.checkedAt`
-  (the TTL worker), and `extras.applications` (syncApplications propagation). **Fail-loud by
-  construction:** the denylist is an explicit exclusion list, not an inclusion allowlist — any
-  *new* field added to the dataset model later is covered by default (hashed, and thus protected)
-  unless deliberately added to the denylist. This mirrors `coveredPatchKeys` (§3.2/§6), which the
-  legitimate-writer instrumentation (`applyPatch`, permissions, `changeOwner`,
+  (the TTL worker), `extras.applications` (syncApplications propagation), and
+  `readApiKey.expiresAt` / `readApiKey.renewAt` (the renewApiKey worker, which rotates these on its
+  own clock — anchoring them would churn a WORM revision per renewal for no security value).
+  **Fail-loud by construction:** the denylist is an explicit exclusion list, not an inclusion
+  allowlist — any *new* field added to the dataset model later is covered by default (hashed, and
+  thus protected) unless deliberately added to the denylist. This mirrors `coveredPatchKeys`
+  (§3.2/§6), which the legitimate-writer instrumentation (`applyPatch`, permissions, `changeOwner`,
   topics/identities/settings propagation) uses to decide which patches must stamp the outbox.
+
+- **Denormalized names are normalized out of the covered hash (D1, simplification design).**
+  `coveredMetadata()` reduces denormalized references to their identifying keys before hashing:
+  `owner` → `{ type, id, department? }` (drop `name` / `departmentName`); `topics[]` → `{ id }`
+  only (drop title/color/icon); `permissions[]` → drop the display `name` only (type / id /
+  department / classes / operations stay covered — the ACL semantics are fully hashed);
+  `masterData.shareOrgs[]` → `{ id }` only. These fields are denormalized copies whose
+  authoritative source lives elsewhere (simple-directory, `settings.topics`) and which the
+  platform re-syncs wholesale — the same "rebuildable projection" argument that excludes ES. The
+  trade accepted: tampering with a *display name* on the dataset doc is not detected; the
+  visibility/ACL-bearing keys (`permissions`, `publicationSites`) remain covered, as the
+  highest-value tamper targets.
+  - **Bulk-writer stamp rule (the honest rule — any covered-content writer stamps).** Because a
+    name propagation is no longer a *covered* change, the six name-sync stamps are gone (the owner
+    / department / permissions / shareOrgs loops in `identities/service.ts` `renameIdentity`, and
+    the topic-*update* stamp in `topics.ts`). The stamp is kept only where a bulk writer makes a
+    **genuine covered-content change**: `deleteIdentity`'s permission-entry removal, the topic
+    *deletion* `$pull` in `topics.ts`, and the `customMetadata` `$unset` + `deletePublicationSite`
+    `$pull` in `settings/service.ts`. Those four funnel through `stampHistorizeMany`, which stamps
+    every affected integrity-active dataset (with `origin: propagation`) in one pass, called
+    **before** any destructive filter-self-invalidating write; over-stamping is harmless (the relay
+    dedupes and drops the flag on un-enrolled datasets).
 
 - **Files** default to level 1. The hash is an md5 of the file, but the **write and verify
   paths both recompute it from the *stored file*** (not from `dataset.originalFile.md5`): that
@@ -379,15 +442,16 @@ The integrity API splits read from write:
 
 - **Writes are superadmin-only** (`reqAdminMode`), matching the `_diagnose` pattern: `PUT
   /datasets/{id}/_integrity` (enable/disable), `POST …/_integrity/_check`, `POST
-  …/_integrity/_fix`. Registered as the superadmin-grouped operations `writeIntegrity`,
-  `checkIntegrity`, `fixIntegrity` (never grantable through permissions).
+  …/_integrity/_fix`. All three are gated by admin mode (never grantable through permissions).
+  `_check` and `_fix` are **synchronous** and respond with the fresh check verdict — `_fix`
+  re-anchors inline, then runs the check and returns its result.
 - **Reads are open to the owner account's admins** via the registered admin-class operations
-  `readIntegrity` / `readIntegrityRevisions` / `realtime-integrity` (the websocket channel of
-  §3.3): `GET /datasets/{id}/_integrity`, `GET
+  `readIntegrity` / `readIntegrityRevisions`: `GET /datasets/{id}/_integrity`, `GET
   …/_integrity/revisions`, and the `integrity` field embedded in dataset responses (which
   drives the list breach badge and the `status=error` filter row). These are enforced with the
   standard `permissions.middleware(...)` machinery, so an owner admin holds them implicitly and
-  a superadmin holds them via admin mode.
+  a superadmin holds them via admin mode. (There is no `realtime-integrity` operation or
+  websocket channel — the admin actions are synchronous, §3.3.)
 - `clean()` (`api/src/datasets/utils/index.ts`) **strips the `integrity` field** from any
   response whose reader cannot `readIntegrity`, so anonymous/unauthorized readers never see
   breach verdicts or anchors even when they can otherwise read the dataset. This also scopes the
@@ -419,6 +483,15 @@ The historized store itself is **admin-mediated**. Two access models, by provide
 Compliance-mode immutability and right-to-erasure are reconciled the only way that
 preserves the guarantee:
 
+- **The revision context holds no personal data by construction.** Since the trail/journal split
+  (§1), a revision's `context` records only an operation type and an actor *category*
+  (`origin: user | superadmin | worker | propagation | upgrade`) — never a `user:‹id›`. At level 2
+  the payload is the *covered projection*, from which `createdBy` / `updatedBy` are already
+  excluded (denylist §5) and the personal-info cleanup removed them from the dataset doc besides.
+  So a **user-erasure** request no longer conflicts with the undeletable store at all: there is no
+  identity to erase inside it. Identity attribution lives in the mutable events/journal, which is
+  anonymized on identity deletion. This is what replaced the earlier "context retained even under
+  GDPR pressure" stance — retention is now a non-issue for *user* erasure.
 - **Bounded, owner-visible retention = protection horizon.** The compliance-lock duration is
   a single fixed window that serves two roles at once (see §3.4): the protection horizon for
   long-lived resources, and the **maximum lag between a resource's deletion and full erasure
@@ -431,8 +504,11 @@ preserves the guarantee:
   assumable long-term.
 - Governance mode was rejected (a privileged role could delete → defeats "even an admin
   cannot contradict it"). Dropping the modifier reference was rejected (guts forensics).
-- **Warning:** we are storing indestructible documents that may contain personal data. The
-  retention window must be chosen deliberately with this in mind.
+- **Owner-level erasure still uses the wait-out.** The remaining erasure unit is the **owner
+  (organization)**: an org's historized data cannot be destroyed early, so org-deletion is honored
+  once the window elapses — unchanged, and identical to the wait-out we already carry in global
+  backups. The retention window (indestructible for its whole length) must still be chosen
+  deliberately with this owner-level wait-out in mind.
 
 ## 9. Storage accounting (internal to data-fair)
 
@@ -456,27 +532,35 @@ speculative framework.
    ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current state stays
    protected indefinitely, and surfacing a loud `lastRenewal: failed` state (alert + UI warning) if
    a provider rejects the prolongation. The superadmin enable/disable/check/fix API plus the admin
-   UI panel (§7) are wired end to end. **Immediate next steps for this target:** *level 2 (repair)*
-   — copy the file into the historized bucket, size-gated; and **re-anchoring (§3.4 Option A)** as
-   the deferred fallback for providers that cannot prolong a lock (the Scaleway prolongation bug,
-   §12) — implemented only if that bug is confirmed to still block us.
-2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets.**
-   The revision store is now **class-segmented** (§3.1): a dataset carries independent `file`
-   and `metadata` anchor sequences, revision histories and verdicts under one
-   `integrity: { active, file?, metadata? }` field, sharing one outbox sub-doc
-   (`_needsHistorizing: { classes, context }`, §3.2). Level 1 hashes a canonical
-   (stable-key-sorted) JSON serialization of the dataset document **minus an operational
-   denylist** (§5) → SHA-256, recomputed fresh from Mongo at check time (not from the caller's
-   possibly-cleaned/projected copy). The legitimate write paths are instrumented end to end:
-   `applyPatch` (metadata-field patches, gated by `coveredPatchKeys`), permissions changes,
-   `changeOwner`, and topics/identities/settings propagation (all funneled through
-   `stampHistorizeMany` so a bulk update stamps every affected dataset in one pass). Superadmin
-   API and admin UI (§7) cover both classes uniformly (per-class enable is not exposed — enabling
-   integrity anchors both `file` and `metadata` together). **Explicitly deferred:**
-   applications and settings metadata (this iteration covers **datasets only**); level 2
-   (payload snapshots, diff, restore) for **both** classes together — file-class level 2 (item 1
-   above) and metadata-class level 2 stay a single follow-on unit of work since they share the
-   same payload-storage machinery.
+   UI panel (§7) are wired end to end. Lock prolongation is **validated on Scaleway** (spike,
+   2026-07-16 — §12), so renewal-by-extension stands as the primary model on the target provider.
+   **Immediate next step for this target:** *level 2 (repair)* — copy the file into the historized
+   bucket, size-gated. Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a
+   portability note for providers that cannot prolong a lock.
+2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets**,
+   then folded into the **joint anchor** (§3.1). A dataset has one revision sequence carrying
+   **both** the file md5 and the covered-metadata sha256, one verdict
+   (`integrity.lastCheck: { status, breach?: ('file'|'metadata')[] }`) and one outbox sub-doc
+   (`_needsHistorizing: { context? }`, §3.2). Level 1 hashes a canonical (stable-key-sorted) JSON
+   serialization of the dataset document **minus an operational denylist**, with denormalized names
+   normalized out (D1, §5) → SHA-256, recomputed fresh from Mongo at check time (not from the
+   caller's possibly-cleaned/projected copy). The legitimate write paths are instrumented end to
+   end: `applyPatch` (metadata-field patches, gated by `coveredPatchKeys`), permissions changes,
+   `changeOwner`, and the four covered-content propagation writers (funneled through
+   `stampHistorizeMany`, §5). Superadmin API and admin UI (§7) cover file and metadata uniformly
+   (per-class enable was never exposed — enabling integrity anchors both together).
+   **Explicitly deferred:** applications and settings metadata (this iteration covers **datasets
+   only**); level 2 (payload snapshots, diff, restore) — file and metadata level 2 stay a single
+   follow-on unit of work since they share the same payload-storage machinery.
+
+   **Simplification (2026-07-16,
+   [design](../plans/2026-07-16-integrity-simplification-design.md)).** After targets 1+2 landed,
+   the two integrity PRs were simplified into the shape this document now describes: the
+   file/metadata classes collapsed into **one joint anchor** (D2); the revision context was
+   **depersonalized** to an actor category (trail/journal split, D3); the admin actions (enable /
+   fix) became **synchronous**, deleting the realtime websocket channel (D4); denormalized names
+   were **normalized out** of the covered hash, dropping the six name-sync stamps (D1); and the
+   tests/fixtures/UI were trimmed accordingly (D5) — a net deletion.
 3. **Editable (REST) datasets** — ⏳ **later.** *ES is not historized* (rebuildable projection,
    repair = reindex). Target is the Mongo lines collection: level 1 = exact rolling fold over the
    precomputed per-line `_hash` (sample only past a threshold); level 2 = the per-line locked
@@ -498,12 +582,14 @@ the portable baseline for the OSS/Garage story.
 
 ## 12. Open questions / risks
 
-- **Scaleway "prolong lock" bug — BLOCKING.** A reported defect breaks *prolonging* an
-  existing lock (the Veeam incompatibility). Our primary lock-renewal model (extension,
-  §3.4 Option B) depends on exactly this operation — and dataset files/metadata are
-  **long-lived** resources that need renewal — so a **validation spike is a blocking
-  prerequisite**: if prolongation cannot be made to work on Scaleway, the primary model is
-  not viable and we fall back to re-anchoring (§3.4 Option A).
+- **Scaleway "prolong lock" bug — RESOLVED (2026-07-16).** A reported defect (the Veeam
+  incompatibility) supposedly broke *prolonging* an existing lock — the exact operation our
+  primary lock-renewal model (extension, §3.4 Option B) depends on. The validation spike
+  **did not reproduce it**: `PutObjectRetention` (COMPLIANCE, later retain-until) works on
+  Scaleway fr-par with and without version-id, on inline and default-retention locks, on
+  Standard and Glacier classes, while shortening/deleting are correctly refused
+  (`docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is no
+  longer blocked; re-anchoring (Option A) stays a portability fallback only.
 - **Editable-dataset hashing — reframed, far narrower than first feared (§5).** ES drops out
   (rebuildable projection); only the Mongo lines collection is a target; level 1 is an *exact*
   fold over the precomputed `_hash` (sampling only past a threshold); level 2 is the §3.5 per-line

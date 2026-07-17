@@ -235,7 +235,7 @@ const datasetTasks: DatasetTask[] = [{
 }, {
   name: 'historize',
   worker: 'shortProcessor',
-  mongoFilter: () => ({ '_needsHistorizing.classes.0': { $exists: true } })
+  mongoFilter: () => ({ _needsHistorizing: { $exists: true } })
 }, {
   name: 'renewApiKey',
   worker: 'shortProcessor',

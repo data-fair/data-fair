@@ -8,39 +8,30 @@ test('padIndex zero-pads to width 9', () => {
   expect(ops.padIndex(42)).toBe('000000042')
 })
 
-test('revisionPrefix and revisionKey follow the class-segmented layout', () => {
-  expect(ops.revisionPrefix(owner, 'ds1', 'file')).toBe('data-fair/organization-acme/ds1/file/')
-  expect(ops.revisionPrefix(owner, 'ds1', 'metadata')).toBe('data-fair/organization-acme/ds1/metadata/')
-  expect(ops.revisionKey(owner, 'ds1', 'file', 7)).toBe('data-fair/organization-acme/ds1/file/000000007')
+test('revisionPrefix and revisionKey follow the joint-anchor layout', () => {
+  expect(ops.revisionPrefix(owner, 'ds1')).toBe('data-fair/organization-acme/ds1/')
+  expect(ops.revisionKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007')
 })
 
-test('parseRevisionIndex and parseRevisionClass extract from a class-segmented key', () => {
-  expect(ops.parseRevisionIndex('data-fair/organization-acme/ds1/metadata/000000007')).toBe(7)
-  expect(ops.parseRevisionClass('data-fair/organization-acme/ds1/metadata/000000007')).toBe('metadata')
-  expect(ops.parseRevisionClass('data-fair/organization-acme/ds1/file/000000000')).toBe('file')
+test('parseRevisionIndex extracts from a key', () => {
+  expect(ops.parseRevisionIndex('data-fair/organization-acme/ds1/000000007')).toBe(7)
 })
 
 test('nextIndex returns 0 for an empty store and max+1 otherwise', () => {
   expect(ops.nextIndex([])).toBe(0)
   expect(ops.nextIndex([
-    'data-fair/organization-acme/ds1/file/000000000',
-    'data-fair/organization-acme/ds1/file/000000002'
+    'data-fair/organization-acme/ds1/000000000',
+    'data-fair/organization-acme/ds1/000000002'
   ])).toBe(3)
 })
 
 test('latestKey returns the highest-index key via lexical sort', () => {
   expect(ops.latestKey([])).toBeUndefined()
   expect(ops.latestKey([
-    'data-fair/organization-acme/ds1/file/000000002',
-    'data-fair/organization-acme/ds1/file/000000010',
-    'data-fair/organization-acme/ds1/file/000000009'
-  ])).toBe('data-fair/organization-acme/ds1/file/000000010')
-})
-
-test('buildContext omits reason when not provided', () => {
-  expect(ops.buildContext('create', 'worker:historize', '2026-06-24T00:00:00.000Z'))
-    .toEqual({ operation: 'create', originator: 'worker:historize', date: '2026-06-24T00:00:00.000Z' })
-  expect(ops.buildContext('fixIntegrity', 'user:1', '2026-06-24T00:00:00.000Z', 'manual fix').reason).toBe('manual fix')
+    'data-fair/organization-acme/ds1/000000002',
+    'data-fair/organization-acme/ds1/000000010',
+    'data-fair/organization-acme/ds1/000000009'
+  ])).toBe('data-fair/organization-acme/ds1/000000010')
 })
 
 test('needsRenewal is false without a retainUntil and while the lock is fresh', () => {
@@ -144,27 +135,41 @@ test('coveredPatchKeys keeps only covered top-level keys', () => {
   expect(ops.coveredPatchKeys({ status: 'error', errorStatus: 'e', count: 1 })).toEqual([])
 })
 
-test('stampHistorize merges the outbox stamp into an existing update', () => {
+test('stampHistorize sets the outbox sub-doc, with and without context', () => {
   const update: any = { $set: { permissions: [] } }
-  ops.stampHistorize(update, ['metadata'], { operation: 'update', originator: 'user:u1' })
+  ops.stampHistorize(update, { operation: 'update', origin: 'user' })
   expect(update).toEqual({
-    $set: { permissions: [], '_needsHistorizing.context': { operation: 'update', originator: 'user:u1' } },
-    $addToSet: { '_needsHistorizing.classes': { $each: ['metadata'] } }
+    $set: { permissions: [], _needsHistorizing: { context: { operation: 'update', origin: 'user' } } }
   })
   const bare: any = {}
-  ops.stampHistorize(bare, ['file', 'metadata'])
-  expect(bare).toEqual({ $addToSet: { '_needsHistorizing.classes': { $each: ['file', 'metadata'] } } })
+  ops.stampHistorize(bare)
+  expect(bare).toEqual({ $set: { _needsHistorizing: {} } })
 })
 
-test('stampHistorize with an empty classes array leaves the update untouched', () => {
-  const update: any = { $set: { title: 'T' } }
-  const result = ops.stampHistorize(update, [], { operation: 'update', originator: 'user:u1' })
-  // an empty-classes stamp would be invisible to both the relay filter and the checker sweep
-  expect(result).toEqual({ $set: { title: 'T' } })
-  expect(result.$addToSet).toBeUndefined()
+test('coveredMetadata strips denormalized display names (owner, topics, permissions, shareOrgs)', () => {
+  const doc = {
+    id: 'ds1',
+    owner: { type: 'organization', id: 'acme', name: 'ACME Corp', department: 'dep1', departmentName: 'Dept One' },
+    topics: [{ id: 't1', title: 'Topic One', color: '#f00', icon: { name: 'x', svgPath: 'y' } }],
+    permissions: [{ type: 'user', id: 'u1', name: 'User One', classes: ['read'] }],
+    masterData: { shareOrgs: [{ id: 'o2', name: 'Org Two' }], other: 'kept' }
+  }
+  expect(ops.coveredMetadata(doc)).toEqual({
+    id: 'ds1',
+    owner: { type: 'organization', id: 'acme', department: 'dep1' },
+    topics: [{ id: 't1' }],
+    permissions: [{ type: 'user', id: 'u1', classes: ['read'] }],
+    masterData: { shareOrgs: [{ id: 'o2' }], other: 'kept' }
+  })
+})
 
-  const bare: any = {}
-  expect(ops.stampHistorize(bare, [])).toEqual({})
+test('metadataHash is stable across a pure display-name rename', () => {
+  const base = { id: 'ds1', owner: { type: 'organization', id: 'acme', name: 'Old Name' }, topics: [{ id: 't1', title: 'Old' }] }
+  const renamed = { id: 'ds1', owner: { type: 'organization', id: 'acme', name: 'New Name' }, topics: [{ id: 't1', title: 'New' }] }
+  expect(ops.metadataHash(base)).toBe(ops.metadataHash(renamed))
+  // but an owner-identity change (the id, not the name) changes the hash
+  const moved = { ...base, owner: { type: 'organization', id: 'other', name: 'Old Name' } }
+  expect(ops.metadataHash(base)).not.toBe(ops.metadataHash(moved))
 })
 
 test('coveredMetadata strips readApiKey renewal churn but keeps active/interval', () => {

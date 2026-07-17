@@ -34,13 +34,10 @@ export default async function (_dataset: DatasetInternal) {
 
   const result: Partial<Nullable<DatasetInternal>> = { status: 'finalized', schema: dataset.schema }
   // Intentionally unconditional (no `!dataset.draftReason` guard). applyPatch (below) prefixes keys
-  // with `draft.` based on its TARGET's draftReason, which routes this correctly:
-  //  - plain draft finalize → applyPatch(dataset) with draftReason → persists `draft._needsHistorizing`,
-  //    which the relay filter `{ _needsHistorizing: true }` never matches → drafts are NOT historized.
-  //  - draft validation → applyPatch(datasetFull) (the published doc, no draftReason) → top-level
-  //    `_needsHistorizing` → the published file IS anchored.
-  // A `!dataset.draftReason` guard would wrongly skip the validation case (dataset is the draft there).
-  if (dataset.integrity?.active) result._needsHistorizing = { classes: ['file', 'metadata'] }
+  // with `draft.` based on its TARGET's draftReason, which routes this correctly: a plain draft
+  // finalize persists `draft._needsHistorizing` (never matched by the relay filter → drafts are NOT
+  // historized), while a draft validation patches the published doc → top-level flag → anchored.
+  if (dataset.integrity?.active) result._needsHistorizing = { context: { operation: 'update', origin: 'worker' } }
 
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)

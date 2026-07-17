@@ -27,7 +27,7 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
-import { stampHistorize, INTEGRITY_CLASSES } from '../../integrity/operations.ts'
+import { stampHistorize } from '../../integrity/operations.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -251,10 +251,9 @@ export const registerMetadataRoutes = (router: Router) => {
     await permissions.initResourcePermissions(patch, preservePermissions)
 
     const changeOwnerUpdate: any = { $set: patch }
-    // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer the
-    // file class has no anchor under the new prefix either, so both classes must be re-stamped
-    // (not just metadata) or the file class would be silently orphaned with no anchor to check against
-    if (dataset.integrity?.active) stampHistorize(changeOwnerUpdate, [...INTEGRITY_CLASSES], { operation: 'update', originator: `user:${sessionState.user.id}` })
+    // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer
+    // there is no anchor under the new prefix, so a re-anchor must be stamped
+    if (dataset.integrity?.active) stampHistorize(changeOwnerUpdate, { operation: 'update', origin: 'user' })
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
