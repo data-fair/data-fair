@@ -94,7 +94,7 @@ export const latestKey = (keys: string[]): string | undefined => {
   return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
-export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity'
+export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity' | 'restore'
 // actor CATEGORY, never an identity: user ids are personal data and must not enter the
 // undeletable WORM store — identity-level attribution lives in the events/journal system
 export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
@@ -111,6 +111,33 @@ export const stampHistorize = (
   update.$set = { ...update.$set, _needsHistorizing: context ? { context } : {} }
   return update
 }
+
+// Level-2 metadata restore (spec §C): compare the hot doc's *covered projection* against the
+// snapshot per key, and write back only genuinely diverging keys. Comparing projections (not raw
+// fields) means a field whose only difference is denormalized-name noise (owner/topics display
+// names) is left untouched — normalized loss only happens where tampering actually happened.
+export const restoreUpdate = (
+  hot: Record<string, any>,
+  snapshot: Record<string, any>
+): { $set: Record<string, any>, $unset: Record<string, any> } => {
+  const hotCovered = coveredMetadata(hot)
+  const $set: Record<string, any> = {}
+  const $unset: Record<string, any> = {}
+  for (const key of Object.keys(snapshot)) {
+    if (stableStringify(hotCovered[key] ?? null) !== stableStringify(snapshot[key] ?? null)) $set[key] = snapshot[key]
+  }
+  // covered keys present on the hot doc but absent from the snapshot were added out-of-band
+  for (const key of Object.keys(hotCovered)) {
+    if (!(key in snapshot)) $unset[key] = ''
+  }
+  return { $set, $unset }
+}
+
+// snapshots store topics as { id } only (D1 normalization); on restore, re-hydrate the display
+// fields from their authoritative source (the owner's settings.topics). An id no longer present
+// in settings stays bare — the same state a topic-deletion propagation would leave.
+export const rehydrateTopics = (topics: Array<{ id: string }>, settingsTopics: any[]): any[] =>
+  topics.map((t) => settingsTopics.find((st) => st.id === t.id) ?? t)
 
 export const RENEW_INTERVAL = 1 / 12 // ≈ monthly for a 1-year retention window (hardcoded)
 

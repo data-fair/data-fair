@@ -204,3 +204,29 @@ test('latestKey and nextIndex ignore payload keys', () => {
   expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
   expect(ops.nextIndex(keys)).toBe(2)
 })
+
+test('restoreUpdate writes only diverging covered keys and unsets extra ones', () => {
+  const snapshot = { title: 'legit', description: 'legit desc', owner: { type: 'organization', id: 'acme' } }
+  const hot = {
+    title: 'tampered',
+    description: 'legit desc',
+    injected: 'evil',
+    status: 'finalized', // denylisted: must never be touched
+    owner: { type: 'organization', id: 'acme', name: 'Acme Corp' } // normalizes to snapshot → untouched
+  }
+  const { $set, $unset } = ops.restoreUpdate(hot, snapshot)
+  expect($set).toEqual({ title: 'legit' }) // description equal → skipped; owner equal after normalization → skipped
+  expect($unset).toEqual({ injected: '' })
+})
+
+test('restoreUpdate restores a tampered owner as its normalized form', () => {
+  const snapshot = { owner: { type: 'organization', id: 'acme' } }
+  const hot = { owner: { type: 'organization', id: 'evil', name: 'Evil' } }
+  expect(ops.restoreUpdate(hot, snapshot).$set.owner).toEqual({ type: 'organization', id: 'acme' })
+})
+
+test('rehydrateTopics fills titles back from settings, keeps unknown ids bare', () => {
+  const settingsTopics = [{ id: 't1', title: 'Topic 1', color: '#f00' }]
+  expect(ops.rehydrateTopics([{ id: 't1' }, { id: 'gone' }], settingsTopics))
+    .toEqual([{ id: 't1', title: 'Topic 1', color: '#f00' }, { id: 'gone' }])
+})
