@@ -115,6 +115,38 @@
           <template #item.origin="{ item }">
             {{ t('origin_' + item.origin) }}
           </template>
+          <template #item.actions="{ item }">
+            <template v-if="item.hasPayload">
+              <v-btn
+                :icon="mdiFileCompare"
+                variant="text"
+                size="x-small"
+                :title="t('viewDiff')"
+                @click="openDiff(item.i)"
+              />
+              <v-btn
+                v-if="item.fileSize"
+                :icon="mdiDownload"
+                variant="text"
+                size="x-small"
+                :title="t('downloadPayload')"
+                :href="`${$apiPath}/datasets/${dataset!.id}/_integrity/revisions/${item.i}/file`"
+              />
+              <v-btn
+                v-if="adminMode"
+                :icon="mdiBackupRestore"
+                variant="text"
+                size="x-small"
+                color="warning"
+                :title="t('restore')"
+                @click="restoreTarget = item.i; restoreReason = ''"
+              />
+            </template>
+            <span
+              v-else
+              class="text-caption text-disabled"
+            >{{ t('noPayload') }}</span>
+          </template>
         </v-data-table-server>
       </template>
     </template>
@@ -128,6 +160,76 @@
       variant="tonal"
       :text="t('loadError')"
     />
+
+    <v-dialog
+      v-model="diffOpen"
+      max-width="1100"
+    >
+      <v-card :title="t('diffTitle', { i: diffData?.i })">
+        <v-card-text v-if="diffData">
+          <p
+            v-if="!diffKeys.length"
+            class="text-caption"
+          >
+            {{ t('noDiff') }}
+          </p>
+          <template
+            v-for="key of diffKeys"
+            :key="key"
+          >
+            <h4 class="text-subtitle-2 mt-2">
+              {{ key }}
+            </h4>
+            <v-row dense>
+              <v-col cols="6">
+                <div class="text-caption">
+                  {{ t('diffRevision') }}
+                </div>
+                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.payload.metadata[key]) }}</pre>
+              </v-col>
+              <v-col cols="6">
+                <div class="text-caption">
+                  {{ t('diffCurrent') }}
+                </div>
+                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.current?.[key]) }}</pre>
+              </v-col>
+            </v-row>
+          </template>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      :model-value="restoreTarget !== null"
+      max-width="500"
+      @update:model-value="(v) => { if (!v) restoreTarget = null }"
+    >
+      <v-card :title="t('restoreTitle', { i: restoreTarget })">
+        <v-card-text>
+          <p class="mb-2">
+            {{ t('restoreWarning') }}
+          </p>
+          <v-text-field
+            v-model="restoreReason"
+            :label="t('restoreReason')"
+            density="compact"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="restoreTarget = null">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="restore.loading.value"
+            @click="restore.execute()"
+          >
+            {{ t('restore') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -161,11 +263,25 @@ fr:
   op_update: Mise à jour
   op_enable: Activation
   op_fixIntegrity: Réconciliation
+  op_restore: Restauration
   origin_user: Utilisateur
   origin_superadmin: Superadmin
   origin_worker: Traitement interne
   origin_propagation: Propagation
   origin_upgrade: Script de migration
+  viewDiff: Voir les différences
+  downloadPayload: Télécharger le fichier historisé
+  restore: Restaurer
+  noPayload: non restaurable
+  diffTitle: "Révision {i} — différences avec l'état courant"
+  noDiff: Aucune différence de métadonnées avec l'état courant.
+  diffRevision: Révision
+  diffCurrent: État courant
+  restoreTitle: "Restaurer la révision {i}"
+  restoreWarning: Les métadonnées couvertes et le fichier de données seront restaurés à l'état de cette révision. Un fichier différent déclenche un retraitement complet du jeu de données.
+  restoreReason: Raison (optionnelle, tracée dans l'historique)
+  cancel: Annuler
+  restoreOk: Restauration lancée
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
@@ -195,15 +311,29 @@ en:
   op_update: Update
   op_enable: Enable
   op_fixIntegrity: Reconcile
+  op_restore: Restore
   origin_user: User
   origin_superadmin: Superadmin
   origin_worker: Internal worker
   origin_propagation: Propagation
   origin_upgrade: Upgrade script
+  viewDiff: View diff
+  downloadPayload: Download historized file
+  restore: Restore
+  noPayload: not restorable
+  diffTitle: "Revision {i} — diff with current state"
+  noDiff: No metadata difference with the current state.
+  diffRevision: Revision
+  diffCurrent: Current state
+  restoreTitle: "Restore revision {i}"
+  restoreWarning: Covered metadata and the data file will be restored to this revision's state. A differing file triggers a full reprocessing of the dataset.
+  restoreReason: Reason (optional, recorded in the history)
+  cancel: Cancel
+  restoreOk: Restore started
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench } from '@mdi/js'
+import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore } from '@mdi/js'
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -215,7 +345,8 @@ const session = useSession()
 const adminMode = computed(() => !!session.state.user?.adminMode)
 
 type IntegrityState = NonNullable<Dataset['integrity']>
-type RevisionEntry = { i: number, hash: { md5?: string, sha256?: string }, date: string, operation: string, origin: string, reason?: string }
+type RevisionEntry = { i: number, hash: { md5?: string, sha256?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number }
+type RevisionDetail = { i: number, hash: { md5?: string, sha256?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any> }
 
 const state = ref<IntegrityState | null>(null)
 
@@ -231,7 +362,8 @@ const headers = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
-  { title: t('colHash'), key: 'hash', sortable: false }
+  { title: t('colHash'), key: 'hash', sortable: false },
+  { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
 
 const loadRevisions = useAsyncAction(async () => {
@@ -272,6 +404,33 @@ const toggle = useAsyncAction(async (active: boolean) => {
 }, { success: t('toggleOk') })
 
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString(locale.value)
+
+const diffOpen = ref(false)
+const diffData = ref<RevisionDetail | null>(null)
+const pretty = (v: any) => v === undefined ? '—' : JSON.stringify(v, null, 2)
+const diffKeys = computed(() => {
+  if (!diffData.value) return []
+  const snapshot = diffData.value.payload.metadata
+  const current = diffData.value.current ?? {}
+  return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
+    .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
+})
+const openDiff = async (i: number) => {
+  diffData.value = await $fetch<RevisionDetail>(`datasets/${dataset.value!.id}/_integrity/revisions/${i}`)
+  diffOpen.value = true
+}
+
+const restoreTarget = ref<number | null>(null)
+const restoreReason = ref('')
+const restore = useAsyncAction(async () => {
+  const body: any = { i: restoreTarget.value }
+  if (restoreReason.value) body.reason = restoreReason.value
+  const res = await $fetch<{ status: string }>(`datasets/${dataset.value!.id}/_integrity/_restore`, { method: 'POST', body })
+  restoreTarget.value = null
+  await load.execute()
+  datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+  return res
+}, { success: t('restoreOk') })
 
 defineExpose({ load })
 </script>
