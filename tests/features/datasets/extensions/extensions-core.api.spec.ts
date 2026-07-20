@@ -290,10 +290,12 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.find((file: any) => file.key === 'original'))
     assert.ok(res.data.find((file: any) => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
+    // indexed.size is now the CSV-equivalent sum of per-line _bytes, not the full-file byte size;
+    // the exact formula is covered by tests/features/datasets/storage-line-bytes.api.spec.ts
+    assert.ok(dataset.storage.indexed.size > 0)
     assert.equal(dataset.storage.size, res.data.find((file: any) => file.key === 'full').size + res.data.find((file: any) => file.key === 'original').size)
     assert.equal(dataset.storage.indexed.parts.length, 1)
-    assert.equal(dataset.storage.indexed.parts[0], 'full-file')
+    assert.equal(dataset.storage.indexed.parts[0], 'lines')
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.trim(), `label,siret,_etablissements.location.lat,_etablissements.location.lon,_etablissements.bodacc.capital,_etablissements.TEFET,_etablissements.NOMEN_LONG
@@ -601,7 +603,9 @@ other,unknown address
     assert.equal(res.status, 200)
     assert.ok(res.data.find((file: any) => file.key === 'original'))
     assert.ok(res.data.find((file: any) => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
+    // indexed.size is now the CSV-equivalent sum of per-line _bytes, not the full-file byte size;
+    // the exact formula is covered by tests/features/datasets/storage-line-bytes.api.spec.ts
+    assert.ok(dataset.storage.indexed.size > 0)
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
