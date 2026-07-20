@@ -237,6 +237,16 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'shortProcessor',
   mongoFilter: () => ({ _needsHistorizing: { $exists: true } })
 }, {
+  name: 'historizeLines',
+  worker: 'shortProcessor',
+  // gated to the settled REST state (status finalized, no pending partial pass) so this stays
+  // exclusive of finalize/indexLines/extend, which all own the transient states in between — a
+  // hint set while a dataset is still mid its very first pipeline run just waits it out. Also
+  // defers to a pending dataset-level _needsHistorizing (the metadata anchor, e.g. re-stamped by
+  // every finalize pass on an integrity-active dataset): both hints can legitimately be pending
+  // together, so this orders them rather than racing the same document across two tasks at once.
+  mongoFilter: () => ({ isRest: true, status: 'finalized', _partialRestStatus: null, _needsHistorizing: { $exists: false }, _needsHistorizingLines: true })
+}, {
   name: 'renewApiKey',
   worker: 'shortProcessor',
   mongoFilter: () => ({ 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } })

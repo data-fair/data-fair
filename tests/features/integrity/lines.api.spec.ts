@@ -104,3 +104,55 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
   const revisions2 = (await ax.get(`/api/v1/datasets/${dataset2.id}/lines/h1/revisions`)).data
   for (const rev of revisions2.results) expect(rev._needsHistorizing).toBeUndefined()
 })
+
+const waitForLinesDrained = async (ax: any, datasetId: string, timeout = 15000) => {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+    if (!raw._needsHistorizingLines) return
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  throw new Error('timed out waiting for _needsHistorizingLines to clear')
+}
+
+test('the lines relay ships a revision per stamped line and clears the flags', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [])
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'hello', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
+  expect(keys).toHaveLength(1)
+  const rev = await integrityTestStore.getRevision(keys[0])
+  expect((rev as any).payload).toMatchObject({ attr1: 'hello', attr2: 1 })
+  expect((rev as any).line._id).toBe('l1')
+  const line = await rawLine(ax, dataset.id, 'l1')
+  expect(line._needsHistorizing).toBeUndefined()
+})
+
+test('a deleted line ships a tombstone revision and the doc is purged after both flags clear', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [])
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'x', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+  await ax.delete(`/api/v1/datasets/${dataset.id}/lines/l1`)
+  await waitForLinesDrained(ax, dataset.id)
+
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
+  expect(keys.some(k => k.endsWith('-deleted'))).toBe(true)
+  // once indexing AND historization both committed, the tombstone doc is purged
+  const start = Date.now()
+  while (Date.now() - start < 15000) {
+    const count = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
+    if (count === 0) break
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  const count = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
+  expect(count).toBe(0)
+})
