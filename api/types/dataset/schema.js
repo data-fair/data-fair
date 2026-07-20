@@ -447,7 +447,15 @@ const datasetProperties = {
         properties: {
           date: { type: 'string', format: 'date-time' },
           status: { type: 'string', enum: ['ok', 'breach', 'unknown'] },
-          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata'] } }
+          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata', 'lines'] } },
+          lines: {
+            type: 'object',
+            properties: {
+              checked: { type: 'number' },
+              diverged: { type: 'number' },
+              sample: { type: 'array', items: { type: 'string' } }
+            }
+          }
         }
       },
       lastRevision: {
@@ -471,6 +479,16 @@ const datasetProperties = {
           status: { type: 'string', enum: ['ok', 'failed'] },
           retainUntil: { type: 'string', format: 'date-time' },
           error: { type: 'string' }
+        }
+      },
+      linesRenewal: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', format: 'date-time' },
+          status: { type: 'string', enum: ['ok', 'failed'] },
+          renewed: { type: 'number' },
+          failed: { type: 'number' },
+          retainUntil: { type: 'string', format: 'date-time' }
         }
       }
     }

@@ -121,6 +121,12 @@
         "retention": {
           "type": "object",
           "properties": { "days": { "type": "number" } }
+        },
+        "lines": {
+          "type": "object",
+          "properties": {
+            "maxLines": { "type": "number" }
+          }
         }
       }
     },

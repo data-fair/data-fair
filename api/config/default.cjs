@@ -32,6 +32,7 @@ module.exports = {
       forcePathStyle: true,
     },
     retention: { days: 365 },
+    lines: { maxLines: 100000 },
   },
   integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,

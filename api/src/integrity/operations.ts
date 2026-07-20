@@ -94,7 +94,7 @@ export const latestKey = (keys: string[]): string | undefined => {
   return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
-export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity' | 'restore'
+export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore'
 // actor CATEGORY, never an identity: user ids are personal data and must not enter the
 // undeletable WORM store — identity-level attribution lives in the events/journal system
 export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
