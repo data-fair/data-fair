@@ -34,7 +34,7 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint } from '#types'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
@@ -185,6 +185,7 @@ export const initDataset = async (dataset: RestDataset) => {
   await Promise.all([
     c.createIndex({ _needsIndexing: 1 }, { sparse: true }),
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
+    c.createIndex({ _needsHistorizing: 1 }, { sparse: true }),
     c.createIndex({ _i: -1 }, { unique: true })
   ])
   await configureConstraintIndexes(dataset)
@@ -419,7 +420,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset, historizeContext?: HistorizeContextHint) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -432,6 +433,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
   const primaryKeyProjection = getPrimaryKeyProjection(dataset)
+
+  // integrity (target 3): hint-first ordering — mark the dataset as having pending line
+  // stamps BEFORE any line stamp is written, so a crash between the two leaves a harmless
+  // empty hint (relay clears it), never orphaned stamps. Skipped for tmp-collection writes
+  // (drop mode), which are refused on enrolled datasets anyway.
+  const historizeLines = !!dataset.integrity?.active && !tmpDataset
+  if (historizeLines && transacs.length) {
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+  }
 
   // prepare future results that will be completed by the following loops
   const operations = []
@@ -464,6 +474,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
+    if (historizeLines) {
+      operation.fullBody._needsHistorizing = {
+        context: historizeContext ?? {
+          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker'
+        }
+      }
+    }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
@@ -1087,6 +1105,9 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  // integrity (target 3): dropping the collection would silently destroy the lines the locked
+  // anchors still vouch for — deletions must go through the transaction path (tombstones)
+  if (dataset.integrity?.active) throw httpError(400, 'suppression de toutes les lignes refusée tant que le suivi d\'intégrité est actif')
   await initDataset(dataset)
   const indexName = await initDatasetIndex(dataset)
   await switchAlias(dataset, indexName)
@@ -1107,6 +1128,9 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
   try {
     const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
+    // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
+    // locked anchors still vouch for — bulk deletions must go through the transaction path
+    if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
@@ -1462,7 +1486,10 @@ class MarkIndexedStream extends Writable {
       if (chunk._updatedAt && updatedAts.get(chunk._id) === chunk._updatedAt.getTime()) {
         i += 1
         if (chunk._deleted) {
-          bulkOp.find({ _id: chunk._id }).deleteOne()
+          // integrity (target 3): a tombstone awaiting historization must survive until its
+          // deletion revision ships — the lines relay purges it once both flags are gone
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: false } }).deleteOne()
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: true } }).updateOne({ $unset: { _needsIndexing: '' } })
         } else {
           bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }
