@@ -153,3 +153,32 @@ Following the existing three-file split under `tests/features/integrity/`:
   `.file` object, owner-transfer forbidden), §3.3 (diff/restore now available), §3.4/§3.5
   (renewal covers the payload object), §5 (files row: level 2 delivered, no size gate),
   §10 (status update).
+
+## Amendment (2026-07-17) — payload reference dedupe
+
+The original design above stored **one locked file copy per anchor revision** (`payload.file =
+{ size }`, a `‹i›.file` sibling on every revision). Because the joint anchor re-anchors on
+**metadata-only** edits too, that duplicated the full file bytes for every metadata change — an
+unacceptable storage cost the maintainer **rejected**. The agreed replacement stores **one locked
+copy per distinct file version**; metadata-only revisions reference the existing copy.
+
+Semantics (as implemented):
+
+- **Shape.** `payload.file` becomes `{ size, i? }`. `i` is the index of the revision whose `.file`
+  object **owns** the bytes. **Absent `i` means "own index"** — the bytes live at this revision's own
+  `‹i›.file` sibling, so already-written L2 revisions need no migration. References always **collapse
+  to the bytes-owning revision — never chain**.
+- **Anchor (`anchorDataset`).** The two-hash full dedupe is unchanged. When writing a new revision
+  with `hash.md5` set: if the latest anchor carries a `payload.file` **and** its `hash.md5` equals
+  the new file's md5 (file unchanged), do **not** upload — resolve `refIndex = latest.payload.file.i
+  ?? parseRevisionIndex(latest)`, **extend the referenced payload's retention** to the new revision's
+  retain-until, and set `payload.file = { size: latest.payload.file.size, i: refIndex }` (keeping the
+  first-pass md5, no tee). Otherwise upload a fresh copy at the own key (`payload.file = { size }`).
+- **Renewal (`maybeRenew`).** The sliding pair is the latest revision JSON **plus the payload it
+  references**: extend `latestKey`, and `payloadKey(refIndex)` where `refIndex = latest.payload.file.i
+  ?? parseRevisionIndex(latestKey)`.
+- **Readers.** `GET revisions/{i}/file` and the `_restore` file re-ingest resolve `refIndex =
+  file.i ?? i` before reading the payload object.
+- **Retention aging.** Because each referencing revision extends the owning payload at **write**
+  time, a superseded payload stops sliding at renewal but still outlives every revision that
+  references it — each revision's file payload survives at least as long as its revision JSON.

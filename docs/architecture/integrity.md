@@ -98,16 +98,28 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
     and an optional free-text reason (on `fixIntegrity` only). It carries **no user identity**
     by construction (§1's trail/journal split), so it holds no personal data — see §8.
   - `dataset` — `{ id, slug }`, a small denormalized descriptor of the anchored dataset.
-  - `payload` — present only at level 2: `{ metadata: <covered projection>, file?: { size } }`.
+  - `payload` — present only at level 2: `{ metadata: <covered projection>, file?: { size, i? } }`.
     `metadata` is the **full** `coveredMetadata()` projection (not merely its hash), stored so it
     can be diffed and restored field-by-field; `file`, present when the anchor covers a file
-    dataset, records the payload's byte size. The file's actual bytes are **not** inlined in this
-    JSON — they live in a **sibling** locked object at `‹revisionKey›.file` (the `PAYLOAD_SUFFIX`),
-    under the **same** compliance lock and retain-until date as the revision JSON, **written
-    payload-first**: the relay uploads the `.file` object before writing the revision JSON that
-    references it, so a crash in between leaves an orphan `.file` that ages out harmlessly —
-    never a revision claiming a payload it doesn't have (the reverse order would risk exactly
-    that). Every consumer of a prefix listing is **suffix-aware**: `nextIndex`, `latestKey`, the
+    dataset, records the payload's byte `size` and an optional reference index `i`. The file's
+    actual bytes are **not** inlined in this JSON — they live in a **sibling** locked object at
+    `‹revisionKey›.file` (the `PAYLOAD_SUFFIX`), under the **same** compliance lock and retain-until
+    date as the revision JSON, **written payload-first**: the relay uploads the `.file` object before
+    writing the revision JSON that references it, so a crash in between leaves an orphan `.file` that
+    ages out harmlessly — never a revision claiming a payload it doesn't have (the reverse order
+    would risk exactly that).
+  - **Payload reference dedupe (`file.i`) — one locked copy per distinct file version.** A locked
+    file copy is stored **once per distinct file version**, not once per revision. When a new
+    anchor's file bytes are **unchanged** from the latest anchor (a metadata-only edit, or a
+    metadata-only restore that lands back on the same bytes), the relay does **not** upload a second
+    copy: the new revision's `payload.file` carries `{ size, i }`, where `i` is the index of the
+    revision whose `.file` object **owns** the bytes. An **absent `i` means "own index"** — the
+    bytes live at this revision's own `‹i›.file` sibling (so already-written L2 revisions need no
+    migration). References always **collapse to the bytes-owning revision — they never chain**: a
+    reference resolves through the owner's `file.i` (or, absent, the latest revision's own index) in
+    one hop. The `.file`-reading endpoints (`revisions/{i}/file`, the restore file re-ingest) and
+    lock renewal all resolve `refIndex = file.i ?? i` before reading or extending the payload object.
+    Every consumer of a prefix listing is **suffix-aware**: `nextIndex`, `latestKey`, the
     dedupe check, and the revisions endpoints all filter out `.file` keys before parsing an index,
     so a payload sibling is never mistaken for its own revision.
 - **Key layout (flat, id-keyed, one joint sequence per dataset):**
@@ -258,10 +270,14 @@ pushing the current anchor's retain-until date forward in place — no new revis
 This is the standard object-lock pattern (the same refresh-retention approach backup tools
 such as Veeam/Kopia use). Owned by the sliding checker (§3.3): when a long-lived resource's
 check passes and its horizon nears expiry, the checker extends the anchor's lock; on a
-mismatch it raises a breach instead. **At level 2 the anchor is a revision *pair***: the
-revision JSON and, when present, its `‹i›.file` payload sibling (§3.1) share the same
-retain-until, so renewal extends **both** locks together — a payload's repairability would
-otherwise silently expire while the revision JSON itself stayed protected.
+mismatch it raises a breach instead. **At level 2 the anchor is a revision *pair***: the latest
+revision JSON and the payload object it **references** (§3.1). Renewal extends the latest revision
+JSON and, resolving `refIndex = file.i ?? i`, the `‹refIndex›.file` payload it points at — which,
+under payload reference dedupe, may be an **earlier** revision's copy. Extending both together keeps
+a payload's repairability from silently expiring while the revision JSON stays protected. A
+**superseded** payload (one the latest revision no longer references) stops sliding at renewal, but
+it was already extended to each referencing revision's retain-until at *write* time (§3.1, §3.5), so
+it outlives every revision that references it.
 
 > **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
 > (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
@@ -293,10 +309,16 @@ applied identically to files, metadata documents, and dataset lines:
 
 > Every write appends a new write-once locked revision (object-lock makes *all* revisions
 > immutable — nothing is special to any class). The **latest** revision is the anchor: its lock
-> slides forward (§3.4) — extending the revision *and*, at level 2, its `.file` payload sibling
-> together as one pair — so the **current state is preserved indefinitely**, while older
-> revisions age out at retention so **history is recoverable only within the retention window**.
-> A deletion is just a tombstone latest-revision that stops being renewed and ages out.
+> slides forward (§3.4) — extending the revision *and*, at level 2, the `.file` payload it
+> **references** (its own copy, or, under payload reference dedupe, an earlier revision's) together
+> as one pair — so the **current state is preserved indefinitely**, while older revisions age out at
+> retention so **history is recoverable only within the retention window**. A deletion is just a
+> tombstone latest-revision that stops being renewed and ages out.
+
+At **write** time a revision that *references* an earlier payload also extends that payload's lock to
+its own retain-until, so a payload's lifetime is the max over every revision that references it —
+each referencing revision's file survives at least as long as its revision JSON, even once the
+payload itself is superseded and stops sliding (§3.4).
 
 This gives every resource the same guarantee as a single file: current state always restorable
 (level 2), any past state restorable within the retention window.
@@ -559,10 +581,12 @@ static-content / storage quota**: the per-owner historized prefix size (§3.1) i
 data-fair already meters. Activating integrity for an owner is a setting, not a separately
 priced product.
 
-The dominant cost driver is level 2's payload retention: it stores a full locked file copy per
-revision (N revisions × file size, within the retention window) — including revisions triggered
-by metadata-only edits, since every anchor is a joint one — and that accumulated size is metered
-into the owner's storage consumption.
+The dominant cost driver is level 2's payload retention: it stores one full locked file copy per
+**distinct file version** within the retention window (not per revision). Metadata-only revisions —
+the joint anchor re-records them whenever covered metadata changes — carry only a lightweight
+reference (`payload.file.i`) to the existing copy rather than duplicating the bytes (payload
+reference dedupe, §3.1). So the accumulated payload size scales with the number of *file* changes,
+not the number of revisions, and that size is metered into the owner's storage consumption.
 
 ## 10. Decomposition & build order
 

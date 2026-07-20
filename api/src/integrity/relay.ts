@@ -39,12 +39,14 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const keys = (await store.listRevisions(prefix)).map((r) => r.key)
   const latest = ops.latestKey(keys)
+  // read the latest revision once: the full dedupe below needs its hash pair, and the payload
+  // reference dedupe further down needs its payload.file descriptor (both on force and non-force)
+  const latestRevision = latest ? await store.getRevision(latest) : undefined
   // restore bypasses the dedupe: it is a rare, explicitly-reasoned remediation action that must
   // always leave its own auditable 'restore' revision, even when it lands back on a state that is
   // byte-identical to a prior anchor (e.g. undoing an out-of-band tamper restores the exact
   // pre-tamper metadata) — otherwise the action would silently vanish from the revision history.
-  if (latest && !opts?.force) {
-    const latestRevision = await store.getRevision(latest)
+  if (latest && latestRevision && !opts?.force) {
     const latestHash = latestRevision.hash
     // level 2: only a payload-bearing anchor is a valid dedupe target — an L1-era anchor
     // with matching hashes still gets a fresh revision, so the store self-heals to level 2
@@ -76,14 +78,28 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   // out harmlessly — the reverse would leave a revision claiming a payload it doesn't have
   const payload: NonNullable<RevisionBody['payload']> = { metadata: ops.coveredMetadata(fresh) }
   if (hash.md5) {
-    const { body, size } = await filesStorage.readStream(datasetUtils.originalFilePath(dataset))
-    const tee = md5Tee()
-    body.on('error', (err) => tee.stream.destroy(err))
-    await store.writePayload(ops.payloadKey(dataset.owner, dataset.id, i), body.pipe(tee.stream), retainUntil)
-    // the file may have changed since the dedupe-check read: the anchor must describe the
-    // payload's actual bytes, so the teed md5 wins over the first-pass one
-    hash.md5 = tee.digest()
-    payload.file = { size }
+    // payload reference dedupe: when the stored file is byte-identical to the latest anchor's
+    // payload (a metadata-only change, or a metadata-only restore that lands back on the same
+    // bytes), do NOT upload a second locked copy — reference the existing one. References always
+    // collapse to the bytes-owning revision (never chain): the latest anchor's `file.i` already
+    // points at the owner, or, absent, the latest revision owns its own bytes.
+    if (latestRevision?.payload?.file && latestRevision.hash.md5 === hash.md5) {
+      const refIndex = latestRevision.payload.file.i ?? ops.parseRevisionIndex(latest!)
+      // extend the referenced payload's lock to this revision's retain-until so every referencing
+      // revision's file outlives it, even after the superseded payload itself stops sliding
+      await store.extendRetention(ops.payloadKey(dataset.owner, dataset.id, refIndex), retainUntil)
+      payload.file = { size: latestRevision.payload.file.size, i: refIndex }
+      // no tee on this branch: the bytes are unchanged, so the first-pass md5 already describes them
+    } else {
+      const { body, size } = await filesStorage.readStream(datasetUtils.originalFilePath(dataset))
+      const tee = md5Tee()
+      body.on('error', (err) => tee.stream.destroy(err))
+      await store.writePayload(ops.payloadKey(dataset.owner, dataset.id, i), body.pipe(tee.stream), retainUntil)
+      // the file may have changed since the dedupe-check read: the anchor must describe the
+      // payload's actual bytes, so the teed md5 wins over the first-pass one
+      hash.md5 = tee.digest()
+      payload.file = { size }
+    }
   }
   await store.writeRevision(ops.revisionKey(dataset.owner, dataset.id, i), {
     hash,

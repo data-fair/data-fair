@@ -281,6 +281,84 @@ test('a file replacement writes a new (second) revision', async () => {
 })
 
 // ---------------------------------------------------------------------------------------------
+// payload reference dedupe: one locked file copy per distinct file version (§3.1 amendment)
+// ---------------------------------------------------------------------------------------------
+
+test('a metadata-only edit references the file-owning revision; a file change owns a fresh payload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // rev 0 owns its own bytes: no reference index
+  const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
+  expect(rev0.payload?.file?.i).toBeUndefined() // absent i = own index
+  const ownSize = rev0.payload!.file!.size
+
+  // metadata-only edit → rev 1 references rev 0's payload, and writes NO new .file key
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only change' })
+  const afterMeta = await waitForIntegrityRevisions(prefix, 3)
+  await waitForFlagCleared(dataset.id)
+  expect(afterMeta.filter(k => !k.endsWith('.file')).length).toBe(2) // rev 0 + rev 1
+  expect(afterMeta.filter(k => k.endsWith('.file')).length).toBe(1) // still only rev 0's payload
+  expect(afterMeta).not.toContain(`${prefix}000000001.file`)
+  const rev1 = await integrityTestStore.getRevision(`${prefix}000000001`)
+  expect(rev1.payload?.file?.i).toBe(0) // references the bytes-owning revision
+  expect(rev1.payload?.file?.size).toBe(ownSize)
+  expect(rev1.hash.md5).toBe(rev0.hash.md5) // file bytes unchanged
+
+  // a subsequent FILE change → rev 2 owns a fresh payload at its own index (no i)
+  await doAndWaitForFinalize(admin, dataset.id, async () => {
+    const FormData = (await import('form-data')).default
+    const fs = (await import('fs-extra')).default
+    const path = (await import('node:path')).default
+    const form = new FormData()
+    form.append('file', fs.readFileSync(path.resolve('./tests/resources/datasets/dataset2.csv')), 'dataset1.csv')
+    await admin.post(`/api/v1/datasets/${dataset.id}`, form, { headers: form.getHeaders() })
+  })
+  // 5 keys: rev0, rev0.file, rev1 (reference, no .file), rev2, rev2.file
+  const afterFile = await waitForIntegrityRevisions(prefix, 5)
+  expect(afterFile).toContain(`${prefix}000000002.file`)
+  const rev2 = await integrityTestStore.getRevision(`${prefix}000000002`)
+  expect(rev2.payload?.file?.i).toBeUndefined() // owns its own bytes
+  expect(rev2.hash.md5).not.toBe(rev0.hash.md5)
+})
+
+test('a referencing revision extends the owning payload at write time; renewal on a reference anchor slides the referenced payload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const ownPayloadKey = `${prefix}000000000.file`
+  const beforeRef = await integrityTestStore.getRetention(ownPayloadKey)
+
+  // metadata-only edit → rev 1 references rev 0's payload
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only' })
+  await waitForIntegrityRevisions(prefix, 3)
+  await waitForFlagCleared(dataset.id)
+  expect((await integrityTestStore.getRevision(`${prefix}000000001`)).payload?.file?.i).toBe(0)
+
+  // reference-time extension: writing the referencing revision pushed the owning payload's
+  // retain-until forward, so a superseded payload outlives every revision that references it
+  const afterRef = await integrityTestStore.getRetention(ownPayloadKey)
+  expect(afterRef!.getTime()).toBeGreaterThan(beforeRef!.getTime())
+
+  // make the latest (a reference) anchor look due, then check → renewal must slide the REFERENCED
+  // payload (rev 0's .file), since rev 1 has no .file object of its own
+  const revBefore = await integrityTestStore.getRetention(`${prefix}000000001`)
+  const payloadBefore = await integrityTestStore.getRetention(ownPayloadKey)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+  const revAfter = await integrityTestStore.getRetention(`${prefix}000000001`)
+  const payloadAfter = await integrityTestStore.getRetention(ownPayloadKey)
+  expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
+  expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
+})
+
+// ---------------------------------------------------------------------------------------------
 // checker: breach detection + fix, on top of a synchronously-enabled dataset
 // ---------------------------------------------------------------------------------------------
 

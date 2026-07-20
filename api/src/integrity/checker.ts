@@ -9,7 +9,6 @@ import type { DatasetInternal } from '#types'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
 import * as ops from './operations.ts'
-import { PAYLOAD_SUFFIX } from './operations.ts'
 import type { RevisionBody } from './store.ts'
 import { md5OfStorageFile } from './hash.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
@@ -31,9 +30,14 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
   try {
     await store.extendRetention(latestKey, retainUntil)
-    // the sliding anchor is the revision *pair*: a level-2 anchor's repairability dies with
-    // its payload's lock, so the .file sibling must slide forward too
-    if (latestRevision.payload?.file) await store.extendRetention(latestKey + PAYLOAD_SUFFIX, retainUntil)
+    // the sliding anchor is the revision *pair*: the latest revision JSON and the payload object it
+    // references. A level-2 anchor's repairability dies with its payload's lock, so the referenced
+    // .file must slide forward too — which may be an earlier revision's copy (payload reference
+    // dedupe): resolve `file.i`, or, absent, the latest revision owns its own bytes.
+    if (latestRevision.payload?.file) {
+      const refIndex = latestRevision.payload.file.i ?? ops.parseRevisionIndex(latestKey)
+      await store.extendRetention(ops.payloadKey(dataset.owner, dataset.id, refIndex), retainUntil)
+    }
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: {
         'integrity.lastRevision.retainUntil': retainUntil.toISOString(),

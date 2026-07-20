@@ -120,7 +120,10 @@ export const registerIntegrityRoutes = (router: Router) => {
       const filename = revision.payload.metadata.originalFile?.name ?? dataset.originalFile?.name ?? 'restored-file'
       const destination = datasetUtils.loadingDir({ ...dataset, draftReason: true })
       const finalPath = path.join(destination, filename)
-      const { body } = await store.readPayload(payloadKey(dataset.owner, dataset.id, i))
+      // payload reference dedupe: the bytes may live under an earlier revision's `{i}.file`
+      // (absent `file.i` = this revision owns them)
+      const fileRefIndex = revision.payload.file?.i ?? i
+      const { body } = await store.readPayload(payloadKey(dataset.owner, dataset.id, fileRefIndex))
       await filesStorage.writeStream(body, finalPath)
       const stats = await filesStorage.fileStats(finalPath)
       // mime type is broken on windows it seems.. detect based on extension instead (mirrors upload.ts's fileFilter)
@@ -214,7 +217,9 @@ export const registerIntegrityRoutes = (router: Router) => {
       throw err
     })
     if (!rev.payload?.file) throw httpError(404, 'this revision has no file payload')
-    const { body, size } = await store.readPayload(payloadKey(dataset.owner, dataset.id, i))
+    // payload reference dedupe: resolve the revision that owns the bytes (absent `file.i` = self)
+    const refIndex = rev.payload.file.i ?? i
+    const { body, size } = await store.readPayload(payloadKey(dataset.owner, dataset.id, refIndex))
     res.setHeader('content-disposition', contentDisposition(rev.payload.metadata.originalFile?.name ?? `${dataset.slug}-revision-${i}`))
     res.setHeader('content-type', rev.payload.metadata.originalFile?.mimetype ?? 'application/octet-stream')
     if (size !== undefined) res.setHeader('content-length', String(size))

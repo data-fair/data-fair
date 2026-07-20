@@ -7,9 +7,12 @@ export type RevisionBody = {
   hash: { md5?: string, sha256?: string }
   context: RevisionContext
   dataset: { id: string, slug?: string }
-  // level 2: the full covered-metadata projection, and the descriptor of the sibling
-  // `{key}.file` locked object when the revision carries a file copy
-  payload?: { metadata: Record<string, any>, file?: { size: number } }
+  // level 2: the full covered-metadata projection, and the descriptor of the file payload the
+  // revision carries. `file.i` is the index of the revision whose `{i}.file` object OWNS the bytes
+  // (payload reference dedupe): a metadata-only revision references an earlier copy instead of
+  // uploading a duplicate. An ABSENT `i` means "own index" — the bytes live at this revision's own
+  // `{i}.file` sibling. References always collapse to the owning revision (never chain).
+  payload?: { metadata: Record<string, any>, file?: { size: number, i?: number } }
 }
 
 export type IntegrityS3Options = {
