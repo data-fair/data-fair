@@ -279,6 +279,28 @@ test('_fix blesses the current tampered state as the new anchored truth', async 
   expect(line0.attr1).toBe('legitimate-oob-edit')
 })
 
+// ---------------------------------------------------------------------------------------------
+// per-line revision history and diff endpoints (target 3, read side)
+// ---------------------------------------------------------------------------------------------
+
+test('per-line revision history lists newest-first and serves the payload diff', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'v1', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'v2', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const history = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions`)).data
+  expect(history.count).toBe(2)
+  expect(history.results[0].hasPayload).toBe(true)
+  expect(history.results[0].i).toBeGreaterThan(history.results[1].i)
+
+  const detail = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions/${history.results[1].i}`)).data
+  expect(detail.payload).toMatchObject({ attr1: 'v1' })
+  expect(detail.current).toMatchObject({ attr1: 'v2' })
+})
+
 test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])

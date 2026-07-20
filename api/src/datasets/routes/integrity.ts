@@ -18,6 +18,7 @@ import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import * as restUtils from '../utils/rest.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
 import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics, coveredMetadata } from '../../integrity/operations.ts'
+import * as lops from '../../integrity/lines-operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
 import { md5OfStorageFile } from '../../integrity/hash.ts'
 import pump from '../../misc/utils/pipe.ts'
@@ -261,6 +262,51 @@ export const registerIntegrityRoutes = (router: Router) => {
     }
     const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
     res.json(await checker.checkDataset(freshAfter as any))
+  })
+
+  // Target 3 (read side): per-line revision history and the payload/current diff for a single
+  // line — the lines counterpart of the dataset-level /revisions endpoints above.
+  router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    if (!isRestDataset(dataset)) throw httpError(400, 'line revisions only apply to an editable (rest) dataset')
+    const store = integrityStore()
+    const keys = (await store.listRevisions(lops.lineRevisionPrefix(dataset.owner, dataset.id, req.params.lineId as string)))
+      .map((r) => r.key).sort().reverse()
+    const count = keys.length
+    const size = Math.min(parseInt(String(req.query.size ?? '20'), 10) || 20, 100)
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1
+    const results = await Promise.all(keys.slice((page - 1) * size, (page - 1) * size + size).map(async (key) => {
+      const parsed = lops.parseLineRevisionKey(key)!
+      const rev: any = await store.getRevision(key)
+      return {
+        i: parsed.i,
+        ...(parsed.deleted ? { deleted: true } : { sha256: parsed.sha256 }),
+        date: rev.context.date,
+        operation: rev.context.operation,
+        origin: rev.context.origin,
+        ...(rev.context.reason ? { reason: rev.context.reason } : {}),
+        hasPayload: !!rev.payload
+      }
+    }))
+    res.json({ count, results })
+  })
+
+  router.get('/:datasetId/_integrity/lines/:lineId/revisions/:i', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    if (!isRestDataset(dataset)) throw httpError(400, 'line revisions only apply to an editable (rest) dataset')
+    const i = parseInt(req.params.i as string, 10)
+    if (Number.isNaN(i) || i < 0) throw httpError(400, 'invalid revision index')
+    const store = integrityStore()
+    // the key embeds the content hash, unknown to the caller: find it by its padded-index prefix
+    const prefix = lops.lineRevisionPrefix(dataset.owner, dataset.id, req.params.lineId as string)
+    const keys = (await store.listRevisions(prefix)).map((r) => r.key)
+    const key = keys.find((k) => k.startsWith(`${prefix}${lops.padLineIndex(i)}-`))
+    if (!key) throw httpError(404, 'unknown revision')
+    const rev: any = await store.getRevision(key)
+    const currentLine = await restUtils.collection(dataset).findOne({ _id: req.params.lineId as string })
+    res.json({ i, hash: rev.hash, context: rev.context, line: rev.line, payload: rev.payload, current: currentLine ? lops.cleanedLineBody(currentLine) : undefined })
   })
 
   router.post('/:datasetId/_integrity/_check', readDataset({ noCache: true }), async (req, res) => {
