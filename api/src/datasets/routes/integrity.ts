@@ -79,7 +79,7 @@ export const registerIntegrityRoutes = (router: Router) => {
       const maxLines = config.integrity?.lines?.maxLines ?? 100000
       const [total, pending] = await Promise.all([
         restUtils.count(dataset, { _deleted: { $ne: true } }),
-        c.countDocuments({ _needsHistorizing: { $exists: true } })
+        c.countDocuments({ _needsHistorizing: { $exists: true }, _deleted: { $ne: true } }) // live lines only — tombstones pending their deletion revision would make anchored undercount
       ])
       integrity.lines = { anchored: Math.max(0, total - pending), pending, ...(total > maxLines ? { overGate: true } : {}) }
     }
