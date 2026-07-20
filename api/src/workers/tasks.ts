@@ -245,6 +245,11 @@ const datasetTasks: DatasetTask[] = [{
   // defers to a pending dataset-level _needsHistorizing (the metadata anchor, e.g. re-stamped by
   // every finalize pass on an integrity-active dataset): both hints can legitimately be pending
   // together, so this orders them rather than racing the same document across two tasks at once.
+  // narrowed beyond the hint flag to keep dev's exclusive-task-selection assertion quiet
+  // (finalize/indexLines/extend run at other statuses; the dataset-level historize outbox
+  // must clear first). Deliberate consequence: a dataset stuck in status 'error' accepts
+  // line writes but defers draining until it recovers — the checker reports 'unknown'
+  // while stamps are pending, so the deferral is visible, not silent
   mongoFilter: () => ({ isRest: true, status: 'finalized', _partialRestStatus: null, _needsHistorizing: { $exists: false }, _needsHistorizingLines: true })
 }, {
   name: 'renewApiKey',

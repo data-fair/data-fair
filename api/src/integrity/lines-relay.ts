@@ -49,6 +49,8 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
   // capability or enrollment gone: drop the stamps rather than retry-storming (same posture as
   // the dataset-level relay). A re-enable later re-stamps everything (backfill).
   if (!config.integrity?.active || !dataset.integrity?.active) {
+    // dropped stamps may leave already-indexed tombstone docs in place; harmless (no data
+    // loss) and they are purged on a later re-enable's backfill pass
     await c.updateMany({ _needsHistorizing: { $exists: true } }, { $unset: { _needsHistorizing: '' } })
     await clearHint()
     return
