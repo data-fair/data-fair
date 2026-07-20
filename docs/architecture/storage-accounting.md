@@ -101,7 +101,7 @@ metric is adopted per-dataset, not globally:
   from the same `IndexStream`, but older docs in that same index might predate the feature, so the
   *sum* isn't trustworthy until the next full rebuild.
 - `_esLineBytes` is a private marker on `DatasetInternal` (`api/types/dataset/index.ts` ≈ line
-  46-49), stripped from every public dataset payload by `clean()`
+  52), stripped from every public dataset payload by `clean()`
   (`api/src/datasets/utils/index.ts` ≈ line 208) alongside the other `_es*` housekeeping flags.
 - `storage()` (`api/src/datasets/utils/storage.ts` ≈ lines 136-145) branches on it: if
   `dataset._esLineBytes` and the dataset isn't virtual, `storage.indexed = { size:
@@ -115,9 +115,27 @@ metric is adopted per-dataset, not globally:
   republish, source-file replacement, …) — no migration script, no backfill.
 - **Rolling-deploy caveat**: during a rollout, a worker replica still running the pre-feature
   image can complete a full reindex without stamping `_bytes` and without setting
-  `_esLineBytes` (that code doesn't exist in its binary). This is harmless and self-corrects: the
-  dataset simply stays on the legacy `indexed` value until *its* next full reindex, whenever that
-  is triggered — accepted as a transient, unbounded-but-rare delay, not a correctness bug.
+  `_esLineBytes` (that code doesn't exist in its binary) on a dataset that wasn't marked yet. This
+  is harmless and self-corrects: the dataset simply stays on the legacy `indexed` value until *its*
+  next full reindex, whenever that is triggered — accepted as a transient, unbounded-but-rare
+  delay, not a correctness bug.
+- **Rolling-deploy caveat, marker-set-at-creation windows**: some paths set `_esLineBytes` directly
+  instead of waiting for a stamping full reindex, because the index is trivially fully stamped at
+  the moment the marker is set (e.g. `api/src/datasets/routes/write.ts` ≈ line 99 sets it on REST
+  dataset creation, right after the API pod builds the index empty — vacuously true with zero
+  docs). During a rollout this marker can outlive its invariant: a REST dataset created by a new
+  API pod gets `_esLineBytes = true` on its empty index, but the *first* batch of lines is then
+  indexed by an old worker replica (`api/src/workers/batch-processor/index-lines.ts`) that doesn't
+  stamp `_bytes`; symmetrically, a draft fully rebuilt by an old worker and then validated
+  (`datasetService.validateDraft`) onto an already-marked dataset promotes an unstamped index under
+  a marker that says it's stamped. Either way the symptom would be the same: `sumBytes` summing an
+  index where some docs carry `_bytes` and others don't, silently under-counting `indexed_bytes`.
+  Two protections close this: the coverage check in `sumBytes` (`api/src/datasets/es/sum-bytes.ts`)
+  compares a `value_count` aggregation on `_bytes` against `track_total_hits`, and returns `null`
+  — falling back to the legacy accounting — whenever they disagree, so a marker-lies window never
+  produces an under-count; and, independently, an admin-triggered full reindex of the dataset
+  always converges and repairs it, since a full reindex re-stamps every doc through the same
+  `IndexStream` path.
 - Virtual datasets never take this path (`storage()` guards `!isVirtualDataset(dataset)`): they
   have no index of their own lines, so their `indexed` size stays the existing
   proportional-to-descendants `master-data` computation.
