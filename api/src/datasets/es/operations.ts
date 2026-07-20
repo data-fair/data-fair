@@ -572,6 +572,37 @@ export const buildIndexMappings = (
   return { properties, wide }
 }
 
+// CSV-equivalent size accounting for the indexed_bytes metric.
+// Counted columns are exactly the ones the CSV export emits (outputs.ts): schema
+// properties without x-calculated. Extension columns are nested objects in the
+// indexed item, so counting walks the top-level key segment of each property.
+export const lineBytesSpec = (schema: any[]): { prefixes: Set<string>, nbCols: number } => {
+  const counted = (schema ?? []).filter(p => !p['x-calculated'])
+  return {
+    prefixes: new Set(counted.map(p => p.key.split('.')[0])),
+    nbCols: counted.length
+  }
+}
+
+const valueBytes = (value: any): number => {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'string') return Buffer.byteLength(value)
+  if (typeof value === 'object') {
+    let sum = 0
+    for (const v of Object.values(value)) sum += valueBytes(v)
+    return sum
+  }
+  return Buffer.byteLength(String(value))
+}
+
+// per line: value bytes + 1 byte per counted column (separator / newline),
+// mirroring the size of a CSV export of the same data
+export const lineBytes = (item: Record<string, any>, spec: { prefixes: Set<string>, nbCols: number }): number => {
+  let sum = spec.nbCols
+  for (const prefix of spec.prefixes) sum += valueBytes(item[prefix])
+  return sum
+}
+
 /**
  * Escape special Lucene query characters in a filter value
  * cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
