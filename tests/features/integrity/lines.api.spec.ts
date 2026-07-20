@@ -88,4 +88,19 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
   const revisions = (await ax.get(`/api/v1/datasets/${dataset.id}/lines/h1/revisions`)).data
   for (const rev of revisions.results) expect(rev._needsHistorizing).toBeUndefined()
+
+  // initial-fill path: history enabled AFTER lines already carry stamps
+  const res2 = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity lines history fill ${Date.now()}`,
+    schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
+  })
+  const dataset2 = res2.data
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset2.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await ax.post(`/api/v1/datasets/${dataset2.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
+  // enabling history triggers configureHistory's initial fill from the stamped live lines
+  await ax.patch(`/api/v1/datasets/${dataset2.id}`, { rest: { history: true } })
+  const revisions2 = (await ax.get(`/api/v1/datasets/${dataset2.id}/lines/h1/revisions`)).data
+  for (const rev of revisions2.results) expect(rev._needsHistorizing).toBeUndefined()
 })

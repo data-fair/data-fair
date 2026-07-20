@@ -258,6 +258,7 @@ export const configureHistory = async (dataset: RestDataset) => {
         const revision: DatasetLineRevision = { ...line, _action: 'create', _lineId: line._id }
         delete revision._needsIndexing
         delete revision._needsExtending
+        delete revision._needsHistorizing
         delete revision._id
         if (!revision._deleted) delete revision._deleted
         revisionsBulkOp.insert(revision)
