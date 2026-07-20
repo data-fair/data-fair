@@ -136,9 +136,11 @@ export const storage = async (dataset: Dataset) => {
   // new regime: the index was fully built with per-line _bytes stamping, the
   // CSV-equivalent sum is the indexed metric (see 2026-07-20 design spec)
   if ((dataset as any)._esLineBytes && !isVirtualDataset(dataset)) {
-    storage.indexed = {
-      size: await esUtils.sumBytes(dataset),
-      parts: ['lines']
+    const sum = await esUtils.sumBytes(dataset)
+    // null = index unavailable (e.g. mid-rebuild): keep this run's legacy-computed
+    // indexed value instead of failing the whole storage update
+    if (sum !== null) {
+      storage.indexed = { size: sum, parts: ['lines'] }
     }
   }
 
