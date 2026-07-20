@@ -501,7 +501,15 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
   // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
   // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
-  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing) {
+  // A REST dataset mid its extend/index/finalize partial-update pipeline (_partialRestStatus,
+  // already merged into `dataset` above, still truthy after this patch) settles covered fields
+  // (e.g. `schema`, recomputed at every index-lines pass) more than once before the pipeline
+  // concludes — auto-stamping here on every interim touch would momentarily make the resource
+  // match both the dataset-level historize task and whichever pipeline task (finalize/
+  // indexLines/extend) is about to run next. finalize.ts always stamps explicitly (and clears
+  // _partialRestStatus in that same write) once the pipeline settles, so defer to it rather than
+  // anchoring every interim covered-key touch along the way.
+  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing && !dataset._partialRestStatus) {
     if (integrityOps.coveredPatchKeys(patch).length) {
       patch._needsHistorizing = { context: { operation: 'update', origin: 'user' } }
     }

@@ -225,6 +225,60 @@ test('check reports the three line tamper shapes and heals via the transaction p
   expect(check.lines.sample.sort()).toEqual(['ghost', 'line0', 'line1'])
 })
 
+test('lines restore heals all three tamper shapes and returns a fresh ok verdict', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
+  })
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'ghost' }, update: { $set: { attr1: 'ghost', _i: 1, _updatedAt: new Date().toISOString() } }, upsert: true
+  })
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
+
+  const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/lines/_restore`, { reason: 'test remediation' })).data
+  expect(verdict.status).toBe('ok')
+  // hot state healed: content back, ghost gone, deleted line re-inserted
+  const line0 = await rawLine(ax, dataset.id, 'line0')
+  expect(line0.attr1).toBe('a')
+  // the restore's delete transaction soft-deletes ghost immediately (verdict above already
+  // reflects that: compareDatasetLines only counts live, non-deleted docs). The physical purge of
+  // the tombstone doc is driven by the async indexing worker (same lifecycle as any REST delete,
+  // see 'a deleted line ships a tombstone revision...' above) — poll rather than assume it is
+  // synchronous with the restore response.
+  let ghost
+  const start = Date.now()
+  while (Date.now() - start < 15000) {
+    ghost = await rawLine(ax, dataset.id, 'ghost')
+    if (!ghost) break
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  expect(ghost).toBeFalsy()
+  const line1 = await rawLine(ax, dataset.id, 'line1')
+  expect(line1.attr1).toBe('b')
+})
+
+test('_fix blesses the current tampered state as the new anchored truth', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'legitimate-oob-edit' } }
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+
+  const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'known migration' })).data
+  expect(verdict.status).toBe('ok')
+  const line0 = await rawLine(ax, dataset.id, 'line0')
+  expect(line0.attr1).toBe('legitimate-oob-edit')
+})
+
 test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])

@@ -95,6 +95,28 @@ export const registerIntegrityRoutes = (router: Router) => {
     // the synchronous anchor above just serviced whatever a pending stamp requested: clear it so
     // checkDataset's pending guard doesn't force an 'unknown' verdict on the fresh read below
     await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
+    // Target 3: bless the current line state — fresh revisions for edited/inserted live lines,
+    // tombstone revisions for anchored-but-vanished lines, all inline (bounded by the gate)
+    if (isRestDataset(dataset)) {
+      const store = integrityStore()
+      const checkerMod = await import('../../integrity/checker.ts')
+      const linesRelay = await import('../../integrity/lines-relay.ts')
+      await linesRelay.historizeLines(dataset)
+      const compare = await checkerMod.compareDatasetLines(dataset, store)
+      const retentionDays = config.integrity!.retention?.days ?? 365
+      const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
+      const hint = { operation: 'fixIntegrity' as const, origin: 'superadmin' as const, ...(typeof req.body?.reason === 'string' ? { reason: req.body.reason } : {}) }
+      const c = restUtils.collection(dataset)
+      for (const lineId of [...compare.edited, ...compare.inserted]) {
+        const line = await c.findOne({ _id: lineId })
+        if (line) await linesRelay.anchorLine(dataset, line, store, retainUntil, hint)
+      }
+      for (const lineId of compare.missing) {
+        const anchor = compare.anchors.get(lineId)!
+        // a tombstone revision for a vanished line: continue its sequence past the stale anchor
+        await linesRelay.anchorLine(dataset, { _id: lineId, _i: anchor.i + 1, _deleted: true }, store, retainUntil, hint)
+      }
+    }
     const checker = await import('../../integrity/checker.ts')
     const fresh = await mongo.datasets.findOne({ id: dataset.id })
     res.json(await checker.checkDataset(fresh as any))
@@ -187,6 +209,56 @@ export const registerIntegrityRoutes = (router: Router) => {
     await anchorDataset(dataset, { operation: 'restore', origin: 'superadmin', reason }, { force: true })
     await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
     const checker = await import('../../integrity/checker.ts')
+    const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
+    res.json(await checker.checkDataset(freshAfter as any))
+  })
+
+  // Target 3: restore every diverged line to its last verified state, through the standard
+  // transaction pipeline (the restore itself is a legitimate write and produces fresh
+  // revisions). Synchronous: drains the relay inline and responds with the fresh verdict.
+  router.post('/:datasetId/_integrity/lines/_restore', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    if (!isRestDataset(dataset)) throw httpError(400, 'lines restore only applies to an editable (rest) dataset')
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined
+    const store = integrityStore()
+    const checker = await import('../../integrity/checker.ts')
+    const linesRelay = await import('../../integrity/lines-relay.ts')
+
+    // drain any pending organic stamps first so the comparison sees anchored truth
+    await linesRelay.historizeLines(dataset)
+
+    const compare = await checker.compareDatasetLines(dataset, store)
+    const transacs: any[] = []
+    // edited lines and out-of-band-deleted lines: rewrite from the latest revision's payload
+    for (const lineId of [...compare.edited, ...compare.missing]) {
+      const anchor = compare.anchors.get(lineId)!
+      const rev: any = await store.getRevision(anchor.key)
+      if (!rev.payload) continue // defensive: tombstone anchors are never in edited/missing
+      transacs.push({ _action: 'createOrUpdate', _id: lineId, ...rev.payload })
+    }
+    // out-of-band-inserted lines have no verified state: restoring means deleting them
+    for (const lineId of compare.inserted) {
+      transacs.push({ _action: 'delete', _id: lineId })
+    }
+    if (transacs.length) {
+      // an out-of-band edit that mutates a field directly (bypassing the REST write path) leaves
+      // the doc's stored _hash stale — still reflecting the PRE-tamper content. Restoring writes
+      // that same pre-tamper content back, so the freshly computed hash lands back on that stale
+      // value: createOrUpdate's `_hash: {$ne: target}` upsert filter would then see "no change"
+      // and silently skip the write (colliding on _id as a no-op 304), leaving the tamper in
+      // place. Invalidate the stale field first so the write pipeline can't mistake this
+      // deliberate restore for a redundant one.
+      const c = restUtils.collection(dataset)
+      await c.updateMany({ _id: { $in: compare.edited } }, { $set: { _hash: null } })
+      await restUtils.applyTransactions(dataset, undefined, transacs, undefined, undefined, undefined,
+        { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) })
+      // route the restored lines through extension/indexing like any partial rest update
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+      const fresh = await mongo.datasets.findOne({ id: dataset.id })
+      await linesRelay.historizeLines(fresh as any)
+    }
     const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
     res.json(await checker.checkDataset(freshAfter as any))
   })
