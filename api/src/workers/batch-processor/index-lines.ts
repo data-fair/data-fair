@@ -217,6 +217,8 @@ export default async function (dataset: DatasetInternal) {
       }
     }
     result.status = 'indexed'
+    // the whole index was just rebuilt through IndexStream, so every doc carries _bytes
+    result._esLineBytes = true
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)
     result.count = indexStream.i

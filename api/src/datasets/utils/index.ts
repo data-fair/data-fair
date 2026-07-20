@@ -205,6 +205,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._partialRestStatus
   delete dataset._newRestAttachments
   delete dataset._esCopyToSearch
+  delete dataset._esLineBytes
   delete dataset._esIgnoredKeywordFields
   delete dataset._needsHistorizing
   // integrity state is readable by the owner's admins and superadmins only (registered
