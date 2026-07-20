@@ -196,7 +196,8 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     console.warn(`failure in worker ${task.name} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
 
     // some error are caused by bad input, we should not retry these
-    let retry = !errorMessage.startsWith('[noretry] ')
+    // they are signalled either by a [noretry] message prefix or a noRetry property on the error
+    let retry = !errorMessage.startsWith('[noretry] ') && err?.noRetry !== true
     if (!retry) {
       debug('error message started by [noretry]')
       errorMessage = errorMessage.replace('[noretry] ', '')

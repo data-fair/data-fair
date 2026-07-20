@@ -133,6 +133,12 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
   return schema.filter((f: any) => !!f)
 }
 
+// "cannot be queried" errors are thrown both while serving requests (descendants are resolved
+// by readDataset with fillDescendants) and inside worker tasks (finalization of a virtual dataset).
+// expose sends the message as response body despite the 501 status being hidden by default,
+// noRetry tells the worker loop not to retry (structured equivalent of the [noretry] message prefix)
+const cannotQueryError = (message: string) => Object.assign(httpError(501, message, { expose: true }), { noRetry: true })
+
 const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any) => {
   const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
   const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
@@ -163,14 +169,14 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
         : `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}"`
       return `le jeu de données "${child.title ?? id}" (${id}, propriété de ${ownerLabel}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel`
     })
-    throw httpError(501, `[noretry] Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
+    throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
   }
   for (const child of children) {
     if (child.isVirtual && (child.virtual?.filters?.length || child.virtual?.filterActiveAccount)) {
       const filterKind = child.virtual?.filters?.length
         ? `des filtres (${child.virtual.filters.map((f: any) => f.key).filter(Boolean).join(', ')})`
         : 'un filtre sur le compte actif'
-      throw httpError(501, `[noretry] Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit ${filterKind}, ce qui n'est pas supporté.`)
+      throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit ${filterKind}, ce qui n'est pas supporté.`)
     }
     if (child.isVirtual) {
       await recurseDescendants(descendants, child as VirtualDataset, mongoOptions)
@@ -197,7 +203,7 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
   const descendants: any[] = []
   await recurseDescendants(descendants, dataset, mongoOptions)
   if (descendants.length === 0 && throwEmpty) {
-    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
+    throw cannotQueryError('Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
   }
   if (extraProperties) {
     for (const descendant of descendants) {
