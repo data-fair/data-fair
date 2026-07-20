@@ -73,3 +73,19 @@ test('deleteAllLines and drop bulk are refused while integrity is active', async
   await expect(ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?drop=true`, [{ _id: 'x', attr1: 'c' }]))
     .rejects.toMatchObject({ status: 400 })
 })
+
+test('history revisions do not expose the _needsHistorizing stamp', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity lines history ${Date.now()}`,
+    rest: { history: true },
+    schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
+  })
+  const dataset = res.data
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
+  const revisions = (await ax.get(`/api/v1/datasets/${dataset.id}/lines/h1/revisions`)).data
+  for (const rev of revisions.results) expect(rev._needsHistorizing).toBeUndefined()
+})

@@ -394,6 +394,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
       }
       delete revision._needsIndexing
       delete revision._needsExtending
+      delete revision._needsHistorizing
       revisionsBulkOp.insert(revision)
     }
     await revisionsBulkOp.execute()
@@ -756,6 +757,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       revision._lineId = operation._id
       delete revision._needsIndexing
       delete revision._needsExtending
+      delete revision._needsHistorizing
       revisionsBulkOp.insert(revision)
       hasRevisionsBulkOp = true
     }
