@@ -37,7 +37,7 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   hash.sha256 = ops.metadataHash(fresh)
 
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
-  const keys = (await store.listRevisions(prefix)).map((r) => r.key)
+  const keys = (await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key)
   const latest = ops.latestKey(keys)
   // read the latest revision once: the full dedupe below needs its hash pair, and the payload
   // reference dedupe further down needs its payload.file descriptor (both on force and non-force)

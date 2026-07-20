@@ -170,7 +170,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
     const store = integrityStore()
     // zero-padded indices sort lexically == numerically; newest first = reversed
-    const keys = (await store.listRevisions(revisionPrefix(dataset.owner, dataset.id))).map((r) => r.key)
+    const keys = (await store.listRevisions(revisionPrefix(dataset.owner, dataset.id), { delimiter: '/' })).map((r) => r.key)
       .filter((k) => !isPayloadKey(k)).sort().reverse()
     const count = keys.length
     const size = Math.min(parseInt(String(req.query.size ?? '20'), 10) || 20, 100)

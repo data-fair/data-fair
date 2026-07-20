@@ -15,6 +15,17 @@ export type RevisionBody = {
   payload?: { metadata: Record<string, any>, file?: { size: number, i?: number } }
 }
 
+// Target 3 (per-line revisions): the revision of a single editable-dataset line. `payload` is the
+// cleaned user body (no `_`-prefixed fields — no identities, no extension outputs); absent on
+// tombstones. The content sha256 is ALSO embedded in the S3 key so checks work from LIST alone.
+export type LineRevisionBody = {
+  hash: { sha256?: string }
+  context: RevisionContext
+  dataset: { id: string, slug?: string }
+  line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }
+  payload?: Record<string, any>
+}
+
 export type IntegrityS3Options = {
   region?: string
   endpoint: string
@@ -36,7 +47,7 @@ export class IntegrityStore {
     this.bucket = opts.bucket
   }
 
-  async writeRevision (key: string, body: RevisionBody, retainUntil: Date): Promise<void> {
+  async writeRevision (key: string, body: RevisionBody | LineRevisionBody, retainUntil: Date): Promise<void> {
     await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -47,11 +58,13 @@ export class IntegrityStore {
     }))
   }
 
-  async listRevisions (prefix: string): Promise<{ key: string, lastModified?: Date }[]> {
+  async listRevisions (prefix: string, opts?: { delimiter?: string }): Promise<{ key: string, lastModified?: Date }[]> {
     const revisions: { key: string, lastModified?: Date }[] = []
     let ContinuationToken: string | undefined
     do {
-      const res = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken }))
+      const res = await this.client.send(new ListObjectsV2Command({
+        Bucket: this.bucket, Prefix: prefix, Delimiter: opts?.delimiter, ContinuationToken
+      }))
       for (const o of res.Contents ?? []) if (o.Key) revisions.push({ key: o.Key, lastModified: o.LastModified })
       ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
     } while (ContinuationToken)

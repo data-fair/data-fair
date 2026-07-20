@@ -58,7 +58,7 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   if (dataset._needsHistorizing) return { status: 'unknown' }
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
-  const latest = ops.latestKey((await store.listRevisions(prefix)).map((r) => r.key))
+  const latest = ops.latestKey((await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key))
   if (!latest) {
     // no anchor written yet (e.g. enable succeeded — integrity.active is set — but the inline
     // anchor write then failed, S3 down, before any revision landed): persist the verdict so a
