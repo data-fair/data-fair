@@ -537,6 +537,9 @@ export const buildIndexMappings = (
   defaultAnalyzer: string
 ): { properties: Record<string, any>, wide: boolean } => {
   const properties: Record<string, any> = {}
+  // CSV-equivalent byte size of the line, summed by storage() for the indexed_bytes
+  // metric. Aggregated only (doc_values), never searched.
+  properties._bytes = { type: 'integer', index: false }
   const wide = hasManyQSearchFields(jsProps)
   if (wide) {
     properties._search = {

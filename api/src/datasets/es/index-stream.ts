@@ -7,6 +7,7 @@ import debugLib from 'debug'
 import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { Dataset } from '#types'
+import { lineBytes, lineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -44,6 +45,7 @@ class IndexStream extends Transform {
   // error reporting and (REST only) re-emitting on the readable side
   items: any[]
   applyCalculations: (item: any) => Promise<string | null>
+  lineBytesSpec: { prefixes: Set<string>, nbCols: number }
   bulkChars: number
   i: number
   nbErroredItems: number
@@ -55,6 +57,7 @@ class IndexStream extends Transform {
     this.options.refresh = this.options.refresh || false
     this.options.reemit = this.options.reemit ?? true
     this.applyCalculations = extensionsUtils.prepareCalculations(options.dataset)
+    this.lineBytesSpec = lineBytesSpec(options.dataset.schema ?? [])
     this.body = []
     this.items = []
     this.bulkChars = 0
@@ -84,6 +87,9 @@ class IndexStream extends Transform {
       params.index._id = item._id || nanoid()
       delete item._id
       warning = await this.applyCalculations(item)
+      // after applyCalculations so extension/calculated fields are present; calculated
+      // fields and _file_raw are excluded by the spec (not CSV-export columns)
+      item._bytes = lineBytes(item, this.lineBytesSpec)
       this.body.push(JSON.stringify(params))
       const itemStr = JSON.stringify(item)
       this.body.push(itemStr)
