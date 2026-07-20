@@ -133,6 +133,15 @@ export const storage = async (dataset: Dataset) => {
     }
   }
 
+  // new regime: the index was fully built with per-line _bytes stamping, the
+  // CSV-equivalent sum is the indexed metric (see 2026-07-20 design spec)
+  if ((dataset as any)._esLineBytes && !isVirtualDataset(dataset)) {
+    storage.indexed = {
+      size: await esUtils.sumBytes(dataset),
+      parts: ['lines']
+    }
+  }
+
   // storage used by attachments
   const documentProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && !dataset.isVirtual) {

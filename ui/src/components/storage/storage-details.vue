@@ -53,6 +53,7 @@ fr:
   original-file: fichier original
   normalized-file: fichier converti
   full-file: fichier enrichi
+  lines: lignes indexées (équivalent CSV)
   export-csv-file: fichier exporté
   attachments: de pièces jointes
   metadata-attachments: pièces jointes aux méta-données
@@ -67,6 +68,7 @@ en:
   original-file: original file
   normalized-file: converted file
   full-file: extended file
+  lines: indexed lines (CSV equivalent)
   export-csv-file: exported file
   attachments: attachments
   metadata-attachments: attachments to metadata
