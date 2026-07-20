@@ -1,18 +1,20 @@
 # Data integrity & traceability
 
-> Status: **target 1 (dataset files) — level 1 detection delivered; target 2 (dataset
-> metadata) — level 1 detection delivered**, then **simplified** (joint anchor, depersonalized
-> context, synchronous admin actions — see
+> Status: **target 1 (dataset files) — level 1 detection + level 2 repair delivered; target 2
+> (dataset metadata) — level 1 detection delivered**, then **simplified** (joint anchor,
+> depersonalized context, synchronous admin actions — see
 > [docs/plans/2026-07-16-integrity-simplification-design.md](../plans/2026-07-16-integrity-simplification-design.md)).
 > The shared core (locked-revision store, transactional-outbox relay, sliding checker) uses a
 > **single joint anchor per dataset**: one revision sequence records **both** the file md5 and the
 > covered-metadata sha256 on every revision, with one verdict, one outbox stamp and one API/UI
 > surface — the file and metadata parts are named inside a breach, not carried as separate anchor
-> classes. The superadmin API and admin UI ship in this iteration;
-> [§10](#10-decomposition--build-order) records precisely what is built vs. what remains (level
-> 2 repair, applications/settings metadata, target 3). This document describes a focused
-> **data-fair feature**, delivered as **three progressive targets** (dataset files → dataset
-> metadata → editable-dataset collections); target 3 and level 2 each get their own
+> classes. **Level 2 (repair) delivered for file datasets** — every anchor carries the full
+> payload (file copy + covered-metadata snapshot); diff, audit download and restore-from-any-
+> revision ship with it; owner transfer is forbidden while integrity is active. The superadmin API
+> and admin UI ship in this iteration; [§10](#10-decomposition--build-order) records precisely
+> what is built vs. what remains (applications/settings metadata, target 3). This document
+> describes a focused **data-fair feature**, delivered as **three progressive targets** (dataset
+> files → dataset metadata → editable-dataset collections); target 3 gets its own
 > spec → plan → implementation cycle next. Scope deliberately left out for now —
 > generalization beyond data-fair, an immutable append-only **log posture** (events, HTTP
 > logs), and a central integrity service — is parked in
@@ -67,10 +69,12 @@ the same machinery; they differ only in what each revision stores.
   check recomputes the hot resource's hash and compares it to the latest stored hash; any
   divergence means something wrote out-of-band → breach. Cheap. **Baseline goal for every
   sensitive resource.**
-- **Level 2 — Repair.** The same revision additionally stores the **full payload** alongside
-  the hash. This unlocks the admin-facing diff *and* "restore the hot resource from the
-  latest verified revision." An opt-in *upgrade* of level 1, applied **where the storage cost
-  is reasonable**.
+- **Level 2 — Repair.** ✅ **Delivered for file datasets.** The same revision additionally
+  stores the **full payload** alongside the hash. This unlocks the admin-facing diff *and*
+  restore-from-**any** historized revision (not just the latest). **Always-on, no size
+  gate** — the maintainer's call: storage cost is proportional to the file size and already
+  metered into the owner's existing storage consumption (§9), so there is no threshold below
+  which level 2 is skipped.
 - **Level 3 — Prevention.** **Out of scope** here, and mechanically different: a superadmin
   marks a resource read-only even to client admins. Noted for completeness; it would be a
   separate feature, not built on this store.
@@ -94,9 +98,33 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
     and an optional free-text reason (on `fixIntegrity` only). It carries **no user identity**
     by construction (§1's trail/journal split), so it holds no personal data — see §8.
   - `dataset` — `{ id, slug }`, a small denormalized descriptor of the anchored dataset.
-  - `payload` — present only at level 2 (the full covered projection / file copy).
+  - `payload` — present only at level 2: `{ metadata: <covered projection>, file?: { size, i? } }`.
+    `metadata` is the **full** `coveredMetadata()` projection (not merely its hash), stored so it
+    can be diffed and restored field-by-field; `file`, present when the anchor covers a file
+    dataset, records the payload's byte `size` and an optional reference index `i`. The file's
+    actual bytes are **not** inlined in this JSON — they live in a **sibling** locked object at
+    `‹revisionKey›.file` (the `PAYLOAD_SUFFIX`), under the **same** compliance lock and retain-until
+    date as the revision JSON, **written payload-first**: the relay uploads the `.file` object before
+    writing the revision JSON that references it, so a crash in between leaves an orphan `.file` that
+    ages out harmlessly — never a revision claiming a payload it doesn't have (the reverse order
+    would risk exactly that).
+  - **Payload reference dedupe (`file.i`) — one locked copy per distinct file version.** A locked
+    file copy is stored **once per distinct file version**, not once per revision. When a new
+    anchor's file bytes are **unchanged** from the latest anchor (a metadata-only edit, or a
+    metadata-only restore that lands back on the same bytes), the relay does **not** upload a second
+    copy: the new revision's `payload.file` carries `{ size, i }`, where `i` is the index of the
+    revision whose `.file` object **owns** the bytes. An **absent `i` means "own index"** — the
+    bytes live at this revision's own `‹i›.file` sibling (so already-written L2 revisions need no
+    migration). References always **collapse to the bytes-owning revision — they never chain**: a
+    reference resolves through the owner's `file.i` (or, absent, the latest revision's own index) in
+    one hop. The `.file`-reading endpoints (`revisions/{i}/file`, the restore file re-ingest) and
+    lock renewal all resolve `refIndex = file.i ?? i` before reading or extending the payload object.
+    Every consumer of a prefix listing is **suffix-aware**: `nextIndex`, `latestKey`, the
+    dedupe check, and the revisions endpoints all filter out `.file` keys before parsing an index,
+    so a payload sibling is never mistaken for its own revision.
 - **Key layout (flat, id-keyed, one joint sequence per dataset):**
-  `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹i›` (zero-padded `‹i›`). There is no
+  `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹i›` (zero-padded `‹i›`), plus the optional
+  `‹i›.file` payload sibling above. There is no
   `‹class›` segment — the file and metadata parts share a **single revision sequence** indexed
   from `0`, since they always enable, anchor and check together (per-class enable was never
   exposed). Zero-padding makes the keys sort lexically == numerically, so "latest" is the
@@ -108,10 +136,11 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
   historized store, since it is not on the hot read path.
-- Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment): an owner transfer therefore
-  re-anchors the dataset under the new owner's prefix (one stamp re-anchors the joint sequence —
-  both hashes), since the old-prefix anchors do not carry over. The old prefix's anchors simply
-  age out at their existing retention — they are not migrated or deleted.
+- Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment). Owner transfer is
+  **forbidden while integrity is active** (the transfer route returns 400): a transfer would
+  orphan the anchor sequence under the old prefix. To transfer, a superadmin disables
+  integrity (anchors age out at their existing retention), transfers, and re-enables — a
+  deliberate simplification over re-anchoring under the new prefix.
 
 ### 3.2 The inline write wrapper — *this is the definition of a legitimate write*
 
@@ -186,6 +215,27 @@ preferred precisely because it eliminates this gap.
   (`anchorDataset()`), then runs `checkDataset()` and **responds with the fresh verdict** — the
   reconcile action completes on its own await, with no outbox stamp and no waiting for the next
   sweep.
+- **Diff and restore (level 2, delivered).** `GET …/_integrity/revisions/{i}` returns the
+  snapshot alongside the dataset's *current* covered projection in one call, so the UI renders
+  the metadata diff without a second round-trip; `GET …/_integrity/revisions/{i}/file` streams
+  the payload back with a `content-disposition` taken from the snapshot's `originalFile`. `POST
+  _integrity/_restore { i, reason? }` writes back **any** payload-bearing revision (not only the
+  latest) and always leaves its own auditable `restore` revision — dedupe is bypassed
+  (`force: true`) so a remediation that lands back on a byte-identical state cannot silently
+  vanish from the trail. Metadata-only restores (no file divergence) are **synchronous**, exactly
+  like `_fix`: `restoreUpdate()` writes back only the covered keys that genuinely diverge from the
+  snapshot, then the route re-anchors inline and responds with the fresh verdict. A **file**
+  restore instead re-ingests the stored payload through the **standard draft pipeline** — the
+  same path a manual file replacement takes — because replacing bytes must go through the usual
+  validation/finalize flow, not a raw overwrite; the route responds `{ status: 'restoring' }`,
+  refuses with 409 if the dataset isn't in a stable `finalized`/`error` state, and the `restore`
+  context rides the draft's `_needsHistorizing` stamp through to `finalize`, which the async relay
+  then anchors with `force: true` for the same reason.
+- **Accepted transient-breach window on file restore.** Between the synchronous metadata write
+  and the draft's validation landing at `finalize`, the hot doc reflects healed metadata over
+  still-stale (or mid-reprocessing) file bytes; a sliding-checker pass or a manual check that lands
+  in that narrow window can compare against the old anchor and record a transient breach — an
+  accepted window, resolved once the anchor written at finalize supersedes it.
 - Automatic re-push into the history is **not** done initially, but is possible by API.
 - **No realtime channel.** The admin actions (enable / check / fix) are synchronous and their
   response carries the fresh state, so the panel updates on the action's own await — there is no
@@ -220,7 +270,14 @@ pushing the current anchor's retain-until date forward in place — no new revis
 This is the standard object-lock pattern (the same refresh-retention approach backup tools
 such as Veeam/Kopia use). Owned by the sliding checker (§3.3): when a long-lived resource's
 check passes and its horizon nears expiry, the checker extends the anchor's lock; on a
-mismatch it raises a breach instead.
+mismatch it raises a breach instead. **At level 2 the anchor is a revision *pair***: the latest
+revision JSON and the payload object it **references** (§3.1). Renewal extends the latest revision
+JSON and, resolving `refIndex = file.i ?? i`, the `‹refIndex›.file` payload it points at — which,
+under payload reference dedupe, may be an **earlier** revision's copy. Extending both together keeps
+a payload's repairability from silently expiring while the revision JSON stays protected. A
+**superseded** payload (one the latest revision no longer references) stops sliding at renewal, but
+it was already extended to each referencing revision's retain-until at *write* time (§3.1, §3.5), so
+it outlives every revision that references it.
 
 > **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
 > (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
@@ -252,9 +309,16 @@ applied identically to files, metadata documents, and dataset lines:
 
 > Every write appends a new write-once locked revision (object-lock makes *all* revisions
 > immutable — nothing is special to any class). The **latest** revision is the anchor: its lock
-> slides forward (§3.4) so the **current state is preserved indefinitely**, while older revisions
-> age out at retention so **history is recoverable only within the retention window**. A deletion
-> is just a tombstone latest-revision that stops being renewed and ages out.
+> slides forward (§3.4) — extending the revision *and*, at level 2, the `.file` payload it
+> **references** (its own copy, or, under payload reference dedupe, an earlier revision's) together
+> as one pair — so the **current state is preserved indefinitely**, while older revisions age out at
+> retention so **history is recoverable only within the retention window**. A deletion is just a
+> tombstone latest-revision that stops being renewed and ages out.
+
+At **write** time a revision that *references* an earlier payload also extends that payload's lock to
+its own retain-until, so a payload's lifetime is the max over every revision that references it —
+each referencing revision's file survives at least as long as its revision JSON, even once the
+payload itself is superseded and stops sliding (§3.4).
 
 This gives every resource the same guarantee as a single file: current state always restorable
 (level 2), any past state restorable within the retention window.
@@ -337,8 +401,8 @@ once per environment; on a fresh environment both datasets seed automatically.
 
 | Resource class | Level 1 (detect) | Level 2 (repair) | Hashing |
 |---|---|---|---|
-| Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | cheap — reasonable, deferred alongside file-class level 2 | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
-| Data files | trivial (md5 already stored) | duplication cost — reasonable up to a size threshold | reuse existing `md5` |
+| Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred — note the metadata half rides the file-class joint anchor, so **enrollment itself is gated on a finalized file dataset** (the `_integrity` enable check, §3): a non-file dataset cannot enroll today, even for metadata-only protection | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
+| Data files | trivial (md5 already stored) | ✅ **delivered — always-on, no size gate** | reuse existing `md5` |
 | Editable (REST) dataset — **Mongo lines** (source of truth) | feasible (see below) | size/cardinality-gated | exact fold over the precomputed per-line `_hash`, sorted by `_i` |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
 
@@ -388,10 +452,10 @@ once per environment; on a fresh environment both datasets seed automatically.
   metadata field is computed on create and, even with the maintain-on-update fix, an *out-of-band*
   edit (exactly what `fixIntegrity` reconciles) never updates it — so anchoring the metadata would
   dedupe and never re-anchor. Relay and checker therefore call the same `md5OfStorageFile(...)`,
-  keeping them symmetric. Level 2 copies the file into the historized bucket and is **gated by a
-  size threshold**. The historized bucket stays fully separate from the main storage bucket
-  (which is unchanged), keeping the model homogeneous with the Mongo case at the cost of some
-  duplication.
+  keeping them symmetric. **Level 2 is delivered and always-on (no size gate**, §2): every anchor
+  copies the file into the historized bucket as its `‹i›.file` payload sibling (§3.1). The
+  historized bucket stays fully separate from the main storage bucket (which is unchanged),
+  keeping the model homogeneous with the Mongo case at the cost of some duplication.
 - **ES is not a historization target — it is a rebuildable projection.** For REST datasets
   Mongo is the source of truth; the ES index is derived (the indexer strips `_hash`/`_deleted`,
   the ES `_id` is a throwaway `nanoid`, and a full reindex rebuilds the index from Mongo). So ES
@@ -517,6 +581,13 @@ static-content / storage quota**: the per-owner historized prefix size (§3.1) i
 data-fair already meters. Activating integrity for an owner is a setting, not a separately
 priced product.
 
+The dominant cost driver is level 2's payload retention: it stores one full locked file copy per
+**distinct file version** within the retention window (not per revision). Metadata-only revisions —
+the joint anchor re-records them whenever covered metadata changes — carry only a lightweight
+reference (`payload.file.i`) to the existing copy rather than duplicating the bytes (payload
+reference dedupe, §3.1). So the accumulated payload size scales with the number of *file* changes,
+not the number of revisions, and that size is metered into the owner's storage consumption.
+
 ## 10. Decomposition & build order
 
 Three progressive targets, easiest first. Each is its own spec → plan → build cycle and ships
@@ -525,18 +596,22 @@ detect-only where repair is too costly. The shared core primitive (locked-revisi
 write wrapper, checker) is **extracted from target 1 and reused**, not built up front as a
 speculative framework.
 
-1. **Dataset data files** — ✅ **level 1 (detect) + lock renewal delivered.** The relay historizes
-   the *stored file's* md5 on every finalize (transactional outbox, §3.2); the sliding checker
-   recomputes and compares it, raising a breach on divergence (§3.3); and it now **renews the
-   anchor's lock by extension** (§3.4 Option B) — pushing the compliance retain-until forward on a
-   ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current state stays
-   protected indefinitely, and surfacing a loud `lastRenewal: failed` state (alert + UI warning) if
-   a provider rejects the prolongation. The superadmin enable/disable/check/fix API plus the admin
-   UI panel (§7) are wired end to end. Lock prolongation is **validated on Scaleway** (spike,
-   2026-07-16 — §12), so renewal-by-extension stands as the primary model on the target provider.
-   **Immediate next step for this target:** *level 2 (repair)* — copy the file into the historized
-   bucket, size-gated. Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a
-   portability note for providers that cannot prolong a lock.
+1. **Dataset data files** — ✅ **level 1 (detect) + level 2 (repair) + lock renewal delivered.**
+   The relay historizes the *stored file's* md5 on every finalize (transactional outbox, §3.2);
+   the sliding checker recomputes and compares it, raising a breach on divergence (§3.3); and it
+   **renews the anchor's lock by extension** (§3.4 Option B) — pushing the compliance retain-until
+   forward on a ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current
+   state stays protected indefinitely, and surfacing a loud `lastRenewal: failed` state (alert +
+   UI warning) if a provider rejects the prolongation. The superadmin enable/disable/check/fix/
+   restore API plus the admin UI panel (§7) are wired end to end. Lock prolongation is **validated
+   on Scaleway** (spike, 2026-07-16 — §12), so renewal-by-extension stands as the primary model on
+   the target provider. **Level 2 (repair) ships always-on, no size gate** (§2, §5): every anchor
+   additionally carries the covered-metadata projection and, for file datasets, a `.file` payload
+   sibling (§3.1) — unlocking the admin-facing diff, an audit download of any historized revision,
+   and restore-from-any-revision (§3.3, §7). Restoring metadata alone is synchronous; restoring a
+   file re-ingests through the standard draft pipeline, with the restore context preserved by
+   finalize. Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a portability note
+   for providers that cannot prolong a lock.
 2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets**,
    then folded into the **joint anchor** (§3.1). A dataset has one revision sequence carrying
    **both** the file md5 and the covered-metadata sha256, one verdict
@@ -550,8 +625,8 @@ speculative framework.
    `stampHistorizeMany`, §5). Superadmin API and admin UI (§7) cover file and metadata uniformly
    (per-class enable was never exposed — enabling integrity anchors both together).
    **Explicitly deferred:** applications and settings metadata (this iteration covers **datasets
-   only**); level 2 (payload snapshots, diff, restore) — file and metadata level 2 stay a single
-   follow-on unit of work since they share the same payload-storage machinery.
+   only**) — level 2 (payload snapshots, diff, restore) shipped together with target 1 above,
+   since file and metadata level 2 share the same payload-storage machinery.
 
    **Simplification (2026-07-16,
    [design](../plans/2026-07-16-integrity-simplification-design.md)).** After targets 1+2 landed,

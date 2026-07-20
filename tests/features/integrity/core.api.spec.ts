@@ -124,9 +124,89 @@ test('extendRetention cannot shorten a compliance lock', async () => {
   await expect(store.extendRetention(key, new Date(Date.now() + 24 * 3600 * 1000))).rejects.toThrow()
 })
 
+test('writePayload stores a compliance-locked binary sibling object', async () => {
+  const store = integrityTestStore
+  const base = `data-fair/test-store-payload/${Date.now()}/000000000`
+  const retainUntil = new Date(Date.now() + 24 * 3600 * 1000)
+  const { Readable } = await import('node:stream')
+  await store.writePayload(base + '.file', Readable.from(Buffer.from('payload-bytes')), retainUntil)
+
+  const { body, size } = await store.readPayload(base + '.file')
+  const chunks: Buffer[] = []
+  for await (const c of body) chunks.push(c as Buffer)
+  expect(Buffer.concat(chunks).toString()).toBe('payload-bytes')
+  expect(size).toBe('payload-bytes'.length)
+
+  // WORM: the locked payload version cannot be destroyed within retention
+  const versionId = await originalVersionId(base + '.file')
+  await expect(integrityTestClient.send(new DeleteObjectCommand({ Bucket: store.bucket, Key: base + '.file', VersionId: versionId })))
+    .rejects.toThrow()
+})
+
+test('a revision body can carry an inline metadata payload', async () => {
+  const store = integrityTestStore
+  const key = `data-fair/test-store-meta/${Date.now()}/000000000`
+  await store.writeRevision(key, {
+    hash: { md5: 'abc', sha256: 'def' },
+    context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
+    dataset: { id: 'ds-meta' },
+    payload: { metadata: { title: 'snap' }, file: { size: 13 } }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+  const back = await store.getRevision(key)
+  expect(back.payload?.metadata.title).toBe('snap')
+  expect(back.payload?.file?.size).toBe(13)
+})
+
 // ---------------------------------------------------------------------------------------------
 // relay: the async historize worker, driven by the _needsHistorizing outbox flag
 // ---------------------------------------------------------------------------------------------
+
+test('anchor carries the level-2 payload: inline metadata snapshot + locked .file sibling', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  const keys = await listIntegrityKeys(prefix)
+  expect(keys).toContain(`${prefix}000000000`)
+  expect(keys).toContain(`${prefix}000000000.file`)
+
+  const rev = await integrityTestStore.getRevision(`${prefix}000000000`)
+  expect(rev.payload?.metadata.title).toBe(dataset.title)
+  expect(rev.payload?.metadata.createdBy).toBeUndefined() // covered projection only
+  expect(rev.payload?.file?.size).toBeGreaterThan(0)
+
+  const { body } = await integrityTestStore.readPayload(`${prefix}000000000.file`)
+  const chunks: Buffer[] = []
+  for await (const c of body) chunks.push(c as Buffer)
+  const { createHash } = await import('node:crypto')
+  expect(createHash('md5').update(Buffer.concat(chunks)).digest('hex')).toBe(rev.hash.md5)
+})
+
+test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+
+  // unchanged state and a payload-bearing latest anchor → dedupe, no new revision
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+
+  // simulate an L1-era anchor: write a payload-less revision as index 1 directly to the store
+  const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
+  await integrityTestStore.writeRevision(`${prefix}000000001`, {
+    hash: rev0.hash, context: { operation: 'update', origin: 'worker', date: new Date().toISOString() }, dataset: { id: dataset.id }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+
+  // hashes match but the latest anchor has no payload → a fresh payload-bearing revision is written
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
+  const keys = await listIntegrityKeys(prefix)
+  expect(keys).toContain(`${prefix}000000002`)
+  expect(keys).toContain(`${prefix}000000002.file`)
+  expect((await integrityTestStore.getRevision(`${prefix}000000002`)).payload?.metadata).toBeTruthy()
+})
 
 test('relay writes a locked revision when _needsHistorizing is set, then dedupes', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -139,8 +219,9 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
     _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } }
   })
 
-  const keys = await waitForIntegrityRevisions(prefix, 1)
-  expect(keys.length).toBe(1)
+  // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
+  const keys = await waitForIntegrityRevisions(prefix, 2)
+  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(1)
   const raw = await getRawDataset(dataset.id)
   expect(raw._needsHistorizing).toBeUndefined()
   expect(raw.integrity.lastRevision.hash.md5).toBe(dataset.originalFile.md5)
@@ -148,7 +229,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   // flag again without a change → relay must dedupe (clears flag, writes no new revision)
   await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForFlagCleared(dataset.id)
-  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 })
 
 test('flagging a REST dataset (no file) anchors metadata only: sha256 present, no md5', async () => {
@@ -179,7 +260,8 @@ test('a file replacement writes a new (second) revision', async () => {
     integrity: { active: true },
     _needsHistorizing: {}
   })
-  expect((await waitForIntegrityRevisions(prefix, 1)).length).toBe(1)
+  // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
+  expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file')).length).toBe(1)
 
   // replace the file; the finalize hook sets _needsHistorizing because integrity.active is true,
   // and the new md5 (dataset2.csv) differs from the anchor → relay writes revision 1. The joint
@@ -193,8 +275,87 @@ test('a file replacement writes a new (second) revision', async () => {
     await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: form.getHeaders() })
   })
 
-  const keys = await waitForIntegrityRevisions(prefix, 2)
-  expect(keys.length).toBe(2)
+  // 4 keys: 2 revisions × (JSON + .file payload)
+  const keys = await waitForIntegrityRevisions(prefix, 4)
+  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(2)
+})
+
+// ---------------------------------------------------------------------------------------------
+// payload reference dedupe: one locked file copy per distinct file version (§3.1 amendment)
+// ---------------------------------------------------------------------------------------------
+
+test('a metadata-only edit references the file-owning revision; a file change owns a fresh payload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // rev 0 owns its own bytes: no reference index
+  const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
+  expect(rev0.payload?.file?.i).toBeUndefined() // absent i = own index
+  const ownSize = rev0.payload!.file!.size
+
+  // metadata-only edit → rev 1 references rev 0's payload, and writes NO new .file key
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only change' })
+  const afterMeta = await waitForIntegrityRevisions(prefix, 3)
+  await waitForFlagCleared(dataset.id)
+  expect(afterMeta.filter(k => !k.endsWith('.file')).length).toBe(2) // rev 0 + rev 1
+  expect(afterMeta.filter(k => k.endsWith('.file')).length).toBe(1) // still only rev 0's payload
+  expect(afterMeta).not.toContain(`${prefix}000000001.file`)
+  const rev1 = await integrityTestStore.getRevision(`${prefix}000000001`)
+  expect(rev1.payload?.file?.i).toBe(0) // references the bytes-owning revision
+  expect(rev1.payload?.file?.size).toBe(ownSize)
+  expect(rev1.hash.md5).toBe(rev0.hash.md5) // file bytes unchanged
+
+  // a subsequent FILE change → rev 2 owns a fresh payload at its own index (no i)
+  await doAndWaitForFinalize(admin, dataset.id, async () => {
+    const FormData = (await import('form-data')).default
+    const fs = (await import('fs-extra')).default
+    const path = (await import('node:path')).default
+    const form = new FormData()
+    form.append('file', fs.readFileSync(path.resolve('./tests/resources/datasets/dataset2.csv')), 'dataset1.csv')
+    await admin.post(`/api/v1/datasets/${dataset.id}`, form, { headers: form.getHeaders() })
+  })
+  // 5 keys: rev0, rev0.file, rev1 (reference, no .file), rev2, rev2.file
+  const afterFile = await waitForIntegrityRevisions(prefix, 5)
+  expect(afterFile).toContain(`${prefix}000000002.file`)
+  const rev2 = await integrityTestStore.getRevision(`${prefix}000000002`)
+  expect(rev2.payload?.file?.i).toBeUndefined() // owns its own bytes
+  expect(rev2.hash.md5).not.toBe(rev0.hash.md5)
+})
+
+test('a referencing revision extends the owning payload at write time; renewal on a reference anchor slides the referenced payload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const ownPayloadKey = `${prefix}000000000.file`
+  const beforeRef = await integrityTestStore.getRetention(ownPayloadKey)
+
+  // metadata-only edit → rev 1 references rev 0's payload
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only' })
+  await waitForIntegrityRevisions(prefix, 3)
+  await waitForFlagCleared(dataset.id)
+  expect((await integrityTestStore.getRevision(`${prefix}000000001`)).payload?.file?.i).toBe(0)
+
+  // reference-time extension: writing the referencing revision pushed the owning payload's
+  // retain-until forward, so a superseded payload outlives every revision that references it
+  const afterRef = await integrityTestStore.getRetention(ownPayloadKey)
+  expect(afterRef!.getTime()).toBeGreaterThan(beforeRef!.getTime())
+
+  // make the latest (a reference) anchor look due, then check → renewal must slide the REFERENCED
+  // payload (rev 0's .file), since rev 1 has no .file object of its own
+  const revBefore = await integrityTestStore.getRetention(`${prefix}000000001`)
+  const payloadBefore = await integrityTestStore.getRetention(ownPayloadKey)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+  const revAfter = await integrityTestStore.getRetention(`${prefix}000000001`)
+  const payloadAfter = await integrityTestStore.getRetention(ownPayloadKey)
+  expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
+  expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
 })
 
 // ---------------------------------------------------------------------------------------------
@@ -242,8 +403,8 @@ test('a check during a pending legitimate update never reports a breach', async 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(['unknown', 'ok']).toContain(check.status)
 
-  // once the relay has anchored the new content the check is 'ok'
-  await waitForIntegrityRevisions(prefix, 2)
+  // once the relay has anchored the new content the check is 'ok' (4 keys: 2 revisions × JSON + .file)
+  await waitForIntegrityRevisions(prefix, 4)
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 
   await new Promise(resolve => setTimeout(resolve, 1500)) // settle: allow a stray event to arrive
@@ -360,4 +521,35 @@ test('a failed lock extension is recorded as lastRenewal.failed and does not fai
   // the real lock is untouched (extend was rejected)
   const got = await integrityTestStore.getRetention(latestKey)
   expect((got!.getTime() - Date.now()) / (24 * 3600000)).toBeGreaterThan(9)
+})
+
+test('lock renewal extends the payload object too', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset, latestKey } = await enabledDataset(admin)
+  const payloadKey = latestKey + '.file'
+
+  // snapshot both real S3 locks right after the anchor write, before any renewal — dev retention
+  // is only 1 day (see development.cjs), so comparing against an absolute far-future threshold
+  // would not discriminate "renewed" from "just-created": both land ~1 day out. Comparing the
+  // before/after timestamps directly does discriminate, regardless of the configured retention length
+  const revBefore = await integrityTestStore.getRetention(latestKey)
+  const payloadBefore = await integrityTestStore.getRetention(payloadKey)
+
+  // force the persisted anchor to look old (due): retain-until ~1h out (< 22h) — same trick as
+  // 'a due anchor is renewed on check'
+  const soon = new Date(Date.now() + 3600 * 1000).toISOString()
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+
+  // both the revision JSON and its .file sibling must have slid forward — the payload's lock
+  // must not be left behind on its original, now-stale, retain-until
+  const revAfter = await integrityTestStore.getRetention(latestKey)
+  const payloadAfter = await integrityTestStore.getRetention(payloadKey)
+  expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
+  expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
 })
