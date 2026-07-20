@@ -6,18 +6,49 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import config from '#config'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
-import { isFileDataset } from '#types/dataset/index.ts'
+import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
 import * as ops from './operations.ts'
+import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
 import { md5OfStorageFile } from './hash.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
+import * as restUtils from '../datasets/utils/rest.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 
 const debug = Debug('integrity-checker')
 const BATCH = 100
 
-export type Check = { status: 'ok' | 'breach' | 'unknown', date?: string, breach?: Array<'file' | 'metadata'> }
+export type Check = {
+  status: 'ok' | 'breach' | 'unknown'
+  date?: string
+  breach?: Array<'file' | 'metadata' | 'lines'>
+  lines?: { checked: number, diverged: number, sample: string[] }
+}
+
+// Compare live Mongo lines against the latest anchors recovered from LIST alone (the sha256 is
+// embedded in each key). Returns the three divergence shapes plus the anchor map (restore/fix
+// need the keys to fetch payloads / write tombstones).
+export const compareDatasetLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>) => {
+  const keys = (await store.listRevisions(lops.linesPrefix(dataset.owner, dataset.id))).map((r) => r.key)
+  const anchors = lops.latestLineAnchors(keys)
+  const unvisited = new Set(anchors.keys())
+  const edited: string[] = []
+  const inserted: string[] = []
+  let checked = 0
+  const c = restUtils.collection(dataset as any)
+  for await (const line of c.find({ _deleted: { $ne: true } })) {
+    checked++
+    unvisited.delete(line._id)
+    const verdict = lops.classifyLine(line, anchors.get(line._id))
+    if (verdict === 'edited') edited.push(line._id)
+    else if (verdict === 'inserted') inserted.push(line._id)
+    if (checked % 1000 === 0) await new Promise(resolve => setImmediate(resolve))
+  }
+  // anchors never visited by a live line: out-of-band deletes (unless their latest is a tombstone)
+  const missing = [...unvisited].filter((lineId) => !anchors.get(lineId)!.deleted)
+  return { checked, edited, inserted, missing, anchors }
+}
 
 // Lock renewal by extension (architecture §3.4 Option B): when a passing check finds the current
 // anchor is "old" (per ops.needsRenewal), push its compliance retain-until forward in place so the
@@ -52,10 +83,36 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   }
 }
 
+// Per-line lock renewal (target 3): when the dataset's lines-renewal horizon is due and the
+// check passed, extend every live latest anchor in one pass. Exhaustive by necessity (§3.5):
+// a missed renewal permanently loses that line's repairability at lock expiry. Tombstone
+// anchors are deliberately skipped — a deleted line's history ages out.
+const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, anchors: Map<string, lops.LatestLineAnchor>): Promise<void> => {
+  const retentionDays = config.integrity?.retention?.days ?? 365
+  if (!ops.needsRenewal((dataset.integrity as any)?.linesRenewal?.retainUntil, Date.now(), retentionDays)) return
+  const date = new Date().toISOString()
+  const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
+  let renewed = 0
+  let failed = 0
+  for (const anchor of anchors.values()) {
+    if (anchor.deleted) continue
+    try {
+      await store.extendRetention(anchor.key, retainUntil)
+      renewed++
+    } catch (err) {
+      internalError('integrity-renew-lines', err)
+      failed++
+    }
+  }
+  await mongo.datasets.updateOne({ id: dataset.id }, {
+    $set: { 'integrity.linesRenewal': { date, status: failed ? 'failed' : 'ok', renewed, failed, ...(failed ? {} : { retainUntil: retainUntil.toISOString() }) } }
+  })
+}
+
 export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => {
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
-  if (dataset._needsHistorizing) return { status: 'unknown' }
+  if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const latest = ops.latestKey((await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key))
@@ -71,7 +128,7 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
 
   const latestRevision = await store.getRevision(latest)
   const expected = latestRevision.hash
-  const breach: Array<'file' | 'metadata'> = []
+  const breach: Array<'file' | 'metadata' | 'lines'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
   const actualMd5 = isFileDataset(dataset)
     ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
@@ -84,17 +141,29 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   const freshDoc = await mongo.datasets.findOne({ id: dataset.id })
   if (!freshDoc || ops.metadataHash(freshDoc) !== expected.sha256) breach.push('metadata')
 
+  let linesResult: { checked: number, diverged: number, sample: string[] } | undefined
+  let linesCompare: Awaited<ReturnType<typeof compareDatasetLines>> | undefined
+  if (isRestDataset(dataset as any)) {
+    linesCompare = await compareDatasetLines(dataset, store)
+    const divergedIds = [...linesCompare.edited, ...linesCompare.inserted, ...linesCompare.missing]
+    if (divergedIds.length) breach.push('lines')
+    linesResult = { checked: linesCompare.checked, diverged: divergedIds.length, sample: divergedIds.slice(0, 20) }
+  }
+
   const status: 'ok' | 'breach' = breach.length ? 'breach' : 'ok'
   const date = new Date().toISOString()
   const wasBreach = (dataset.integrity as any)?.lastCheck?.status === 'breach'
   await mongo.datasets.updateOne({ id: dataset.id }, {
-    $set: { 'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}) } }
+    $set: { 'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}) } }
   })
   if (status === 'breach' && !wasBreach) {
     await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
   }
-  if (status === 'ok') await maybeRenew(dataset, store, latest, latestRevision)
-  return { status, date, ...(breach.length ? { breach } : {}) }
+  if (status === 'ok') {
+    await maybeRenew(dataset, store, latest, latestRevision)
+    if (linesCompare) await maybeRenewLines(dataset, store, linesCompare.anchors)
+  }
+  return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}) }
 }
 
 const runOnce = async () => {

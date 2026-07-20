@@ -232,8 +232,18 @@ router.get('/rest-collection-find-one/:datasetId', async (req, res, next) => {
 // Update one document in a REST dataset MongoDB collection
 router.post('/rest-collection-update-one/:datasetId', async (req, res, next) => {
   try {
-    const { filter, update } = req.body
-    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update)
+    const { filter, update, upsert } = req.body
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update, { upsert: !!upsert })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Delete one document in a REST dataset MongoDB collection (out-of-band tamper for integrity tests)
+router.post('/rest-collection-delete-one/:datasetId', async (req, res, next) => {
+  try {
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).deleteOne(req.body.filter)
     res.json({ ok: true })
   } catch (err) {
     next(err)

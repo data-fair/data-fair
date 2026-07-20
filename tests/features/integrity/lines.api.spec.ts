@@ -188,3 +188,56 @@ test('enable is refused above the lines gate', async () => {
     await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 100000 })
   }
 })
+
+// ---------------------------------------------------------------------------------------------
+// checker: lines verdict (target 3) — the three out-of-band tamper shapes + the pending guard
+// ---------------------------------------------------------------------------------------------
+
+const enableAndDrain = async (ax: any, datasetId: string) => {
+  await ax.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, datasetId)
+}
+
+test('check reports the three line tamper shapes and heals via the transaction path', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  let check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+
+  // 1. out-of-band content edit (no _hash/_i touch — the silent-edit blind spot the fold had)
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
+  })
+  // 2. out-of-band insert
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'ghost' }, update: { $set: { attr1: 'ghost', _i: 1, _updatedAt: new Date().toISOString() } }, upsert: true
+  })
+  // 3. out-of-band delete
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
+
+  check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+  expect(check.breach).toContain('lines')
+  expect(check.lines.diverged).toBe(3)
+  expect(check.lines.sample.sort()).toEqual(['ghost', 'line0', 'line1'])
+})
+
+test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  // simulate a dataset stuck with an undrained lines hint (e.g. status 'error') without any real
+  // pending line — the guard must fail safe rather than report 'ok' against a possibly-stale view
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  try {
+    const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+    expect(check.status).toBe('unknown')
+  } finally {
+    await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { _needsHistorizingLines: '' } })
+  }
+})
