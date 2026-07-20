@@ -93,6 +93,11 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       const indexName = await initDatasetIndex(dataset)
       await switchAlias(dataset, indexName)
       await restDatasetsUtils.configureHistory(dataset)
+      // the ES index was just built empty by the stamping code -> trivially fully stamped
+      // (every doc has _bytes, vacuously true with zero docs), and the invariant holds forever
+      // after since every REST write path indexes through the same stamping indexStream
+      dataset._esLineBytes = true
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _esLineBytes: true } })
       await updateStorage(dataset)
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
