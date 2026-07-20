@@ -14,7 +14,8 @@ import * as datasetUtils from '../utils/index.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { fallbackMimeTypes } from '../utils/upload.ts'
 import { applyPatch } from '../service.ts'
-import { isFileDataset } from '#types/dataset/index.ts'
+import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
+import * as restUtils from '../utils/rest.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
 import { revisionPrefix, parseRevisionIndex, isPayloadKey, revisionKey, payloadKey, restoreUpdate, rehydrateTopics, coveredMetadata } from '../../integrity/operations.ts'
 import { anchorDataset } from '../../integrity/relay.ts'
@@ -28,20 +29,43 @@ export const registerIntegrityRoutes = (router: Router) => {
     const active = !!req.body?.active
     if (active) {
       if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
-      if (!isFileDataset(dataset) || !dataset.originalFile?.md5) throw httpError(400, 'integrity can only be enabled on a finalized file dataset')
+      const isRest = isRestDataset(dataset)
+      if (!isRest && (!isFileDataset(dataset) || !dataset.originalFile?.md5)) {
+        throw httpError(400, 'integrity can only be enabled on a finalized file dataset or an editable (rest) dataset')
+      }
+      if (isRest) {
+        // the coverage gate (target 3): per-line anchors mean per-line writes, checks and lock
+        // renewals — refuse enrollment where that burden is not tractable
+        const maxLines = config.integrity.lines?.maxLines ?? 100000
+        const liveLines = await restUtils.count(dataset, { _deleted: { $ne: true } })
+        if (liveLines > maxLines) throw httpError(409, `this dataset has ${liveLines} lines, above the integrity gate of ${maxLines}`)
+      }
+      const retentionDays = config.integrity.retention?.days ?? 365
+      const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
       // bump updatedAt so the dataset read-cache (getDatasetFresh) detects the change; a raw
       // updateOne leaves updatedAt untouched and reads then serve a stale doc without integrity.active
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.active': true, updatedAt: new Date().toISOString() } })
+      const $set: Record<string, any> = { 'integrity.active': true, updatedAt: new Date().toISOString() }
+      // baseline for the per-line renewal cadence: conservative (backfill revisions written by
+      // the relay get equal-or-later locks, so renewal triggers no later than needed)
+      if (isRest) $set['integrity.linesRenewal'] = { date: new Date().toISOString(), status: 'ok', retainUntil: retainUntil.toISOString() }
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set })
       // anchor synchronously: enable is a rare superadmin action, and the response then reflects
       // the anchored state. On failure (S3 down) active stays true with no anchor — the check
       // reports 'unknown' and a later _fix retries (fail-loud, no compensating rollback).
       await anchorDataset(dataset, { operation: 'enable', origin: 'superadmin' })
+      if (isRest) {
+        // async backfill: stamp every line (hint-first) and let the relay drain; GET _integrity
+        // reports pending progress and checks stay 'unknown' until drained
+        await restUtils.collection(dataset).createIndex({ _needsHistorizing: 1 }, { sparse: true })
+        await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+        await restUtils.collection(dataset).updateMany({}, { $set: { _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } } } })
+      }
     } else {
       await mongo.datasets.updateOne({ id: dataset.id }, {
         // clear the verdicts and any pending relay work: a disabled dataset must not keep showing
         // a breach badge / error-filter listing it no longer allows acting on
         $set: { integrity: { active: false }, updatedAt: new Date().toISOString() },
-        $unset: { _needsHistorizing: '' }
+        $unset: { _needsHistorizing: '', _needsHistorizingLines: '' }
       })
     }
     res.status(200).json({ active })
@@ -49,7 +73,17 @@ export const registerIntegrityRoutes = (router: Router) => {
 
   router.get('/:datasetId/_integrity', readDataset({ noCache: true }), permissions.middleware('readIntegrity', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
-    res.json(dataset.integrity ?? { active: false })
+    const integrity = { ...(dataset.integrity ?? { active: false }) }
+    if (integrity.active && isRestDataset(dataset)) {
+      const c = restUtils.collection(dataset)
+      const maxLines = config.integrity?.lines?.maxLines ?? 100000
+      const [total, pending] = await Promise.all([
+        restUtils.count(dataset, { _deleted: { $ne: true } }),
+        c.countDocuments({ _needsHistorizing: { $exists: true } })
+      ])
+      integrity.lines = { anchored: Math.max(0, total - pending), pending, ...(total > maxLines ? { overGate: true } : {}) }
+    }
+    res.json(integrity)
   })
 
   router.post('/:datasetId/_integrity/_fix', readDataset({ noCache: true }), async (req, res) => {

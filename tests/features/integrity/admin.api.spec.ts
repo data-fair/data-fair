@@ -31,10 +31,10 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
   expect(status.lastRevision.hash.sha256).toBeTruthy()
 })
 
-test('enable is rejected on a dataset without an md5 file', async () => {
+test('enable is rejected on a dataset that is neither a finalized file dataset nor rest', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  // a REST dataset has no originalFile.md5
-  const ds = (await admin.post('/api/v1/datasets', { isRest: true, title: 'rest-int', schema: [{ key: 'a', type: 'string' }] })).data
+  // a virtual dataset is neither a file dataset (no originalFile.md5) nor rest (target 3 opened enable up to rest)
+  const ds = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual-int' })).data
   await expect(admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })).rejects.toMatchObject({ status: 400 })
 })
 

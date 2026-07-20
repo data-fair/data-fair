@@ -4,6 +4,7 @@
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { ensureIntegrityBucket, integrityTestStore } from '../../support/integrity.ts'
+import { waitForFinalize } from '../../support/workers.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -155,4 +156,35 @@ test('a deleted line ships a tombstone revision and the doc is purged after both
   }
   const count = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
   expect(count).toBe(0)
+})
+
+test('enable on a REST dataset backfills every live line and GET reports progress', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  // wait for initial indexing to settle before enabling (polls status via the journal instead of a fixed sleep)
+  await waitForFinalize(ax, dataset.id)
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const integrity = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(integrity.active).toBe(true)
+  expect(integrity.lines).toMatchObject({ anchored: 2, pending: 0 })
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
+  expect(keys).toHaveLength(2)
+  const rev = await integrityTestStore.getRevision(keys[0])
+  expect((rev as any).context.operation).toBe('enable')
+})
+
+test('enable is refused above the lines gate', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 0 })
+  try {
+    await expect(ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }))
+      .rejects.toMatchObject({ status: 409 })
+  } finally {
+    await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 100000 })
+  }
 })
