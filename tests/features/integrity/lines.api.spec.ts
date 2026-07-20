@@ -48,7 +48,8 @@ test('line writes stamp _needsHistorizing and the dataset hint when integrity is
   // patch-dataset does not bump updatedAt, so drop the read-cache to force a fresh mongo read
   await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
-  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'b', attr2: 2 })
+  const postRes = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'b', attr2: 2 })
+  expect(postRes.data._needsHistorizing).toBeUndefined()
   const line = await rawLine(ax, dataset.id, 'line0')
   expect(line._needsHistorizing?.context?.origin).toBe('superadmin')
   const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data

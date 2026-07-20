@@ -28,6 +28,7 @@ const cleanItem = (item: any) => {
   delete item._hash
   delete item._needsIndexing
   delete item._needsExtending
+  delete item._needsHistorizing
   delete item._deleted
 }
 

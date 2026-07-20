@@ -78,6 +78,7 @@ const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 function cleanLine (line: DatasetLine) {
   delete line._needsIndexing
   delete line._needsExtending
+  delete line._needsHistorizing
   delete line._deleted
   delete line._action
   delete line._error
