@@ -7,7 +7,7 @@ export * from './.type/index.js'
 // mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
 // package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
 type HistorizeContextHint = {
-  operation: 'create' | 'update' | 'enable' | 'fixIntegrity'
+  operation: 'create' | 'update' | 'enable' | 'fixIntegrity' | 'restore'
   origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
   reason?: string
 }

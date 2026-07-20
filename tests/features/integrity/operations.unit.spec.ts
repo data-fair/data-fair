@@ -188,3 +188,45 @@ test('coveredMetadata strips readApiKey renewal churn but keeps active/interval'
   const disabled = { id: 'ds1', readApiKey: { ...base.readApiKey, active: false } }
   expect(ops.metadataHash(base)).not.toBe(ops.metadataHash(disabled))
 })
+
+test('payloadKey appends the .file suffix to the revision key', () => {
+  expect(ops.payloadKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007.file')
+  expect(ops.isPayloadKey('data-fair/organization-acme/ds1/000000007.file')).toBe(true)
+  expect(ops.isPayloadKey('data-fair/organization-acme/ds1/000000007')).toBe(false)
+})
+
+test('latestKey and nextIndex ignore payload keys', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000000',
+    'data-fair/organization-acme/ds1/000000001',
+    'data-fair/organization-acme/ds1/000000001.file'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
+
+test('restoreUpdate writes only diverging covered keys and unsets extra ones', () => {
+  const snapshot = { title: 'legit', description: 'legit desc', owner: { type: 'organization', id: 'acme' } }
+  const hot = {
+    title: 'tampered',
+    description: 'legit desc',
+    injected: 'evil',
+    status: 'finalized', // denylisted: must never be touched
+    owner: { type: 'organization', id: 'acme', name: 'Acme Corp' } // normalizes to snapshot → untouched
+  }
+  const { $set, $unset } = ops.restoreUpdate(hot, snapshot)
+  expect($set).toEqual({ title: 'legit' }) // description equal → skipped; owner equal after normalization → skipped
+  expect($unset).toEqual({ injected: '' })
+})
+
+test('restoreUpdate restores a tampered owner as its normalized form', () => {
+  const snapshot = { owner: { type: 'organization', id: 'acme' } }
+  const hot = { owner: { type: 'organization', id: 'evil', name: 'Evil' } }
+  expect(ops.restoreUpdate(hot, snapshot).$set.owner).toEqual({ type: 'organization', id: 'acme' })
+})
+
+test('rehydrateTopics fills titles back from settings, keeps unknown ids bare', () => {
+  const settingsTopics = [{ id: 't1', title: 'Topic 1', color: '#f00' }]
+  expect(ops.rehydrateTopics([{ id: 't1' }, { id: 'gone' }], settingsTopics))
+    .toEqual([{ id: 't1', title: 'Topic 1', color: '#f00' }, { id: 'gone' }])
+})

@@ -97,10 +97,18 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
-// Patch a dataset document directly in MongoDB (test-only)
+// Patch a dataset document directly in MongoDB (test-only). The body is normally a flat object
+// of fields to $set (backward-compatible shape), but a `$unset` key is also recognized so tests
+// can simulate an out-of-band tamper that REMOVES a covered field (e.g. `file`/`originalFile`),
+// not just overwrites one.
 router.post('/patch-dataset/:datasetId', async (req, res, next) => {
   try {
-    await mongo.datasets.updateOne({ id: req.params.datasetId }, { $set: req.body })
+    const { $unset, ...flatSet } = req.body ?? {}
+    const update: any = {}
+    if (Object.keys(flatSet).length) update.$set = flatSet
+    if ($unset) update.$unset = $unset
+    if (!update.$set && !update.$unset) update.$set = {}
+    await mongo.datasets.updateOne({ id: req.params.datasetId }, update)
     res.status(204).send()
   } catch (err) {
     next(err)
