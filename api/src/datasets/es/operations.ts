@@ -663,3 +663,66 @@ export const buildWordsAggs = (aggType: 'terms' | 'significant_text', field: str
 
   return aggs
 }
+
+// ---- Scoped filters for virtual datasets ----
+
+// element of dataset.virtual.filters (see contract in api/types/dataset/schema.js)
+export type VirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+
+// One arrival of a non-virtual descendant of a virtual dataset, as resolved by the traversal in
+// utils/virtual.ts and attached to the queryable dataset as `dataset.descendants` — the single
+// source of truth for both the multi-index target (aliasName) and the scoped filters below.
+// `index` is resolved by the producer so this module stays config-free.
+// `filters` holds the merged filters of the virtual ancestors on this path; absent = unfiltered.
+// The array is ARRIVAL-based: a descendant reachable both through a filtered and an unfiltered path
+// appears twice, once with filters and once without, which gives union-of-paths semantics below.
+export interface QueryableDescendant {
+  id: string
+  index: string
+  filters?: VirtualFilter[]
+}
+
+// translate dataset.virtual.filters into ES filter clauses
+export const virtualFilterClauses = (filters: VirtualFilter[]): any[] => {
+  const clauses: any[] = []
+  for (const f of filters) {
+    if (!f.values || !f.values.length) continue
+    if (f.operator === 'nin') {
+      if (f.values.length === 1) clauses.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
+      else clauses.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
+    } else {
+      if (f.values.length === 1) clauses.push({ term: { [f.key]: f.values[0] } })
+      else clauses.push({ terms: { [f.key]: f.values } })
+    }
+  }
+  return clauses
+}
+
+// a single filter clause restricting each filtered descendant's subtree to the rows matching
+// the merged filters of its virtual ancestors. term/terms on the _index metafield match index
+// aliases, so the same names used by aliasName work here.
+// returns null when no descendant carries filters: an unfiltered virtual dataset must add no
+// clause at all, keeping its query shape identical to a non-virtual one.
+export const descendantsFilterClause = (descendants: QueryableDescendant[] | undefined): any | null => {
+  // cheap fail-loud check: this is a programming error (a caller that resolved descendants in a
+  // stale shape, or not at all), never user input, so it is an internal 500-class error. Types
+  // alone cannot be trusted here, the repo's tsc is not clean.
+  if (!Array.isArray(descendants)) throw new Error('[internal] missing descendants on a virtual dataset, refusing to query it unscoped')
+  // validate every element up front, before the early return below, so a malformed descendant is
+  // always caught rather than only when some sibling happens to carry filters
+  for (const descendant of descendants) {
+    if (!descendant.index) throw new Error(`[internal] descendant ${descendant.id} has no resolved index, refusing to query it unscoped`)
+  }
+  if (!descendants.some(d => d.filters?.length)) return null
+  const should: any[] = []
+  const unfilteredIndices = new Set<string>()
+  for (const descendant of descendants) {
+    if (!descendant.filters?.length) unfilteredIndices.add(descendant.index)
+  }
+  if (unfilteredIndices.size) should.push({ terms: { _index: [...unfilteredIndices] } })
+  for (const descendant of descendants) {
+    if (!descendant.filters?.length) continue
+    should.push({ bool: { filter: [{ term: { _index: descendant.index } }, ...virtualFilterClauses(descendant.filters)] } })
+  }
+  return { bool: { minimum_should_match: 1, should } }
+}
