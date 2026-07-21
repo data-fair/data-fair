@@ -422,20 +422,26 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Filters of nested virtual ancestors are merged', async () => {
+    // dataset2.csv has 6 rows: 3 with id=koumoul, 2 with id=bidule, 1 with an empty id.
+    // level1's filter (in [koumoul, bidule]) excludes the empty-id row (-> 5 rows).
+    // level2's filter (nin [bidule]) further excludes the 2 bidule rows (-> 3 rows).
+    // both filters are load-bearing here: dropping level1 would yield 4 (3 koumoul + empty-id row),
+    // dropping level2 would yield 5 (3 koumoul + 2 bidule) — unlike dataset1.csv (2 rows total),
+    // which cannot distinguish "both filters applied" from "only one applied".
     const ax = testUser1
-    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await sendDataset('datasets/dataset2.csv', ax)
     const level1 = (await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'level1',
       virtual: { children: [dataset.id], filters: [{ key: 'id', values: ['koumoul', 'bidule'] }] },
-      schema: [{ key: 'id' }, { key: 'adr' }]
+      schema: [{ key: 'id' }, { key: 'employees' }]
     })).data
     await waitForFinalize(ax, level1.id)
     const level2 = (await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'level2',
       virtual: { children: [level1.id], filters: [{ key: 'id', operator: 'nin', values: ['bidule'] }] },
-      schema: [{ key: 'id' }, { key: 'adr' }]
+      schema: [{ key: 'id' }, { key: 'employees' }]
     })).data
     await waitForFinalize(ax, level2.id)
 
@@ -443,12 +449,12 @@ test.describe('virtual datasets core', () => {
       isVirtual: true,
       title: 'level3',
       virtual: { children: [level2.id] },
-      schema: [{ key: 'id' }, { key: 'adr' }]
+      schema: [{ key: 'id' }, { key: 'employees' }]
     })
     const parent = await waitForFinalize(ax, res.data.id)
     const lines = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
-    assert.equal(lines.data.total, 1)
-    assert.equal(lines.data.results[0].id, 'koumoul')
+    assert.equal(lines.data.total, 3)
+    assert.ok(lines.data.results.every((r: any) => r.id === 'koumoul'), JSON.stringify(lines.data.results))
   })
 
   test('A virtual dataset cannot have a child virtual dataset with filterActiveAccount', async () => {
