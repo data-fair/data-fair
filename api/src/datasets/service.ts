@@ -522,7 +522,12 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // anchoring every interim covered-key touch along the way.
   if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing && !dataset._partialRestStatus) {
     if (integrityOps.coveredPatchKeys(patch).length) {
-      patch._needsHistorizing = { context: { operation: 'update', origin: 'user' } }
+      // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
+      // only means "re-anchor", and the pending context is the more specific one — e.g. the
+      // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
+      // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
+      // generic update/user context before finalize gets to preserve it
+      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user' } }
     }
   }
 
