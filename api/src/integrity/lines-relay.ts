@@ -31,8 +31,11 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
       retainUntil
     )
   } else {
-    const payload = lops.cleanedLineBody(line)
-    const sha256 = lops.lineSha256(line)
+    // extension-owned columns are excluded from the covered body (see extensionOwnedKeys):
+    // the extender rewrites them out-of-pipeline, and they are rebuildable anyway
+    const excluded = lops.extensionOwnedKeys(dataset.extensions)
+    const payload = lops.cleanedLineBody(line, excluded)
+    const sha256 = lops.lineSha256(line, excluded)
     await store.writeRevision(
       lops.lineRevisionKey(dataset.owner, dataset.id, line._id, line._i!, sha256),
       { hash: { sha256 }, context, dataset: { id: dataset.id, slug: dataset.slug }, line: lineMeta, payload },

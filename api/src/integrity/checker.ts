@@ -42,11 +42,13 @@ export const compareDatasetLines = async (dataset: DatasetInternal, store: Retur
   const edited: string[] = []
   const inserted: string[] = []
   let checked = 0
+  // must mirror the relay: extension-owned columns are outside the covered body
+  const excluded = lops.extensionOwnedKeys(dataset.extensions)
   const c = restUtils.collection(dataset as any)
   for await (const line of c.find({ _deleted: { $ne: true } })) {
     checked++
     unvisited.delete(line._id)
-    const verdict = lops.classifyLine(line, anchors.get(line._id))
+    const verdict = lops.classifyLine(line, anchors.get(line._id), excluded)
     if (verdict === 'edited') edited.push(line._id)
     else if (verdict === 'inserted') inserted.push(line._id)
     if (checked % 1000 === 0) await new Promise(resolve => setImmediate(resolve))
@@ -177,8 +179,11 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
 }
 
 const runOnce = async () => {
+  // pre-exclude BOTH pending-relay markers (M3): checkDataset would return 'unknown' without
+  // persisting lastCheck.date, so a hinted dataset would keep sorting first and waste a sweep
+  // slot every night until its relay drains
   const cursor = mongo.datasets
-    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false } })
+    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false }, _needsHistorizingLines: { $exists: false } })
     .sort({ 'integrity.lastCheck.date': 1 })
     .limit(BATCH)
   for await (const dataset of cursor) {

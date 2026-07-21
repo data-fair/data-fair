@@ -459,9 +459,20 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   if (removedRestProps && removedRestProps.length) {
     // some property was removed in rest dataset, trigger full re-indexing
-    await restDatasetsUtils.collection(dataset).updateMany({},
-      { $unset: removedRestProps.reduce<Record<string, ''>>((a, df) => { a[df.key] = ''; return a }, {}) }
-    )
+    const unset = removedRestProps.reduce<Record<string, ''>>((a, df) => { a[df.key] = ''; return a }, {})
+    // a removed non-underscore property changes every line's covered body: on an enrolled
+    // dataset this legitimate rewrite must re-anchor the lines or the next check would read
+    // them all as out-of-band edits. Hint FIRST (the historizeLines worker discovers stamped
+    // lines through the dataset-level hint), then the stamp merged into the same line write.
+    const coveredRemoved = removedRestProps.some((df) => !df.key.startsWith('_'))
+    if (dataset.integrity?.active && coveredRemoved) {
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+      const context = patch._needsHistorizing?.context ?? { operation: 'update', origin: 'user' }
+      await restDatasetsUtils.collection(dataset).updateMany({},
+        { $unset: unset, $set: { _needsHistorizing: { context } } })
+    } else {
+      await restDatasetsUtils.collection(dataset).updateMany({}, { $unset: unset })
+    }
   }
 
   if (attemptMappingUpdate) {

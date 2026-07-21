@@ -99,6 +99,12 @@ export const disableIntegrity = async (dataset: DatasetInternal): Promise<void> 
     $set: { integrity: { active: false }, updatedAt: new Date().toISOString() },
     $unset: { _needsHistorizing: '', _needsHistorizingLines: '' }
   })
+  // per-line stamp residue (M2): with the hint gone the relay will never visit these lines, and
+  // a later re-enable's backfill re-stamps everything anyway — sweep them now. After the dataset
+  // update above so a racing line write cannot re-stamp behind the sweep.
+  if (isRestDataset(dataset)) {
+    await restUtils.collection(dataset).updateMany({ _needsHistorizing: { $exists: true } }, { $unset: { _needsHistorizing: '' } })
+  }
 }
 
 export const getIntegrityState = async (dataset: DatasetInternal): Promise<Record<string, any>> => {
@@ -162,7 +168,8 @@ export const fixIntegrity = async (dataset: DatasetInternal, reason?: string): P
     const blessIds = [...compare.edited, ...compare.inserted]
     if (blessIds.length) {
       const liveLines = await restUtils.collection(dataset).find({ _id: { $in: blessIds } }).toArray()
-      const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line) }))
+      const excluded = lops.extensionOwnedKeys(dataset.extensions)
+      const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line, excluded) }))
       await rewriteLinesThroughPipeline(dataset, transacs, hint)
     }
     // tombstone revisions for vanished lines: continue each sequence past its stale anchor
@@ -215,10 +222,14 @@ export const restoreRevision = async (app: any, dataset: DatasetInternal, i: num
   const revision = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))
   if (!revision.payload) throw httpError(400, 'this revision has no payload (level-1 anchor): not restorable')
 
-  // file part: the stored file's actual bytes vs the revision's file hash (metadata fields can
-  // lie). Computed and gated up front, BEFORE the metadata write below: a file restore refused
-  // with 409 must not have already applied its metadata $set/$unset. Metadata-only restores (no
-  // file divergence) stay ungated.
+  // A restore routes its work through the standard pipeline (a file re-ingest, or a metadata
+  // patch that can wake revalidation/reindex workers — M6): only a settled dataset is a safe
+  // target, and the refusal comes BEFORE any write so a refused restore writes nothing.
+  if (dataset.status !== 'finalized' && dataset.status !== 'error') {
+    throw httpError(409, 'dataset is not in a stable state (finalized/error) for a restore')
+  }
+
+  // file part: the stored file's actual bytes vs the revision's file hash (metadata fields can lie)
   const currentFileHash = isFileDataset(dataset)
     ? await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
       if (err.status === 404) return undefined
@@ -226,15 +237,8 @@ export const restoreRevision = async (app: any, dataset: DatasetInternal, i: num
     })
     : undefined
   const needsFileRestore = !!(revision.payload.file && revision.hash.file !== currentFileHash)
-  if (needsFileRestore) {
-    // re-ingesting mutates the dataset through the full pipeline; refuse while it is mid-processing
-    // (only a settled finalized/error dataset is safe to route a fresh file replacement through)
-    if (dataset.status !== 'finalized' && dataset.status !== 'error') {
-      throw httpError(409, 'dataset is not in a stable state (finalized/error) for a file restore')
-    }
-  }
 
-  // metadata part: write back only the genuinely diverging covered keys
+  // metadata part: only the genuinely diverging covered keys
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
   if (!fresh) throw httpError(404, 'dataset not found')
   const { $set, $unset } = ops.restoreUpdate(fresh, revision.payload.metadata)
@@ -242,56 +246,78 @@ export const restoreRevision = async (app: any, dataset: DatasetInternal, i: num
     const settings = await mongo.db.collection('settings').findOne({ type: dataset.owner.type, id: dataset.owner.id })
     $set.topics = ops.rehydrateTopics($set.topics, settings?.topics ?? [])
   }
+  const restoreContext: HistorizeContextHint = { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) }
+
+  if (!needsFileRestore) {
+    // metadata-only restore: route the diverging keys through the standard patch pipeline (M6)
+    // instead of a raw $set — a restored schema/extensions/rest change needs the same
+    // revalidation, status triggers (reindex, line cleanup) and bookkeeping as a legitimate
+    // patch. The restore context rides the patch's own outbox stamp (applyPatch defers to it,
+    // finalize preserves it if a worker takes over).
+    if (Object.keys($set).length || Object.keys($unset).length) {
+      const patch: any = { _needsHistorizing: { context: restoreContext } }
+      for (const key of Object.keys($set)) patch[key] = $set[key]
+      for (const key of Object.keys($unset)) patch[key] = null
+      const datasetClone: any = clone(fresh)
+      const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(app, patch, datasetClone, sessionState, locale)
+      if (!isEmpty) {
+        await applyPatch(datasetClone, patch, removedRestProps, attemptMappingUpdate)
+        // the patch woke a worker (revalidation/reindex): the pipeline re-anchors on finalize
+        // with the preserved restore context — report async completion like the file branch
+        if (patch.status) return { status: 'restoring' }
+      }
+    }
+    // no worker woken: anchor synchronously with the restore context and respond with the
+    // fresh verdict, like _fix. force: true — restore must always leave its own auditable
+    // revision, even when the corrected state lands back on one identical to a prior anchor
+    // (anchorDataset's normal dedupe would otherwise silently swallow the remediation)
+    await anchorDataset(dataset, restoreContext, { force: true })
+    await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
+    const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
+    return await checkDataset(freshAfter as unknown as DatasetInternal)
+  }
+
+  // file restore: the raw metadata write stays (the re-ingest reprocesses everything downstream
+  // through the draft pipeline, which revalidates what the metadata-only path routes through
+  // preparePatch; and preparePatch below needs the healed doc — see the stale-clone note)
   if (Object.keys($set).length || Object.keys($unset).length) {
     const update: any = { $set: { ...$set, updatedAt: new Date().toISOString() } }
     if (Object.keys($unset).length) update.$unset = $unset
     await mongo.datasets.updateOne({ id: dataset.id }, update)
   }
 
-  if (needsFileRestore) {
-    // re-ingest through the standard file-replacement path (spec §C): the payload lands in the
-    // loading dir exactly as an upload would, preparePatch/applyPatch route it through the
-    // draft pipeline, and finalize re-anchors with the restore context riding the draft
-    const filename = revision.payload.metadata.originalFile?.name ?? dataset.originalFile?.name ?? 'restored-file'
-    const destination = datasetUtils.loadingDir({ ...dataset, draftReason: true })
-    const finalPath = path.join(destination, filename)
-    // payload reference dedupe: the bytes may live under an earlier revision's `{i}.file`
-    // (absent `file.i` = this revision owns them)
-    const fileRefIndex = revision.payload.file?.i ?? i
-    const { body } = await store.readPayload(ops.payloadKey(dataset.owner, dataset.id, fileRefIndex))
-    // the platform-level originalFile.md5 descriptor is computed in-flight from the payload bytes
-    // (the integrity hash is sha256 now, and metadata fields could have been tampered)
-    const tee = md5Tee()
-    body.on('error', (err: any) => tee.stream.destroy(err))
-    await filesStorage.writeStream(body.pipe(tee.stream), finalPath)
-    const stats = await filesStorage.fileStats(finalPath)
-    // mime type is broken on windows it seems.. detect based on extension instead (mirrors upload.ts's fileFilter)
-    const mimetype = mime.lookup(filename) || fallbackMimeTypes[filename.split('.').pop() as string] || filename.split('.').pop()
-    const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: tee.digest(), mimetype }]
+  // re-ingest through the standard file-replacement path (spec §C): the payload lands in the
+  // loading dir exactly as an upload would, preparePatch/applyPatch route it through the
+  // draft pipeline, and finalize re-anchors with the restore context riding the draft
+  const filename = revision.payload.metadata.originalFile?.name ?? dataset.originalFile?.name ?? 'restored-file'
+  const destination = datasetUtils.loadingDir({ ...dataset, draftReason: true })
+  const finalPath = path.join(destination, filename)
+  // payload reference dedupe: the bytes may live under an earlier revision's `{i}.file`
+  // (absent `file.i` = this revision owns them)
+  const fileRefIndex = revision.payload.file?.i ?? i
+  const { body } = await store.readPayload(ops.payloadKey(dataset.owner, dataset.id, fileRefIndex))
+  // the platform-level originalFile.md5 descriptor is computed in-flight from the payload bytes
+  // (the integrity hash is sha256 now, and metadata fields could have been tampered)
+  const tee = md5Tee()
+  body.on('error', (err: any) => tee.stream.destroy(err))
+  await filesStorage.writeStream(body.pipe(tee.stream), finalPath)
+  const stats = await filesStorage.fileStats(finalPath)
+  // mime type is broken on windows it seems.. detect based on extension instead (mirrors upload.ts's fileFilter)
+  const mimetype = mime.lookup(filename) || fallbackMimeTypes[filename.split('.').pop() as string] || filename.split('.').pop()
+  const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: tee.digest(), mimetype }]
 
-    const patch: any = { _needsHistorizing: { context: { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) } } }
-    // the metadata $set/$unset above may have just restored `file`/`originalFile` on the Mongo
-    // doc (both are covered fields a metadata tamper can unset); preparePatch/applyPatch must
-    // see that post-restore state, not the stale route-entry `dataset` — otherwise a healed
-    // `file` still reads as absent on the clone and preparePatch's file-based guard throws 400
-    // even though the metadata write already landed.
-    const postMetadataDataset = await mongo.datasets.findOne({ id: dataset.id })
-    if (!postMetadataDataset) throw httpError(404, 'dataset not found')
-    const datasetClone: any = clone(postMetadataDataset)
-    await preparePatch(app, patch, datasetClone, sessionState, locale, 'always', files)
-    await applyPatch(datasetClone, patch)
-    return { status: 'restoring' }
-  }
-
-  // metadata-only restore (file part handled above): re-anchor
-  // synchronously with the restore context and respond with the fresh verdict, like _fix.
-  // force: true — restore must always leave its own auditable revision, even when the
-  // corrected state lands back on one identical to a prior anchor (anchorDataset's normal
-  // dedupe would otherwise silently swallow the remediation, see relay.ts for detail)
-  await anchorDataset(dataset, { operation: 'restore', origin: 'superadmin', reason }, { force: true })
-  await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
-  const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
-  return await checkDataset(freshAfter as unknown as DatasetInternal)
+  const patch: any = { _needsHistorizing: { context: restoreContext } }
+  // the metadata $set/$unset above may have just restored `file`/`originalFile` on the Mongo
+  // doc (both are covered fields a metadata tamper can unset); preparePatch/applyPatch must
+  // see that post-restore state, not the stale route-entry `dataset` — otherwise a healed
+  // `file` still reads as absent on the clone and preparePatch's file-based guard throws 400
+  // even though the metadata write already landed.
+  const postMetadataDataset = await mongo.datasets.findOne({ id: dataset.id })
+  if (!postMetadataDataset) throw httpError(404, 'dataset not found')
+  const datasetClone: any = clone(postMetadataDataset)
+  await preparePatch(app, patch, datasetClone, sessionState, locale, 'always', files)
+  await applyPatch(datasetClone, patch)
+  return { status: 'restoring' }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -379,5 +405,7 @@ export const getLineRevision = async (dataset: DatasetInternal, lineId: string, 
   if (!key) throw httpError(404, 'unknown revision')
   const rev: any = await store.getRevision(key)
   const currentLine = await restUtils.collection(dataset).findOne({ _id: lineId })
-  return { i, hash: rev.hash, context: rev.context, line: rev.line, payload: rev.payload, current: currentLine ? lops.cleanedLineBody(currentLine) : undefined }
+  // symmetric with the payload: extension-owned columns are outside the covered body, so the
+  // live projection shown against the snapshot excludes them too (no spurious diff)
+  return { i, hash: rev.hash, context: rev.context, line: rev.line, payload: rev.payload, current: currentLine ? lops.cleanedLineBody(currentLine, lops.extensionOwnedKeys(dataset.extensions)) : undefined }
 }
