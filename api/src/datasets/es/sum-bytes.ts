@@ -2,19 +2,23 @@ import config from '#config'
 import { aliasName } from './commons.ts'
 import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import type { Dataset } from '#types'
 
 // total CSV-equivalent size of the indexed lines: sum of the _bytes field stamped
 // on every doc by index-stream (see the indexed_bytes metric in storage.ts)
-// returns null if the index/alias does not exist (e.g. mid-rebuild transient window), or if the
-// sum is not trustworthy (see coverage check below)
-// this function must NEVER throw: storage accounting (storage()/updateStorage()) can run in
-// worker contexts that have no ES client connected at all (e.g. files-processor), where even
-// accessing es.client throws synchronously — any failure here must degrade gracefully so the
-// caller falls back to its legacy-computed indexed value instead of crashing the whole task
-export default async (dataset: any): Promise<number | null> => {
+// returns null whenever the sum cannot be trusted; the caller then keeps its
+// legacy-computed indexed value instead of failing the whole storage update:
+// - index/alias does not exist: e.g. the transient window in the middle of a full rebuild
+// - incomplete _bytes coverage: see the check below
+// contexts with no ES client at all (the files-processor worker pool) must not call this —
+// they declare it by passing esUnavailable to updateStorage (see UpdateStorageOptions in
+// storage.ts); a call without a connected client lands in the catch below and is reported
+export default async (dataset: Dataset): Promise<number | null> => {
   try {
     const esResponse: any = await es.client.search({
       index: aliasName(dataset),
+      // a missing index/alias matches 0 shards instead of erroring, detected below
+      ignore_unavailable: true,
       body: {
         size: 0,
         track_total_hits: true,
@@ -28,6 +32,9 @@ export default async (dataset: any): Promise<number | null> => {
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
     })
+    // 0 shards searched = the index/alias does not exist (an existing index has >= 1 shard,
+    // even when empty) — distinguishes "no data yet" (a legitimate sum of 0) from "no index"
+    if (!esResponse._shards?.total) return null
     const totalHits = esResponse.hits?.total?.value ?? 0
     const bytesCount = (esResponse.aggregations?.bytesCount as any)?.value ?? 0
     // coverage check: the sum is only valid if EVERY doc in the index carries a _bytes value.
@@ -38,16 +45,10 @@ export default async (dataset: any): Promise<number | null> => {
     // into the tested legacy fallback instead of a silent under-count
     if (bytesCount !== totalHits) return null
     return Math.round((esResponse.aggregations?.bytes as any)?.value ?? 0)
-  } catch (err: any) {
-    // 404 / index_not_found_exception: the index doesn't exist yet (e.g. mid-rebuild) — let the
-    // caller keep its legacy-computed indexed value instead of failing the whole storage update
-    if (err?.meta?.statusCode === 404 || err?.statusCode === 404) return null
-    // the files-processor worker pool connects to Mongo only, never to ES (see
-    // workers/files-processor/index.ts) — its tasks (analyze-csv, analyze-geojson, normalize)
-    // still call updateStorage, so for _esLineBytes datasets we hit this on every run of those
-    // tasks. es.ts throws this exact message synchronously when the client was never connected;
-    // that's an expected, permanent condition here, not an error worth paging on
-    if (err instanceof Error && err.message === 'db was not connected') return null
+  } catch (err) {
+    // no expected condition flows through here (a missing index is handled above without
+    // throwing, ES-less contexts don't call at all) — this is a last-resort guarantee that
+    // storage accounting never crashes on an ES anomaly, and anything caught is worth reporting
     internalError('es-sum-bytes', err)
     return null
   }

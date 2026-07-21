@@ -82,10 +82,20 @@ exactly-once:
 Instead `esUtils.sumBytes` (`api/src/datasets/es/sum-bytes.ts`) sums `_bytes` with a `sum`
 aggregation over the dataset's live index/alias (`size: 0, aggs: { bytes: { sum: { field:
 '_bytes' } } } }`, bounded by `config.elasticsearch.searchTimeout` and
-`allow_partial_search_results: false`; a missing index — e.g. the transient window mid-rebuild —
-is caught (404) and surfaced as `null` rather than thrown. The sum is a **pure function of
-current index state**: it is automatically correct after any sequence of writes/crashes/retries,
-self-healing on the next reindex with no reconciliation logic needed.
+`allow_partial_search_results: false`). It returns `null` (caller keeps its legacy-computed
+value) for every expected can't-trust-the-sum condition, **without exception-based control
+flow**: a missing index/alias — e.g. the transient window mid-rebuild — is searched with
+`ignore_unavailable: true` and detected as `_shards.total === 0` (an existing index has ≥ 1 shard
+even when empty, so a legitimate empty sum of 0 is not confused with "no index"). Contexts that
+have no ES client at all don't reach `sumBytes` in the first place: the files-processor worker
+pool (Mongo only, never ES — its analyze-csv / analyze-geojson / normalize tasks all call
+`updateStorage`) declares this explicitly by passing `esUnavailable: true` in
+`UpdateStorageOptions`, and `storage()` then skips the sum and keeps the legacy computation. The
+remaining `try/catch` is only a last-resort guarantee that storage accounting never crashes on
+an ES anomaly; anything it catches — including a forgotten `esUnavailable` in some future
+ES-less context — is unexpected and reported via `internalError`. The sum is a **pure function
+of current index state**: it is automatically correct after any sequence of
+writes/crashes/retries, self-healing on the next reindex with no reconciliation logic needed.
 
 ## The organic `_esLineBytes` transition
 
@@ -107,8 +117,9 @@ metric is adopted per-dataset, not globally:
   `dataset._esLineBytes` and the dataset isn't virtual, `storage.indexed = { size:
   await esUtils.sumBytes(dataset), parts: ['lines'] }` — replacing whatever the legacy computation
   above it set (data-file size for file datasets, `$collStats` size for REST collections). If the
-  sum comes back `null` (index unavailable), this run **keeps the legacy-computed value** instead
-  of failing the whole storage update.
+  sum comes back `null` (index unavailable, incomplete coverage) — or the calling context
+  declared `esUnavailable` (see above) — this run **keeps the legacy-computed value** instead of
+  failing the whole storage update.
 - Until a dataset's first full reindex under the new code, it silently keeps the legacy
   proxy (physical file size, or REST collection storage size) as its `indexed` figure. Every
   dataset converges to the CSV-equivalent metric on its next natural full reindex (schema change,

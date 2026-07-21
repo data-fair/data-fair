@@ -10,7 +10,7 @@ import debug from 'debug'
 import { dataFiles, metadataAttachmentsDir, attachmentsDir } from './files.ts'
 import type { Account, AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
-import { isVirtualDataset, isRestDataset } from '#types/dataset/index.ts'
+import { isVirtualDataset, isRestDataset, type DatasetInternal } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 
 const debugLimits = debug('limits')
@@ -50,7 +50,16 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
   }
 }
 
-export const storage = async (dataset: Dataset) => {
+export type UpdateStorageOptions = {
+  deleted?: boolean
+  checkRemaining?: boolean
+  // set by callers running in a context with no ES client (the files-processor worker pool
+  // connects to Mongo only): the ES-based indexed sum is not attempted at all and the
+  // legacy-computed indexed value is used for this run
+  esUnavailable?: boolean
+}
+
+export const storage = async (dataset: Dataset & Pick<DatasetInternal, '_esLineBytes'>, options?: Pick<UpdateStorageOptions, 'esUnavailable'>) => {
   // TODO: apply Storage type
   const storage: any = {
     size: 0,
@@ -135,10 +144,10 @@ export const storage = async (dataset: Dataset) => {
 
   // new regime: the index was fully built with per-line _bytes stamping, the
   // CSV-equivalent sum is the indexed metric (see 2026-07-20 design spec)
-  if ((dataset as any)._esLineBytes && !isVirtualDataset(dataset)) {
+  if (dataset._esLineBytes && !options?.esUnavailable && !isVirtualDataset(dataset)) {
     const sum = await esUtils.sumBytes(dataset)
-    // null = index unavailable (e.g. mid-rebuild): keep this run's legacy-computed
-    // indexed value instead of failing the whole storage update
+    // null = sum not trustable (index missing mid-rebuild, incomplete _bytes coverage):
+    // keep this run's legacy-computed indexed value instead of failing the whole storage update
     if (sum !== null) {
       storage.indexed = { size: sum, parts: ['lines'] }
     }
@@ -172,19 +181,19 @@ export const storage = async (dataset: Dataset) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-export const updateStorage = async (dataset: Dataset, deleted = false, checkRemaining = false) => {
+export const updateStorage = async (dataset: Dataset, options?: UpdateStorageOptions) => {
   if (dataset.draftReason) {
     console.log(new Error('updateStorage should not be called on a draft dataset'))
     return
   }
-  if (!deleted) {
+  if (!options?.deleted) {
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: {
-        storage: await storage(dataset)
+        storage: await storage(dataset, options)
       }
     })
   }
-  return updateTotalStorage(dataset.owner, checkRemaining)
+  return updateTotalStorage(dataset.owner, options?.checkRemaining ?? false)
 }
 
 export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = false) => {

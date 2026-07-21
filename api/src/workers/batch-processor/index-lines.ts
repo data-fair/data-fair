@@ -96,7 +96,7 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.file && await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
       await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
-      if (!dataset.draftReason) await updateStorage(dataset, false, true)
+      if (!dataset.draftReason) await updateStorage(dataset, { checkRemaining: true })
     }
   }
 

@@ -422,7 +422,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
     if (!dataset.draftReason) {
-      await updateStorage(dataset, true)
+      await updateStorage(dataset, { deleted: true })
     }
   }
 }
