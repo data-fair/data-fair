@@ -663,3 +663,50 @@ export const buildWordsAggs = (aggType: 'terms' | 'significant_text', field: str
 
   return aggs
 }
+
+// ---- Scoped filters for virtual datasets ----
+
+// element of dataset.virtual.filters (see contract in api/types/dataset/schema.js)
+export type VirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+
+// scoped filters inherited from intermediate virtual children, attached to a queryable
+// virtual dataset as `_descendantsFilters` by queryableDescendants (utils/virtual.ts).
+// `unfilteredIds` is arrival-based: a descendant reachable both through a filtered and an
+// unfiltered path appears on both sides, giving union-of-paths semantics in the query below.
+// `indicesPrefix` is embedded by the producer so this module stays config-free.
+export interface DescendantsFilters {
+  indicesPrefix: string
+  unfilteredIds: string[]
+  filtered: { id: string, filters: VirtualFilter[] }[]
+}
+
+// translate dataset.virtual.filters into ES filter clauses
+export const virtualFilterClauses = (filters: VirtualFilter[]): any[] => {
+  const clauses: any[] = []
+  for (const f of filters) {
+    if (!f.values || !f.values.length) continue
+    if (f.operator === 'nin') {
+      if (f.values.length === 1) clauses.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
+      else clauses.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
+    } else {
+      if (f.values.length === 1) clauses.push({ term: { [f.key]: f.values[0] } })
+      else clauses.push({ terms: { [f.key]: f.values } })
+    }
+  }
+  return clauses
+}
+
+// a single filter clause restricting each filtered descendant's subtree to the rows matching
+// the merged filters of its virtual ancestors. term/terms on the _index metafield match index
+// aliases, so the same `${indicesPrefix}-${id}` names used by aliasName work here.
+export const descendantsFilterClause = (descendantsFilters: DescendantsFilters): any => {
+  const { indicesPrefix } = descendantsFilters
+  const should: any[] = []
+  if (descendantsFilters.unfilteredIds.length) {
+    should.push({ terms: { _index: descendantsFilters.unfilteredIds.map(id => `${indicesPrefix}-${id}`) } })
+  }
+  for (const { id, filters } of descendantsFilters.filtered) {
+    should.push({ bool: { filter: [{ term: { _index: `${indicesPrefix}-${id}` } }, ...virtualFilterClauses(filters)] } })
+  }
+  return { bool: { minimum_should_match: 1, should } }
+}
