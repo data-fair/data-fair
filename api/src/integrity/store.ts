@@ -4,7 +4,9 @@ import type { Readable } from 'node:stream'
 import type { RevisionContext } from './operations.ts'
 
 export type RevisionBody = {
-  hash: { md5?: string, sha256?: string }
+  // both sha256-hex: `file` digests the stored file's bytes (absent on file-less datasets),
+  // `metadata` digests the covered-metadata projection (stable-key-sorted JSON)
+  hash: { file?: string, metadata?: string }
   context: RevisionContext
   dataset: { id: string, slug?: string }
   // level 2: the full covered-metadata projection, and the descriptor of the file payload the

@@ -5,7 +5,7 @@ import type { DatasetInternal } from '#types'
 import { isFileDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import { integrityStore } from './store-factory.ts'
-import { md5OfStorageFile, md5Tee } from './hash.ts'
+import { sha256OfStorageFile, sha256Tee } from './hash.ts'
 import type { RevisionBody } from './store.ts'
 import * as ops from './operations.ts'
 
@@ -18,23 +18,24 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + (config.integrity!.retention?.days ?? 365) * 24 * 3600 * 1000)
 
-  const hash: { md5?: string, sha256?: string } = {}
-  // Hash the actual stored file, NOT dataset.originalFile.md5: an out-of-band edit (exactly what
-  // fixIntegrity reconciles) never updates that metadata field, so anchoring it would dedupe and
-  // never re-anchor. Hashing the stored file keeps the relay symmetric with the checker.
+  const hash: { file?: string, metadata?: string } = {}
+  // Hash the actual stored file, NOT dataset.originalFile's hash fields: an out-of-band edit
+  // (exactly what fixIntegrity reconciles) never updates that metadata field, so anchoring it
+  // would dedupe and never re-anchor. Hashing the stored file keeps the relay symmetric with the
+  // checker.
   if (isFileDataset(dataset)) {
-    const md5 = await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
+    const fileHash = await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
       // missing file (both backends normalize to 404): genuinely nothing to anchor for the file part
       if (err.status === 404) return undefined
       throw err // transient storage error: propagate so the caller/worker retries
     })
-    if (md5) hash.md5 = md5
+    if (fileHash) hash.file = fileHash
   }
   // re-read the freshest doc: the caller's copy may lag behind the write that set the flag,
   // and the checker hashes the live doc — relay and checker must see the same state
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
   if (!fresh) return // deleted in the meantime
-  hash.sha256 = ops.metadataHash(fresh)
+  hash.metadata = ops.metadataHash(fresh)
 
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const keys = (await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key)
@@ -50,7 +51,7 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
     const latestHash = latestRevision.hash
     // level 2: only a payload-bearing anchor is a valid dedupe target — an L1-era anchor
     // with matching hashes still gets a fresh revision, so the store self-heals to level 2
-    if (latestHash.md5 === hash.md5 && latestHash.sha256 === hash.sha256 && latestRevision.payload) {
+    if (latestHash.file === hash.file && latestHash.metadata === hash.metadata && latestRevision.payload) {
       // disable→re-enable dedupe constraint: PUT _integrity {active:false} replaces the whole
       // integrity object (wiping integrity.lastRevision); a later re-enable that dedupes against
       // this unchanged anchor must still restore that mirror, or it stays unset forever and the
@@ -77,27 +78,27 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   // payload FIRST, revision JSON second: a crash in between leaves an orphan .file that ages
   // out harmlessly — the reverse would leave a revision claiming a payload it doesn't have
   const payload: NonNullable<RevisionBody['payload']> = { metadata: ops.coveredMetadata(fresh) }
-  if (hash.md5) {
+  if (hash.file) {
     // payload reference dedupe: when the stored file is byte-identical to the latest anchor's
     // payload (a metadata-only change, or a metadata-only restore that lands back on the same
     // bytes), do NOT upload a second locked copy — reference the existing one. References always
     // collapse to the bytes-owning revision (never chain): the latest anchor's `file.i` already
     // points at the owner, or, absent, the latest revision owns its own bytes.
-    if (latestRevision?.payload?.file && latestRevision.hash.md5 === hash.md5) {
+    if (latestRevision?.payload?.file && latestRevision.hash.file === hash.file) {
       const refIndex = latestRevision.payload.file.i ?? ops.parseRevisionIndex(latest!)
       // extend the referenced payload's lock to this revision's retain-until so every referencing
       // revision's file outlives it, even after the superseded payload itself stops sliding
       await store.extendRetention(ops.payloadKey(dataset.owner, dataset.id, refIndex), retainUntil)
       payload.file = { size: latestRevision.payload.file.size, i: refIndex }
-      // no tee on this branch: the bytes are unchanged, so the first-pass md5 already describes them
+      // no tee on this branch: the bytes are unchanged, so the first-pass hash already describes them
     } else {
       const { body, size } = await filesStorage.readStream(datasetUtils.originalFilePath(dataset))
-      const tee = md5Tee()
+      const tee = sha256Tee()
       body.on('error', (err) => tee.stream.destroy(err))
       await store.writePayload(ops.payloadKey(dataset.owner, dataset.id, i), body.pipe(tee.stream), retainUntil)
       // the file may have changed since the dedupe-check read: the anchor must describe the
-      // payload's actual bytes, so the teed md5 wins over the first-pass one
-      hash.md5 = tee.digest()
+      // payload's actual bytes, so the teed hash wins over the first-pass one
+      hash.file = tee.digest()
       payload.file = { size }
     }
   }

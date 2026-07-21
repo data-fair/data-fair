@@ -23,7 +23,7 @@ import { anchorDataset } from './relay.ts'
 import { historizeLines, anchorLine } from './lines-relay.ts'
 import { checkDataset, compareDatasetLines, type Check } from './checker.ts'
 import { resetPurgeWatermark } from './purge.ts'
-import { md5OfStorageFile } from './hash.ts'
+import { sha256OfStorageFile, md5Tee } from './hash.ts'
 
 const LINE_IO_CONCURRENCY = 100
 
@@ -215,17 +215,17 @@ export const restoreRevision = async (app: any, dataset: DatasetInternal, i: num
   const revision = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))
   if (!revision.payload) throw httpError(400, 'this revision has no payload (level-1 anchor): not restorable')
 
-  // file part: the stored file's actual bytes vs the revision's md5 (metadata fields can lie).
-  // Computed and gated up front, BEFORE the metadata write below: a file restore refused with 409
-  // must not have already applied its metadata $set/$unset. Metadata-only restores (no file
-  // divergence) stay ungated.
-  const currentMd5 = isFileDataset(dataset)
-    ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
+  // file part: the stored file's actual bytes vs the revision's file hash (metadata fields can
+  // lie). Computed and gated up front, BEFORE the metadata write below: a file restore refused
+  // with 409 must not have already applied its metadata $set/$unset. Metadata-only restores (no
+  // file divergence) stay ungated.
+  const currentFileHash = isFileDataset(dataset)
+    ? await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err: any) => {
       if (err.status === 404) return undefined
       throw err
     })
     : undefined
-  const needsFileRestore = !!(revision.payload.file && revision.hash.md5 !== currentMd5)
+  const needsFileRestore = !!(revision.payload.file && revision.hash.file !== currentFileHash)
   if (needsFileRestore) {
     // re-ingesting mutates the dataset through the full pipeline; refuse while it is mid-processing
     // (only a settled finalized/error dataset is safe to route a fresh file replacement through)
@@ -259,11 +259,15 @@ export const restoreRevision = async (app: any, dataset: DatasetInternal, i: num
     // (absent `file.i` = this revision owns them)
     const fileRefIndex = revision.payload.file?.i ?? i
     const { body } = await store.readPayload(ops.payloadKey(dataset.owner, dataset.id, fileRefIndex))
-    await filesStorage.writeStream(body, finalPath)
+    // the platform-level originalFile.md5 descriptor is computed in-flight from the payload bytes
+    // (the integrity hash is sha256 now, and metadata fields could have been tampered)
+    const tee = md5Tee()
+    body.on('error', (err: any) => tee.stream.destroy(err))
+    await filesStorage.writeStream(body.pipe(tee.stream), finalPath)
     const stats = await filesStorage.fileStats(finalPath)
     // mime type is broken on windows it seems.. detect based on extension instead (mirrors upload.ts's fileFilter)
     const mimetype = mime.lookup(filename) || fallbackMimeTypes[filename.split('.').pop() as string] || filename.split('.').pop()
-    const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: revision.hash.md5, mimetype }]
+    const files = [{ fieldname: 'file', originalname: filename, filename, destination, path: finalPath, size: stats.size, md5: tee.digest(), mimetype }]
 
     const patch: any = { _needsHistorizing: { context: { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) } } }
     // the metadata $set/$unset above may have just restored `file`/`originalFile` on the Mongo

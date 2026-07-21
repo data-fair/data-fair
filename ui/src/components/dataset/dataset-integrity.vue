@@ -179,7 +179,7 @@
             {{ formatDate(item.date) }}
           </template>
           <template #item.hash="{ item }">
-            <code class="text-caption">{{ (item.hash.md5 ?? item.hash.sha256 ?? '').slice(0, 12) }}…</code>
+            <code class="text-caption">{{ (item.hash.file ?? item.hash.metadata ?? '').slice(0, 12) }}…</code>
           </template>
           <template #item.operation="{ item }">
             {{ t('op_' + item.operation) }}
@@ -662,8 +662,8 @@ const adminMode = computed(() => !!session.state.user?.adminMode)
 // `lines` (anchored/pending/overGate) is computed on the fly by GET _integrity for enrolled REST
 // datasets — it is not part of the stored/public Dataset schema, hence the local extension
 type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean } }
-type RevisionEntry = { i: number, hash: { md5?: string, sha256?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number }
-type RevisionDetail = { i: number, hash: { md5?: string, sha256?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any> }
+type RevisionEntry = { i: number, hash: { file?: string, metadata?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number }
+type RevisionDetail = { i: number, hash: { file?: string, metadata?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any> }
 type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean }
 type LineRevisionDetail = { i: number, hash: { sha256?: string }, context: any, line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }, payload?: Record<string, any>, current?: Record<string, any> }
 

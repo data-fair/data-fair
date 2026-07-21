@@ -12,7 +12,7 @@ import { purgeExpiredRevisions } from './purge.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
-import { md5OfStorageFile } from './hash.ts'
+import { sha256OfStorageFile } from './hash.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
 import * as notifications from '../misc/utils/notifications.ts'
@@ -140,16 +140,16 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   const expected = latestRevision.hash
   const breach: Array<'file' | 'metadata' | 'lines'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
-  const actualMd5 = isFileDataset(dataset)
-    ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
+  const actualFileHash = isFileDataset(dataset)
+    ? await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
       if (err.status === 404) return undefined
       throw err
     })
     : undefined
-  if (expected.md5 !== actualMd5) breach.push('file')
+  if (expected.file !== actualFileHash) breach.push('file')
   // hash the live doc, freshly re-read (the caller's copy may be a cleaned/projected response doc)
   const freshDoc = await mongo.datasets.findOne({ id: dataset.id })
-  if (!freshDoc || ops.metadataHash(freshDoc) !== expected.sha256) breach.push('metadata')
+  if (!freshDoc || ops.metadataHash(freshDoc) !== expected.metadata) breach.push('metadata')
 
   let linesResult: { checked: number, diverged: number, sample: string[] } | undefined
   let linesCompare: Awaited<ReturnType<typeof compareDatasetLines>> | undefined
