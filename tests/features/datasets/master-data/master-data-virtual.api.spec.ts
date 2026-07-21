@@ -75,6 +75,47 @@ test.describe('master data - Master-data interaction with virtual datasets', () 
     assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))
   })
 
+  // the billed share of a master-data child is prorated by the fraction of its rows the virtual
+  // dataset actually exposes. Filters carried by an INTERMEDIATE virtual child count too: two
+  // virtual datasets exposing the same rows must be billed the same whether the filter sits at the
+  // top level or in a child.
+  test('the storage share of a master-data child is prorated by the filters of an intermediate virtual child', async () => {
+    const ax = testSuperadmin
+
+    const { remoteService } = await initVirtualMaster(ax, [{ key: 'str1', type: 'string' }])
+    await testSuperadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
+
+    await ax.post('/api/v1/datasets/master/_bulk_lines', [
+      { str1: 'LINE1' },
+      { str1: 'LINE2' },
+      { str1: 'LINE3' },
+      { str1: 'LINE4' }
+    ])
+    const master = await waitForFinalize(ax, 'master')
+
+    // intermediate virtual child exposing only half of the master's rows
+    const child = await waitForFinalize(testUser1, (await testUser1.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'filtered child',
+      virtual: { children: ['master'], filters: [{ key: 'str1', values: ['LINE1', 'LINE2'] }] },
+      schema: [{ key: 'str1' }]
+    })).data.id)
+    assert.equal(child.count, 2)
+
+    const parent = await waitForFinalize(testUser1, (await testUser1.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual grandparent',
+      virtual: { children: [child.id] },
+      schema: [{ key: 'str1' }]
+    })).data.id)
+    assert.equal(parent.count, 2)
+
+    // storageRatio (0.5) * visible fraction (2/4) — the intermediate child's filters are counted
+    assert.equal(parent.storage.indexed.size, Math.round(master.storage.indexed.size * 0.25))
+    // the child itself is billed the same way
+    assert.equal(child.storage.indexed.size, Math.round(master.storage.indexed.size * 0.25))
+  })
+
   // Regression test for a row leak through the local master-data bulk-search path
   // (api/src/datasets/utils/master-data.ts bulkSearchStreams): a virtual dataset used as
   // master-data can itself have a virtual child that carries static `virtual.filters`. The

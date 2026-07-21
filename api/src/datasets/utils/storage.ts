@@ -64,18 +64,31 @@ export const storage = async (dataset: Dataset) => {
 
   if (isVirtualDataset(dataset)) {
     const descendants = await virtualDatasetsUtils.descendants(dataset, ['storage', 'owner', 'masterData', 'count'], false)
+    // the traversal is arrival-based: the same descendant appears once per path reaching it, with
+    // the filters of that path. Group the arrivals by id so a master-data child is billed once,
+    // and count against ALL of its arrivals at once — that way the union of the paths is measured
+    // (an unfiltered arrival makes every row of the child visible again)
+    const arrivalsById = new Map<string, typeof descendants>()
+    for (const descendant of descendants) {
+      const arrivals = arrivalsById.get(descendant.id)
+      if (arrivals) arrivals.push(descendant)
+      else arrivalsById.set(descendant.id, [descendant])
+    }
     let masterDataSize = 0
     const masterDataCount = 0
-    for (const descendant of descendants) {
+    for (const arrivals of arrivalsById.values()) {
+      const descendant = arrivals[0]
       if (!descendant?.masterData?.virtualDatasets?.active) continue
       if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
       const remoteService = await mongo.remoteServices.findOne({ id: 'dataset:' + descendant.id })
       if (!remoteService) throw new Error(`missing remote service dataset:${descendant.id}`)
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }
-      // intentionally unfiltered: storage measures what is indexed for this one descendant, not what
-      // is visible through the virtual dataset's scoped filters
-      queryableDataset.descendants = [{ id: descendant.id, index: descendant.index }]
+      queryableDataset.descendants = arrivals
+      // the ratio measures the fraction of this master-data child's rows that this virtual dataset
+      // actually exposes — its own top-level `virtual.filters` and the filters of the intermediate
+      // virtual children on the paths reaching the child both apply — and prorates the share of the
+      // child's indexed storage billed to this virtual dataset accordingly
       const count = await esUtils.count(queryableDataset, {})
       storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
