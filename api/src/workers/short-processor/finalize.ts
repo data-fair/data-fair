@@ -43,10 +43,7 @@ export default async function (_dataset: DatasetInternal) {
   if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
   if (isVirtualDataset(dataset)) {
-    const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset)
-    queryableDataset.descendants = ids
-    // always assign, including null — see the comment in service.ts's getDataset for why
-    queryableDataset._descendantsFilters = filters
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
   }
 
@@ -174,8 +171,8 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
-    dataset.descendants = descendants.map(d => d.id)
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
+    dataset.descendants = descendants
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
       result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt

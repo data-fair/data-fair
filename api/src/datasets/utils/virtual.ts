@@ -4,11 +4,11 @@ import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { AccountKeys } from '@data-fair/lib-express'
-import type { Dataset, VirtualDataset } from '#types'
+import type { VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
-import { type VirtualFilter, type DescendantsFilters } from '../es/operations.ts'
+import { type VirtualFilter, type QueryableDescendant } from '../es/operations.ts'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -184,7 +184,7 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
       // scoped filters inherited from the virtual ancestors on this path (AND semantics);
       // the same dataset may be pushed several times with different stacks (union of paths)
       // this exact array reference is shared across every sibling stamped in this loop (and later
-      // referenced from DescendantsFilters.filtered, see queryableDescendants) — safe only because
+      // referenced from QueryableDescendant.filters, see descendants()) — safe only because
       // it is read-only from here on: the `.concat()` above always allocates a fresh array per
       // recursion level, and nothing ever mutates a stamped array in place
       if (inheritedFilters.length) (child as any)._inheritedFilters = inheritedFilters
@@ -193,9 +193,9 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
   }
 }
 
-// shared by descendants() and queryableDescendants(): resolves the raw physical descendant docs,
-// each internally annotated with `_inheritedFilters` (see recurseDescendants) when reached through
-// a filtered virtual ancestor, and applies the empty-descendants guard once
+// resolves the raw physical descendant docs, each internally annotated with `_inheritedFilters`
+// (see recurseDescendants) when reached through a filtered virtual ancestor, and applies the
+// empty-descendants guard
 const resolveDescendants = async (dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: FindOptions, throwEmpty: boolean) => {
   const descendants: any[] = []
   await recurseDescendants(descendants, dataset, mongoOptions)
@@ -205,8 +205,21 @@ const resolveDescendants = async (dataset: Pick<VirtualDataset, 'id' | 'owner' |
   return descendants
 }
 
-// Only non virtual descendants on which to perform the actual ES queries
-export const descendants = async (dataset: VirtualDataset, extraProperties: string[] | null = null, throwEmpty = true) => {
+// an element of the traversal result: always the queryable fields (id / index / optional scoped
+// filters), plus the requested extraProperties read from the descendant's mongo doc
+export type Descendant = QueryableDescendant & Record<string, any>
+
+// The single traversal of a virtual dataset: the non virtual descendants on which the actual ES
+// queries are performed. The result is THE source of truth assigned to `dataset.descendants` — it
+// carries both the multi-index target (`index`, resolved here so that es/operations.ts and
+// api-compat/ods/operations.ts stay config-free) and the scoped filters inherited from
+// intermediate virtual children, so no caller can resolve one without the other.
+// The array is arrival-based: a descendant reachable through both a filtered and an unfiltered
+// path appears twice, which is what gives correct union-of-paths semantics — never deduplicate it.
+// `extraProperties` adds fields of the descendant's mongo doc to each element.
+// `throwEmpty` false is for callers (e.g. storage computation) that tolerate a non queryable
+// virtual dataset.
+export const descendants = async (dataset: VirtualDataset, extraProperties: string[] | null = null, throwEmpty = true): Promise<Descendant[]> => {
   const mongoOptions: FindOptions = {
     projection: {
       id: 1,
@@ -219,47 +232,17 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
   if (extraProperties) {
     for (const p of extraProperties) mongoOptions.projection![p] = 1
   }
-  const descendants = await resolveDescendants(dataset, mongoOptions, throwEmpty)
-  if (extraProperties) {
-    for (const descendant of descendants) {
-      if (!extraProperties.includes('owner')) delete descendant.owner
-      if (!extraProperties.includes('permissions')) delete descendant.permissions
-      delete descendant._inheritedFilters
-    }
-  }
-  return extraProperties ? descendants : descendants.map((d: Dataset) => d.id)
-}
-
-// descendants + the scoped-filters annotation consumed by prepareQuery/parseFilters
-// (attached to the queryable dataset as `_descendantsFilters`)
-// optional extraProperties mirrors descendants(): when set, also returns the full descendant
-// docs (same shape/stripping rules as descendants(dataset, extraProperties)) from the SAME
-// traversal, so callers that need both the raw docs (e.g. for owner-scoped file paths) and the
-// filters annotation (for the ES query) don't have to resolve descendants twice.
-export const queryableDescendants = async (dataset: VirtualDataset, extraProperties: string[] | null = null): Promise<{ ids: string[], filters: DescendantsFilters | null, descendantsFull?: any[] }> => {
-  const mongoOptions: FindOptions = { projection: { id: 1, isVirtual: 1, virtual: 1, owner: 1, permissions: 1 } }
-  if (extraProperties) {
-    for (const p of extraProperties) mongoOptions.projection![p] = 1
-  }
-  const all = await resolveDescendants(dataset, mongoOptions, true)
-  const unfilteredIds: string[] = []
-  const filtered: DescendantsFilters['filtered'] = []
-  for (const d of all) {
-    if (d._inheritedFilters?.length) filtered.push({ id: d.id, filters: d._inheritedFilters })
-    else unfilteredIds.push(d.id)
-  }
-  const result: { ids: string[], filters: DescendantsFilters | null, descendantsFull?: any[] } = {
-    ids: all.map(d => d.id),
-    filters: filtered.length ? { indicesPrefix: config.indicesPrefix, unfilteredIds, filtered } : null
-  }
-  if (extraProperties) {
-    result.descendantsFull = all.map(d => {
-      const descendant = { ...d }
-      if (!extraProperties.includes('owner')) delete descendant.owner
-      if (!extraProperties.includes('permissions')) delete descendant.permissions
-      delete descendant._inheritedFilters
-      return descendant
-    })
-  }
-  return result
+  const docs = await resolveDescendants(dataset, mongoOptions, throwEmpty)
+  return docs.map((doc: any) => {
+    const descendant: Descendant = { ...doc, index: `${config.indicesPrefix}-${doc.id}` }
+    if (doc._inheritedFilters?.length) descendant.filters = doc._inheritedFilters
+    delete descendant._inheritedFilters
+    // isVirtual/virtual are only fetched to drive the recursion, and owner/permissions to check
+    // readability — none of them is part of the result unless explicitly requested
+    delete descendant.isVirtual
+    delete descendant.virtual
+    if (!extraProperties?.includes('owner')) delete descendant.owner
+    if (!extraProperties?.includes('permissions')) delete descendant.permissions
+    return descendant
+  })
 }

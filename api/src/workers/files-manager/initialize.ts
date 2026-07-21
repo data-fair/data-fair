@@ -122,11 +122,8 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
       if (isVirtualDataset(parentDataset)) {
-        const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
-        parentDataset.descendantsFull = descendantsFull
-        parentDataset.descendants = ids
-        // always assign, including null — see the comment in service.ts's getDataset for why
-        parentDataset._descendantsFilters = filters
+        // 'owner' is required to resolve the per-descendant attachment paths below
+        parentDataset.descendants = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
       }
       if (isRestDataset(dataset)) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
@@ -236,15 +233,12 @@ export default async function (dataset: DatasetInternal) {
         let relPath = attachment
         let copyPath = attachmentPath(parentDataset, attachment)
         if (isVirtualDataset(parentDataset)) {
-          if (!parentDataset.descendantsFull) {
-            const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
-            parentDataset.descendantsFull = descendantsFull
-            parentDataset.descendants = ids
-            // always assign, including null — see the comment in service.ts's getDataset for why
-            parentDataset._descendantsFilters = filters
+          if (!parentDataset.descendants) {
+            // 'owner' is required to resolve the per-descendant attachment paths below
+            parentDataset.descendants = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
           }
           const pathParts = new URL(attachment).pathname.split('/')
-          const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])
+          const descendant = parentDataset.descendants.find(d => d.id === pathParts[5])
           if (!descendant) continue
           relPath = pathParts.slice(7).join('/')
           copyPath = attachmentPath(descendant, relPath)

@@ -51,7 +51,21 @@ export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsear
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
-  if (dataset.isVirtual) return dataset.descendants.map((id: string) => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.isVirtual) {
+    // cheap fail-loud check on the shape of dataset.descendants: it is resolved by a single
+    // traversal (datasets/utils/virtual.ts) that always stamps `index`, but the repo's tsc is not
+    // clean so types alone cannot guarantee a stale caller is caught — a wrong shape must fail
+    // loudly here rather than silently produce a bad (or empty) index target.
+    if (!Array.isArray(dataset.descendants)) throw new Error(`[internal] dataset ${dataset.id} is virtual but its descendants were not resolved`)
+    const indices = new Set<string>()
+    for (const descendant of dataset.descendants) {
+      if (!descendant?.index) throw new Error(`[internal] dataset ${dataset.id} has a descendant without a resolved index`)
+      // a descendant can legitimately appear twice (reachable through both a filtered and an
+      // unfiltered path) - dedupe the index target, not the array itself
+      indices.add(descendant.index)
+    }
+    return [...indices].join(',')
+  }
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
@@ -280,18 +294,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if (dataset.virtual && dataset.virtual.filters) {
     filter.push(...virtualFilterClauses(dataset.virtual.filters))
   }
-  // Every caller that resolves descendants for a virtual dataset (queryableDescendants, in
-  // utils/virtual.ts) MUST also set `_descendantsFilters` (null when there is nothing to scope).
-  // undefined here means some call path forgot to do that — turn the missing annotation into a loud
-  // failure instead of a silent row leak (rows a child's `virtual.filters` is meant to hide would
-  // otherwise become readable through the parent). This is a programming error, never user input,
-  // hence a 500 and not a 4xx.
-  if (dataset.isVirtual && dataset._descendantsFilters === undefined) {
-    throw new Error(`[internal] dataset ${dataset.id} is virtual but is missing the _descendantsFilters annotation, refusing to query it unscoped`)
-  }
-  // Scoped filters inherited from intermediate virtual children (see utils/virtual.ts)
-  if (dataset._descendantsFilters) {
-    filter.push(descendantsFilterClause(dataset._descendantsFilters))
+  // Scoped filters inherited from intermediate virtual children, read from the same
+  // dataset.descendants that drives the multi-index target (see utils/virtual.ts).
+  // null = no descendant carries filters, nothing to add.
+  if (dataset.isVirtual) {
+    const descendantsClause = descendantsFilterClause(dataset.descendants)
+    if (descendantsClause) filter.push(descendantsClause)
   }
 
   // Envorced filter in case of rest datasets with line ownership

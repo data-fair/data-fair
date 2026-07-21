@@ -30,10 +30,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
 
   if (dataset.isVirtual) {
     const virtualDataset = dataset as VirtualDataset
-    const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(virtualDataset)
-    virtualDataset.descendants = ids
-    // always assign, including null — see the comment in service.ts's getDataset for why
-    virtualDataset._descendantsFilters = filters
+    virtualDataset.descendants = await virtualDatasetsUtils.descendants(virtualDataset)
   }
   const schema = dataset.schema ?? []
   const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)

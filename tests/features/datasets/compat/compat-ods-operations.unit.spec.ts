@@ -230,9 +230,9 @@ test.describe('parseFilters virtual scoping', () => {
     const { bool: { filter } } = parseFilters(ds({
       isVirtual: true,
       virtual: { children: ['c1'], filters: [{ key: 'a', operator: 'nin', values: ['x'] }] },
-      // required since parseFilters now fails loudly on a virtual dataset missing this annotation
-      // (mirrors the same guard in es/commons.ts#prepareQuery) — null means "nothing to scope"
-      _descendantsFilters: null
+      // descendants are always resolved for a virtual dataset (readDataset({ fillDescendants: true }));
+      // none of them carries filters here, so no scoped clause is added
+      descendants: [{ id: 'c1', index: 'dataset-c1' }]
     }), {}, 'records')
     assert.deepEqual(filter, [{ bool: { must_not: { term: { a: 'x' } } } }])
   })
@@ -241,7 +241,7 @@ test.describe('parseFilters virtual scoping', () => {
     const { bool: { filter } } = parseFilters(ds({
       isVirtual: true,
       virtual: { children: ['c1'] },
-      _descendantsFilters: { indicesPrefix: 'dataset', unfilteredIds: ['c1'], filtered: [{ id: 'c2', filters: [{ key: 'a', values: ['x'] }] }] }
+      descendants: [{ id: 'c1', index: 'dataset-c1' }, { id: 'c2', index: 'dataset-c2', filters: [{ key: 'a', values: ['x'] }] }]
     }), {}, 'records')
     assert.equal(filter.length, 1)
     assert.deepEqual(filter[0].bool.should[1], { bool: { filter: [{ term: { _index: 'dataset-c2' } }, { term: { a: 'x' } }] } })

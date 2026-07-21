@@ -204,12 +204,7 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset)
-        dataset.descendants = ids
-        // always assign, including the null case: an absent (undefined) annotation is what makes
-        // prepareQuery / parseFilters fail loudly (see es/commons.ts) — "no filters to scope" and
-        // "caller forgot to set it" must never be indistinguishable for this invariant
-        dataset._descendantsFilters = filters
+        dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
       }
       if (dataset.schema) {
         for (const prop of dataset.schema) {

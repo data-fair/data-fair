@@ -79,7 +79,7 @@ test.describe('master data - Master-data interaction with virtual datasets', () 
   // (api/src/datasets/utils/master-data.ts bulkSearchStreams): a virtual dataset used as
   // master-data can itself have a virtual child that carries static `virtual.filters`. The
   // local extension path (extensions.ts reads the master dataset straight from mongo, bypassing
-  // readDataset/getDataset which normally attaches `_descendantsFilters` alongside `descendants`)
+  // readDataset/getDataset which normally resolves `descendants` and their scoped filters)
   // must still enforce that child's filters, or rows it is meant to hide leak into extension output.
   test('static filters of an intermediate virtual child are enforced through the local master-data extension path', async () => {
     const ax = testUser1

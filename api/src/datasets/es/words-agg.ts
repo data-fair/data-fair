@@ -56,7 +56,7 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 async function unstem (client: Client, dataset: any, field: string, key: any, abortContext?: EsAbortContext) {
   // this raw query is built directly against aliasName(dataset), bypassing prepareQuery — so on its
-  // own it applies neither the top-level `virtual.filters` nor the scoped `_descendantsFilters`, and
+  // own it applies neither the top-level `virtual.filters` nor the descendants-scoped filters, and
   // could return highlighted fragments sourced from rows a virtual dataset (or an intermediate
   // virtual child) hides. Reuse prepareQuery's scoping (called with an empty query: only the
   // invariant filters, no user-supplied q/qs/etc) as an extra filter alongside the term clause.

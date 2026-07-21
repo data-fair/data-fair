@@ -40,8 +40,8 @@ export const registerFilesRoutes = (router: Router) => {
     const attachmentPath = req.params.attachmentPath as string[]
     if (dataset.isVirtual) {
       const childDatasetId = attachmentPath[0]
-      const descendants = (dataset as Dataset & { descendants?: string[] }).descendants
-      if (!descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
+      const descendants = (dataset as Dataset & { descendants?: { id: string }[] }).descendants
+      if (!descendants?.find(c => c.id === childDatasetId)) return res.status(404).send('Child dataset not found')
       const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, reqPublicationSite(req), reqMainPublicationSite(req), false, false, false, mongo.db, undefined, undefined)
       const documentProp = (dataset.schema ?? []).find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
       const childDocumentProp = childDataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
