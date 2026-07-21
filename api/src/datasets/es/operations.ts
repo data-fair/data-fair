@@ -708,11 +708,15 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
   // stale shape, or not at all), never user input, so it is an internal 500-class error. Types
   // alone cannot be trusted here, the repo's tsc is not clean.
   if (!Array.isArray(descendants)) throw new Error('[internal] missing descendants on a virtual dataset, refusing to query it unscoped')
+  // validate every element up front, before the early return below, so a malformed descendant is
+  // always caught rather than only when some sibling happens to carry filters
+  for (const descendant of descendants) {
+    if (!descendant.index) throw new Error(`[internal] descendant ${descendant.id} has no resolved index, refusing to query it unscoped`)
+  }
   if (!descendants.some(d => d.filters?.length)) return null
   const should: any[] = []
   const unfilteredIndices = new Set<string>()
   for (const descendant of descendants) {
-    if (!descendant.index) throw new Error(`[internal] descendant ${descendant.id} has no resolved index, refusing to query it unscoped`)
     if (!descendant.filters?.length) unfilteredIndices.add(descendant.index)
   }
   if (unfilteredIndices.size) should.push({ terms: { _index: [...unfilteredIndices] } })

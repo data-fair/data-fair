@@ -90,7 +90,10 @@ export const storage = async (dataset: Dataset) => {
       // virtual children on the paths reaching the child both apply — and prorates the share of the
       // child's indexed storage billed to this virtual dataset accordingly
       const count = await esUtils.count(queryableDataset, {})
-      storageRatio *= (count / descendant.count)
+      // descendant.count is the child's own row count, read from its mongo doc — it is 0 for an
+      // empty child and undefined for one not yet finalized (see finalize.ts). Either way there are
+      // no rows to prorate a share of, so the ratio (and the billed share) is 0 rather than NaN.
+      storageRatio *= descendant.count ? count / descendant.count : 0
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }
     storage.indexed.size = masterDataSize

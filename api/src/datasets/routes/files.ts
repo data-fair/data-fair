@@ -1,6 +1,6 @@
 // File-download and metadata-attachment routes for a dataset (extracted from router.js, phase 6d)
 import type { Router } from 'express'
-import type { Dataset, RestDataset } from '#types'
+import type { Dataset, RestDataset, QueryableDescendant } from '#types'
 import { text as stream2text } from 'node:stream/consumers'
 import path from 'path'
 import moment from 'moment'
@@ -40,7 +40,7 @@ export const registerFilesRoutes = (router: Router) => {
     const attachmentPath = req.params.attachmentPath as string[]
     if (dataset.isVirtual) {
       const childDatasetId = attachmentPath[0]
-      const descendants = (dataset as Dataset & { descendants?: { id: string }[] }).descendants
+      const descendants = (dataset as Dataset & { descendants?: QueryableDescendant[] }).descendants
       if (!descendants?.find(c => c.id === childDatasetId)) return res.status(404).send('Child dataset not found')
       const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, reqPublicationSite(req), reqMainPublicationSite(req), false, false, false, mongo.db, undefined, undefined)
       const documentProp = (dataset.schema ?? []).find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')

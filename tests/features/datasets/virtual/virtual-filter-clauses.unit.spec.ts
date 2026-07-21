@@ -64,4 +64,11 @@ test.describe('descendantsFilterClause', () => {
     assert.throws(() => descendantsFilterClause(undefined), /internal/)
     assert.throws(() => descendantsFilterClause([{ id: 'ds1', filters: [{ key: 'id', values: ['a'] }] } as any]), /internal/)
   })
+
+  test('fails loudly on a malformed descendant even when no descendant carries filters', () => {
+    // none of these descendants has `filters`, so the early-return-on-no-filters path must not
+    // shadow the per-element index validation
+    assert.throws(() => descendantsFilterClause([{ id: 'ds1' } as any]), /internal/)
+    assert.throws(() => descendantsFilterClause([{ id: 'ds1', index: 'dataset-ds1' }, { id: 'ds2' } as any]), /internal/)
+  })
 })
