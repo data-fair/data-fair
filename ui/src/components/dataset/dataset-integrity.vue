@@ -48,6 +48,75 @@
         </div>
       </template>
 
+      <template v-if="state.active && dataset?.isRest">
+        <v-divider class="my-4" />
+        <div class="text-body-2">
+          {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
+        </div>
+        <template v-if="(state.lines?.pending ?? 0) > 0">
+          <div class="text-caption mt-1">
+            {{ state.lines!.pending }} {{ t('linesPending') }}
+          </div>
+          <v-progress-linear
+            indeterminate
+            color="primary"
+            class="mt-1"
+          />
+        </template>
+        <v-alert
+          v-if="state.lines?.overGate"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mt-2"
+          :text="t('linesOverGate')"
+        />
+        <v-alert
+          v-if="(state.lastCheck?.lines?.diverged ?? 0) > 0"
+          type="error"
+          variant="outlined"
+          density="compact"
+          class="mt-2"
+          :title="`${state.lastCheck!.lines!.diverged} ${t('linesDivergedTitle')}`"
+        >
+          <div class="d-flex flex-wrap align-center ga-2 mt-2">
+            <div
+              v-for="lineId of state.lastCheck!.lines!.sample ?? []"
+              :key="lineId"
+              class="d-flex align-center ga-1"
+            >
+              <v-chip
+                size="small"
+                label
+              >
+                {{ lineId }}
+              </v-chip>
+              <v-btn
+                :icon="mdiHistory"
+                variant="text"
+                size="x-small"
+                :title="t('viewLineRevisions')"
+                @click="openLineRevisions(lineId)"
+              />
+            </div>
+          </div>
+          <div
+            v-if="adminMode"
+            class="mt-2"
+          >
+            <v-btn
+              :prepend-icon="mdiBackupRestore"
+              color="warning"
+              variant="text"
+              size="small"
+              @click="linesRestoreDialog = true"
+            >
+              {{ t('linesRestore') }}
+            </v-btn>
+          </div>
+        </v-alert>
+      </template>
+
       <div class="d-flex align-center ga-2 mt-4">
         <v-spacer />
         <v-btn
@@ -68,6 +137,7 @@
           color="warning"
           variant="text"
           size="small"
+          :title="t('fixHelp')"
           @click="fix.execute()"
         >
           {{ t('fix') }}
@@ -232,6 +302,132 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog
+      v-model="linesRestoreDialog"
+      max-width="500"
+    >
+      <v-card :title="t('linesRestoreTitle')">
+        <v-card-text>
+          <p class="mb-2">
+            {{ t('linesRestoreWarning') }}
+          </p>
+          <v-text-field
+            v-model="linesRestoreReason"
+            :label="t('restoreReason')"
+            density="compact"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="linesRestoreDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="linesRestore.loading.value"
+            @click="linesRestore.execute()"
+          >
+            {{ t('linesRestore') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="lineRevisionsOpen"
+      max-width="900"
+    >
+      <v-card :title="t('lineRevisionsTitle', { lineId: lineRevisionsLineId })">
+        <v-card-text>
+          <v-data-table-server
+            :headers="lineRevisionHeaders"
+            :items="lineRevisions"
+            :items-length="lineRevisionsCount"
+            :loading="loadLineRevisions.loading.value"
+            :items-per-page="lineRevisionsSize"
+            :page="lineRevisionsPage"
+            density="compact"
+            @update:page="(p) => { lineRevisionsPage = p; loadLineRevisions.execute() }"
+          >
+            <template #item.date="{ item }">
+              {{ formatDate(item.date) }}
+            </template>
+            <template #item.operation="{ item }">
+              {{ t('op_' + item.operation) }}
+            </template>
+            <template #item.origin="{ item }">
+              {{ t('origin_' + item.origin) }}
+            </template>
+            <template #item.actions="{ item }">
+              <v-btn
+                v-if="item.hasPayload"
+                :icon="mdiFileCompare"
+                variant="text"
+                size="x-small"
+                :loading="openLineDiff.loading.value"
+                :title="t('viewDiff')"
+                @click="openLineDiff.execute(item.i)"
+              />
+              <span
+                v-else
+                class="text-caption text-disabled"
+              >{{ t('noPayload') }}</span>
+            </template>
+          </v-data-table-server>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="lineRevisionsOpen = false">
+            {{ t('close') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="lineDiffOpen"
+      max-width="1100"
+    >
+      <v-card :title="t('diffTitle', { i: lineDiffData?.i })">
+        <v-card-text v-if="lineDiffData">
+          <p
+            v-if="lineDiffData.line?.deleted"
+            class="text-caption"
+          >
+            {{ t('lineDeletedRevision') }}
+          </p>
+          <p
+            v-else-if="!lineDiffKeys.length"
+            class="text-caption"
+          >
+            {{ t('noDiff') }}
+          </p>
+          <template
+            v-for="key of lineDiffKeys"
+            :key="key"
+          >
+            <h4 class="text-subtitle-2 mt-2">
+              {{ key }}
+            </h4>
+            <v-row dense>
+              <v-col cols="6">
+                <div class="text-caption">
+                  {{ t('diffRevision') }}
+                </div>
+                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.payload?.[key]) }}</pre>
+              </v-col>
+              <v-col cols="6">
+                <div class="text-caption">
+                  {{ t('diffCurrent') }}
+                </div>
+                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.current?.[key]) }}</pre>
+              </v-col>
+            </v-row>
+          </template>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -250,6 +446,7 @@ fr:
   neverChecked: Aucun contrôle effectué
   checkNow: Contrôler maintenant
   fix: Réconcilier
+  fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
   enableLabel: Activer le contrôle d'intégrité
   checkOk: Contrôle effectué
   fixOk: Réconciliation effectuée
@@ -266,6 +463,7 @@ fr:
   op_enable: Activation
   op_fixIntegrity: Réconciliation
   op_restore: Restauration
+  op_delete: Suppression
   origin_user: Utilisateur
   origin_superadmin: Superadmin
   origin_worker: Traitement interne
@@ -283,7 +481,19 @@ fr:
   restoreWarning: Les métadonnées couvertes et le fichier de données seront restaurés à l'état de cette révision. Un fichier différent déclenche un retraitement complet du jeu de données.
   restoreReason: Raison (optionnelle, tracée dans l'historique)
   cancel: Annuler
+  close: Fermer
   restoreOk: Restauration lancée
+  linesAnchored: lignes ancrées
+  linesPending: lignes en attente d'ancrage
+  linesOverGate: Ce jeu de données dépasse le seuil de lignes recommandé pour le suivi d'intégrité — l'ancrage continue mais les contrôles et renouvellements de verrous sont coûteux.
+  linesDivergedTitle: ligne(s) en divergence détectée(s)
+  viewLineRevisions: Voir l'historique de la ligne
+  linesRestore: Restaurer les lignes
+  linesRestoreTitle: Restaurer les lignes divergentes
+  linesRestoreWarning: Les lignes éditées ou supprimées hors circuit seront réécrites à partir de leur dernière révision vérifiée. Les lignes insérées hors circuit seront supprimées.
+  linesRestoreOk: Restauration des lignes lancée
+  lineRevisionsTitle: "Historique de la ligne {lineId}"
+  lineDeletedRevision: Cette révision correspond à la suppression de la ligne.
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
@@ -298,6 +508,7 @@ en:
   neverChecked: No check run yet
   checkNow: Check now
   fix: Reconcile
+  fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
   enableLabel: Enable integrity checking
   checkOk: Check completed
   fixOk: Reconciliation completed
@@ -314,6 +525,7 @@ en:
   op_enable: Enable
   op_fixIntegrity: Reconcile
   op_restore: Restore
+  op_delete: Delete
   origin_user: User
   origin_superadmin: Superadmin
   origin_worker: Internal worker
@@ -331,11 +543,23 @@ en:
   restoreWarning: Covered metadata and the data file will be restored to this revision's state. A differing file triggers a full reprocessing of the dataset.
   restoreReason: Reason (optional, recorded in the history)
   cancel: Cancel
+  close: Close
   restoreOk: Restore started
+  linesAnchored: anchored lines
+  linesPending: lines pending anchoring
+  linesOverGate: This dataset exceeds the recommended line count for integrity tracking — anchoring continues but checks and lock renewals are costly.
+  linesDivergedTitle: diverging line(s) detected
+  viewLineRevisions: View line history
+  linesRestore: Restore lines
+  linesRestoreTitle: Restore diverging lines
+  linesRestoreWarning: Lines edited or deleted out of band will be rewritten from their last verified revision. Lines inserted out of band will be deleted.
+  linesRestoreOk: Line restore started
+  lineRevisionsTitle: "History of line {lineId}"
+  lineDeletedRevision: This revision corresponds to the line's deletion.
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore } from '@mdi/js'
+import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory } from '@mdi/js'
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -346,9 +570,13 @@ const session = useSession()
 // check/fix write actions stay superadmin-only
 const adminMode = computed(() => !!session.state.user?.adminMode)
 
-type IntegrityState = NonNullable<Dataset['integrity']>
+// `lines` (anchored/pending/overGate) is computed on the fly by GET _integrity for enrolled REST
+// datasets — it is not part of the stored/public Dataset schema, hence the local extension
+type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean } }
 type RevisionEntry = { i: number, hash: { md5?: string, sha256?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number }
 type RevisionDetail = { i: number, hash: { md5?: string, sha256?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any> }
+type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean }
+type LineRevisionDetail = { i: number, hash: { sha256?: string }, context: any, line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }, payload?: Record<string, any>, current?: Record<string, any> }
 
 const state = ref<IntegrityState | null>(null)
 
@@ -386,6 +614,30 @@ const load = useAsyncAction(async () => {
   }
 })
 load.execute()
+
+// backfill progress (target 3, enrolled REST datasets): while lines are pending anchoring, poll
+// the lightweight summary every ~2s so the progress indicator reflects the relay draining, then
+// stop — no full `load.execute()` here, that would also reset the revision history page
+let linesPollTimer: ReturnType<typeof setInterval> | undefined
+const stopLinesPoll = () => {
+  if (linesPollTimer) {
+    clearInterval(linesPollTimer)
+    linesPollTimer = undefined
+  }
+}
+const pollLinesSummary = async () => {
+  if (!dataset.value) return
+  const fresh = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  if (state.value) state.value.lines = fresh.lines
+}
+watch(() => state.value?.lines?.pending, (pending) => {
+  if (pending && pending > 0) {
+    if (!linesPollTimer) linesPollTimer = setInterval(pollLinesSummary, 2000)
+  } else {
+    stopLinesPoll()
+  }
+}, { immediate: true })
+onUnmounted(stopLinesPoll)
 
 const check = useAsyncAction(async () => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
@@ -433,6 +685,73 @@ const restore = useAsyncAction(async () => {
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
   return res
 }, { success: t('restoreOk') })
+
+// Target 3: restore every diverged line to its last verified state. The endpoint drains the
+// relay and re-checks synchronously, responding with the fresh verdict — swap it straight into
+// `state.lastCheck` (lighter than a full `load.execute()`, which would also reset the revision
+// history page); the dataset-level breach badge is still refreshed from the dataset doc.
+const linesRestoreDialog = ref(false)
+const linesRestoreReason = ref('')
+const linesRestore = useAsyncAction(async () => {
+  const body: any = {}
+  if (linesRestoreReason.value) body.reason = linesRestoreReason.value
+  const res = await $fetch<NonNullable<IntegrityState['lastCheck']>>(`datasets/${dataset.value!.id}/_integrity/lines/_restore`, { method: 'POST', body })
+  linesRestoreDialog.value = false
+  linesRestoreReason.value = ''
+  if (state.value) state.value.lastCheck = res
+  datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+  return res
+}, { success: t('linesRestoreOk') })
+
+// Target 3 (read side): per-line revision history, the lines counterpart of the dataset-level
+// history table + diff dialog above — same pattern, `payload`/`current` are flat line bodies here
+// instead of `{ metadata }` objects.
+const lineRevisionsOpen = ref(false)
+const lineRevisionsLineId = ref<string | null>(null)
+const lineRevisionsSize = 10
+const lineRevisionsPage = ref(1)
+const lineRevisions = ref<LineRevisionEntry[]>([])
+const lineRevisionsCount = ref(0)
+
+const lineRevisionHeaders = computed(() => [
+  { title: t('colIndex'), key: 'i', width: 60 },
+  { title: t('colOperation'), key: 'operation', sortable: false },
+  { title: t('colDate'), key: 'date', sortable: false },
+  { title: t('colOriginator'), key: 'origin', sortable: false },
+  { title: '', key: 'actions', sortable: false, align: 'end' as const }
+])
+
+const loadLineRevisions = useAsyncAction(async () => {
+  if (!dataset.value || !lineRevisionsLineId.value) return
+  const res = await $fetch<{ count: number, results: LineRevisionEntry[] }>(
+    `datasets/${dataset.value.id}/_integrity/lines/${encodeURIComponent(lineRevisionsLineId.value)}/revisions`,
+    { params: { size: lineRevisionsSize, page: lineRevisionsPage.value } }
+  )
+  lineRevisions.value = res.results
+  lineRevisionsCount.value = res.count
+})
+
+const openLineRevisions = (lineId: string) => {
+  lineRevisionsLineId.value = lineId
+  lineRevisionsPage.value = 1
+  lineRevisionsOpen.value = true
+  loadLineRevisions.execute()
+}
+
+const lineDiffOpen = ref(false)
+const lineDiffData = ref<LineRevisionDetail | null>(null)
+const lineDiffKeys = computed(() => {
+  if (!lineDiffData.value) return []
+  const snapshot = lineDiffData.value.payload ?? {}
+  const current = lineDiffData.value.current ?? {}
+  return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
+    .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
+})
+const openLineDiff = useAsyncAction(async (i: number) => {
+  if (!dataset.value || !lineRevisionsLineId.value) return
+  lineDiffData.value = await $fetch<LineRevisionDetail>(`datasets/${dataset.value.id}/_integrity/lines/${encodeURIComponent(lineRevisionsLineId.value)}/revisions/${i}`)
+  lineDiffOpen.value = true
+})
 
 defineExpose({ load })
 </script>
