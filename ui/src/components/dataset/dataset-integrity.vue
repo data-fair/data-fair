@@ -575,7 +575,7 @@ fr:
   fixTitle: Réconcilier l'état courant
   fixWarning: L'état courant du fichier, des métadonnées et de chaque ligne sera ancré comme la nouvelle référence légitime. Les divergences détectées ne seront plus signalées — à n'utiliser que si ces modifications sont connues et légitimes.
   disableTitle: Désactiver le contrôle d'intégrité
-  disableWarning: Les verdicts de contrôle seront effacés et le renouvellement des verrous s'arrêtera : les révisions déjà écrites resteront verrouillées jusqu'à leur date de rétention puis seront purgées. Une réactivation ultérieure ré-ancrera l'état courant.
+  disableWarning: "Les verdicts de contrôle seront effacés et le renouvellement des verrous s'arrêtera : les révisions déjà écrites resteront verrouillées jusqu'à leur date de rétention puis seront purgées. Une réactivation ultérieure ré-ancrera l'état courant."
   disableConfirm: Désactiver
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
@@ -643,7 +643,7 @@ en:
   fixTitle: Reconcile the current state
   fixWarning: The current state of the file, metadata and every line will be anchored as the new legitimate reference. Detected divergences will no longer be reported — use only if those changes are known and legitimate.
   disableTitle: Disable integrity checking
-  disableWarning: Check verdicts will be cleared and lock renewal will stop: revisions already written stay locked until their retention date, then are purged. Re-enabling later re-anchors the current state.
+  disableWarning: "Check verdicts will be cleared and lock renewal will stop: revisions already written stay locked until their retention date, then are purged. Re-enabling later re-anchors the current state."
   disableConfirm: Disable
 </i18n>
 
