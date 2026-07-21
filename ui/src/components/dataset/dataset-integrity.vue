@@ -659,15 +659,18 @@ const toggle = useAsyncAction(async (active: boolean) => {
 
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString(locale.value)
 
+const computeDiffKeys = (snapshot: Record<string, any> | undefined, current: Record<string, any> | undefined): string[] => {
+  if (!snapshot || !current) return []
+  return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
+    .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
+}
+
 const diffOpen = ref(false)
 const diffData = ref<RevisionDetail | null>(null)
 const pretty = (v: any) => v === undefined ? '—' : JSON.stringify(v, null, 2)
 const diffKeys = computed(() => {
   if (!diffData.value) return []
-  const snapshot = diffData.value.payload.metadata
-  const current = diffData.value.current ?? {}
-  return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
-    .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
+  return computeDiffKeys(diffData.value.payload.metadata, diffData.value.current)
 })
 const openDiff = useAsyncAction(async (i: number) => {
   diffData.value = await $fetch<RevisionDetail>(`datasets/${dataset.value!.id}/_integrity/revisions/${i}`)
@@ -699,6 +702,7 @@ const linesRestore = useAsyncAction(async () => {
   linesRestoreDialog.value = false
   linesRestoreReason.value = ''
   if (state.value) state.value.lastCheck = res
+  await pollLinesSummary()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
   return res
 }, { success: t('linesRestoreOk') })
@@ -742,10 +746,7 @@ const lineDiffOpen = ref(false)
 const lineDiffData = ref<LineRevisionDetail | null>(null)
 const lineDiffKeys = computed(() => {
   if (!lineDiffData.value) return []
-  const snapshot = lineDiffData.value.payload ?? {}
-  const current = lineDiffData.value.current ?? {}
-  return [...new Set([...Object.keys(snapshot), ...Object.keys(current)])]
-    .filter(k => JSON.stringify(snapshot[k]) !== JSON.stringify(current[k])).sort()
+  return computeDiffKeys(lineDiffData.value.payload ?? {}, lineDiffData.value.current)
 })
 const openLineDiff = useAsyncAction(async (i: number) => {
   if (!dataset.value || !lineRevisionsLineId.value) return
