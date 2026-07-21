@@ -1,6 +1,7 @@
 import mongo from '#mongo'
 import config from '#config'
 import type { RestDataset, DatasetLine } from '#types'
+import type { AnyBulkWriteOperation } from 'mongodb'
 import * as restUtils from '../datasets/utils/rest.ts'
 import { integrityStore } from './store-factory.ts'
 import type { IntegrityStore } from './store.ts'
@@ -62,16 +63,24 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
     const lines = await c.find({ _needsHistorizing: { $exists: true } }).limit(BATCH).toArray()
     if (!lines.length) break
     const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
-    await Promise.all(lines.map(async (line) => {
-      await anchorLine(dataset, line, store, retainUntil)
+    // all the batch's S3 PUTs first (concurrent), then ONE Mongo round-trip for the bookkeeping:
+    // a crash after some PUTs re-runs the whole batch, and same-key re-PUTs are idempotent
+    await Promise.all(lines.map((line) => anchorLine(dataset, line, store, retainUntil)))
+    const bookkeeping: AnyBulkWriteOperation<DatasetLine>[] = []
+    for (const line of lines) {
       // clear conditionally on _i: a legit write interleaved since our read changed _i and
       // re-stamped — that fresh stamp must survive to get its own revision
-      await c.updateOne({ _id: line._id, _i: line._i }, { $unset: { _needsHistorizing: '' } })
-      // purge a fully-committed tombstone (commitLines defers to us when our flag was still set)
+      bookkeeping.push({ updateOne: { filter: { _id: line._id, _i: line._i }, update: { $unset: { _needsHistorizing: '' } } } })
+    }
+    for (const line of lines) {
+      // purge a fully-committed tombstone (commitLines defers to us when our flag was still set);
+      // ordered bulk: runs after the flag clears above, so the _needsHistorizing-absent condition
+      // sees this batch's own clear
       if (line._deleted) {
-        await c.deleteOne({ _id: line._id, _deleted: true, _needsIndexing: { $exists: false }, _needsHistorizing: { $exists: false } })
+        bookkeeping.push({ deleteOne: { filter: { _id: line._id, _deleted: true, _needsIndexing: { $exists: false }, _needsHistorizing: { $exists: false } } } })
       }
-    }))
+    }
+    await c.bulkWrite(bookkeeping, { ordered: true })
   }
   await clearHint()
 }

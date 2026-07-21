@@ -19,7 +19,10 @@
 > anchored independently — a dataset can therefore show `breach: ['metadata', 'lines']` naming
 > both at once. **Level 2 (repair) delivered for file datasets and for lines** — every anchor
 > carries the full payload; diff, audit download and restore-from-any-revision ship with it; owner
-> transfer is forbidden while integrity is active. The superadmin API and admin UI cover all three
+> transfer is forbidden while integrity is active. **Coverage limits are enforced as enrollment
+> refusals rather than documented caveats** — a dataset with attachments or lines-owner attribution
+> cannot enroll, and neither can be acquired while enrolled — so a verdict never claims more than
+> the snapshot actually protects (§5). The superadmin API and admin UI cover all three
 > targets; [§10](#10-decomposition--build-order) records precisely what is built vs. what remains
 > (applications/settings metadata, line attachment bytes, a possible fold-based level 1 for
 > above-gate datasets). This document describes a focused **data-fair feature**, delivered as
@@ -328,6 +331,55 @@ its own retain-until, so a payload's lifetime is the max over every revision tha
 each referencing revision's file survives at least as long as its revision JSON, even once the
 payload itself is superseded and stops sliding (§3.4).
 
+**"Ages out" is an owned mechanism, not a bucket setting.** A revision whose compliance lock has
+lapsed grounds *no* guarantee — it is ordinary mutable storage that could have been altered, so
+keeping it buys nothing and costs both storage and LIST time on every check. A **purge**
+(`api/src/integrity/purge.ts`) therefore deletes expired revisions outright, riding the daily
+checker pass under the same cross-pod lock (never thrown: a failed purge delays reclamation, not
+protection).
+
+Its shape is deliberately the same as the `mc rm --versions --older-than 30d` cleanup cronjobs on
+our backup buckets — **list object versions, filter by time, delete what has lapsed**. Deletion is
+decided from dates and only then executed, so **an S3 error is a real error**, never control flow:
+the purge does not attempt a delete to learn whether an object is still locked.
+
+**Age cannot be pushed server-side, so the saving is in not listing.** S3 LIST takes only
+prefix / delimiter / marker / max-keys — there is no date, size or metadata predicate — so
+`mc --older-than` walks every version too, and no listing call can pre-filter by age. Nor can a
+lifecycle rule replace this job: `NoncurrentVersionExpiration` only touches *noncurrent* versions,
+but each revision is the current version of its **own** key, so it would reclaim almost nothing
+here (only retried same-key PUTs), and a plain `Expiration` rule cannot express the current-anchor
+carve-out below — quite apart from Scaleway not supporting the former yet. What the layout does
+allow is to skip whole subtrees: keys are `data-fair/‹owner›/‹datasetId›/…`, so a `Delimiter: '/'`
+listing enumerates **dataset scopes** at O(datasets) cost, and each scope carries a **watermark** —
+the earliest date at which anything under it could next become deletable. Below that date the scope
+is skipped without listing a single object. The watermark is derived, never guessed: after a pass
+at `T` it is the minimum of every kept-but-unexpired version's horizon and `T + retention` (nothing
+written after `T` can expire sooner). Disabling integrity clears it, since the anchors stop being
+protected at that moment and must not wait on a watermark computed while they still were. Scopes
+are discovered **from the store, not from Mongo**, so the tail of a *deleted* dataset still ages
+out (§8) rather than being orphaned forever.
+
+One thing separates this bucket from a backup bucket, and it is why a date filter alone is not the
+whole story: locks here get **extended** (renewal slides the current anchor, §3.4; a revision
+referencing an earlier payload extends that payload at write time, above). Object age is therefore
+only a *lower* bound on the protection horizon, and is used exactly that way — as a cheap, sound
+pre-filter that can only skip work, never authorize a delete (a lock is never earlier than
+`lastModified + retention`). What decides is the version's actual `ObjectLockRetainUntilDate`, read
+from the store, minus a small clock-skew margin so a boundary case cannot produce a spurious
+failure. Two consequences of the pre-filter, both safe: *raising* the configured retention delays
+reclamation of already-written objects (bounded by the new window); *lowering* it merely costs one
+extra `HEAD` on objects that turn out to be still locked.
+
+The single carve-out is the **current anchor set of a still-enrolled dataset** (the latest dataset
+revision plus the `.file` payload it references, and every live line's latest non-tombstone
+anchor), which is kept whatever its lock says. That is not a guess about the lock but a refusal to
+act on a lapsed one: under a renewal outage — already surfaced loudly by `lastRenewal` /
+`linesRenewal` (§3.4) — deleting the anchor would manufacture a missing-anchor breach and destroy
+repairability irreversibly, while keeping a stale-locked anchor costs only storage. Since the store
+is versioned (object-lock requires it), the purge walks *versions*, so a retried same-key PUT's
+noncurrent copies and stray delete markers are reclaimed too.
+
 This gives every resource the same guarantee as a single file: current state always restorable
 (level 2), any past state restorable within the retention window.
 
@@ -356,7 +408,15 @@ This gives every resource the same guarantee as a single file: current state alw
   its own checker in-process.
 - It is nonetheless **factored as a self-contained module** (locked-revision format, write
   wrappers, checker) so that promotion to `@data-fair/lib-node` for other adopters later is a
-  packaging change, not a redesign — see [§14](#14-deferred-scope--future-directions).
+  packaging change, not a redesign — see [§14](#14-deferred-scope--future-directions). Internally it
+  follows the repo's module-role split
+  ([code-conventions.md](code-conventions.md) §1): `operations.ts` / `lines-operations.ts` are pure
+  (the unit-test surface), `store.ts` is the S3/WORM adapter behind a config-free constructor
+  (`store-factory.ts` holds the config-coupled singleton), `relay.ts` / `lines-relay.ts` /
+  `checker.ts` / `purge.ts` are express-free services, and **`service.ts` owns the admin-action
+  orchestration** (enable/disable, `_fix`, both restores, the revision reads) so
+  `datasets/routes/integrity.ts` stays a thin adapter — the actions are therefore callable from
+  workers and tests without Express.
 - **No central integrity service** and **no central checker** — both deliberately deferred
   (§14).
 - **A single bucket for data-fair**, with the per-owner prefix layout of §3.1 (the `‹service›`
@@ -424,7 +484,8 @@ once per environment; on a fresh environment the three datasets seed automatical
 |---|---|---|---|
 | Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred — note the metadata half rides the file-class joint anchor, so **enrollment itself is gated on a finalized file dataset** (the `_integrity` enable check, §3): a non-file dataset cannot enroll today, even for metadata-only protection | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
 | Data files | trivial (md5 already stored) | ✅ **delivered — always-on, no size gate** | reuse existing `md5` |
-| Editable (REST) dataset — **Mongo lines** (source of truth) | ✅ **delivered — per-line locked revisions (detect + repair), gated ~100k live lines, opt-in per dataset** | same mechanism as detect (level 1 and 2 are not separated for lines — every anchor carries its payload) | SHA-256 of the cleaned line body (stable-stringified), embedded in the revision key |
+| Editable (REST) dataset — **Mongo lines** (source of truth) | ✅ **delivered — per-line locked revisions (detect + repair), gated ~100k live lines, opt-in per dataset; enrollment refused on lines-owner / attachment datasets (§5 limits)** | same mechanism as detect (level 1 and 2 are not separated for lines — every anchor carries its payload) | SHA-256 of the cleaned line body (stable-stringified), embedded in the revision key |
+| Dataset **attachments** (bytes beside the document) | ❌ not covered — **enrollment refused** rather than partially claimed | ❌ | n/a |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
 
 > A fold-based level 1 over the existing per-line CRC32 `_hash` — the originally-sketched cheap
@@ -552,18 +613,22 @@ once per environment; on a fresh environment the three datasets seed automatical
   check after re-enable reports every still-anchored-but-now-absent line as an out-of-band delete;
   `_fix` reconciles by writing the tombstone the gap never produced.
 - **Check and renewal.** The nightly `checkDataset` gains a lines part for enrolled REST datasets:
-  LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names, a live-Mongo scan
-  recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
+  LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names — **folded page by
+  page** (`foldLatestLineAnchors`) rather than materialized, so the checker's memory is
+  O(live lines), bounded by the gate, even though the prefix holds every revision in the retention
+  window — a live-Mongo scan recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
   with no revision (out-of-band insert), or a latest revision with no live line (out-of-band
   delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
   gains a `'lines'` breach member and `integrity.lastCheck.lines = { checked, diverged, sample:
   [≤20 lineIds] }`. **Renewal rides the check** (verify-then-renew, §3.4 Option B): when the
   dataset's lines-renewal horizon is due and the check passes, every live line's anchor retention
-  is extended in the same pass; failures aggregate into `integrity.linesRenewal: { date, status,
-  renewed, failed }`, loud, never thrown. Per §3.5 this coverage must be exhaustive — a missed
-  renewal permanently loses that line's repairability — so **level 2 on a large editable dataset
-  is an inevitable scalability bottleneck**: accepted, not engineered away, and is exactly why the
-  cardinality gate exists.
+  is extended in the same pass, **batch-concurrent** (100 in flight, like the relay's PUTs);
+  failures aggregate into `integrity.linesRenewal: { date, status, renewed, failed }`, loud, never
+  thrown. Per §3.5 this coverage must be exhaustive — a missed renewal permanently loses that
+  line's repairability — so the *number* of operations is irreducible (one `PutObjectRetention` per
+  live line per window) and **level 2 on a large editable dataset remains an inevitable scalability
+  bottleneck**: accepted, not engineered away, and exactly why the cardinality gate exists. Only
+  their serialization was avoidable, and is avoided.
 - **Repair.** `POST …/_integrity/lines/_restore` (superadmin, synchronous) re-runs the per-line
   comparison and, for each diverged line, rewrites it from its latest revision payload through the
   standard transaction pipeline (`operation: 'restore'`), re-inserts out-of-band-deleted lines,
@@ -581,19 +646,37 @@ once per environment; on a fresh environment the three datasets seed automatical
   always deterministically latest. Per-line history (`GET …/_integrity/lines/{lineId}/revisions`
   and the `/revisions/{i}` payload/diff endpoint) reuses the dataset-level revisions UI pattern and
   permissions (`readIntegrityRevisions`, superadmin-only writes).
-- **Explicit limits (accepted, not engineered around).** Line **attachment bytes are out of
-  scope** — the snapshot covers the line document only, so attachments are neither detected nor
-  restorable (same family as file-level-2 size gating; a possible later addition is md5 + copy in
-  the line's revision). A dataset **above the gate has no lines integrity at all** — the accepted
-  coverage cliff of skipping the fold (§10, §12): sensitive editable datasets are bet to be
-  modest-cardinality reference tables. **Lines-owner attribution is out of the snapshot.** A line
-  snapshot is `cleanedLineBody()` — the user-visible body only — so the `_`-prefixed
-  `_owner`/`_ownerName` columns an application-key write stamps for lines-owner attribution are
-  excluded from both the hash and the payload: an out-of-band edit to `_owner` alone goes
-  undetected, and both `lines/_restore` and `_fix`'s bless rewrite a line via `createOrUpdate`
-  through the transaction pipeline (§3.2) **without** a `linesOwner`, so either rewrite drops
-  whatever `_owner`/`_ownerName` the line held. Enrollment on a dataset that receives lines-owner
-  writes should account for this gap.
+- **Explicit limits — enforced by refusing enrollment, never by a caveat.** The rule is that a
+  dataset is either **fully covered or not enrolled**: the verdict must never overstate what the
+  snapshot actually protects. Two shapes fall outside the line snapshot, and **both are refused at
+  enable with a `400`** (`enableIntegrity`, `api/src/integrity/service.ts`), and refused as
+  *transitions* on an already-enrolled dataset by the dataset `PATCH` route — acquiring them later
+  would silently degrade a live guarantee, exactly like the owner transfer of §3.1:
+  - **Attachments.** A dataset carrying an `x-refersTo: http://schema.org/DigitalDocument` field
+    stores bytes outside the document (and outside the file anchor's `originalFile`), so those
+    bytes are neither detected nor restorable. Enrolling would let an `ok` verdict coexist with
+    tampered attachment files. Refused at **three** points, because a dataset can acquire
+    attachments three ways: at enable (`400`), when a schema patch would add the field, and — the
+    one a patch guard cannot see — when an `attachments` archive is **uploaded** onto an enrolled
+    dataset (`preparePatch`), since there the field is added later by the normalize worker rather
+    than by the patch itself. This applies to file datasets as much as REST ones.
+  - **Lines-owner attribution.** A line snapshot is `cleanedLineBody()` — the user-visible body
+    only — so the `_`-prefixed `_owner`/`_ownerName` columns an application-key write stamps are
+    excluded from both the hash and the payload. Worse than undetected: both `lines/_restore` and
+    `_fix`'s bless rewrite a line via `createOrUpdate` through the transaction pipeline (§3.2)
+    **without** a `linesOwner`, so the repair itself would **drop** whatever `_owner`/`_ownerName`
+    the line held — a remediation causing collateral data loss. Refused (both at enable, and when a
+    patch would set `rest.lineOwnership` while active).
+
+  Covering either properly (attachment md5 + locked copy in the line's revision; `_owner` inside
+  the covered projection with a linesOwner-preserving rewrite) is a possible later addition — the
+  refusals are what keep the *stated* guarantee true until then.
+
+  A dataset **above the gate has no lines integrity at all** — the accepted coverage cliff of
+  skipping the fold (§10, §12): sensitive editable datasets are bet to be modest-cardinality
+  reference tables. Enrollment above the gate is likewise refused (`409`), so this cliff is never
+  silently entered either; only *growth past the gate after* enrollment continues anchoring, with a
+  loud `overGate` warning rather than silent partial protection.
 
 ## 6. Atomicity & failure model
 
@@ -631,7 +714,12 @@ The integrity API splits read from write:
 - **UI:** the integrity tab is shown when the reader holds `readIntegrity` (or is in admin
   mode); the enable/disable switch and the check/fix action buttons inside it render only in
   admin mode. The status alerts and revision-history table are visible to every viewer of the
-  tab.
+  tab. The three actions that change the trail or the protection state are **confirmed in a
+  dialog stating their consequence**: restore (overwrites data), reconcile (blesses the current
+  state as legitimate, so pending divergences stop being reported) and **disable** (clears the
+  verdicts and stops renewal — additive *enable* needs no such guard). Reconcile and both restores
+  offer the optional free-text `reason`, which is the only free-text field a WORM revision carries;
+  both history tables render it, so what an admin can write is also what an auditor can read.
 
 ### 7.2 Store access
 
@@ -669,8 +757,11 @@ preserves the guarantee:
   long-lived resources, and the **maximum lag between a resource's deletion and full erasure
   of its history**. While a resource is live, lock renewal (§3.4) keeps it protected — and
   its data cannot be erased anyway, as it is still in the hot store. Once the resource is
-  deleted, renewal stops and the tail ages out (auto-unlock + purge of non-fresh revisions)
-  within one window.
+  deleted, renewal stops and the tail ages out within one window — and that erasure is
+  **actively performed** by the purge described in §3.5 (a daily attempt-delete whose only
+  authority is the lock's own refusal), not left to an out-of-band bucket lifecycle rule. This
+  matters for the erasure promise below: the wait-out is bounded by a mechanism this codebase
+  owns and tests, so "erased within one window" is a claim the system actually makes good on.
 - **Erasure = wait-out.** Erasure requests are honored once the window elapses after
   deletion; the window length is a **documented policy / contract term** that must be
   assumable long-term.
@@ -767,13 +858,15 @@ speculative framework.
    `POST …/_integrity/lines/_restore` (synchronous) heals all three tamper shapes (content edit,
    out-of-band insert, out-of-band delete) through the standard transaction pipeline; `_fix`
    extends to bless diverged lines inline; per-line history/diff endpoints and the admin UI ship
-   alongside. **Accepted limits:** line attachment bytes are not covered (document-only
-   snapshot); a dataset above the gate has no lines integrity at all (the coverage cliff of
-   skipping the fold). **Follow-ups, deliberately not in this iteration:** attachment coverage
-   (md5 + copy in the line's revision), a **fold-based level 1** for the above-gate tail (now a
-   possible *later, separate* level rather than "the design" — levels stay separate by design,
-   nothing here forecloses it), and applications/settings metadata (still deferred from
-   target 2).
+   alongside. **Limits are enforced as refusals, not caveats** (§5): a dataset with attachments or
+   with lines-owner attribution **cannot enroll** (400), and neither feature can be acquired while
+   enrolled — so no verdict ever claims coverage the snapshot does not have; above the gate,
+   enrollment is refused (409). **Follow-ups, deliberately not in this iteration:** attachment
+   coverage (md5 + copy in the line's revision) and lines-owner coverage — the two refusals above
+   are what keep the guarantee honest until they land — a **fold-based level 1** for the
+   above-gate tail (now a possible *later, separate* level rather than "the design" — levels stay
+   separate by design, nothing here forecloses it), and applications/settings metadata (still
+   deferred from target 2).
 
 ## 11. Provider support (target: Scaleway)
 

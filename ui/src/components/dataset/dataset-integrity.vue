@@ -138,7 +138,7 @@
           variant="text"
           size="small"
           :title="t('fixHelp')"
-          @click="fix.execute()"
+          @click="fixDialog = true; fixReason = ''"
         >
           {{ t('fix') }}
         </v-btn>
@@ -147,6 +147,8 @@
       <template v-if="adminMode">
         <v-divider class="my-4" />
 
+        <!-- disabling clears the verdicts and stops lock renewal (anchors then age out at
+             retention): confirm it, unlike the additive enable which needs no guard -->
         <v-switch
           :model-value="state.active"
           :label="t('enableLabel')"
@@ -154,7 +156,7 @@
           color="primary"
           density="compact"
           hide-details
-          @update:model-value="(v) => toggle.execute(!!v)"
+          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
         />
       </template>
 
@@ -184,6 +186,16 @@
           </template>
           <template #item.origin="{ item }">
             {{ t('origin_' + item.origin) }}
+          </template>
+          <template #item.reason="{ item }">
+            <span
+              v-if="item.reason"
+              class="text-caption"
+            >{{ item.reason }}</span>
+            <span
+              v-else
+              class="text-caption text-disabled"
+            >—</span>
           </template>
           <template #item.actions="{ item }">
             <template v-if="item.hasPayload">
@@ -304,6 +316,61 @@
     </v-dialog>
 
     <v-dialog
+      v-model="fixDialog"
+      max-width="500"
+    >
+      <v-card :title="t('fixTitle')">
+        <v-card-text>
+          <p class="mb-2">
+            {{ t('fixWarning') }}
+          </p>
+          <v-text-field
+            v-model="fixReason"
+            :label="t('restoreReason')"
+            density="compact"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="fixDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="fix.loading.value"
+            @click="fix.execute()"
+          >
+            {{ t('fix') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="disableDialog"
+      max-width="500"
+    >
+      <v-card :title="t('disableTitle')">
+        <v-card-text>
+          <p>{{ t('disableWarning') }}</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="disableDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="toggle.loading.value"
+            @click="toggle.execute(false)"
+          >
+            {{ t('disableConfirm') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="linesRestoreDialog"
       max-width="500"
     >
@@ -358,6 +425,16 @@
             </template>
             <template #item.origin="{ item }">
               {{ t('origin_' + item.origin) }}
+            </template>
+            <template #item.reason="{ item }">
+              <span
+                v-if="item.reason"
+                class="text-caption"
+              >{{ item.reason }}</span>
+              <span
+                v-else
+                class="text-caption text-disabled"
+              >—</span>
             </template>
             <template #item.actions="{ item }">
               <v-btn
@@ -457,6 +534,7 @@ fr:
   colOperation: Opération
   colDate: Date
   colOriginator: Auteur
+  colReason: Raison
   colHash: Empreinte
   op_create: Création
   op_update: Mise à jour
@@ -494,6 +572,11 @@ fr:
   linesRestoreOk: Restauration des lignes lancée
   lineRevisionsTitle: "Historique de la ligne {lineId}"
   lineDeletedRevision: Cette révision correspond à la suppression de la ligne.
+  fixTitle: Réconcilier l'état courant
+  fixWarning: L'état courant du fichier, des métadonnées et de chaque ligne sera ancré comme la nouvelle référence légitime. Les divergences détectées ne seront plus signalées — à n'utiliser que si ces modifications sont connues et légitimes.
+  disableTitle: Désactiver le contrôle d'intégrité
+  disableWarning: Les verdicts de contrôle seront effacés et le renouvellement des verrous s'arrêtera : les révisions déjà écrites resteront verrouillées jusqu'à leur date de rétention puis seront purgées. Une réactivation ultérieure ré-ancrera l'état courant.
+  disableConfirm: Désactiver
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
@@ -519,6 +602,7 @@ en:
   colOperation: Operation
   colDate: Date
   colOriginator: Author
+  colReason: Reason
   colHash: Hash
   op_create: Create
   op_update: Update
@@ -556,6 +640,11 @@ en:
   linesRestoreOk: Line restore started
   lineRevisionsTitle: "History of line {lineId}"
   lineDeletedRevision: This revision corresponds to the line's deletion.
+  fixTitle: Reconcile the current state
+  fixWarning: The current state of the file, metadata and every line will be anchored as the new legitimate reference. Detected divergences will no longer be reported — use only if those changes are known and legitimate.
+  disableTitle: Disable integrity checking
+  disableWarning: Check verdicts will be cleared and lock renewal will stop: revisions already written stay locked until their retention date, then are purged. Re-enabling later re-anchors the current state.
+  disableConfirm: Disable
 </i18n>
 
 <script setup lang="ts">
@@ -592,6 +681,7 @@ const headers = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
+  { title: t('colReason'), key: 'reason', sortable: false },
   { title: t('colHash'), key: 'hash', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
@@ -645,14 +735,24 @@ const check = useAsyncAction(async () => {
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }, { success: t('checkOk') })
 
+// reconcile blesses the current state into the WORM trail: the optional reason is the only
+// free-text audit field a revision carries, so it is offered here rather than API-only
+const fixDialog = ref(false)
+const fixReason = ref('')
 const fix = useAsyncAction(async () => {
-  await $fetch(`datasets/${dataset.value!.id}/_integrity/_fix`, { method: 'POST' })
+  const body: any = {}
+  if (fixReason.value) body.reason = fixReason.value
+  await $fetch(`datasets/${dataset.value!.id}/_integrity/_fix`, { method: 'POST', body })
+  fixDialog.value = false
+  fixReason.value = ''
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }, { success: t('fixOk') })
 
+const disableDialog = ref(false)
 const toggle = useAsyncAction(async (active: boolean) => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity`, { method: 'PUT', body: { active } })
+  disableDialog.value = false
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }, { success: t('toggleOk') })
@@ -722,6 +822,7 @@ const lineRevisionHeaders = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
+  { title: t('colReason'), key: 'reason', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
 

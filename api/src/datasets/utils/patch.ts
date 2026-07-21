@@ -71,6 +71,14 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     }
   }
   if (attachmentsFile) {
+    // integrity truth-grounding: attachment bytes live outside the anchored snapshot, so an
+    // enrolled dataset must not acquire them — otherwise an 'ok' verdict would silently start
+    // overstating its coverage. Mirrors the enable-time and schema-patch refusals (see
+    // integrity/service.ts and docs/architecture/integrity.md §5); the upload path needs its own
+    // guard because the attachment field is added later by the normalize worker, not by a patch.
+    if (dataset.integrity?.active) {
+      throw httpError(400, 'attachments cannot be added while integrity is active: attachment files are not covered by the integrity guarantee')
+    }
     patch.loaded = patch.loaded || {}
     patch.loaded.attachments = true
   }

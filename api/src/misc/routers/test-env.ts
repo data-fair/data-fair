@@ -48,6 +48,7 @@ router.delete('/', async (req, res, next) => {
       // collections without owner (blanket delete)
       mongo.applicationsKeys.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
+      mongo.db.collection('integrity-purge').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
       mongo.remoteServices.deleteMany({}),
@@ -270,6 +271,24 @@ router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
   if (req.body?.delete) await filesStorage.removeFile(datasetUtils.originalFilePath(dataset))
   else await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
   res.status(204).send()
+})
+
+// Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
+// and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
+// decision on a seconds-long lock instead of waiting out a full retention window.
+router.post('/integrity-purge/run', async (req, res, next) => {
+  try {
+    const { purgeExpiredRevisions } = await import('../../integrity/purge.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await purgeExpiredRevisions(integrityStore(), {
+      prefix: req.body?.prefix,
+      ignoreAge: !!req.body?.ignoreAge,
+      skewMarginMs: req.body?.skewMarginMs,
+      ignoreWatermark: !!req.body?.ignoreWatermark
+    }))
+  } catch (err) {
+    next(err)
+  }
 })
 
 // Trigger the api-keys expiration cron task on demand (test-only)

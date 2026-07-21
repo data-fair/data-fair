@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, ListObjectVersionsCommand, DeleteObjectCommand, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { Readable } from 'node:stream'
 import type { RevisionContext } from './operations.ts'
@@ -58,17 +58,77 @@ export class IntegrityStore {
     }))
   }
 
-  async listRevisions (prefix: string, opts?: { delimiter?: string }): Promise<{ key: string, lastModified?: Date }[]> {
-    const revisions: { key: string, lastModified?: Date }[] = []
+  // Paged variant of listRevisions: yields one LIST page (≤1000 keys, lexical order) at a time so
+  // callers can fold over an arbitrarily large prefix without materializing every key in memory
+  // (the checker's lines compare folds pages into an O(live-lines) latest-anchor map).
+  async * iterateRevisionPages (prefix: string, opts?: { delimiter?: string }): AsyncGenerator<{ key: string, lastModified?: Date }[]> {
     let ContinuationToken: string | undefined
     do {
       const res = await this.client.send(new ListObjectsV2Command({
         Bucket: this.bucket, Prefix: prefix, Delimiter: opts?.delimiter, ContinuationToken
       }))
-      for (const o of res.Contents ?? []) if (o.Key) revisions.push({ key: o.Key, lastModified: o.LastModified })
+      const page: { key: string, lastModified?: Date }[] = []
+      for (const o of res.Contents ?? []) if (o.Key) page.push({ key: o.Key, lastModified: o.LastModified })
+      if (page.length) yield page
       ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
     } while (ContinuationToken)
+  }
+
+  // The sub-prefixes directly under `prefix` (S3 CommonPrefixes), without listing their contents.
+  // This is what lets the purge enumerate dataset scopes at O(datasets) cost instead of walking
+  // every object: LIST has no date predicate, so the only way to avoid a full walk is to not ask
+  // for the objects in the first place.
+  async listSubPrefixes (prefix: string): Promise<string[]> {
+    const prefixes: string[] = []
+    let ContinuationToken: string | undefined
+    do {
+      const res = await this.client.send(new ListObjectsV2Command({
+        Bucket: this.bucket, Prefix: prefix, Delimiter: '/', ContinuationToken
+      }))
+      for (const p of res.CommonPrefixes ?? []) if (p.Prefix) prefixes.push(p.Prefix)
+      ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
+    } while (ContinuationToken)
+    return prefixes
+  }
+
+  async listRevisions (prefix: string, opts?: { delimiter?: string }): Promise<{ key: string, lastModified?: Date }[]> {
+    const revisions: { key: string, lastModified?: Date }[] = []
+    for await (const page of this.iterateRevisionPages(prefix, opts)) revisions.push(...page)
     return revisions
+  }
+
+  // The store bucket is versioned (object-lock requires it): a retried same-key PUT stacks a
+  // noncurrent version, and full erasure means deleting versions, not keys. Yields one page of
+  // versions (and stray delete markers) at a time, keys in lexical order — the purge worker's
+  // walk (see purge.ts).
+  async * iterateVersionPages (prefix: string): AsyncGenerator<Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean }>> {
+    let KeyMarker: string | undefined
+    let VersionIdMarker: string | undefined
+    do {
+      const res = await this.client.send(new ListObjectVersionsCommand({
+        Bucket: this.bucket, Prefix: prefix, KeyMarker, VersionIdMarker
+      }))
+      const page: Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean }> = []
+      for (const v of res.Versions ?? []) {
+        if (v.Key) page.push({ key: v.Key, versionId: v.VersionId, isLatest: v.IsLatest, lastModified: v.LastModified })
+      }
+      for (const m of res.DeleteMarkers ?? []) {
+        if (m.Key) page.push({ key: m.Key, versionId: m.VersionId, isLatest: m.IsLatest, lastModified: m.LastModified, deleteMarker: true })
+      }
+      // the response splits versions and delete markers into two arrays, each key-ordered on its
+      // own; re-sort so a page is lexically ordered as a whole and every key's entries are
+      // adjacent — callers group contiguous keys (see purge.ts) and rely on that
+      page.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+      if (page.length) yield page
+      KeyMarker = res.IsTruncated ? res.NextKeyMarker : undefined
+      VersionIdMarker = res.IsTruncated ? res.NextVersionIdMarker : undefined
+    } while (KeyMarker !== undefined || VersionIdMarker !== undefined)
+  }
+
+  // Delete one specific version. On a compliance-locked version the provider refuses (AccessDenied)
+  // — the purge worker relies on exactly that refusal as its source of truth for "still protected".
+  async deleteVersion (key: string, versionId?: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key, VersionId: versionId }))
   }
 
   async getRevision (key: string): Promise<RevisionBody> {
@@ -87,8 +147,12 @@ export class IntegrityStore {
     }))
   }
 
-  async getRetention (key: string): Promise<Date | undefined> {
-    const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+  // The authoritative protection horizon of a stored object: whatever the lock actually says,
+  // whether it was set at write or pushed forward by a renewal/reference extension. Reading it is
+  // how the purge decides what has genuinely lapsed (never by attempting a delete and reading the
+  // provider's refusal). `versionId` targets one specific version.
+  async getRetention (key: string, versionId?: string): Promise<Date | undefined> {
+    const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key, VersionId: versionId }))
     return res.ObjectLockRetainUntilDate
   }
 

@@ -8,6 +8,7 @@ import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
+import { purgeExpiredRevisions } from './purge.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
@@ -18,6 +19,7 @@ import * as notifications from '../misc/utils/notifications.ts'
 
 const debug = Debug('integrity-checker')
 const BATCH = 100
+const RENEW_CONCURRENCY = 100
 
 export type Check = {
   status: 'ok' | 'breach' | 'unknown'
@@ -30,8 +32,12 @@ export type Check = {
 // embedded in each key). Returns the three divergence shapes plus the anchor map (restore/fix
 // need the keys to fetch payloads / write tombstones).
 export const compareDatasetLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>) => {
-  const keys = (await store.listRevisions(lops.linesPrefix(dataset.owner, dataset.id))).map((r) => r.key)
-  const anchors = lops.latestLineAnchors(keys)
+  // fold LIST pages incrementally: the prefix holds every revision within the retention window,
+  // but only the latest anchor per line is kept in memory (O(live lines), bounded by the gate)
+  const anchors = new Map<string, lops.LatestLineAnchor>()
+  for await (const page of store.iterateRevisionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
+    lops.foldLatestLineAnchors(anchors, page.map((r) => r.key))
+  }
   const unvisited = new Set(anchors.keys())
   const edited: string[] = []
   const inserted: string[] = []
@@ -94,15 +100,19 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
   let renewed = 0
   let failed = 0
-  for (const anchor of anchors.values()) {
-    if (anchor.deleted) continue
-    try {
-      await store.extendRetention(anchor.key, retainUntil)
-      renewed++
-    } catch (err) {
-      internalError('integrity-renew-lines', err)
-      failed++
-    }
+  // one PutObjectRetention per live line is unavoidable (exhaustive by design), but serializing
+  // them is not: batch-concurrent like the relay, so a gate-sized dataset renews in minutes not hours
+  const live = [...anchors.values()].filter((anchor) => !anchor.deleted)
+  for (let offset = 0; offset < live.length; offset += RENEW_CONCURRENCY) {
+    await Promise.all(live.slice(offset, offset + RENEW_CONCURRENCY).map(async (anchor) => {
+      try {
+        await store.extendRetention(anchor.key, retainUntil)
+        renewed++
+      } catch (err) {
+        internalError('integrity-renew-lines', err)
+        failed++
+      }
+    }))
   }
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: { 'integrity.linesRenewal': { date, status: failed ? 'failed' : 'ok', renewed, failed, ...(failed ? {} : { retainUntil: retainUntil.toISOString() }) } }
@@ -185,7 +195,19 @@ export const task = async () => {
   try {
     const ack = await locks.acquire('integrity-check-task')
     if (!ack) { debug('another pod holds the integrity-check lock, skipping'); return }
-    try { await runOnce() } finally { await locks.release('integrity-check-task') }
+    try {
+      await runOnce()
+      // aging-out of expired revisions rides the same daily lock-held pass (see purge.ts):
+      // never thrown — a failed purge only delays reclamation, not protection
+      if (config.integrity?.active) {
+        try {
+          const purged = await purgeExpiredRevisions(integrityStore())
+          debug('purged expired revisions', purged)
+        } catch (err) {
+          internalError('integrity-purge-run', err)
+        }
+      }
+    } finally { await locks.release('integrity-check-task') }
   } catch (err) {
     internalError('integrity-check-cron', err)
   }

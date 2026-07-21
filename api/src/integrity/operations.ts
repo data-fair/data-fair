@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto'
 import stableStringify from 'fast-json-stable-stringify'
+// type-only import, erased at runtime: this file stays pure/config-free for the unit tests
+import type { RevisionOperation, RevisionOrigin, HistorizeContextHint } from '#types/dataset/index.ts'
+
+export type { RevisionOperation, RevisionOrigin, HistorizeContextHint }
 
 export const INDEX_WIDTH = 9
 
@@ -94,12 +98,7 @@ export const latestKey = (keys: string[]): string | undefined => {
   return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
-export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore'
-// actor CATEGORY, never an identity: user ids are personal data and must not enter the
-// undeletable WORM store — identity-level attribution lives in the events/journal system
-export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
 export type RevisionContext = { operation: RevisionOperation, origin: RevisionOrigin, date: string, reason?: string }
-export type HistorizeContextHint = { operation: RevisionOperation, origin: RevisionOrigin, reason?: string }
 
 // Merge the transactional-outbox stamp (spec §4) into a writer's own Mongo update, keeping the
 // write single-document atomic. A stamp means "re-anchor this dataset" (every anchor covers both

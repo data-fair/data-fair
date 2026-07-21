@@ -2,8 +2,10 @@
 // Covers the admin-facing surface: the enable/disable/_fix/_check/revisions routes, permission
 // scoping, and the metadata-class historization flows (permissions, topics, publication sites).
 import { test, expect } from '@playwright/test'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
-import { sendDataset, getRawDataset, collectNotifications } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -584,4 +586,39 @@ test('owner transfer is refused while integrity is active', async () => {
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
   const res = await admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
   expect(res.status).toBe(200)
+})
+
+// ---------------------------------------------------------------------------------------------
+// attachments are outside the anchored snapshot: enrollment is refused, and an enrolled dataset
+// cannot acquire them — the guarantee is never allowed to quietly become partial
+// ---------------------------------------------------------------------------------------------
+
+test('enable is refused on a file dataset that carries attachments', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const form = new FormData()
+  form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+  form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+  const res = await admin.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+  await waitForFinalize(admin, res.data.id)
+
+  await expect(admin.put(`/api/v1/datasets/${res.data.id}/_integrity`, { active: true }))
+    .rejects.toMatchObject({ status: 400 })
+})
+
+test('an enrolled dataset cannot acquire attachments through an upload', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // the schema-patch guard cannot catch this one: the attachment field is added later by the
+  // normalize worker, so the refusal has to live on the upload path itself
+  const form = new FormData()
+  form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+  form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }))
+    .rejects.toMatchObject({ status: 400 })
+
+  // refused cleanly: the dataset still verifies against its anchor
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
 })

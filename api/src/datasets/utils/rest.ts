@@ -26,6 +26,7 @@ import * as findUtils from '../../misc/utils/find.ts'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
+import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
 import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
@@ -76,9 +77,7 @@ export const sheet2csvPiscina = new Piscina({
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
 function cleanLine (line: DatasetLine) {
-  delete line._needsIndexing
-  delete line._needsExtending
-  delete line._needsHistorizing
+  stripTransientLineFlags(line)
   delete line._deleted
   delete line._action
   delete line._error
@@ -256,9 +255,7 @@ export const configureHistory = async (dataset: RestDataset) => {
       let revisionsBulkOp = rc.initializeUnorderedBulkOp()
       for await (const line of collection(dataset).find<DatasetLine>({})) {
         const revision: DatasetLineRevision = { ...line, _action: 'create', _lineId: line._id }
-        delete revision._needsIndexing
-        delete revision._needsExtending
-        delete revision._needsHistorizing
+        stripTransientLineFlags(revision)
         delete revision._id
         if (!revision._deleted) delete revision._deleted
         revisionsBulkOp.insert(revision)
@@ -393,9 +390,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
         revision._updatedBy = sessionState.user.id
         revision._updatedByName = sessionState.user.name
       }
-      delete revision._needsIndexing
-      delete revision._needsExtending
-      delete revision._needsHistorizing
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
     }
     await revisionsBulkOp.execute()
@@ -756,9 +751,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       const revision = getLineFromOperation(operation) as unknown as DatasetLineRevision
       delete revision._id
       revision._lineId = operation._id
-      delete revision._needsIndexing
-      delete revision._needsExtending
-      delete revision._needsHistorizing
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
       hasRevisionsBulkOp = true
     }

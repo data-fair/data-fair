@@ -53,8 +53,9 @@ export const lineSha256 = (line: Record<string, any>): string =>
 
 export type LatestLineAnchor = { key: string, i: number, sha256?: string, deleted: boolean }
 
-export const latestLineAnchors = (keys: string[]): Map<string, LatestLineAnchor> => {
-  const latest = new Map<string, LatestLineAnchor>()
+// Incremental fold: merge one batch of keys into the latest-anchor map. Callers stream LIST
+// pages through this so memory stays O(distinct lines), never O(total revisions).
+export const foldLatestLineAnchors = (latest: Map<string, LatestLineAnchor>, keys: string[]): Map<string, LatestLineAnchor> => {
   for (const key of keys) {
     const parsed = parseLineRevisionKey(key)
     if (!parsed) continue
@@ -65,6 +66,9 @@ export const latestLineAnchors = (keys: string[]): Map<string, LatestLineAnchor>
   }
   return latest
 }
+
+export const latestLineAnchors = (keys: string[]): Map<string, LatestLineAnchor> =>
+  foldLatestLineAnchors(new Map(), keys)
 
 export type LineVerdict = 'ok' | 'edited' | 'inserted'
 

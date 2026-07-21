@@ -116,6 +116,11 @@ const waitForLinesDrained = async (ax: any, datasetId: string, timeout = 15000) 
   throw new Error('timed out waiting for _needsHistorizingLines to clear')
 }
 
+const enableAndDrain = async (ax: any, datasetId: string) => {
+  await ax.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, datasetId)
+}
+
 test('the lines relay ships a revision per stamped line and clears the flags', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
@@ -194,13 +199,66 @@ test('enable is refused above the lines gate', async () => {
 })
 
 // ---------------------------------------------------------------------------------------------
-// checker: lines verdict (target 3) — the three out-of-band tamper shapes + the pending guard
+// truth-grounding refusals: a guarantee is never claimed over content the snapshot cannot cover
 // ---------------------------------------------------------------------------------------------
 
-const enableAndDrain = async (ax: any, datasetId: string) => {
-  await ax.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, datasetId)
-}
+test('enable is refused on a rest dataset with line ownership', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    rest: { lineOwnership: true },
+    title: `integrity lines owner ${Date.now()}`,
+    schema: [{ key: 'attr1', type: 'string' }]
+  })
+  await waitForFinalize(ax, res.data.id)
+  // _owner/_ownerName live outside cleanedLineBody: undetectable AND dropped by restore/_fix's
+  // bless — enrolling would advertise a guarantee the mechanism cannot honour
+  await expect(ax.put(`/api/v1/datasets/${res.data.id}/_integrity`, { active: true }))
+    .rejects.toMatchObject({ status: 400 })
+  const state = (await ax.get(`/api/v1/datasets/${res.data.id}/_integrity`)).data
+  expect(state.active).toBeFalsy()
+})
+
+test('enable is refused on a dataset with an attachments field', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity lines attachments ${Date.now()}`,
+    schema: [
+      { key: 'attr1', type: 'string' },
+      { key: 'doc', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+    ]
+  })
+  await waitForFinalize(ax, res.data.id)
+  // attachment bytes are not covered by the snapshot: an 'ok' verdict would overstate coverage
+  await expect(ax.put(`/api/v1/datasets/${res.data.id}/_integrity`, { active: true }))
+    .rejects.toMatchObject({ status: 400 })
+})
+
+test('line ownership and attachment fields cannot be acquired while integrity is active', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  await expect(ax.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: true } }))
+    .rejects.toMatchObject({ status: 400 })
+  await expect(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+    schema: [
+      { key: 'attr1', type: 'string' },
+      { key: 'attr2', type: 'integer' },
+      { key: 'doc', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+    ]
+  })).rejects.toMatchObject({ status: 400 })
+
+  // and the guarantee is intact: the refusals left the dataset untouched
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+})
+
+// ---------------------------------------------------------------------------------------------
+// checker: lines verdict (target 3) — the three out-of-band tamper shapes + the pending guard
+// ---------------------------------------------------------------------------------------------
 
 test('check reports the three line tamper shapes and heals via the transaction path', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -336,6 +394,69 @@ test('per-line revision history lists newest-first and serves the payload diff',
   const detail = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions/${history.results[1].i}`)).data
   expect(detail.payload).toMatchObject({ attr1: 'v1' })
   expect(detail.current).toMatchObject({ attr1: 'v2' })
+})
+
+// ---------------------------------------------------------------------------------------------
+// per-line lock renewal (§3.4 Option B, exhaustive per §3.5): the sliding lock that keeps every
+// line's repairability alive — a missed renewal loses it permanently at lock expiry
+// ---------------------------------------------------------------------------------------------
+
+const linesAnchorKeys = async (ax: any, datasetId: string) => {
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+  return (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/`)).map(r => r.key)
+}
+
+test('a due lines horizon renews every live line anchor on a passing check', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  const keys = await linesAnchorKeys(ax, dataset.id)
+  expect(keys).toHaveLength(2)
+  const before = await integrityTestStore.getRetention(keys[0])
+
+  // make the lines horizon look due (retention is 1 day in test config, renewal interval 1/12 →
+  // anything under ~22h remaining is due)
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+
+  const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.linesRenewal.status).toBe('ok')
+  expect(state.linesRenewal.renewed).toBe(2) // exhaustive: every live line, not a sample
+  expect(state.linesRenewal.failed).toBe(0)
+  // the real S3 lock advanced, not merely the mongo mirror
+  const after = await integrityTestStore.getRetention(keys[0])
+  expect(after!.getTime()).toBeGreaterThan(before!.getTime())
+})
+
+test('a fresh lines horizon is not renewed, and a breach skips lines renewal entirely', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  // fresh horizon: nothing due
+  const first = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(first.status).toBe('ok')
+  let state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.linesRenewal.renewed).toBeUndefined() // untouched enable-time baseline
+
+  // due + tampered: renewal must not slide a lock over state we just failed to verify
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
+  })
+  const breach = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(breach.status).toBe('breach')
+  state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.linesRenewal.renewed).toBeUndefined() // verify-then-renew: no renewal on breach
 })
 
 test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {

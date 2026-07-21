@@ -4,11 +4,15 @@ import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
 export * from './.type/index.js'
 
-// mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
-// package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+// canonical declaration (api/src/integrity/operations.ts re-exports it) — declared here because
+// this package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore'
+// actor CATEGORY, never an identity: user ids are personal data and must not enter the
+// undeletable WORM store — identity-level attribution lives in the events/journal system
+export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
 export type HistorizeContextHint = {
-  operation: 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore'
-  origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+  operation: RevisionOperation
+  origin: RevisionOrigin
   reason?: string
 }
 
