@@ -183,6 +183,10 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
     } else {
       // scoped filters inherited from the virtual ancestors on this path (AND semantics);
       // the same dataset may be pushed several times with different stacks (union of paths)
+      // this exact array reference is shared across every sibling stamped in this loop (and later
+      // referenced from DescendantsFilters.filtered, see queryableDescendants) — safe only because
+      // it is read-only from here on: the `.concat()` above always allocates a fresh array per
+      // recursion level, and nothing ever mutates a stamped array in place
       if (inheritedFilters.length) (child as any)._inheritedFilters = inheritedFilters
       descendants.push(child)
     }

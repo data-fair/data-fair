@@ -125,7 +125,8 @@ export default async function (dataset: DatasetInternal) {
         const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
         parentDataset.descendantsFull = descendantsFull
         parentDataset.descendants = ids
-        if (filters) (parentDataset as any)._descendantsFilters = filters
+        // always assign, including null — see the comment in service.ts's getDataset for why
+        parentDataset._descendantsFilters = filters
       }
       if (isRestDataset(dataset)) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
@@ -239,7 +240,8 @@ export default async function (dataset: DatasetInternal) {
             const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
             parentDataset.descendantsFull = descendantsFull
             parentDataset.descendants = ids
-            if (filters) (parentDataset as any)._descendantsFilters = filters
+            // always assign, including null — see the comment in service.ts's getDataset for why
+            parentDataset._descendantsFilters = filters
           }
           const pathParts = new URL(attachment).pathname.split('/')
           const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])

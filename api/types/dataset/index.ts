@@ -22,7 +22,19 @@ export function assertRestDataset (dataset: Dataset): asserts dataset is RestDat
   if (!dataset.isRest) throw httpError(400, 'dataset is not "rest"')
 }
 
-export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: string[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>
+// mirrors VirtualFilter / DescendantsFilters in api/src/datasets/es/operations.ts — declared inline
+// because this package must not import from src (a src import drags API code into the UI's vue-tsc
+// type graph). Scoped filters inherited from intermediate virtual children, attached to a queryable
+// virtual dataset as `_descendantsFilters` by queryableDescendants (datasets/utils/virtual.ts) and
+// consumed by prepareQuery (es/commons.ts) / parseFilters (api-compat/ods/operations.ts).
+type DescendantsVirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+type DescendantsFilters = {
+  indicesPrefix: string
+  unfilteredIds: string[]
+  filtered: { id: string, filters: DescendantsVirtualFilter[] }[]
+}
+
+export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: string[], _descendantsFilters?: DescendantsFilters | null } & Required<Pick<Dataset, 'virtual' | 'schema'>>
 export const isVirtualDataset = (dataset: Dataset): dataset is VirtualDataset => {
   return !!dataset.isVirtual
 }
@@ -38,6 +50,7 @@ export type DatasetInternal = Dataset & {
   loaded?: { attachments?: boolean, dataset?: Partial<FileDataset['originalFile']> } | null,
   descendants?: string[]
   descendantsFull?: DatasetInternal[]
+  _descendantsFilters?: DescendantsFilters | null
   initFrom?: (InitFrom & { role: string, department?: string }) | null
   _partialRestStatus?: 'updated' | 'extended' | 'indexed'
   validateDraft?: boolean

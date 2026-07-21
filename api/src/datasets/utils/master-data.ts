@@ -29,10 +29,11 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
   if (dataset.isVirtual) {
-    const virtualDataset = dataset as Dataset & { descendants?: any, _descendantsFilters?: any }
-    const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset as VirtualDataset)
+    const virtualDataset = dataset as VirtualDataset
+    const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(virtualDataset)
     virtualDataset.descendants = ids
-    if (filters) virtualDataset._descendantsFilters = filters
+    // always assign, including null — see the comment in service.ts's getDataset for why
+    virtualDataset._descendantsFilters = filters
   }
   const schema = dataset.schema ?? []
   const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)

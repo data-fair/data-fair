@@ -74,6 +74,10 @@ export const storage = async (dataset: Dataset) => {
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
+      // intentionally unfiltered: storage measures what is indexed for this one descendant, not what
+      // is visible through the virtual dataset's scoped filters. Explicit null (not omitted/deleted) —
+      // prepareQuery now throws on a virtual dataset missing this annotation entirely (es/commons.ts)
+      queryableDataset._descendantsFilters = null
       const count = await esUtils.count(queryableDataset, {})
       storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)

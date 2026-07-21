@@ -45,7 +45,8 @@ export default async function (_dataset: DatasetInternal) {
   if (isVirtualDataset(dataset)) {
     const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset)
     queryableDataset.descendants = ids
-    if (filters) (queryableDataset as any)._descendantsFilters = filters
+    // always assign, including null — see the comment in service.ts's getDataset for why
+    queryableDataset._descendantsFilters = filters
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
   }
 

@@ -280,6 +280,15 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if (dataset.virtual && dataset.virtual.filters) {
     filter.push(...virtualFilterClauses(dataset.virtual.filters))
   }
+  // Every caller that resolves descendants for a virtual dataset (queryableDescendants, in
+  // utils/virtual.ts) MUST also set `_descendantsFilters` (null when there is nothing to scope).
+  // undefined here means some call path forgot to do that — turn the missing annotation into a loud
+  // failure instead of a silent row leak (rows a child's `virtual.filters` is meant to hide would
+  // otherwise become readable through the parent). This is a programming error, never user input,
+  // hence a 500 and not a 4xx.
+  if (dataset.isVirtual && dataset._descendantsFilters === undefined) {
+    throw new Error(`[internal] dataset ${dataset.id} is virtual but is missing the _descendantsFilters annotation, refusing to query it unscoped`)
+  }
   // Scoped filters inherited from intermediate virtual children (see utils/virtual.ts)
   if (dataset._descendantsFilters) {
     filter.push(descendantsFilterClause(dataset._descendantsFilters))

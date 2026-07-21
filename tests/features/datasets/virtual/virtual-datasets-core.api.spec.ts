@@ -419,6 +419,13 @@ test.describe('virtual datasets core', () => {
     // the descendant index is queried once: rows admitted by the unfiltered path, no duplicates
     const lines = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
     assert.equal(lines.data.total, 2)
+
+    // total===2 above also guards duplication/intersection, but is indistinguishable from a bug that
+    // silently drops the filter entirely (union would still yield 2). Check the filtered child alone
+    // to also guard filter-dropping.
+    const filteredLines = await ax.get(`/api/v1/datasets/${filteredChild.id}/lines`)
+    assert.equal(filteredLines.data.total, 1)
+    assert.equal(filteredLines.data.results[0].id, 'koumoul')
   })
 
   test('Filters of nested virtual ancestors are merged', async () => {

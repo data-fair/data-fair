@@ -60,6 +60,15 @@ export const parseFilters = (dataset, query, route) => {
   if (dataset.virtual && dataset.virtual.filters) {
     filter.push(...virtualFilterClauses(dataset.virtual.filters))
   }
+  // Every route reaching this builder (api-compat/ods/index.ts) goes through
+  // readDataset({ fillDescendants: true }), which always sets `_descendantsFilters` (null when there
+  // is nothing to scope) — so this should never fire in practice. Mirrors the fail-loud guard in
+  // es/commons.ts#prepareQuery for symmetry: if a future route ever reached here without that
+  // middleware, it must fail loudly instead of silently leaking rows a child's `virtual.filters` is
+  // meant to hide.
+  if (dataset.isVirtual && dataset._descendantsFilters === undefined) {
+    throw new Error(`[internal] dataset ${dataset.id} is virtual but is missing the _descendantsFilters annotation, refusing to query it unscoped`)
+  }
   // Scoped filters inherited from intermediate virtual children (see utils/virtual.ts)
   if (dataset._descendantsFilters) {
     filter.push(descendantsFilterClause(dataset._descendantsFilters))

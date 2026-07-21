@@ -229,7 +229,10 @@ test.describe('parseFilters virtual scoping', () => {
   test('nin virtual filters produce must_not clauses', () => {
     const { bool: { filter } } = parseFilters(ds({
       isVirtual: true,
-      virtual: { children: ['c1'], filters: [{ key: 'a', operator: 'nin', values: ['x'] }] }
+      virtual: { children: ['c1'], filters: [{ key: 'a', operator: 'nin', values: ['x'] }] },
+      // required since parseFilters now fails loudly on a virtual dataset missing this annotation
+      // (mirrors the same guard in es/commons.ts#prepareQuery) — null means "nothing to scope"
+      _descendantsFilters: null
     }), {}, 'records')
     assert.deepEqual(filter, [{ bool: { must_not: { term: { a: 'x' } } } }])
   })

@@ -15,7 +15,11 @@ export default <T extends object>(target: T, label: string): T => {
     get (target: any, key: string | symbol) {
       if (key === '__isProxy') return true
       if (key === '__proxyTarget') return target
-      if (typeof target[key] === 'object' && !(target[key] instanceof Date)) {
+      // `typeof null === 'object'` — exclude it explicitly, otherwise every explicit-null field
+      // (e.g. a virtual dataset's `_descendantsFilters: null`, see es/commons.ts) hits `new
+      // Proxy(null, ...)`, which throws and gets caught below, just to fall back to the same
+      // `target[key]` return — harmless but spams a console.warn on every access.
+      if (target[key] !== null && typeof target[key] === 'object' && !(target[key] instanceof Date)) {
         try {
           return new Proxy(target[key], proxyHandler)
         } catch (err) {
