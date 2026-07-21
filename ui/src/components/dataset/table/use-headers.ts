@@ -28,6 +28,7 @@ export type TableHeader = {
 }
 
 export type TableHeaderWithProperty = Omit<TableHeader, 'property'> & Required<Pick<TableHeader, 'property'>>
+export type TableSort = { key: string, direction: 1 | -1 }
 
 // transform a schema key into a string usable in a CSS selector (id/class/activator) ;
 // keys can contain dots but also slashes, accents, spaces, etc. that would break querySelector

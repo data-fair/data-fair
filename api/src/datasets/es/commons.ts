@@ -69,7 +69,9 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
     if (key.startsWith('_geo_distance:')) {
       if (!dataset.bbox) throw httpError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
-      result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
+      // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+      // rows from a child without geo mapping sort last instead of failing the query
+      result.push({ _geo_distance: { _geopoint: { lon, lat }, order, ignore_unmapped: true } })
       continue
     }
 
@@ -232,7 +234,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if ((query.geo_distance ?? query._c_geo_distance)) {
     if (!esQuery.sort.some((s: any) => !!s._geo_distance)) {
       const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
-      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc', ignore_unmapped: true } })
     }
     if (!esQuery._source.includes('_geopoint')) {
       esQuery._source.push('_geopoint')
@@ -475,7 +477,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
             type: 'envelope',
             coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
           }
-        }
+        },
+        // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+        // the non-geo child's index simply matches nothing instead of failing the query
+        ignore_unmapped: true
       }
     })
   }
@@ -501,7 +506,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
                 type: 'point',
                 coordinates: [lon, lat]
               }
-            }
+            },
+            ignore_unmapped: true
           }
         })
       } else {
@@ -513,7 +519,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
         filter.push({
           geo_distance: {
             distance,
-            _geopoint: { lat, lon }
+            _geopoint: { lat, lon },
+            ignore_unmapped: true
           }
         })
       }

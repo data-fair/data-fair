@@ -289,6 +289,43 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
   })
 
+  test('A virtual dataset with geo and non-geo children supports geo queries', async () => {
+    const ax = testUser1
+    const geoChild = await sendDataset('datasets/dataset1.csv', ax)
+    const locProp = geoChild.schema.find((p: any) => p.key === 'loc')
+    locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+    await ax.patch('/api/v1/datasets/' + geoChild.id, { schema: geoChild.schema })
+    await waitForFinalize(ax, geoChild.id)
+    const plainChild = await sendDataset('datasets/dataset2.csv', ax)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [geoChild.id, plainChild.id]
+      },
+      schema: [{ key: 'id' }, { key: 'loc' }]
+    })
+    const virtualDataset = await waitForFinalize(ax, res.data.id)
+    assert.ok(virtualDataset.bbox?.length, 'the virtual dataset should be geolocalized')
+
+    let lines = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(lines.data.total, 8)
+    // geo filters must ignore the rows of the non-geo child instead of failing
+    // on its index that has no geo mapping (partial shards failure)
+    lines = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?bbox=-2.5,40,3,47`)
+    assert.equal(lines.data.total, 1)
+    assert.equal(lines.data.results[0].id, 'bidule')
+    lines = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?geo_distance=-2.75,47.7,10km`)
+    assert.equal(lines.data.total, 1)
+    assert.equal(lines.data.results[0].id, 'koumoul')
+    lines = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?sort=_geo_distance:2.6:45.5`)
+    assert.equal(lines.data.total, 8)
+    assert.equal(lines.data.results[0].id, 'bidule')
+    const geoAgg = await ax.get(`/api/v1/datasets/${virtualDataset.id}/geo_agg?bbox=-3,45,3,48`)
+    assert.equal(geoAgg.data.aggs.length, 2)
+  })
+
   test('fails to upload file on virtual data', async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
