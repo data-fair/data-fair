@@ -416,7 +416,7 @@ simplification design, D5.)
 Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
 for a day (compliance lock), so re-creating a dataset with the same id and identical content
 dedupes against the still-locked revision. The fixtures are `skip-if-exists` and thus run
-once per environment; on a fresh environment both datasets seed automatically.
+once per environment; on a fresh environment the three datasets seed automatically.
 
 ## 5. Resource taxonomy & per-class feasibility
 
@@ -523,17 +523,21 @@ once per environment; on a fresh environment both datasets seed automatically.
   sha256(stableStringify(cleanedBody))`, computed by the relay from the payload it stores, so
   relay and checker stay symmetric by construction.
 - **Write path — per-line transactional outbox.** Every legitimate line mutation (transaction
-  pipeline create/update/patch/delete, the TTL worker's tombstones, `deleteAllLines`-style resets)
-  adds `_needsHistorizing: { context? }` to the line document in the **same single-document
+  pipeline create/update/patch/delete, the TTL worker's tombstones) adds `_needsHistorizing: { context? }` to the line document in the **same single-document
   write** — the `_needsIndexing` pattern, atomic on any shard key, stamped only when
-  `dataset.integrity.active`. A dataset-level hint (`_needsHistorizingLines`) is set *before* the
-  line stamps so a crash between the two leaves a harmless empty hint, never orphaned stamps. The
-  relay (`historizeLines`) picks up hinted datasets, batches concurrent S3 PUTs, clears line flags
-  per batch and the hint once none remain — retry-forward, per line. `commitLines` additionally
-  requires `_needsHistorizing` to be absent before purging a `_deleted` doc, so a deletion
-  revision can never be lost to a race with indexing. The extender does **not** stamp. A dataset
-  with pending line stamps (or the hint) reports `unknown` rather than a false verdict — same
-  posture as the dataset-level outbox.
+  `dataset.integrity.active`. Whole-collection resets (`deleteAllLines`, `bulkLines?drop=true`)
+  are refused with 400 while integrity is active — integrity anchors would be orphaned by a collection
+  drop; deletions must go through the ordinary transaction path (per-line tombstones). A
+  dataset-level hint (`_needsHistorizingLines`) is set *before* the line stamps so a crash
+  between the two leaves a harmless empty hint, never orphaned stamps. The relay (`historizeLines`)
+  picks up hinted datasets, batches concurrent S3 PUTs, clears line flags per batch and the hint
+  once none remain — retry-forward, per line. `commitLines` additionally requires `_needsHistorizing`
+  to be absent before purging a `_deleted` doc, so a deletion revision can never be lost to a race
+  with indexing. The extender does **not** stamp. A dataset with pending line stamps (or the hint)
+  reports `unknown` rather than a false verdict — same posture as the dataset-level outbox. To
+  perform mass deletion or disable integrity first (allowing anchors to age out at retention), then
+  delete through transactions; to drop the collection, disable integrity, perform the reset, then
+  optionally re-enable.
 - **Enable, gate, and lifecycle.** `PUT …/_integrity {active: true}` on a REST dataset first
   counts live lines and **refuses above the gate** (`config.integrity.lines.maxLines`, default
   100 000) with a `409`; on success it anchors the joint metadata revision inline as today, then

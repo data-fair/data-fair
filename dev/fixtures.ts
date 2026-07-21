@@ -126,12 +126,13 @@ async function enableIntegrity (id: string) {
   await dfAdminAx.put(`/api/v1/datasets/${id}/_integrity`, { active: true })
 }
 
-/** Run an on-demand integrity check; returns `{ status, breach? }` where
- * `breach` lists the affected classes (`'file' | 'metadata'`) when
- * status === 'breach'. The breach path persists integrity.lastCheck before
- * sending the breach notification, so if that fire-and-forget send errors we
- * still read the already-stored verdict instead of failing the fixture. */
-async function runCheck (id: string): Promise<{ status: string, breach?: string[] }> {
+/** Run an on-demand integrity check; returns `{ status, breach?, lines? }` where
+ * `breach` lists the affected classes (`'file' | 'metadata' | 'lines'`) when
+ * status === 'breach', and `lines` carries the per-line verdict for target 3.
+ * The breach path persists integrity.lastCheck before sending the breach
+ * notification, so if that fire-and-forget send errors we still read the
+ * already-stored verdict instead of failing the fixture. */
+async function runCheck (id: string): Promise<{ status: string, breach?: string[], lines?: { checked: number, diverged: number, sample: string[] } }> {
   try {
     const { data } = await dfAdminAx.post(`/api/v1/datasets/${id}/_integrity/_check`)
     return data
@@ -444,7 +445,7 @@ async function seedIntegriteLignes () {
   await tamperLine(id, 'ref-4', { libelle: 'Clavier — libellé modifié hors circuit applicatif' })
 
   const check = await runCheck(id)
-  console.log(`${id}: seeded (integrity active, ${lines.length} lines, 1 legitimate edit, 1 out-of-band tamper, check=${check.status}, breach=${check.breach?.join(',') || 'none'}, diverged=${(check as any).lines?.diverged ?? 'n/a'}, sample=${(check as any).lines?.sample?.join(',') || 'none'})`)
+  console.log(`${id}: seeded (integrity active, ${lines.length} lines, 1 legitimate edit, 1 out-of-band tamper, check=${check.status}, breach=${check.breach?.join(',') || 'none'}, diverged=${check.lines?.diverged ?? 'n/a'}, sample=${check.lines?.sample?.join(',') || 'none'})`)
   // level 2 repair: every line anchor carries the payload, so ref-4's divergence above can be
   // healed superadmin-side without losing the trail —
   // POST /api/v1/datasets/${id}/_integrity/lines/_restore rewrites every diverged line from its
