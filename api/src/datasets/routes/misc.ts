@@ -142,7 +142,7 @@ export const registerMiscRoutes = (router: Router) => {
     if (dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
       if (dataset.isVirtual) {
         const childDatasetId = url.split('/')[2]
-        if (!dataset.descendants?.find((c: any) => c === childDatasetId)) return res.status(404).send('Child dataset not found')
+        if (!dataset.descendants?.find((c: any) => c.id === childDatasetId)) return res.status(404).send('Child dataset not found')
         const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, reqPublicationSite(req), reqMainPublicationSite(req), false, false, false, mongo.db, undefined, undefined)
         const documentProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
         const childDocumentProp = childDataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')

@@ -171,8 +171,8 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
-    dataset.descendants = descendants.map(d => d.id)
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
+    dataset.descendants = descendants
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
       result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt

@@ -340,40 +340,158 @@ test.describe('virtual datasets core', () => {
     })
   })
 
-  test('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async () => {
+  test('A virtual dataset can have a child virtual dataset with filters', async () => {
     const ax = testUser1
+    // the ODS compat API is opt-in per dataset owner (brief's snippet omitted this: without it
+    // the compat-ods route 404s with "unknown API" regardless of our filter-threading changes)
+    await ax.put('/api/v1/settings/user/test_user1', { compatODS: true })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      title: 'a virtual dataset',
+      title: 'filtered child',
       virtual: {
         children: [dataset.id],
-        filters: [{
-          key: 'id',
-          values: ['koumoul']
-        }]
+        filters: [{ key: 'id', values: ['koumoul'] }]
       },
-      schema: [{
-        key: 'adr'
-      }]
+      schema: [{ key: 'id' }, { key: 'adr' }]
     })
-    await waitForFinalize(ax, res.data.id)
+    const child = await waitForFinalize(ax, res.data.id)
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      title: 'a virtual dataset',
-      virtual: {
-        children: [res.data.id]
-      }
+      title: 'a virtual grandparent',
+      virtual: { children: [child.id] },
+      schema: [{ key: 'id' }, { key: 'adr' }]
     })
-    const virtualDataset = res.data
-    await waitForDatasetError(ax, virtualDataset.id)
+    const parent = await waitForFinalize(ax, res.data.id)
+    // the finalized count respects the child's filters
+    assert.equal(parent.count, 1)
 
-    await assert.rejects(ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`), (err: any) => {
+    // native lines API
+    res = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
+
+    // aggregations
+    res = await ax.get(`/api/v1/datasets/${parent.id}/values_agg`, { params: { field: 'id' } })
+    assert.equal(res.data.aggs.length, 1)
+    assert.equal(res.data.aggs[0].value, 'koumoul')
+
+    // ODS compat API
+    res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${parent.id}/records`)
+    assert.equal(res.data.total_count, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
+
+    // the parent's own filters compose (AND) with the child's filters
+    await ax.patch('/api/v1/datasets/' + parent.id, {
+      virtual: { children: [child.id], filters: [{ key: 'id', values: ['bidule'] }] }
+    })
+    await waitForFinalize(ax, parent.id)
+    res = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
+    assert.equal(res.data.total, 0)
+  })
+
+  test('Union of a filtered and an unfiltered virtual child over the same descendant', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const filteredChild = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'filtered child',
+      virtual: { children: [dataset.id], filters: [{ key: 'id', values: ['koumoul'] }] },
+      schema: [{ key: 'id' }, { key: 'adr' }]
+    })).data
+    await waitForFinalize(ax, filteredChild.id)
+    const plainChild = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'plain child',
+      virtual: { children: [dataset.id] },
+      schema: [{ key: 'id' }, { key: 'adr' }]
+    })).data
+    await waitForFinalize(ax, plainChild.id)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual parent',
+      virtual: { children: [filteredChild.id, plainChild.id] },
+      schema: [{ key: 'id' }, { key: 'adr' }]
+    })
+    const parent = await waitForFinalize(ax, res.data.id)
+    // the descendant index is queried once: rows admitted by the unfiltered path, no duplicates
+    const lines = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
+    assert.equal(lines.data.total, 2)
+
+    // total===2 above also guards duplication/intersection, but is indistinguishable from a bug that
+    // silently drops the filter entirely (union would still yield 2). Check the filtered child alone
+    // to also guard filter-dropping.
+    const filteredLines = await ax.get(`/api/v1/datasets/${filteredChild.id}/lines`)
+    assert.equal(filteredLines.data.total, 1)
+    assert.equal(filteredLines.data.results[0].id, 'koumoul')
+  })
+
+  test('Filters of nested virtual ancestors are merged', async () => {
+    // dataset2.csv has 6 rows: 3 with id=koumoul, 2 with id=bidule, 1 with an empty id.
+    // level1's filter (in [koumoul, bidule]) excludes the empty-id row (-> 5 rows).
+    // level2's filter (nin [bidule]) further excludes the 2 bidule rows (-> 3 rows).
+    // both filters are load-bearing here: dropping level1 would yield 4 (3 koumoul + empty-id row),
+    // dropping level2 would yield 5 (3 koumoul + 2 bidule) — unlike dataset1.csv (2 rows total),
+    // which cannot distinguish "both filters applied" from "only one applied".
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset2.csv', ax)
+    const level1 = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'level1',
+      virtual: { children: [dataset.id], filters: [{ key: 'id', values: ['koumoul', 'bidule'] }] },
+      schema: [{ key: 'id' }, { key: 'employees' }]
+    })).data
+    await waitForFinalize(ax, level1.id)
+    const level2 = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'level2',
+      virtual: { children: [level1.id], filters: [{ key: 'id', operator: 'nin', values: ['bidule'] }] },
+      schema: [{ key: 'id' }, { key: 'employees' }]
+    })).data
+    await waitForFinalize(ax, level2.id)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'level3',
+      virtual: { children: [level2.id] },
+      schema: [{ key: 'id' }, { key: 'employees' }]
+    })
+    const parent = await waitForFinalize(ax, res.data.id)
+    const lines = await ax.get(`/api/v1/datasets/${parent.id}/lines`)
+    assert.equal(lines.data.total, 3)
+    assert.ok(lines.data.results.every((r: any) => r.id === 'koumoul'), JSON.stringify(lines.data.results))
+  })
+
+  test('A virtual dataset cannot have a child virtual dataset with filterActiveAccount', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets/restaccountchild', {
+      isRest: true,
+      title: 'restaccountchild',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
+    })).data
+    await ax.post('/api/v1/datasets/restaccountchild/_bulk_lines', [{ attr1: 'test1', account: 'user:test_user2' }])
+    await waitForFinalize(ax, dataset.id)
+
+    const child = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'account filtered child',
+      virtual: { children: [dataset.id], filterActiveAccount: true },
+      schema: [{ key: 'attr1' }, { key: 'account' }]
+    })).data
+    await waitForFinalize(ax, child.id)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual parent',
+      virtual: { children: [child.id] },
+      schema: [{ key: 'attr1' }]
+    })
+    await waitForDatasetError(ax, res.data.id)
+    await assert.rejects(ax.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
       assert.equal(err.status, 501)
-      // the body is the user-facing message, without the worker-only [noretry] prefix
-      assert.ok(err.data.startsWith(`Le jeu de données virtuel "${virtualDataset.id}" ne peut pas être requêté`), err.data)
-      assert.ok(err.data.includes('des filtres (id)'), err.data)
+      assert.ok(err.data.includes('filtre sur le compte actif'), err.data)
       return true
     })
   })

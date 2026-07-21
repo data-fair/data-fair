@@ -26,7 +26,20 @@ export function assertRestDataset (dataset: Dataset): asserts dataset is RestDat
   if (!dataset.isRest) throw httpError(400, 'dataset is not "rest"')
 }
 
-export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: string[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>
+// mirrors VirtualFilter / QueryableDescendant in api/src/datasets/es/operations.ts — declared inline
+// because this package must not import from src (a src import drags API code into the UI's vue-tsc
+// type graph). One arrival of a non-virtual descendant of a virtual dataset, resolved by the single
+// traversal in datasets/utils/virtual.ts and assigned to `dataset.descendants`; consumed by
+// aliasName / prepareQuery (es/commons.ts) and parseFilters (api-compat/ods/operations.ts).
+type DescendantsVirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+export type QueryableDescendant = {
+  id: string
+  index: string
+  filters?: DescendantsVirtualFilter[]
+  [key: string]: any
+}
+
+export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: QueryableDescendant[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>
 export const isVirtualDataset = (dataset: Dataset): dataset is VirtualDataset => {
   return !!dataset.isVirtual
 }
@@ -40,8 +53,7 @@ export type DatasetExt = Dataset & { visibility: 'public' | 'private' | 'protect
 
 export type DatasetInternal = Dataset & {
   loaded?: { attachments?: boolean, dataset?: Partial<FileDataset['originalFile']> } | null,
-  descendants?: string[]
-  descendantsFull?: DatasetInternal[]
+  descendants?: QueryableDescendant[]
   initFrom?: (InitFrom & { role: string, department?: string }) | null
   _partialRestStatus?: 'updated' | 'extended' | 'indexed'
   validateDraft?: boolean

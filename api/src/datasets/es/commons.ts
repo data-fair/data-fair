@@ -31,7 +31,9 @@ import {
   resolveExactKeywordTarget,
   resolveExistsFields,
   resolveRangeOrPrefixField,
-  KEYWORD_IGNORE_ABOVE
+  KEYWORD_IGNORE_ABOVE,
+  virtualFilterClauses,
+  descendantsFilterClause
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -49,7 +51,21 @@ export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsear
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
-  if (dataset.isVirtual) return dataset.descendants.map((id: string) => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.isVirtual) {
+    // cheap fail-loud check on the shape of dataset.descendants: it is resolved by a single
+    // traversal (datasets/utils/virtual.ts) that always stamps `index`, but the repo's tsc is not
+    // clean so types alone cannot guarantee a stale caller is caught — a wrong shape must fail
+    // loudly here rather than silently produce a bad (or empty) index target.
+    if (!Array.isArray(dataset.descendants)) throw new Error(`[internal] dataset ${dataset.id} is virtual but its descendants were not resolved`)
+    const indices = new Set<string>()
+    for (const descendant of dataset.descendants) {
+      if (!descendant?.index) throw new Error(`[internal] dataset ${dataset.id} has a descendant without a resolved index`)
+      // a descendant can legitimately appear twice (reachable through both a filtered and an
+      // unfiltered path) - dedupe the index target, not the array itself
+      indices.add(descendant.index)
+    }
+    return [...indices].join(',')
+  }
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
@@ -276,17 +292,14 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.operator === 'nin') {
-          if (f.values.length === 1) filter.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
-          else filter.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
-        } else {
-          if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-          else filter.push({ terms: { [f.key]: f.values } })
-        }
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children, read from the same
+  // dataset.descendants that drives the multi-index target (see utils/virtual.ts).
+  // null = no descendant carries filters, nothing to add.
+  if (dataset.isVirtual) {
+    const descendantsClause = descendantsFilterClause(dataset.descendants)
+    if (descendantsClause) filter.push(descendantsClause)
   }
 
   // Envorced filter in case of rest datasets with line ownership
