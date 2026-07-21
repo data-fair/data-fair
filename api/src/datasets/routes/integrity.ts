@@ -108,9 +108,33 @@ export const registerIntegrityRoutes = (router: Router) => {
       const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
       const hint = { operation: 'fixIntegrity' as const, origin: 'superadmin' as const, ...(typeof req.body?.reason === 'string' ? { reason: req.body.reason } : {}) }
       const c = restUtils.collection(dataset)
-      for (const lineId of [...compare.edited, ...compare.inserted]) {
-        const line = await c.findOne({ _id: lineId })
-        if (line) await linesRelay.anchorLine(dataset, line, store, retainUntil, hint)
+      // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
+      // re-writing it through the standard transaction pipeline (the same mechanism
+      // lines/_restore uses) rather than anchoring directly at the line's current `_i`.
+      // A direct anchor there is nondeterministic/broken: an equal-`_i` tie against the still-live
+      // stale anchor can lose (latestLineAnchors keeps the lexically-first key on a tie between
+      // the old and new sha at the same i), an `_i`-rewind tamper can never outrank the stale
+      // anchor, and an out-of-band-inserted line can be shadowed by a higher-i tombstone. The
+      // pipeline always mints a fresh `_i` strictly greater than any prior anchor's, so the
+      // blessed anchor deterministically becomes latest.
+      const blessIds = [...compare.edited, ...compare.inserted]
+      if (blessIds.length) {
+        const transacs: any[] = []
+        for (const lineId of blessIds) {
+          const line = await c.findOne({ _id: lineId })
+          if (line) transacs.push({ _action: 'createOrUpdate' as const, _id: lineId, ...lops.cleanedLineBody(line) })
+        }
+        if (transacs.length) {
+          // writing back content the line already holds: invalidate the stale `_hash` first so
+          // createOrUpdate's `_hash: {$ne: target}` upsert filter doesn't mistake this deliberate
+          // bless for a redundant no-op write (mirrors lines/_restore's identical guard below)
+          await c.updateMany({ _id: { $in: transacs.map((t) => t._id) } }, { $set: { _hash: null } })
+          await restUtils.applyTransactions(dataset, undefined, transacs, undefined, undefined, undefined, hint)
+          // route the blessed lines through extension/indexing like any partial rest update
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+          const freshForHistorize = await mongo.datasets.findOne({ id: dataset.id })
+          await linesRelay.historizeLines(freshForHistorize as any)
+        }
       }
       for (const lineId of compare.missing) {
         const anchor = compare.anchors.get(lineId)!

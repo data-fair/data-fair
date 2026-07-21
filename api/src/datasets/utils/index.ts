@@ -207,6 +207,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._esCopyToSearch
   delete dataset._esIgnoredKeywordFields
   delete dataset._needsHistorizing
+  delete dataset._needsHistorizingLines
   // integrity state is readable by the owner's admins and superadmins only (registered
   // 'readIntegrity' operation); everyone else must not see breach verdicts or anchors
   if (dataset.integrity && !permissions.can('datasets', dataset, 'readIntegrity', reqSession(req), reqBypassPermissions(req))) {

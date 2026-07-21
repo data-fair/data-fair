@@ -164,6 +164,10 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   // wait for initial indexing to settle before enabling (polls status via the journal instead of a fixed sleep)
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  // the internal backfill-pending flag must never leak through the cleaned public dataset
+  // response, even while the backfill is still in flight
+  const midBackfill = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+  expect(midBackfill._needsHistorizingLines).toBeUndefined()
   await waitForLinesDrained(ax, dataset.id)
 
   const integrity = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
@@ -277,6 +281,39 @@ test('_fix blesses the current tampered state as the new anchored truth', async 
   expect(verdict.status).toBe('ok')
   const line0 = await rawLine(ax, dataset.id, 'line0')
   expect(line0.attr1).toBe('legitimate-oob-edit')
+})
+
+test('_fix deterministically blesses content whose sha256 sorts adversely against the stale anchor', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  // A raw out-of-band content edit leaves `_i` untouched, so the stale anchor and the fresh
+  // bless both land at the SAME `_i`. sha256(stableStringify({attr1:'a',attr2:1})) (the original,
+  // still-anchored content) is 5184d5e0efa40fd77121931b69a9269c011d9049110e77d6e1a3334c8bf04606;
+  // sha256(stableStringify({attr1:'tampered-x',attr2:1})) is
+  // 5e823ce884bb336dc8f0779d7459f78ae7939ac4503a3c7d71885e3a717c2642 — lexically GREATER. A
+  // `_fix` that anchors the bless directly at the line's current `_i` (rather than through the
+  // transaction pipeline) writes a second same-`_i` key that LIST returns AFTER the original, so
+  // `latestLineAnchors`'s equal-`i` tie-break (`parsed.i > current.i`, strict) keeps the
+  // lexically-first — here the STALE, pre-tamper — anchor as "latest": the bless is silently
+  // lost and a follow-up check still reports a breach against the tampered live content.
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-x' } }
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+
+  const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'adverse-order regression' })).data
+  expect(verdict.status).toBe('ok')
+  const line0 = await rawLine(ax, dataset.id, 'line0')
+  expect(line0.attr1).toBe('tampered-x')
+
+  // the blessed anchor must be deterministically latest, not just accepted by _fix's own
+  // inline verdict — a follow-up, independent check must also read ok
+  const recheck = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(recheck.status).toBe('ok')
 })
 
 // ---------------------------------------------------------------------------------------------
