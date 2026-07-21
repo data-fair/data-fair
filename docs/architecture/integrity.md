@@ -144,7 +144,8 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   goal is to retrieve a dataset's history from its id, not to browse — minimal traversability is
   fine. The per-owner
   prefix makes storage accounting a simple prefix-size query (feeds storage accounting, §9) and
-  enables per-owner access scoping (§7).
+  enables per-owner access scoping (§7). One key **per revision** — not one key per resource with
+  S3 native versioning as the history mechanism — is a deliberate choice, recorded in §13.
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
   historized store, since it is not on the hot read path.
 - Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment). Owner transfer is
@@ -914,7 +915,7 @@ the portable baseline for the OSS/Garage story.
 
 ## 13. Alternatives considered & deliberately not adopted
 
-These are closed decisions, recorded to avoid relitigation. All three follow from the threat
+These are closed decisions, recorded to avoid relitigation. The first three follow from the threat
 model in §1 (detection + audit + repair against a tenant admin — not cryptographic
 non-repudiation against the operator/provider).
 
@@ -931,6 +932,32 @@ non-repudiation against the operator/provider).
   not achievable in our architecture, and unnecessary under the threat model — the auditable trail
   plus always-available rollback is the intended guarantee, not cryptographic attestation. (This
   is the explicit acceptance of the "first-write lie" limit named in §1.)
+- **S3 native versioning as the revision mechanism** (one key per resource — dataset or line — with
+  the version stack as its history; the "obvious" S3-native design, and the bucket is versioned
+  anyway since object-lock requires it). **Rejected**, because it breaks four properties the trail
+  depends on:
+  1. *The trail must be verifiable from the store alone.* Version ids are opaque provider strings,
+     so "revision `i`" would need an `i → versionId` mapping — necessarily in Mongo, which is
+     mutable and is precisely what is being guarded: whoever rewrites Mongo could then reorder or
+     hide revisions. Ordering by `LastModified` instead is provider clock granularity — two writes
+     in the same second have no reliable order. With `‹paddedI›` in the key, LIST alone yields the
+     complete, ordered, gap-visible sequence: the WORM store is its own index.
+  2. *Checks must stay O(LIST).* LIST (keys or versions) returns no user metadata and no hash we
+     control (ETag is the md5 of the stored JSON, not the covered content's hash), so a fixed key
+     per line would force one GET per line per nightly check — the exact cost the hash-in-key
+     layout of §5 eliminates. Hash-in-key is only possible because each revision has its own key.
+  3. *Retries must be unambiguous.* Every PUT on a versioned key mints a new version, so a
+     crash-and-retry write yields two versions of "the same revision" with no canonical one. On a
+     per-revision key, a retried PUT lands on the same key: the logical trail is unchanged and the
+     stray noncurrent duplicate is meaningless garbage the purge sweeps (§3.5) — this is what makes
+     the relays' re-run-the-batch crash recovery safe.
+  4. *Deletes must be revisions, not markers.* A versioned-key delete is a delete marker: unlocked,
+     context-free, and itself deletable (removing it resurrects the hidden state). A tombstone
+     written as a first-class locked revision carries `context` and is as protected as any edit.
+
+  Versioning is therefore enabled only because compliance lock demands it, and demoted to a
+  nuisance to be swept — with one load-bearing exception: a same-key overwrite attack cannot touch
+  the locked original version, which is exactly what the WORM tamper tests exercise.
 
 ## 14. Deferred scope & future directions
 
