@@ -43,7 +43,9 @@ export default async function (_dataset: DatasetInternal) {
   if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
   if (isVirtualDataset(dataset)) {
-    queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
+    const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset)
+    queryableDataset.descendants = ids
+    if (filters) (queryableDataset as any)._descendantsFilters = filters
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
   }
 

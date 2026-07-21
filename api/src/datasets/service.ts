@@ -204,7 +204,9 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
+        const { ids, filters } = await virtualDatasetsUtils.queryableDescendants(dataset)
+        dataset.descendants = ids
+        if (filters) dataset._descendantsFilters = filters
       }
       if (dataset.schema) {
         for (const prop of dataset.schema) {

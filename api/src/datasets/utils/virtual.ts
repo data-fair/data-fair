@@ -1,4 +1,5 @@
 import mongo from '#mongo'
+import config from '#config'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -7,6 +8,7 @@ import type { Dataset, VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
+import { type VirtualFilter, type DescendantsFilters } from '../es/operations.ts'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -139,7 +141,7 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
 // noRetry tells the worker loop not to retry (structured equivalent of the [noretry] message prefix)
 const cannotQueryError = (message: string) => Object.assign(httpError(501, message, { expose: true }), { noRetry: true })
 
-const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any) => {
+const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any, inheritedFilters: VirtualFilter[] = []) => {
   const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
   const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
   // dedupe in case the same child is referenced twice, otherwise the count
@@ -172,18 +174,31 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
     throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
   }
   for (const child of children) {
-    if (child.isVirtual && (child.virtual?.filters?.length || child.virtual?.filterActiveAccount)) {
-      const filterKind = child.virtual?.filters?.length
-        ? `des filtres (${child.virtual.filters.map((f: any) => f.key).filter(Boolean).join(', ')})`
-        : 'un filtre sur le compte actif'
-      throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit ${filterKind}, ce qui n'est pas supporté.`)
+    if (child.isVirtual && child.virtual?.filterActiveAccount) {
+      throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit un filtre sur le compte actif, ce qui n'est pas supporté.`)
     }
     if (child.isVirtual) {
-      await recurseDescendants(descendants, child as VirtualDataset, mongoOptions)
+      const childFilters = (child.virtual?.filters ?? []).filter((f: any) => f.values?.length)
+      await recurseDescendants(descendants, child as VirtualDataset, mongoOptions, inheritedFilters.concat(childFilters))
     } else {
+      // scoped filters inherited from the virtual ancestors on this path (AND semantics);
+      // the same dataset may be pushed several times with different stacks (union of paths)
+      if (inheritedFilters.length) (child as any)._inheritedFilters = inheritedFilters
       descendants.push(child)
     }
   }
+}
+
+// shared by descendants() and queryableDescendants(): resolves the raw physical descendant docs,
+// each internally annotated with `_inheritedFilters` (see recurseDescendants) when reached through
+// a filtered virtual ancestor, and applies the empty-descendants guard once
+const resolveDescendants = async (dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: FindOptions, throwEmpty: boolean) => {
+  const descendants: any[] = []
+  await recurseDescendants(descendants, dataset, mongoOptions)
+  if (descendants.length === 0 && throwEmpty) {
+    throw cannotQueryError('Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
+  }
+  return descendants
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
@@ -200,16 +215,30 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
   if (extraProperties) {
     for (const p of extraProperties) mongoOptions.projection![p] = 1
   }
-  const descendants: any[] = []
-  await recurseDescendants(descendants, dataset, mongoOptions)
-  if (descendants.length === 0 && throwEmpty) {
-    throw cannotQueryError('Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
-  }
+  const descendants = await resolveDescendants(dataset, mongoOptions, throwEmpty)
   if (extraProperties) {
     for (const descendant of descendants) {
       if (!extraProperties.includes('owner')) delete descendant.owner
       if (!extraProperties.includes('permissions')) delete descendant.permissions
+      delete descendant._inheritedFilters
     }
   }
   return extraProperties ? descendants : descendants.map((d: Dataset) => d.id)
+}
+
+// descendants + the scoped-filters annotation consumed by prepareQuery/parseFilters
+// (attached to the queryable dataset as `_descendantsFilters`)
+export const queryableDescendants = async (dataset: VirtualDataset): Promise<{ ids: string[], filters: DescendantsFilters | null }> => {
+  const mongoOptions: FindOptions = { projection: { id: 1, isVirtual: 1, virtual: 1, owner: 1, permissions: 1 } }
+  const all = await resolveDescendants(dataset, mongoOptions, true)
+  const unfilteredIds: string[] = []
+  const filtered: DescendantsFilters['filtered'] = []
+  for (const d of all) {
+    if (d._inheritedFilters?.length) filtered.push({ id: d.id, filters: d._inheritedFilters })
+    else unfilteredIds.push(d.id)
+  }
+  return {
+    ids: all.map(d => d.id),
+    filters: filtered.length ? { indicesPrefix: config.indicesPrefix, unfilteredIds, filtered } : null
+  }
 }
