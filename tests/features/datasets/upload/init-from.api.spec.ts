@@ -344,6 +344,62 @@ test.describe('Datasets with auto-initialization from another one', () => {
     assert.equal(initFromDataset.count, 2)
   })
 
+  test('Does not copy rows hidden by an intermediate virtual child\'s static filters', async () => {
+    const ax = testUser1
+
+    // real dataset with 2 rows: id=koumoul and id=bidule
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    // intermediate virtual child that only re-exposes the "koumoul" row
+    const virtualChild = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'virtual child with static filter',
+      virtual: {
+        children: [dataset.id],
+        filters: [{ key: 'id', values: ['koumoul'] }]
+      },
+      schema: [{ key: 'id' }, { key: 'adr' }]
+    })).data
+    await waitForFinalize(ax, virtualChild.id)
+
+    let res = await ax.get(`/api/v1/datasets/${virtualChild.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
+
+    // parent virtual dataset that only wraps the already-filtered child, with no filters of its own
+    const parentVirtual = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'parent virtual over filtered child',
+      virtual: {
+        children: [virtualChild.id]
+      },
+      schema: [{ key: 'id' }, { key: 'adr' }]
+    })).data
+    await waitForFinalize(ax, parentVirtual.id)
+
+    res = await ax.get(`/api/v1/datasets/${parentVirtual.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
+
+    // initializing a new dataset from the parent virtual dataset must only copy the visible row,
+    // never the "bidule" row hidden by the intermediate virtual child's static filter
+    res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'init from parent virtual with hidden descendant rows',
+      initFrom: {
+        dataset: parentVirtual.id,
+        parts: ['schema', 'data']
+      }
+    })
+    assert.equal(res.status, 201)
+    const initFromDataset = await waitForFinalize(ax, res.data.id)
+
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 1)
+    assert.equal(lines.results[0].id, 'koumoul')
+    assert.ok(!lines.results.find((l: any) => l.id === 'bidule'))
+  })
+
   test('Inherit conformsTo from a public reference dataset across accounts', async () => {
     // user1 publishes a reference dataset and marks it as conforming to an external schema
     const ref = await sendDataset('datasets/dataset1.csv', testUser1)

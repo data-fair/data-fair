@@ -228,8 +228,15 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
 
 // descendants + the scoped-filters annotation consumed by prepareQuery/parseFilters
 // (attached to the queryable dataset as `_descendantsFilters`)
-export const queryableDescendants = async (dataset: VirtualDataset): Promise<{ ids: string[], filters: DescendantsFilters | null }> => {
+// optional extraProperties mirrors descendants(): when set, also returns the full descendant
+// docs (same shape/stripping rules as descendants(dataset, extraProperties)) from the SAME
+// traversal, so callers that need both the raw docs (e.g. for owner-scoped file paths) and the
+// filters annotation (for the ES query) don't have to resolve descendants twice.
+export const queryableDescendants = async (dataset: VirtualDataset, extraProperties: string[] | null = null): Promise<{ ids: string[], filters: DescendantsFilters | null, descendantsFull?: any[] }> => {
   const mongoOptions: FindOptions = { projection: { id: 1, isVirtual: 1, virtual: 1, owner: 1, permissions: 1 } }
+  if (extraProperties) {
+    for (const p of extraProperties) mongoOptions.projection![p] = 1
+  }
   const all = await resolveDescendants(dataset, mongoOptions, true)
   const unfilteredIds: string[] = []
   const filtered: DescendantsFilters['filtered'] = []
@@ -237,8 +244,18 @@ export const queryableDescendants = async (dataset: VirtualDataset): Promise<{ i
     if (d._inheritedFilters?.length) filtered.push({ id: d.id, filters: d._inheritedFilters })
     else unfilteredIds.push(d.id)
   }
-  return {
+  const result: { ids: string[], filters: DescendantsFilters | null, descendantsFull?: any[] } = {
     ids: all.map(d => d.id),
     filters: filtered.length ? { indicesPrefix: config.indicesPrefix, unfilteredIds, filtered } : null
   }
+  if (extraProperties) {
+    result.descendantsFull = all.map(d => {
+      const descendant = { ...d }
+      if (!extraProperties.includes('owner')) delete descendant.owner
+      if (!extraProperties.includes('permissions')) delete descendant.permissions
+      delete descendant._inheritedFilters
+      return descendant
+    })
+  }
+  return result
 }

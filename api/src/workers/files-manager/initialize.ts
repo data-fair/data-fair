@@ -122,8 +122,10 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
       if (isVirtualDataset(parentDataset)) {
-        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
-        parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
+        const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
+        parentDataset.descendantsFull = descendantsFull
+        parentDataset.descendants = ids
+        if (filters) (parentDataset as any)._descendantsFilters = filters
       }
       if (isRestDataset(dataset)) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
@@ -233,8 +235,12 @@ export default async function (dataset: DatasetInternal) {
         let relPath = attachment
         let copyPath = attachmentPath(parentDataset, attachment)
         if (isVirtualDataset(parentDataset)) {
-          parentDataset.descendantsFull = parentDataset.descendantsFull ?? await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
-          parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
+          if (!parentDataset.descendantsFull) {
+            const { ids, filters, descendantsFull } = await virtualDatasetsUtils.queryableDescendants(parentDataset, ['owner'])
+            parentDataset.descendantsFull = descendantsFull
+            parentDataset.descendants = ids
+            if (filters) (parentDataset as any)._descendantsFilters = filters
+          }
           const pathParts = new URL(attachment).pathname.split('/')
           const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])
           if (!descendant) continue
