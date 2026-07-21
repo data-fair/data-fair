@@ -148,6 +148,31 @@ async function tamperFile (id: string) {
   await dfAx.post(`/api/v1/test-env/tamper-dataset-file/${id}`, { content: 'ligne falsifiée hors du circuit applicatif\n' })
 }
 
+/** Target 3 (editable-dataset lines). Wait until the per-line backfill/relay has drained: the
+ * dataset-level `_needsHistorizingLines` hint clears once every stamped line's revision has
+ * shipped (docs/plans/2026-07-20-integrity-target3-lines-design.md §2-3). Before it drains, a
+ * check correctly reports `status: 'unknown'` rather than risk a false verdict, so this must be
+ * awaited before tampering or checking. */
+async function waitForLinesDrained (id: string, timeoutMs = 60000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const { data } = await dfAx.get(`/api/v1/test-env/raw-dataset/${id}`)
+    if (!data._needsHistorizingLines) return
+    await sleep(500)
+  }
+  throw new Error(`timeout waiting for ${id} lines backfill to drain`)
+}
+
+/** Out-of-band tamper of one line's content — a raw mongo write to the REST collection that
+ * changes a field WITHOUT touching `_hash`/`_i`. This is the canonical silent edit: it is
+ * invisible to a cheap fold over the stored `_hash` and is exactly the blind spot that made the
+ * team pivot straight to per-line locked revisions instead (design doc §0). */
+async function tamperLine (datasetId: string, lineId: string, set: Record<string, any>) {
+  await dfAx.post(`/api/v1/test-env/rest-collection-update-one/${datasetId}`, {
+    filter: { _id: lineId }, update: { $set: set }
+  })
+}
+
 // ── Topics (group/filter the demo datasets by illustrated functionality) ───
 // Each fixture dataset is tagged with the functionality it demonstrates, so
 // the datasets list can group/filter them with the thematic chips. Stable
@@ -169,6 +194,7 @@ const datasetTopics: Record<string, string[]> = {
   'fixtures-equipements': ['demo-geo'],
   'fixtures-integrite-ok': ['demo-integrite'],
   'fixtures-integrite-breach': ['demo-integrite'],
+  'fixtures-integrite-lignes': ['demo-integrite', 'demo-editable'],
   'fixtures-horaires-fuseaux': ['demo-dates'],
   'fixtures-ignore-above': ['demo-recherche'],
   'fixtures-unicite-rest': ['demo-unicite', 'demo-editable'],
@@ -369,6 +395,63 @@ async function seedIntegriteBreach () {
   await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: 'description modifiée hors circuit (démo intégrité)' })
   const { status, breach } = await runCheck(id)
   console.log(`${id}: seeded (integrity active, file+metadata tampered, check=${status}, breach=${breach?.join(',') || 'none'})`)
+}
+
+/** Integrity demo — target 3, editable (REST) dataset lines: integrity enabled per line, one
+ * legitimate edit (a second revision in that line's history), then one line tampered out-of-band
+ * (raw mongo write, `_hash`/`_i` untouched — the silent-edit blind spot §0 of the design doc
+ * pivoted away from a cheap hash-fold to avoid), so the check reports `breach: ['lines']`.
+ * Unlike `fixtures-integrite-breach`, no re-tamper-on-each-run is needed: nothing in this script
+ * legitimately rewrites `ref-4`'s content (the topics patch in `ensureDatasetTopics` only touches
+ * dataset metadata, never line documents), and the fixture is skip-if-exists besides, so the
+ * breach — once seeded — persists untouched across re-runs. */
+async function seedIntegriteLignes () {
+  const id = 'fixtures-integrite-lignes'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Référentiel produits (intégrité par ligne)',
+    description: 'Jeu de données éditable (REST) avec intégrité activée au niveau ligne (cible 3) : chaque écriture verrouille une révision S3 propre à la ligne, dans un stockage verrouillé (WORM). Une ligne est modifiée hors circuit applicatif pour illustrer la détection.',
+    schema: [
+      { key: 'reference', type: 'string', title: 'Référence' },
+      { key: 'libelle', type: 'string', title: 'Libellé' },
+      { key: 'prix', type: 'number', title: 'Prix' }
+    ]
+  })
+  const lines = [
+    { _id: 'ref-1', reference: 'REF-001', libelle: 'Chaise de bureau', prix: 79.9 },
+    { _id: 'ref-2', reference: 'REF-002', libelle: 'Bureau réglable', prix: 249 },
+    { _id: 'ref-3', reference: 'REF-003', libelle: 'Lampe LED', prix: 24.5 },
+    { _id: 'ref-4', reference: 'REF-004', libelle: 'Clavier sans fil', prix: 39.99 },
+    { _id: 'ref-5', reference: 'REF-005', libelle: 'Souris ergonomique', prix: 29.99 }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+
+  // enable is synchronous for the gate check (live-line count vs config.integrity.lines.maxLines)
+  // and the joint metadata anchor; the per-line backfill (one 'enable' revision per live line)
+  // then runs asynchronously — wait for it to drain before doing anything that a check would need
+  // to see as anchored truth
+  await enableIntegrity(id)
+  await waitForLinesDrained(id)
+
+  // legitimate edit through the standard REST write path: POST upserts by _id, so this updates
+  // ref-2 and produces a second, properly-stamped revision in its per-line history (visible in
+  // the admin UI's per-line history tab)
+  await dfAx.post(`/api/v1/datasets/${id}/lines`, { _id: 'ref-2', reference: 'REF-002', libelle: 'Bureau réglable (repeint)', prix: 259 })
+  await waitForLinesDrained(id)
+
+  // out-of-band tamper on a DIFFERENT line: content changes, _hash/_i stay stale
+  await tamperLine(id, 'ref-4', { libelle: 'Clavier — libellé modifié hors circuit applicatif' })
+
+  const check = await runCheck(id)
+  console.log(`${id}: seeded (integrity active, ${lines.length} lines, 1 legitimate edit, 1 out-of-band tamper, check=${check.status}, breach=${check.breach?.join(',') || 'none'}, diverged=${(check as any).lines?.diverged ?? 'n/a'}, sample=${(check as any).lines?.sample?.join(',') || 'none'})`)
+  // level 2 repair: every line anchor carries the payload, so ref-4's divergence above can be
+  // healed superadmin-side without losing the trail —
+  // POST /api/v1/datasets/${id}/_integrity/lines/_restore rewrites every diverged line from its
+  // latest verified revision through the standard transaction pipeline (content edits,
+  // out-of-band inserts AND out-of-band deletes all heal in one call) and returns the fresh
+  // verdict; not auto-demoed here, the fixture keeps showing the breach state as-is (diff/restore
+  // from the admin UI's intégrité tab, or the API directly)
 }
 
 /** REST dataset highlighting date / date-time display behaviour:
@@ -670,6 +753,7 @@ async function main () {
   await seedEquipements()
   await seedIntegriteOk()
   await seedIntegriteBreach()
+  await seedIntegriteLignes()
   await seedHorairesFuseaux()
   await seedIgnoreAbove()
   await seedUniciteRest()
@@ -681,7 +765,7 @@ async function main () {
   await ensureBreachState()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')

@@ -1,23 +1,31 @@
 # Data integrity & traceability
 
-> Status: **target 1 (dataset files) — level 1 detection + level 2 repair delivered; target 2
-> (dataset metadata) — level 1 detection delivered**, then **simplified** (joint anchor,
-> depersonalized context, synchronous admin actions — see
-> [docs/plans/2026-07-16-integrity-simplification-design.md](../plans/2026-07-16-integrity-simplification-design.md)).
+> Status: **all three targets delivered.** Target 1 (dataset files) — level 1 detection + level 2
+> repair; target 2 (dataset metadata) — level 1 detection, folded into the file-class joint
+> anchor; target 3 (editable/REST dataset lines) — **pure level 2, per-line locked revisions**
+> (detect + repair), gated to ~100k live lines, opt-in per dataset. Targets 1+2 were then
+> **simplified** (joint anchor, depersonalized context, synchronous admin actions — see
+> [docs/plans/2026-07-16-integrity-simplification-design.md](../plans/2026-07-16-integrity-simplification-design.md)),
+> and target 3 shipped as a deliberate **pivot away from the originally-sketched fold-based level
+> 1** — see
+> [docs/plans/2026-07-20-integrity-target3-lines-design.md](../plans/2026-07-20-integrity-target3-lines-design.md)
+> §0 for the rationale, and [§10](#10-decomposition--build-order) below for what it delivered.
 > The shared core (locked-revision store, transactional-outbox relay, sliding checker) uses a
-> **single joint anchor per dataset**: one revision sequence records **both** the file md5 and the
-> covered-metadata sha256 on every revision, with one verdict, one outbox stamp and one API/UI
-> surface — the file and metadata parts are named inside a breach, not carried as separate anchor
-> classes. **Level 2 (repair) delivered for file datasets** — every anchor carries the full
-> payload (file copy + covered-metadata snapshot); diff, audit download and restore-from-any-
-> revision ship with it; owner transfer is forbidden while integrity is active. The superadmin API
-> and admin UI ship in this iteration; [§10](#10-decomposition--build-order) records precisely
-> what is built vs. what remains (applications/settings metadata, target 3). This document
-> describes a focused **data-fair feature**, delivered as **three progressive targets** (dataset
-> files → dataset metadata → editable-dataset collections); target 3 gets its own
-> spec → plan → implementation cycle next. Scope deliberately left out for now —
-> generalization beyond data-fair, an immutable append-only **log posture** (events, HTTP
-> logs), and a central integrity service — is parked in
+> **single joint anchor per dataset** for the file/metadata classes: one revision sequence records
+> **both** the file md5 and the covered-metadata sha256 on every revision, with one verdict, one
+> outbox stamp and one API/UI surface — the file and metadata parts are named inside a breach, not
+> carried as separate anchor classes. Editable-dataset lines get their **own, parallel revision
+> sequence per line** (§5), reusing the same store/wrapper/checker primitives but keyed and
+> anchored independently — a dataset can therefore show `breach: ['metadata', 'lines']` naming
+> both at once. **Level 2 (repair) delivered for file datasets and for lines** — every anchor
+> carries the full payload; diff, audit download and restore-from-any-revision ship with it; owner
+> transfer is forbidden while integrity is active. The superadmin API and admin UI cover all three
+> targets; [§10](#10-decomposition--build-order) records precisely what is built vs. what remains
+> (applications/settings metadata, line attachment bytes, a possible fold-based level 1 for
+> above-gate datasets). This document describes a focused **data-fair feature**, delivered as
+> **three progressive targets** (dataset files → dataset metadata → editable-dataset collections).
+> Scope deliberately left out for now — generalization beyond data-fair, an immutable append-only
+> **log posture** (events, HTTP logs), and a central integrity service — is parked in
 > [§14 Deferred scope](#14-deferred-scope--future-directions).
 
 ## 1. Motivation
@@ -372,7 +380,7 @@ is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` side
 is `true` with a 1-day retention, so the capability is on by default — but it is still
 opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds **two** datasets in the `dev_fixtures` org that demonstrate the
+`npm run dev-fixtures` seeds **three** datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end:
 
 - `fixtures-integrite-ok` — integrity enabled (one joint anchor), a compatible published update
@@ -386,9 +394,22 @@ feature end-to-end:
   demonstrated in this fixture's comments: the demo re-tampers the metadata on every run because a
   legitimate covered-field write would silently re-anchor and heal the metadata half — a
   superadmin `_fix` would likewise re-anchor and return the verdict to `ok`.
+- `fixtures-integrite-lignes` (target 3) — an editable (REST) dataset with 5 lines: integrity
+  enable stamps every live line and the fixture waits for `_needsHistorizingLines` to clear
+  (backfill drain), then one line is updated through the normal REST write path (a second,
+  properly-stamped revision in that line's history) and a **different** line is tampered
+  out-of-band via `test-env/rest-collection-update-one` — a raw content edit that leaves `_hash`
+  and `_i` untouched, the silent-edit shape a cheap hash-fold could not see (the reason target 3
+  pivoted straight to per-line revisions, design doc §0). The check reports `status: 'breach'`
+  with `breach: ['lines']` and `lines: { checked, diverged: 1, sample: ['ref-4'] }`. Unlike the
+  file/metadata breach fixture, no re-tamper-on-each-run is needed: nothing else in the script
+  writes to that line, and the fixture is skip-if-exists besides, so the breach persists untouched
+  across re-runs. The restore path (`POST …/_integrity/lines/_restore`) is documented in the
+  fixture's comments, not auto-demoed, so the admin UI/API has a breach to show.
 
-The on-demand check's response is the joint verdict `{ status, breach?: ('file'|'metadata')[] }`;
-the fixtures script logs `status` plus the diverged parts. (The former per-class-independence and
+The on-demand check's response is the joint verdict
+`{ status, breach?: ('file'|'metadata'|'lines')[], lines?: { checked, diverged, sample } }`; the
+fixtures script logs `status` plus the diverged parts. (The former per-class-independence and
 reconcile demos lost their purpose with the joint anchor and synchronous fix — see the
 simplification design, D5.)
 
@@ -403,8 +424,14 @@ once per environment; on a fresh environment both datasets seed automatically.
 |---|---|---|---|
 | Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred — note the metadata half rides the file-class joint anchor, so **enrollment itself is gated on a finalized file dataset** (the `_integrity` enable check, §3): a non-file dataset cannot enroll today, even for metadata-only protection | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
 | Data files | trivial (md5 already stored) | ✅ **delivered — always-on, no size gate** | reuse existing `md5` |
-| Editable (REST) dataset — **Mongo lines** (source of truth) | feasible (see below) | size/cardinality-gated | exact fold over the precomputed per-line `_hash`, sorted by `_i` |
+| Editable (REST) dataset — **Mongo lines** (source of truth) | ✅ **delivered — per-line locked revisions (detect + repair), gated ~100k live lines, opt-in per dataset** | same mechanism as detect (level 1 and 2 are not separated for lines — every anchor carries its payload) | SHA-256 of the cleaned line body (stable-stringified), embedded in the revision key |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
+
+> A fold-based level 1 over the existing per-line CRC32 `_hash` — the originally-sketched cheap
+> universal detector for datasets **above** the gate — remains a **possible later level** for that
+> tail (§10, §12); it was deliberately not built for v1 (design doc §0: it cannot see a direct
+> content edit that leaves `_hash` untouched, so its cheapness does not cover the tamper that
+> matters most).
 
 - **Dataset metadata hashing (delivered).** The hash is SHA-256 of the **stable-key-sorted**
   JSON serialization of the dataset document with an **operational denylist** removed — every
@@ -462,30 +489,88 @@ once per environment; on a fresh environment both datasets seed automatically.
   is a pure **rebuildable projection**: its integrity is *consistency with Mongo*, **repaired by
   reindex**, and it needs no locked history of its own. The historization target reduces to the **Mongo
   lines collection** — which shrinks this "hard tail" considerably.
-- **Existing primitives to build on** (verified in `api/src/datasets/utils/rest.ts`): a
-  precomputed per-line `_hash` (CRC32 over stable-stringified data, `:269`), a unique monotonic
-  order key `_i` (`:273`, unique index `:187`), an optional per-line revision log
-  `dataset-revisions-‹id›` (mutable + TTL-able today, gated by `rest.history`), and the
-  `_needsIndexing` flag+worker relay — the outbox of §3.2, already in production for Mongo→ES.
-- **Level 1 (detect) = whole-state rolling fingerprint — and it can be *exact*, not statistical.**
-  Scan the lines projecting only `{_id, _i, _hash}` and fold into one digest stored as a single
-  locked anchor per check. Because `_hash` is **already computed and stored**, the fold needs no
-  re-serialization of payloads — a cheap, index-covered scan — so the earlier "must sample →
-  statistical confidence" posture is downgraded to a **fallback above a size threshold**, not the
-  default. *Caveat:* `_hash` is CRC32 (non-cryptographic, chosen for conflict detection); folding
-  it detects accidental/careless out-of-band writes but not a determined forger. Matching our
-  threat model (detection + auditable trail + rollback, not non-repudiation) that is acceptable;
-  to resist adversarial tampering, fold a parallel SHA-256 instead (recomputed, costlier). An
-  explicit hash-strength choice, not an inherited default.
-- **Level 2 (repair) = the §3.5 sliding-lock mirror, one anchor per line.** Each line mutation
-  appends a write-once locked object `{ hash, context, snapshot? }` keyed `‹dataset›/‹lineId›/‹i›`
-  — the per-resource revision shape of §3.1, just keyed per line; the latest object is that line's
-  sliding repair anchor, and the existing mutable `dataset-revisions` collection is its rebuildable
-  projection. Cost scales with **row cardinality × write volume**, not dataset bytes — and per §3.5
-  the per-line lock renewal must be *exhaustive*, so **level 2 on a large editable dataset is an
-  inevitable scalability bottleneck**: accepted, not engineered away. It stays **cardinality-gated
-  and opt-in per dataset** — activated intelligently where the row count makes it affordable.
-  Level 1 has no backfill and stays universal.
+- **Existing primitives reused** (verified in `api/src/datasets/utils/rest.ts`): a precomputed
+  per-line `_hash` (CRC32 over stable-stringified data, kept as-is for its original purpose —
+  conflict detection, `:269`), a unique monotonic order key `_i` (`:273`, unique index `:187`),
+  and the `_needsIndexing` flag+worker relay pattern — mirrored, not reused directly, by the
+  lines outbox below. The optional per-line revision log `dataset-revisions-‹id›` (mutable,
+  TTL-able, gated by `rest.history`) stays a **separate, disposable UI convenience**: it is not
+  the integrity primitive and is never read by the checker.
+- **The pivot (design doc §0): pure level 2, no fold.** The architecture originally sketched here
+  a cheap level 1 — fold the precomputed `_hash` across all lines into one digest, exact and
+  index-covered, no payload re-serialization. Brainstorming surfaced a blind spot that killed it:
+  folding the *stored* `_hash` detects out-of-band inserts/deletes/reorders, but a direct
+  out-of-band **content edit that never touches `_hash`** — arguably the single most likely
+  tamper — is invisible to it. Any check that must cover content has to read payloads regardless,
+  so the fold's cheapness was illusory for the part that matters. **Decision: skip the fold and
+  go straight to the §3.5 sliding-lock mirror at line granularity** — every line mutation appends
+  a locked revision carrying the actual payload. Detection, diff and repair all come from the
+  same primitive, level 1 and level 2 are not separated for lines, and the CRC32 hash-strength
+  question (§12) dissolves: the relay computes a **SHA-256 of the cleaned snapshot it stores**, so
+  detection is adversarial-grade without touching `rest.ts`'s `_hash` (which stays a
+  conflict-detection tool, not an integrity primitive).
+- **Key layout, hash-in-key.** Revisions live under
+  `‹service›/‹owner.type›-‹owner.id›/‹datasetId›/lines/‹encodedLineId›/‹paddedI›-‹sha256|deleted›`
+  — a subtree of the dataset's existing prefix, kept invisible to the dataset-level joint-anchor
+  listing by switching that listing to `delimiter: '/'`. `‹encodedLineId›` is the Mongo `_id`,
+  URI-encoded; `‹paddedI›` is the line's own monotonic `_i` (zero-padded to 16 digits — wide
+  enough for `timestamp3` values), which doubles as the revision index so **the relay never lists
+  before writing**; the full hex SHA-256 (or the literal marker `deleted` for a tombstone) is
+  embedded in the key itself, so the checker recovers every line's latest anchor hash from **LIST
+  alone** (paged, no per-object GETs). The revision payload is the **cleaned body**: the line
+  document minus every `_`-prefixed field — internals and `_ext_*` extension outputs (rebuildable
+  projections, same argument that excludes ES) are not covered content; `sha256 =
+  sha256(stableStringify(cleanedBody))`, computed by the relay from the payload it stores, so
+  relay and checker stay symmetric by construction.
+- **Write path — per-line transactional outbox.** Every legitimate line mutation (transaction
+  pipeline create/update/patch/delete, the TTL worker's tombstones, `deleteAllLines`-style resets)
+  adds `_needsHistorizing: { context? }` to the line document in the **same single-document
+  write** — the `_needsIndexing` pattern, atomic on any shard key, stamped only when
+  `dataset.integrity.active`. A dataset-level hint (`_needsHistorizingLines`) is set *before* the
+  line stamps so a crash between the two leaves a harmless empty hint, never orphaned stamps. The
+  relay (`historizeLines`) picks up hinted datasets, batches concurrent S3 PUTs, clears line flags
+  per batch and the hint once none remain — retry-forward, per line. `commitLines` additionally
+  requires `_needsHistorizing` to be absent before purging a `_deleted` doc, so a deletion
+  revision can never be lost to a race with indexing. The extender does **not** stamp. A dataset
+  with pending line stamps (or the hint) reports `unknown` rather than a false verdict — same
+  posture as the dataset-level outbox.
+- **Enable, gate, and lifecycle.** `PUT …/_integrity {active: true}` on a REST dataset first
+  counts live lines and **refuses above the gate** (`config.integrity.lines.maxLines`, default
+  100 000) with a `409`; on success it anchors the joint metadata revision inline as today, then
+  stamps every live line (`operation: 'enable'`) and sets the hint — the relay backfills
+  asynchronously, and `GET …/_integrity` exposes `lines: { anchored, pending }` for progress until
+  it drains. Growth past the gate after enrollment never blocks writes; anchoring continues with a
+  loud warning rather than silently dropping protection. Disable stops stamping/renewal (anchors
+  age out at retention); owner transfer stays refused while active (avoids re-anchoring the whole
+  line set under a new prefix, integrity4's rule).
+- **Check and renewal.** The nightly `checkDataset` gains a lines part for enrolled REST datasets:
+  LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names, a live-Mongo scan
+  recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
+  with no revision (out-of-band insert), or a latest revision with no live line (out-of-band
+  delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
+  gains a `'lines'` breach member and `integrity.lastCheck.lines = { checked, diverged, sample:
+  [≤20 lineIds] }`. **Renewal rides the check** (verify-then-renew, §3.4 Option B): when the
+  dataset's lines-renewal horizon is due and the check passes, every live line's anchor retention
+  is extended in the same pass; failures aggregate into `integrity.linesRenewal: { date, status,
+  renewed, failed }`, loud, never thrown. Per §3.5 this coverage must be exhaustive — a missed
+  renewal permanently loses that line's repairability — so **level 2 on a large editable dataset
+  is an inevitable scalability bottleneck**: accepted, not engineered away, and is exactly why the
+  cardinality gate exists.
+- **Repair.** `POST …/_integrity/lines/_restore` (superadmin, synchronous) re-runs the per-line
+  comparison and, for each diverged line, rewrites it from its latest revision payload through the
+  standard transaction pipeline (`operation: 'restore'`), re-inserts out-of-band-deleted lines,
+  and **deletes out-of-band-inserted lines** (no verified state to restore to) — then re-checks
+  and returns the fresh verdict, bounded by the gate. `POST …/_integrity/_fix` extends naturally:
+  diverged lines get fresh revisions written inline (`fixIntegrity` context) before the re-check —
+  "bless the current state". Per-line history (`GET …/_integrity/lines/{lineId}/revisions` and the
+  `/revisions/{i}` payload/diff endpoint) reuses the dataset-level revisions UI pattern and
+  permissions (`readIntegrityRevisions`, superadmin-only writes).
+- **Explicit limits (accepted, not engineered around).** Line **attachment bytes are out of
+  scope** — the snapshot covers the line document only, so attachments are neither detected nor
+  restorable (same family as file-level-2 size gating; a possible later addition is md5 + copy in
+  the line's revision). A dataset **above the gate has no lines integrity at all** — the accepted
+  coverage cliff of skipping the fold (§10, §12): sensitive editable datasets are bet to be
+  modest-cardinality reference tables.
 
 ## 6. Atomicity & failure model
 
@@ -636,11 +721,36 @@ speculative framework.
    fix) became **synchronous**, deleting the realtime websocket channel (D4); denormalized names
    were **normalized out** of the covered hash, dropping the six name-sync stamps (D1); and the
    tests/fixtures/UI were trimmed accordingly (D5) — a net deletion.
-3. **Editable (REST) datasets** — ⏳ **later.** *ES is not historized* (rebuildable projection,
-   repair = reindex). Target is the Mongo lines collection: level 1 = exact rolling fold over the
-   precomputed per-line `_hash` (sample only past a threshold); level 2 = the per-line locked
-   log (§5), reusing `dataset-revisions` as the projection, cardinality-gated. The hard tail —
-   level 1 stays universal, level 2 is gated.
+3. **Editable (REST) datasets** — ✅ **delivered, pure level 2, per-line locked revisions.**
+   *ES is not historized* (rebuildable projection, repair = reindex); the target is the Mongo
+   lines collection. Design:
+   [docs/plans/2026-07-20-integrity-target3-lines-design.md](../plans/2026-07-20-integrity-target3-lines-design.md).
+   Shipped as a deliberate **pivot away from the fold-based level 1** this document originally
+   sketched (§0 of that design, summarized in §5 above): a cheap fold over the precomputed
+   `_hash` cannot see a direct out-of-band content edit that leaves `_hash` untouched — the most
+   likely tamper — so detection needs the payload anyway, and the design goes straight to the
+   per-line sliding-lock mirror (§3.5). Every line mutation appends a write-once locked revision
+   `…/lines/‹lineId›/‹paddedI›-‹sha256|deleted›`, keyed by the line's own `_i` (hash embedded in
+   the key, so the checker recovers every line's anchor from a LIST alone). A per-line
+   transactional outbox (`_needsHistorizing` on the line doc + a dataset-level
+   `_needsHistorizingLines` hint, hint-first ordering) stamps every legitimate write; a relay
+   worker (`historizeLines`) ships the revisions and clears the flags. Enable is **gated**
+   (`config.integrity.lines.maxLines`, default 100 000 live lines, refused above it with a `409`)
+   and backfills every live line asynchronously on success; `GET …/_integrity` reports backfill
+   progress (`lines: { anchored, pending }`). The nightly check gains a `'lines'` breach member and
+   `lastCheck.lines: { checked, diverged, sample }`; lock renewal rides the check
+   (verify-then-renew, §3.4 Option B), exhaustively over live lines (a missed renewal
+   permanently loses that line's repairability — the reason the gate exists at all).
+   `POST …/_integrity/lines/_restore` (synchronous) heals all three tamper shapes (content edit,
+   out-of-band insert, out-of-band delete) through the standard transaction pipeline; `_fix`
+   extends to bless diverged lines inline; per-line history/diff endpoints and the admin UI ship
+   alongside. **Accepted limits:** line attachment bytes are not covered (document-only
+   snapshot); a dataset above the gate has no lines integrity at all (the coverage cliff of
+   skipping the fold). **Follow-ups, deliberately not in this iteration:** attachment coverage
+   (md5 + copy in the line's revision), a **fold-based level 1** for the above-gate tail (now a
+   possible *later, separate* level rather than "the design" — levels stay separate by design,
+   nothing here forecloses it), and applications/settings metadata (still deferred from
+   target 2).
 
 ## 11. Provider support (target: Scaleway)
 
@@ -665,12 +775,16 @@ the portable baseline for the OSS/Garage story.
   Standard and Glacier classes, while shortening/deleting are correctly refused
   (`docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is no
   longer blocked; re-anchoring (Option A) stays a portability fallback only.
-- **Editable-dataset hashing — reframed, far narrower than first feared (§5).** ES drops out
-  (rebuildable projection); only the Mongo lines collection is a target; level 1 is an *exact*
-  fold over the precomputed `_hash` (sampling only past a threshold); level 2 is the §3.5 per-line
-  locked log, cardinality-gated. The one genuinely open decision is **hash strength**: reuse the
-  existing CRC32 `_hash` (detects careless out-of-band writes, cheap) vs. a parallel SHA-256
-  (resists adversarial tampering, recomputed). A policy call, not an architecture problem.
+- **Editable-dataset hashing — RESOLVED (2026-07-20, target 3 delivered).** ES drops out
+  (rebuildable projection); the Mongo lines collection was the only remaining target. The
+  originally-open **hash-strength** decision — reuse the existing CRC32 `_hash` (cheap, detects
+  careless out-of-band writes) vs. a parallel SHA-256 (resists adversarial tampering, recomputed)
+  — is closed: **SHA-256 of the cleaned line snapshot**, computed by the relay from the payload it
+  stores. This fell out of the bigger pivot (design doc §0, §5, §10): a fold over the cheap CRC32
+  `_hash` cannot see a direct content edit that leaves `_hash` untouched, so a level 1 built on it
+  was abandoned for v1 in favor of going straight to per-line locked revisions, which need a
+  real content hash anyway. A fold-based level 1 (CRC32 or otherwise) for datasets above the
+  cardinality gate remains a possible *later, separate* level (§10) — not built, not precluded.
 - **Outbox vs sharding — decided (§3.2).** The integrity write rides a flag on the resource
   document (the existing `_needsIndexing`/`commitLines` shape), not a separate collection, so the
   atomic write stays single-document and single-shard on any shard key. This is future-proof
