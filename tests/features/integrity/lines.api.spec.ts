@@ -14,7 +14,7 @@ test('delimiter listing keeps the joint anchor blind to the lines subtree', asyn
   const prefix = `data-fair/test-delim/${Date.now()}/`
   const retainUntil = new Date(Date.now() + 24 * 3600 * 1000)
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
-  await store.writeRevision(`${prefix}000000000`, { hash: { sha256: 'meta' }, context, dataset: { id: 'ds' } }, retainUntil)
+  await store.writeRevision(`${prefix}000000000`, { hash: { metadata: 'meta' }, context, dataset: { id: 'ds' } }, retainUntil)
   await store.writeRevision(`${prefix}lines/l1/0000000000000001-abc`, {
     hash: { sha256: 'abc' }, context, dataset: { id: 'ds' }, line: { _id: 'l1', _i: 1 }, payload: { a: 1 }
   }, retainUntil)

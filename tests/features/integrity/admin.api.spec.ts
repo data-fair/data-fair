@@ -29,8 +29,12 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
 
   const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(status.active).toBe(true)
-  expect(status.lastRevision.hash.md5).toBe(dataset.originalFile.md5)
-  expect(status.lastRevision.hash.sha256).toBeTruthy()
+  const { createHash } = await import('node:crypto')
+  const fs = (await import('fs-extra')).default
+  const path = (await import('node:path')).default
+  const fixtureSha256 = createHash('sha256').update(fs.readFileSync(path.resolve('./tests/resources/datasets/dataset1.csv'))).digest('hex')
+  expect(status.lastRevision.hash.file).toBe(fixtureSha256)
+  expect(status.lastRevision.hash.metadata).toBeTruthy()
 })
 
 test('enable is rejected on a dataset that is neither a finalized file dataset nor rest', async () => {
@@ -422,10 +426,10 @@ test('file download of a referencing revision streams the owning payload bytes',
 
   const rev1 = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/1`)).data
   expect(rev1.payload.file.i).toBe(0)
-  // downloading rev 1's file resolves the reference and streams rev 0's bytes; md5 matches
+  // downloading rev 1's file resolves the reference and streams rev 0's bytes; the file hash matches
   const file = await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/1/file`, { responseType: 'arraybuffer' })
   const { createHash } = await import('node:crypto')
-  expect(createHash('md5').update(Buffer.from(file.data)).digest('hex')).toBe(rev1.hash.md5)
+  expect(createHash('sha256').update(Buffer.from(file.data)).digest('hex')).toBe(rev1.hash.file)
 })
 
 test('restore re-ingests a tampered file through the pipeline and anchors with restore context', async () => {
@@ -567,7 +571,7 @@ test('revision detail returns snapshot + current projection; file endpoint strea
 
   const file = await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/0/file`, { responseType: 'arraybuffer' })
   const { createHash } = await import('node:crypto')
-  expect(createHash('md5').update(Buffer.from(file.data)).digest('hex')).toBe(detail.hash.md5)
+  expect(createHash('sha256').update(Buffer.from(file.data)).digest('hex')).toBe(detail.hash.file)
   expect(file.headers['content-disposition']).toContain(dataset.originalFile.name)
 
   // reads follow the readIntegrityRevisions permission (same as the list endpoint)
