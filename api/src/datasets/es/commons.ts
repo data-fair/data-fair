@@ -31,7 +31,9 @@ import {
   resolveExactKeywordTarget,
   resolveExistsFields,
   resolveRangeOrPrefixField,
-  KEYWORD_IGNORE_ABOVE
+  KEYWORD_IGNORE_ABOVE,
+  virtualFilterClauses,
+  descendantsFilterClause
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -276,17 +278,11 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.operator === 'nin') {
-          if (f.values.length === 1) filter.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
-          else filter.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
-        } else {
-          if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-          else filter.push({ terms: { [f.key]: f.values } })
-        }
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children (see utils/virtual.ts)
+  if (dataset._descendantsFilters) {
+    filter.push(descendantsFilterClause(dataset._descendantsFilters))
   }
 
   // Envorced filter in case of rest datasets with line ownership

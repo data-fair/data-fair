@@ -11,7 +11,8 @@ import {
   transforms,
   applyAliases,
   sortBuckets,
-  prepareBucketResult
+  prepareBucketResult,
+  parseFilters
 } from '../../../../api/src/api-compat/ods/operations.ts'
 
 dayjs.extend(utc)
@@ -219,5 +220,27 @@ test.describe('transforms.date_transform', () => {
         }
       }
     }
+  })
+})
+
+test.describe('parseFilters virtual scoping', () => {
+  const ds = (extra: any = {}) => ({ id: 'ds1', schema: [{ key: 'a' }, { key: 'b' }, { key: '_i' }], ...extra })
+
+  test('nin virtual filters produce must_not clauses', () => {
+    const { bool: { filter } } = parseFilters(ds({
+      isVirtual: true,
+      virtual: { children: ['c1'], filters: [{ key: 'a', operator: 'nin', values: ['x'] }] }
+    }), {}, 'records')
+    assert.deepEqual(filter, [{ bool: { must_not: { term: { a: 'x' } } } }])
+  })
+
+  test('descendants filters produce a scoped _index clause', () => {
+    const { bool: { filter } } = parseFilters(ds({
+      isVirtual: true,
+      virtual: { children: ['c1'] },
+      _descendantsFilters: { indicesPrefix: 'dataset', unfilteredIds: ['c1'], filtered: [{ id: 'c2', filters: [{ key: 'a', values: ['x'] }] }] }
+    }), {}, 'records')
+    assert.equal(filter.length, 1)
+    assert.deepEqual(filter[0].bool.should[1], { bool: { filter: [{ term: { _index: 'dataset-c2' } }, { term: { a: 'x' } }] } })
   })
 })

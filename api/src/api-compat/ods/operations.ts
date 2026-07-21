@@ -3,7 +3,7 @@
 // index.ts keeps routing, the ES search calls, streaming and response sending.
 // import getFilterableFields from the config-free es/operations.ts (NOT the es/index.ts barrel, which
 // loads #config) so this module stays config-free and unit-testable. See code-conventions.md §2.
-import { getFilterableFields, resolveExactKeywordTarget } from '../../datasets/es/operations.ts'
+import { getFilterableFields, resolveExactKeywordTarget, virtualFilterClauses, descendantsFilterClause } from '../../datasets/es/operations.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
 import { parse as parseWhere } from './where.peg.js'
@@ -58,12 +58,11 @@ export const parseFilters = (dataset, query, route) => {
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-        else filter.push({ terms: { [f.key]: f.values } })
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children (see utils/virtual.ts)
+  if (dataset._descendantsFilters) {
+    filter.push(descendantsFilterClause(dataset._descendantsFilters))
   }
 
   // Envorced filter in case of rest datasets with line ownership
