@@ -932,9 +932,18 @@ the portable baseline for the OSS/Garage story.
   atomic write stays single-document and single-shard on any shard key. This is future-proof
   against later sharding of the high-volume collections; a separate outbox collection is reserved
   for collections we commit to never sharding.
-- **Default retention window** — a legal/product decision per resource class (files, metadata,
-  lines), pending stakeholder input. It is simultaneously the protection horizon (§3.4) and the
-  maximum deletion→erasure lag (§8), so it must be assumable long-term.
+- **Default retention window — DECIDED (2026-07-21): one year, uniform.** One bucket per
+  deployment means one retention policy: `config.integrity.retention.days` (default 365) applies
+  to every scope (files, metadata, lines). The window is simultaneously the protection horizon
+  (§3.4) and the maximum deletion→erasure lag (§8). One year is the top of the CNIL
+  journalisation band (délib. 2021-122: 6 months–1 year, extensible if justified), matches
+  ANSSI PA-022 (≥ 12 months), and stays well inside CNIL's tolerated deferred-erasure doctrine
+  for backups/WORM stores (documented finite cycle + automatic purge at expiry + no re-serving —
+  the same argument the platform runs for global backups). Archives-publiques obligations bind
+  the producing collectivité, not the hosting platform, so no legal floor forces a longer
+  window. Compliance locks can be extended but never shortened, so a deployment may raise the
+  default, never lower it retroactively; a longer window (e.g. 5 years) stays a per-deployment
+  opt-in, not the default.
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history.
 
