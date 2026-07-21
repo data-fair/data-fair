@@ -12,7 +12,7 @@
 > §0 for the rationale, and [§10](#10-decomposition--build-order) below for what it delivered.
 > The shared core (locked-revision store, transactional-outbox relay, sliding checker) uses a
 > **single joint anchor per dataset** for the file/metadata classes: one revision sequence records
-> **both** the file md5 and the covered-metadata sha256 on every revision, with one verdict, one
+> **both** the file hash and the covered-metadata hash (each SHA-256) on every revision, with one verdict, one
 > outbox stamp and one API/UI surface — the file and metadata parts are named inside a breach, not
 > carried as separate anchor classes. Editable-dataset lines get their **own, parallel revision
 > sequence per line** (§5), reusing the same store/wrapper/checker primitives but keyed and
@@ -100,10 +100,14 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
 - A dedicated S3 bucket with **versioning enabled** and **object-lock in compliance mode**,
   with a **default bucket-level retention** so the writer need not set retention per object.
 - A **revision** object is `{ hash, context, dataset, [payload] }` where:
-  - `hash` — `{ md5?, sha256 }`: the md5 of the stored file (absent for non-file datasets) and
-    the sha256 of the covered metadata (§5). A dataset has **one joint anchor**, so both hashes
-    are recorded on **every** revision; the breach verdict names which part diverged (file /
-    metadata) by comparing each half against the latest anchor's pair.
+  - `hash` — `{ file?, metadata }`: the sha256 of the stored file's bytes (absent for
+    non-file datasets) and the sha256 of the covered metadata (§5). Both are SHA-256 — md5 was
+    dropped before first release because the payload reference dedupe keys off the file hash,
+    making it storage-load-bearing: under the adversarial-tenant threat model a chosen-prefix
+    md5 collision would collapse two file versions onto one locked payload. A dataset has
+    **one joint anchor**, so both hashes are recorded on **every** revision; the breach verdict
+    names which part diverged (file / metadata) by comparing each half against the latest
+    anchor's pair.
   - `context` — `{ operation, origin, date, reason? }`: the operation type, the actor
     **category** (`origin`: `user | superadmin | worker | propagation | upgrade`), a timestamp,
     and an optional free-text reason (on `fixIntegrity` only). It carries **no user identity**
@@ -445,8 +449,8 @@ opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 feature end-to-end:
 
 - `fixtures-integrite-ok` — integrity enabled (one joint anchor), a compatible published update
-  historizes a second revision (new file md5), and a legitimate metadata PATCH through the API
-  historizes a further revision (new metadata sha256); the history tab shows the write category
+  historizes a second revision (new file hash), and a legitimate metadata PATCH through the API
+  historizes a further revision (new metadata hash); the history tab shows the write category
   (`operation` / `origin`), not a user identity; on-demand check returns `ok`
 - `fixtures-integrite-breach` — integrity enabled, then **both parts** are tampered out-of-band:
   the stored file via the dev-only `test-env/tamper-dataset-file` endpoint, and the metadata via
@@ -484,7 +488,7 @@ once per environment; on a fresh environment the three datasets seed automatical
 | Resource class | Level 1 (detect) | Level 2 (repair) | Hashing |
 |---|---|---|---|
 | Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | ✅ **delivered for datasets** (bundled with the file-class joint anchor, §3.1); applications/settings deferred — note the metadata half rides the file-class joint anchor, so **enrollment itself is gated on a finalized file dataset** (the `_integrity` enable check, §3): a non-file dataset cannot enroll today, even for metadata-only protection | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
-| Data files | trivial (md5 already stored) | ✅ **delivered — always-on, no size gate** | reuse existing `md5` |
+| Data files | trivial | ✅ **delivered — always-on, no size gate** | SHA-256 of the stored bytes (teed while streaming to the locked store) |
 | Editable (REST) dataset — **Mongo lines** (source of truth) | ✅ **delivered — per-line locked revisions (detect + repair), gated ~100k live lines, opt-in per dataset; enrollment refused on lines-owner / attachment datasets (§5 limits)** | same mechanism as detect (level 1 and 2 are not separated for lines — every anchor carries its payload) | SHA-256 of the cleaned line body (stable-stringified), embedded in the revision key |
 | Dataset **attachments** (bytes beside the document) | ❌ not covered — **enrollment refused** rather than partially claimed | ❌ | n/a |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
@@ -536,11 +540,11 @@ once per environment; on a fresh environment the three datasets seed automatical
     **before** any destructive filter-self-invalidating write; over-stamping is harmless (the relay
     dedupes and drops the flag on un-enrolled datasets).
 
-- **Files** default to level 1. The hash is an md5 of the file, but the **write and verify
-  paths both recompute it from the *stored file*** (not from `dataset.originalFile.md5`): that
-  metadata field is computed on create and, even with the maintain-on-update fix, an *out-of-band*
+- **Files** default to level 1. The hash is a sha256 of the file, and the **write and verify
+  paths both recompute it from the *stored file*** (not from `dataset.originalFile`'s fields): that
+  metadata is computed on create and, even with the maintain-on-update fix, an *out-of-band*
   edit (exactly what `fixIntegrity` reconciles) never updates it — so anchoring the metadata would
-  dedupe and never re-anchor. Relay and checker therefore call the same `md5OfStorageFile(...)`,
+  dedupe and never re-anchor. Relay and checker therefore call the same `sha256OfStorageFile(...)`,
   keeping them symmetric. **Level 2 is delivered and always-on (no size gate**, §2): every anchor
   copies the file into the historized bucket as its `‹i›.file` payload sibling (§3.1). The
   historized bucket stays fully separate from the main storage bucket (which is unchanged),
@@ -581,15 +585,26 @@ once per environment; on a fresh environment the three datasets seed automatical
   embedded in the key itself, so the checker recovers every line's latest anchor hash from **LIST
   alone** (paged, no per-object GETs). The revision payload is the **cleaned body**: the line
   document minus every `_`-prefixed field — internals and `_ext_*` extension outputs (rebuildable
-  projections, same argument that excludes ES) are not covered content; `sha256 =
+  projections, same argument that excludes ES) are not covered content — and minus
+  **extension-owned plain columns** (`extensionOwnedKeys()`: exprEval outputs and remoteService
+  `overwrite` columns). Those are non-underscore fields, but they are equally derived and
+  rebuildable, and the extender writes them back **outside** the transaction pipeline
+  (unstamped), racing the relay — covering them would false-breach every organic
+  write-then-extend flow and every expression recompute. `sha256 =
   sha256(stableStringify(cleanedBody))`, computed by the relay from the payload it stores, so
-  relay and checker stay symmetric by construction.
+  relay and checker stay symmetric by construction (the checker derives the same exclusion set
+  from `dataset.extensions`).
 - **Write path — per-line transactional outbox.** Every legitimate line mutation (transaction
   pipeline create/update/patch/delete, the TTL worker's tombstones) adds `_needsHistorizing: { context? }` to the line document in the **same single-document
   write** — the `_needsIndexing` pattern, atomic on any shard key, stamped only when
   `dataset.integrity.active`. Whole-collection resets (`deleteAllLines`, `bulkLines?drop=true`)
   are refused with 400 while integrity is active — integrity anchors would be orphaned by a collection
-  drop; deletions must go through the ordinary transaction path (per-line tombstones). A
+  drop; deletions must go through the ordinary transaction path (per-line tombstones). The one
+  **bulk covered-content rewrite outside the transaction pipeline** — `applyPatch` `$unset`ting a
+  removed schema property from every line on a narrowing patch — is stamped through the same
+  outbox (hint first, then the stamp merged into the very `updateMany` that rewrites the lines),
+  so a legitimate property removal re-anchors the rewritten lines instead of mass false-breaching
+  them; extension-removal `$unset`s need no stamp (their columns are outside the covered body). A
   dataset-level hint (`_needsHistorizingLines`) is set *before* the line stamps so a crash
   between the two leaves a harmless empty hint, never orphaned stamps. The relay (`historizeLines`)
   picks up hinted datasets, batches concurrent S3 PUTs, clears line flags per batch and the hint
@@ -607,7 +622,8 @@ once per environment; on a fresh environment the three datasets seed automatical
   asynchronously, and `GET …/_integrity` exposes `lines: { anchored, pending }` for progress until
   it drains. Growth past the gate after enrollment never blocks writes; anchoring continues with a
   loud warning rather than silently dropping protection. Disable stops stamping/renewal (anchors
-  age out at retention); owner transfer stays refused while active (avoids re-anchoring the whole
+  age out at retention), clears the dataset flags AND sweeps per-line stamp residue (with the
+  hint gone the relay would never visit those lines again); owner transfer stays refused while active (avoids re-anchoring the whole
   line set under a new prefix, integrity4's rule). **Re-enable false-missing.** Lines deleted while
   integrity was disabled purge (no outbox stamp, so no tombstone revision) — on re-enable, the
   backfill has no way to distinguish "never existed" from "deleted during the gap", so the first
@@ -669,7 +685,7 @@ once per environment; on a fresh environment the three datasets seed automatical
     the line held — a remediation causing collateral data loss. Refused (both at enable, and when a
     patch would set `rest.lineOwnership` while active).
 
-  Covering either properly (attachment md5 + locked copy in the line's revision; `_owner` inside
+  Covering either properly (attachment content hash + locked copy in the line's revision; `_owner` inside
   the covered projection with a linesOwner-preserving rewrite) is a possible later addition — the
   refusals are what keep the *stated* guarantee true until then.
 
@@ -797,7 +813,7 @@ write wrapper, checker) is **extracted from target 1 and reused**, not built up 
 speculative framework.
 
 1. **Dataset data files** — ✅ **level 1 (detect) + level 2 (repair) + lock renewal delivered.**
-   The relay historizes the *stored file's* md5 on every finalize (transactional outbox, §3.2);
+   The relay historizes the *stored file's* sha256 on every finalize (transactional outbox, §3.2);
    the sliding checker recomputes and compares it, raising a breach on divergence (§3.3); and it
    **renews the anchor's lock by extension** (§3.4 Option B) — pushing the compliance retain-until
    forward on a ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current
@@ -810,11 +826,20 @@ speculative framework.
    sibling (§3.1) — unlocking the admin-facing diff, an audit download of any historized revision,
    and restore-from-any-revision (§3.3, §7). Restoring metadata alone is synchronous; restoring a
    file re-ingests through the standard draft pipeline, with the restore context preserved by
-   finalize. Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a portability note
+   finalize (the re-ingest descriptor's platform-level `originalFile.md5` is recomputed in-flight
+   from the payload bytes). **Restoring metadata alone routes the diverging covered keys through
+   the standard patch pipeline** (`preparePatch`/`applyPatch` — pre-release M6 fix): a restored
+   schema/extensions/rest change gets the same revalidation, status triggers (reindex, REST line
+   cleanup) and bookkeeping as a legitimate patch; when a worker is woken the route answers
+   `{status:'restoring'}` and finalize preserves the restore context, otherwise it anchors
+   synchronously and returns the fresh verdict. Every restore now requires a **settled dataset**
+   (`finalized`/`error`, refused 409 up front before any write) — a known accepted refusal: a
+   tampered `rest.primaryKeyMode` cannot be healed by restore (preparePatch's guard refuses it,
+   fail-loud, rather than silently rewriting the lines' `_id` derivation). Re-anchoring (§3.4 Option A) is not needed for Scaleway; it remains a portability note
    for providers that cannot prolong a lock.
 2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets**,
    then folded into the **joint anchor** (§3.1). A dataset has one revision sequence carrying
-   **both** the file md5 and the covered-metadata sha256, one verdict
+   **both** the file and covered-metadata sha256 hashes, one verdict
    (`integrity.lastCheck: { status, breach?: ('file'|'metadata')[] }`) and one outbox sub-doc
    (`_needsHistorizing: { context? }`, §3.2). Level 1 hashes a canonical (stable-key-sorted) JSON
    serialization of the dataset document **minus an operational denylist**, with denormalized names
@@ -863,7 +888,7 @@ speculative framework.
    with lines-owner attribution **cannot enroll** (400), and neither feature can be acquired while
    enrolled — so no verdict ever claims coverage the snapshot does not have; above the gate,
    enrollment is refused (409). **Follow-ups, deliberately not in this iteration:** attachment
-   coverage (md5 + copy in the line's revision) and lines-owner coverage — the two refusals above
+   coverage (content hash + copy in the line's revision) and lines-owner coverage — the two refusals above
    are what keep the guarantee honest until they land — a **fold-based level 1** for the
    above-gate tail (now a possible *later, separate* level rather than "the design" — levels stay
    separate by design, nothing here forecloses it), and applications/settings metadata (still

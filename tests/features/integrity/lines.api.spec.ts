@@ -518,6 +518,9 @@ test('exprEval extension outputs stay outside the covered line body', async () =
     await new Promise(resolve => setTimeout(resolve, 200))
   }
   expect(line.double).toBe(6)
+  // M5: the extender's write-back must NOT stamp — its columns are outside the covered body,
+  // so stamping would only churn pointless re-anchors on every recompute
+  expect(line._needsHistorizing).toBeUndefined()
   await waitForFlagCleared(dataset.id)
   await waitForLinesDrained(ax, dataset.id)
   expect((await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
