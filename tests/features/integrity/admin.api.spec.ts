@@ -6,7 +6,7 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
-import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, waitForLinesDrained, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
@@ -551,6 +551,96 @@ test('restore guards: inactive, unknown index, payload-less revision, non-admin'
     dataset: { id: dataset.id }
   }, new Date(Date.now() + 24 * 3600 * 1000))
   await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 1 })).rejects.toMatchObject({ status: 400 })
+})
+
+// M6: the metadata part of a restore must go through the standard patch pipeline
+// (preparePatch/applyPatch), not a raw Mongo $set — a restored schema change needs the same
+// revalidation, reindex triggers and REST line cleanup as a legitimate schema patch.
+test('restore of a tampered REST schema goes through the patch pipeline and reindexes', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ds = (await admin.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity restore rest schema ${Date.now()}`,
+    schema: [{ key: 'attr1', type: 'string' }]
+  })).data
+  await admin.post(`/api/v1/datasets/${ds.id}/lines`, { _id: 'l1', attr1: 'v1' })
+  await waitForFinalize(admin, ds.id)
+  await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
+  await waitForLinesDrained(admin, ds.id)
+
+  // out-of-band tamper: a stray property appended to the schema (raw write, no stamp)
+  const raw0 = await getRawDataset(ds.id)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { schema: [...raw0.schema, { key: 'evil', type: 'string' }] })
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  expect((await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_check`)).data.breach).toContain('metadata')
+
+  // the restored schema drops 'evil' relative to the hot doc — a schema-narrowing patch, so the
+  // restore must answer 'restoring' (worker reindex), not a synchronous raw write
+  const res = (await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_restore`, { i: 0, reason: 'undo schema tamper' })).data
+  expect(res.status).toBe('restoring')
+
+  await waitForFinalize(admin, ds.id)
+  const raw = await getRawDataset(ds.id)
+  expect(raw.schema.find((p: any) => p.key === 'evil')).toBeUndefined()
+
+  await waitForFlagCleared(ds.id)
+  await waitForLinesDrained(admin, ds.id)
+  // the trail carries a restore-context revision (finalize preserves the pre-set context; an
+  // interleaved relay pass may add a worker-context anchor after it, so 'some', not 'latest')
+  const revisions = (await admin.get(`/api/v1/datasets/${ds.id}/_integrity/revisions`)).data
+  expect(revisions.results.some((r: any) => r.operation === 'restore')).toBe(true)
+  expect((await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_check`)).data.status).toBe('ok')
+})
+
+// M6 companion: routing restores through the pipeline means restores can trigger worker
+// processing, so EVERY restore now requires a settled dataset — and a refused restore must not
+// have written anything (the metadata part must not land before the refusal).
+test('restore on an unsettled dataset is refused (409) and writes no metadata', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  // freeze the dataset in a non-settled status: not a safe target for restore-triggered work
+  // (an unknown status value keeps the workers away, unlike 'analyzed' which they would settle)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'frozen-by-test' })
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).rejects.toMatchObject({ status: 409 })
+  // refused atomically: the tampered description was not silently half-healed
+  expect((await getRawDataset(dataset.id)).description).toBe('tampered-oob')
+
+  // settle the dataset again: the same restore now heals synchronously (no worker trigger for a
+  // description-only divergence)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'finalized' })
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo tamper' })).data
+  expect(res.status).toBe('ok')
+  expect((await getRawDataset(dataset.id)).description ?? '').not.toBe('tampered-oob')
+})
+
+// level-2 test debt: one restore heals a combined file+metadata tamper, and the re-ingested
+// file restores the platform-level originalFile.md5 descriptor
+test('restore heals a combined file+metadata tamper in one action', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const originalMd5 = dataset.originalFile.md5
+
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  const breach = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(breach.breach).toEqual(expect.arrayContaining(['file', 'metadata']))
+
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo combined tamper' })).data
+  expect(res.status).toBe('restoring')
+
+  await waitForFinalize(admin, dataset.id)
+  const raw = await waitForFlagCleared(dataset.id)
+  expect(raw.originalFile.md5).toBe(originalMd5)
+  expect(raw.description ?? '').not.toBe('tampered-oob')
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 })
 
 test('revision detail returns snapshot + current projection; file endpoint streams the payload', async () => {

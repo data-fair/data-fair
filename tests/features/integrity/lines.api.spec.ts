@@ -3,7 +3,7 @@
 // stamping, relay, enable/gate, check, restore/fix.
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { ensureIntegrityBucket, integrityTestStore } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared } from '../../support/integrity.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -105,16 +105,6 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
   const revisions2 = (await ax.get(`/api/v1/datasets/${dataset2.id}/lines/h1/revisions`)).data
   for (const rev of revisions2.results) expect(rev._needsHistorizing).toBeUndefined()
 })
-
-const waitForLinesDrained = async (ax: any, datasetId: string, timeout = 15000) => {
-  const start = Date.now()
-  while (Date.now() - start < timeout) {
-    const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
-    if (!raw._needsHistorizingLines) return
-    await new Promise(resolve => setTimeout(resolve, 200))
-  }
-  throw new Error('timed out waiting for _needsHistorizingLines to clear')
-}
 
 const enableAndDrain = async (ax: any, datasetId: string) => {
   await ax.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
@@ -474,4 +464,85 @@ test('a check on a dataset with undrained line stamps reports unknown, never a f
   } finally {
     await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { _needsHistorizingLines: '' } })
   }
+})
+
+// ---------------------------------------------------------------------------------------------
+// covered-content propagation writers: line rewrites driven by legitimate dataset patches must
+// keep the anchors in sync (stamped), and derived columns must stay out of the covered body
+// ---------------------------------------------------------------------------------------------
+
+test('a legitimate schema patch removing a property re-anchors the rewritten lines (no false breach)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 7 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+  expect((await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+
+  // narrowing patch: attr2 leaves the schema → applyPatch $unsets it from every line — a
+  // covered-content rewrite that must be stamped (hint first) or every line reads 'edited'
+  await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'attr1', type: 'string' }] })
+  await waitForFinalize(ax, dataset.id)
+  await waitForLinesDrained(ax, dataset.id)
+  await waitForFlagCleared(dataset.id)
+
+  const line = await rawLine(ax, dataset.id, 'line0')
+  expect(line.attr2).toBeUndefined()
+  expect(line._needsHistorizing).toBeUndefined()
+  expect((await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+})
+
+test('exprEval extension outputs stay outside the covered line body', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity lines expr ${Date.now()}`,
+    schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }],
+    extensions: [{ active: true, type: 'exprEval', expr: 'attr2 * 2', property: { key: 'double', type: 'integer' } }]
+  })
+  const dataset = res.data
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'a', attr2: 2 })
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  // the extender rewrites its computed column out-of-pipeline (no stamp): change the expression
+  // so it recomputes every line — the covered body must not shift
+  await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+    extensions: [{ active: true, type: 'exprEval', expr: 'attr2 * 3', property: { key: 'double', type: 'integer' } }]
+  })
+  // the recompute runs through the extension-updater worker: poll the raw line
+  let line: any
+  const start = Date.now()
+  while (Date.now() - start < 15000) {
+    line = await rawLine(ax, dataset.id, 'l1')
+    if (line?.double === 6) break
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  expect(line.double).toBe(6)
+  await waitForFlagCleared(dataset.id)
+  await waitForLinesDrained(ax, dataset.id)
+  expect((await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+
+  // the locked payload never carries the derived column
+  const list = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/l1/revisions`)).data
+  const detail = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/l1/revisions/${list.results[0].i}`)).data
+  expect(detail.payload.attr2).toBe(2)
+  expect(detail.payload.double).toBeUndefined()
+})
+
+// M2 (target-3 review): disable must not leave per-line stamp residue behind
+test('disable clears per-line stamp residue', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  // enroll raw and stamp a line WITHOUT setting the dataset hint: the relay never drains it,
+  // so the residue is deterministic
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context: { operation: 'update', origin: 'user' } } } }
+  })
+
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  const line = await rawLine(ax, dataset.id, 'line0')
+  expect(line._needsHistorizing).toBeUndefined()
 })
