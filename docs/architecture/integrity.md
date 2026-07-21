@@ -546,7 +546,11 @@ once per environment; on a fresh environment the three datasets seed automatical
   it drains. Growth past the gate after enrollment never blocks writes; anchoring continues with a
   loud warning rather than silently dropping protection. Disable stops stamping/renewal (anchors
   age out at retention); owner transfer stays refused while active (avoids re-anchoring the whole
-  line set under a new prefix, integrity4's rule).
+  line set under a new prefix, integrity4's rule). **Re-enable false-missing.** Lines deleted while
+  integrity was disabled purge (no outbox stamp, so no tombstone revision) — on re-enable, the
+  backfill has no way to distinguish "never existed" from "deleted during the gap", so the first
+  check after re-enable reports every still-anchored-but-now-absent line as an out-of-band delete;
+  `_fix` reconciles by writing the tombstone the gap never produced.
 - **Check and renewal.** The nightly `checkDataset` gains a lines part for enrolled REST datasets:
   LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names, a live-Mongo scan
   recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
@@ -565,16 +569,31 @@ once per environment; on a fresh environment the three datasets seed automatical
   standard transaction pipeline (`operation: 'restore'`), re-inserts out-of-band-deleted lines,
   and **deletes out-of-band-inserted lines** (no verified state to restore to) — then re-checks
   and returns the fresh verdict, bounded by the gate. `POST …/_integrity/_fix` extends naturally:
-  diverged lines get fresh revisions written inline (`fixIntegrity` context) before the re-check —
-  "bless the current state". Per-line history (`GET …/_integrity/lines/{lineId}/revisions` and the
-  `/revisions/{i}` payload/diff endpoint) reuses the dataset-level revisions UI pattern and
+  edited/inserted lines get their **current** content re-written through that **same transaction
+  pipeline** (`createOrUpdate` from `cleanedLineBody()`, `operation: 'fixIntegrity'`, `_hash`
+  invalidated first so the dedupe doesn't 304 identical content) — "bless the current state" — and
+  vanished (out-of-band-deleted) lines get an explicit tombstone anchored past the stale anchor's
+  `_i`. Anchoring the bless directly at the line's *current* `_i` (an earlier, since-fixed shape)
+  was nondeterministic: an out-of-band edit that leaves `_i` untouched ties the fresh anchor
+  against the still-live stale one at the same `_i`, and `latestLineAnchors`'s tie-break (keeps the
+  lexically-first key) can silently keep the *stale* anchor latest; routing the bless through the
+  pipeline instead mints a fresh `_i` strictly greater than any prior anchor's, so the result is
+  always deterministically latest. Per-line history (`GET …/_integrity/lines/{lineId}/revisions`
+  and the `/revisions/{i}` payload/diff endpoint) reuses the dataset-level revisions UI pattern and
   permissions (`readIntegrityRevisions`, superadmin-only writes).
 - **Explicit limits (accepted, not engineered around).** Line **attachment bytes are out of
   scope** — the snapshot covers the line document only, so attachments are neither detected nor
   restorable (same family as file-level-2 size gating; a possible later addition is md5 + copy in
   the line's revision). A dataset **above the gate has no lines integrity at all** — the accepted
   coverage cliff of skipping the fold (§10, §12): sensitive editable datasets are bet to be
-  modest-cardinality reference tables.
+  modest-cardinality reference tables. **Lines-owner attribution is out of the snapshot.** A line
+  snapshot is `cleanedLineBody()` — the user-visible body only — so the `_`-prefixed
+  `_owner`/`_ownerName` columns an application-key write stamps for lines-owner attribution are
+  excluded from both the hash and the payload: an out-of-band edit to `_owner` alone goes
+  undetected, and both `lines/_restore` and `_fix`'s bless rewrite a line via `createOrUpdate`
+  through the transaction pipeline (§3.2) **without** a `linesOwner`, so either rewrite drops
+  whatever `_owner`/`_ownerName` the line held. Enrollment on a dataset that receives lines-owner
+  writes should account for this gap.
 
 ## 6. Atomicity & failure model
 
