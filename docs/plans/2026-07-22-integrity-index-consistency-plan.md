@@ -23,6 +23,12 @@
 - REST ES docs use the Mongo line `_id` as ES `_id` (`api/src/datasets/es/index-stream.ts:84`); file rows get throwaway nanoids but carry a dense 1-based `_i` (`api/src/datasets/utils/data-streams.ts:86-87` — empty CSV lines consume an `_i`, so gaps are possible and max `_i` may exceed `dataset.count`).
 - REST `_i` is sparse (time-derived); unique index exists (`rest.ts:190`).
 - File `dataset.count` = rows read from the file by the indexer (`index-lines.ts:222`), NOT an ES count → count check is non-circular; REST authoritative count = `restUtils.count(dataset, { _deleted: { $ne: true } })`.
+  > **Correction (delivery):** the spec (§3.1) additionally claimed `dataset.count` "is covered by
+  > the metadata hash, so an adversary cannot silently adjust it" — that part is **wrong**: `count`
+  > is on the metadata hash *denylist* (`EXCLUDED_TOP_LEVEL`, indexer-churn field). The
+  > non-circularity point above stays true; the file-side count check is a tripwire, hint-grade,
+  > grounded for real by the sampled windows / `?deep=true` re-reading the (hash-covered) file. See
+  > the design doc's own §3.1 correction.
 - Enrollment refuses datasets with attachment fields (`service.ts:85-87`) → `_file_raw`/`_file` never occur on enrolled datasets. The only index-time non-derivable field is **`_rand`** (`Math.random()` at index time, `extensions.ts:726`) → exclusion set is `{'_rand'}`.
 - The indexer projection to mirror = `stripTransientLineFlags` + delete `_hash`/`_deleted`/`_id` + `prepareCalculations(dataset)` (see `index-stream.ts:27-32,66-92`); for file datasets the read path is `readStreams(dataset, false, extended, false)` from `data-streams.ts:257` with `extended = dataset.extensions?.some(e => e.active)` (mirrors `index-lines.ts:114-116`).
 - Mongo line docs hold `Date` objects (`_updatedAt`); ES `_source` holds their JSON serialization → expected docs must be JSON-round-tripped before compare.
@@ -722,7 +728,9 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
       const last = await c.find({ _deleted: { $ne: true } }).sort({ _i: -1 }).limit(1).toArray()
       if (first.length && last.length) { minI = first[0]._i; maxI = last[0]._i }
     } else {
-      // file _i is a dense 1-based row counter; dataset.count (metadata-covered) bounds it
+      // file _i is a dense 1-based row counter; dataset.count (metadata-denylisted, hint-grade —
+      // not hash-covered) only bounds the pivot range; the windows read below re-derive rows
+      // from the file, whose bytes are what the file hash actually covers
       minI = 1
       maxI = dataset.count ?? 1
     }

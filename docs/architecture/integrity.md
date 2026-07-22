@@ -743,8 +743,16 @@ fixtures also feed the screenshots of the client-facing presentation
   gap. One uniform mechanism, only the source adapter differs per family:
   - **Count check, every run.** The ES doc count **through the alias** (`aliasName(dataset)` —
     never a physical index name, so a diverted alias is caught rather than silently trusted) is
-    compared against the authoritative count: live Mongo line count for REST, `dataset.count`
-    (set by the indexer from rows actually read, itself covered by the metadata hash) for file.
+    compared against the authoritative count: live Mongo line count for REST — solid, because the
+    lines verdict grounds that collection in the locked store — or `dataset.count` (set by the
+    indexer from rows actually read) for file. `count` sits on the metadata hash **denylist**
+    (`EXCLUDED_TOP_LEVEL`, an indexer-churn field — covering it would WORM-churn a locked revision
+    per reindex), so a Mongo-writing adversary *can* silently adjust `dataset.count`; the file-side
+    compare is therefore a cheap tripwire, hint-grade, not a proof. It still instantly catches a
+    bulk ES add/remove by an adversary who does not also forge `dataset.count`; one who forges both
+    is caught by the sampled windows below (probabilistically, each night) or by `?deep=true`
+    (deterministically) — both re-derive rows from the file itself, whose bytes the file hash does
+    cover.
   - **Seeded sampled windows, every run.** A **fresh crypto-random seed drawn per run and never
     persisted before use** picks `windows` random `_i` pivots (default 8), each compared over
     `windowSize` rows (default 128) between the ES alias and the verified source (Mongo for

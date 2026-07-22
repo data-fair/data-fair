@@ -99,3 +99,7 @@ against, not only the happy path.
   divergence is found (line writes do not hold the worker lock).
 - `_rand` is the only excluded compare key (index-time Math.random). `_file*` cannot occur:
   enrollment refuses attachment datasets.
+- The file-side count check is hint-grade, not a proof: `dataset.count` is on the metadata hash
+  denylist (`EXCLUDED_TOP_LEVEL`, indexer-churn field), so a Mongo-writing adversary can forge it
+  alongside an ES tamper. The guarantee rests on the sampled windows / `?deep=true`, which
+  re-derive rows from the verified file (file-hash-covered), not on the count compare.

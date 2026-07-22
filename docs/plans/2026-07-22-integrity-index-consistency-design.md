@@ -16,7 +16,10 @@ as a fourth breach member `'index'` in the existing verdict/alert/realert machin
 
 This is *not* historization of ES (it remains a rebuildable projection) and it does not extend
 the threat model: the sources compared against are themselves guarded (the file by the file
-hash, Mongo lines by the lines verdict, `dataset.count` by the metadata hash). The chain is:
+hash, Mongo lines by the lines verdict). `dataset.count` is *not* one of those guarded sources —
+it sits on the metadata hash denylist (see the §3.1 correction below) — so for file datasets the
+count compare is a cheap tripwire, hint-grade; the real grounding is the file-hash-covered
+sampled windows / `?deep=true` compare (§3.2). The chain is:
 locked store → source verdicts → **this check** → what is served.
 
 Deliverable includes removing the honesty limits currently stated in
@@ -47,10 +50,22 @@ through the alias, never a physical index name) against the authoritative count:
 - **REST**: live Mongo line count (non-deleted), the same collection the lines verdict guards.
 - **File**: `dataset.count` — set by the indexer from `indexStream.i`, i.e. the number of rows
   *read from the file* (`index-lines.ts:222`), not an ES count, so there is no circularity;
-  it is covered by the metadata hash, so an adversary cannot silently adjust it.
+  ~~it is covered by the metadata hash, so an adversary cannot silently adjust it.~~
+
+  > **Correction (delivery):** `count` is in `EXCLUDED_TOP_LEVEL` (`api/src/integrity/operations.ts`)
+  > — the metadata hash **denylist** — because it is an indexer-churn field: covering it would
+  > WORM-churn a locked revision on every reindex. So `dataset.count` is *not* hash-covered, and a
+  > Mongo-writing adversary *can* silently adjust it. The non-circularity point above still holds
+  > (the count is derived from a file parse, not from ES), but the file-side count compare is a
+  > cheap tripwire, hint-grade, not a proof: it instantly catches a bulk ES add/remove by an
+  > adversary who does not also forge `dataset.count`. An adversary who forges both is still caught
+  > — probabilistically each night by the sampled windows below (§3.2), and deterministically by
+  > `?deep=true` — because both re-derive rows from the file itself, whose bytes *are* covered by
+  > the file hash.
 
 Any mismatch → diverged (the count pair is persisted in the verdict). This catches bulk
-add/remove immediately, regardless of sampling luck.
+add/remove immediately, regardless of sampling luck (against an adversary who does not also
+forge `dataset.count`; see the correction above).
 
 ### 3.2 Sampled windows (nightly, both families)
 

@@ -288,6 +288,10 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
     if (err?.meta?.statusCode === 404 || err?.statusCode === 404) return { status: 'unknown' }
     throw err
   }
+  // for file datasets, dataset.count is on the metadata hash denylist (indexer-churn field,
+  // see EXCLUDED_TOP_LEVEL) — this compare is a cheap tripwire, hint-grade, not a proof; an
+  // adversary who forges dataset.count alongside ES is still caught by the sampled windows /
+  // deep compare below, which re-derive rows from the file itself (file hash covers those bytes)
   const expectedCount = isRest
     ? await restUtils.count(dataset as any, { _deleted: { $ne: true } })
     : (dataset.count ?? 0)
@@ -313,7 +317,9 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
       const last = await c.find({ _deleted: { $ne: true } }).sort({ _i: -1 }).limit(1).toArray()
       if (first.length && last.length) { minI = first[0]._i; maxI = last[0]._i }
     } else {
-      // file _i is a dense 1-based row counter; dataset.count (metadata-covered) bounds it
+      // file _i is a dense 1-based row counter; dataset.count (metadata-denylisted, hint-grade —
+      // not hash-covered) only bounds the pivot range; the windows read below re-derive rows
+      // from the file, whose bytes are what the file hash actually covers
       minI = 1
       maxI = dataset.count ?? 1
     }
