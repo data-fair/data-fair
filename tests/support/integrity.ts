@@ -2,6 +2,7 @@ import { S3Client, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/cl
 import { IntegrityStore } from '../../api/src/integrity/store.ts'
 import { getRawDataset } from './workers.ts'
 import { apiUrl } from './axios.ts'
+import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 
 const endpoint = `http://localhost:${process.env.S3_PORT}`
 const bucket = 'data-fair-integrity'
@@ -81,4 +82,25 @@ export const putShadowVersion = async (key: string, body: any): Promise<void> =>
 export const putDeleteMarker = async (key: string): Promise<void> => {
   const { DeleteObjectCommand } = await import('@aws-sdk/client-s3')
   await integrityTestClient.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+}
+
+// --- A1 (index verdict) helpers ---------------------------------------------------------------
+
+// Brute-force a seed whose sampled windows DO cover a target _i (pivot ≤ target ⇒ the window
+// "next K rows from pivot" includes it, window sizes in tests exceed the dataset size).
+export const aimSeedAt = (targetI: number, minI: number, maxI: number, windows: number): string => {
+  for (let n = 0; n < 100000; n++) {
+    const seed = `aim-${n}`
+    if (samplePivots(seed, windows, minI, maxI).some((p) => p <= targetI)) return seed
+  }
+  throw new Error('no seed aims a window at the target line')
+}
+
+// ...and one whose windows all start ABOVE the target (the sampled pass must miss it)
+export const aimSeedAway = (targetI: number, minI: number, maxI: number, windows: number): string => {
+  for (let n = 0; n < 100000; n++) {
+    const seed = `away-${n}`
+    if (samplePivots(seed, windows, minI, maxI).every((p) => p > targetI)) return seed
+  }
+  throw new Error('no seed avoids the target line')
 }

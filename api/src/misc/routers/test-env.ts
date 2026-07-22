@@ -276,6 +276,48 @@ router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
   res.status(204).send()
 })
 
+// Out-of-band ES tamper through the dataset's alias (integrity index-verdict tests). The alias
+// resolves to exactly one index so writes through it are accepted by ES.
+router.post('/es-tamper/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    if (req.body?.delete) {
+      await esDefault.client.deleteByQuery({ index: alias, body: { query: req.body.query }, refresh: true })
+    } else if (req.body?.insert) {
+      await esDefault.client.index({ index: alias, document: req.body.insert, refresh: true })
+    } else {
+      await esDefault.client.updateByQuery({
+        index: alias,
+        body: { query: req.body.query, script: { source: req.body.script, ...(req.body.params ? { params: req.body.params } : {}) } },
+        refresh: true
+      })
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Force a refresh of the dataset's alias so tests read a settled index before checking
+router.post('/es-refresh/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    await esDefault.client.indices.refresh({ index: aliasName(dataset) })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.
