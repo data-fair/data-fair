@@ -134,7 +134,9 @@
           "properties": {
             "dateSkewHours": { "type": "number" }
           }
-        }
+        },
+        "realertDays": { "type": "number" },
+        "maxUnknownDays": { "type": "number" }
       }
     },
     "integrityCheckCron": { "type": "string" },

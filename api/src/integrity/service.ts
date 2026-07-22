@@ -97,7 +97,9 @@ const enableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> 
   }
   // bump updatedAt so the dataset read-cache (getDatasetFresh) detects the change; a raw
   // updateOne leaves updatedAt untouched and reads then serve a stale doc without integrity.active
-  const $set: Record<string, any> = { 'integrity.active': true, updatedAt: new Date().toISOString() }
+  // seed the check-stale clock (§S3): a never-checked enrollment trips the alert after
+  // maxUnknownDays instead of staying silent forever
+  const $set: Record<string, any> = { 'integrity.active': true, 'integrity.lastDefinitiveCheck': new Date().toISOString(), updatedAt: new Date().toISOString() }
   // baseline for the per-line renewal cadence: conservative (backfill revisions written by
   // the relay get equal-or-later locks, so renewal triggers no later than needed)
   if (isRest) $set['integrity.linesRenewal'] = { date: new Date().toISOString(), status: 'ok', retainUntil: retentionWindow().toISOString() }

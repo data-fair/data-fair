@@ -39,6 +39,11 @@ module.exports = {
     // trail-coherence verdict: tolerated distance between a revision's claimed context.date and
     // the provider-stamped LastModified (relay retries legitimately delay the object write)
     trail: { dateSkewHours: 48 },
+    // re-fire a persistent bad-state event (breach / trail-altered / renewal-failed /
+    // scope-incoherent) once per window — bounds alert suppression via pre-written dedup state
+    realertDays: 7,
+    // alert when an enrolled dataset produced no definitive verdict (ok/breach) for this long
+    maxUnknownDays: 7,
   },
   integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,

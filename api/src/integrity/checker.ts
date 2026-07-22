@@ -12,13 +12,13 @@ import { purgeExpiredRevisions } from './purge.ts'
 import { measureIntegrityStorage } from './storage.ts'
 import { anchorDataset } from './relay.ts'
 import { auditScopes } from './audit.ts'
+import { maybeAlert } from './alerts.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
 import { sha256OfStorageFile } from './hash.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
-import * as notifications from '../misc/utils/notifications.ts'
 
 const debug = Debug('integrity-checker')
 const BATCH = 100
@@ -81,7 +81,6 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   if (!ops.needsRenewal((dataset.integrity as any)?.lastRevision?.retainUntil, Date.now(), retentionDays)) return
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
-  const wasFailed = (dataset.integrity as any)?.lastRenewal?.status === 'failed'
   try {
     await store.extendRetention(latestKey, retainUntil)
     // the sliding anchor is the revision *pair*: the latest revision JSON and the payload object it
@@ -98,18 +97,16 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
         'integrity.lastRenewal': { date, status: 'ok', retainUntil: retainUntil.toISOString() }
       }
     })
+    await maybeAlert(dataset, 'integrity-renewal-failed', false, 'renewal-failed')
   } catch (err) {
     internalError('integrity-renew', err)
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: { 'integrity.lastRenewal': { date, status: 'failed', error: err instanceof Error ? err.message : String(err) } }
     })
     // a failed renewal left un-reacted-to is the one silent path to permanently lost
-    // repairability (the anchor's lock lapses while the resource is still live): surface it
-    // through the same events path as a breach, gated on the ok→failed transition like the
-    // breach notification (renewal retries nightly until it succeeds — no daily re-alert)
-    if (!wasFailed) {
-      await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-renewal-failed')
-    }
+    // repairability (the anchor's lock lapses while the resource is still live): same loudness
+    // and realert cadence as a breach (§S3)
+    await maybeAlert(dataset, 'integrity-renewal-failed', true, 'renewal-failed')
   }
 }
 
@@ -141,16 +138,18 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: { 'integrity.linesRenewal': { date, status: failed ? 'failed' : 'ok', renewed, failed, ...(failed ? {} : { retainUntil: retainUntil.toISOString() }) } }
   })
-  // same posture as the dataset-level renewal: alert on the ok→failed transition (see maybeRenew)
-  if (failed && (dataset.integrity as any)?.linesRenewal?.status !== 'failed') {
-    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-renewal-failed')
-  }
+  // same posture as the dataset-level renewal, separate dedup cadence (see alerts.ts)
+  await maybeAlert(dataset, 'integrity-renewal-failed', failed > 0, 'lines-renewal-failed')
 }
 
 export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boolean }): Promise<Check> => {
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
+  // an 'unknown' verdict must still start the check-stale clock (§S3) on datasets enrolled
+  // before the field existed — otherwise a permanently-unknown dataset never trips the alert
+  const seedDefinitive = (date: string): Record<string, string> =>
+    (dataset.integrity as any)?.lastDefinitiveCheck ? {} : { 'integrity.lastDefinitiveCheck': date }
   if (isRestDataset(dataset as any)) {
     // orphaned per-line stamps: a line write that raced the relay's final hint clear left stamps
     // with no hint — the relay's task filter needs the hint, so without this net those lines
@@ -160,7 +159,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     const stamped = await restUtils.collection(dataset as any).findOne({ _needsHistorizing: { $exists: true } }, { projection: { _id: 1 } })
     if (stamped) {
       const date = new Date().toISOString()
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true, 'integrity.lastCheck': { date, status: 'unknown' } } })
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true, 'integrity.lastCheck': { date, status: 'unknown' }, ...seedDefinitive(date) } })
       return { status: 'unknown', date }
     }
   }
@@ -200,7 +199,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     // stale 'ok' cannot linger and the sweep cursor (sorted on lastCheck.date) advances past this
     // dataset
     const date = new Date().toISOString()
-    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' }, ...seedDefinitive(date) } })
     return { status: 'unknown', date }
   }
 
@@ -211,7 +210,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     // force-anchor a fresh non-terminal revision and report unknown; the next pass verifies
     await anchorDataset(dataset, { operation: 'update', origin: 'worker' }, { force: true })
     const date = new Date().toISOString()
-    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' }, ...seedDefinitive(date) } })
     return { status: 'unknown', date }
   }
 
@@ -293,24 +292,25 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     const flagsNow = await mongo.datasets.findOne({ id: dataset.id }, { projection: { _needsHistorizing: 1, _needsHistorizingLines: 1 } })
     if (flagsNow?._needsHistorizing || flagsNow?._needsHistorizingLines) {
       const date = new Date().toISOString()
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' }, ...seedDefinitive(date) } })
       return { status: 'unknown', date }
     }
   }
 
   const status: 'ok' | 'breach' = breach.length ? 'breach' : 'ok'
   const date = new Date().toISOString()
-  const wasBreach = (dataset.integrity as any)?.lastCheck?.status === 'breach'
-  const wasAltered = (dataset.integrity as any)?.lastCheck?.trail?.status === 'altered'
   await mongo.datasets.updateOne({ id: dataset.id }, {
-    $set: { 'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, trailCursor: latestIndex } }
+    $set: {
+      'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, trailCursor: latestIndex },
+      // ok and breach are both DEFINITIVE verdicts: they reset the check-stale clock (§S3) —
+      // only 'unknown' lets it run
+      'integrity.lastDefinitiveCheck': date
+    }
   })
-  if (status === 'breach' && !wasBreach) {
-    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
-  }
-  if (trail.status === 'altered' && !wasAltered) {
-    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-trail-altered')
-  }
+  // entry-alert + periodic re-alert while the state persists, dedup cleared on recovery (§S3)
+  await maybeAlert(dataset, 'integrity-breach', status === 'breach')
+  await maybeAlert(dataset, 'integrity-trail-altered', trail.status === 'altered')
+  await maybeAlert(dataset, 'integrity-check-stale', false)
   // renewal only on a fully clean pass: under a shadow attack PutObjectRetention (keyed, no
   // version id) would extend the ATTACKER's current version while the original's lock runs out
   if (status === 'ok' && trail.status === 'ok') {
@@ -318,6 +318,25 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     if (linesCompare) await maybeRenewLines(dataset, store, linesCompare.anchors)
   }
   return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail }
+}
+
+// Check-stale alert (§S3): a dataset that is enrolled but has produced no DEFINITIVE verdict
+// (ok or breach) for maxUnknownDays — wedged stamps, stuck pipeline, lock contention, S3 outage,
+// or an adversary keeping flags set — must not stay silent: the whole round-2 posture of
+// "downgrade to unknown" is only safe if unknowns cannot silently accumulate.
+export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
+  const maxUnknownDays = config.integrity?.maxUnknownDays ?? 7
+  const cutoff = new Date(Date.now() - maxUnknownDays * 24 * 3600 * 1000).toISOString()
+  const alerted: string[] = []
+  const cursor = mongo.datasets.find({ 'integrity.active': true, 'integrity.lastDefinitiveCheck': { $lt: cutoff } }).limit(BATCH)
+  for await (const dataset of cursor) {
+    try {
+      if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true)) alerted.push(dataset.id)
+    } catch (err) {
+      internalError('integrity-check-stale', err)
+    }
+  }
+  return { alerted }
 }
 
 const runOnce = async () => {
@@ -376,6 +395,13 @@ export const task = async () => {
           debug('audited scopes', audited)
         } catch (err) {
           internalError('integrity-audit-run', err)
+        }
+        // check-stale alert (§S3): unknowns must not silently accumulate
+        try {
+          const stale = await alertStaleChecks()
+          debug('stale-check alerts', stale)
+        } catch (err) {
+          internalError('integrity-stale-run', err)
         }
       }
     } finally { await locks.release('integrity-check-task') }

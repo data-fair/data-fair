@@ -224,6 +224,16 @@ export const filterAckedAnomalies = (anomalies: TrailAnomaly[], ackedFingerprint
   return anomalies.filter((a) => !acked.has(anomalyFingerprint(a)))
 }
 
+// Persistent-state re-alert gate (round 3 §S3): alert on entry into a bad state, then re-alert
+// once per window while it persists. The dedup date is Mongo-resident (attacker territory), so a
+// pre-written bad state can suppress at most one window — sustained suppression requires
+// sustained rewriting, and the store-side scope audit is immune to it.
+export const shouldNotify = (isBad: boolean, lastAlertDate: string | undefined, realertDays: number, now: number): boolean => {
+  if (!isBad) return false
+  if (!lastAlertDate) return true
+  return now - new Date(lastAlertDate).getTime() >= realertDays * 24 * 3600 * 1000
+}
+
 // Merge the transactional-outbox stamp (spec §4) into a writer's own Mongo update, keeping the
 // write single-document atomic. A stamp means "re-anchor this dataset" (every anchor covers both
 // the file and metadata hashes since the joint-anchor simplification).

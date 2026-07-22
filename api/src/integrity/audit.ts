@@ -10,6 +10,7 @@ import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { IntegrityStore } from './store.ts'
 import * as ops from './operations.ts'
+import { maybeAlert } from './alerts.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 
 const debug = Debug('integrity-audit')
@@ -68,15 +69,21 @@ export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarke
           detail: `latest revision ${latest.key} (${latestRevision.context.operation}) is protected until ${new Date(protectedUntil).toISOString()} but integrity is not active in the database`
         }
         result.incoherent.push(incoherent)
-        // deleted datasets have no doc to hang the event on: rebuild a minimal resource from
-        // the trail's own denormalized descriptor — the trail is designed to be self-describing
-        const resource: any = dataset ?? {
-          id: datasetId,
-          slug: latestRevision.dataset.slug,
-          title: latestRevision.dataset.slug ?? datasetId,
-          owner
+        if (dataset) {
+          // existing doc: entry-alert + realert cadence through the shared dedup map (§S3)
+          await maybeAlert(dataset as any, 'integrity-scope-incoherent', true)
+        } else {
+          // deleted dataset: no doc to hold dedup state — rebuild a minimal resource from the
+          // trail's own denormalized descriptor and alert on every audit pass (deliberately
+          // loud: a protected scope with no dataset and no terminal revision is the worst case)
+          const resource: any = {
+            id: datasetId,
+            slug: latestRevision.dataset.slug,
+            title: latestRevision.dataset.slug ?? datasetId,
+            owner
+          }
+          await notifications.sendResourceEvent('datasets', resource, 'worker:integrity-audit', 'integrity-scope-incoherent')
         }
-        await notifications.sendResourceEvent('datasets', resource, 'worker:integrity-audit', 'integrity-scope-incoherent')
       } catch (err) {
         internalError('integrity-audit-scope', err)
       }

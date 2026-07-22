@@ -294,6 +294,16 @@ router.post('/integrity-purge/run', async (req, res, next) => {
   }
 })
 
+// Trigger the check-stale alert sweep on demand (test-only)
+router.post('/integrity-stale/run', async (req, res, next) => {
+  try {
+    const { alertStaleChecks } = await import('../../integrity/checker.ts')
+    res.json(await alertStaleChecks())
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
 router.post('/integrity-audit/run', async (req, res, next) => {
   try {

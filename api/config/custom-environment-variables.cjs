@@ -56,6 +56,14 @@ module.exports = {
         __name: 'INTEGRITY_TRAIL_DATE_SKEW_HOURS',
         __format: 'json'
       }
+    },
+    realertDays: {
+      __name: 'INTEGRITY_REALERT_DAYS',
+      __format: 'json'
+    },
+    maxUnknownDays: {
+      __name: 'INTEGRITY_MAX_UNKNOWN_DAYS',
+      __format: 'json'
     }
   },
   integrityCheckCron: 'INTEGRITY_CHECK_CRON',
