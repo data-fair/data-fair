@@ -259,6 +259,37 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
   return await checkDataset(freshAfter as unknown as DatasetInternal)
 }
 
+// Acknowledge the trail anomalies the fresh check surfaces (round 3 §S1): the ack is itself a
+// locked, reasoned ackTrail revision carrying the anomaly FINGERPRINTS — no mutable "dismissed"
+// flag an adversary could set preemptively. The Mongo trailAck is only a pointer to it; the
+// checker reads the fingerprints from the locked body. Fingerprints pin the exact version sets,
+// so any later shadow/marker changes them and resurfaces despite the ack. A new ack merges the
+// previous ack's fingerprints (only the latest ack is consulted).
+export const ackTrailAnomalies = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => ackTrailAnomaliesUnlocked(dataset, reason))
+
+const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+  requireActive(dataset)
+  const store = integrityStore()
+  const before = await checkDataset(dataset)
+  const anomalies = before.trail?.anomalies ?? []
+  if (!anomalies.length) throw httpError(400, 'no trail anomalies to acknowledge')
+  let fingerprints = anomalies.map(ops.anomalyFingerprint)
+  const prevAck = (dataset.integrity as any)?.trailAck
+  if (Number.isInteger(prevAck?.i)) {
+    try {
+      const prevRev = await store.getRevision(ops.revisionKey(dataset.owner, dataset.id, prevAck.i))
+      if (prevRev.context.operation === 'ackTrail' && prevRev.ack?.fingerprints) {
+        fingerprints = [...new Set([...prevRev.ack.fingerprints, ...fingerprints])]
+      }
+    } catch { /* unreadable previous ack: its anomalies resurface, which is the safe direction */ }
+  }
+  const i = await anchorDataset(dataset, { operation: 'ackTrail', origin: 'superadmin', ...(reason ? { reason } : {}) }, { force: true, ack: { fingerprints } })
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.trailAck': { i } }, $unset: { _needsHistorizing: '' } })
+  const fresh = await mongo.datasets.findOne({ id: dataset.id })
+  return await checkDataset(fresh as unknown as DatasetInternal)
+}
+
 export type RestoreResult = { status: 'restoring' } | Check
 
 export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> =>

@@ -31,6 +31,58 @@
           density="compact"
           :text="t('notCheckedBody')"
         />
+        <!-- verdict 2 (round 3): the trail itself — independent of the data verdict above -->
+        <v-alert
+          v-if="state.lastCheck?.trail?.status === 'altered'"
+          type="error"
+          variant="outlined"
+          density="compact"
+          class="mt-1"
+          :title="t('trailAlteredTitle')"
+        >
+          <div class="text-body-2">
+            {{ t('trailAlteredBody') }}
+          </div>
+          <div
+            v-for="(anomaly, idx) of state.lastCheck!.trail!.anomalies ?? []"
+            :key="idx"
+            class="d-flex align-center ga-2 mt-1"
+          >
+            <v-chip
+              size="x-small"
+              label
+              :color="anomaly.confidence === 'confirmed' ? 'error' : 'warning'"
+            >
+              {{ t('anomaly_' + anomaly.kind) }}
+            </v-chip>
+            <code class="text-caption">{{ anomaly.key }}</code>
+            <span
+              v-if="anomaly.detail"
+              class="text-caption text-disabled"
+            >{{ anomaly.detail }}</span>
+          </div>
+          <div
+            v-if="adminMode"
+            class="mt-2"
+          >
+            <v-btn
+              :prepend-icon="mdiCheckDecagram"
+              color="warning"
+              variant="text"
+              size="small"
+              :title="t('ackHelp')"
+              @click="ackDialog = true; ackReason = ''"
+            >
+              {{ t('ackTrail') }}
+            </v-btn>
+          </div>
+        </v-alert>
+        <div
+          v-else-if="state.lastCheck?.trail?.status === 'ok'"
+          class="text-caption mt-1 text-success"
+        >
+          {{ t('trailOkBody') }}
+        </div>
         <v-alert
           v-if="state.lastRenewal?.status === 'failed'"
           type="warning"
@@ -347,6 +399,37 @@
     </v-dialog>
 
     <v-dialog
+      v-model="ackDialog"
+      max-width="500"
+    >
+      <v-card :title="t('ackTitle')">
+        <v-card-text>
+          <p class="mb-2">
+            {{ t('ackWarning') }}
+          </p>
+          <v-text-field
+            v-model="ackReason"
+            :label="t('restoreReason')"
+            density="compact"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="ackDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="ackTrail.loading.value"
+            @click="ackTrail.execute()"
+          >
+            {{ t('ackTrail') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="disableDialog"
       max-width="500"
     >
@@ -542,6 +625,8 @@ fr:
   op_fixIntegrity: Réconciliation
   op_restore: Restauration
   op_delete: Suppression
+  op_disable: Désactivation
+  op_ackTrail: Anomalies de piste acquittées
   origin_user: Utilisateur
   origin_superadmin: Superadmin
   origin_worker: Traitement interne
@@ -577,6 +662,18 @@ fr:
   disableTitle: Désactiver le contrôle d'intégrité
   disableWarning: "Les verdicts de contrôle seront effacés et le renouvellement des verrous s'arrêtera : les révisions déjà écrites resteront verrouillées jusqu'à leur date de rétention puis seront purgées. Une réactivation ultérieure ré-ancrera l'état courant."
   disableConfirm: Désactiver
+  trailAlteredTitle: Piste de révisions altérée
+  trailAlteredBody: "L'historique verrouillé présente des signes d'altération (révisions réécrites ou masquées). Les versions d'origine sont intactes dans l'entrepôt ; investiguez (accès à l'entrepôt compromis ?) avant d'acquitter."
+  trailOkBody: Piste de révisions vérifiée, aucune altération détectée.
+  anomaly_delete-marker: Révision masquée
+  anomaly_version-divergence: Révision réécrite
+  anomaly_date-skew: Date incohérente
+  anomaly_sequence-gap: Trou de séquence
+  ackTrail: Acquitter les anomalies
+  ackHelp: Enregistre une révision verrouillée attestant que ces anomalies ont été examinées ; toute nouvelle altération ressortira malgré l'acquittement.
+  ackTitle: Acquitter les anomalies de piste
+  ackWarning: "Les anomalies actuellement détectées ne seront plus signalées. L'acquittement est lui-même une révision verrouillée et tracée : toute altération ultérieure sera de nouveau détectée. À n'utiliser qu'après investigation."
+  ackOk: Anomalies acquittées
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
@@ -610,6 +707,8 @@ en:
   op_fixIntegrity: Reconcile
   op_restore: Restore
   op_delete: Delete
+  op_disable: Disable
+  op_ackTrail: Trail anomalies acknowledged
   origin_user: User
   origin_superadmin: Superadmin
   origin_worker: Internal worker
@@ -645,10 +744,22 @@ en:
   disableTitle: Disable integrity checking
   disableWarning: "Check verdicts will be cleared and lock renewal will stop: revisions already written stay locked until their retention date, then are purged. Re-enabling later re-anchors the current state."
   disableConfirm: Disable
+  trailAlteredTitle: Revision trail altered
+  trailAlteredBody: "The locked history shows signs of alteration (rewritten or hidden revisions). The original versions are intact in the store; investigate (compromised store access?) before acknowledging."
+  trailOkBody: Revision trail verified, no alteration detected.
+  anomaly_delete-marker: Hidden revision
+  anomaly_version-divergence: Rewritten revision
+  anomaly_date-skew: Inconsistent date
+  anomaly_sequence-gap: Sequence gap
+  ackTrail: Acknowledge anomalies
+  ackHelp: Records a locked revision attesting these anomalies were reviewed; any new alteration resurfaces despite the acknowledgement.
+  ackTitle: Acknowledge trail anomalies
+  ackWarning: "The currently detected anomalies will no longer be reported. The acknowledgement is itself a locked, audited revision: any later alteration will be detected again. Use only after investigation."
+  ackOk: Anomalies acknowledged
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory } from '@mdi/js'
+import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram } from '@mdi/js'
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -748,6 +859,20 @@ const fix = useAsyncAction(async () => {
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }, { success: t('fixOk') })
+
+// trail-anomaly acknowledgement (round 3): trail-recorded, reasoned, fingerprint-pinned — new
+// tampering after the ack changes the fingerprints and resurfaces
+const ackDialog = ref(false)
+const ackReason = ref('')
+const ackTrail = useAsyncAction(async () => {
+  const body: any = {}
+  if (ackReason.value) body.reason = ackReason.value
+  await $fetch(`datasets/${dataset.value!.id}/_integrity/trail/_ack`, { method: 'POST', body })
+  ackDialog.value = false
+  ackReason.value = ''
+  await load.execute()
+  datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+}, { success: t('ackOk') })
 
 const disableDialog = ref(false)
 const toggle = useAsyncAction(async (active: boolean) => {

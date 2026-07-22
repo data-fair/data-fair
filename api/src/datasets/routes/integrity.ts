@@ -55,6 +55,11 @@ export const registerIntegrityRoutes = (router: Router) => {
     res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req)))
   })
 
+  router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req)))
+  })
+
   router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
     const { page, size } = reqPagination(req)
     res.json(await integrityService.listLineRevisions(reqDataset(req), req.params.lineId as string, page, size))
