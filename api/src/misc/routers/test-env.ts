@@ -294,6 +294,17 @@ router.post('/integrity-purge/run', async (req, res, next) => {
   }
 })
 
+// Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
+router.post('/integrity-audit/run', async (req, res, next) => {
+  try {
+    const { auditScopes } = await import('../../integrity/audit.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers }))
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the integrity storage-accounting measure on demand (test-only)
 router.post('/integrity-storage/run', async (req, res, next) => {
   try {

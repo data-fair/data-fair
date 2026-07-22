@@ -10,6 +10,8 @@ import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
 import { purgeExpiredRevisions } from './purge.ts'
 import { measureIntegrityStorage } from './storage.ts'
+import { anchorDataset } from './relay.ts'
+import { auditScopes } from './audit.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
@@ -203,6 +205,15 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   }
 
   const latestRevision = await store.getRevision(latest)
+  if (latestRevision.context.operation === 'disable' || latestRevision.context.operation === 'delete') {
+    // crash residue of a terminal action (revision written, Mongo flip never landed — the
+    // benign direction of §S2's revision-first ordering): the dataset is still active, so
+    // force-anchor a fresh non-terminal revision and report unknown; the next pass verifies
+    await anchorDataset(dataset, { operation: 'update', origin: 'worker' }, { force: true })
+    const date = new Date().toISOString()
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
+    return { status: 'unknown', date }
+  }
 
   // trail verdict: sequence gaps + date skew (incremental — only revisions the trail check has
   // not yet date-verified; `deep` re-verifies the whole window) + ack filtering
@@ -342,8 +353,10 @@ export const task = async () => {
       // aging-out of expired revisions rides the same daily lock-held pass (see purge.ts):
       // never thrown — a failed purge only delays reclamation, not protection
       if (config.integrity?.active) {
+        let reclaimedMarkers: Record<string, number> = {}
         try {
           const purged = await purgeExpiredRevisions(integrityStore())
+          reclaimedMarkers = purged.markerScopes
           debug('purged expired revisions', purged)
         } catch (err) {
           internalError('integrity-purge-run', err)
@@ -355,6 +368,14 @@ export const task = async () => {
           debug('measured integrity storage', measured)
         } catch (err) {
           internalError('integrity-storage-run', err)
+        }
+        // store-vs-Mongo scope audit (round 3 §S2): the store is the authority on what should
+        // be protected — an out-of-band `integrity.active` flip cannot silence it
+        try {
+          const audited = await auditScopes(integrityStore(), { reclaimedMarkers })
+          debug('audited scopes', audited)
+        } catch (err) {
+          internalError('integrity-audit-run', err)
         }
       }
     } finally { await locks.release('integrity-check-task') }

@@ -22,6 +22,7 @@ import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
 import { getDatasetCacheKey } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
+import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
@@ -398,6 +399,15 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
 export const deleteDataset = async (app: any, dataset: any) => {
   const db = mongo.db
+  // terminal trail revision (integrity round 3, §S2): the trail of an enrolled dataset must end
+  // with a signed-off 'delete' revision, or the daily scope audit reads the aging-out tail as an
+  // out-of-band disarm. Written BEFORE any destructive step (revision-first ordering — the
+  // benign crash residue is a delete revision with a still-live dataset, self-healed by the
+  // checker; the reverse residue is indistinguishable from the alarm-kill attack). A store
+  // outage therefore blocks deleting an enrolled dataset: fail-loud, retry later.
+  if (dataset.integrity?.active && !dataset.draftReason) {
+    await anchorDataset(dataset, { operation: 'delete', origin: 'superadmin' }, { force: true })
+  }
   try {
     await filesStorage.removeDir(dir(dataset))
   } catch (err) {

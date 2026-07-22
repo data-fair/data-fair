@@ -30,7 +30,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     const active = !!req.body?.active
     if (active) await integrityService.enableIntegrity(dataset)
-    else await integrityService.disableIntegrity(dataset)
+    else await integrityService.disableIntegrity(dataset, reqReason(req))
     res.status(200).json({ active })
   })
 

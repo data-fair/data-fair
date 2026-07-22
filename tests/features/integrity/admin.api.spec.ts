@@ -141,11 +141,12 @@ test('disabling integrity clears the breach state and error-filter listing', asy
   expect(list.results.find((d: any) => d.id === dataset.id)).toBeUndefined()
 })
 
-// Regression: PUT _integrity {active:false} replaces the whole integrity object (wiping
-// lastRevision); a subsequent re-enable with unchanged content dedupes against the still-locked
-// anchor and must restore that mirror, or it stays unset forever and the checker's renewal gate
-// (needsRenewal(undefined) === false) silently stops protecting the anchor.
-test('disable then re-enable with unchanged content restores lastRevision', async () => {
+// PUT _integrity {active:false} replaces the whole integrity object (wiping lastRevision).
+// Since round 3, disable also writes a terminal 'disable' revision, which is never a dedupe
+// target — so re-enable always writes a fresh 'enable' revision and thereby restores the
+// lastRevision mirror (the relay's dedupe-restores-mirror branch remains for organic anchors,
+// and the checker heals an externally wiped mirror besides).
+test('disable then re-enable writes a self-describing trail (enable → disable → enable)', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
@@ -153,20 +154,27 @@ test('disable then re-enable with unchanged content restores lastRevision', asyn
 
   const before = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(before.lastRevision).toBeTruthy()
-  const i = before.lastRevision.i
+  expect(before.lastRevision.i).toBe(0)
 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
-  // re-enable with the exact same file/metadata → the relay dedupes against the untouched anchor
+  // round 3: disable ends the trail with a terminal revision, and a terminal revision is never
+  // a dedupe target — re-enable therefore writes a fresh 'enable' revision even on unchanged
+  // content, keeping the trail self-describing and the lastRevision mirror restored
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const after = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(after.lastRevision).toBeTruthy()
-  expect(after.lastRevision.i).toBe(i)
+  expect(after.lastRevision.i).toBe(2)
   expect(after.lastRevision.retainUntil).toBeTruthy()
-  // dedupe wrote no new revision
   const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
-  expect(revisions.count).toBe(1)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect(revisions.count).toBe(3)
+  // newest first: the re-enable, the terminal disable, the original enable
+  expect(revisions.results.map((r: any) => r.operation)).toEqual(['enable', 'disable', 'enable'])
+  // the file payload is not re-uploaded: the fresh revisions reference revision 0's bytes
+  expect((await listIntegrityKeys(prefix)).filter(k => k.endsWith('.file')).length).toBe(1)
+  // and the fresh anchor is a valid non-terminal latest: the check is clean immediately
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
 })
 
 test('internal historize fields are stripped from API responses', async () => {

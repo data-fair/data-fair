@@ -45,7 +45,10 @@ export const resetPurgeWatermark = async (owner: { type: string, id: string }, d
   await watermarks().deleteOne({ _id: ops.revisionPrefix(owner, datasetId) })
 }
 
-export type PurgeResult = { deleted: number, kept: number, errors: number, scopes: number, skipped: number }
+// markerScopes: delete markers reclaimed per dataset scope — markers are attacker artifacts
+// (no code path of ours issues a versionless DELETE), so the daily audit reports their reclaim
+// (integrity-scope-incoherent) instead of this purge silently destroying the anomaly evidence
+export type PurgeResult = { deleted: number, kept: number, errors: number, scopes: number, skipped: number, markerScopes: Record<string, number> }
 
 type StoredVersion = { key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean }
 
@@ -65,7 +68,7 @@ export const purgeExpiredRevisions = async (
   const retentionMs = (config.integrity?.retention?.days ?? 365) * 24 * 3600 * 1000
   const skewMarginMs = opts?.skewMarginMs ?? CLOCK_SKEW_MARGIN_MS
   const now = Date.now()
-  const result: PurgeResult = { deleted: 0, kept: 0, errors: 0, scopes: 0, skipped: 0 }
+  const result: PurgeResult = { deleted: 0, kept: 0, errors: 0, scopes: 0, skipped: 0, markerScopes: {} }
 
   // sequences arrive contiguous (lexical LIST order), so a single-entry cache suffices
   let cachedActive: { datasetId: string, active: boolean } | undefined
@@ -159,6 +162,7 @@ export const purgeExpiredRevisions = async (
             }
             await store.deleteVersion(v.key, v.versionId)
             result.deleted++
+            if (v.deleteMarker) result.markerScopes[scopePrefix] = (result.markerScopes[scopePrefix] ?? 0) + 1
           } catch (err) {
             // no error is expected here: the decision was taken on dates, so a failure means
             // something genuinely went wrong (or our view of the lock diverged from the store)

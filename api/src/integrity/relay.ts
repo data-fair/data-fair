@@ -13,7 +13,9 @@ import * as ops from './operations.ts'
 // dedupe against the latest anchor, write the next locked revision and persist the
 // integrity.lastRevision hint. Shared by the async relay (organic writes) and the synchronous
 // admin routes (enable / fixIntegrity / restore).
-export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.HistorizeContextHint, opts?: { force?: boolean }): Promise<void> => {
+// Returns the index of the revision that now anchors the dataset — the freshly written one, or
+// the deduped-against latest. `opts.ack` merges ackTrail fingerprints into the revision body.
+export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.HistorizeContextHint, opts?: { force?: boolean, ack?: { fingerprints: string[] } }): Promise<number | undefined> => {
   const store = integrityStore()
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + (config.integrity!.retention?.days ?? 365) * 24 * 3600 * 1000)
@@ -34,7 +36,7 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   // re-read the freshest doc: the caller's copy may lag behind the write that set the flag,
   // and the checker hashes the live doc — relay and checker must see the same state
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
-  if (!fresh) return // deleted in the meantime
+  if (!fresh) return undefined // deleted in the meantime
   hash.metadata = ops.metadataHash(fresh)
 
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
@@ -47,7 +49,11 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   // always leave its own auditable 'restore' revision, even when it lands back on a state that is
   // byte-identical to a prior anchor (e.g. undoing an out-of-band tamper restores the exact
   // pre-tamper metadata) — otherwise the action would silently vanish from the revision history.
-  if (latest && latestRevision && !opts?.force) {
+  // a terminal revision (disable/delete) ends the sequence: it is never a dedupe target — the
+  // next anchor (a re-enable, or a checker heal of crash residue) must write a fresh revision so
+  // the trail stays self-describing (create → disable → enable, not a dedupe onto the disable)
+  const latestIsTerminal = latestRevision && ['disable', 'delete'].includes(latestRevision.context.operation)
+  if (latest && latestRevision && !opts?.force && !latestIsTerminal) {
     const latestHash = latestRevision.hash
     // level 2: only a payload-bearing anchor is a valid dedupe target — an L1-era anchor
     // with matching hashes still gets a fresh revision, so the store self-heals to level 2
@@ -63,7 +69,7 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
           $set: { 'integrity.lastRevision': { i, hash: latestHash, date: latestRevision.context.date, retainUntil: retainUntil?.toISOString() } }
         })
       }
-      return // already anchored
+      return ops.parseRevisionIndex(latest) // already anchored
     }
   }
 
@@ -106,11 +112,13 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
     hash,
     context,
     dataset: { id: dataset.id, slug: dataset.slug },
-    payload
+    payload,
+    ...(opts?.ack ? { ack: opts.ack } : {})
   }, retainUntil)
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: { 'integrity.lastRevision': { i, hash, date, retainUntil: retainUntil.toISOString() } }
   })
+  return i
 }
 
 // The async relay behind the historize worker task, driven by the _needsHistorizing outbox flag.

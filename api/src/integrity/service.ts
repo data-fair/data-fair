@@ -115,10 +115,18 @@ const enableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> 
   }
 }
 
-export const disableIntegrity = async (dataset: DatasetInternal): Promise<void> =>
-  await withDatasetLock(dataset.id, () => disableIntegrityUnlocked(dataset))
+export const disableIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<void> =>
+  await withDatasetLock(dataset.id, () => disableIntegrityUnlocked(dataset, reason))
 
-const disableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> => {
+const disableIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<void> => {
+  // terminal trail revision FIRST (round 3 §S2, deliberate inversion of the hot-first rule): a
+  // crash after the Mongo flip but before the revision leaves exactly the alarm-kill signature
+  // the scope audit hunts; the reverse residue (terminal revision, still-active dataset) is
+  // benign and self-healed by the checker. force: the revision must land even when the hashes
+  // match the latest anchor. An S3 outage therefore blocks disable — fail-loud, retry later.
+  if (dataset.integrity?.active) {
+    await anchorDataset(dataset, { operation: 'disable', origin: 'superadmin', ...(reason ? { reason } : {}) }, { force: true })
+  }
   // the anchors stop being purge-protected at this moment, so the scope's watermark — computed
   // while they still were — must not delay their aging out
   await resetPurgeWatermark(dataset.owner, dataset.id)
