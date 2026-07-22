@@ -233,20 +233,31 @@ const deepCompare = async (source: AsyncGenerator<iops.WindowDoc>, esSide: Async
     }
     return done
   }
-  while (true) {
-    sDone = await fill(source, sBuf, sDone)
-    eDone = await fill(esSide, eBuf, eDone)
-    if (!sBuf.length && !eBuf.length) break
-    let spanEnd = Infinity
-    if (!sDone && sBuf.length) spanEnd = Math.min(spanEnd, sBuf[sBuf.length - 1].i)
-    if (!eDone && eBuf.length) spanEnd = Math.min(spanEnd, eBuf[eBuf.length - 1].i)
-    const sSlice = sBuf.filter(d => d.i <= spanEnd)
-    const eSlice = eBuf.filter(d => d.i <= spanEnd)
-    sBuf = sBuf.filter(d => d.i > spanEnd)
-    eBuf = eBuf.filter(d => d.i > spanEnd)
-    const cmp = iops.compareWindowDocs(sSlice, eSlice, { sourceExhausted: true, esExhausted: true })
-    checked += cmp.checked
-    record(cmp.diverged)
+  try {
+    while (true) {
+      sDone = await fill(source, sBuf, sDone)
+      eDone = await fill(esSide, eBuf, eDone)
+      if (!sBuf.length && !eBuf.length) break
+      let spanEnd = Infinity
+      if (!sDone && sBuf.length) spanEnd = Math.min(spanEnd, sBuf[sBuf.length - 1].i)
+      if (!eDone && eBuf.length) spanEnd = Math.min(spanEnd, eBuf[eBuf.length - 1].i)
+      const sSlice = sBuf.filter(d => d.i <= spanEnd)
+      const eSlice = eBuf.filter(d => d.i <= spanEnd)
+      sBuf = sBuf.filter(d => d.i > spanEnd)
+      eBuf = eBuf.filter(d => d.i > spanEnd)
+      const cmp = iops.compareWindowDocs(sSlice, eSlice, { sourceExhausted: true, esExhausted: true })
+      checked += cmp.checked
+      record(cmp.diverged)
+    }
+  } finally {
+    // If either generator throws mid-loop (most plausibly esIterate's es.client.search), the
+    // other stays suspended at its `yield` — a suspended generator's `finally` only runs via an
+    // explicit `.return()`, never on GC — so without this, fileIterate's AbortController never
+    // fires (file streams leak) and restIterate's mongo cursor never closes. `.return()` on an
+    // already-done generator is a no-op. Swallow rejections here so cleanup can never mask the
+    // original error propagating out of the try block.
+    await source.return(undefined).catch(() => {})
+    await esSide.return(undefined).catch(() => {})
   }
   return checked
 }
