@@ -4,6 +4,8 @@
 // One uniform mechanism for both dataset families: count check + seeded-random sampled _i
 // windows; only the source adapter differs. Exhaustive compare rides ?deep=true (deep mode).
 import crypto from 'node:crypto'
+import { Writable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import config from '#config'
 import mongo from '#mongo'
 import es from '#es'
@@ -11,6 +13,7 @@ import type { DatasetInternal, Dataset } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { aliasName } from '../datasets/es/commons.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
+import { readStreams as datasetReadStreams } from '../datasets/utils/data-streams.ts'
 import { prepareCalculations } from '../datasets/utils/extensions.ts'
 import { stripTransientLineFlags } from '../datasets/utils/line-flags.ts'
 import * as iops from './index-operations.ts'
@@ -77,10 +80,50 @@ const restWindows = async (dataset: DatasetInternal, pivots: number[], windowSiz
   return { windows, exhausted }
 }
 
-// Task 5 implements the real file source adapter; returning empty exhausted windows means a file
-// dataset's sampled pass compares nothing yet — the count check still runs
+// One streaming parse serves every window of the run: rows are projected once and appended to
+// each still-hungry window whose pivot they reach; the stream is destroyed as soon as all
+// windows are full, so the nightly cost is bounded by one partial file parse, no ES writes.
+// `node:stream`'s `compose` is only typed as an instance method (not a named export) in the
+// @types/node version pinned here, so a Writable collector piped through `pipeline` (aborted
+// once every window is full) stands in for it — same single-pass, early-destroy behavior.
 const fileWindows = async (dataset: DatasetInternal, pivots: number[], windowSize: number): Promise<{ windows: iops.WindowDoc[][], exhausted: boolean[] }> => {
-  return { windows: pivots.map(() => []), exhausted: pivots.map(() => true) }
+  const applyCalculations = prepareCalculations(dataset as unknown as Dataset)
+  // mirror the indexer exactly (index-lines.ts): extended file when extensions are active
+  const extended = !!(dataset.extensions && dataset.extensions.some((e: any) => e.active))
+  const streams = await datasetReadStreams(dataset as any, false, extended, false)
+  const windows: iops.WindowDoc[][] = pivots.map(() => [])
+  const controller = new AbortController()
+  const collector = new Writable({
+    objectMode: true,
+    write (row: any, _encoding, callback) {
+      (async () => {
+        const i = row._i
+        let projected: iops.WindowDoc | undefined
+        let allFull = true
+        for (let w = 0; w < pivots.length; w++) {
+          if (windows[w].length >= windowSize) continue
+          if (i >= pivots[w]) {
+            if (!projected) {
+              const doc = { ...row }
+              await applyCalculations(doc)
+              projected = { join: String(i), i, doc: iops.normalizeProjectedDoc(doc) }
+            }
+            windows[w].push(projected)
+          }
+          allFull = allFull && windows[w].length >= windowSize
+        }
+        if (allFull) controller.abort()
+        callback()
+      })().catch(callback)
+    }
+  })
+  try {
+    await pipeline([...streams, collector], { signal: controller.signal })
+  } catch (err: any) {
+    // an abort once every window is full is the expected early-stop, not a failure
+    if (!controller.signal.aborted) throw err
+  }
+  return { windows, exhausted: windows.map((w) => w.length < windowSize) }
 }
 
 // pending projection states: the index legitimately lags the source — verdict must not lie
@@ -136,16 +179,11 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
       minI = 1
       maxI = dataset.count ?? 1
     }
-    // isRest gate: fileWindows is a Task-4 stub (always empty) — running it against the real
-    // ES window here would flag every real ES doc as "surplus" (an empty exhausted source
-    // never bounds spanEnd, so nothing filters the ES side). Until Task 5 lands the real file
-    // source adapter, skip the sampled compare for file datasets entirely; the count check
-    // above still runs and still catches gross divergence.
-    if (isRest && minI !== undefined && maxI !== undefined) {
+    if (minI !== undefined && maxI !== undefined) {
       const pivots = iops.samplePivots(seed, cfg.windows, minI, maxI)
       const source = isRest
         ? await restWindows(dataset, pivots, cfg.windowSize)
-        : await fileWindows(dataset, pivots, cfg.windowSize) // Task 5
+        : await fileWindows(dataset, pivots, cfg.windowSize)
       for (let w = 0; w < pivots.length; w++) {
         const esw = await esWindow(alias, pivots[w], cfg.windowSize, !isRest)
         const cmp = iops.compareWindowDocs(source.windows[w], esw.docs, { sourceExhausted: source.exhausted[w], esExhausted: esw.exhausted })

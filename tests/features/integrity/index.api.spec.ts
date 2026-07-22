@@ -3,7 +3,7 @@
 // against the verified source. REST datasets here; file datasets in the same file, Task 5.
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { waitForFinalize } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForLinesDrained, waitForFlagCleared, aimSeedAt, aimSeedAway } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -113,4 +113,38 @@ test('pending indexing downgrades the index verdict to unknown, other verdicts u
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.index?.status).toBe('unknown')
   expect(check.breach ?? []).not.toContain('index')
+})
+
+// enrolled file dataset (dataset1.csv), relay drained, indexed and refreshed — ready to check
+const enrolledFileDataset = async (ax: any) => {
+  const dataset = await sendDataset('datasets/dataset1.csv', ax)
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
+  return (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+}
+
+test('clean file dataset gets an ok index verdict', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledFileDataset(ax)
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  expect(check.index?.status).toBe('ok')
+  expect(check.index?.count?.expected).toBe(dataset.count)
+  expect(check.index?.checked).toBeGreaterThan(0)
+})
+
+test('an out-of-band ES edit on a file dataset row is a breach (window aimed by _i)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledFileDataset(ax)
+  // tamper the first row (_i is the join key for file datasets)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    query: { term: { _i: 1 } }, script: "ctx._source.id = 'es-tampered'"
+  })
+  const seed = aimSeedAt(1, 1, dataset.count, WINDOWS) // pivot ≤ 1 ⇒ covers row 1
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed })).data
+  expect(check.breach).toContain('index')
+  const edited = check.index!.sample.find((s: any) => s.kind === 'edited')
+  expect(edited?.key).toBe('1')
+  expect(edited?.actual).toContain('es-tampered')
 })
