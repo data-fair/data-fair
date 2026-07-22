@@ -15,6 +15,9 @@ export const PROJECTION_EXCLUDED_KEYS = new Set(['_rand'])
 // before use, so an adversary cannot know which rows tonight's windows will visit.
 export const samplePivots = (seed: string, windows: number, minI: number, maxI: number): number[] => {
   if (maxI < minI) return []
+  // `minI + Number(h % span)` is exact while the span stays under 2^53 (JS safe-integer bound).
+  // REST `_i` is millisecond-derived (~2^41 today) and file `_i` is a dense 1..count counter, so
+  // the span is unreachably far from that bound in practice — no precision loss to guard against.
   const span = BigInt(maxI - minI + 1)
   const pivots = new Set<number>()
   for (let n = 0; n < windows; n++) {

@@ -103,3 +103,19 @@ against, not only the happy path.
   denylist (`EXCLUDED_TOP_LEVEL`, indexer-churn field), so a Mongo-writing adversary can forge it
   alongside an ES tamper. The guarantee rests on the sampled windows / `?deep=true`, which
   re-derive rows from the verified file (file-hash-covered), not on the count compare.
+- An ES doc with a missing/null/non-numeric `_i` is treated as an immediate divergence (kind
+  `surplus`, keyed by ES `_id`), never joined: it cannot be ordered against the source. The
+  sampled window query explicitly pulls `_i`-less docs (a `range: {_i: {gte}}` alone never matches
+  them), and `deepCompare`/`compareWindowDocs` guard their span frontier with `Number.isFinite` so
+  a stray non-finite `_i` can never collapse the span to NaN and empty a batch uncompared.
+
+### A1 stated residual limit (follow-up, not fixed in this wave)
+
+- **Per-verdict `unknown`-pinning is unbounded.** `integrity-check-stale` fires off
+  `integrity.lastDefinitiveCheck`, which advances on every *overall* definitive check
+  (`ok`/`breach`). The overall check stays definitive even when the `index` member alone is
+  `unknown`, so a Mongo-writing adversary can pin the index verdict to `unknown` **forever** (an
+  orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+  `dataset.status` — both outside hash coverage) without ever tripping the stale alert. Closing
+  this needs a *per-verdict* freshness clock, deliberately deferred. Documented in the design doc
+  §3.4 correction and `docs/architecture/integrity.md` §A1.

@@ -265,15 +265,21 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
   }
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
   const check = await checkDataset(fresh as unknown as DatasetInternal)
-  // _fix means "the current source state is the new truth". Blessing the trail is not enough on
-  // its own: for a FILE dataset whose tamper changed CONTENT (not merely corrupted a hash), the
-  // ES projection users read still holds the PRE-bless rows, which the A1 index verdict correctly
-  // flags as diverged. Complete the action by rebuilding the projection from the blessed source.
-  // Trigger condition (precise): FILE dataset whose post-bless re-check reports index 'diverged'.
-  // - A metadata-only bless leaves the projection consistent (index 'ok') → NO reindex churn.
-  // - ES unavailable → index 'unknown' → NO reindex (nothing proves the projection is stale).
-  // - REST line blesses route through rewriteLinesThroughPipeline, which sets _partialRestStatus,
-  //   so their index verdict is already 'unknown' here (pendingState) and never 'diverged'.
+  // _fix means "the current source state is the new truth". For a FILE dataset, blessing changes
+  // the DERIVATION SOURCE: a tamper that changed CONTENT (not merely corrupted a hash) leaves the
+  // ES projection holding the PRE-bless rows, which the A1 index verdict correctly flags as
+  // diverged — so _fix completes the action by rebuilding the projection from the blessed source.
+  // Trigger condition (precise): FILE dataset whose post-bless re-check reports index 'diverged';
+  // a metadata-only bless leaves the projection consistent (index 'ok') → no reindex churn, and
+  // ES unavailable (index 'unknown') proves nothing about the projection → no reindex.
+  //
+  // This does NOT mean a bless always heals an index divergence. An ES-ONLY tamper (the source is
+  // untouched, only the alias/index was written) is NOT _fix's job on either family: there is no
+  // source to re-bless, so _fix corrects nothing and the re-check still returns breach ['index']
+  // with no completion. That asymmetry is deliberate — the dedicated panel reindex action
+  // (`index/_reindex`) is the remedy for an ES-only divergence, for FILE and REST alike. (REST
+  // line blesses route through rewriteLinesThroughPipeline, which sets _partialRestStatus, so a
+  // divergence caused by a stale projection reports 'unknown' here, not 'diverged'.)
   if (isFileDataset(dataset) && check.index?.status === 'diverged') {
     // journalIndexRepairAndReindex journals the divergence evidence BEFORE reindex overwrites it
     // (the A1 invariant) and returns the patched doc — reindex set status to a non-finalized value
@@ -341,7 +347,7 @@ export const reindexForIntegrity = async (dataset: DatasetInternal, reason?: str
   await withDatasetLock(dataset.id, () => reindexForIntegrityUnlocked(dataset, reason))
 
 const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> => {
-  if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+  requireActive(dataset)
   await journalIndexRepairAndReindex(dataset, (dataset.integrity as any)?.lastCheck?.index, reason)
   return { ok: true }
 }

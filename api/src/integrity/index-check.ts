@@ -103,6 +103,9 @@ const fileWindows = async (dataset: DatasetInternal, pivots: number[], windowSiz
   const applyCalculations = prepareCalculations(dataset as unknown as Dataset)
   // mirror the indexer exactly (index-lines.ts): extended file when extensions are active
   const extended = !!(dataset.extensions && dataset.extensions.some((e: any) => e.active))
+  // draft approximation (shared with fileIterate): read the PRODUCTION source — ignoreDraftLimit
+  // stays false, no `validateDraft` — the deliberate mirror of comparing against the PRODUCTION
+  // alias, not a draft view
   const streams = await datasetReadStreams(dataset as any, false, extended, false)
   const windows: iops.WindowDoc[][] = pivots.map(() => [])
   const controller = new AbortController()

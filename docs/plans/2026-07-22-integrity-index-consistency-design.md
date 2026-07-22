@@ -105,6 +105,17 @@ a missing alias while a (re)index is in flight → the index verdict is `unknown
 posture as the rest of the check; the existing check-stale alert bounds accumulated unknowns.
 Draft state is ignored: the check compares the production alias against the production source.
 
+> **Correction (delivery):** the claim that "the existing check-stale alert bounds accumulated
+> unknowns" is wrong for a *per-verdict* index `unknown`. `integrity-check-stale` fires off
+> `integrity.lastDefinitiveCheck`, which advances whenever the **overall** check completes
+> definitively (`ok`/`breach`) — and the overall check stays definitive even while the `index`
+> member alone is pinned to `unknown`. So a Mongo-writing adversary can pin the index verdict to
+> `unknown` **indefinitely** — e.g. an orphaned `_needsIndexing: true` line with no relay hint, or
+> a forged non-finalized `dataset.status`; both fields sit outside the metadata hash coverage — and
+> the stale clock never trips for it. This is a **stated residual limit**, not bounded in this wave
+> (see `api/src/integrity/README.md` A1 invariants and `docs/architecture/integrity.md` §A1). A
+> proper fix would need a *per-verdict* freshness clock (a follow-up), not the overall one.
+
 ## 4. Verdict shape and alerting
 
 `Check` gains:

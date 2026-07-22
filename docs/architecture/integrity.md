@@ -765,6 +765,21 @@ fixtures also feed the screenshots of the client-facing presentation
     `_partialRestStatus`, a dataset not yet finalized/indexed, or a missing alias mid-(re)index
     all downgrade the index verdict to `unknown`; a fresh check re-runs after any divergence is
     found, so a transient pending state cannot mask a real one.
+
+    > **Stated residual limit (follow-up, not fixed in this wave):** the `integrity-check-stale`
+    > alert does **not** bound a *per-verdict* index `unknown`. It fires off
+    > `integrity.lastDefinitiveCheck`, which advances on every **overall** definitive check
+    > (`ok`/`breach`) — and the overall check stays definitive even while the `index` member alone
+    > is `unknown`. So a Mongo-writing adversary can pin the index verdict to `unknown` **forever**
+    > (an orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+    > `dataset.status` — both outside hash coverage) without tripping the stale alert. Closing this
+    > needs a per-verdict freshness clock, deliberately deferred (design doc §3.4 correction,
+    > `api/src/integrity/README.md` A1 invariants).
+  - **Malformed ES docs are surfaced, not dropped:** a doc with a missing/null/non-numeric `_i`
+    (unorderable, unjoinable) is recorded as a `surplus` divergence keyed by its ES `_id` — the
+    sampled window query explicitly pulls `_i`-less docs (a `range` alone never matches them), and
+    the compare guards its `_i` span frontier with `Number.isFinite` so a stray non-finite value
+    can never collapse the span to NaN and skip a whole batch uncompared.
   - **Evidence before repair.** A capped excerpt of the expected vs. actual doc for each
     divergent entry (`_rand`, index-time `Math.random`, is the only excluded compare key) is
     persisted in `integrity.lastCheck.index.sample` at detection time. The panel's superadmin
