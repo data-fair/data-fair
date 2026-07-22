@@ -14,7 +14,7 @@ test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
 
 const latestRevisionKey = async (prefix: string): Promise<string> => {
-  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.includes('/lines/'))
+  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who') && !k.includes('/lines/'))
   return keys.sort().at(-1)!
 }
 
@@ -146,7 +146,7 @@ test('crash residue (terminal latest on an active dataset) self-heals through th
   await waitForFlagCleared(dataset.id)
 
   // simulate a disable that crashed after the terminal revision, before the Mongo flip
-  const keys = (await listIntegrityKeys(revisionsPrefix(dataset))).filter(k => !k.endsWith('.file') && !k.includes('/lines/')).sort()
+  const keys = (await listIntegrityKeys(revisionsPrefix(dataset))).filter(k => !k.endsWith('.file') && !k.endsWith('.who') && !k.includes('/lines/')).sort()
   const latest = await integrityTestStore.getRevision(keys.at(-1)!)
   const nextIndex = keys.length
   const nextKey = `${revisionsPrefix(dataset)}${String(nextIndex).padStart(9, '0')}`

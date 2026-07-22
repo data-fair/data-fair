@@ -188,11 +188,11 @@ test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async ()
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // unchanged state and a payload-bearing latest anchor → dedupe, no new revision
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // simulate an L1-era anchor: write a payload-less revision as index 1 directly to the store
   const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
@@ -221,7 +221,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
 
   // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
   const keys = await waitForIntegrityRevisions(prefix, 2)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
   const raw = await getRawDataset(dataset.id)
   expect(raw._needsHistorizing).toBeUndefined()
   const { createHash } = await import('node:crypto')
@@ -233,7 +233,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   // flag again without a change → relay must dedupe (clears flag, writes no new revision)
   await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForFlagCleared(dataset.id)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 })
 
 test('flagging a REST dataset (no file) anchors metadata only: metadata hash present, no file hash', async () => {
@@ -265,7 +265,7 @@ test('a file replacement writes a new (second) revision', async () => {
     _needsHistorizing: {}
   })
   // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
-  expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // replace the file; the finalize hook sets _needsHistorizing because integrity.active is true,
   // and the new file hash (dataset2.csv) differs from the anchor → relay writes revision 1. The joint
@@ -281,7 +281,7 @@ test('a file replacement writes a new (second) revision', async () => {
 
   // 4 keys: 2 revisions × (JSON + .file payload)
   const keys = await waitForIntegrityRevisions(prefix, 4)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(2)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
 })
 
 // ---------------------------------------------------------------------------------------------
@@ -301,9 +301,10 @@ test('a metadata-only edit references the file-owning revision; a file change ow
 
   // metadata-only edit → rev 1 references rev 0's payload, and writes NO new .file key
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only change' })
-  const afterMeta = await waitForIntegrityRevisions(prefix, 3)
+  // 5 keys: rev0 JSON+.file+.who (enable), rev1 JSON+.who (attributed user PATCH)
+  const afterMeta = await waitForIntegrityRevisions(prefix, 5)
   await waitForFlagCleared(dataset.id)
-  expect(afterMeta.filter(k => !k.endsWith('.file')).length).toBe(2) // rev 0 + rev 1
+  expect(afterMeta.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2) // rev 0 + rev 1
   expect(afterMeta.filter(k => k.endsWith('.file')).length).toBe(1) // still only rev 0's payload
   expect(afterMeta).not.toContain(`${prefix}000000001.file`)
   const rev1 = await integrityTestStore.getRevision(`${prefix}000000001`)
@@ -320,8 +321,9 @@ test('a metadata-only edit references the file-owning revision; a file change ow
     form.append('file', fs.readFileSync(path.resolve('./tests/resources/datasets/dataset2.csv')), 'dataset1.csv')
     await admin.post(`/api/v1/datasets/${dataset.id}`, form, { headers: form.getHeaders() })
   })
-  // 5 keys: rev0, rev0.file, rev1 (reference, no .file), rev2, rev2.file
-  const afterFile = await waitForIntegrityRevisions(prefix, 5)
+  // 8 keys: rev0 JSON+.file+.who, rev1 JSON+.who (reference, no .file), rev2 JSON+.file+.who
+  // (the file replacement is uploaded by the same admin session, so it's attributed too)
+  const afterFile = await waitForIntegrityRevisions(prefix, 8)
   expect(afterFile).toContain(`${prefix}000000002.file`)
   const rev2 = await integrityTestStore.getRevision(`${prefix}000000002`)
   expect(rev2.payload?.file?.i).toBeUndefined() // owns its own bytes
