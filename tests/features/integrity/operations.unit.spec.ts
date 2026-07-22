@@ -230,3 +230,16 @@ test('rehydrateTopics fills titles back from settings, keeps unknown ids bare', 
   expect(ops.rehydrateTopics([{ id: 't1' }, { id: 'gone' }], settingsTopics))
     .toEqual([{ id: 't1', title: 'Topic 1', color: '#f00' }, { id: 'gone' }])
 })
+
+test('parseOwnerPrefix splits the owner segment on its first dash (ids may contain dashes)', () => {
+  expect(ops.parseOwnerPrefix('data-fair/organization-acme/')).toEqual({ type: 'organization', id: 'acme' })
+  expect(ops.parseOwnerPrefix('data-fair/user-jean-pierre')).toEqual({ type: 'user', id: 'jean-pierre' })
+})
+
+test('parseOwnerPrefix refuses malformed segments (foreign objects in the bucket)', () => {
+  expect(ops.parseOwnerPrefix('other-service/organization-acme/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/no-dash-type/deeper/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/nodash/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/organization-/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/-acme/')).toBeUndefined()
+})
