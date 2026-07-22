@@ -955,6 +955,19 @@ the portable baseline for the OSS/Garage story.
 
 ## 12. Open questions / risks
 
+- **Security round 3 — trail coherence & store authority: DESIGNED, not yet built.** A review
+  pass over what the guarantee-bearing components *trust* found that verdicts and scheduling
+  read attacker-writable inputs: the checker reads only the store's current view (a
+  bucket-credentialed adversary can shadow revisions or hide keys behind delete markers,
+  undetected), and Mongo-resident state gates the sweep worklist, the purge carve-out, alert
+  dedup and `_fix` convergence (raw-Mongo writes can disarm, silence, or wedge them). The
+  designed answer — a second trail-coherence verdict from a versions walk, terminal
+  `disable`/`delete` trail revisions plus a daily store-vs-Mongo scope audit, persistent-state
+  re-alerts, an `unknown`-too-long alert, and the `_i`-wedge fix — is specced in
+  [docs/plans/2026-07-22-integrity-trail-coherence-design.md](../plans/2026-07-22-integrity-trail-coherence-design.md).
+  Until it lands, the guarantee holds against a *careless* out-of-band writer, not one who
+  targets the integrity machinery itself.
+
 - **Scaleway "prolong lock" bug — RESOLVED (2026-07-16).** A reported defect (the Veeam
   incompatibility) supposedly broke *prolonging* an existing lock — the exact operation our
   primary lock-renewal model (extension, §3.4 Option B) depends on. The validation spike
