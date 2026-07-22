@@ -163,30 +163,44 @@ async function * restIterate (dataset: DatasetInternal): AsyncGenerator<iops.Win
 // Exhaustive walk of the file source, one streaming parse (mirrors fileWindows' single-pass
 // idiom). `node:stream`'s `compose` doesn't type-check against this repo's pinned @types/node
 // (see fileWindows above), so the same Writable-collector + pipeline/AbortController fallback
-// stands in for it, adapted into a pull-based async generator: the collector's write() hands one
-// row at a time to the generator through a single-slot promise handoff and only calls its own
-// `callback` (releasing backpressure) once the generator has consumed and yielded that row — so
-// at most one row is ever in flight. If the generator is abandoned (`.return()`, e.g. the
-// consumer breaks out early), the `finally` block below runs, aborts the controller and awaits
-// the pipeline's settlement so the underlying streams are destroyed before this generator
-// finishes tearing down (abort-induced rejection swallowed, genuine errors rethrown).
+// stands in for it, adapted into a pull-based async generator. Draft approximation (shared with
+// fileWindows): `datasetReadStreams(dataset, false, extended, false)` reads the PRODUCTION source
+// (ignoreDraftLimit stays false, no `validateDraft`) — the deliberate mirror of comparing against
+// the PRODUCTION alias, not a draft view.
+//
+// Producer→consumer handoff is a FIFO queue, NOT a single slot. When the consumer invokes an
+// entry's `callback()` to ask for the next row, Node's Writable drains the next buffered chunk
+// *synchronously from inside that very call* — so a second `write()` runs before the consumer has
+// looped back to take the first row. A single-slot handoff would overwrite (lose) that first row
+// and leave the consumer awaiting a promise no one ever resolves: a permanent hang that holds the
+// per-dataset worker lock forever. The queue holds every synchronously-drained row; buffering
+// stays bounded by the Writable's highWaterMark because each entry's `callback()` is withheld
+// until the consumer has actually taken its row (backpressure). If the generator is abandoned
+// (`.return()`, e.g. the consumer breaks out early), the `finally` block below aborts the
+// controller and awaits the pipeline's settlement so the underlying streams are destroyed before
+// this generator finishes tearing down (abort-induced rejection swallowed, genuine errors rethrown).
 async function * fileIterate (dataset: DatasetInternal): AsyncGenerator<iops.WindowDoc> {
   const applyCalculations = prepareCalculations(dataset as unknown as Dataset)
   const extended = !!(dataset.extensions && dataset.extensions.some((e: any) => e.active))
   const streams = await datasetReadStreams(dataset as any, false, extended, false)
   const controller = new AbortController()
-  type Arrival = { row: any, callback: () => void } | { done: true }
-  let deliver: ((v: Arrival) => void) | undefined
-  let arrival = new Promise<Arrival>((resolve) => { deliver = resolve })
+  type Entry = { row: any, callback: () => void }
+  const queue: Entry[] = []
+  let ended = false
+  // one-shot wakeup: armed by the consumer only when it has drained the queue and must block;
+  // fired by write()/final(). `wake()` when unarmed is a harmless no-op — the consumer re-checks
+  // `queue.length` synchronously before it ever arms, so a row pushed while unarmed is never missed.
+  let notify: (() => void) | null = null
+  const wake = () => { if (notify) { const n = notify; notify = null; n() } }
   const collector = new Writable({
     objectMode: true,
     write (row: any, _encoding, callback) {
-      const priorDeliver = deliver!
-      arrival = new Promise((resolve) => { deliver = resolve })
-      priorDeliver({ row, callback })
+      queue.push({ row, callback })
+      wake()
     },
     final (callback) {
-      deliver!({ done: true })
+      ended = true
+      wake()
       callback()
     }
   })
@@ -197,12 +211,20 @@ async function * fileIterate (dataset: DatasetInternal): AsyncGenerator<iops.Win
   })
   try {
     while (true) {
-      const next = await arrival
-      if ('done' in next) break
-      const doc = { ...next.row }
-      await applyCalculations(doc)
-      yield { join: String(next.row._i), i: next.row._i, doc: iops.normalizeProjectedDoc(doc) }
-      next.callback()
+      while (queue.length) {
+        const entry = queue.shift()!
+        const doc = { ...entry.row }
+        await applyCalculations(doc)
+        yield { join: String(entry.row._i), i: entry.row._i, doc: iops.normalizeProjectedDoc(doc) }
+        // release backpressure only now — bounds the Writable's buffer to its highWaterMark. This
+        // may synchronously re-enter write() and push the next chunk; the outer loop drains it.
+        entry.callback()
+      }
+      if (ended) break
+      // queue drained and stream still open: arm and block. This arm-then-await stretch is
+      // synchronous (no write() can interleave between the `queue.length` test above and here),
+      // and any row that arrived earlier is already in `queue` and was drained — so no wake is lost.
+      await new Promise<void>((resolve) => { notify = resolve })
     }
   } finally {
     controller.abort()

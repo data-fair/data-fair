@@ -161,10 +161,30 @@ test('deep=true catches a tamper the sampled windows miss', async () => {
   // sampled pass with an away seed: the edit is invisible (count unchanged by an edit)
   const sampled = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed: away })).data
   expect(sampled.index?.status).toBe('ok')
-  // deep pass: exhaustive lockstep — no seed can hide it
-  const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
+  // deep pass: exhaustive lockstep — no seed can hide it. Pass the away seed too: deep must
+  // ignore it, so a regression that fell back to the sampled path would fail loudly here.
+  const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`, { seed: away })).data
   expect(deep.breach).toContain('index')
   expect(deep.index!.sample.find((s: any) => s.kind === 'edited')?.key).toBe('line0')
+})
+
+// C1: file-dataset ?deep=true walks the file source through fileIterate, whose Writable→generator
+// handoff must not lose rows on Node's synchronous drain (a single-slot handoff deadlocks the
+// pipeline and holds the worker lock forever). dataset1.csv has enough rows to trip a lost-row
+// bug on the second buffered chunk. Per-test timeout so a regression fails fast, not by hanging.
+test('deep=true on a file dataset walks every row without deadlocking (fileIterate handoff)', async () => {
+  test.setTimeout(30000)
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledFileDataset(ax)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    query: { term: { _i: 1 } }, script: "ctx._source.id = 'es-tampered'"
+  })
+  const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
+  expect(deep.breach).toContain('index')
+  expect(deep.index?.status).toBe('diverged')
+  const edited = deep.index!.sample.find((s: any) => s.kind === 'edited')
+  expect(edited?.key).toBe('1')
+  expect(edited?.actual).toContain('es-tampered')
 })
 
 test('a diverted alias pointing at a doctored index copy is a breach', async () => {
