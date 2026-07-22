@@ -254,22 +254,46 @@ async function seedProduits () {
 
 /** Geo dataset: points on a map (public facilities). The lat/lon columns are
  * tagged with geo concepts in the upload body, so the map view works as soon as
- * indexing completes — no post-upload schema patch needed. */
+ * indexing completes — no post-upload schema patch needed. Also demoes the map
+ * `category` preview param: the description links to categorized map views.
+ * Re-seeded (PUT create/replace) when the description lacks the demo links, so
+ * existing dev envs upgrade on re-run. */
 async function seedEquipements () {
   const id = 'fixtures-equipements'
-  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  if (await datasetExists(id)) {
+    const { data: current } = await dfAx.get(`/api/v1/datasets/${id}`, { params: { select: 'id,description' } })
+    if (current.description?.includes('category=type')) { console.log(`${id}: skipped (exists)`); return }
+  }
   const csv = [
     'nom,type,commune,lat,lon',
     'Mairie de Rennes,Administration,Rennes,48.1113,-1.6800',
-    'Bibliothèque Champs Libres,Culture,Rennes,48.1045,-1.6759',
     'Hôtel de Ville de Nantes,Administration,Nantes,47.2173,-1.5534',
+    'Préfecture des Côtes-d\'Armor,Administration,Saint-Brieuc,48.5136,-2.7653',
+    'Bibliothèque Champs Libres,Culture,Rennes,48.1045,-1.6759',
+    'Opéra de Rennes,Culture,Rennes,48.1110,-1.6794',
+    'Château des ducs de Bretagne,Culture,Nantes,47.2155,-1.5477',
+    'Quartz de Brest,Culture,Brest,48.3897,-4.4849',
     'Gare de Brest,Transport,Brest,48.3876,-4.4783',
+    'Gare de Rennes,Transport,Rennes,48.1033,-1.6725',
+    'Port de Lorient,Transport,Lorient,47.7270,-3.3700',
+    'Aéroport de Nantes Atlantique,Transport,Bouguenais,47.1569,-1.6078',
     'Université de Vannes,Éducation,Vannes,47.6587,-2.7603',
-    'Port de Lorient,Transport,Lorient,47.7270,-3.3700'
+    'Université Rennes 2,Éducation,Rennes,48.1194,-1.7030',
+    'Lycée naval de Brest,Éducation,Brest,48.4076,-4.4956',
+    'CHU de Rennes Pontchaillou,Santé,Rennes,48.1194,-1.6924',
+    'CHU de Nantes,Santé,Nantes,47.2094,-1.5525',
+    'Hôpital de la Cavale Blanche,Santé,Brest,48.4022,-4.5266',
+    'Stade Rennais Roazhon Park,Sport,Rennes,48.1075,-1.7129',
+    'Stade de la Beaujoire,Sport,Nantes,47.2560,-1.5246',
+    'Piscine olympique de Brest,Sport,Brest,48.4046,-4.4671'
   ].join('\n') + '\n'
   await uploadCsv(id, 'equipements.csv', {
     title: 'Équipements publics',
-    description: 'Points géolocalisés affichables sur une carte (exemple géographique).',
+    description: 'Points géolocalisés affichables sur une carte (exemple géographique). ' +
+      'Démonstration du paramètre de prévisualisation "category" (couleur par valeur + légende) : ' +
+      `<a href="${dfBaseURL}/dataset/${id}/map?category=type">carte par type d'équipement</a>, ` +
+      `<a href="${dfBaseURL}/embed/dataset/${id}/map?category=type">version intégrable (iframe)</a>, ` +
+      `<a href="${dfBaseURL}/embed/dataset/${id}/map?category=type&type_in=Culture,Sport">pré-filtrée sur Culture et Sport</a>.`,
     schema: [
       { key: 'lat', type: 'number', 'x-refersTo': 'http://schema.org/latitude' },
       { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' }
