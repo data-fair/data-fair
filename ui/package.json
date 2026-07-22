@@ -30,6 +30,7 @@
     "@turf/bbox": "^7.2.0",
     "@turf/bbox-polygon": "^7.2.0",
     "@types/config": "^3.3.5",
+    "@types/tinycolor2": "^1.4.6",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vueuse/core": "^13.9.0",
     "compare-versions": "^6.1.1",
@@ -64,6 +65,7 @@
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
     "@data-fair/lib-vuetify-events": "^0.3.0",
+    "tinycolor2": "^1.6.0",
     "zod-to-json-schema": "^3.25.1"
   }
 }

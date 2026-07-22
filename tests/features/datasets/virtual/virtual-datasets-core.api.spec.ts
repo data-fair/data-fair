@@ -49,6 +49,25 @@ test.describe('virtual datasets core', () => {
     assert.equal(res.data.total, 2)
   })
 
+  test('Preserve a group (x-group) set on a virtual dataset column', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [dataset.id] },
+      title: 'a virtual dataset with a group',
+      schema: [{ key: 'id' }, { key: 'loc' }]
+    })
+    let virtualDataset = await waitForFinalize(ax, res.data.id)
+    assert.ok(virtualDataset.schema.find((p: any) => p.key === 'id'))
+
+    // define a group on a column and save the schema (innocuous change)
+    virtualDataset.schema.find((p: any) => p.key === 'id')['x-group'] = 'my group'
+    virtualDataset = await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { schema: virtualDataset.schema }).then(r => r.data)
+    const groupedField = virtualDataset.schema.find((p: any) => p.key === 'id')
+    assert.equal(groupedField['x-group'], 'my group', 'x-group must be preserved on virtual dataset columns')
+  })
+
   test('Create a virtual dataset with initFrom', async () => {
     // Send basic dataset
     const ax = testUser1
