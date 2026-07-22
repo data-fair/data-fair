@@ -49,20 +49,33 @@ const projectRestLine = async (line: Record<string, any>, applyCalculations: (it
   return { join, i: doc._i, doc: iops.normalizeProjectedDoc(doc) }
 }
 
-const esWindow = async (alias: string, pivot: number, size: number, joinByI: boolean): Promise<{ docs: iops.WindowDoc[], exhausted: boolean }> => {
+const esWindow = async (alias: string, pivot: number, size: number, joinByI: boolean): Promise<{ docs: iops.WindowDoc[], malformed: iops.DivergedEntry[], exhausted: boolean }> => {
   const res: any = await es.client.search({
     index: alias,
-    body: { query: { range: { _i: { gte: pivot } } }, sort: [{ _i: 'asc' }], size }
+    // `range: {_i: {gte}}` alone never matches a doc missing `_i`, so an `_i`-less corrupt doc
+    // would be invisible to the window (evading everything but the count check). Widen the query
+    // to also pull docs with no `_i` field; they sort last (missing → last on asc) and are peeled
+    // off as `malformed` below, never joining the comparable slice.
+    body: {
+      query: { bool: { minimum_should_match: 1, should: [{ range: { _i: { gte: pivot } } }, { bool: { must_not: { exists: { field: '_i' } } } }] } },
+      sort: [{ _i: 'asc' }],
+      size
+    }
   })
   const hits: any[] = res.hits.hits
-  return {
-    docs: hits.map((h) => ({
-      join: joinByI ? String(h._source._i) : String(h._id),
-      i: h._source._i,
-      doc: iops.normalizeProjectedDoc(h._source)
-    })),
-    exhausted: hits.length < size
+  const docs: iops.WindowDoc[] = []
+  const malformed: iops.DivergedEntry[] = []
+  for (const h of hits) {
+    const i = h._source._i
+    // a missing/null/non-numeric `_i` cannot be ordered or joined; record it as surplus (keyed by
+    // ES `_id`) and keep it out of `docs` so it can never poison the compare's span frontier
+    if (!Number.isFinite(i)) {
+      malformed.push({ key: String(h._id), kind: 'surplus', actual: iops.docEvidence(iops.normalizeProjectedDoc(h._source)) })
+      continue
+    }
+    docs.push({ join: joinByI ? String(i) : String(h._id), i, doc: iops.normalizeProjectedDoc(h._source) })
   }
+  return { docs, malformed, exhausted: hits.length < size }
 }
 
 const restWindows = async (dataset: DatasetInternal, pivots: number[], windowSize: number): Promise<{ windows: iops.WindowDoc[][], exhausted: boolean[] }> => {
@@ -131,7 +144,7 @@ const DEEP_BATCH = 1000
 // Exhaustive _i-ordered walk of the ES side through the alias (never the physical index — a
 // diverted alias is an in-scope attack). `_doc` tiebreak keeps search_after stable when an
 // adversary inserted duplicate _i values.
-async function * esIterate (alias: string, joinByI: boolean): AsyncGenerator<iops.WindowDoc> {
+async function * esIterate (alias: string, joinByI: boolean, record: (entries: iops.DivergedEntry[]) => void): AsyncGenerator<iops.WindowDoc> {
   let searchAfter: any[] | undefined
   while (true) {
     const res: any = await es.client.search({
@@ -144,7 +157,18 @@ async function * esIterate (alias: string, joinByI: boolean): AsyncGenerator<iop
       }
     })
     const hits: any[] = res.hits.hits
-    for (const h of hits) yield { join: joinByI ? String(h._source._i) : String(h._id), i: h._source._i, doc: iops.normalizeProjectedDoc(h._source) }
+    for (const h of hits) {
+      const i = h._source._i
+      // a missing/null/non-numeric `_i` cannot be ordered or joined; record it as surplus (keyed
+      // by ES `_id`) and skip — yielding it would drop an unorderable `undefined` into
+      // deepCompare's frontier (Math.min(..., undefined) → NaN empties both buffers uncompared).
+      // These docs sort last (missing → last on asc) so they arrive in the final batch(es).
+      if (!Number.isFinite(i)) {
+        record([{ key: String(h._id), kind: 'surplus', actual: iops.docEvidence(iops.normalizeProjectedDoc(h._source)) }])
+        continue
+      }
+      yield { join: joinByI ? String(i) : String(h._id), i, doc: iops.normalizeProjectedDoc(h._source) }
+    }
     if (hits.length < DEEP_BATCH) return
     searchAfter = hits[hits.length - 1].sort
   }
@@ -261,12 +285,23 @@ const deepCompare = async (source: AsyncGenerator<iops.WindowDoc>, esSide: Async
       eDone = await fill(esSide, eBuf, eDone)
       if (!sBuf.length && !eBuf.length) break
       let spanEnd = Infinity
-      if (!sDone && sBuf.length) spanEnd = Math.min(spanEnd, sBuf[sBuf.length - 1].i)
-      if (!eDone && eBuf.length) spanEnd = Math.min(spanEnd, eBuf[eBuf.length - 1].i)
+      // Frontier reads guarded by Number.isFinite: esIterate/restIterate/fileIterate already peel
+      // off any non-finite `_i` before a doc reaches these buffers, so in practice the last `.i`
+      // is always finite — the guard is an internal-consistency fallback. Without it, a stray
+      // non-finite frontier would collapse spanEnd to NaN, and `d.i <= NaN`/`d.i > NaN` are BOTH
+      // false, emptying both buffers uncompared (up to DEEP_BATCH genuine docs per side skipped).
+      const sLastI = sBuf.length ? sBuf[sBuf.length - 1].i : undefined
+      const eLastI = eBuf.length ? eBuf[eBuf.length - 1].i : undefined
+      if (!sDone && Number.isFinite(sLastI)) spanEnd = Math.min(spanEnd, sLastI as number)
+      if (!eDone && Number.isFinite(eLastI)) spanEnd = Math.min(spanEnd, eLastI as number)
       const sSlice = sBuf.filter(d => d.i <= spanEnd)
       const eSlice = eBuf.filter(d => d.i <= spanEnd)
       sBuf = sBuf.filter(d => d.i > spanEnd)
       eBuf = eBuf.filter(d => d.i > spanEnd)
+      // Duplicate-`_i` caveat: a group of same-`_i` docs straddling a DEEP_BATCH cut may split
+      // across two rounds, so within a round its missing/surplus labels can be mislabelled — still
+      // a breach, just possibly the wrong kind. compareWindowDocs joins by key into a Map, so
+      // same-key duplicates in one slice collapse; the count check catches the resulting imbalance.
       const cmp = iops.compareWindowDocs(sSlice, eSlice, { sourceExhausted: true, esExhausted: true })
       checked += cmp.checked
       record(cmp.diverged)
@@ -329,7 +364,7 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
 
   if (opts?.deep) {
     const source = isRest ? restIterate(dataset) : fileIterate(dataset)
-    checked = await deepCompare(source, esIterate(alias, !isRest), record)
+    checked = await deepCompare(source, esIterate(alias, !isRest, record), record)
   } else if (expectedCount > 0) {
     const seed = opts?.seed ?? crypto.randomUUID()
     let minI: number | undefined, maxI: number | undefined
@@ -355,6 +390,9 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
         const cmp = iops.compareWindowDocs(source.windows[w], esw.docs, { sourceExhausted: source.exhausted[w], esExhausted: esw.exhausted })
         checked += cmp.checked
         record(cmp.diverged)
+        // malformed (`_i`-less) ES docs the window surfaced: divergences in their own right,
+        // outside the _i-ordered join — deduped by `surplus:<_id>` in the caller's evidence pass
+        record(esw.malformed)
       }
     }
   }

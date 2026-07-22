@@ -187,6 +187,44 @@ test('deep=true on a file dataset walks every row without deadlocking (fileItera
   expect(edited?.actual).toContain('es-tampered')
 })
 
+// C2: an ES doc with a missing/null/non-numeric `_i` cannot be ordered or joined. The sampled
+// window query must still surface it (a plain `range: {_i: {gte}}` never matches an `_i`-less
+// doc), and it must be reported in the sample — not silently dropped from the compare.
+test('an ES doc with no _i is surfaced as a divergence in the sample (malformed insert)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  // insert straight into the alias with no `_i` field (ES auto-assigns the _id)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    insert: { attr1: 'ghost-no-i', attr2: 99 }
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.breach).toContain('index')
+  expect(check.index?.status).toBe('diverged')
+  const surplus = check.index!.sample.find((s: any) => s.kind === 'surplus')
+  expect(surplus).toBeTruthy()
+  expect(surplus.actual).toContain('ghost-no-i')
+})
+
+// C2 deep variant: the malformed doc (sorted last, `_i` undefined) must not NaN-wipe the batch —
+// the genuine rows around it stay compared. Tamper the last real row too and assert BOTH the
+// surplus (malformed) and the edited (line2) divergences are reported.
+test('deep=true reports a malformed _i-less doc AND still compares the real rows around it', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    insert: { attr1: 'ghost-no-i', attr2: 99 }
+  })
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    query: { term: { _id: 'line2' } }, script: "ctx._source.attr1 = 'deep-edited'"
+  })
+  const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
+  expect(deep.breach).toContain('index')
+  const surplus = deep.index!.sample.find((s: any) => s.kind === 'surplus')
+  expect(surplus?.actual).toContain('ghost-no-i')
+  const edited = deep.index!.sample.find((s: any) => s.kind === 'edited' && s.key === 'line2')
+  expect(edited?.actual).toContain('deep-edited')
+})
+
 test('a diverted alias pointing at a doctored index copy is a breach', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)

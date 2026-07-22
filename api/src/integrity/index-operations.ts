@@ -42,8 +42,14 @@ export const docEvidence = (doc: Record<string, any>, cap = 800): string => {
 // the comparable range, not divergences.
 export const compareWindowDocs = (source: WindowDoc[], es: WindowDoc[], bounds: { sourceExhausted: boolean, esExhausted: boolean }): { checked: number, diverged: DivergedEntry[] } => {
   let spanEnd = Infinity
-  if (!bounds.sourceExhausted && source.length) spanEnd = Math.min(spanEnd, source[source.length - 1].i)
-  if (!bounds.esExhausted && es.length) spanEnd = Math.min(spanEnd, es[es.length - 1].i)
+  // Number.isFinite guards mirror deepCompare's: callers peel off non-finite `_i` before a doc
+  // reaches here, so the last `.i` is finite in practice — the guard is an internal-consistency
+  // fallback that stops a stray non-finite frontier collapsing spanEnd to NaN (which would filter
+  // every doc out of both the slice and the carry, silently uncompared).
+  const sLastI = source.length ? source[source.length - 1].i : undefined
+  const esLastI = es.length ? es[es.length - 1].i : undefined
+  if (!bounds.sourceExhausted && Number.isFinite(sLastI)) spanEnd = Math.min(spanEnd, sLastI as number)
+  if (!bounds.esExhausted && Number.isFinite(esLastI)) spanEnd = Math.min(spanEnd, esLastI as number)
   const s = source.filter(d => d.i <= spanEnd)
   const esByJoin = new Map(es.filter(d => d.i <= spanEnd).map(d => [d.join, d]))
   const diverged: DivergedEntry[] = []

@@ -25,6 +25,14 @@ test('normalizeProjectedDoc round-trips dates and strips excluded keys', () => {
   expect(doc).toEqual({ a: 1, _updatedAt: '2026-07-22T10:00:00.000Z' })
 })
 
+test('normalizeProjectedDoc drops undefined keys (JSON round-trip parity with the bulk indexer)', () => {
+  // the ES bulk serialization drops undefined-valued keys; the source projection must match, or a
+  // key that is present-but-undefined on one side would read as a spurious edited divergence
+  const doc = normalizeProjectedDoc({ a: 1, b: undefined, c: null })
+  expect(doc).toEqual({ a: 1, c: null })
+  expect('b' in doc).toBe(false)
+})
+
 test('compareWindowDocs finds edited, missing and surplus docs within the common span', () => {
   const src = [
     { join: 'l1', i: 1, doc: { a: 1 } },
@@ -57,6 +65,23 @@ test('compareWindowDocs cuts at the shorter unexhausted side (span intersection)
     { join: 'l2', i: 2, doc: { a: 2 } }
   ]
   const { checked, diverged } = compareWindowDocs(src, es, { sourceExhausted: true, esExhausted: false })
+  expect(checked).toBe(2)
+  expect(diverged).toEqual([])
+})
+
+test('compareWindowDocs does not flag surplus ES docs beyond an unexhausted source frontier', () => {
+  // mirror of the missing-beyond-span case: the source window filled up at i=2 (not exhausted),
+  // so ES docs beyond i=2 are outside the comparable span and must NOT read as surplus
+  const src = [
+    { join: 'l1', i: 1, doc: { a: 1 } },
+    { join: 'l2', i: 2, doc: { a: 2 } }
+  ]
+  const es = [
+    { join: 'l1', i: 1, doc: { a: 1 } },
+    { join: 'l2', i: 2, doc: { a: 2 } },
+    { join: 'l3', i: 3, doc: { a: 3 } }
+  ]
+  const { checked, diverged } = compareWindowDocs(src, es, { sourceExhausted: false, esExhausted: true })
   expect(checked).toBe(2)
   expect(diverged).toEqual([])
 })
