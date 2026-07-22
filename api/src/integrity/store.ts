@@ -15,6 +15,9 @@ export type RevisionBody = {
   // uploading a duplicate. An ABSENT `i` means "own index" — the bytes live at this revision's own
   // `{i}.file` sibling. References always collapse to the owning revision (never chain).
   payload?: { metadata: Record<string, any>, file?: { size: number, i?: number } }
+  // ackTrail revisions only: the fingerprints of the trail anomalies being acknowledged — the
+  // checker reads them from THIS locked body, never from Mongo (the Mongo trailAck is a pointer)
+  ack?: { fingerprints: string[] }
 }
 
 // Target 3 (per-line revisions): the revision of a single editable-dataset line. `payload` is the

@@ -128,7 +128,13 @@
             "maxLines": { "type": "number" }
           }
         },
-        "lockWaitMs": { "type": "number" }
+        "lockWaitMs": { "type": "number" },
+        "trail": {
+          "type": "object",
+          "properties": {
+            "dateSkewHours": { "type": "number" }
+          }
+        }
       }
     },
     "integrityCheckCron": { "type": "string" },

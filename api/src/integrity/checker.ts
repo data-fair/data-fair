@@ -22,22 +22,33 @@ const debug = Debug('integrity-checker')
 const BATCH = 100
 const RENEW_CONCURRENCY = 100
 
+export type TrailVerdict = { status: 'ok' | 'altered', anomalies?: ops.TrailAnomaly[] }
+
 export type Check = {
   status: 'ok' | 'breach' | 'unknown'
   date?: string
   breach?: Array<'file' | 'metadata' | 'lines'>
   lines?: { checked: number, diverged: number, sample: string[] }
+  // verdict 2 (round 3): the trail itself is the one we wrote — absent on 'unknown' early returns
+  trail?: TrailVerdict
 }
+
+// cap what is persisted on the dataset doc; the count of what was dropped goes in the last entry
+const TRAIL_ANOMALY_CAP = 50
 
 // Compare live Mongo lines against the latest anchors recovered from LIST alone (the sha256 is
 // embedded in each key). Returns the three divergence shapes plus the anchor map (restore/fix
-// need the keys to fetch payloads / write tombstones).
-export const compareDatasetLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>) => {
+// need the keys to fetch payloads / write tombstones). `preAnchors` lets checkDataset inject the
+// anchors folded from its own versions walk (marker-hidden keys resurfaced) — fix/restore call
+// without it and walk the current view themselves (repair targets data, not the trail).
+export const compareDatasetLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, preAnchors?: Map<string, lops.LatestLineAnchor>) => {
   // fold LIST pages incrementally: the prefix holds every revision within the retention window,
-  // but only the latest anchor per line is kept in memory (O(live lines), bounded by the gate)
-  const anchors = new Map<string, lops.LatestLineAnchor>()
-  for await (const page of store.iterateRevisionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
-    lops.foldLatestLineAnchors(anchors, page.map((r) => r.key))
+  // but only the latest anchor per line is kept in memory (O(distinct lines in window))
+  const anchors = preAnchors ?? new Map<string, lops.LatestLineAnchor>()
+  if (!preAnchors) {
+    for await (const page of store.iterateRevisionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
+      lops.foldLatestLineAnchors(anchors, page.map((r) => r.key))
+    }
   }
   const unvisited = new Set(anchors.keys())
   const edited: string[] = []
@@ -134,7 +145,7 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   }
 }
 
-export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => {
+export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boolean }): Promise<Check> => {
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
@@ -153,7 +164,34 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   }
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
-  const latest = ops.latestKey((await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key))
+  const linesPrefix = lops.linesPrefix(dataset.owner, dataset.id)
+
+  // ONE versions walk over the whole scope serves both verdicts: it reconstructs the current
+  // view (marker-hidden keys resurface into the data compare) and yields the trail anomalies
+  // the current view cannot show (shadow versions, markers). Line keys are folded into the
+  // latest-anchor map page by page and dropped, so memory stays O(distinct lines in window).
+  const datasetAcc = ops.newTrailFold()
+  const linesAcc = ops.newTrailFold()
+  const lineAnchors = new Map<string, lops.LatestLineAnchor>()
+  const drainLineKeys = () => {
+    if (!linesAcc.current.size) return
+    lops.foldLatestLineAnchors(lineAnchors, [...linesAcc.current.keys()])
+    linesAcc.current.clear()
+  }
+  for await (const page of store.iterateVersionPages(prefix)) {
+    const datasetEntries: ops.TrailVersionEntry[] = []
+    const lineEntries: ops.TrailVersionEntry[] = []
+    for (const entry of page) (entry.key.startsWith(linesPrefix) ? lineEntries : datasetEntries).push(entry)
+    if (datasetEntries.length) ops.foldTrailVersions(datasetAcc, datasetEntries)
+    if (lineEntries.length) { ops.foldTrailVersions(linesAcc, lineEntries); drainLineKeys() }
+  }
+  const datasetView = ops.finishTrailFold(datasetAcc)
+  const linesView = ops.finishTrailFold(linesAcc)
+  drainLineKeys()
+  const trailAnomalies = [...datasetView.anomalies, ...linesView.anomalies]
+
+  const datasetKeys = [...datasetView.current.keys()]
+  const latest = ops.latestKey(datasetKeys)
   if (!latest) {
     // no anchor written yet (e.g. enable succeeded — integrity.active is set — but the inline
     // anchor write then failed, S3 down, before any revision landed): persist the verdict so a
@@ -165,6 +203,44 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   }
 
   const latestRevision = await store.getRevision(latest)
+
+  // trail verdict: sequence gaps + date skew (incremental — only revisions the trail check has
+  // not yet date-verified; `deep` re-verifies the whole window) + ack filtering
+  const seqIndexes = datasetKeys.filter((k) => !ops.isPayloadKey(k)).map(ops.parseRevisionIndex)
+  trailAnomalies.push(...ops.sequenceGapAnomalies(prefix, seqIndexes))
+  const skewToleranceMs = (config.integrity?.trail?.dateSkewHours ?? 48) * 3600 * 1000
+  const latestIndex = ops.parseRevisionIndex(latest)
+  const latestSkew = ops.dateSkewAnomaly(latest, latestRevision.context.date, datasetView.current.get(latest)?.lastModified, skewToleranceMs)
+  if (latestSkew) trailAnomalies.push(latestSkew)
+  const trailCursor = opts?.deep ? -1 : ((dataset.integrity as any)?.lastCheck?.trailCursor ?? -1)
+  for (const i of seqIndexes.filter((n) => n > trailCursor && n !== latestIndex).sort((a, b) => a - b)) {
+    const key = ops.revisionKey(dataset.owner, dataset.id, i)
+    try {
+      const rev = await store.getRevision(key)
+      const skew = ops.dateSkewAnomaly(key, rev.context.date, datasetView.current.get(key)?.lastModified, skewToleranceMs)
+      if (skew) trailAnomalies.push(skew)
+    } catch (err) {
+      internalError('integrity-trail-read', err) // unreadable mid-purge revision: skip, not an anomaly
+    }
+  }
+  let anomalies = trailAnomalies
+  const trailAck = (dataset.integrity as any)?.trailAck
+  if (anomalies.length && Number.isInteger(trailAck?.i)) {
+    // the Mongo pointer is a hint: authority is the locked ackTrail revision body itself — a
+    // forged pointer to a non-ack revision verifies false and filters nothing
+    try {
+      const ackRev = await store.getRevision(ops.revisionKey(dataset.owner, dataset.id, trailAck.i))
+      if (ackRev.context.operation === 'ackTrail' && ackRev.ack?.fingerprints) {
+        anomalies = ops.filterAckedAnomalies(anomalies, ackRev.ack.fingerprints)
+      }
+    } catch (err) {
+      internalError('integrity-trail-ack-read', err)
+    }
+  }
+  const trail: TrailVerdict = anomalies.length
+    ? { status: 'altered', anomalies: anomalies.slice(0, TRAIL_ANOMALY_CAP) }
+    : { status: 'ok' }
+
   const expected = latestRevision.hash
   const breach: Array<'file' | 'metadata' | 'lines'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
@@ -191,7 +267,7 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   let linesResult: { checked: number, diverged: number, sample: string[] } | undefined
   let linesCompare: Awaited<ReturnType<typeof compareDatasetLines>> | undefined
   if (isRestDataset(dataset as any)) {
-    linesCompare = await compareDatasetLines(dataset, store)
+    linesCompare = await compareDatasetLines(dataset, store, lineAnchors)
     const divergedIds = [...linesCompare.edited, ...linesCompare.inserted, ...linesCompare.missing]
     if (divergedIds.length) breach.push('lines')
     linesResult = { checked: linesCompare.checked, diverged: divergedIds.length, sample: divergedIds.slice(0, 20) }
@@ -214,17 +290,23 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   const status: 'ok' | 'breach' = breach.length ? 'breach' : 'ok'
   const date = new Date().toISOString()
   const wasBreach = (dataset.integrity as any)?.lastCheck?.status === 'breach'
+  const wasAltered = (dataset.integrity as any)?.lastCheck?.trail?.status === 'altered'
   await mongo.datasets.updateOne({ id: dataset.id }, {
-    $set: { 'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}) } }
+    $set: { 'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, trailCursor: latestIndex } }
   })
   if (status === 'breach' && !wasBreach) {
     await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
   }
-  if (status === 'ok') {
+  if (trail.status === 'altered' && !wasAltered) {
+    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-trail-altered')
+  }
+  // renewal only on a fully clean pass: under a shadow attack PutObjectRetention (keyed, no
+  // version id) would extend the ATTACKER's current version while the original's lock runs out
+  if (status === 'ok' && trail.status === 'ok') {
     await maybeRenew(dataset, store, latest, latestRevision)
     if (linesCompare) await maybeRenewLines(dataset, store, linesCompare.anchors)
   }
-  return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}) }
+  return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail }
 }
 
 const runOnce = async () => {

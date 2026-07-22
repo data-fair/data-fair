@@ -69,8 +69,10 @@ export const registerIntegrityRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
     // same per-dataset lock as the sweep and the other admin actions: a check racing a relay
-    // would compare fresh content against a stale anchor and report a false breach
-    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset)))
+    // would compare fresh content against a stale anchor and report a false breach.
+    // ?deep=true re-verifies date coherence over the whole retention window (nightly checks
+    // only verify incrementally past the trail cursor)
+    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true' })))
   })
 
   router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {

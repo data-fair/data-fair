@@ -124,7 +124,9 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     statusBreachOr = {
       $or: [
         { status: { $in: reqQuery.status.split(',') } },
-        { 'integrity.lastCheck.status': 'breach' }
+        { 'integrity.lastCheck.status': 'breach' },
+        // an altered trail is as alarming as a data breach: same error-filter surfacing
+        { 'integrity.lastCheck.trail.status': 'altered' }
       ]
     }
   }

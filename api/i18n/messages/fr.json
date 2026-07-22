@@ -173,6 +173,10 @@
 			"integrity-renewal-failed": {
 				"title": "Échec du renouvellement du verrou d'intégrité",
 				"body": "Le verrou de protection du jeu de données {{label}} n'a pas pu être renouvelé. Si le problème persiste, la garantie d'intégrité expirera à l'échéance du verrou actuel."
+			},
+			"integrity-trail-altered": {
+				"title": "Piste d'intégrité altérée",
+				"body": "L'historique de révisions du jeu de données {{label}} présente des signes d'altération (révisions masquées ou réécrites). Les révisions verrouillées d'origine sont intactes ; consultez les anomalies dans le panneau d'intégrité."
 			}
 		},
 		"applications": {

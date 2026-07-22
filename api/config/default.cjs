@@ -36,6 +36,9 @@ module.exports = {
     // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
     // worker lock before answering 409 — it must hold that lock to not race the relay tasks
     lockWaitMs: 10000,
+    // trail-coherence verdict: tolerated distance between a revision's claimed context.date and
+    // the provider-stamped LastModified (relay retries legitimately delay the object write)
+    trail: { dateSkewHours: 48 },
   },
   integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,

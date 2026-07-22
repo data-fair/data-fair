@@ -6,7 +6,9 @@ export * from './.type/index.js'
 
 // canonical declaration (api/src/integrity/operations.ts re-exports it) — declared here because
 // this package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
-export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore'
+// 'disable' (and 'delete' at dataset level) are the TERMINAL trail revisions (round 3 §S2);
+// 'ackTrail' records a reviewed trail-anomaly acknowledgement carrying its fingerprints
+export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore' | 'disable' | 'ackTrail'
 // actor CATEGORY, never an identity: user ids are personal data and must not enter the
 // undeletable WORM store — identity-level attribution lives in the events/journal system
 export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
