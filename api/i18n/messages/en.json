@@ -167,6 +167,10 @@
 			"integrity-breach": {
 				"title": "Integrity breach",
 				"body": "Dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check on its data file or metadata)."
+			},
+			"integrity-renewal-failed": {
+				"title": "Integrity lock renewal failed",
+				"body": "The protection lock of dataset {{label}} could not be renewed. If this persists, the integrity guarantee will lapse when the current lock expires."
 			}
 		},
 		"applications": {

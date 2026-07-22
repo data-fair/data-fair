@@ -49,6 +49,9 @@ router.delete('/', async (req, res, next) => {
       mongo.applicationsKeys.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
       mongo.db.collection('integrity-purge').deleteMany({}),
+      // the storage-accounting measure of still-locked test revisions would otherwise keep
+      // counting into the freshly-reset limits and starve the next tests' storage quota
+      mongo.db.collection('integrity-storage').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
       mongo.remoteServices.deleteMany({}),
@@ -286,6 +289,37 @@ router.post('/integrity-purge/run', async (req, res, next) => {
       skewMarginMs: req.body?.skewMarginMs,
       ignoreWatermark: !!req.body?.ignoreWatermark
     }))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the integrity storage-accounting measure on demand (test-only)
+router.post('/integrity-storage/run', async (req, res, next) => {
+  try {
+    const { measureIntegrityStorage } = await import('../../integrity/storage.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await measureIntegrityStorage(integrityStore()))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Hold / release a lock from the locks collection (test-only): lets a test simulate a busy
+// dataset (worker task in progress) and assert the integrity admin actions answer 409
+router.post('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    res.json({ ack: await locks.acquire(req.params.key, 'test-env') })
+  } catch (err) {
+    next(err)
+  }
+})
+router.delete('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    await locks.release(req.params.key)
+    res.status(204).send()
   } catch (err) {
     next(err)
   }

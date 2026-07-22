@@ -127,7 +127,8 @@
           "properties": {
             "maxLines": { "type": "number" }
           }
-        }
+        },
+        "lockWaitMs": { "type": "number" }
       }
     },
     "integrityCheckCron": { "type": "string" },

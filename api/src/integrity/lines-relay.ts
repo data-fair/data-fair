@@ -86,4 +86,11 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
     await c.bulkWrite(bookkeeping, { ordered: true })
   }
   await clearHint()
+  // hint-first ordering protects against a crash, not against concurrency: an API write can set
+  // the (already-set) hint and stamp its lines between our final empty scan and the clear above,
+  // orphaning those stamps — the task filter needs the hint, so they would never drain and the
+  // checker would read them as a false 'edited' breach. Re-set the hint if any stamp slipped in;
+  // the checker carries the same net for the residual window after this re-check.
+  const straggler = await c.findOne({ _needsHistorizing: { $exists: true } }, { projection: { _id: 1 } })
+  if (straggler) await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
 }

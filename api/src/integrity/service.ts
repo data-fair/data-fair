@@ -2,8 +2,10 @@
 // datasets/routes/integrity.ts router extracts inputs and streams responses, everything else
 // lives here — callable from workers and tests, throws httpError.
 import path from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
 import mime from 'mime-types'
 import clone from '@data-fair/lib-utils/clone.js'
+import locks from '@data-fair/lib-node/locks.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
@@ -45,7 +47,31 @@ const requireActive = (dataset: DatasetInternal): void => {
   if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
 }
 
-export const enableIntegrity = async (dataset: DatasetInternal): Promise<void> => {
+// Every synchronous admin action runs under the standard per-dataset worker lock (the same
+// `datasets:‹id›` lock the relay/checker tasks hold, workers/index.ts): without it an inline
+// anchor can race the relay to the same LIST-derived revision index — both PUT the same key,
+// the loser becomes a shadowed noncurrent version, and the purge later reclaims it (permanent
+// trail loss). Bounded wait then 409: admin actions are rare, a busy dataset answers quickly
+// rather than queueing.
+const LOCK_RETRY_MS = 250
+export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>): Promise<T> => {
+  const lockKey = `datasets:${datasetId}`
+  const deadline = Date.now() + (config.integrity?.lockWaitMs ?? 10000)
+  while (!(await locks.acquire(lockKey, 'integrity-admin'))) {
+    if (Date.now() >= deadline) throw httpError(409, 'dataset is busy (a background task is processing it), retry later')
+    await sleep(LOCK_RETRY_MS)
+  }
+  try {
+    return await fn()
+  } finally {
+    await locks.release(lockKey)
+  }
+}
+
+export const enableIntegrity = async (dataset: DatasetInternal): Promise<void> =>
+  await withDatasetLock(dataset.id, () => enableIntegrityUnlocked(dataset))
+
+const enableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> => {
   if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
   const isRest = isRestDataset(dataset)
   if (!isRest && (!isFileDataset(dataset) || !dataset.originalFile?.md5)) {
@@ -89,7 +115,10 @@ export const enableIntegrity = async (dataset: DatasetInternal): Promise<void> =
   }
 }
 
-export const disableIntegrity = async (dataset: DatasetInternal): Promise<void> => {
+export const disableIntegrity = async (dataset: DatasetInternal): Promise<void> =>
+  await withDatasetLock(dataset.id, () => disableIntegrityUnlocked(dataset))
+
+const disableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> => {
   // the anchors stop being purge-protected at this moment, so the scope's watermark — computed
   // while they still were — must not delay their aging out
   await resetPurgeWatermark(dataset.owner, dataset.id)
@@ -142,7 +171,10 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
   await historizeLines(fresh as unknown as RestDataset)
 }
 
-export const fixIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+export const fixIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason))
+
+const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
   requireActive(dataset)
   // synchronous re-anchor + verify: the reconcile action responds with a fresh verdict
   await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason })
@@ -187,7 +219,10 @@ export const fixIntegrity = async (dataset: DatasetInternal, reason?: string): P
 
 // Target 3: restore every diverged line to its last verified state, through the standard
 // transaction pipeline. Synchronous: drains the relay inline and returns the fresh verdict.
-export const restoreLines = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+export const restoreLines = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => restoreLinesUnlocked(dataset, reason))
+
+const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
   requireActive(dataset)
   if (!isRestDataset(dataset)) throw httpError(400, 'lines restore only applies to an editable (rest) dataset')
   const store = integrityStore()
@@ -216,7 +251,10 @@ export const restoreLines = async (dataset: DatasetInternal, reason?: string): P
 
 export type RestoreResult = { status: 'restoring' } | Check
 
-export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> => {
+export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> =>
+  await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale))
+
+const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> => {
   requireActive(dataset)
   const store = integrityStore()
   const revision = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))

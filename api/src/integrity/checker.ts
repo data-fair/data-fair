@@ -9,6 +9,7 @@ import type { DatasetInternal } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
 import { purgeExpiredRevisions } from './purge.ts'
+import { measureIntegrityStorage } from './storage.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
@@ -67,6 +68,7 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   if (!ops.needsRenewal((dataset.integrity as any)?.lastRevision?.retainUntil, Date.now(), retentionDays)) return
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
+  const wasFailed = (dataset.integrity as any)?.lastRenewal?.status === 'failed'
   try {
     await store.extendRetention(latestKey, retainUntil)
     // the sliding anchor is the revision *pair*: the latest revision JSON and the payload object it
@@ -88,6 +90,13 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: { 'integrity.lastRenewal': { date, status: 'failed', error: err instanceof Error ? err.message : String(err) } }
     })
+    // a failed renewal left un-reacted-to is the one silent path to permanently lost
+    // repairability (the anchor's lock lapses while the resource is still live): surface it
+    // through the same events path as a breach, gated on the ok→failed transition like the
+    // breach notification (renewal retries nightly until it succeeds — no daily re-alert)
+    if (!wasFailed) {
+      await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-renewal-failed')
+    }
   }
 }
 
@@ -119,12 +128,29 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: { 'integrity.linesRenewal': { date, status: failed ? 'failed' : 'ok', renewed, failed, ...(failed ? {} : { retainUntil: retainUntil.toISOString() }) } }
   })
+  // same posture as the dataset-level renewal: alert on the ok→failed transition (see maybeRenew)
+  if (failed && (dataset.integrity as any)?.linesRenewal?.status !== 'failed') {
+    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-renewal-failed')
+  }
 }
 
 export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => {
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
+  if (isRestDataset(dataset as any)) {
+    // orphaned per-line stamps: a line write that raced the relay's final hint clear left stamps
+    // with no hint — the relay's task filter needs the hint, so without this net those lines
+    // would never drain and would read as a false 'edited' breach here. Re-set the hint (the
+    // relay drains them on its next pass) and report unknown, date persisted so the sweep
+    // cursor advances.
+    const stamped = await restUtils.collection(dataset as any).findOne({ _needsHistorizing: { $exists: true } }, { projection: { _id: 1 } })
+    if (stamped) {
+      const date = new Date().toISOString()
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true, 'integrity.lastCheck': { date, status: 'unknown' } } })
+      return { status: 'unknown', date }
+    }
+  }
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const latest = ops.latestKey((await store.listRevisions(prefix, { delimiter: '/' })).map((r) => r.key))
@@ -152,6 +178,15 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
   // hash the live doc, freshly re-read (the caller's copy may be a cleaned/projected response doc)
   const freshDoc = await mongo.datasets.findOne({ id: dataset.id })
   if (!freshDoc || ops.metadataHash(freshDoc) !== expected.metadata) breach.push('metadata')
+  if (freshDoc?.integrity?.active && !(freshDoc.integrity as any).lastRevision) {
+    // externally lost lastRevision mirror: the renewal gate (needsRenewal(undefined) === false)
+    // would silently stop sliding the anchor's lock — heal it from the store, the authoritative
+    // source, and patch the in-memory doc so this very pass can renew if due
+    const retainUntil = await store.getRetention(latest)
+    const lastRevision = { i: ops.parseRevisionIndex(latest), hash: latestRevision.hash, date: latestRevision.context.date, retainUntil: retainUntil?.toISOString() }
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastRevision': lastRevision } })
+    ;(dataset.integrity as any).lastRevision = lastRevision
+  }
 
   let linesResult: { checked: number, diverged: number, sample: string[] } | undefined
   let linesCompare: Awaited<ReturnType<typeof compareDatasetLines>> | undefined
@@ -160,6 +195,20 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<Check> => 
     const divergedIds = [...linesCompare.edited, ...linesCompare.inserted, ...linesCompare.missing]
     if (divergedIds.length) breach.push('lines')
     linesResult = { checked: linesCompare.checked, diverged: divergedIds.length, sample: divergedIds.slice(0, 20) }
+  }
+
+  if (breach.length) {
+    // a legitimate stamped write may have landed while this (potentially long) scan ran: the
+    // compare then saw new content against the old anchor. The relay cannot have drained the
+    // stamp mid-check (relays run under the per-dataset worker lock, held around this check by
+    // the sweep and the admin actions), so a mid-check write is still visible as a pending flag
+    // here — report unknown instead of recording and notifying a false breach.
+    const flagsNow = await mongo.datasets.findOne({ id: dataset.id }, { projection: { _needsHistorizing: 1, _needsHistorizingLines: 1 } })
+    if (flagsNow?._needsHistorizing || flagsNow?._needsHistorizingLines) {
+      const date = new Date().toISOString()
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status: 'unknown' } } })
+      return { status: 'unknown', date }
+    }
   }
 
   const status: 'ok' | 'breach' = breach.length ? 'breach' : 'ok'
@@ -187,7 +236,13 @@ const runOnce = async () => {
     .sort({ 'integrity.lastCheck.date': 1 })
     .limit(BATCH)
   for await (const dataset of cursor) {
-    try { await checkDataset(dataset as DatasetInternal) } catch (err) { internalError('integrity-check-dataset', err) }
+    // the standard per-dataset worker lock: without it a relay (or a synchronous admin anchor,
+    // which holds the same lock) could write a new anchor mid-check and turn the stale compare
+    // into a false breach. Skip a busy dataset — its lastCheck.date stays old, so it sorts
+    // first on the next pass.
+    const ack = await locks.acquire(`datasets:${dataset.id}`, 'integrity-checker')
+    if (!ack) { debug('dataset busy (worker/admin lock held), skipping check', dataset.id); continue }
+    try { await checkDataset(dataset as DatasetInternal) } catch (err) { internalError('integrity-check-dataset', err) } finally { await locks.release(`datasets:${dataset.id}`) }
   }
 }
 
@@ -210,6 +265,14 @@ export const task = async () => {
           debug('purged expired revisions', purged)
         } catch (err) {
           internalError('integrity-purge-run', err)
+        }
+        // storage accounting rides the same daily pass, after the purge so freshly reclaimed
+        // bytes stop counting immediately (see integrity/storage.ts)
+        try {
+          const measured = await measureIntegrityStorage(integrityStore())
+          debug('measured integrity storage', measured)
+        } catch (err) {
+          internalError('integrity-storage-run', err)
         }
       }
     } finally { await locks.release('integrity-check-task') }
