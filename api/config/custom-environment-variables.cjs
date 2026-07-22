@@ -17,6 +17,42 @@ module.exports = {
       secretAccessKey: 'S3_SECRET_ACCESS_KEY',
     }
   },
+  integrity: {
+    active: {
+      __name: 'INTEGRITY_ACTIVE',
+      __format: 'json'
+    },
+    s3: {
+      region: 'INTEGRITY_S3_REGION',
+      endpoint: 'INTEGRITY_S3_ENDPOINT',
+      bucket: 'INTEGRITY_S3_BUCKET',
+      credentials: {
+        accessKeyId: 'INTEGRITY_S3_ACCESS_KEY_ID',
+        secretAccessKey: 'INTEGRITY_S3_SECRET_ACCESS_KEY',
+      },
+      forcePathStyle: {
+        __name: 'INTEGRITY_S3_FORCE_PATH_STYLE',
+        __format: 'json'
+      }
+    },
+    retention: {
+      days: {
+        __name: 'INTEGRITY_RETENTION_DAYS',
+        __format: 'json'
+      }
+    },
+    lines: {
+      maxLines: {
+        __name: 'INTEGRITY_LINES_MAX_LINES',
+        __format: 'json'
+      }
+    },
+    lockWaitMs: {
+      __name: 'INTEGRITY_LOCK_WAIT_MS',
+      __format: 'json'
+    }
+  },
+  integrityCheckCron: 'INTEGRITY_CHECK_CRON',
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
