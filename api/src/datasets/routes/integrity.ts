@@ -8,6 +8,7 @@ import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import * as integrityService from '../../integrity/service.ts'
 import { checkDataset } from '../../integrity/checker.ts'
+import { whoFromReq } from '../../integrity/who.ts'
 import pump from '../../misc/utils/pipe.ts'
 
 const reqReason = (req: Request): string | undefined =>
@@ -29,8 +30,8 @@ export const registerIntegrityRoutes = (router: Router) => {
     reqAdminMode(req)
     const dataset = reqDataset(req)
     const active = !!req.body?.active
-    if (active) await integrityService.enableIntegrity(dataset)
-    else await integrityService.disableIntegrity(dataset, reqReason(req))
+    if (active) await integrityService.enableIntegrity(dataset, whoFromReq(req))
+    else await integrityService.disableIntegrity(dataset, reqReason(req), whoFromReq(req))
     res.status(200).json({ active })
   })
 
@@ -40,24 +41,24 @@ export const registerIntegrityRoutes = (router: Router) => {
 
   router.post('/:datasetId/_integrity/_fix', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.fixIntegrity(reqDataset(req), reqReason(req)))
+    res.json(await integrityService.fixIntegrity(reqDataset(req), reqReason(req), whoFromReq(req)))
   })
 
   router.post('/:datasetId/_integrity/_restore', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const i = req.body?.i
     if (!Number.isInteger(i) || i < 0) throw httpError(400, 'missing or invalid revision index "i"')
-    res.json(await integrityService.restoreRevision(req.app, reqDataset(req), i, reqReason(req), reqSessionAuthenticated(req), req.getLocale()))
+    res.json(await integrityService.restoreRevision(req.app, reqDataset(req), i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req)))
   })
 
   router.post('/:datasetId/_integrity/lines/_restore', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req)))
+    res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req), whoFromReq(req)))
   })
 
   router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req)))
+    res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req), whoFromReq(req)))
   })
 
   router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {

@@ -11,7 +11,7 @@ import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
-import type { DatasetInternal, HistorizeContextHint, RestDataset } from '#types'
+import type { DatasetInternal, HistorizeContextHint, RestDataset, WhoHint } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import { preparePatch } from '../datasets/utils/patch.ts'
@@ -68,10 +68,10 @@ export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>
   }
 }
 
-export const enableIntegrity = async (dataset: DatasetInternal): Promise<void> =>
-  await withDatasetLock(dataset.id, () => enableIntegrityUnlocked(dataset))
+export const enableIntegrity = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> =>
+  await withDatasetLock(dataset.id, () => enableIntegrityUnlocked(dataset, who))
 
-const enableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> => {
+const enableIntegrityUnlocked = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> => {
   if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
   const isRest = isRestDataset(dataset)
   if (!isRest && (!isFileDataset(dataset) || !dataset.originalFile?.md5)) {
@@ -107,27 +107,30 @@ const enableIntegrityUnlocked = async (dataset: DatasetInternal): Promise<void> 
   // anchor synchronously: enable is a rare superadmin action, and the response then reflects
   // the anchored state. On failure (S3 down) active stays true with no anchor — the check
   // reports 'unknown' and a later _fix retries (fail-loud, no compensating rollback).
-  await anchorDataset(dataset, { operation: 'enable', origin: 'superadmin' })
+  const context: HistorizeContextHint = { operation: 'enable', origin: 'superadmin', ...(who ? { who } : {}) }
+  await anchorDataset(dataset, context)
   if (isRest) {
     // async backfill: stamp every line (hint-first) and let the relay drain; GET _integrity
-    // reports pending progress and checks stay 'unknown' until drained
+    // reports pending progress and checks stay 'unknown' until drained. Reusing the same
+    // `context` (rather than rebuilding a fresh literal) means the backfill lines carry the
+    // enabling admin's `who` too (target 4 consumes it in anchorLine) with no extra plumbing.
     await restUtils.collection(dataset).createIndex({ _needsHistorizing: 1 }, { sparse: true })
     await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
-    await restUtils.collection(dataset).updateMany({}, { $set: { _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } } } })
+    await restUtils.collection(dataset).updateMany({}, { $set: { _needsHistorizing: { context } } })
   }
 }
 
-export const disableIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<void> =>
-  await withDatasetLock(dataset.id, () => disableIntegrityUnlocked(dataset, reason))
+export const disableIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<void> =>
+  await withDatasetLock(dataset.id, () => disableIntegrityUnlocked(dataset, reason, who))
 
-const disableIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<void> => {
+const disableIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<void> => {
   // terminal trail revision FIRST (round 3 §S2, deliberate inversion of the hot-first rule): a
   // crash after the Mongo flip but before the revision leaves exactly the alarm-kill signature
   // the scope audit hunts; the reverse residue (terminal revision, still-active dataset) is
   // benign and self-healed by the checker. force: the revision must land even when the hashes
   // match the latest anchor. An S3 outage therefore blocks disable — fail-loud, retry later.
   if (dataset.integrity?.active) {
-    await anchorDataset(dataset, { operation: 'disable', origin: 'superadmin', ...(reason ? { reason } : {}) }, { force: true })
+    await anchorDataset(dataset, { operation: 'disable', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }, { force: true })
   }
   // the anchors stop being purge-protected at this moment, so the scope's watermark — computed
   // while they still were — must not delay their aging out
@@ -181,13 +184,13 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
   await historizeLines(fresh as unknown as RestDataset)
 }
 
-export const fixIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
-  await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason))
+export const fixIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason, who))
 
-const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   // synchronous re-anchor + verify: the reconcile action responds with a fresh verdict
-  await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason })
+  await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason, who })
   // the synchronous anchor above just serviced whatever a pending stamp requested: clear it so
   // checkDataset's pending guard doesn't force an 'unknown' verdict on the fresh read below
   await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
@@ -197,7 +200,7 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
     const store = integrityStore()
     await historizeLines(dataset)
     const compare = await compareDatasetLines(dataset, store)
-    const hint: HistorizeContextHint = { operation: 'fixIntegrity', origin: 'superadmin', ...(reason ? { reason } : {}) }
+    const hint: HistorizeContextHint = { operation: 'fixIntegrity', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }
     // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
     // re-writing it through the standard transaction pipeline (the same mechanism
     // lines/_restore uses) rather than anchoring directly at the line's current `_i`.
@@ -268,10 +271,10 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
 
 // Target 3: restore every diverged line to its last verified state, through the standard
 // transaction pipeline. Synchronous: drains the relay inline and returns the fresh verdict.
-export const restoreLines = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
-  await withDatasetLock(dataset.id, () => restoreLinesUnlocked(dataset, reason))
+export const restoreLines = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => restoreLinesUnlocked(dataset, reason, who))
 
-const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   if (!isRestDataset(dataset)) throw httpError(400, 'lines restore only applies to an editable (rest) dataset')
   const store = integrityStore()
@@ -293,7 +296,7 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
   for (const lineId of compare.inserted) {
     transacs.push({ _action: 'delete', _id: lineId })
   }
-  await rewriteLinesThroughPipeline(dataset, transacs, { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) })
+  await rewriteLinesThroughPipeline(dataset, transacs, { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) })
   const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(freshAfter as unknown as DatasetInternal)
 }
@@ -304,10 +307,10 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
 // checker reads the fingerprints from the locked body. Fingerprints pin the exact version sets,
 // so any later shadow/marker changes them and resurfaces despite the ack. A new ack merges the
 // previous ack's fingerprints (only the latest ack is consulted).
-export const ackTrailAnomalies = async (dataset: DatasetInternal, reason?: string): Promise<Check> =>
-  await withDatasetLock(dataset.id, () => ackTrailAnomaliesUnlocked(dataset, reason))
+export const ackTrailAnomalies = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
+  await withDatasetLock(dataset.id, () => ackTrailAnomaliesUnlocked(dataset, reason, who))
 
-const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<Check> => {
+const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   const store = integrityStore()
   const before = await checkDataset(dataset)
@@ -323,7 +326,7 @@ const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: stri
       }
     } catch { /* unreadable previous ack: its anomalies resurface, which is the safe direction */ }
   }
-  const i = await anchorDataset(dataset, { operation: 'ackTrail', origin: 'superadmin', ...(reason ? { reason } : {}) }, { force: true, ack: { fingerprints } })
+  const i = await anchorDataset(dataset, { operation: 'ackTrail', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }, { force: true, ack: { fingerprints } })
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.trailAck': { i } }, $unset: { _needsHistorizing: '' } })
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(fresh as unknown as DatasetInternal)
@@ -331,10 +334,10 @@ const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: stri
 
 export type RestoreResult = { status: 'restoring' } | Check
 
-export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> =>
-  await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale))
+export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> =>
+  await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale, who))
 
-const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string): Promise<RestoreResult> => {
+const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> => {
   requireActive(dataset)
   const store = integrityStore()
   const revision = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))
@@ -364,7 +367,7 @@ const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: nu
     const settings = await mongo.db.collection('settings').findOne({ type: dataset.owner.type, id: dataset.owner.id })
     $set.topics = ops.rehydrateTopics($set.topics, settings?.topics ?? [])
   }
-  const restoreContext: HistorizeContextHint = { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) }
+  const restoreContext: HistorizeContextHint = { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }
 
   if (!needsFileRestore) {
     // metadata-only restore: route the diverging keys through the standard patch pipeline (M6)

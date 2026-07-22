@@ -28,6 +28,7 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
+import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -170,7 +171,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
       if (!isEmpty) {
         await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-        await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
+        await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
           .catch(err => {
             if (err.code !== 11000) throw err
             throw httpError(400, req.__('errors.dupSlug'))

@@ -173,6 +173,14 @@ export const buildWho = (
   }
 }
 
+// Pure predicate for the relay's who-first write gate (target 8, §1.3/§2.4): a `.who` sibling is
+// written only when the effective hint actually carries attribution AND the kill switch is not
+// explicitly off. Extracted so the guard is unit-testable without a live config module — the API
+// test harness has no way to flip `integrity.attribution.active` on a running server at runtime
+// (see attribution.api.spec.ts for the limitation note).
+export const shouldWriteWho = (who: WhoHint | undefined, attributionActive: boolean | undefined): who is WhoHint =>
+  !!who && attributionActive !== false
+
 // ---------------------------------------------------------------------------------------------
 // Trail coherence (round 3): the store's version stacks and provider dates are evidence the
 // current view cannot show. These pure folds reconstruct the current view from a versions walk
