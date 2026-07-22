@@ -176,3 +176,34 @@ test('a diverted alias pointing at a doctored index copy is a breach', async () 
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
   expect(check.breach).toContain('index')
 })
+
+test('index reindex action journals the evidence, repairs, and the next check is ok', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'repair-me'"
+  })
+  const target = await lineI(ax, dataset.id, 'line0')
+  const { min, max } = await lineIBounds(ax, dataset.id, ['line0', 'line1', 'line2'])
+  const seed = aimSeedAt(target, min, max, WINDOWS)
+  const breach = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed })).data
+  expect(breach.breach).toContain('index')
+
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/index/_reindex`, { reason: 'test repair' })
+  // the evidence survives the repair in the journal
+  const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+  const evt = journal.find((e: any) => e.type === 'integrity-index-repair')
+  expect(evt).toBeTruthy()
+  expect(evt.data).toContain('repair-me')
+  expect(evt.data).toContain('test repair')
+
+  await waitForFinalize(ax, dataset.id)
+  // the reindex's finalize pass re-stamps _needsHistorizing (integrity-active dataset, standard
+  // outbox); the async historize task must drain it before a check reads a converged verdict
+  // instead of the pending 'unknown'
+  await waitForFlagCleared(dataset.id)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
+  const recheck = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed })).data
+  expect(recheck.index?.status).toBe('ok')
+  expect(recheck.status).toBe('ok')
+})

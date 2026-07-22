@@ -14,6 +14,7 @@ import filesStorage from '#files-storage'
 import type { DatasetInternal, HistorizeContextHint, RestDataset } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
+import * as journals from '../misc/utils/journals.ts'
 import { preparePatch } from '../datasets/utils/patch.ts'
 import { fallbackMimeTypes } from '../datasets/utils/upload.ts'
 import { applyPatch } from '../datasets/service.ts'
@@ -296,6 +297,29 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
   await rewriteLinesThroughPipeline(dataset, transacs, { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) })
   const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(freshAfter as unknown as DatasetInternal)
+}
+
+// Repair for an 'index' breach: rebuild the projection from the verified source through the
+// standard reindex path. The divergence evidence lives in integrity.lastCheck.index, which the
+// post-reindex check will overwrite — journal it FIRST so what was served remains auditable
+// after the repair destroys the live divergence (design: no silent auto-repair).
+export const reindexForIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> =>
+  await withDatasetLock(dataset.id, () => reindexForIntegrityUnlocked(dataset, reason))
+
+const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> => {
+  if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+  const lastIndex = (dataset.integrity as any)?.lastCheck?.index
+  await journals.log('datasets', dataset as any, {
+    type: 'integrity-index-repair',
+    data: JSON.stringify({
+      reason,
+      count: lastIndex?.count,
+      diverged: lastIndex?.diverged,
+      sample: lastIndex?.sample
+    })
+  } as any)
+  await datasetUtils.reindex(mongo.db, dataset as any)
+  return { ok: true }
 }
 
 // Acknowledge the trail anomalies the fresh check surfaces (round 3 §S1): the ack is itself a

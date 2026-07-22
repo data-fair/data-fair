@@ -55,6 +55,11 @@ export const registerIntegrityRoutes = (router: Router) => {
     res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req)))
   })
 
+  router.post('/:datasetId/_integrity/index/_reindex', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.reindexForIntegrity(reqDataset(req), reqReason(req)))
+  })
+
   router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req)))
