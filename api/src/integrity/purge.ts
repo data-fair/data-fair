@@ -31,7 +31,7 @@ import * as ops from './operations.ts'
 import { DELETED_MARKER } from './lines-operations.ts'
 
 const CONCURRENCY = 50
-const SERVICE_PREFIX = 'data-fair/'
+const SERVICE_PREFIX = ops.SERVICE_PREFIX
 // only act on locks that lapsed comfortably in the past: our clock and the provider's are not the
 // same clock, and a delete refused right at the boundary would be a spurious error
 const CLOCK_SKEW_MARGIN_MS = 60 * 1000

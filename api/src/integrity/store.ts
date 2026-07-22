@@ -103,16 +103,16 @@ export class IntegrityStore {
   // noncurrent version, and full erasure means deleting versions, not keys. Yields one page of
   // versions (and stray delete markers) at a time, keys in lexical order — the purge worker's
   // walk (see purge.ts).
-  async * iterateVersionPages (prefix: string): AsyncGenerator<Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean }>> {
+  async * iterateVersionPages (prefix: string): AsyncGenerator<Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number }>> {
     let KeyMarker: string | undefined
     let VersionIdMarker: string | undefined
     do {
       const res = await this.client.send(new ListObjectVersionsCommand({
         Bucket: this.bucket, Prefix: prefix, KeyMarker, VersionIdMarker
       }))
-      const page: Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean }> = []
+      const page: Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number }> = []
       for (const v of res.Versions ?? []) {
-        if (v.Key) page.push({ key: v.Key, versionId: v.VersionId, isLatest: v.IsLatest, lastModified: v.LastModified })
+        if (v.Key) page.push({ key: v.Key, versionId: v.VersionId, isLatest: v.IsLatest, lastModified: v.LastModified, size: v.Size })
       }
       for (const m of res.DeleteMarkers ?? []) {
         if (m.Key) page.push({ key: m.Key, versionId: m.VersionId, isLatest: m.IsLatest, lastModified: m.LastModified, deleteMarker: true })

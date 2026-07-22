@@ -9,8 +9,24 @@ export const INDEX_WIDTH = 9
 
 export const padIndex = (i: number): string => String(i).padStart(INDEX_WIDTH, '0')
 
+export const SERVICE_PREFIX = 'data-fair/'
+
 export const revisionPrefix = (owner: { type: string, id: string }, datasetId: string): string =>
-  `data-fair/${owner.type}-${owner.id}/${datasetId}/`
+  `${SERVICE_PREFIX}${owner.type}-${owner.id}/${datasetId}/`
+
+// `data-fair/organization-abc-def/` → { type: 'organization', id: 'abc-def' } — ids may contain
+// '-', account types never do, so the first '-' is the separator. Returns undefined on a
+// malformed segment (foreign object in the bucket): the caller skips it rather than guessing.
+export const parseOwnerPrefix = (ownerPrefix: string): { type: 'user' | 'organization', id: string } | undefined => {
+  if (!ownerPrefix.startsWith(SERVICE_PREFIX)) return undefined
+  const segment = ownerPrefix.slice(SERVICE_PREFIX.length).replace(/\/$/, '')
+  if (segment.includes('/')) return undefined
+  const sep = segment.indexOf('-')
+  if (sep <= 0 || sep === segment.length - 1) return undefined
+  const type = segment.slice(0, sep)
+  if (type !== 'user' && type !== 'organization') return undefined
+  return { type, id: segment.slice(sep + 1) }
+}
 
 export const revisionKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
   `${revisionPrefix(owner, datasetId)}${padIndex(i)}`
