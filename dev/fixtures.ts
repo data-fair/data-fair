@@ -262,7 +262,9 @@ async function seedEquipements () {
   const id = 'fixtures-equipements'
   if (await datasetExists(id)) {
     const { data: current } = await dfAx.get(`/api/v1/datasets/${id}`, { params: { select: 'id,description' } })
-    if (current.description?.includes('category=type')) { console.log(`${id}: skipped (exists)`); return }
+    // the marker includes the markdown closing paren so envs seeded with the
+    // earlier HTML-anchor description re-seed once
+    if (current.description?.includes('map?category=type)')) { console.log(`${id}: skipped (exists)`); return }
   }
   const csv = [
     'nom,type,commune,lat,lon',
@@ -291,9 +293,9 @@ async function seedEquipements () {
     title: 'Équipements publics',
     description: 'Points géolocalisés affichables sur une carte (exemple géographique). ' +
       'Démonstration du paramètre de prévisualisation "category" (couleur par valeur + légende) : ' +
-      `<a href="${dfBaseURL}/dataset/${id}/map?category=type">carte par type d'équipement</a>, ` +
-      `<a href="${dfBaseURL}/embed/dataset/${id}/map?category=type">version intégrable (iframe)</a>, ` +
-      `<a href="${dfBaseURL}/embed/dataset/${id}/map?category=type&type_in=Culture,Sport">pré-filtrée sur Culture et Sport</a>.`,
+      `[carte par type d'équipement](${dfBaseURL}/dataset/${id}/map?category=type), ` +
+      `[version intégrable (iframe)](${dfBaseURL}/embed/dataset/${id}/map?category=type), ` +
+      `[pré-filtrée sur Culture et Sport](${dfBaseURL}/embed/dataset/${id}/map?category=type&type_in=Culture,Sport).`,
     schema: [
       { key: 'lat', type: 'number', 'x-refersTo': 'http://schema.org/latitude' },
       { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' }
