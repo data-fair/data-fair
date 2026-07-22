@@ -206,6 +206,15 @@ export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = fa
   const appRes = await mongo.applications.aggregate(aggQuery).toArray()
   totalStorage.size += (appRes[0] && appRes[0].size) || 0
 
+  // historized integrity storage (architecture §9): measured daily from the store's per-owner
+  // prefix (api/src/integrity/storage.ts). Read from its measurement doc, not live from S3 —
+  // this function runs on every storage-affecting change and must stay cheap. Includes the
+  // aging-out tails of deleted datasets, which hold bytes but no longer appear in the
+  // aggregation above.
+  const integrityStorage = await mongo.db.collection('integrity-storage')
+    .findOne({ 'owner.type': owner.type, 'owner.id': owner.id }, { projection: { size: 1 } })
+  totalStorage.size += integrityStorage?.size ?? 0
+
   await limits.setConsumption(owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(owner, 'indexed_bytes', totalStorage.indexed)
   await limits.setConsumption(owner, 'nb_datasets', totalStorage.count)

@@ -27,6 +27,7 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
+import { hasAttachmentField } from '../../integrity/service.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -151,6 +152,19 @@ export const registerMetadataRoutes = (router: Router) => {
       const sessionState = reqSessionAuthenticated(req)
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+
+      // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
+      // attachments and line ownership are outside the integrity snapshot, so acquiring them
+      // while enrolled would silently degrade the stated guarantee — refuse the transition,
+      // same posture as the owner-transfer refusal below. Disable integrity first.
+      if (dataset.integrity?.active) {
+        if (patch.rest?.lineOwnership && !dataset.rest?.lineOwnership) {
+          throw httpError(400, 'line ownership cannot be enabled while integrity is active: line owner attribution is not covered by the integrity guarantee')
+        }
+        if (patch.schema && hasAttachmentField({ ...dataset, schema: patch.schema }) && !hasAttachmentField(dataset)) {
+          throw httpError(400, 'an attachments field cannot be added while integrity is active: attachment files are not covered by the integrity guarantee')
+        }
+      }
 
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 

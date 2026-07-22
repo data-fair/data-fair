@@ -48,6 +48,10 @@ router.delete('/', async (req, res, next) => {
       // collections without owner (blanket delete)
       mongo.applicationsKeys.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
+      mongo.db.collection('integrity-purge').deleteMany({}),
+      // the storage-accounting measure of still-locked test revisions would otherwise keep
+      // counting into the freshly-reset limits and starve the next tests' storage quota
+      mongo.db.collection('integrity-storage').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
       mongo.remoteServices.deleteMany({}),
@@ -232,8 +236,18 @@ router.get('/rest-collection-find-one/:datasetId', async (req, res, next) => {
 // Update one document in a REST dataset MongoDB collection
 router.post('/rest-collection-update-one/:datasetId', async (req, res, next) => {
   try {
-    const { filter, update } = req.body
-    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update)
+    const { filter, update, upsert } = req.body
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update, { upsert: !!upsert })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Delete one document in a REST dataset MongoDB collection (out-of-band tamper for integrity tests)
+router.post('/rest-collection-delete-one/:datasetId', async (req, res, next) => {
+  try {
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).deleteOne(req.body.filter)
     res.json({ ok: true })
   } catch (err) {
     next(err)
@@ -260,6 +274,76 @@ router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
   if (req.body?.delete) await filesStorage.removeFile(datasetUtils.originalFilePath(dataset))
   else await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
   res.status(204).send()
+})
+
+// Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
+// and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
+// decision on a seconds-long lock instead of waiting out a full retention window.
+router.post('/integrity-purge/run', async (req, res, next) => {
+  try {
+    const { purgeExpiredRevisions } = await import('../../integrity/purge.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await purgeExpiredRevisions(integrityStore(), {
+      prefix: req.body?.prefix,
+      ignoreAge: !!req.body?.ignoreAge,
+      skewMarginMs: req.body?.skewMarginMs,
+      ignoreWatermark: !!req.body?.ignoreWatermark
+    }))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the check-stale alert sweep on demand (test-only)
+router.post('/integrity-stale/run', async (req, res, next) => {
+  try {
+    const { alertStaleChecks } = await import('../../integrity/checker.ts')
+    res.json(await alertStaleChecks())
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
+router.post('/integrity-audit/run', async (req, res, next) => {
+  try {
+    const { auditScopes } = await import('../../integrity/audit.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers }))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the integrity storage-accounting measure on demand (test-only)
+router.post('/integrity-storage/run', async (req, res, next) => {
+  try {
+    const { measureIntegrityStorage } = await import('../../integrity/storage.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await measureIntegrityStorage(integrityStore()))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Hold / release a lock from the locks collection (test-only): lets a test simulate a busy
+// dataset (worker task in progress) and assert the integrity admin actions answer 409
+router.post('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    res.json({ ack: await locks.acquire(req.params.key, 'test-env') })
+  } catch (err) {
+    next(err)
+  }
+})
+router.delete('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    await locks.release(req.params.key)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
 })
 
 // Trigger the api-keys expiration cron task on demand (test-only)

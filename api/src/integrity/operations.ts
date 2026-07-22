@@ -1,12 +1,32 @@
 import { createHash } from 'node:crypto'
 import stableStringify from 'fast-json-stable-stringify'
+// type-only import, erased at runtime: this file stays pure/config-free for the unit tests
+import type { RevisionOperation, RevisionOrigin, HistorizeContextHint } from '#types/dataset/index.ts'
+
+export type { RevisionOperation, RevisionOrigin, HistorizeContextHint }
 
 export const INDEX_WIDTH = 9
 
 export const padIndex = (i: number): string => String(i).padStart(INDEX_WIDTH, '0')
 
+export const SERVICE_PREFIX = 'data-fair/'
+
 export const revisionPrefix = (owner: { type: string, id: string }, datasetId: string): string =>
-  `data-fair/${owner.type}-${owner.id}/${datasetId}/`
+  `${SERVICE_PREFIX}${owner.type}-${owner.id}/${datasetId}/`
+
+// `data-fair/organization-abc-def/` → { type: 'organization', id: 'abc-def' } — ids may contain
+// '-', account types never do, so the first '-' is the separator. Returns undefined on a
+// malformed segment (foreign object in the bucket): the caller skips it rather than guessing.
+export const parseOwnerPrefix = (ownerPrefix: string): { type: 'user' | 'organization', id: string } | undefined => {
+  if (!ownerPrefix.startsWith(SERVICE_PREFIX)) return undefined
+  const segment = ownerPrefix.slice(SERVICE_PREFIX.length).replace(/\/$/, '')
+  if (segment.includes('/')) return undefined
+  const sep = segment.indexOf('-')
+  if (sep <= 0 || sep === segment.length - 1) return undefined
+  const type = segment.slice(0, sep)
+  if (type !== 'user' && type !== 'organization') return undefined
+  return { type, id: segment.slice(sep + 1) }
+}
 
 export const revisionKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
   `${revisionPrefix(owner, datasetId)}${padIndex(i)}`
@@ -27,7 +47,12 @@ export const isPayloadKey = (key: string): boolean => key.endsWith(PAYLOAD_SUFFI
 
 // The covered projection (spec §2): the whole doc minus underscore-prefixed fields and the
 // operational denylist; a field added to the model later is covered by default (fail-loud).
-const EXCLUDED_TOP_LEVEL = new Set([
+// INVARIANT: every top-level dataset-schema property must be consciously classified as covered
+// or excluded — the classification ratchet in tests/features/integrity/operations.unit.spec.ts
+// fails on any new unclassified property. Excluding a field here means the checker ignores its
+// tampering; covering a field means EVERY writer of it must stamp the outbox (or ride
+// applyPatch's coveredPatchKeys gate) or organic writes will false-breach.
+export const EXCLUDED_TOP_LEVEL = new Set([
   'status', 'draft', 'integrity', 'count', 'storage', 'esWarning', 'finalizedAt',
   'dataUpdatedAt', 'dataUpdatedBy', 'updatedAt', 'updatedBy', 'createdBy',
   'errorStatus', 'errorRetry', 'loaded', 'descendants'
@@ -94,12 +119,125 @@ export const latestKey = (keys: string[]): string | undefined => {
   return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
-export type RevisionOperation = 'create' | 'update' | 'enable' | 'fixIntegrity' | 'restore'
-// actor CATEGORY, never an identity: user ids are personal data and must not enter the
-// undeletable WORM store — identity-level attribution lives in the events/journal system
-export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
 export type RevisionContext = { operation: RevisionOperation, origin: RevisionOrigin, date: string, reason?: string }
-export type HistorizeContextHint = { operation: RevisionOperation, origin: RevisionOrigin, reason?: string }
+
+// ---------------------------------------------------------------------------------------------
+// Trail coherence (round 3): the store's version stacks and provider dates are evidence the
+// current view cannot show. These pure folds reconstruct the current view from a versions walk
+// (marker-hidden keys resurface) and classify what should never exist in a healthy trail.
+// ---------------------------------------------------------------------------------------------
+
+export type TrailVersionEntry = { key: string, versionId?: string, lastModified?: Date, deleteMarker?: boolean, size?: number, etag?: string }
+
+export type TrailAnomalyKind = 'delete-marker' | 'version-divergence' | 'date-skew' | 'sequence-gap'
+
+export type TrailAnomaly = {
+  kind: TrailAnomalyKind
+  key: string
+  confidence: 'confirmed' | 'suspect'
+  detail?: string
+  versionIds?: string[]
+}
+
+export type CurrentViewEntry = { key: string, versionId?: string, lastModified?: Date }
+
+export type TrailFoldAcc = {
+  current: Map<string, CurrentViewEntry>
+  anomalies: TrailAnomaly[]
+  pendingKey?: string
+  pendingEntries: TrailVersionEntry[]
+}
+
+export const newTrailFold = (): TrailFoldAcc => ({ current: new Map(), anomalies: [], pendingEntries: [] })
+
+const flushTrailKey = (acc: TrailFoldAcc): void => {
+  if (!acc.pendingKey || !acc.pendingEntries.length) return
+  const key = acc.pendingKey
+  const markers = acc.pendingEntries.filter((e) => e.deleteMarker)
+  const versions = acc.pendingEntries.filter((e) => !e.deleteMarker)
+  if (markers.length) {
+    // no code path of ours issues a versionless DELETE: a marker is attacker-made by definition
+    acc.anomalies.push({ kind: 'delete-marker', key, confidence: 'confirmed', versionIds: markers.map((m) => m.versionId ?? '') })
+  }
+  if (versions.length) {
+    // versions arrive newest-first within a key (S3 order, preserved by the store's stable page
+    // sort): the first one is the current view — resurfaced even when a marker hides it
+    acc.current.set(key, { key, versionId: versions[0].versionId, lastModified: versions[0].lastModified })
+    if (versions.length > 1) {
+      // legitimate multiplicity (crash-retry re-PUTs) is byte-identical: same size, same
+      // md5-based ETag (single PUT, or multipart with fixed deterministic chunking). Anything
+      // else is a same-key rewrite — the shadowing attack.
+      const shapes = new Set(versions.map((e) => `${e.size ?? ''}|${e.etag ?? ''}`))
+      if (shapes.size > 1) {
+        acc.anomalies.push({ kind: 'version-divergence', key, confidence: 'confirmed', versionIds: versions.map((e) => e.versionId ?? '') })
+      }
+    }
+  }
+  acc.pendingEntries = []
+}
+
+// Feed one page of version entries (lexical key order, per-key adjacency). Call finishTrailFold
+// once every page is consumed — a key's versions may straddle a page boundary.
+export const foldTrailVersions = (acc: TrailFoldAcc, entries: TrailVersionEntry[]): void => {
+  for (const entry of entries) {
+    if (entry.key !== acc.pendingKey) {
+      flushTrailKey(acc)
+      acc.pendingKey = entry.key
+    }
+    acc.pendingEntries.push(entry)
+  }
+}
+
+export const finishTrailFold = (acc: TrailFoldAcc): { current: Map<string, CurrentViewEntry>, anomalies: TrailAnomaly[] } => {
+  flushTrailKey(acc)
+  return { current: acc.current, anomalies: acc.anomalies }
+}
+
+// Mid-sequence holes only: the purge removes a *prefix* of the sequence (locks lapse in write
+// order), so missing low indexes are normal aging-out — a hole between surviving indexes is not.
+export const sequenceGapAnomalies = (prefix: string, indexes: number[]): TrailAnomaly[] => {
+  const sorted = [...indexes].sort((a, b) => a - b)
+  const anomalies: TrailAnomaly[] = []
+  for (let n = 1; n < sorted.length; n++) {
+    if (sorted[n] - sorted[n - 1] > 1) {
+      const missing = sorted[n] - sorted[n - 1] === 2
+        ? `${sorted[n - 1] + 1}`
+        : `${sorted[n - 1] + 1}-${sorted[n] - 1}`
+      anomalies.push({ kind: 'sequence-gap', key: `${prefix}${padIndex(sorted[n - 1] + 1)}`, confidence: 'suspect', detail: `missing revision(s) ${missing}` })
+    }
+  }
+  return anomalies
+}
+
+// A revision claiming a write date far from the provider-stamped LastModified of its object was
+// not written when it says it was. Suspect (not confirmed): relay retries legitimately delay the
+// object write past the stamp date, hence the generous configurable tolerance.
+export const dateSkewAnomaly = (key: string, contextDate: string, lastModified: Date | undefined, toleranceMs: number): TrailAnomaly | undefined => {
+  if (!lastModified) return undefined
+  const skewMs = Math.abs(lastModified.getTime() - new Date(contextDate).getTime())
+  if (skewMs <= toleranceMs) return undefined
+  return { kind: 'date-skew', key, confidence: 'suspect', detail: `context.date ${contextDate} vs stored ${lastModified.toISOString()}` }
+}
+
+// The ack fingerprint pins an anomaly to its exact version set: any later shadow/marker changes
+// the fingerprint, so an old ack can never cover new tampering.
+export const anomalyFingerprint = (anomaly: TrailAnomaly): string =>
+  `${anomaly.kind}:${anomaly.key}:${[...(anomaly.versionIds ?? [])].sort().join(',')}`
+
+export const filterAckedAnomalies = (anomalies: TrailAnomaly[], ackedFingerprints: string[]): TrailAnomaly[] => {
+  const acked = new Set(ackedFingerprints)
+  return anomalies.filter((a) => !acked.has(anomalyFingerprint(a)))
+}
+
+// Persistent-state re-alert gate (round 3 §S3): alert on entry into a bad state, then re-alert
+// once per window while it persists. The dedup date is Mongo-resident (attacker territory), so a
+// pre-written bad state can suppress at most one window — sustained suppression requires
+// sustained rewriting, and the store-side scope audit is immune to it.
+export const shouldNotify = (isBad: boolean, lastAlertDate: string | undefined, realertDays: number, now: number): boolean => {
+  if (!isBad) return false
+  if (!lastAlertDate) return true
+  return now - new Date(lastAlertDate).getTime() >= realertDays * 24 * 3600 * 1000
+}
 
 // Merge the transactional-outbox stamp (spec §4) into a writer's own Mongo update, keeping the
 // write single-document atomic. A stamp means "re-anchor this dataset" (every anchor covers both

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import * as ops from '../../../api/src/integrity/operations.ts'
+import datasetSchema from '../../../api/types/dataset/schema.js'
 
 const owner = { type: 'organization', id: 'acme' }
 
@@ -229,4 +230,147 @@ test('rehydrateTopics fills titles back from settings, keeps unknown ids bare', 
   const settingsTopics = [{ id: 't1', title: 'Topic 1', color: '#f00' }]
   expect(ops.rehydrateTopics([{ id: 't1' }, { id: 'gone' }], settingsTopics))
     .toEqual([{ id: 't1', title: 'Topic 1', color: '#f00' }, { id: 'gone' }])
+})
+
+test('parseOwnerPrefix splits the owner segment on its first dash (ids may contain dashes)', () => {
+  expect(ops.parseOwnerPrefix('data-fair/organization-acme/')).toEqual({ type: 'organization', id: 'acme' })
+  expect(ops.parseOwnerPrefix('data-fair/user-jean-pierre')).toEqual({ type: 'user', id: 'jean-pierre' })
+})
+
+test('parseOwnerPrefix refuses malformed segments (foreign objects in the bucket)', () => {
+  expect(ops.parseOwnerPrefix('other-service/organization-acme/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/no-dash-type/deeper/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/nodash/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/organization-/')).toBeUndefined()
+  expect(ops.parseOwnerPrefix('data-fair/-acme/')).toBeUndefined()
+})
+
+// ---------------------------------------------------------------------------------------------
+// Round 3 (trail coherence): pure fold over version listings — reconstructed current view +
+// anomaly classification, sequence gaps, date skew, ack fingerprints.
+// ---------------------------------------------------------------------------------------------
+
+const v = (key: string, versionId: string, opts: Partial<ops.TrailVersionEntry> = {}): ops.TrailVersionEntry =>
+  ({ key, versionId, size: 100, etag: 'aaa', lastModified: new Date('2026-07-01T00:00:00Z'), ...opts })
+
+const foldAll = (entries: ops.TrailVersionEntry[]) => {
+  const acc = ops.newTrailFold()
+  ops.foldTrailVersions(acc, entries)
+  return ops.finishTrailFold(acc)
+}
+
+test('trail fold: single version per key → clean current view, no anomalies', () => {
+  const { current, anomalies } = foldAll([v('p/000000000', 'v1'), v('p/000000001', 'v2')])
+  expect(anomalies).toEqual([])
+  expect([...current.keys()]).toEqual(['p/000000000', 'p/000000001'])
+  expect(current.get('p/000000000')!.versionId).toBe('v1')
+})
+
+test('trail fold: a delete marker is an anomaly and the hidden key resurfaces', () => {
+  const { current, anomalies } = foldAll([
+    v('p/000000000', 'v1'),
+    { key: 'p/000000000', versionId: 'm1', deleteMarker: true }
+  ])
+  expect(current.get('p/000000000')!.versionId).toBe('v1') // resurfaced, not hidden
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'delete-marker', key: 'p/000000000', confidence: 'confirmed', versionIds: ['m1'] })
+})
+
+test('trail fold: byte-identical retry duplicates are benign, newest version wins', () => {
+  // S3 lists versions newest-first within a key; the fold keeps that order
+  const { current, anomalies } = foldAll([v('p/000000000', 'newer'), v('p/000000000', 'older')])
+  expect(anomalies).toEqual([])
+  expect(current.get('p/000000000')!.versionId).toBe('newer')
+})
+
+test('trail fold: differing versions of the same key are a confirmed rewrite anomaly', () => {
+  const { anomalies } = foldAll([
+    v('p/000000000', 'shadow', { etag: 'bbb' }),
+    v('p/000000000', 'original')
+  ])
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'version-divergence', key: 'p/000000000', confidence: 'confirmed' })
+  expect(anomalies[0].versionIds!.sort()).toEqual(['original', 'shadow'])
+})
+
+test('trail fold: groups a key straddling a page boundary', () => {
+  const acc = ops.newTrailFold()
+  ops.foldTrailVersions(acc, [v('p/000000000', 'shadow', { size: 999 })])
+  ops.foldTrailVersions(acc, [v('p/000000000', 'original')])
+  const { anomalies } = ops.finishTrailFold(acc)
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0].kind).toBe('version-divergence')
+})
+
+test('sequence gaps: mid-sequence holes are suspect, tail truncation is not', () => {
+  // purge removes a prefix of the sequence (locks lapse in write order): [3..6] with 0-2 gone is normal
+  expect(ops.sequenceGapAnomalies('p/', [3, 4, 5, 6])).toEqual([])
+  const anomalies = ops.sequenceGapAnomalies('p/', [3, 4, 7, 8])
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'sequence-gap', confidence: 'suspect' })
+  expect(anomalies[0].detail).toContain('5')
+  expect(anomalies[0].detail).toContain('6')
+})
+
+test('date skew: within tolerance is fine, beyond is a suspect anomaly', () => {
+  const written = new Date('2026-07-01T12:00:00Z')
+  expect(ops.dateSkewAnomaly('p/000000003', '2026-07-01T11:00:00Z', written, 48 * 3600 * 1000)).toBeUndefined()
+  const anomaly = ops.dateSkewAnomaly('p/000000003', '2026-06-25T12:00:00Z', written, 48 * 3600 * 1000)
+  expect(anomaly).toMatchObject({ kind: 'date-skew', key: 'p/000000003', confidence: 'suspect' })
+})
+
+test('ack fingerprints cover an anomaly exactly, new versions escape an old ack', () => {
+  const shadow: ops.TrailAnomaly = { kind: 'version-divergence', key: 'p/000000000', confidence: 'confirmed', versionIds: ['original', 'shadow'] }
+  const fp = ops.anomalyFingerprint(shadow)
+  expect(ops.filterAckedAnomalies([shadow], [fp])).toEqual([])
+  // a NEW shadow version after the ack changes the fingerprint → resurfaces
+  const reShadow = { ...shadow, versionIds: ['original', 'shadow', 'shadow2'] }
+  expect(ops.filterAckedAnomalies([reShadow], [fp])).toEqual([reShadow])
+})
+
+test('shouldNotify: alerts on entry, re-alerts only past the window, silent when good', () => {
+  const day = 24 * 3600 * 1000
+  const now = Date.parse('2026-07-22T00:00:00Z')
+  expect(ops.shouldNotify(false, undefined, 7, now)).toBe(false)
+  expect(ops.shouldNotify(true, undefined, 7, now)).toBe(true)
+  // alerted yesterday: within the window, no spam
+  expect(ops.shouldNotify(true, new Date(now - day).toISOString(), 7, now)).toBe(false)
+  // alerted 8 days ago and still bad: re-alert (bounds the pre-written-state suppression attack)
+  expect(ops.shouldNotify(true, new Date(now - 8 * day).toISOString(), 7, now)).toBe(true)
+})
+
+// ---------------------------------------------------------------------------------------------
+// Classification ratchet: every top-level dataset-schema property must be consciously classified
+// for integrity coverage. This test FAILING on a new property is the point — decide, then list it:
+//   - meaningful metadata a tamper should be detected on → add it to COVERED below, and make
+//     sure every writer of it stamps the outbox (or goes through applyPatch's coveredPatchKeys
+//     gate), or organic writes will false-breach;
+//   - worker-maintained churn / derived bookkeeping → add it to EXCLUDED_TOP_LEVEL in
+//     api/src/integrity/operations.ts, accepting that tampering with it is NOT detected.
+// Never let a field land in neither list "for now": covered-by-default + an unstamped writer is
+// a false-breach generator, and silently excluding is a coverage hole nobody decided.
+// ---------------------------------------------------------------------------------------------
+
+const COVERED_TOP_LEVEL = [
+  'id', 'slug', 'href', 'page', 'title', 'summary', 'description', 'image', 'spatial', 'temporal',
+  'keywords', 'frequency', 'creator', 'modified', 'visibility', 'file', 'originalFile',
+  'attachments', 'createdAt', 'owner', 'primaryKey', 'schema', 'bbox', 'timePeriod', 'timeZone',
+  'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'masterData',
+  'publications', 'publicationSites', 'requestedPublicationSites', 'hasFiles',
+  'attachmentsAsImage', 'isVirtual', 'virtual', 'isRest', 'rest', 'isMetaOnly', 'topics',
+  'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'permissions',
+  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation'
+]
+
+test('every dataset-schema property is consciously classified for integrity coverage', () => {
+  const schemaKeys = Object.keys((datasetSchema as any).properties).filter((k) => !k.startsWith('_'))
+  const unclassified = schemaKeys.filter((k) => !COVERED_TOP_LEVEL.includes(k) && !ops.EXCLUDED_TOP_LEVEL.has(k))
+  expect(unclassified, `new dataset propert${unclassified.length > 1 ? 'ies' : 'y'} [${unclassified.join(', ')}] must be classified for integrity coverage — read the comment above this test`).toEqual([])
+  const doubleClassified = COVERED_TOP_LEVEL.filter((k) => ops.EXCLUDED_TOP_LEVEL.has(k))
+  expect(doubleClassified).toEqual([])
+  // the classification matches what coveredPatchKeys actually does
+  for (const key of schemaKeys) {
+    const covered = ops.coveredPatchKeys({ [key]: 'x' }).length === 1
+    expect(covered, `${key} classification drifted from coveredPatchKeys`).toBe(COVERED_TOP_LEVEL.includes(key))
+  }
 })

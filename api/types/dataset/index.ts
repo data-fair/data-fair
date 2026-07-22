@@ -4,11 +4,17 @@ import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
 export * from './.type/index.js'
 
-// mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
-// package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
-type HistorizeContextHint = {
-  operation: 'create' | 'update' | 'enable' | 'fixIntegrity' | 'restore'
-  origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+// canonical declaration (api/src/integrity/operations.ts re-exports it) — declared here because
+// this package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+// 'disable' (and 'delete' at dataset level) are the TERMINAL trail revisions (round 3 §S2);
+// 'ackTrail' records a reviewed trail-anomaly acknowledgement carrying its fingerprints
+export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore' | 'disable' | 'ackTrail'
+// actor CATEGORY, never an identity: user ids are personal data and must not enter the
+// undeletable WORM store — identity-level attribution lives in the events/journal system
+export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+export type HistorizeContextHint = {
+  operation: RevisionOperation
+  origin: RevisionOrigin
   reason?: string
 }
 
@@ -60,6 +66,9 @@ export type DatasetInternal = Dataset & {
   _esCopyToSearch?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
   _needsHistorizing?: { context?: HistorizeContextHint }
+  // work-queue hint for the per-line integrity relay (target 3): set BEFORE line stamps are
+  // written (hint-first ordering) so a crash between the two leaves a harmless empty hint
+  _needsHistorizingLines?: boolean
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
 }
@@ -68,6 +77,9 @@ export type DatasetLine = {
   _id: string,
   _i?: number,
   _updatedAt?: Date,
+  _deleted?: boolean,
+  _hash?: string | null,
+  _needsHistorizing?: { context?: HistorizeContextHint },
   [key: string]: unknown
 }
 

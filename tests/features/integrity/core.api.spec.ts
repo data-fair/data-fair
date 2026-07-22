@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test'
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectVersionsCommand } from '@aws-sdk/client-s3'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { sendDataset, doAndWaitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
+import { sendDataset, doAndWaitForFinalize, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, integrityTestClient, integrityTestStore,
   listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix
@@ -41,13 +41,13 @@ test('writeRevision stores a compliance-locked object that can be read back and 
   const key = `data-fair/test-store/${Date.now()}/000000000`
   const retainUntil = new Date(Date.now() + 24 * 3600 * 1000)
   await store.writeRevision(key, {
-    hash: { md5: 'abc123' },
+    hash: { file: 'abc123' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-store', slug: 'ds-store' }
   }, retainUntil)
 
   const back = await store.getRevision(key)
-  expect(back.hash.md5).toBe('abc123')
+  expect(back.hash.file).toBe('abc123')
   const revisions = await store.listRevisions('data-fair/test-store/')
   const keys = revisions.map(r => r.key)
   expect(keys).toContain(key)
@@ -61,7 +61,7 @@ test('a written revision is WORM: the locked version cannot be destroyed within 
   const store = integrityTestStore
   const key = `data-fair/test-store-worm/${Date.now()}/000000000`
   await store.writeRevision(key, {
-    hash: { md5: 'worm' },
+    hash: { file: 'worm' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-worm' }
   }, new Date(Date.now() + 24 * 3600 * 1000))
@@ -72,14 +72,14 @@ test('a written revision is WORM: the locked version cannot be destroyed within 
     .rejects.toThrow()
   // ...and the locked bytes remain readable and intact.
   const back = await readVersion(key, versionId)
-  expect(back.hash.md5).toBe('worm')
+  expect(back.hash.file).toBe('worm')
 })
 
 test('overwriting a locked key never replaces the locked version: the original is retained', async () => {
   const store = integrityTestStore
   const key = `data-fair/test-store-ow/${Date.now()}/000000000`
   await store.writeRevision(key, {
-    hash: { md5: 'v1' },
+    hash: { file: 'v1' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-ow' }
   }, new Date(Date.now() + 24 * 3600 * 1000))
@@ -90,7 +90,7 @@ test('overwriting a locked key never replaces the locked version: the original i
   await integrityTestClient.send(new PutObjectCommand({ Bucket: store.bucket, Key: key, Body: 'tampered' }))
   // The original locked version is still readable and unchanged.
   const back = await readVersion(key, versionId)
-  expect(back.hash.md5).toBe('v1')
+  expect(back.hash.file).toBe('v1')
   // And that locked version still cannot be destroyed.
   await expect(integrityTestClient.send(new DeleteObjectCommand({ Bucket: store.bucket, Key: key, VersionId: versionId })))
     .rejects.toThrow()
@@ -100,7 +100,7 @@ test('extendRetention increases a compliance lock and getRetention reflects it',
   const store = integrityTestStore
   const key = `data-fair/test-renew/${Date.now()}/000000000`
   await store.writeRevision(key, {
-    hash: { md5: 'r' },
+    hash: { file: 'r' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-renew' }
   }, new Date(Date.now() + 24 * 3600 * 1000))
@@ -116,7 +116,7 @@ test('extendRetention cannot shorten a compliance lock', async () => {
   const store = integrityTestStore
   const key = `data-fair/test-renew-shorten/${Date.now()}/000000000`
   await store.writeRevision(key, {
-    hash: { md5: 's' },
+    hash: { file: 's' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-shorten' }
   }, new Date(Date.now() + 2 * 24 * 3600 * 1000))
@@ -147,7 +147,7 @@ test('a revision body can carry an inline metadata payload', async () => {
   const store = integrityTestStore
   const key = `data-fair/test-store-meta/${Date.now()}/000000000`
   await store.writeRevision(key, {
-    hash: { md5: 'abc', sha256: 'def' },
+    hash: { file: 'abc', metadata: 'def' },
     context: { operation: 'create', origin: 'worker', date: new Date().toISOString() },
     dataset: { id: 'ds-meta' },
     payload: { metadata: { title: 'snap' }, file: { size: 13 } }
@@ -180,7 +180,7 @@ test('anchor carries the level-2 payload: inline metadata snapshot + locked .fil
   const chunks: Buffer[] = []
   for await (const c of body) chunks.push(c as Buffer)
   const { createHash } = await import('node:crypto')
-  expect(createHash('md5').update(Buffer.concat(chunks)).digest('hex')).toBe(rev.hash.md5)
+  expect(createHash('sha256').update(Buffer.concat(chunks)).digest('hex')).toBe(rev.hash.file)
 })
 
 test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async () => {
@@ -224,7 +224,11 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   expect(keys.filter(k => !k.endsWith('.file')).length).toBe(1)
   const raw = await getRawDataset(dataset.id)
   expect(raw._needsHistorizing).toBeUndefined()
-  expect(raw.integrity.lastRevision.hash.md5).toBe(dataset.originalFile.md5)
+  const { createHash } = await import('node:crypto')
+  const fs = (await import('fs-extra')).default
+  const path = (await import('node:path')).default
+  const fixtureSha256 = createHash('sha256').update(fs.readFileSync(path.resolve('./tests/resources/datasets/dataset1.csv'))).digest('hex')
+  expect(raw.integrity.lastRevision.hash.file).toBe(fixtureSha256)
 
   // flag again without a change → relay must dedupe (clears flag, writes no new revision)
   await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
@@ -232,7 +236,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
 })
 
-test('flagging a REST dataset (no file) anchors metadata only: sha256 present, no md5', async () => {
+test('flagging a REST dataset (no file) anchors metadata only: metadata hash present, no file hash', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const ds = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest-relay', schema: [{ key: 'a', type: 'string' }] })).data
   const prefix = revisionsPrefix(ds)
@@ -244,10 +248,10 @@ test('flagging a REST dataset (no file) anchors metadata only: sha256 present, n
   })
   const keys = await waitForIntegrityRevisions(prefix, 1)
   expect(keys.length).toBe(1)
-  // the joint anchor still anchors a REST (file-less) dataset — sha256 (metadata) only, no md5
+  // the joint anchor still anchors a REST (file-less) dataset — metadata hash only, no file hash
   const rev = await integrityTestStore.getRevision(keys[0])
-  expect(rev.hash.sha256).toBeTruthy()
-  expect(rev.hash.md5).toBeUndefined()
+  expect(rev.hash.metadata).toBeTruthy()
+  expect(rev.hash.file).toBeUndefined()
 })
 
 test('a file replacement writes a new (second) revision', async () => {
@@ -264,7 +268,7 @@ test('a file replacement writes a new (second) revision', async () => {
   expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file')).length).toBe(1)
 
   // replace the file; the finalize hook sets _needsHistorizing because integrity.active is true,
-  // and the new md5 (dataset2.csv) differs from the anchor → relay writes revision 1. The joint
+  // and the new file hash (dataset2.csv) differs from the anchor → relay writes revision 1. The joint
   // anchor re-records the metadata hash too, but it's still ONE new revision.
   await doAndWaitForFinalize(ax, dataset.id, async () => {
     const FormData = (await import('form-data')).default
@@ -305,7 +309,7 @@ test('a metadata-only edit references the file-owning revision; a file change ow
   const rev1 = await integrityTestStore.getRevision(`${prefix}000000001`)
   expect(rev1.payload?.file?.i).toBe(0) // references the bytes-owning revision
   expect(rev1.payload?.file?.size).toBe(ownSize)
-  expect(rev1.hash.md5).toBe(rev0.hash.md5) // file bytes unchanged
+  expect(rev1.hash.file).toBe(rev0.hash.file) // file bytes unchanged
 
   // a subsequent FILE change → rev 2 owns a fresh payload at its own index (no i)
   await doAndWaitForFinalize(admin, dataset.id, async () => {
@@ -321,7 +325,7 @@ test('a metadata-only edit references the file-owning revision; a file change ow
   expect(afterFile).toContain(`${prefix}000000002.file`)
   const rev2 = await integrityTestStore.getRevision(`${prefix}000000002`)
   expect(rev2.payload?.file?.i).toBeUndefined() // owns its own bytes
-  expect(rev2.hash.md5).not.toBe(rev0.hash.md5)
+  expect(rev2.hash.file).not.toBe(rev0.hash.file)
 })
 
 test('a referencing revision extends the owning payload at write time; renewal on a reference anchor slides the referenced payload', async () => {
@@ -552,4 +556,129 @@ test('lock renewal extends the payload object too', async () => {
   const payloadAfter = await integrityTestStore.getRetention(payloadKey)
   expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
   expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
+})
+
+// ---------------------------------------------------------------------------------------------
+// purge: expired revisions age out (§3.5/§8). A stored-but-unlocked revision grounds no guarantee,
+// so it is deleted; the compliance lock itself is the authority on what is still protected.
+// ---------------------------------------------------------------------------------------------
+
+const runPurge = async (admin: any, prefix: string, opts: Record<string, any> = {}) =>
+  (await admin.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+    { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true, ...opts })).data
+
+test('purge deletes a revision whose lock has lapsed and keeps one still locked', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  // a bare prefix with no matching dataset: nothing is "current anchor of an enrolled dataset",
+  // so the compliance lock alone decides — exactly the property under test
+  const prefix = `data-fair/test-purge-${Date.now()}/nodataset/`
+  const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  const body = { hash: { metadata: 'x' }, context, dataset: { id: 'nodataset' } }
+  // MinIO takes retain-until at second granularity; 2s out expires well inside the test
+  await integrityTestStore.writeRevision(`${prefix}000000000`, body, new Date(Date.now() + 2000))
+  await integrityTestStore.writeRevision(`${prefix}000000001`, body, new Date(Date.now() + 24 * 3600 * 1000))
+  expect(await listIntegrityKeys(prefix)).toHaveLength(2)
+
+  await new Promise(resolve => setTimeout(resolve, 3500)) // let the first lock lapse
+  const result = await runPurge(admin, prefix)
+
+  // decided entirely from retain-until dates: no delete is attempted on the locked object, so a
+  // clean run reports zero errors rather than treating a refusal as the signal
+  expect(result).toMatchObject({ deleted: 1, kept: 1, errors: 0 })
+  const remaining = await listIntegrityKeys(prefix)
+  expect(remaining).toEqual([`${prefix}000000001`]) // the locked one survived, the lapsed one is gone
+})
+
+test('purge leaves a still-locked revision entirely untouched, attempting no delete', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const prefix = `data-fair/test-purge-locked-${Date.now()}/nodataset/`
+  const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  // every version here is locked well into the future, and ignoreAge defeats the age pre-filter,
+  // so the retain-until read is the only thing standing between the purge and a delete
+  for (const i of ['000000000', '000000001']) {
+    await integrityTestStore.writeRevision(`${prefix}${i}`, { hash: { metadata: i }, context, dataset: { id: 'nodataset' } },
+      new Date(Date.now() + 24 * 3600 * 1000))
+  }
+
+  const result = await runPurge(admin, prefix)
+  // zero errors is the property under test: the old attempt-and-catch design could only reach this
+  // verdict by provoking a refusal and classifying the provider's error message
+  expect(result).toMatchObject({ deleted: 0, kept: 2, errors: 0 })
+  expect((await listIntegrityKeys(prefix)).length).toBe(2)
+})
+
+test('purge never deletes the current anchor of an enrolled dataset, even with a lapsed lock', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+  const before = await listIntegrityKeys(prefix)
+  expect(before.length).toBeGreaterThan(0)
+
+  // ignoreAge makes the purge attempt-delete everything under the prefix: the latest revision and
+  // the payload it references must be refused by the protection rule itself, not merely by their
+  // locks — otherwise a renewal outage would let the purge manufacture a missing-anchor breach
+  const result = await runPurge(admin, prefix)
+  expect(result.errors).toBe(0)
+  expect(await listIntegrityKeys(prefix)).toEqual(before)
+
+  // and the dataset still verifies against that anchor
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+})
+
+test('a scope is skipped without listing objects until its watermark comes due', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const prefix = `data-fair/test-purge-wm-${Date.now()}/nodataset/`
+  const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  await integrityTestStore.writeRevision(`${prefix}000000000`, { hash: { metadata: 'a' }, context, dataset: { id: 'nodataset' } },
+    new Date(Date.now() + 24 * 3600 * 1000))
+
+  // first pass examines the scope and records when anything under it could next expire
+  const first = await runPurge(admin, prefix, { ignoreWatermark: false })
+  expect(first).toMatchObject({ scopes: 1, skipped: 0, deleted: 0, errors: 0 })
+
+  // second pass must not list the subtree at all: S3 LIST has no date predicate, so not asking is
+  // the only way to avoid the walk
+  const second = await runPurge(admin, prefix, { ignoreWatermark: false })
+  expect(second).toMatchObject({ scopes: 0, skipped: 1, deleted: 0, kept: 0, errors: 0 })
+  expect((await listIntegrityKeys(prefix)).length).toBe(1)
+})
+
+test('disabling integrity clears the scope watermark so the anchors can age out', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+
+  // arm a watermark far in the future while the anchors are still purge-protected
+  const armed = await runPurge(admin, prefix, { ignoreWatermark: false })
+  expect(armed.scopes).toBe(1)
+  expect((await runPurge(admin, prefix, { ignoreWatermark: false })).skipped).toBe(1)
+
+  // disabling un-protects them; the stale watermark must not keep the tail alive
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  const after = await runPurge(admin, prefix, { ignoreWatermark: false })
+  expect(after).toMatchObject({ scopes: 1, skipped: 0 })
+})
+
+test('purge keeps every live line anchor of an enrolled rest dataset', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await admin.post('/api/v1/datasets', {
+    isRest: true,
+    title: `integrity purge lines ${Date.now()}`,
+    schema: [{ key: 'attr1', type: 'string' }]
+  })
+  const dataset = res.data
+  await admin.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'l1', attr1: 'a' }, { _id: 'l2', attr1: 'b' }])
+  await waitForFinalize(admin, dataset.id)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const raw = await waitForFlagCleared(dataset.id)
+  const linesPrefix = `data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`
+  const anchors = await waitForIntegrityRevisions(linesPrefix, 2)
+  expect(anchors).toHaveLength(2)
+
+  const result = await runPurge(admin, linesPrefix)
+  expect(result.errors).toBe(0)
+  // every line's latest anchor is its repairability: losing one is unrecoverable, so the purge
+  // must protect them all, not just the dataset-level anchor
+  expect((await listIntegrityKeys(linesPrefix)).sort()).toEqual(anchors.sort())
 })

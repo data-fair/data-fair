@@ -2,6 +2,7 @@ import { Transform, type TransformCallback } from 'stream'
 import config from '#config'
 import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.ts'
+import { stripTransientLineFlags } from '../utils/line-flags.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 import es from '#es'
@@ -25,9 +26,8 @@ interface IndexStreamOptions {
 // remove some properties that must not be indexed
 const cleanItem = (item: any) => {
   // these properties are only for internal management of rest dataset
+  stripTransientLineFlags(item)
   delete item._hash
-  delete item._needsIndexing
-  delete item._needsExtending
   delete item._deleted
 }
 

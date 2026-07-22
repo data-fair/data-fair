@@ -121,7 +121,22 @@
         "retention": {
           "type": "object",
           "properties": { "days": { "type": "number" } }
-        }
+        },
+        "lines": {
+          "type": "object",
+          "properties": {
+            "maxLines": { "type": "number" }
+          }
+        },
+        "lockWaitMs": { "type": "number" },
+        "trail": {
+          "type": "object",
+          "properties": {
+            "dateSkewHours": { "type": "number" }
+          }
+        },
+        "realertDays": { "type": "number" },
+        "maxUnknownDays": { "type": "number" }
       }
     },
     "integrityCheckCron": { "type": "string" },
