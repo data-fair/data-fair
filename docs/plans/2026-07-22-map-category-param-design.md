@@ -1,6 +1,6 @@
 # Design — simple preview params, starting with `?category=` on maps
 
-Date: 2026-07-22 · Branch: `feat-map-legend` · Status: validated design, pre-implementation
+Date: 2026-07-22 · Branch: `feat-map-legend` · Status: implemented (see 2026-07-22-map-category-param.md)
 
 ## Goal & convention
 
