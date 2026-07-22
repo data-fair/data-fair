@@ -17,6 +17,7 @@ import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
 import { sha256OfStorageFile } from './hash.ts'
+import { checkIndexConsistency, type IndexCheckResult } from './index-check.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
 
@@ -29,8 +30,10 @@ export type TrailVerdict = { status: 'ok' | 'altered', anomalies?: ops.TrailAnom
 export type Check = {
   status: 'ok' | 'breach' | 'unknown'
   date?: string
-  breach?: Array<'file' | 'metadata' | 'lines'>
+  breach?: Array<'file' | 'metadata' | 'lines' | 'index'>
   lines?: { checked: number, diverged: number, sample: string[] }
+  // verdict 3 (A1): the ES projection users actually read is consistent with the source
+  index?: IndexCheckResult
   // verdict 2 (round 3): the trail itself is the one we wrote — absent on 'unknown' early returns
   trail?: TrailVerdict
 }
@@ -142,7 +145,7 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   await maybeAlert(dataset, 'integrity-renewal-failed', failed > 0, 'lines-renewal-failed')
 }
 
-export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boolean }): Promise<Check> => {
+export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boolean, seed?: string }): Promise<Check> => {
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
@@ -252,7 +255,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     : { status: 'ok' }
 
   const expected = latestRevision.hash
-  const breach: Array<'file' | 'metadata' | 'lines'> = []
+  const breach: Array<'file' | 'metadata' | 'lines' | 'index'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
   const actualFileHash = isFileDataset(dataset)
     ? await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
@@ -283,6 +286,18 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     linesResult = { checked: linesCompare.checked, diverged: divergedIds.length, sample: divergedIds.slice(0, 20) }
   }
 
+  // verdict 3 (A1): the projection users actually read. ES unavailability degrades to
+  // 'unknown' (fail-open on availability — check-stale bounds accumulation), never a crash
+  // that would abort the whole check.
+  let indexResult: IndexCheckResult
+  try {
+    indexResult = await checkIndexConsistency(dataset, { deep: opts?.deep, seed: opts?.seed })
+  } catch (err) {
+    internalError('integrity-index-check', err)
+    indexResult = { status: 'unknown' }
+  }
+  if (indexResult.status === 'diverged') breach.push('index')
+
   if (breach.length) {
     // a legitimate stamped write may have landed while this (potentially long) scan ran: the
     // compare then saw new content against the old anchor. The relay cannot have drained the
@@ -301,7 +316,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   const date = new Date().toISOString()
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: {
-      'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, trailCursor: latestIndex },
+      'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, index: indexResult, trailCursor: latestIndex },
       // ok and breach are both DEFINITIVE verdicts: they reset the check-stale clock (§S3) —
       // only 'unknown' lets it run
       'integrity.lastDefinitiveCheck': date
@@ -317,7 +332,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     await maybeRenew(dataset, store, latest, latestRevision)
     if (linesCompare) await maybeRenewLines(dataset, store, linesCompare.anchors)
   }
-  return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail }
+  return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, index: indexResult }
 }
 
 // Check-stale alert (§S3): a dataset that is enrolled but has produced no DEFINITIVE verdict

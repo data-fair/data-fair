@@ -447,13 +447,42 @@ const datasetProperties = {
         properties: {
           date: { type: 'string', format: 'date-time' },
           status: { type: 'string', enum: ['ok', 'breach', 'unknown'] },
-          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata', 'lines'] } },
+          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata', 'lines', 'index'] } },
           lines: {
             type: 'object',
             properties: {
               checked: { type: 'number' },
               diverged: { type: 'number' },
               sample: { type: 'array', items: { type: 'string' } }
+            }
+          },
+          // verdict 3 (A1): sampled consistency of the ES projection (read through the alias)
+          // against the verified source; sample entries persist tamper EVIDENCE (capped
+          // expected/actual excerpts) because the reindex remedy destroys the live divergence
+          index: {
+            type: 'object',
+            required: ['status'],
+            properties: {
+              status: { type: 'string', enum: ['ok', 'diverged', 'unknown'] },
+              checked: { type: 'number' },
+              diverged: { type: 'number' },
+              count: {
+                type: 'object',
+                properties: { expected: { type: 'number' }, actual: { type: 'number' } }
+              },
+              sample: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['key', 'kind'],
+                  properties: {
+                    key: { type: 'string' },
+                    kind: { type: 'string', enum: ['edited', 'missing', 'surplus'] },
+                    expected: { type: 'string' },
+                    actual: { type: 'string' }
+                  }
+                }
+              }
             }
           },
           // verdict 2 (round 3): the revision trail itself is unaltered — computed from the

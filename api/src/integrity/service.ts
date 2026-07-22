@@ -14,6 +14,7 @@ import filesStorage from '#files-storage'
 import type { DatasetInternal, HistorizeContextHint, RestDataset } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
+import * as journals from '../misc/utils/journals.ts'
 import { preparePatch } from '../datasets/utils/patch.ts'
 import { fallbackMimeTypes } from '../datasets/utils/upload.ts'
 import { applyPatch } from '../datasets/service.ts'
@@ -263,7 +264,31 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
     }
   }
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
-  return await checkDataset(fresh as unknown as DatasetInternal)
+  const check = await checkDataset(fresh as unknown as DatasetInternal)
+  // _fix means "the current source state is the new truth". For a FILE dataset, blessing changes
+  // the DERIVATION SOURCE: a tamper that changed CONTENT (not merely corrupted a hash) leaves the
+  // ES projection holding the PRE-bless rows, which the A1 index verdict correctly flags as
+  // diverged — so _fix completes the action by rebuilding the projection from the blessed source.
+  // Trigger condition (precise): FILE dataset whose post-bless re-check reports index 'diverged';
+  // a metadata-only bless leaves the projection consistent (index 'ok') → no reindex churn, and
+  // ES unavailable (index 'unknown') proves nothing about the projection → no reindex.
+  //
+  // This does NOT mean a bless always heals an index divergence. An ES-ONLY tamper (the source is
+  // untouched, only the alias/index was written) is NOT _fix's job on either family: there is no
+  // source to re-bless, so _fix corrects nothing and the re-check still returns breach ['index']
+  // with no completion. That asymmetry is deliberate — the dedicated panel reindex action
+  // (`index/_reindex`) is the remedy for an ES-only divergence, for FILE and REST alike. (REST
+  // line blesses route through rewriteLinesThroughPipeline, which sets _partialRestStatus, so a
+  // divergence caused by a stale projection reports 'unknown' here, not 'diverged'.)
+  if (isFileDataset(dataset) && check.index?.status === 'diverged') {
+    // journalIndexRepairAndReindex journals the divergence evidence BEFORE reindex overwrites it
+    // (the A1 invariant) and returns the patched doc — reindex set status to a non-finalized value
+    // via findOneAndUpdate(returnDocument:'after'). Feed THAT doc to the re-check so pendingState
+    // sees the pending projection and reports index 'unknown' (converging), not a stale compare.
+    const patched = await journalIndexRepairAndReindex(dataset, check.index, reason)
+    return await checkDataset(patched as unknown as DatasetInternal)
+  }
+  return check
 }
 
 // Target 3: restore every diverged line to its last verified state, through the standard
@@ -296,6 +321,35 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
   await rewriteLinesThroughPipeline(dataset, transacs, { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}) })
   const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(freshAfter as unknown as DatasetInternal)
+}
+
+// Shared by the explicit reindex action and _fix's projection-completion (A1 invariant): journal
+// the index-divergence evidence BEFORE the reindex overwrites integrity.lastCheck.index, so what
+// was served stays auditable after the repair destroys the live divergence (design: no silent
+// auto-repair). Returns the reindex patch result (returnDocument:'after') so a caller that must
+// re-check sees the pending, non-finalized doc.
+const journalIndexRepairAndReindex = async (dataset: DatasetInternal, index: Check['index'], reason?: string) => {
+  await journals.log('datasets', dataset as any, {
+    type: 'integrity-index-repair',
+    data: JSON.stringify({
+      reason,
+      count: index?.count,
+      diverged: index?.diverged,
+      sample: index?.sample
+    })
+  } as any)
+  return await datasetUtils.reindex(mongo.db, dataset as any)
+}
+
+// Repair for an 'index' breach: rebuild the projection from the verified source through the
+// standard reindex path.
+export const reindexForIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> =>
+  await withDatasetLock(dataset.id, () => reindexForIntegrityUnlocked(dataset, reason))
+
+const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> => {
+  requireActive(dataset)
+  await journalIndexRepairAndReindex(dataset, (dataset.integrity as any)?.lastCheck?.index, reason)
+  return { ok: true }
 }
 
 // Acknowledge the trail anomalies the fresh check surfaces (round 3 §S1): the ack is itself a
