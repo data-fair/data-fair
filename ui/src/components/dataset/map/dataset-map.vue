@@ -114,46 +114,34 @@ const theme = useTheme()
 const categoryProperty = computed(() => {
   if (!category || !dataset.value?.schema) return undefined
   const p = dataset.value.schema.find(p => p.key === category)
-  if (!p) return undefined
-  // schema allows null for these fields, CategoryProperty (kept dependency-free) expects undefined
-  const eligible = isCategoryEligible({
-    key: p.key,
-    type: p.type,
-    format: p.format ?? undefined,
-    separator: p.separator as string | undefined,
-    'x-refersTo': p['x-refersTo'] ?? undefined,
-    'x-cardinality': p['x-cardinality'],
-    'x-calculated': p['x-calculated'] ?? undefined,
-    'x-capabilities': p['x-capabilities'] as { values?: boolean } | undefined
-  })
-  return eligible ? p : undefined
+  return p && isCategoryEligible(p) ? p : undefined
 })
-const categoryError = ref(false)
-// only warn once the schema is known and the field is truly unusable, or the values fetch failed
-const categoryWarning = computed(() => (!!category && !!dataset.value?.schema && !categoryProperty.value) || categoryError.value)
 
-const categoryValues = ref<{ value: string, label: string }[] | null>(null)
-watch([categoryProperty, () => dataset.value?.finalizedAt], async () => {
-  categoryValues.value = null
-  categoryError.value = false
-  const prop = categoryProperty.value
-  if (!prop) return
-  // stringified + alphabetical (default sort) for deterministic value -> color assignment,
-  // fetched without the current filters so colors do not remap while filtering
-  const params: Record<string, string> = { size: String(MAX_CATEGORY_VALUES + 1), stringify: 'true' }
-  if (dataset.value?.draftReason) params.draft = 'true'
-  try {
-    const values = await $fetch(`datasets/${id}/values-labels/${prop.key}`, { params }) as { value: string, label: string }[]
-    if (categoryProperty.value?.key === prop.key) categoryValues.value = values
-  } catch {
-    if (categoryProperty.value?.key === prop.key) categoryError.value = true
+// stringified + alphabetical (default sort) for deterministic value -> color assignment,
+// fetched without the current filters so colors do not remap while filtering
+const fetchCategoryValues = useFetch<{ value: string, label: string }[]>(
+  () => categoryProperty.value ? `${$apiPath}/datasets/${id}/values-labels/${categoryProperty.value.key}` : null,
+  {
+    query: computed(() => {
+      const query: Record<string, string> = { size: String(MAX_CATEGORY_VALUES + 1), stringify: 'true' }
+      if (dataset.value?.draftReason) query.draft = 'true'
+      if (dataset.value?.finalizedAt) query.finalizedAt = dataset.value.finalizedAt
+      return query
+    }),
+    // failures degrade to the warning chip below, not an error toast
+    notifError: false
   }
-}, { immediate: true })
+)
 
-const hasOther = computed(() => (categoryValues.value?.length ?? 0) > MAX_CATEGORY_VALUES)
+// only warn once the schema is known and the field is truly unusable, or the values fetch failed
+const categoryWarning = computed(() => !!category && !!dataset.value?.schema &&
+  (!categoryProperty.value || !!fetchCategoryValues.error.value))
+
+const hasOther = computed(() => (fetchCategoryValues.data.value?.length ?? 0) > MAX_CATEGORY_VALUES)
 const legend = computed(() => {
-  if (!categoryValues.value?.length) return undefined
-  const values = categoryValues.value.slice(0, MAX_CATEGORY_VALUES)
+  // while a new fetch is in flight, hide the previous field's legend
+  if (fetchCategoryValues.loading.value || !fetchCategoryValues.data.value?.length) return undefined
+  const values = fetchCategoryValues.data.value.slice(0, MAX_CATEGORY_VALUES)
   const colors = theme.current.value.colors
   const { colors: palette, otherColor } = categoryPalette(colors.primary as string, values.length, {
     bgColors: [colors.background as string, colors.surface as string],

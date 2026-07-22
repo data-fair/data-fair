@@ -1,27 +1,13 @@
 import tinycolor from 'tinycolor2'
 import { type ExpressionSpecification } from 'maplibre-gl'
+import { type SchemaProperty } from '#api/types'
 
 export const MAX_CATEGORY_VALUES = 12
-
-/** Structural subset of a dataset schema property — keeps this module free of
- * app-level imports so the unit test runner can load it directly. */
-export type CategoryProperty = {
-  key: string
-  type?: string
-  format?: string
-  separator?: string
-  title?: string
-  'x-originalName'?: string
-  'x-refersTo'?: string
-  'x-cardinality'?: number
-  'x-calculated'?: boolean
-  'x-capabilities'?: { values?: boolean }
-}
 
 /** A field is usable as a map category if its values behave as a small discrete
  * set: same spirit as tiles.defaultSelect on the API side (strings capped at
  * cardinality 50), excluding dates, multivalued and calculated fields. */
-export const isCategoryEligible = (property: CategoryProperty): boolean => {
+export const isCategoryEligible = (property: SchemaProperty): boolean => {
   if (property.key.startsWith('_')) return false
   if (property['x-calculated']) return false
   if (property['x-capabilities']?.values === false) return false
