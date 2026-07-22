@@ -596,6 +596,7 @@ fr:
   disabledInfo: Le contrôle d'intégrité n'est pas activé pour ce jeu de données.
   part_file: Fichier de données
   part_metadata: Métadonnées
+  part_lines: Lignes
   breachTitle: Intégrité compromise
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
@@ -678,6 +679,7 @@ en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
   part_metadata: Metadata
+  part_lines: Lines
   breachTitle: Integrity breach
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
