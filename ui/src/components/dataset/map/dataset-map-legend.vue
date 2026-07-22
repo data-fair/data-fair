@@ -1,7 +1,7 @@
 <template>
   <v-card
     class="dataset-map-legend pa-2"
-    style="position:absolute;bottom:24px;left:8px;z-index:2;max-height:50%;overflow-y:auto;max-width:280px;"
+    style="position:absolute;bottom:24px;right:8px;z-index:2;max-height:50%;overflow-y:auto;max-width:280px;"
     density="compact"
   >
     <div

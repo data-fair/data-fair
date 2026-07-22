@@ -42,7 +42,7 @@
       color="warning"
       variant="tonal"
       size="small"
-      style="position:absolute;bottom:24px;left:8px;z-index:2;"
+      style="position:absolute;bottom:24px;right:8px;z-index:2;"
     >
       {{ t('categoryInvalid', { field: category }) }}
     </v-chip>
