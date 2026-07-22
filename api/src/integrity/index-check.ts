@@ -126,6 +126,131 @@ const fileWindows = async (dataset: DatasetInternal, pivots: number[], windowSiz
   return { windows, exhausted: windows.map((w) => w.length < windowSize) }
 }
 
+const DEEP_BATCH = 1000
+
+// Exhaustive _i-ordered walk of the ES side through the alias (never the physical index — a
+// diverted alias is an in-scope attack). `_doc` tiebreak keeps search_after stable when an
+// adversary inserted duplicate _i values.
+async function * esIterate (alias: string, joinByI: boolean): AsyncGenerator<iops.WindowDoc> {
+  let searchAfter: any[] | undefined
+  while (true) {
+    const res: any = await es.client.search({
+      index: alias,
+      body: {
+        query: { match_all: {} },
+        sort: [{ _i: 'asc' }, { _doc: { order: 'asc' } }],
+        size: DEEP_BATCH,
+        ...(searchAfter ? { search_after: searchAfter } : {})
+      }
+    })
+    const hits: any[] = res.hits.hits
+    for (const h of hits) yield { join: joinByI ? String(h._source._i) : String(h._id), i: h._source._i, doc: iops.normalizeProjectedDoc(h._source) }
+    if (hits.length < DEEP_BATCH) return
+    searchAfter = hits[hits.length - 1].sort
+  }
+}
+
+// Exhaustive _i-ordered walk of the REST source (mongo cursor's own asyncIterator closes the
+// cursor if this generator is abandoned mid-walk — nothing extra to clean up here).
+async function * restIterate (dataset: DatasetInternal): AsyncGenerator<iops.WindowDoc> {
+  const applyCalculations = prepareCalculations(dataset as unknown as Dataset)
+  const c = restUtils.collection(dataset as any)
+  for await (const line of c.find({ _deleted: { $ne: true } }).sort({ _i: 1 })) {
+    yield await projectRestLine(line, applyCalculations)
+  }
+}
+
+// Exhaustive walk of the file source, one streaming parse (mirrors fileWindows' single-pass
+// idiom). `node:stream`'s `compose` doesn't type-check against this repo's pinned @types/node
+// (see fileWindows above), so the same Writable-collector + pipeline/AbortController fallback
+// stands in for it, adapted into a pull-based async generator: the collector's write() hands one
+// row at a time to the generator through a single-slot promise handoff and only calls its own
+// `callback` (releasing backpressure) once the generator has consumed and yielded that row — so
+// at most one row is ever in flight. If the generator is abandoned (`.return()`, e.g. the
+// consumer breaks out early), the `finally` block below runs, aborts the controller and awaits
+// the pipeline's settlement so the underlying streams are destroyed before this generator
+// finishes tearing down (abort-induced rejection swallowed, genuine errors rethrown).
+async function * fileIterate (dataset: DatasetInternal): AsyncGenerator<iops.WindowDoc> {
+  const applyCalculations = prepareCalculations(dataset as unknown as Dataset)
+  const extended = !!(dataset.extensions && dataset.extensions.some((e: any) => e.active))
+  const streams = await datasetReadStreams(dataset as any, false, extended, false)
+  const controller = new AbortController()
+  type Arrival = { row: any, callback: () => void } | { done: true }
+  let deliver: ((v: Arrival) => void) | undefined
+  let arrival = new Promise<Arrival>((resolve) => { deliver = resolve })
+  const collector = new Writable({
+    objectMode: true,
+    write (row: any, _encoding, callback) {
+      const priorDeliver = deliver!
+      arrival = new Promise((resolve) => { deliver = resolve })
+      priorDeliver({ row, callback })
+    },
+    final (callback) {
+      deliver!({ done: true })
+      callback()
+    }
+  })
+  const pipelineDone = pipeline([...streams, collector], { signal: controller.signal }).catch((err: any) => {
+    // an abort (either the natural end-of-generator cleanup below, or an early `.return()`) is
+    // the expected early-stop, not a failure — only a genuine error propagates
+    if (!controller.signal.aborted) throw err
+  })
+  try {
+    while (true) {
+      const next = await arrival
+      if ('done' in next) break
+      const doc = { ...next.row }
+      await applyCalculations(doc)
+      yield { join: String(next.row._i), i: next.row._i, doc: iops.normalizeProjectedDoc(doc) }
+      next.callback()
+    }
+  } finally {
+    controller.abort()
+    await pipelineDone
+  }
+}
+
+// exhaustive compare: pull both _i-ordered sides in batches, cut each round at the smaller
+// side's frontier, compare the slice with compareWindowDocs (both marked exhausted: the span
+// cut already happened here), and carry the uncompared tail into the next round. Termination:
+// each round either exhausts a side (recorded in sDone/eDone, letting the other side's frontier
+// alone bound the span until it too runs out) or strictly advances spanEnd, since `fill` always
+// tops up a still-hungry, not-yet-done buffer before the cut is computed — a round that removed
+// nothing merely means one side is fully drained ahead of the other, and continued refilling of
+// the lagging side is exactly what closes that gap on a later round. Both empty and both done is
+// the only exit.
+const deepCompare = async (source: AsyncGenerator<iops.WindowDoc>, esSide: AsyncGenerator<iops.WindowDoc>, record: (entries: iops.DivergedEntry[]) => void): Promise<number> => {
+  let checked = 0
+  let sBuf: iops.WindowDoc[] = []
+  let eBuf: iops.WindowDoc[] = []
+  let sDone = false
+  let eDone = false
+  const fill = async (gen: AsyncGenerator<iops.WindowDoc>, buf: iops.WindowDoc[], done: boolean): Promise<boolean> => {
+    while (buf.length < DEEP_BATCH && !done) {
+      const n = await gen.next()
+      if (n.done) done = true
+      else buf.push(n.value)
+    }
+    return done
+  }
+  while (true) {
+    sDone = await fill(source, sBuf, sDone)
+    eDone = await fill(esSide, eBuf, eDone)
+    if (!sBuf.length && !eBuf.length) break
+    let spanEnd = Infinity
+    if (!sDone && sBuf.length) spanEnd = Math.min(spanEnd, sBuf[sBuf.length - 1].i)
+    if (!eDone && eBuf.length) spanEnd = Math.min(spanEnd, eBuf[eBuf.length - 1].i)
+    const sSlice = sBuf.filter(d => d.i <= spanEnd)
+    const eSlice = eBuf.filter(d => d.i <= spanEnd)
+    sBuf = sBuf.filter(d => d.i > spanEnd)
+    eBuf = eBuf.filter(d => d.i > spanEnd)
+    const cmp = iops.compareWindowDocs(sSlice, eSlice, { sourceExhausted: true, esExhausted: true })
+    checked += cmp.checked
+    record(cmp.diverged)
+  }
+  return checked
+}
+
 // pending projection states: the index legitimately lags the source — verdict must not lie
 const pendingState = async (dataset: DatasetInternal): Promise<boolean> => {
   if (dataset._partialRestStatus) return true
@@ -165,8 +290,10 @@ export const checkIndexConsistency = async (dataset: DatasetInternal, opts?: { d
     for (const e of entries) if (evidence.length < EVIDENCE_CAP) evidence.push(e)
   }
 
-  if (expectedCount > 0) {
-    // Task 6 replaces this branch condition with the deep lockstep compare
+  if (opts?.deep) {
+    const source = isRest ? restIterate(dataset) : fileIterate(dataset)
+    checked = await deepCompare(source, esIterate(alias, !isRest), record)
+  } else if (expectedCount > 0) {
     const seed = opts?.seed ?? crypto.randomUUID()
     let minI: number | undefined, maxI: number | undefined
     if (isRest) {

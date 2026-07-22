@@ -318,6 +318,32 @@ router.post('/es-refresh/:datasetId', async (req, res, next) => {
   }
 })
 
+// Divert a dataset's alias to a doctored copy of its index (in-scope attack: the check must
+// verify through the alias, never the physical index). The copy uses dynamic mapping — enough
+// for the compare, which reads _source. The orphan copy is cleaned by nothing: test-env only.
+router.post('/es-divert-alias/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    const current = Object.keys(await esDefault.client.indices.getAlias({ name: alias }))[0]
+    const doctored = `${current}-doctored-${Date.now()}`
+    await esDefault.client.reindex({ body: { source: { index: current }, dest: { index: doctored } }, refresh: true, wait_for_completion: true })
+    await esDefault.client.updateByQuery({
+      index: doctored,
+      body: { query: req.body.query, script: { source: req.body.script } },
+      refresh: true
+    })
+    await esDefault.client.indices.updateAliases({ body: { actions: [{ remove: { alias, index: current } }, { add: { alias, index: doctored } }] } })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.

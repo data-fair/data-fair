@@ -148,3 +148,31 @@ test('an out-of-band ES edit on a file dataset row is a breach (window aimed by 
   expect(edited?.key).toBe('1')
   expect(edited?.actual).toContain('es-tampered')
 })
+
+test('deep=true catches a tamper the sampled windows miss', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+    query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'deep-tampered'"
+  })
+  const target = await lineI(ax, dataset.id, 'line0')
+  const { min, max } = await lineIBounds(ax, dataset.id, ['line0', 'line1', 'line2'])
+  const away = aimSeedAway(target, min, max, WINDOWS)
+  // sampled pass with an away seed: the edit is invisible (count unchanged by an edit)
+  const sampled = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed: away })).data
+  expect(sampled.index?.status).toBe('ok')
+  // deep pass: exhaustive lockstep — no seed can hide it
+  const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
+  expect(deep.breach).toContain('index')
+  expect(deep.index!.sample.find((s: any) => s.kind === 'edited')?.key).toBe('line0')
+})
+
+test('a diverted alias pointing at a doctored index copy is a breach', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  await ax.post(`${apiUrl}/api/v1/test-env/es-divert-alias/${dataset.id}`, {
+    query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'diverted'"
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
+  expect(check.breach).toContain('index')
+})
