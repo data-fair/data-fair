@@ -203,7 +203,7 @@ export const useMap = (
   if (categoryExpr) {
     watch(categoryExpr, () => {
       const map = getMap()
-      if (!map?.loaded) return
+      if (!map?.loaded()) return
       for (const [layerId, prop] of categoryPaint) {
         if (map.getLayer(layerId)) {
           const layer = dataLayers.value.find(l => l.id === layerId) as AddLayerObject & { paint: Record<string, unknown> }
@@ -218,7 +218,7 @@ export const useMap = (
   })
   const applySelectedFilter = () => {
     const map = getMap()
-    if (!map?.loaded) return
+    if (!map?.loaded()) return
     const itemFilter: LegacyFilterSpecification = ['==', '_id', selectedItem.value]
     map.setFilter('results_selected', itemFilter)
     map.setFilter('results_point_selected', ['all', ['==', '$type', 'Point'], itemFilter])
@@ -227,7 +227,7 @@ export const useMap = (
   const initCustomSource = () => {
     if (!tileUrl.value) return
     const map = getMap()
-    if (!map?.loaded) return
+    if (!map?.loaded()) return
     map.addSource('data-fair', { type: 'vector', tiles: [tileUrl.value] })
     dataLayers.value.forEach(layer => {
       map.addLayer(layer, $uiConfig.map.beforeLayer)
