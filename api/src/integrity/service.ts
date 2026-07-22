@@ -222,6 +222,45 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
         return anchorLine(dataset, { _id: lineId, _i: anchor.i + 1, _deleted: true }, store, retainUntil, hint)
       }))
     }
+    // Adversarial _i inflation (§S4): the bless above mints a time-derived _i — a forged anchor
+    // index above any clock-derived value can therefore never be outranked by it, wedging the
+    // remediation (the fresh anchor never becomes latest). Detect the non-convergent shape
+    // (still 'edited' with live _i below the anchor index) and correct the line's _i explicitly
+    // past the stale anchor — stamped and reindexed in the same single-document write — then
+    // drain again so the final verdict below proves convergence.
+    const recompare = await compareDatasetLines(dataset, store)
+    const stillEdited = recompare.edited.length
+      ? await restUtils.collection(dataset).find({ _id: { $in: recompare.edited } }).toArray()
+      : []
+    let corrected = false
+    for (const line of stillEdited) {
+      const anchor = recompare.anchors.get(line._id)
+      if (!anchor || (line._i ?? 0) >= anchor.i) continue // not the wedge shape
+      let targetI = anchor.i + 1
+      if (!lops.lineIndexInRange(targetI)) continue // unfixable without corrupting the key layout — stays a breach, loudly
+      if (!corrected) {
+        // hint FIRST (outbox ordering), like every lines writer
+        await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+        corrected = true
+      }
+      while (true) {
+        try {
+          await restUtils.collection(dataset).updateOne(
+            { _id: line._id },
+            { $set: { _i: targetI, _hash: null, _needsIndexing: true, _needsHistorizing: { context: hint } } }
+          )
+          break
+        } catch (err: any) {
+          if (err.code === 11000 && lops.lineIndexInRange(targetI + 1)) { targetI++; continue } // another line holds this _i
+          throw err
+        }
+      }
+    }
+    if (corrected) {
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+      const freshAfterCorrection = await mongo.datasets.findOne({ id: dataset.id })
+      await historizeLines(freshAfterCorrection as unknown as RestDataset)
+    }
   }
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(fresh as unknown as DatasetInternal)

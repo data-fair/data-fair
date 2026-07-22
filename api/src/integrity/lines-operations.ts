@@ -8,6 +8,12 @@ import { escapeKey } from '../datasets/utils/operations.ts'
 export const LINE_INDEX_WIDTH = 16
 export const DELETED_MARKER = 'deleted'
 
+// an _i outside [0, 10^16) does not fit the padding: a wider (or sign-prefixed) number breaks
+// the lexical==numeric ordering of that line's whole key sequence — the relay refuses to anchor
+// such a value (adversarial _i, §S4) rather than corrupt the trail's self-indexing property
+export const MAX_LINE_INDEX = 10 ** LINE_INDEX_WIDTH
+export const lineIndexInRange = (i: number): boolean => Number.isFinite(i) && i >= 0 && i < MAX_LINE_INDEX
+
 export const padLineIndex = (i: number): string => String(i).padStart(LINE_INDEX_WIDTH, '0')
 
 export const linesPrefix = (owner: { type: string, id: string }, datasetId: string): string =>

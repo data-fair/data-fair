@@ -1,5 +1,6 @@
 import mongo from '#mongo'
 import config from '#config'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import type { RestDataset, DatasetLine } from '#types'
 import type { AnyBulkWriteOperation } from 'mongodb'
 import * as restUtils from '../datasets/utils/rest.ts'
@@ -14,7 +15,14 @@ const BATCH = 100
 // the synchronous _fix path. The revision index is the line's own _i (unique, monotonic,
 // changes on every update): no LIST-before-write, retry-forward re-PUTs are idempotent
 // (a same-key PUT adds a version on the locked bucket without touching the locked one).
-export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store: IntegrityStore, retainUntil: Date, contextHint?: HistorizeContextHint): Promise<void> => {
+export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store: IntegrityStore, retainUntil: Date, contextHint?: HistorizeContextHint): Promise<boolean> => {
+  // adversarial _i (§S4): a value outside the key padding would corrupt the line's whole
+  // sequence ordering — refuse, loudly; the caller leaves the stamp pending so the dataset
+  // stays 'unknown' and the check-stale alert surfaces the wedge if nobody remediates
+  if (!lops.lineIndexInRange(line._i!)) {
+    internalError('integrity-line-index', new Error(`refusing to anchor line ${line._id} of dataset ${dataset.id}: _i ${line._i} outside the key padding range`))
+    return false
+  }
   const hint = contextHint ?? line._needsHistorizing?.context
   const deleted = !!line._deleted
   const context: RevisionContext = {
@@ -30,6 +38,7 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
       { hash: {}, context, dataset: { id: dataset.id, slug: dataset.slug }, line: { ...lineMeta, deleted: true } },
       retainUntil
     )
+    return true
   } else {
     // extension-owned columns are excluded from the covered body (see extensionOwnedKeys):
     // the extender rewrites them out-of-pipeline, and they are rebuildable anyway
@@ -41,6 +50,7 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
       { hash: { sha256 }, context, dataset: { id: dataset.id, slug: dataset.slug }, line: lineMeta, payload },
       retainUntil
     )
+    return true
   }
 }
 
@@ -62,28 +72,33 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
 
   const store = integrityStore()
   const retentionDays = config.integrity.retention?.days ?? 365
+  // lines whose anchoring was REFUSED (out-of-range _i, §S4): their stamp stays pending, so
+  // exclude them from every further scan of this run — including the straggler re-check, or the
+  // re-set hint would re-trigger this task in a hot loop over the same refusal
+  const refused: string[] = []
   while (true) {
-    const lines = await c.find({ _needsHistorizing: { $exists: true } }).limit(BATCH).toArray()
+    const lines = await c.find({ _needsHistorizing: { $exists: true }, _id: { $nin: refused } }).limit(BATCH).toArray()
     if (!lines.length) break
     const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
     // all the batch's S3 PUTs first (concurrent), then ONE Mongo round-trip for the bookkeeping:
     // a crash after some PUTs re-runs the whole batch, and same-key re-PUTs are idempotent
-    await Promise.all(lines.map((line) => anchorLine(dataset, line, store, retainUntil)))
+    const anchored = await Promise.all(lines.map(async (line) => ({ line, ok: await anchorLine(dataset, line, store, retainUntil) })))
     const bookkeeping: AnyBulkWriteOperation<DatasetLine>[] = []
-    for (const line of lines) {
+    for (const { line, ok } of anchored) {
+      if (!ok) { refused.push(line._id); continue }
       // clear conditionally on _i: a legit write interleaved since our read changed _i and
       // re-stamped — that fresh stamp must survive to get its own revision
       bookkeeping.push({ updateOne: { filter: { _id: line._id, _i: line._i }, update: { $unset: { _needsHistorizing: '' } } } })
     }
-    for (const line of lines) {
+    for (const { line, ok } of anchored) {
       // purge a fully-committed tombstone (commitLines defers to us when our flag was still set);
       // ordered bulk: runs after the flag clears above, so the _needsHistorizing-absent condition
       // sees this batch's own clear
-      if (line._deleted) {
+      if (ok && line._deleted) {
         bookkeeping.push({ deleteOne: { filter: { _id: line._id, _deleted: true, _needsIndexing: { $exists: false }, _needsHistorizing: { $exists: false } } } })
       }
     }
-    await c.bulkWrite(bookkeeping, { ordered: true })
+    if (bookkeeping.length) await c.bulkWrite(bookkeeping, { ordered: true })
   }
   await clearHint()
   // hint-first ordering protects against a crash, not against concurrency: an API write can set
@@ -91,6 +106,6 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
   // orphaning those stamps — the task filter needs the hint, so they would never drain and the
   // checker would read them as a false 'edited' breach. Re-set the hint if any stamp slipped in;
   // the checker carries the same net for the residual window after this re-check.
-  const straggler = await c.findOne({ _needsHistorizing: { $exists: true } }, { projection: { _id: 1 } })
+  const straggler = await c.findOne({ _needsHistorizing: { $exists: true }, _id: { $nin: refused } }, { projection: { _id: 1 } })
   if (straggler) await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
 }
