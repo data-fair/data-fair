@@ -97,7 +97,7 @@ export const purgeExpiredRevisions = async (
       // a tombstone latest is deliberately NOT protected: a deleted line's history ages out whole
       if (latest && !latest.endsWith(`-${DELETED_MARKER}`)) protectedSet.add(latest)
     } else {
-      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker && !ops.isPayloadKey(v.key)).map((v) => v.key))].sort()
+      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker && !ops.isSiblingKey(v.key)).map((v) => v.key))].sort()
       const latest = revKeys.at(-1)
       if (latest) {
         protectedSet.add(latest)

@@ -450,7 +450,7 @@ export const listDatasetRevisions = async (dataset: DatasetInternal, page: numbe
   const store = integrityStore()
   // zero-padded indices sort lexically == numerically; newest first = reversed
   const keys = (await store.listRevisions(ops.revisionPrefix(dataset.owner, dataset.id), { delimiter: '/' })).map((r) => r.key)
-    .filter((k) => !ops.isPayloadKey(k)).sort().reverse()
+    .filter((k) => !ops.isSiblingKey(k)).sort().reverse()
   const results = await Promise.all(pageSlice(keys, page, size).map(async (key) => {
     const rev = await store.getRevision(key)
     return {

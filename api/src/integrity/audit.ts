@@ -48,7 +48,7 @@ export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarke
         // Mongo says inactive or gone: coherent only if the trail ends with a terminal revision
         // or nothing under it is protected anymore (aging out normally)
         const revisions = (await store.listRevisions(scopePrefix, { delimiter: '/' }))
-          .filter((r) => !ops.isPayloadKey(r.key))
+          .filter((r) => !ops.isSiblingKey(r.key))
         const latest = revisions.length ? revisions.reduce((a, b) => (a.key > b.key ? a : b)) : undefined
         if (!latest) continue
         // age is a sound lower bound (a lock is never earlier than lastModified + retention);
