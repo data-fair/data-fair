@@ -166,13 +166,23 @@ dataset can never converge to `ok` — a denial-of-remediation.
 than its stale anchor's, and the Mongo line's `_i` equals the anchored index (the checker
 compares both content hash and `_i`).
 
-**Mechanism:** before the bless rewrite, `_fix` reads the max anchor index across the
-lines it will bless (already in the folded anchors map) and, if the dataset's transaction
-`_i` sequence head is not beyond it, advances the sequence past it — one bounded counter
-bump, after which the pipeline mints strictly-greater values as normal. (Where the
-sequence lives and how it advances is a plan-level detail in `rest.ts`; the invariant
-above is the spec.) Test recipe: forge an inflated `_i` + content edit via test-env,
-assert `_fix` returns `ok` and the line's anchor/`_i` agree.
+**Mechanism (amended at plan time):** `_i` is time-derived (`_updatedAt − createdAt`
+scaled, `getLineIndice`), not a stored counter — there is no sequence to advance. Instead:
+
+- **Pre-guard:** `anchorLine` refuses an `_i` that does not fit the 16-digit key padding
+  (≥ 10^16) — a wider number breaks the lexical==numeric key ordering for that line's
+  whole sequence. The stamp is left in place, so the line shows as pending and the S3
+  `integrity-check-stale` alert surfaces the wedge instead of a corrupted trail.
+- **Post-bless correction in `_fix`:** after the bless rewrite and drain, re-compare; a
+  line still diverged because its fresh time-based `_i` did not outrank the forged
+  anchor's index gets an explicit correction — `_i = staleAnchor.i + 1` (advanced past
+  duplicate-key collisions), `_hash` invalidated, stamped in the same single-document
+  write — then a final drain and the fresh verdict. Deterministic convergence, bounded to
+  the adversarial case.
+
+Test recipe: forge an inflated `_i` + content edit via test-env, assert `_fix` returns
+`ok` and the line's anchor/`_i` agree; forge a ≥10^16 `_i` and assert the relay refuses
+while the stamp stays pending.
 
 ## S5 — Threat-model honesty (architecture-doc changes)
 
