@@ -503,8 +503,9 @@ is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` side
 
 `api/config/development.cjs` points `s3` and `integrity.s3` at the same MinIO (`S3_PORT`,
 `minioadmin`/`minioadmin`; MinIO enforces credentials, unlike s3mock). `integrity.active`
-is `true` with a 1-day retention, so the capability is on by default — but it is still
-opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
+is `true` with a 2-day revision retention and a 1-day attribution retention (deliberately
+distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
+but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
 `npm run dev-fixtures` seeds **three** datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end (each is documented in detail in the fixtures script itself):

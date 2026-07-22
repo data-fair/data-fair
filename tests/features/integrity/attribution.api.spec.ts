@@ -181,37 +181,22 @@ test('a user PATCH drives the async relay to write the `.who` sibling with its O
   // relay.ts anchorDataset computes, at two different lines:
   //   revision retain-until = now + config.integrity.retention.days
   //   .who     retain-until = now + config.integrity.attribution.retentionDays
-  // The dev/test config (api/config/development.cjs) sets retention.days: 1 and
-  // attribution.retentionDays: 1 — the SAME window length. This is deliberate upstream (see the
-  // store-factory.ts startup assert: attribution.retentionDays must be <= retention.days), and it
-  // means this test genuinely cannot prove a strict inequality between the two retain-until
-  // instants, nor can it prove-by-value that a regression swapping `attribution?.retentionDays`
-  // for `retention?.days` at that line was NOT made — with equal configured windows, both
-  // formulas yield the same 1-day-out instant. What it DOES prove, end-to-end through the live
-  // relay (not a direct store.writeWho call with a hand-picked date like T2 above):
-  //  - anchorDataset actually reads a configured days value and turns it into a real
-  //    ObjectLockRetainUntilDate on the `.who` object (not undefined, not some unrelated default)
-  //  - that value lands within the [before, after] wall-clock window of the PATCH, +/- tolerance
-  //  - the `.who` retention never exceeds the sibling revision's — the invariant the store-factory
-  //    startup assert also enforces, now checked against what MinIO actually persisted
-  // A future regression that swaps the two config paths would only be caught by THIS test in a
-  // deployment/config where the two values differ (production default.cjs: 180 vs 365) — exactly
-  // the gap the review finding flags; closing it fully would require the async relay's Piscina
-  // worker to honor per-test config overrides, which tests/support/workers.ts's setConfig cannot
-  // do (see the LIMITATION note below) without building config-reload machinery.
+  // The dev/test config (api/config/development.cjs) deliberately sets these to DIFFERENT window
+  // lengths — retention.days: 2, attribution.retentionDays: 1 — precisely so a regression that
+  // swaps `attribution?.retentionDays` for `retention?.days` (or vice versa) at either line
+  // produces a value a day off and gets caught here, rather than being masked by two configured
+  // windows that happen to coincide.
   const attributionRetentionMs = 1 * 24 * 3600 * 1000 // config.integrity.attribution.retentionDays (dev/test config)
+  const revisionRetentionMs = 2 * 24 * 3600 * 1000 // config.integrity.retention.days (dev/test config)
   const toleranceMs = 60 * 60 * 1000 // 1h, generous for relay scheduling + worker clock skew
   expect(whoRetention!.getTime()).toBeGreaterThanOrEqual(before + attributionRetentionMs - toleranceMs)
   expect(whoRetention!.getTime()).toBeLessThanOrEqual(after + attributionRetentionMs + toleranceMs)
-  // Not a strict `<=`: inside anchorDataset, `retainUntil` (revision) and `attributionRetainUntil`
-  // (.who) are each stamped with their OWN `Date.now()` call, and the `.who` one runs LATER in the
-  // function (after the file/metadata hashing and dedupe lookups) — so with equal configured
-  // windows the `.who` retain-until can land a few milliseconds AFTER the revision's, not before.
-  // A small tolerance (well above realistic in-process processing time, well below the 1-day
-  // window itself) keeps this a same-window check without asserting an ordering the code doesn't
-  // actually guarantee when the two config values are equal.
-  const sameWindowToleranceMs = 5000
-  expect(whoRetention!.getTime()).toBeLessThanOrEqual(revisionRetention!.getTime() + sameWindowToleranceMs)
+  expect(revisionRetention!.getTime()).toBeGreaterThanOrEqual(before + revisionRetentionMs - toleranceMs)
+  expect(revisionRetention!.getTime()).toBeLessThanOrEqual(after + revisionRetentionMs + toleranceMs)
+  // with genuinely distinct configured windows (1 day vs 2 days, an order of magnitude apart from
+  // the 1h tolerance above), this is now a real, strict ordering assertion — not one that a
+  // config-key swap could still satisfy by accident
+  expect(whoRetention!.getTime()).toBeLessThan(revisionRetention!.getTime())
 })
 
 // LIMITATION (documented per the brief rather than building config-reload machinery): `setConfig`

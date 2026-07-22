@@ -36,8 +36,9 @@ module.exports = {
       credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
       forcePathStyle: true,
     },
-    retention: { days: 1 },
-    // must stay <= retention.days above (startup assert in store-factory.ts)
+    retention: { days: 2 },
+    // must stay <= retention.days above (startup assert in store-factory.ts) — deliberately
+    // shorter than retention.days (not equal) so tests can actually distinguish the two windows
     attribution: { active: true, retentionDays: 1 },
     lockWaitMs: 2000, // fast 409 in dev/tests when the per-dataset lock is held
   },
