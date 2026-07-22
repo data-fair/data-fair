@@ -156,6 +156,64 @@ test('dedupe writes no new revision and no new `.who`, even when the hint carrie
   await expect(integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))).rejects.toMatchObject({ name: 'NoSuchKey' })
 })
 
+test('a user PATCH drives the async relay to write the `.who` sibling with its OWN retain-until (attribution.retentionDays), distinct from the revision JSON\'s (retention.days)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // a metadata-only PATCH is a covered change → rev 1, written by the async relay (historize),
+  // exercising anchorDataset's who-first write — the exact code path the review finding flags as
+  // untested (T2 above calls store.writeWho directly, bypassing anchorDataset's formula entirely)
+  const before = Date.now()
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'retention formula test' })
+  await waitForIntegrityRevisions(prefix, 3) // rev0 JSON + .file, rev1 JSON
+  await waitForFlagCleared(dataset.id)
+  const after = Date.now()
+
+  const revisionKey = ops.revisionKey(dataset.owner, dataset.id, 1)
+  const whoKey = ops.whoKey(dataset.owner, dataset.id, 1)
+  const revisionRetention = await integrityTestStore.getRetention(revisionKey)
+  const whoRetention = await integrityTestStore.getRetention(whoKey)
+  expect(revisionRetention).toBeTruthy()
+  expect(whoRetention).toBeTruthy()
+
+  // relay.ts anchorDataset computes, at two different lines:
+  //   revision retain-until = now + config.integrity.retention.days
+  //   .who     retain-until = now + config.integrity.attribution.retentionDays
+  // The dev/test config (api/config/development.cjs) sets retention.days: 1 and
+  // attribution.retentionDays: 1 — the SAME window length. This is deliberate upstream (see the
+  // store-factory.ts startup assert: attribution.retentionDays must be <= retention.days), and it
+  // means this test genuinely cannot prove a strict inequality between the two retain-until
+  // instants, nor can it prove-by-value that a regression swapping `attribution?.retentionDays`
+  // for `retention?.days` at that line was NOT made — with equal configured windows, both
+  // formulas yield the same 1-day-out instant. What it DOES prove, end-to-end through the live
+  // relay (not a direct store.writeWho call with a hand-picked date like T2 above):
+  //  - anchorDataset actually reads a configured days value and turns it into a real
+  //    ObjectLockRetainUntilDate on the `.who` object (not undefined, not some unrelated default)
+  //  - that value lands within the [before, after] wall-clock window of the PATCH, +/- tolerance
+  //  - the `.who` retention never exceeds the sibling revision's — the invariant the store-factory
+  //    startup assert also enforces, now checked against what MinIO actually persisted
+  // A future regression that swaps the two config paths would only be caught by THIS test in a
+  // deployment/config where the two values differ (production default.cjs: 180 vs 365) — exactly
+  // the gap the review finding flags; closing it fully would require the async relay's Piscina
+  // worker to honor per-test config overrides, which tests/support/workers.ts's setConfig cannot
+  // do (see the LIMITATION note below) without building config-reload machinery.
+  const attributionRetentionMs = 1 * 24 * 3600 * 1000 // config.integrity.attribution.retentionDays (dev/test config)
+  const toleranceMs = 60 * 60 * 1000 // 1h, generous for relay scheduling + worker clock skew
+  expect(whoRetention!.getTime()).toBeGreaterThanOrEqual(before + attributionRetentionMs - toleranceMs)
+  expect(whoRetention!.getTime()).toBeLessThanOrEqual(after + attributionRetentionMs + toleranceMs)
+  // Not a strict `<=`: inside anchorDataset, `retainUntil` (revision) and `attributionRetainUntil`
+  // (.who) are each stamped with their OWN `Date.now()` call, and the `.who` one runs LATER in the
+  // function (after the file/metadata hashing and dedupe lookups) — so with equal configured
+  // windows the `.who` retain-until can land a few milliseconds AFTER the revision's, not before.
+  // A small tolerance (well above realistic in-process processing time, well below the 1-day
+  // window itself) keeps this a same-window check without asserting an ordering the code doesn't
+  // actually guarantee when the two config values are equal.
+  const sameWindowToleranceMs = 5000
+  expect(whoRetention!.getTime()).toBeLessThanOrEqual(revisionRetention!.getTime() + sameWindowToleranceMs)
+})
+
 // LIMITATION (documented per the brief rather than building config-reload machinery): `setConfig`
 // (tests/support/workers.ts) mutates the config object of the MAIN thread only. The async relay
 // (`historize`) runs as a `shortProcessor` Piscina task — a genuine separate worker thread
