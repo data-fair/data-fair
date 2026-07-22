@@ -220,3 +220,40 @@ test('a dataset stuck without a definitive verdict fires integrity-check-stale',
   expect(new Date(raw.integrity.lastDefinitiveCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
   expect(raw.integrity.alerts?.['integrity-check-stale']).toBeUndefined()
 })
+
+// ---------------------------------------------------------------------------------------------
+// T5: trail-anomaly acknowledgement — trail-recorded, fingerprint-pinned
+// ---------------------------------------------------------------------------------------------
+
+test('ack silences reviewed anomalies via a locked ackTrail revision; new tampering escapes it', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  const key = await latestRevisionKey(revisionsPrefix(dataset))
+  const shadow = { hash: { metadata: 'attacker' }, context: { operation: 'update', origin: 'worker', date: new Date().toISOString() }, dataset: { id: dataset.id } }
+  await putShadowVersion(key, shadow)
+  const altered = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(altered.trail.status).toBe('altered')
+
+  // no anomalies, no ack
+  // (the ack targets what the fresh check surfaces — acking a clean trail is a 400)
+  const acked = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/trail/_ack`, { reason: 'investigated: retry artifact' })).data
+  expect(acked.trail.status).toBe('ok')
+
+  // the ack is itself a locked, reasoned trail revision
+  const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
+  const ackRev = revisions.results.find((r: any) => r.operation === 'ackTrail')
+  expect(ackRev).toBeTruthy()
+  expect(ackRev.reason).toBe('investigated: retry artifact')
+
+  // acking a clean trail is refused
+  await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/trail/_ack`)).rejects.toMatchObject({ status: 400 })
+
+  // NEW tampering after the ack changes the fingerprint: it resurfaces despite the old ack
+  const key2 = await latestRevisionKey(revisionsPrefix(dataset))
+  await putShadowVersion(key2, { ...shadow, hash: { metadata: 'attacker2' } })
+  const reAltered = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(reAltered.trail.status).toBe('altered')
+})
