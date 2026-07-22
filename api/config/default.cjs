@@ -33,6 +33,9 @@ module.exports = {
     },
     retention: { days: 365 },
     lines: { maxLines: 100000 },
+    // index-consistency verdict (A1): nightly sampled compare of the ES projection vs the
+    // source — windows × windowSize rows per run; sampleCap bounds persisted evidence entries
+    index: { windows: 8, windowSize: 128, sampleCap: 5 },
     // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
     // worker lock before answering 409 — it must hold that lock to not race the relay tasks
     lockWaitMs: 10000,

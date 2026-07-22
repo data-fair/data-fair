@@ -17,6 +17,7 @@ import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
 import type { RevisionBody } from './store.ts'
 import { sha256OfStorageFile } from './hash.ts'
+import type { IndexCheckResult } from './index-check.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
 
@@ -29,8 +30,10 @@ export type TrailVerdict = { status: 'ok' | 'altered', anomalies?: ops.TrailAnom
 export type Check = {
   status: 'ok' | 'breach' | 'unknown'
   date?: string
-  breach?: Array<'file' | 'metadata' | 'lines'>
+  breach?: Array<'file' | 'metadata' | 'lines' | 'index'>
   lines?: { checked: number, diverged: number, sample: string[] }
+  // verdict 3 (A1): the ES projection users actually read is consistent with the source
+  index?: IndexCheckResult
   // verdict 2 (round 3): the trail itself is the one we wrote — absent on 'unknown' early returns
   trail?: TrailVerdict
 }
@@ -252,7 +255,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     : { status: 'ok' }
 
   const expected = latestRevision.hash
-  const breach: Array<'file' | 'metadata' | 'lines'> = []
+  const breach: Array<'file' | 'metadata' | 'lines' | 'index'> = []
   // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception
   const actualFileHash = isFileDataset(dataset)
     ? await sha256OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
