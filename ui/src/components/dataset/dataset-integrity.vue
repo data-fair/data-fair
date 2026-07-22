@@ -627,7 +627,7 @@ fr:
   op_restore: Restauration
   op_delete: Suppression
   op_disable: Désactivation
-  op_ackTrail: Anomalies de piste acquittées
+  op_ackTrail: Anomalies d'historique acquittées
   origin_user: Utilisateur
   origin_superadmin: Superadmin
   origin_worker: Traitement interne
@@ -663,16 +663,16 @@ fr:
   disableTitle: Désactiver le contrôle d'intégrité
   disableWarning: "Les verdicts de contrôle seront effacés et le renouvellement des verrous s'arrêtera : les révisions déjà écrites resteront verrouillées jusqu'à leur date de rétention puis seront purgées. Une réactivation ultérieure ré-ancrera l'état courant."
   disableConfirm: Désactiver
-  trailAlteredTitle: Piste de révisions altérée
+  trailAlteredTitle: Historique de révisions altéré
   trailAlteredBody: "L'historique verrouillé présente des signes d'altération (révisions réécrites ou masquées). Les versions d'origine sont intactes dans l'entrepôt ; investiguez (accès à l'entrepôt compromis ?) avant d'acquitter."
-  trailOkBody: Piste de révisions vérifiée, aucune altération détectée.
+  trailOkBody: Historique de révisions vérifié, aucune altération détectée.
   anomaly_delete-marker: Révision masquée
   anomaly_version-divergence: Révision réécrite
   anomaly_date-skew: Date incohérente
   anomaly_sequence-gap: Trou de séquence
   ackTrail: Acquitter les anomalies
   ackHelp: Enregistre une révision verrouillée attestant que ces anomalies ont été examinées ; toute nouvelle altération ressortira malgré l'acquittement.
-  ackTitle: Acquitter les anomalies de piste
+  ackTitle: Acquitter les anomalies d'historique
   ackWarning: "Les anomalies actuellement détectées ne seront plus signalées. L'acquittement est lui-même une révision verrouillée et tracée : toute altération ultérieure sera de nouveau détectée. À n'utiliser qu'après investigation."
   ackOk: Anomalies acquittées
 en:

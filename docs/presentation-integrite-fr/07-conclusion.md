@@ -1,6 +1,6 @@
 ## Conclusion
 
-Le contrôle d'intégrité de data-fair apporte aux données engageantes une garantie simple à énoncer et honnête dans ses limites : **toute altération hors des circuits légitimes est détectée, toute tentative d'effacer les preuves échoue, et l'état vérifié reste restaurable** — le tout adossé à un verrouillage de conformité que ni la plateforme ni son hébergeur ne peuvent contredire.
+Le contrôle d'intégrité de data-fair apporte aux jeux de données protégés une garantie simple à énoncer et honnête dans ses limites : **toute altération hors des circuits légitimes est détectée, toute tentative d'effacer les preuves échoue, et l'état vérifié reste restaurable** — le tout adossé à un verrouillage de conformité que ni la plateforme ni son hébergeur ne peuvent contredire.
 
 Les choix qui fondent la confiance :
 

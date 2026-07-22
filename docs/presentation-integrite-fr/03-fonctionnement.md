@@ -27,7 +27,7 @@ Les fichiers identiques ne sont jamais stockés deux fois : une modification qui
 
 ### Le contrôle et l'alerte
 
-Un contrôle automatique passe chaque nuit sur les jeux de données protégés ; un contrôle immédiat peut aussi être déclenché à la demande depuis l'interface. Chaque passage produit les deux verdicts (données et piste, voir les garanties) et alerte les administrateurs abonnés via le système de notifications de la plateforme en cas d'anomalie — avec la logique de réémission périodique décrite dans les garanties.
+Un contrôle automatique passe chaque nuit sur les jeux de données protégés ; un contrôle immédiat peut aussi être déclenché à la demande depuis l'interface. Chaque passage produit les deux verdicts (données et historique, voir les garanties) et alerte les administrateurs abonnés via le système de notifications de la plateforme en cas d'anomalie — avec la logique de réémission périodique décrite dans les garanties.
 
 ### La rétention et l'horizon de protection
 
@@ -44,11 +44,11 @@ flowchart LR
 
 ### La fin de vie : désactivation et suppression
 
-La désactivation de la protection et la suppression d'un jeu de données protégé sont elles-mêmes **des événements enregistrés dans la piste** : une révision terminale signée clôt la séquence, avec l'éventuel motif saisi. Les révisions existantes restent verrouillées jusqu'à leur échéance puis s'effacent naturellement — la suppression complète de l'historique intervient donc au plus tard une fenêtre de rétention après la fin de vie. Une surveillance quotidienne vérifie qu'aucune protection ne s'est arrêtée **sans** cette clôture signée : c'est la parade au scénario « couper l'alarme avant d'agir ».
+La désactivation de la protection et la suppression d'un jeu de données protégé sont elles-mêmes **des événements enregistrés dans l'historique** : une révision terminale signée clôt la séquence, avec l'éventuel motif saisi. Les révisions existantes restent verrouillées jusqu'à leur échéance puis s'effacent naturellement — la suppression complète de l'historique intervient donc au plus tard une fenêtre de rétention après la fin de vie. Une surveillance quotidienne vérifie qu'aucune protection ne s'est arrêtée **sans** cette clôture signée : c'est la parade au scénario « couper l'alarme avant d'agir ».
 
 ### La restauration et la réconciliation
 
-Deux remèdes, tous deux réservés au superadministrateur et systématiquement tracés dans la piste :
+Deux remèdes, tous deux réservés au superadministrateur et systématiquement tracés dans l'historique :
 
 - **Restaurer** ramène le jeu de données (ou ses lignes divergentes) à l'état d'une révision vérifiée — n'importe laquelle de la fenêtre de rétention, pas seulement la dernière. La restauration d'un fichier repasse par le circuit de traitement standard de la plateforme, avec ses validations habituelles.
 - **Réconcilier** fait l'inverse : après vérification humaine qu'une divergence correspond à une modification connue et assumée, l'état *courant* est scellé comme nouvelle référence. La divergence cesse d'être signalée, mais l'opération de réconciliation — et son motif — restent lisibles dans l'historique pour toujours.

@@ -1,6 +1,6 @@
 ## Introduction
 
-Le contrôle d'intégrité de data-fair répond à une question simple que se posent les administrations et les organisations qui publient des données engageantes : **comment prouver que ces données n'ont pas été altérées en dehors des circuits légitimes, et comment revenir en arrière si cela s'est produit ?**
+Le contrôle d'intégrité de data-fair répond à une question simple : **comment prouver que des données n'ont pas été altérées en dehors des circuits légitimes, et comment revenir en arrière si cela s'est produit ?**
 
 La fonctionnalité s'articule autour de trois niveaux d'exigence, dont les deux premiers sont couverts :
 
@@ -8,7 +8,7 @@ La fonctionnalité s'articule autour de trois niveaux d'exigence, dont les deux 
 2. **Réparation** — pouvoir restaurer la ressource dans n'importe quel état antérieur vérifié, dans la limite d'une fenêtre de rétention.
 3. **Prévention** — rendre une ressource immodifiable. Ce niveau n'est pas couvert par cette fonctionnalité : la plateforme reste un outil de gestion de données vivantes, et l'immuabilité totale relèverait d'un dispositif distinct.
 
-Le principe central : chaque écriture légitime dépose une **révision scellée** — empreinte numérique, contexte de l'opération et copie complète du contenu — dans un **entrepôt à verrouillage de conformité** (stockage objet WORM, *Write Once Read Many*), où personne, pas même l'hébergeur de la plateforme, ne peut la modifier ni la supprimer avant l'échéance de son verrou. Un contrôle régulier compare l'état courant des données à la dernière révision scellée, et vérifie également que la piste de révisions elle-même n'a pas été manipulée.
+Le principe central : chaque écriture légitime dépose une **révision scellée** — empreinte numérique, contexte de l'opération et copie complète du contenu — dans un **entrepôt à verrouillage de conformité** (stockage objet WORM, *Write Once Read Many*), où personne, pas même l'hébergeur de la plateforme, ne peut la modifier ni la supprimer avant l'échéance de son verrou. Un contrôle régulier compare l'état courant des données à la dernière révision scellée, et vérifie également que l'historique de révisions lui-même n'a pas été manipulé.
 
 ```mermaid
 flowchart LR

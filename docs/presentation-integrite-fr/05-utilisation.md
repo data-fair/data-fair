@@ -1,10 +1,10 @@
 ## Utilisation dans l'interface
 
-Toute la fonctionnalité se pilote depuis l'onglet **Intégrité** de la page d'administration du jeu de données. L'onglet est visible par les administrateurs du compte propriétaire ; les actions qui modifient la protection ou la piste (activer, désactiver, contrôler, réconcilier, restaurer, acquitter) sont réservées au **superadministrateur** de la plateforme et confirmées par des boîtes de dialogue qui énoncent leurs conséquences.
+Toute la fonctionnalité se pilote depuis l'onglet **Intégrité** de la page d'administration du jeu de données. L'onglet est visible par les administrateurs du compte propriétaire ; les actions qui modifient la protection ou l'historique (activer, désactiver, contrôler, réconcilier, restaurer, acquitter) sont réservées au **superadministrateur** de la plateforme et confirmées par des boîtes de dialogue qui énoncent leurs conséquences.
 
 ### L'état nominal
 
-Le panneau affiche le verdict du dernier contrôle, la vérification de la piste, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
+Le panneau affiche le verdict du dernier contrôle, la vérification de cohérence, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
 
 ![Panneau d'intégrité — état vérifié](img/panneau-integrite-ok.png)
 
@@ -20,7 +20,7 @@ Pour un jeu éditable, le panneau ajoute le décompte des lignes protégées et,
 
 ![Panneau d'intégrité — divergence sur une ligne d'un jeu éditable](img/panneau-integrite-lignes.png)
 
-### L'alerte de piste et l'acquittement
+### L'alerte de cohérence et l'acquittement
 
 Si le second verdict détecte une manipulation de l'entrepôt lui-même (révision masquée ou réécrite, incohérence de dates), une alerte distincte l'affiche avec le détail de chaque anomalie et son niveau de certitude. Après enquête — typiquement : rotation des accès de stockage, vérification des sauvegardes — le superadministrateur peut **acquitter** les anomalies examinées. L'acquittement est lui-même une révision scellée, motivée et datée : il fait taire les anomalies passées en revue, jamais les futures — toute nouvelle manipulation ressort immédiatement.
 

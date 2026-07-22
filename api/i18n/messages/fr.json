@@ -183,7 +183,7 @@
 				"body": "L'entrepôt d'intégrité protège encore le jeu de données {{label}} mais la base indique que sa protection est désactivée (ou que le jeu de données a disparu) sans désactivation signée. Cela ressemble à un désarmement hors circuit — à vérifier."
 			},
 			"integrity-trail-altered": {
-				"title": "Piste d'intégrité altérée",
+				"title": "Historique de révisions altéré",
 				"body": "L'historique de révisions du jeu de données {{label}} présente des signes d'altération (révisions masquées ou réécrites). Les révisions verrouillées d'origine sont intactes ; consultez les anomalies dans le panneau d'intégrité."
 			}
 		},
