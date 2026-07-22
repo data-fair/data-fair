@@ -165,3 +165,58 @@ test('crash residue (terminal latest on an active dataset) self-heals through th
   const healedLatest = await integrityTestStore.getRevision(await latestRevisionKey(revisionsPrefix(dataset)))
   expect(healedLatest.context.operation).not.toBe('disable')
 })
+
+// ---------------------------------------------------------------------------------------------
+// T4: alert robustness — realert cadence dedup map, check-stale alert
+// ---------------------------------------------------------------------------------------------
+
+test('breach alert dedup lives in integrity.alerts and clears on recovery', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  const first = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(first.status).toBe('breach')
+  let raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const alertDate = raw.integrity.alerts?.['integrity-breach']
+  expect(alertDate).toBeTruthy()
+
+  // still breached, within the realert window: the dedup date does not move (no spam)
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity.alerts['integrity-breach']).toBe(alertDate)
+
+  // recovery clears the dedup state so a future breach alerts immediately again
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
+  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity.alerts?.['integrity-breach']).toBeUndefined()
+})
+
+test('a dataset stuck without a definitive verdict fires integrity-check-stale', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+  // enable seeded the definitive-check clock
+  let raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity.lastDefinitiveCheck).toBeTruthy()
+
+  // simulate 8 silent days (default maxUnknownDays = 7)
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveCheck': eightDaysAgo })
+
+  const run1 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  expect(run1.alerted).toContain(dataset.id)
+  // dedup: a second run within the realert window stays silent
+  const run2 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  expect(run2.alerted).not.toContain(dataset.id)
+
+  // a definitive verdict resets the clock and clears the alert
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(new Date(raw.integrity.lastDefinitiveCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
+  expect(raw.integrity.alerts?.['integrity-check-stale']).toBeUndefined()
+})

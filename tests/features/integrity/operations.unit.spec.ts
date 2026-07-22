@@ -326,3 +326,14 @@ test('ack fingerprints cover an anomaly exactly, new versions escape an old ack'
   const reShadow = { ...shadow, versionIds: ['original', 'shadow', 'shadow2'] }
   expect(ops.filterAckedAnomalies([reShadow], [fp])).toEqual([reShadow])
 })
+
+test('shouldNotify: alerts on entry, re-alerts only past the window, silent when good', () => {
+  const day = 24 * 3600 * 1000
+  const now = Date.parse('2026-07-22T00:00:00Z')
+  expect(ops.shouldNotify(false, undefined, 7, now)).toBe(false)
+  expect(ops.shouldNotify(true, undefined, 7, now)).toBe(true)
+  // alerted yesterday: within the window, no spam
+  expect(ops.shouldNotify(true, new Date(now - day).toISOString(), 7, now)).toBe(false)
+  // alerted 8 days ago and still bad: re-alert (bounds the pre-written-state suppression attack)
+  expect(ops.shouldNotify(true, new Date(now - 8 * day).toISOString(), 7, now)).toBe(true)
+})
