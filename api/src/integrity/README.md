@@ -84,3 +84,18 @@ encode the attack scenarios these invariants defend against — shadow versions,
 markers, alarm-kill flips, forged stamps and `_i` inflation, alert suppression. When you
 change behavior around an invariant, extend those suites with the attack you are defending
 against, not only the happy path.
+
+## Index verdict (A1) invariants
+
+- Every ES access in the index check goes through the dataset ALIAS (`aliasName`), never a
+  physical index name: a diverted alias is an in-scope attack and must be caught, not bypassed.
+- The sampling seed is drawn crypto-random per run and NEVER persisted before use; an explicit
+  seed is accepted only from the superadmin `_check` route (test determinism).
+- Divergence evidence (capped expected/actual excerpts) is persisted in the verdict at
+  detection time, and journaled by the reindex action BEFORE the reindex runs: the repair
+  destroys the live divergence, the journal entry survives.
+- Pending projection states (`_needsIndexing`, `_partialRestStatus`, non-finalized, missing
+  alias) downgrade the index verdict to `unknown` — never a false breach; re-checked after a
+  divergence is found (line writes do not hold the worker lock).
+- `_rand` is the only excluded compare key (index-time Math.random). `_file*` cannot occur:
+  enrollment refuses attachment datasets.
