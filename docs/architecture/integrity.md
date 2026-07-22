@@ -898,6 +898,12 @@ the portable baseline for the OSS/Garage story.
 
 Genuinely open:
 
+- **Next actions (assessed 2026-07-22, one dedicated branch each — pre-design notes in
+  [2026-07-22-integrity-next-actions-notes.md](../plans/2026-07-22-integrity-next-actions-notes.md)):**
+  **A1** ES index consistency verification — the *presented* data (read through ES) is not
+  covered by any verdict today, the priority gap; **A2** API-key attribution in the revision
+  context + an API-key-only write lock (partial level 3: process discipline, near-mechanical
+  trail↔journal attribution); **A3** visual revision diffs in the panel.
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history. A product conversation per
   deployment, not a design gap.
