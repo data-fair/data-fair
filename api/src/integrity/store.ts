@@ -103,23 +103,25 @@ export class IntegrityStore {
   // noncurrent version, and full erasure means deleting versions, not keys. Yields one page of
   // versions (and stray delete markers) at a time, keys in lexical order — the purge worker's
   // walk (see purge.ts).
-  async * iterateVersionPages (prefix: string): AsyncGenerator<Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number }>> {
+  async * iterateVersionPages (prefix: string): AsyncGenerator<Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number, etag?: string }>> {
     let KeyMarker: string | undefined
     let VersionIdMarker: string | undefined
     do {
       const res = await this.client.send(new ListObjectVersionsCommand({
         Bucket: this.bucket, Prefix: prefix, KeyMarker, VersionIdMarker
       }))
-      const page: Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number }> = []
+      const page: Array<{ key: string, versionId?: string, isLatest?: boolean, lastModified?: Date, deleteMarker?: boolean, size?: number, etag?: string }> = []
       for (const v of res.Versions ?? []) {
-        if (v.Key) page.push({ key: v.Key, versionId: v.VersionId, isLatest: v.IsLatest, lastModified: v.LastModified, size: v.Size })
+        if (v.Key) page.push({ key: v.Key, versionId: v.VersionId, isLatest: v.IsLatest, lastModified: v.LastModified, size: v.Size, etag: v.ETag })
       }
       for (const m of res.DeleteMarkers ?? []) {
         if (m.Key) page.push({ key: m.Key, versionId: m.VersionId, isLatest: m.IsLatest, lastModified: m.LastModified, deleteMarker: true })
       }
       // the response splits versions and delete markers into two arrays, each key-ordered on its
       // own; re-sort so a page is lexically ordered as a whole and every key's entries are
-      // adjacent — callers group contiguous keys (see purge.ts) and rely on that
+      // adjacent — callers group contiguous keys (see purge.ts) and rely on that. sort() is
+      // stable (ES2019), so within a key the provider's newest-first version order is preserved —
+      // the trail fold (operations.ts) relies on exactly that to pick the current version
       page.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
       if (page.length) yield page
       KeyMarker = res.IsTruncated ? res.NextKeyMarker : undefined
