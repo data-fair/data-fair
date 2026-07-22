@@ -3,11 +3,11 @@
 // itself was not altered. Attacks simulated with raw store credentials (shadow versions, delete
 // markers): object-lock preserves the original versions, and the verdict reads that evidence.
 import { test, expect } from '@playwright/test'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, listIntegrityKeys, revisionsPrefix, waitForFlagCleared,
-  waitForLinesDrained, putShadowVersion, putDeleteMarker
+  waitForLinesDrained, putShadowVersion, putDeleteMarker, integrityTestStore
 } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -82,4 +82,86 @@ test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says 
   const anomaly = check.trail.anomalies.find((a: any) => a.kind === 'delete-marker')
   expect(anomaly).toBeTruthy()
   expect(anomaly.key).toBe(lineKeys[0])
+})
+
+// ---------------------------------------------------------------------------------------------
+// T3: terminal trail revisions (disable / delete) + the daily store-vs-Mongo scope audit
+// ---------------------------------------------------------------------------------------------
+
+test('disable ends the trail with a terminal disable revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false, reason: 'planned migration' })
+  const key = await latestRevisionKey(revisionsPrefix(dataset))
+  const rev = await integrityTestStore.getRevision(key)
+  expect(rev.context.operation).toBe('disable')
+  expect(rev.context.reason).toBe('planned migration')
+  // the terminal revision re-records the current hash pair so a crash between the revision
+  // write and the Mongo flip never false-breaches (the checker self-heals that residue)
+  expect(rev.hash.file).toBeTruthy()
+  expect(rev.hash.metadata).toBeTruthy()
+})
+
+test('deleting an enrolled dataset ends the trail with a terminal delete revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  await admin.delete(`/api/v1/datasets/${dataset.id}`)
+  const key = await latestRevisionKey(revisionsPrefix(dataset))
+  const rev = await integrityTestStore.getRevision(key)
+  expect(rev.context.operation).toBe('delete')
+})
+
+test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  // the attack: a raw Mongo write flips protection off — no disable revision, sweep worklist
+  // and purge carve-out would silently stand down
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': false })
+
+  const audit = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  const incoherent = audit.incoherent.find((s: any) => s.datasetId === dataset.id)
+  expect(incoherent).toBeTruthy()
+
+  // a legitimate disable through the API is NOT incoherent: re-enable then disable properly
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  const audit2 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  expect(audit2.incoherent.find((s: any) => s.datasetId === dataset.id)).toBeFalsy()
+})
+
+test('crash residue (terminal latest on an active dataset) self-heals through the check', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  // simulate a disable that crashed after the terminal revision, before the Mongo flip
+  const keys = (await listIntegrityKeys(revisionsPrefix(dataset))).filter(k => !k.endsWith('.file') && !k.includes('/lines/')).sort()
+  const latest = await integrityTestStore.getRevision(keys.at(-1)!)
+  const nextIndex = keys.length
+  const nextKey = `${revisionsPrefix(dataset)}${String(nextIndex).padStart(9, '0')}`
+  await integrityTestStore.writeRevision(nextKey, {
+    hash: latest.hash,
+    context: { operation: 'disable', origin: 'superadmin', date: new Date().toISOString() },
+    dataset: { id: dataset.id, slug: dataset.slug }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+
+  // first check: recognizes the residue, force-re-anchors, reports unknown
+  const first = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(first.status).toBe('unknown')
+  // second check: fresh non-terminal anchor in place, clean verdict
+  const second = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(second.status).toBe('ok')
+  const healedLatest = await integrityTestStore.getRevision(await latestRevisionKey(revisionsPrefix(dataset)))
+  expect(healedLatest.context.operation).not.toBe('disable')
 })
