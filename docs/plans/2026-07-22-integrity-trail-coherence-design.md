@@ -1,8 +1,11 @@
 # Integrity — trail coherence & store authority (security round 3) — design
 
-> Status: **draft for review**. Successor to the two pre-release hardening rounds on
-> `feat-integrity6` (follow-ups plan of 2026-07-21, hardening commits of 2026-07-22).
-> Scope: the last security round before first client release.
+> Status: **✅ DELIVERED (2026-07-22)** — implementation plan:
+> [2026-07-22-integrity-trail-coherence-plan.md](./2026-07-22-integrity-trail-coherence-plan.md).
+> Successor to the two pre-release hardening rounds on `feat-integrity6` (follow-ups plan of
+> 2026-07-21, hardening commits of 2026-07-22). The last security round before first client
+> release. S4's mechanism was amended at plan time (`_i` is time-derived, not a counter — see
+> §S4); everything else shipped as designed.
 
 ## 0. The gap class: the store is the root of trust, Mongo is a hint
 

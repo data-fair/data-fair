@@ -25,7 +25,12 @@
 > the snapshot actually protects (§5). The superadmin API and admin UI cover all three
 > targets; [§10](#10-decomposition--build-order) records precisely what is built vs. what remains
 > (applications/settings metadata, line attachment bytes, a possible fold-based level 1 for
-> above-gate datasets). This document describes a focused **data-fair feature**, delivered as
+> above-gate datasets). **Security round 3 (trail coherence & store authority, 2026-07-22)**
+> hardened the whole against adversaries who target the integrity machinery itself: the check
+> carries a second **trail-coherence verdict** read from the store's version stacks, disable/delete
+> are **terminal trail revisions** audited daily against Mongo, alerts re-fire while a bad state
+> persists, and the threat model states plainly what Mongo-resident state can and cannot be
+> trusted for (§1, §3.3, §3.5, §12). This document describes a focused **data-fair feature**, delivered as
 > **three progressive targets** (dataset files → dataset metadata → editable-dataset collections).
 > Scope deliberately left out for now — generalization beyond data-fair, an immutable append-only
 > **log posture** (events, HTTP logs), and a central integrity service — is parked in
@@ -49,12 +54,30 @@ historization burden — which removes the original objection.
 **Guarantee scope (threat model).** The adversary is a **client/tenant admin** — and, thanks
 to compliance mode, even our own operators as far as *deletion* goes: once written, a revision
 **cannot be altered or deleted** before retention expiry by anyone, including the account owner.
-What the store does **not** prevent is a **first-write lie** — whoever controls the legitimate
-write path can record a false `context`. We accept this deliberately: the value is a
-**transparent, append-only, auditable trail** in which a bad or out-of-band write always leaves
-a mark, and rolling back to an earlier verified revision is always possible — *detection + audit
-+ repair*, not cryptographic non-repudiation. This scoping is exactly why per-revision
-hash-chaining and signatures are out of scope (§13).
+What the store does **not** prevent is a **first-write lie** — and this extends further than
+"whoever controls the legitimate write path": the transactional-outbox stamp lives in the same
+Mongo the tenant-admin adversary writes to, so **a raw-Mongo tamper that also forges the stamp is
+anchored by the relay as an ordinary `update`/`worker` revision — self-laundered into the trail.**
+The trail still timestamps it; the catch is the **trail-vs-journal review** (a trail revision with
+no matching journal event), which is therefore not a nice-to-have but the *only* detection for a
+stamp-forging adversary. We accept this deliberately: the value is a **transparent, append-only,
+auditable trail** in which a bad or out-of-band write always leaves a mark, and rolling back to an
+earlier verified revision is always possible — *detection + audit + repair*, not cryptographic
+non-repudiation. This scoping is exactly why per-revision hash-chaining and signatures are out of
+scope (§13).
+
+**Mongo is a hint; the store is the authority (round 3).** Every Mongo-resident integrity field is
+writable by the in-scope adversary, so nothing guarantee-bearing may *terminate* on it — each hint
+has a store-side backstop: `integrity.active` (sweep worklist, purge carve-out) is cross-checked by
+the daily **scope audit** against terminal trail revisions (§3.5); `lastCheck`/alert-dedup dates are
+bounded by the **periodic re-alert** cadence (§3.3); `lastRevision` is healed from the store when
+lost; `trailAck` is a pointer whose authority is the locked ackTrail revision body it points at
+(§3.3); and the check itself gains a second verdict — **trail coherence** — computed from the
+store's version stacks and provider dates, which a **store-credentialed** adversary (stolen bucket
+keys) cannot forge: shadowing a revision or hiding keys behind delete markers is detectable because
+the original versions are undeletable and `LastModified` is provider-stamped. The guarantee is thus
+tamper-evidence against **anyone who cannot destroy locked versions**, with the first-write lie
+(above) and operator/provider collusion (§13) as the stated residual limits.
 
 **Trail vs. journal — the locked trail records a *kind*, not a *who*.** A revision's context
 names the **category** of legitimate write (`operation` + an actor category `origin` —
@@ -224,9 +247,37 @@ preferred precisely because it eliminates this gap.
 ### 3.3 The integrity check
 
 - Recompute the hot resource's hash and compare to the latest revision's hash.
+- **Two verdicts per check (round 3).** The check answers two independent questions: verdict 1
+  (`lastCheck.status`) — does the hot state match the latest anchor; verdict 2
+  (`lastCheck.trail`) — is the trail itself the one we wrote. Verdict 2 comes from **one
+  versions walk** over the whole scope (which also feeds verdict 1: the current view is
+  *reconstructed* from version stacks, so a marker-hidden line anchor resurfaces into the
+  compare instead of silently vanishing). Anomaly classes: `delete-marker` (no code path of
+  ours issues a versionless DELETE — always attacker-made), `version-divergence` (same-key
+  versions differing in size/ETag; crash-retry duplicates are byte-identical, ETag is
+  md5-deterministic even for fixed-chunking multipart), `date-skew` (`context.date` vs the
+  provider-stamped `LastModified`, tolerance `integrity.trail.dateSkewHours`; verified
+  incrementally past a trail cursor, `_check?deep=true` re-verifies the window), and
+  `sequence-gap` (mid-sequence holes — the purge only ever truncates the tail's low end).
+  Anomalies are filtered by the latest **ackTrail** revision's fingerprints (`POST
+  …/_integrity/trail/_ack { reason }`, superadmin): the ack is itself a locked, reasoned
+  revision carrying the fingerprints — the Mongo `trailAck` is only a pointer to it, and a
+  fingerprint pins the exact version set, so any later tampering resurfaces despite the ack.
+  `_fix` never clears trail anomalies (blessing data cannot un-shadow a key), and **renewal
+  runs only on a fully clean pass** — under a shadow attack, `PutObjectRetention` (keyed, no
+  version id) would extend the attacker's current version while the original's lock runs out.
 - **Sliding scheduled checker:** data-fair runs a scheduled job that walks protected
   resources in batches and emits an alert on divergence through its normal alerting/events
   path. At scale we cannot check everything all the time, hence "sliding" coverage.
+- **Alerting: entry + periodic re-fire (round 3).** The four bad-state events —
+  `integrity-breach`, `integrity-trail-altered`, `integrity-renewal-failed`,
+  `integrity-scope-incoherent` — alert on entry and re-fire every `integrity.realertDays`
+  while the state persists; the dedup date (`integrity.alerts`) clears on recovery. The dedup
+  state is Mongo-resident (accepted): pre-writing it suppresses at most one window, and the
+  scope audit is immune. A dataset with no *definitive* verdict (ok/breach) for
+  `integrity.maxUnknownDays` fires `integrity-check-stale` (`integrity.lastDefinitiveCheck`,
+  seeded at enable) — the "downgrade to unknown" posture is only safe because unknowns cannot
+  silently accumulate.
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
 - **Everything that anchors or checks holds the per-dataset worker lock.** The relay tasks
   already run under the standard `datasets:‹id›` cross-pod lock; the synchronous admin actions
@@ -355,9 +406,19 @@ applied identically to files, metadata documents, and dataset lines:
 > **references** (its own copy, or, under payload reference dedupe, an earlier revision's) together
 > as one pair — so the **current state is preserved indefinitely**, while older revisions age out at
 > retention so **history is recoverable only within the retention window**. A **line** deletion is a
-> tombstone latest-revision that stops being renewed and ages out; a **dataset** deletion writes no
-> tombstone — the trail simply stops being renewed and the whole scope ages out within one window
-> (§8), discovered from the store rather than from Mongo.
+> tombstone latest-revision that stops being renewed and ages out; a **dataset** disable or deletion
+> ends the trail with a **terminal `disable`/`delete` revision** (round 3): written **before** the
+> Mongo flip — a deliberate inversion of §3.2's hot-first rule, because the Mongo-first crash
+> residue is indistinguishable from an out-of-band disarm while the revision-first residue (terminal
+> latest on a still-active dataset) is benign and self-healed by the checker's force-re-anchor. A
+> terminal revision re-records the current hash pair, is **never a dedupe target** (re-enable writes
+> a fresh `enable` revision — the trail stays self-describing), then the whole scope ages out within
+> one window (§8), discovered from the store rather than from Mongo. The daily **scope audit**
+> closes the alarm-kill hole: a scope whose latest revision is live and still protected while Mongo
+> claims the dataset inactive or gone — no signed-off terminal revision — fires
+> `integrity-scope-incoherent` (deleted datasets get a synthetic event resource rebuilt from the
+> revision's own `dataset` descriptor). The purge reports the delete markers it reclaims through the
+> same event: markers are attacker artifacts and must never be *silently* swept.
 
 At **write** time a revision that *references* an earlier payload also extends that payload's lock to
 its own retain-until, so a payload's lifetime is the max over every revision that references it —
@@ -747,8 +808,11 @@ once per environment; on a fresh environment the three datasets seed automatical
 The integrity API splits read from write:
 
 - **Writes are superadmin-only** (`reqAdminMode`), matching the `_diagnose` pattern: `PUT
-  /datasets/{id}/_integrity` (enable/disable), `POST …/_integrity/_check`, `POST
-  …/_integrity/_fix`. All three are gated by admin mode (never grantable through permissions).
+  /datasets/{id}/_integrity` (enable/disable — disable accepts a trail-recorded `reason`),
+  `POST …/_integrity/_check` (`?deep=true` re-verifies trail date coherence over the whole
+  window), `POST …/_integrity/_fix`, and `POST …/_integrity/trail/_ack { reason }` (round 3 —
+  acknowledges the trail anomalies the fresh check surfaces, as a locked ackTrail revision).
+  All are gated by admin mode (never grantable through permissions).
   `_check` and `_fix` are **synchronous** and respond with the fresh check verdict — `_fix`
   re-anchors inline, then runs the check and returns its result.
 - **Reads are open to the owner account's admins** via the registered admin-class operations
@@ -767,10 +831,13 @@ The integrity API splits read from write:
   admin mode. The status alerts and revision-history table are visible to every viewer of the
   tab. The three actions that change the trail or the protection state are **confirmed in a
   dialog stating their consequence**: restore (overwrites data), reconcile (blesses the current
-  state as legitimate, so pending divergences stop being reported) and **disable** (clears the
-  verdicts and stops renewal — additive *enable* needs no such guard). Reconcile and both restores
-  offer the optional free-text `reason`, which is the only free-text field a WORM revision carries;
-  both history tables render it, so what an admin can write is also what an auditor can read.
+  state as legitimate, so pending divergences stop being reported), **disable** (clears the
+  verdicts and stops renewal — additive *enable* needs no such guard) and **trail-anomaly ack**
+  (round 3 — stops reporting the reviewed anomalies; itself a locked, audited revision).
+  Reconcile, both restores, disable and the ack offer the optional free-text `reason`, which is
+  the only free-text field a WORM revision carries; both history tables render it, so what an
+  admin can write is also what an auditor can read. The panel shows the trail verdict as a
+  second status row with the anomaly list (kind, key, confidence).
 
 ### 7.2 Store access
 
@@ -955,18 +1022,19 @@ the portable baseline for the OSS/Garage story.
 
 ## 12. Open questions / risks
 
-- **Security round 3 — trail coherence & store authority: DESIGNED, not yet built.** A review
+- **Security round 3 — trail coherence & store authority: ✅ DELIVERED (2026-07-22).** A review
   pass over what the guarantee-bearing components *trust* found that verdicts and scheduling
-  read attacker-writable inputs: the checker reads only the store's current view (a
-  bucket-credentialed adversary can shadow revisions or hide keys behind delete markers,
-  undetected), and Mongo-resident state gates the sweep worklist, the purge carve-out, alert
-  dedup and `_fix` convergence (raw-Mongo writes can disarm, silence, or wedge them). The
-  designed answer — a second trail-coherence verdict from a versions walk, terminal
-  `disable`/`delete` trail revisions plus a daily store-vs-Mongo scope audit, persistent-state
-  re-alerts, an `unknown`-too-long alert, and the `_i`-wedge fix — is specced in
+  read attacker-writable inputs (the checker read only the store's current view; Mongo-resident
+  state gated the sweep worklist, purge carve-out, alert dedup and `_fix` convergence). All five
+  parts of the design landed: the second trail-coherence verdict from a versions walk with
+  trail-recorded acks (§3.3), terminal `disable`/`delete` revisions plus the daily
+  store-vs-Mongo scope audit (§3.5), persistent-state re-alerts and the check-stale alert
+  (§3.3), the `_i`-wedge fix (padding guard in the relay, convergence correction in `_fix`),
+  and the threat-model rewrite (§1). Design:
   [docs/plans/2026-07-22-integrity-trail-coherence-design.md](../plans/2026-07-22-integrity-trail-coherence-design.md).
-  Until it lands, the guarantee holds against a *careless* out-of-band writer, not one who
-  targets the integrity machinery itself.
+  The guarantee now reads: tamper-evident against anyone who cannot destroy locked versions —
+  including stolen store credentials — with the stamp-forging first-write lie (§1) and
+  operator/provider collusion (§13) as the stated residual limits.
 
 - **Scaleway "prolong lock" bug — RESOLVED (2026-07-16).** A reported defect (the Veeam
   incompatibility) supposedly broke *prolonging* an existing lock — the exact operation our
