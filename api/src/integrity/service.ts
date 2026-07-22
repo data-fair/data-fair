@@ -264,7 +264,25 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): 
     }
   }
   const fresh = await mongo.datasets.findOne({ id: dataset.id })
-  return await checkDataset(fresh as unknown as DatasetInternal)
+  const check = await checkDataset(fresh as unknown as DatasetInternal)
+  // _fix means "the current source state is the new truth". Blessing the trail is not enough on
+  // its own: for a FILE dataset whose tamper changed CONTENT (not merely corrupted a hash), the
+  // ES projection users read still holds the PRE-bless rows, which the A1 index verdict correctly
+  // flags as diverged. Complete the action by rebuilding the projection from the blessed source.
+  // Trigger condition (precise): FILE dataset whose post-bless re-check reports index 'diverged'.
+  // - A metadata-only bless leaves the projection consistent (index 'ok') → NO reindex churn.
+  // - ES unavailable → index 'unknown' → NO reindex (nothing proves the projection is stale).
+  // - REST line blesses route through rewriteLinesThroughPipeline, which sets _partialRestStatus,
+  //   so their index verdict is already 'unknown' here (pendingState) and never 'diverged'.
+  if (isFileDataset(dataset) && check.index?.status === 'diverged') {
+    // journalIndexRepairAndReindex journals the divergence evidence BEFORE reindex overwrites it
+    // (the A1 invariant) and returns the patched doc — reindex set status to a non-finalized value
+    // via findOneAndUpdate(returnDocument:'after'). Feed THAT doc to the re-check so pendingState
+    // sees the pending projection and reports index 'unknown' (converging), not a stale compare.
+    const patched = await journalIndexRepairAndReindex(dataset, check.index, reason)
+    return await checkDataset(patched as unknown as DatasetInternal)
+  }
+  return check
 }
 
 // Target 3: restore every diverged line to its last verified state, through the standard
@@ -299,26 +317,32 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string): 
   return await checkDataset(freshAfter as unknown as DatasetInternal)
 }
 
+// Shared by the explicit reindex action and _fix's projection-completion (A1 invariant): journal
+// the index-divergence evidence BEFORE the reindex overwrites integrity.lastCheck.index, so what
+// was served stays auditable after the repair destroys the live divergence (design: no silent
+// auto-repair). Returns the reindex patch result (returnDocument:'after') so a caller that must
+// re-check sees the pending, non-finalized doc.
+const journalIndexRepairAndReindex = async (dataset: DatasetInternal, index: Check['index'], reason?: string) => {
+  await journals.log('datasets', dataset as any, {
+    type: 'integrity-index-repair',
+    data: JSON.stringify({
+      reason,
+      count: index?.count,
+      diverged: index?.diverged,
+      sample: index?.sample
+    })
+  } as any)
+  return await datasetUtils.reindex(mongo.db, dataset as any)
+}
+
 // Repair for an 'index' breach: rebuild the projection from the verified source through the
-// standard reindex path. The divergence evidence lives in integrity.lastCheck.index, which the
-// post-reindex check will overwrite — journal it FIRST so what was served remains auditable
-// after the repair destroys the live divergence (design: no silent auto-repair).
+// standard reindex path.
 export const reindexForIntegrity = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> =>
   await withDatasetLock(dataset.id, () => reindexForIntegrityUnlocked(dataset, reason))
 
 const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> => {
   if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
-  const lastIndex = (dataset.integrity as any)?.lastCheck?.index
-  await journals.log('datasets', dataset as any, {
-    type: 'integrity-index-repair',
-    data: JSON.stringify({
-      reason,
-      count: lastIndex?.count,
-      diverged: lastIndex?.diverged,
-      sample: lastIndex?.sample
-    })
-  } as any)
-  await datasetUtils.reindex(mongo.db, dataset as any)
+  await journalIndexRepairAndReindex(dataset, (dataset.integrity as any)?.lastCheck?.index, reason)
   return { ok: true }
 }
 
