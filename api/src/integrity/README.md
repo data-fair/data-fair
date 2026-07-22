@@ -106,8 +106,11 @@ against, not only the happy path.
 - An ES doc with a missing/null/non-numeric `_i` is treated as an immediate divergence (kind
   `surplus`, keyed by ES `_id`), never joined: it cannot be ordered against the source. The
   sampled window query explicitly pulls `_i`-less docs (a `range: {_i: {gte}}` alone never matches
-  them), and `deepCompare`/`compareWindowDocs` guard their span frontier with `Number.isFinite` so
-  a stray non-finite `_i` can never collapse the span to NaN and empty a batch uncompared.
+  them) — best-effort within the window `size`: a window already full of in-range docs can push an
+  `_i`-less doc past the cut, but such a doc always inflates the ES count (caught every run) and
+  `?deep=true` reports it deterministically. `deepCompare`/`compareWindowDocs` guard their span
+  frontier with `Number.isFinite` so a stray non-finite `_i` can never collapse the span to NaN
+  and empty a batch uncompared.
 
 ### A1 stated residual limit (follow-up, not fixed in this wave)
 
