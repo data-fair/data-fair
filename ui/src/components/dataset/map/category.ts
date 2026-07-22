@@ -14,6 +14,8 @@ export type CategoryProperty = {
   'x-originalName'?: string
   'x-refersTo'?: string
   'x-cardinality'?: number
+  'x-calculated'?: boolean
+  'x-capabilities'?: { values?: boolean }
 }
 
 /** A field is usable as a map category if its values behave as a small discrete
@@ -21,6 +23,8 @@ export type CategoryProperty = {
  * cardinality 50), excluding dates, multivalued and calculated fields. */
 export const isCategoryEligible = (property: CategoryProperty): boolean => {
   if (property.key.startsWith('_')) return false
+  if (property['x-calculated']) return false
+  if (property['x-capabilities']?.values === false) return false
   if (property.separator) return false
   if (property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
   if (property['x-cardinality'] !== undefined && property['x-cardinality'] > 50) return false

@@ -26,6 +26,7 @@ export const useMap = (
   const localeDayjs = useLocaleDayjs()
 
   let _map: Map
+  let styleLoaded = false
   const getMap = () => {
     if (!tileUrl.value || !bbox.value || !mapEl.value) return
     if (_map) return _map
@@ -59,7 +60,7 @@ export const useMap = (
       sendUiNotif({ type: 'error', error: e.error, msg: t('mapError') })
     })
 
-    map.once('load', () => { initCustomSource() })
+    map.once('load', () => { styleLoaded = true; initCustomSource() })
 
     fitBBox({ duration: 0 })
 
@@ -203,7 +204,7 @@ export const useMap = (
   if (categoryExpr) {
     watch(categoryExpr, () => {
       const map = getMap()
-      if (!map?.loaded()) return
+      if (!map || !styleLoaded) return
       for (const [layerId, prop] of categoryPaint) {
         if (map.getLayer(layerId)) {
           const layer = dataLayers.value.find(l => l.id === layerId) as AddLayerObject & { paint: Record<string, unknown> }
@@ -218,7 +219,7 @@ export const useMap = (
   })
   const applySelectedFilter = () => {
     const map = getMap()
-    if (!map?.loaded()) return
+    if (!map || !styleLoaded) return
     const itemFilter: LegacyFilterSpecification = ['==', '_id', selectedItem.value]
     map.setFilter('results_selected', itemFilter)
     map.setFilter('results_point_selected', ['all', ['==', '$type', 'Point'], itemFilter])
@@ -227,7 +228,7 @@ export const useMap = (
   const initCustomSource = () => {
     if (!tileUrl.value) return
     const map = getMap()
-    if (!map?.loaded()) return
+    if (!map || !styleLoaded) return
     map.addSource('data-fair', { type: 'vector', tiles: [tileUrl.value] })
     dataLayers.value.forEach(layer => {
       map.addLayer(layer, $uiConfig.map.beforeLayer)

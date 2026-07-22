@@ -21,6 +21,8 @@ test.describe('isCategoryEligible', () => {
     assert.equal(isCategoryEligible({ key: '_id', type: 'string' }), false)
     assert.equal(isCategoryEligible({ key: 'nom', type: 'string', 'x-cardinality': 51 }), false)
     assert.equal(isCategoryEligible({ key: 'ville', type: 'string', 'x-cardinality': 50 }), true)
+    assert.equal(isCategoryEligible({ key: 'ext.error', type: 'string', 'x-calculated': true }), false)
+    assert.equal(isCategoryEligible({ key: 'nom', type: 'string', 'x-capabilities': { values: false } }), false)
   })
 })
 

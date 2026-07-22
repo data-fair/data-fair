@@ -20,6 +20,13 @@ test.describe('embed dataset map page with category param', () => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/Antennes du CD22.csv', ax, undefined, geoBody)
 
+    // the dev stack has no tileserver, so the basemap style 404s and MapLibre never
+    // fires "load" (no data source, no tile requests). Serve a minimal style (with the
+    // configured beforeLayer id) so the map becomes functional and tile traffic observable.
+    await page.route('**/tileserver/styles/**', route => route.fulfill({
+      json: { version: 8, sources: {}, layers: [{ id: 'poi_label', type: 'background', paint: { 'background-color': '#eeeeee' } }] }
+    }))
+
     await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map?category=ville`, 'test_user1')
 
     // legend overlay: field title + one entry per value
@@ -34,8 +41,15 @@ test.describe('embed dataset map page with category param', () => {
 
     // first click: single value -> normalized to an eq filter in the URL, and the
     // legend must dim non-active rows immediately (no reload needed)
+    // a filtered tile request proves the map source is re-added with the new URL
+    // after the post-load layer teardown (regression lock for the loaded() guard bug)
+    const filteredTileRequest = page.waitForRequest(
+      req => req.url().includes('format=pbf') && req.url().includes('ville_eq=Dinan'),
+      { timeout: 10000 }
+    )
     await legend.getByText('Dinan').click()
     await expect(page).toHaveURL(/ville_eq=Dinan/)
+    await filteredTileRequest
     await expect(guingampRow).toHaveCSS('opacity', '0.4', { timeout: 5000 })
     await expect(dinanRow).toHaveCSS('opacity', '1')
 

@@ -122,24 +122,32 @@ const categoryProperty = computed(() => {
     format: p.format ?? undefined,
     separator: p.separator as string | undefined,
     'x-refersTo': p['x-refersTo'] ?? undefined,
-    'x-cardinality': p['x-cardinality']
+    'x-cardinality': p['x-cardinality'],
+    'x-calculated': p['x-calculated'] ?? undefined,
+    'x-capabilities': p['x-capabilities'] as { values?: boolean } | undefined
   })
   return eligible ? p : undefined
 })
-// only warn once the schema is known and the field is truly unusable
-const categoryWarning = computed(() => !!category && !!dataset.value?.schema && !categoryProperty.value)
+const categoryError = ref(false)
+// only warn once the schema is known and the field is truly unusable, or the values fetch failed
+const categoryWarning = computed(() => (!!category && !!dataset.value?.schema && !categoryProperty.value) || categoryError.value)
 
 const categoryValues = ref<{ value: string, label: string }[] | null>(null)
 watch([categoryProperty, () => dataset.value?.finalizedAt], async () => {
   categoryValues.value = null
+  categoryError.value = false
   const prop = categoryProperty.value
   if (!prop) return
   // stringified + alphabetical (default sort) for deterministic value -> color assignment,
   // fetched without the current filters so colors do not remap while filtering
   const params: Record<string, string> = { size: String(MAX_CATEGORY_VALUES + 1), stringify: 'true' }
   if (dataset.value?.draftReason) params.draft = 'true'
-  const values = await $fetch(`datasets/${id}/values-labels/${prop.key}`, { params }) as { value: string, label: string }[]
-  if (categoryProperty.value?.key === prop.key) categoryValues.value = values
+  try {
+    const values = await $fetch(`datasets/${id}/values-labels/${prop.key}`, { params }) as { value: string, label: string }[]
+    if (categoryProperty.value?.key === prop.key) categoryValues.value = values
+  } catch {
+    if (categoryProperty.value?.key === prop.key) categoryError.value = true
+  }
 }, { immediate: true })
 
 const hasOther = computed(() => (categoryValues.value?.length ?? 0) > MAX_CATEGORY_VALUES)

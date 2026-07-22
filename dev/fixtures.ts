@@ -268,7 +268,7 @@ async function seedEquipements () {
     'nom,type,commune,lat,lon',
     'Mairie de Rennes,Administration,Rennes,48.1113,-1.6800',
     'Hôtel de Ville de Nantes,Administration,Nantes,47.2173,-1.5534',
-    'Préfecture des Côtes-d\'Armor,Administration,Saint-Brieuc,48.5136,-2.7653',
+    'Préfecture des Côtes-d’Armor,Administration,Saint-Brieuc,48.5136,-2.7653',
     'Bibliothèque Champs Libres,Culture,Rennes,48.1045,-1.6759',
     'Opéra de Rennes,Culture,Rennes,48.1110,-1.6794',
     'Château des ducs de Bretagne,Culture,Nantes,47.2155,-1.5477',
