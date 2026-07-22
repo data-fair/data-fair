@@ -185,9 +185,12 @@ background **relay** (`anchorDataset()`) then recomputes both hashes from the au
 sources (stored file bytes + fresh Mongo doc), dedupes against the latest anchor's hash pair,
 writes the next revision `{ hash, context, dataset, payload? }` to the locked S3 store (§3.1),
 updates the `integrity.lastRevision` hint and clears the flag — **retrying forward, never rolling
-back** (the relay's filter is simply `{ _needsHistorizing: { $exists: true } }`). The write is
-atomic with no multi-document transaction, and the relay only ever acts on already-committed state
-(ordering preserved).
+back**. The worker task's filter is the flag **settle-gated** to the stable states
+(`status ∈ finalized|error`, no partial-rest pass, no pending extension) so the relay never
+anchors an interim mid-pipeline state; the deferral is visible (`unknown` verdict while the stamp
+is pending), and a dataset permanently stuck mid-pipeline defers anchoring until it recovers. The
+write is atomic with no multi-document transaction, and the relay only ever acts on
+already-committed state (ordering preserved).
 
 **The outbox is only for *organic* writes.** The rare superadmin actions — `PUT _integrity`
 (enable) and `POST _integrity/_fix` (reconcile) — **bypass the outbox and anchor inline** in the
@@ -225,6 +228,22 @@ preferred precisely because it eliminates this gap.
   resources in batches and emits an alert on divergence through its normal alerting/events
   path. At scale we cannot check everything all the time, hence "sliding" coverage.
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
+- **Everything that anchors or checks holds the per-dataset worker lock.** The relay tasks
+  already run under the standard `datasets:‹id›` cross-pod lock; the synchronous admin actions
+  (enable / disable / `_fix` / `_check` / both restores) and the nightly sweep acquire the **same
+  lock** (bounded wait then `409` for the admin actions; skip-until-next-pass for the sweep).
+  Without it, an inline admin anchor can race the relay to the same LIST-derived revision index —
+  both PUT the same key, and the loser becomes a shadowed noncurrent version that the purge later
+  reclaims (permanent trail loss). With it, a check can also never interleave with a relay drain.
+  Organic API writes take no lock; a stamped write landing **during** a check is therefore still
+  visible as a pending flag when the check ends, and a would-be breach verdict is downgraded to
+  `unknown` instead of recorded/notified (the relay re-anchors and the next pass converges) — a
+  check racing a legitimate write can produce a deferral, never a false alert.
+- **Orphaned line stamps self-heal.** A line write racing the lines relay's final hint clear can
+  leave per-line stamps with no dataset hint (the shape the task filter would never revisit). The
+  relay re-sets the hint if a stamp slipped in behind its final scan, and the checker carries the
+  same net: stamped lines found with no hint → hint re-set, verdict `unknown` — never a false
+  'edited' breach.
 - On a confirmed divergence: alert; show a **diff** (level 2 only — requires the stored
   payload); allow a superadmin `fixIntegrity` for legitimate-but-untracked edits. `POST
   _integrity/_fix` is **synchronous**: it re-anchors the current state inline
@@ -286,7 +305,14 @@ pushing the current anchor's retain-until date forward in place — no new revis
 This is the standard object-lock pattern (the same refresh-retention approach backup tools
 such as Veeam/Kopia use). Owned by the sliding checker (§3.3): when a long-lived resource's
 check passes and its horizon nears expiry, the checker extends the anchor's lock; on a
-mismatch it raises a breach instead. **At level 2 the anchor is a revision *pair***: the latest
+mismatch it raises a breach instead. A **failed renewal fires an `integrity-renewal-failed`
+event** through the same notifications path as a breach (gated on the ok→failed transition —
+renewal retries nightly, no daily re-alert): an unnoticed renewal outage is the one silent path
+to permanently lost repairability, so it gets the same loudness as a breach, on top of the
+`lastRenewal` / `linesRenewal` status fields the UI surfaces. The renewal gate reads the
+`integrity.lastRevision` mirror; if that mirror is externally lost, the checker **heals it from
+the store** (the authoritative source) rather than letting `needsRenewal(undefined)` silently
+disarm the slide. **At level 2 the anchor is a revision *pair***: the latest
 revision JSON and the payload object it **references** (§3.1). Renewal extends the latest revision
 JSON and, resolving `refIndex = file.i ?? i`, the `‹refIndex›.file` payload it points at — which,
 under payload reference dedupe, may be an **earlier** revision's copy. Extending both together keeps
@@ -328,8 +354,10 @@ applied identically to files, metadata documents, and dataset lines:
 > slides forward (§3.4) — extending the revision *and*, at level 2, the `.file` payload it
 > **references** (its own copy, or, under payload reference dedupe, an earlier revision's) together
 > as one pair — so the **current state is preserved indefinitely**, while older revisions age out at
-> retention so **history is recoverable only within the retention window**. A deletion is just a
-> tombstone latest-revision that stops being renewed and ages out.
+> retention so **history is recoverable only within the retention window**. A **line** deletion is a
+> tombstone latest-revision that stops being renewed and ages out; a **dataset** deletion writes no
+> tombstone — the trail simply stops being renewed and the whole scope ages out within one window
+> (§8), discovered from the store rather than from Mongo.
 
 At **write** time a revision that *references* an earlier payload also extends that payload's lock to
 its own retain-until, so a payload's lifetime is the max over every revision that references it —
@@ -377,8 +405,10 @@ reclamation of already-written objects (bounded by the new window); *lowering* i
 extra `HEAD` on objects that turn out to be still locked.
 
 The single carve-out is the **current anchor set of a still-enrolled dataset** (the latest dataset
-revision plus the `.file` payload it references, and every live line's latest non-tombstone
-anchor), which is kept whatever its lock says. That is not a guess about the lock but a refusal to
+revision plus the `.file` payload it references, and every anchored line sequence's latest
+non-tombstone anchor — deliberately without consulting Mongo live-ness, so an
+out-of-band-deleted line's evidence is kept too, erring protective), which is kept whatever its
+lock says. That is not a guess about the lock but a refusal to
 act on a lapsed one: under a renewal outage — already surfaced loudly by `lastRenewal` /
 `linesRenewal` (§3.4) — deleting the anchor would manufacture a missing-anchor breach and destroy
 repairability irreversibly, while keeping a stale-locked anchor costs only storage. Since the store
@@ -410,7 +440,10 @@ This gives every resource the same guarantee as a single file: current state alw
 - The capability is a **module local to data-fair** — not (yet) an independent web service,
   and not (yet) a shared `@data-fair/lib-node` package. To stay as close to atomicity as
   possible we avoid an extra networking layer: data-fair configures one S3 client and runs
-  its own checker in-process.
+  its own checker in-process. The whole `integrity` config block (plus `integrityCheckCron`) is
+  wired to environment variables (`INTEGRITY_ACTIVE`, `INTEGRITY_S3_*`,
+  `INTEGRITY_RETENTION_DAYS`, …) like the main `s3` block, so a containerized deployment needs
+  no mounted config file to enable it.
 - It is nonetheless **factored as a self-contained module** (locked-revision format, write
   wrappers, checker) so that promotion to `@data-fair/lib-node` for other adopters later is a
   packaging change, not a redesign — see [§14](#14-deferred-scope--future-directions). Internally it
@@ -632,8 +665,9 @@ once per environment; on a fresh environment the three datasets seed automatical
 - **Check and renewal.** The nightly `checkDataset` gains a lines part for enrolled REST datasets:
   LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names — **folded page by
   page** (`foldLatestLineAnchors`) rather than materialized, so the checker's memory is
-  O(live lines), bounded by the gate, even though the prefix holds every revision in the retention
-  window — a live-Mongo scan recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
+  O(**distinct lines within the retention window**) — live lines plus not-yet-aged-out deleted
+  ones, so a high-churn dataset can hold more anchors than the gate's live-line count — even
+  though the prefix holds every revision in the retention window — a live-Mongo scan recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
   with no revision (out-of-band insert), or a latest revision with no live line (out-of-band
   delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
   gains a `'lines'` breach member and `integrity.lastCheck.lines = { checked, diverged, sample:
@@ -796,6 +830,18 @@ No separate billing surface. Historized storage is **counted toward the owner's 
 static-content / storage quota**: the per-owner historized prefix size (§3.1) is added to what
 data-fair already meters. Activating integrity for an owner is a setting, not a separately
 priced product.
+
+**Implemented as a daily measure, not a hot-path LIST.** A measurement pass rides the daily
+checker/purge run (`api/src/integrity/storage.ts`, same cross-pod lock, after the purge so
+freshly reclaimed bytes stop counting immediately): it walks each owner prefix's **versions**
+(revision JSONs, `.file` payloads, noncurrent duplicates — everything the bucket genuinely
+holds), sums the sizes into a per-owner `integrity-storage` Mongo doc, and refreshes the owner's
+metered consumption. `updateTotalStorage` (the function every storage-affecting change calls)
+then adds that stored figure to the datasets/applications aggregation — a cheap Mongo read, never
+a live S3 walk. Because owners are discovered **from the store**, the aging-out tail of a
+**deleted dataset keeps counting** until the purge reclaims it — the bytes are held either way —
+and an owner whose only remaining historized data is such a tail still gets refreshed by the
+daily pass (no organic `updateStorage` call would otherwise touch it).
 
 The dominant cost driver is level 2's payload retention: it stores one full locked file copy per
 **distinct file version** within the retention window (not per revision). Metadata-only revisions —
