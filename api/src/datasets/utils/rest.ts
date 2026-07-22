@@ -22,6 +22,7 @@ import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.ts'
+import { extensionOwnedKeys } from '../../integrity/lines-operations.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
@@ -1404,22 +1405,13 @@ export const readStreams = async (dataset: RestDataset, filter = {}, progress?: 
 }
 
 export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDataset['extensions']) => {
-  const patchedKeys: string[] = []
-  for (const extension of extensions ?? []) {
-    if (extension.type === 'remoteService' && extension.propertyPrefix) {
-      patchedKeys.push(extension.propertyPrefix)
-      if (extension.overwrite) {
-        for (const key in extension.overwrite) {
-          // @ts-ignore
-          if (extension.overwrite[key]['x-originalName']) {
-            // @ts-ignore
-            patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
-          }
-        }
-      }
-    }
-    if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
-  }
+  // INVARIANT (integrity): the columns written back here are exactly the ones the integrity
+  // module excludes from the covered line body — the extender writes OUTSIDE the transaction
+  // pipeline (unstamped), so any column it wrote that the relay/checker still covered would
+  // false-breach every organic write-then-extend flow. extensionOwnedKeys IS that exclusion
+  // set: one shared source of truth instead of two mirrored implementations, so the write-back
+  // and the coverage exclusion can never drift apart.
+  const patchedKeys = [...extensionOwnedKeys(extensions)]
   const c = collection(dataset)
   // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
   let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []

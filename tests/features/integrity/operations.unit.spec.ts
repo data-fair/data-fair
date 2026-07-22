@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import * as ops from '../../../api/src/integrity/operations.ts'
+import datasetSchema from '../../../api/types/dataset/schema.js'
 
 const owner = { type: 'organization', id: 'acme' }
 
@@ -336,4 +337,40 @@ test('shouldNotify: alerts on entry, re-alerts only past the window, silent when
   expect(ops.shouldNotify(true, new Date(now - day).toISOString(), 7, now)).toBe(false)
   // alerted 8 days ago and still bad: re-alert (bounds the pre-written-state suppression attack)
   expect(ops.shouldNotify(true, new Date(now - 8 * day).toISOString(), 7, now)).toBe(true)
+})
+
+// ---------------------------------------------------------------------------------------------
+// Classification ratchet: every top-level dataset-schema property must be consciously classified
+// for integrity coverage. This test FAILING on a new property is the point — decide, then list it:
+//   - meaningful metadata a tamper should be detected on → add it to COVERED below, and make
+//     sure every writer of it stamps the outbox (or goes through applyPatch's coveredPatchKeys
+//     gate), or organic writes will false-breach;
+//   - worker-maintained churn / derived bookkeeping → add it to EXCLUDED_TOP_LEVEL in
+//     api/src/integrity/operations.ts, accepting that tampering with it is NOT detected.
+// Never let a field land in neither list "for now": covered-by-default + an unstamped writer is
+// a false-breach generator, and silently excluding is a coverage hole nobody decided.
+// ---------------------------------------------------------------------------------------------
+
+const COVERED_TOP_LEVEL = [
+  'id', 'slug', 'href', 'page', 'title', 'summary', 'description', 'image', 'spatial', 'temporal',
+  'keywords', 'frequency', 'creator', 'modified', 'visibility', 'file', 'originalFile',
+  'attachments', 'createdAt', 'owner', 'primaryKey', 'schema', 'bbox', 'timePeriod', 'timeZone',
+  'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'masterData',
+  'publications', 'publicationSites', 'requestedPublicationSites', 'hasFiles',
+  'attachmentsAsImage', 'isVirtual', 'virtual', 'isRest', 'rest', 'isMetaOnly', 'topics',
+  'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'permissions',
+  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation'
+]
+
+test('every dataset-schema property is consciously classified for integrity coverage', () => {
+  const schemaKeys = Object.keys((datasetSchema as any).properties).filter((k) => !k.startsWith('_'))
+  const unclassified = schemaKeys.filter((k) => !COVERED_TOP_LEVEL.includes(k) && !ops.EXCLUDED_TOP_LEVEL.has(k))
+  expect(unclassified, `new dataset propert${unclassified.length > 1 ? 'ies' : 'y'} [${unclassified.join(', ')}] must be classified for integrity coverage — read the comment above this test`).toEqual([])
+  const doubleClassified = COVERED_TOP_LEVEL.filter((k) => ops.EXCLUDED_TOP_LEVEL.has(k))
+  expect(doubleClassified).toEqual([])
+  // the classification matches what coveredPatchKeys actually does
+  for (const key of schemaKeys) {
+    const covered = ops.coveredPatchKeys({ [key]: 'x' }).length === 1
+    expect(covered, `${key} classification drifted from coveredPatchKeys`).toBe(COVERED_TOP_LEVEL.includes(key))
+  }
 })

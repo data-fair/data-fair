@@ -47,7 +47,12 @@ export const isPayloadKey = (key: string): boolean => key.endsWith(PAYLOAD_SUFFI
 
 // The covered projection (spec §2): the whole doc minus underscore-prefixed fields and the
 // operational denylist; a field added to the model later is covered by default (fail-loud).
-const EXCLUDED_TOP_LEVEL = new Set([
+// INVARIANT: every top-level dataset-schema property must be consciously classified as covered
+// or excluded — the classification ratchet in tests/features/integrity/operations.unit.spec.ts
+// fails on any new unclassified property. Excluding a field here means the checker ignores its
+// tampering; covering a field means EVERY writer of it must stamp the outbox (or ride
+// applyPatch's coveredPatchKeys gate) or organic writes will false-breach.
+export const EXCLUDED_TOP_LEVEL = new Set([
   'status', 'draft', 'integrity', 'count', 'storage', 'esWarning', 'finalizedAt',
   'dataUpdatedAt', 'dataUpdatedBy', 'updatedAt', 'updatedBy', 'createdBy',
   'errorStatus', 'errorRetry', 'loaded', 'descendants'
