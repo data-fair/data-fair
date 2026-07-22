@@ -32,6 +32,10 @@ module.exports = {
       forcePathStyle: true,
     },
     retention: { days: 365 },
+    // the `.who` attribution sibling's OWN retention (target 8): a kill switch plus a retention
+    // shorter than (and never extended past) the revision's own retention.days above — enforced
+    // at startup by store-factory.ts.
+    attribution: { active: true, retentionDays: 180 },
     lines: { maxLines: 100000 },
     // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
     // worker lock before answering 409 — it must hold that lock to not race the relay tasks

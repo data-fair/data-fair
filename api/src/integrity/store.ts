@@ -1,7 +1,9 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, ListObjectVersionsCommand, DeleteObjectCommand, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { Readable } from 'node:stream'
-import type { RevisionContext } from './operations.ts'
+import type { RevisionContext, WhoBody } from './operations.ts'
+
+export type { WhoBody }
 
 export type RevisionBody = {
   // both sha256-hex: `file` digests the stored file's bytes (absent on file-less datasets),
@@ -139,6 +141,26 @@ export class IntegrityStore {
   }
 
   async getRevision (key: string): Promise<RevisionBody> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
+    const text = await res.Body!.transformToString()
+    return JSON.parse(text)
+  }
+
+  // The `.who` attribution sibling (target 8): a compliance-locked object exactly like
+  // writeRevision, but with its OWN (shorter) retain-until — never referenced/renewed/dedupe-
+  // targeted, and never pushed forward by extendRetention.
+  async writeWho (key: string, body: WhoBody, retainUntil: Date): Promise<void> {
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: JSON.stringify(body),
+      ContentType: 'application/json',
+      ObjectLockMode: 'COMPLIANCE',
+      ObjectLockRetainUntilDate: retainUntil
+    }))
+  }
+
+  async getWho (key: string): Promise<WhoBody> {
     const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
     const text = await res.Body!.transformToString()
     return JSON.parse(text)

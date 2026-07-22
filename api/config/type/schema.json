@@ -122,6 +122,13 @@
           "type": "object",
           "properties": { "days": { "type": "number" } }
         },
+        "attribution": {
+          "type": "object",
+          "properties": {
+            "active": { "type": "boolean" },
+            "retentionDays": { "type": "number" }
+          }
+        },
         "lines": {
           "type": "object",
           "properties": {

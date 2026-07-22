@@ -37,6 +37,8 @@ module.exports = {
       forcePathStyle: true,
     },
     retention: { days: 1 },
+    // must stay <= retention.days above (startup assert in store-factory.ts)
+    attribution: { active: true, retentionDays: 1 },
     lockWaitMs: 2000, // fast 409 in dev/tests when the per-dataset lock is held
   },
   directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`,
