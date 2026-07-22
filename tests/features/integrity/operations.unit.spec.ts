@@ -243,3 +243,86 @@ test('parseOwnerPrefix refuses malformed segments (foreign objects in the bucket
   expect(ops.parseOwnerPrefix('data-fair/organization-/')).toBeUndefined()
   expect(ops.parseOwnerPrefix('data-fair/-acme/')).toBeUndefined()
 })
+
+// ---------------------------------------------------------------------------------------------
+// Round 3 (trail coherence): pure fold over version listings — reconstructed current view +
+// anomaly classification, sequence gaps, date skew, ack fingerprints.
+// ---------------------------------------------------------------------------------------------
+
+const v = (key: string, versionId: string, opts: Partial<ops.TrailVersionEntry> = {}): ops.TrailVersionEntry =>
+  ({ key, versionId, size: 100, etag: 'aaa', lastModified: new Date('2026-07-01T00:00:00Z'), ...opts })
+
+const foldAll = (entries: ops.TrailVersionEntry[]) => {
+  const acc = ops.newTrailFold()
+  ops.foldTrailVersions(acc, entries)
+  return ops.finishTrailFold(acc)
+}
+
+test('trail fold: single version per key → clean current view, no anomalies', () => {
+  const { current, anomalies } = foldAll([v('p/000000000', 'v1'), v('p/000000001', 'v2')])
+  expect(anomalies).toEqual([])
+  expect([...current.keys()]).toEqual(['p/000000000', 'p/000000001'])
+  expect(current.get('p/000000000')!.versionId).toBe('v1')
+})
+
+test('trail fold: a delete marker is an anomaly and the hidden key resurfaces', () => {
+  const { current, anomalies } = foldAll([
+    v('p/000000000', 'v1'),
+    { key: 'p/000000000', versionId: 'm1', deleteMarker: true }
+  ])
+  expect(current.get('p/000000000')!.versionId).toBe('v1') // resurfaced, not hidden
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'delete-marker', key: 'p/000000000', confidence: 'confirmed', versionIds: ['m1'] })
+})
+
+test('trail fold: byte-identical retry duplicates are benign, newest version wins', () => {
+  // S3 lists versions newest-first within a key; the fold keeps that order
+  const { current, anomalies } = foldAll([v('p/000000000', 'newer'), v('p/000000000', 'older')])
+  expect(anomalies).toEqual([])
+  expect(current.get('p/000000000')!.versionId).toBe('newer')
+})
+
+test('trail fold: differing versions of the same key are a confirmed rewrite anomaly', () => {
+  const { anomalies } = foldAll([
+    v('p/000000000', 'shadow', { etag: 'bbb' }),
+    v('p/000000000', 'original')
+  ])
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'version-divergence', key: 'p/000000000', confidence: 'confirmed' })
+  expect(anomalies[0].versionIds!.sort()).toEqual(['original', 'shadow'])
+})
+
+test('trail fold: groups a key straddling a page boundary', () => {
+  const acc = ops.newTrailFold()
+  ops.foldTrailVersions(acc, [v('p/000000000', 'shadow', { size: 999 })])
+  ops.foldTrailVersions(acc, [v('p/000000000', 'original')])
+  const { anomalies } = ops.finishTrailFold(acc)
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0].kind).toBe('version-divergence')
+})
+
+test('sequence gaps: mid-sequence holes are suspect, tail truncation is not', () => {
+  // purge removes a prefix of the sequence (locks lapse in write order): [3..6] with 0-2 gone is normal
+  expect(ops.sequenceGapAnomalies('p/', [3, 4, 5, 6])).toEqual([])
+  const anomalies = ops.sequenceGapAnomalies('p/', [3, 4, 7, 8])
+  expect(anomalies).toHaveLength(1)
+  expect(anomalies[0]).toMatchObject({ kind: 'sequence-gap', confidence: 'suspect' })
+  expect(anomalies[0].detail).toContain('5')
+  expect(anomalies[0].detail).toContain('6')
+})
+
+test('date skew: within tolerance is fine, beyond is a suspect anomaly', () => {
+  const written = new Date('2026-07-01T12:00:00Z')
+  expect(ops.dateSkewAnomaly('p/000000003', '2026-07-01T11:00:00Z', written, 48 * 3600 * 1000)).toBeUndefined()
+  const anomaly = ops.dateSkewAnomaly('p/000000003', '2026-06-25T12:00:00Z', written, 48 * 3600 * 1000)
+  expect(anomaly).toMatchObject({ kind: 'date-skew', key: 'p/000000003', confidence: 'suspect' })
+})
+
+test('ack fingerprints cover an anomaly exactly, new versions escape an old ack', () => {
+  const shadow: ops.TrailAnomaly = { kind: 'version-divergence', key: 'p/000000000', confidence: 'confirmed', versionIds: ['original', 'shadow'] }
+  const fp = ops.anomalyFingerprint(shadow)
+  expect(ops.filterAckedAnomalies([shadow], [fp])).toEqual([])
+  // a NEW shadow version after the ack changes the fingerprint → resurfaces
+  const reShadow = { ...shadow, versionIds: ['original', 'shadow', 'shadow2'] }
+  expect(ops.filterAckedAnomalies([reShadow], [fp])).toEqual([reShadow])
+})
