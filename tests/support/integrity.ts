@@ -67,3 +67,18 @@ export const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000): 
   if (raw._needsHistorizing !== undefined) throw new Error('relay did not clear _needsHistorizing within timeout')
   return raw
 }
+
+// --- round 3 (trail coherence) attack helpers -------------------------------------------------
+
+// Shadow a revision: PUT a new current version onto an existing key (object-lock protects the
+// original version, not the key) — the store-credentialed rewrite attack.
+export const putShadowVersion = async (key: string, body: any): Promise<void> => {
+  const { PutObjectCommand } = await import('@aws-sdk/client-s3')
+  await integrityTestClient.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: JSON.stringify(body), ContentType: 'application/json' }))
+}
+
+// Hide a key behind a delete marker (versionless DELETE) — the store-credentialed hide attack.
+export const putDeleteMarker = async (key: string): Promise<void> => {
+  const { DeleteObjectCommand } = await import('@aws-sdk/client-s3')
+  await integrityTestClient.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+}
