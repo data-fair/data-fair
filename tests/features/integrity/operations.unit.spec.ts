@@ -206,6 +206,59 @@ test('latestKey and nextIndex ignore payload keys', () => {
   expect(ops.nextIndex(keys)).toBe(2)
 })
 
+test('whoKey appends the .who suffix; isSiblingKey covers both .file and .who', () => {
+  expect(ops.whoKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007.who')
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007.who')).toBe(true)
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007.file')).toBe(true)
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007')).toBe(false)
+})
+
+test('latestKey and nextIndex ignore .who keys too', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000000',
+    'data-fair/organization-acme/ds1/000000001',
+    'data-fair/organization-acme/ds1/000000001.who',
+    'data-fair/organization-acme/ds1/000000001.file'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
+
+test('a lone ‹i›.who key must never win latest, even though it sorts lexically after its revision', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000001',
+    // orphan who for a revision write that has not landed yet (or never will, crash residue)
+    'data-fair/organization-acme/ds1/000000002.who'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
+
+test('buildWho nests raw parts into a WhoBody, stamping the given date', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'u1', apiKeyId: 'k1', ip: '203.0.113.7', country: 'FR', asn: 3215, asnOrg: 'Orange' }, date))
+    .toEqual({ date, user: { id: 'u1' }, apiKey: { id: 'k1' }, ip: '203.0.113.7', geo: { country: 'FR', asn: 3215, asnOrg: 'Orange' } })
+})
+
+test('buildWho drops the reverse-proxy neutral fillers (country XX / asn 0 / asnOrg Unknown)', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'u1', country: 'XX', asn: 0, asnOrg: 'Unknown' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', asn: '0' }, date)).toEqual({ date, user: { id: 'u1' } })
+  // a real asn alongside a filler country: geo is still built, just without the filler field
+  expect(ops.buildWho({ userId: 'u1', country: 'XX', asn: 3215 }, date)).toEqual({ date, user: { id: 'u1' }, geo: { asn: 3215 } })
+})
+
+test('buildWho skips the readApiKey pseudo-user id', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'readApiKey', ip: '203.0.113.7' }, date)).toEqual({ date, ip: '203.0.113.7' })
+})
+
+test('buildWho returns undefined when nothing attributable remains', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({}, date)).toBeUndefined()
+  expect(ops.buildWho({ userId: 'readApiKey', country: 'XX', asn: 0, asnOrg: 'Unknown' }, date)).toBeUndefined()
+})
+
 test('restoreUpdate writes only diverging covered keys and unsets extra ones', () => {
   const snapshot = { title: 'legit', description: 'legit desc', owner: { type: 'organization', id: 'acme' } }
   const hot = {
