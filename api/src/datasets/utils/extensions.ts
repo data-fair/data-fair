@@ -616,6 +616,7 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
       if (newExtProp) {
         if (prop.title) newExtProp.title = prop.title
         if (prop.description) newExtProp.description = prop.description
+        if ('x-group' in prop) newExtProp['x-group'] = prop['x-group']
         newSchema.push(newExtProp)
       }
     } else {
