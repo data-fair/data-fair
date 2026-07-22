@@ -11,6 +11,7 @@
       :no-interaction="!interaction"
       :selectable="selectable"
       :cols="cols"
+      :category="category"
     />
   </v-container>
 </template>
@@ -34,4 +35,5 @@ const interaction = useBooleanSearchParam('interaction', true)
 const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_id_eq')
 const cols = useStringsArraySearchParam('cols')
+const category = useStringSearchParam('category')
 </script>

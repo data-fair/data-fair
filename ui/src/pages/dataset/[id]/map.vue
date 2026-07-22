@@ -4,7 +4,10 @@
     class="pa-0"
     fluid
   >
-    <dataset-map :height="contentHeight" />
+    <dataset-map
+      :height="contentHeight"
+      :category="category"
+    />
   </v-container>
 </template>
 
@@ -35,6 +38,7 @@ const { dataset } = store
 useDatasetWatch(store, ['info'])
 
 const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
+const category = useStringSearchParam('category')
 
 watch(dataset, (d) => {
   if (!d) return
