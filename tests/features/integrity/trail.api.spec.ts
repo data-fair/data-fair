@@ -257,3 +257,74 @@ test('ack silences reviewed anomalies via a locked ackTrail revision; new tamper
   const reAltered = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(reAltered.trail.status).toBe('altered')
 })
+
+// ---------------------------------------------------------------------------------------------
+// T6: adversarial _i inflation — _fix convergence + the padding-overflow guard
+// ---------------------------------------------------------------------------------------------
+
+const restLinesDataset = async (admin: any) => {
+  const res = await admin.post('/api/v1/datasets', {
+    isRest: true, title: `trail i-wedge ${Date.now()}`, schema: [{ key: 'attr1', type: 'string' }]
+  })
+  const dataset = res.data
+  await admin.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'a' }, { _id: 'line1', attr1: 'b' }])
+  await waitForFinalize(admin, dataset.id)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(admin, dataset.id)
+  await waitForFlagCleared(dataset.id)
+  return dataset
+}
+
+test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restLinesDataset(admin)
+
+  // step 1 — the attacker launders a forged write: content + inflated _i + stamp + hint, which
+  // the relay anchors at the forged index (in padding range, far above any time-derived value)
+  const forgedI = 9e15
+  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' },
+    update: { $set: { attr1: 'forged', _i: forgedI, _needsHistorizing: {} } }
+  })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(admin, dataset.id)
+
+  // step 2 — a plain out-of-band edit diverges from that forged anchor
+  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' },
+    update: { $set: { attr1: 'tampered' } }
+  })
+  const breach = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(breach.status).toBe('breach')
+  expect(breach.breach).toContain('lines')
+
+  // without the correction, the bless's time-derived _i can never outrank the forged anchor and
+  // _fix would report a breach forever — with it, _fix must converge to ok
+  const fixed = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).data
+  expect(fixed.status).toBe('ok')
+  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  expect(line._i).toBeGreaterThan(forgedI)
+})
+
+test('the relay refuses an _i that overflows the key padding (trail ordering stays sound)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restLinesDataset(admin)
+  const before = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).length
+
+  // 10^16 does not fit the 16-digit padding: a wider number would break the lexical==numeric
+  // ordering of the line's whole sequence — the relay must refuse rather than corrupt the trail
+  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' },
+    update: { $set: { attr1: 'overflow', _i: 1e16, _needsHistorizing: {} } }
+  })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(admin, dataset.id)
+
+  // no revision was written for the overflow value, and the stamp is deliberately left pending
+  // (the dataset stays 'unknown' until remediation; check-stale surfaces it if forgotten)
+  expect((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).length).toBe(before)
+  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  expect(line._needsHistorizing).toBeTruthy()
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('unknown')
+})
