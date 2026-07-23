@@ -514,6 +514,9 @@ const datasetProperties = {
       },
       // last DEFINITIVE verdict (ok/breach) — drives the check-stale alert (unknowns let it run)
       lastDefinitiveCheck: { type: 'string', format: 'date-time' },
+      // per-verdict clock for the index member, the only verdict that can be individually
+      // 'unknown' while the overall check stays definitive — never ahead of lastDefinitiveCheck
+      lastDefinitiveIndexCheck: { type: 'string', format: 'date-time' },
       // pointer to the latest ackTrail revision; the acked fingerprints live in its locked body
       trailAck: {
         type: 'object',

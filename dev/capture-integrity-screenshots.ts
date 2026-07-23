@@ -12,7 +12,8 @@ const outDir = 'docs/presentation-integrite-fr/img'
 mkdirSync(outDir, { recursive: true })
 
 const browser = await chromium.launch()
-const context = await browser.newContext({ viewport: { width: 1100, height: 1400 }, locale: 'fr-FR' })
+// wide enough for the full revision table incl. the attribution column (Empreinte must not clip)
+const context = await browser.newContext({ viewport: { width: 1280, height: 1400 }, locale: 'fr-FR' })
 const page = await context.newPage()
 
 // superadmin login with admin mode (the integrity write actions render in admin mode only)

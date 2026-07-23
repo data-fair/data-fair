@@ -115,6 +115,11 @@ Draft state is ignored: the check compares the production alias against the prod
 > the stale clock never trips for it. This is a **stated residual limit**, not bounded in this wave
 > (see `api/src/integrity/README.md` A1 invariants and `docs/architecture/integrity.md` §A1). A
 > proper fix would need a *per-verdict* freshness clock (a follow-up), not the overall one.
+>
+> **Closed 2026-07-23:** the per-verdict clock is delivered —
+> `integrity.lastDefinitiveIndexCheck`, stale-swept under the distinct dedup key
+> `index-check-stale` on the same `integrity-check-stale` event. See
+> `2026-07-23-integrity-per-verdict-freshness-design.md`.
 
 ## 4. Verdict shape and alerting
 

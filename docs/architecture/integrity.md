@@ -100,9 +100,14 @@ the same machinery; they differ only in what each revision stores.
   gate** — the maintainer's call: storage cost is proportional to the file size and already
   metered into the owner's existing storage consumption (§9), so there is no threshold below
   which level 2 is skipped.
-- **Level 3 — Prevention.** **Out of scope** here, and mechanically different: a superadmin
-  marks a resource read-only even to client admins. Noted for completeness; it would be a
-  separate feature, not built on this store.
+- **Level 3 — Prevention.** **Out of scope** here, but assessed (2026-07-23) and — reversing
+  the earlier "separate feature" note — it **would** be built on this store: a superadmin
+  **freeze** recorded as a locked trail revision, honestly named a *tamper-evident freeze*
+  rather than prevention (the hot stores stay mutable; app code is the only enforcement). Its
+  real value is mechanical: while frozen there are no legitimate writes, so **any** post-lock
+  revision is automatically a breach — closing §1's self-laundering first-write lie for frozen
+  datasets. See §14 and
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md).
 
 Priority: **level 1 everywhere it makes sense first**, level 2 added afterward where
 reasonable (it may never be reasonable for large editable datasets — see §5).
@@ -285,7 +290,10 @@ where async is genuinely needed: `applyPatch`, finalize, and the bulk propagatio
   scope audit is immune. A dataset with no *definitive* verdict (ok/breach) for
   `integrity.maxUnknownDays` fires `integrity-check-stale` (`integrity.lastDefinitiveCheck`,
   seeded at enable) — the "downgrade to unknown" posture is only safe because unknowns cannot
-  silently accumulate.
+  silently accumulate. That bound is **per-verdict** where it needs to be: the `index` member,
+  the only verdict that can be individually `unknown` while the overall check stays definitive,
+  has its own clock (`integrity.lastDefinitiveIndexCheck`, dedup key `index-check-stale` on the
+  same event — see §5).
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
 - **Everything that anchors or checks holds the per-dataset worker lock.** The relay tasks
   already run under the standard `datasets:‹id›` cross-pod lock; the synchronous admin actions
@@ -840,15 +848,17 @@ fixtures also feed the screenshots of the client-facing presentation
     all downgrade the index verdict to `unknown`; a fresh check re-runs after any divergence is
     found, so a transient pending state cannot mask a real one.
 
-    > **Stated residual limit (follow-up, not fixed in this wave):** the `integrity-check-stale`
-    > alert does **not** bound a *per-verdict* index `unknown`. It fires off
-    > `integrity.lastDefinitiveCheck`, which advances on every **overall** definitive check
-    > (`ok`/`breach`) — and the overall check stays definitive even while the `index` member alone
-    > is `unknown`. So a Mongo-writing adversary can pin the index verdict to `unknown` **forever**
-    > (an orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
-    > `dataset.status` — both outside hash coverage) without tripping the stale alert. Closing this
-    > needs a per-verdict freshness clock, deliberately deferred (design doc §3.4 correction,
-    > `api/src/integrity/README.md` A1 invariants).
+    > **Per-verdict freshness clock (2026-07-23 — closed the A1 residual limit):** the `index`
+    > member is the only verdict that can be individually `unknown` while the overall check stays
+    > definitive, so it carries its own clock, `integrity.lastDefinitiveIndexCheck` — advanced
+    > only when the index verdict is definitive (`ok`/`diverged`), alongside the overall clock,
+    > and never ahead of it. The stale sweep fires `integrity-check-stale` when the index clock
+    > alone goes stale (distinct dedup key `index-check-stale`, cleared only on a definitive
+    > index pass), so a Mongo-writing adversary pinning the index verdict to `unknown` (an
+    > orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+    > `dataset.status` — both outside hash coverage) is bounded by `integrity.maxUnknownDays`
+    > like every other deferral. Design:
+    > [2026-07-23-integrity-per-verdict-freshness-design.md](../plans/2026-07-23-integrity-per-verdict-freshness-design.md).
   - **Malformed ES docs are surfaced, not dropped:** a doc with a missing/null/non-numeric `_i`
     (unorderable, unjoinable) is recorded as a `surplus` divergence keyed by its ES `_id` — the
     sampled window query explicitly pulls `_i`-less docs (a `range` alone never matches them), and
@@ -1060,6 +1070,7 @@ plan → build, test-first), not here.
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
 | A1 — ES index consistency | third `'index'` verdict (count + seeded sampled windows nightly, exhaustive on `?deep=true`), both dataset families, through the alias; panel reindex journals evidence first | `2026-07-22-integrity-index-consistency-design.md` |
 | A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
+| Per-verdict freshness clock | `integrity.lastDefinitiveIndexCheck` bounds a pinned-`unknown` index verdict (closed the A1 residual limit) | `2026-07-23-integrity-per-verdict-freshness-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
 guarantee honest until they land):
@@ -1096,6 +1107,12 @@ Genuinely open:
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history. A product conversation per
   deployment, not a design gap.
+- **Level 3 — tamper-evident freeze (assessed 2026-07-23, not scheduled).** Reversible,
+  store-authoritative dataset lock as trail revisions; the strong/weak knob is checker policy,
+  not storage location, and within the threat model the reversible lock ≈ the permanent one —
+  full assessment in
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md)
+  and §14.
 
 Decided / resolved (one line each; details in the linked docs):
 
@@ -1228,6 +1245,28 @@ is precluded by the design above; each is an additive step.
   spike on Scaleway), and a fixed time-based retention (~1 year was the working number, replacing
   today's keep-forever). Deferred as a **family** — events, HTTP request logs, and any other
   append-only journal share this posture.
+- **Level 3 — the tamper-evident freeze (assessed 2026-07-23, notes in
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md)).**
+  A superadmin dataset lock, recorded as first-class trail revisions (`lock`/`unlock`, with
+  `reason`) — the Mongo flag is only the write-path mirror, cross-checked like
+  `integrity.active`. Prevention proper is unattainable (hot stores are mutable; enforcement is
+  app code the in-scope adversary bypasses), so the honest guarantee is: **while frozen, any
+  change by anyone through any path becomes a permanent breach record — any post-lock revision
+  is automatically illegitimate — and unfreezing is itself a permanent audited event.** That
+  mechanically closes §1's self-laundering first-write lie for frozen datasets (today caught
+  only by human trail-vs-journal review). Key conclusions: (a) the strong/weak knob is
+  **checker policy** (is a superadmin `unlock` revision honored?), not storage location — both
+  modes live in the store, with the mode recorded *inside* the compliance-locked lock revision
+  so it cannot be downgraded, and the relay never minting lock/unlock operations from outbox
+  stamps; (b) within the threat model (tenant admin, who cannot call the superadmin route)
+  **the reversible lock is as strong as the permanent one**, while permanent mode collides
+  with upgrade scripts, GDPR rectification, deletion/erasure (§8) and is operationally bounded
+  by renewal anyway — so the product is the reversible lock, "permanent" at most a recorded
+  intent flag; (c) **partial locks** ("only processing X may write") are cut from the
+  integrity surface: origins are claimed, not proven, so they re-open exactly the ambiguity
+  the full lock removes — that need is served by permissions and A2's API-key-only write lock
+  (process discipline, §12). Enforcement reuses the existing boundary: locked = the write
+  wrapper refuses any write that would stamp `_needsHistorizing`.
 - **Central integrity service.** Instead of an in-process module, a `registry`-style technical
   service could own S3-credential custody, revision-format governance across services, the
   audit/listing API (§7), storage accounting, and retention/lock-renewal orchestration — while

@@ -10,9 +10,9 @@ Le panneau affiche le verdict du dernier contrôle, la vérification de cohéren
 
 ### En cas de divergence
 
-Quand un contrôle détecte une écriture hors circuit, le panneau bascule en alerte : la ou les parties touchées (fichier, métadonnées, lignes) sont nommées, et les remèdes sont proposés — comparer l'état courant avec la dernière révision saine, **restaurer** l'état vérifié, ou **réconcilier** si la modification s'avère légitime après enquête. Le jeu de données remonte aussi dans le filtre « en erreur » de la liste des jeux de données, et les administrateurs abonnés reçoivent la notification.
+Quand un contrôle détecte une écriture hors circuit, le panneau bascule en alerte : la ou les parties touchées (fichier, métadonnées, lignes, index de recherche) sont nommées, et les remèdes sont proposés — comparer l'état courant avec la dernière révision saine, **restaurer** l'état vérifié, ou **réconcilier** si la modification s'avère légitime après enquête. Le jeu de données remonte aussi dans le filtre « en erreur » de la liste des jeux de données, et les administrateurs abonnés reçoivent la notification.
 
-![Panneau d'intégrité — divergence détectée sur les métadonnées](img/panneau-integrite-breche.png)
+![Panneau d'intégrité — divergences détectées sur les métadonnées et l'index servi, avec la preuve conservée](img/panneau-integrite-breche.png)
 
 ### Jeux de données éditables : la vue par lignes
 
