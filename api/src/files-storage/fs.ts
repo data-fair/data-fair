@@ -3,16 +3,22 @@ import { join as joinPath, relative as relativePath } from 'path'
 import fs from 'fs-extra'
 import type { FileStats, FileBackend } from './types.ts'
 import { httpError } from '@data-fair/lib-express'
-import { fsyncFile } from '../datasets/utils/files.ts'
+import { fsyncFile } from './operations.ts'
 import parseRange from 'range-parser'
 import { pipeline } from 'node:stream/promises'
 import nodeDir from 'node-dir'
 import unzipper from 'unzipper'
-import config from '#config'
 
 export class FsBackend implements FileBackend {
+  private dataDir: string
+
+  // explicit dataDir instead of #config so the backend can be constructed in the test process
+  constructor (dataDir: string) {
+    this.dataDir = dataDir
+  }
+
   async checkAccess () {
-    await fs.writeFile(`${config.dataDir}/check-access.txt`, 'ok')
+    await fs.writeFile(`${this.dataDir}/check-access.txt`, 'ok')
   }
 
   async lsr (path: string): Promise<string[]> {
@@ -122,6 +128,15 @@ export class FsBackend implements FileBackend {
 
   async pathExists (path: string) {
     return fs.pathExists(path)
+  }
+
+  async fileExists (path: string) {
+    try {
+      return (await fs.stat(path)).isFile()
+    } catch (err: any) {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return false
+      throw err
+    }
   }
 
   async zipDirectory (path: string) {

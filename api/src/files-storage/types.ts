@@ -21,7 +21,10 @@ export type FileBackend = {
   moveFile(srcPath: string, dstPath: string): Promise<void>
   copyDir(srcPath: string, dstPath: string): Promise<void>
   moveDir(srcPath: string, dstPath: string): Promise<void>
+  // file OR directory, with prefix semantics on S3 (a strict prefix of an existing key matches)
   pathExists(path: string): Promise<boolean>
+  // exact match of a file, the only correct existence check before reading one
+  fileExists(path: string): Promise<boolean>
   zipDirectory(path: string): Promise<CentralDirectory>
   fileSample(path: string): Promise<Buffer>
   checkAccess(): Promise<void>
