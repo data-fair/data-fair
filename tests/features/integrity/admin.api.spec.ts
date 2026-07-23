@@ -25,7 +25,7 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
   // enable is synchronous: the anchor exists as soon as the PUT returns, no wait needed
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   // 2 raw keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(status.active).toBe(true)
@@ -49,11 +49,11 @@ test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
   // _fix is synchronous too
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
   // unchanged state → dedupe → still exactly one revision
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 })
 
 test('revisions endpoint lists revisions newest-first and is readable by the owner admin', async () => {
@@ -68,7 +68,7 @@ test('revisions endpoint lists revisions newest-first and is readable by the own
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`) // revision 1
 
   // raw store has 4 keys (2 revisions × JSON + .file); the revisions endpoint filters payloads out
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   const res = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
   expect(res.count).toBe(2)
   expect(res.results.length).toBe(2)
@@ -97,7 +97,7 @@ test('integrity reads are allowed to the owner admin, writes stay superadmin-onl
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // owner (admin of the owner account) can read status and revisions
   expect((await owner.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.active).toBe(true)
@@ -249,7 +249,7 @@ test('an out-of-band write to an EXCLUDED field neither breaches nor creates a r
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 })
 
 test('a legitimate metadata PATCH historizes a new revision', async () => {
@@ -260,10 +260,11 @@ test('a legitimate metadata PATCH historizes a new revision', async () => {
 
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'legitimate new description' })
 
-  // 3 raw keys: 2 revisions (JSON) + 1 .file payload — the metadata-only edit references rev 0's
-  // payload rather than uploading a second copy (payload reference dedupe)
-  const keys = await waitForIntegrityRevisions(prefix, 3)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(2)
+  // 5 raw keys: 2 revisions (JSON) + 1 .file payload + 2 .who siblings (rev 0's enable and rev
+  // 1's user PATCH are both attributed) — the metadata-only edit references rev 0's payload
+  // rather than uploading a second copy (payload reference dedupe)
+  const keys = await waitForIntegrityRevisions(prefix, 5)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   expect(keys.filter(k => k.endsWith('.file')).length).toBe(1)
   await waitForFlagCleared(dataset.id)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -284,8 +285,9 @@ test('a permissions change historizes a new revision', async () => {
 
   await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
 
-  // metadata-only change → the new revision references rev 0's payload (3 keys, one .file)
-  expect((await waitForIntegrityRevisions(prefix, 3)).filter(k => !k.endsWith('.file')).length).toBe(2)
+  // metadata-only change → the new revision references rev 0's payload (5 keys: 2 revisions,
+  // 1 .file, 2 .who siblings — the permissions PATCH is attributed too)
+  expect((await waitForIntegrityRevisions(prefix, 5)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -307,8 +309,9 @@ test('a topic removed from owner settings historizes a new revision', async () =
 
   // topics is a covered field: assigning it to the dataset is itself a legitimate PATCH that historizes
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Integrity topic' }] })
-  // metadata-only → the new revision references rev 0's payload (3 keys, one .file)
-  expect((await waitForIntegrityRevisions(prefix, 3)).filter(k => !k.endsWith('.file')).length).toBe(2)
+  // metadata-only → the new revision references rev 0's payload (5 keys: 2 revisions, 1 .file,
+  // 2 .who siblings — the topics PATCH is attributed too)
+  expect((await waitForIntegrityRevisions(prefix, 5)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
 
   // renaming the topic in settings propagates the display name, but topics are hashed as ids only
@@ -318,16 +321,17 @@ test('a topic removed from owner settings historizes a new revision', async () =
     topics: beforeRename.map((t: any) => t.id === topicId ? { ...t, title: 'Renamed integrity topic' } : t)
   })
   await waitForFlagCleared(dataset.id)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2) // unchanged: rename is not covered
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2) // unchanged: rename is not covered
 
   // now remove the topic from the owner settings — this fires the propagation $pull on the dataset
   const settingsBeforeRemoval = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsBeforeRemoval.filter((t: any) => t.id !== topicId) })
 
   await waitForFlagCleared(dataset.id)
-  // metadata-only propagation → the new revision references rev 0's payload (4 keys, one .file)
-  const keys = await waitForIntegrityRevisions(prefix, 4)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(3)
+  // metadata-only propagation → the new revision references rev 0's payload; propagation stamps
+  // (stampHistorizeMany) deliberately carry no who (design §2.2), so only +1 key (6 total)
+  const keys = await waitForIntegrityRevisions(prefix, 6)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
 })
@@ -345,17 +349,19 @@ test('deleting a publication site historizes a new revision', async () => {
 
   // publicationSites is a covered field: assigning it to the dataset is itself a legitimate PATCH
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [`data-fair-portals:${siteId}`] })
-  // metadata-only → the new revision references rev 0's payload (3 keys, one .file)
-  expect((await waitForIntegrityRevisions(prefix, 3)).filter(k => !k.endsWith('.file')).length).toBe(2)
+  // metadata-only → the new revision references rev 0's payload (5 keys: 2 revisions, 1 .file,
+  // 2 .who siblings — the publicationSites PATCH is attributed too)
+  expect((await waitForIntegrityRevisions(prefix, 5)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   await waitForFlagCleared(dataset.id)
 
   // deleting the publication site fires the propagation $pull on the dataset
   await admin.delete(`/api/v1/settings/user/test_superadmin/publication-sites/data-fair-portals/${siteId}`)
 
   await waitForFlagCleared(dataset.id)
-  // metadata-only propagation → the new revision references rev 0's payload (4 keys, one .file)
-  const keys = await waitForIntegrityRevisions(prefix, 4)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(3)
+  // metadata-only propagation → the new revision references rev 0's payload; propagation stamps
+  // (stampHistorizeMany) deliberately carry no who (design §2.2), so only +1 key (6 total)
+  const keys = await waitForIntegrityRevisions(prefix, 6)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
 })
@@ -384,7 +390,7 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsTopics })
   await new Promise(resolve => setTimeout(resolve, 2000)) // settle: give a wrongly-stamped relay time to run
   expect((await getRawDataset(dataset.id))._needsHistorizing).toBeUndefined()
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(2)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
   // and the tamper is still detectable
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
@@ -408,7 +414,7 @@ test('restore heals a tampered metadata field synchronously and appends a restor
   expect(raw.description ?? '').not.toBe('tampered-oob')
 
   // the restore appended a new revision with the restore context
-  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).sort()
+  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
   const latest = await integrityTestStore.getRevision(keys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')
@@ -458,7 +464,7 @@ test('restore re-ingests a tampered file through the pipeline and anchors with r
   const raw = await waitForFlagCleared(dataset.id)
   expect(raw.originalFile.md5).toBe(originalMd5)
 
-  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')
@@ -497,7 +503,7 @@ test('restore re-ingests a tampered non-basic-format (xlsx) file through the pip
   expect(raw.originalFile.mimetype).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   expect(raw.status).toBe('finalized')
 
-  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')
@@ -533,7 +539,7 @@ test('restore heals a tampered doc whose `file` field was unset out-of-band (sta
   expect(raw.originalFile.md5).toBe(originalMd5)
   expect(raw.file).toBeTruthy()
 
-  const revKeys = keys.filter(k => !k.endsWith('.file')).sort()
+  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')

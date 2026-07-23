@@ -206,6 +206,103 @@ test('latestKey and nextIndex ignore payload keys', () => {
   expect(ops.nextIndex(keys)).toBe(2)
 })
 
+test('whoKey appends the .who suffix; isSiblingKey covers both .file and .who', () => {
+  expect(ops.whoKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007.who')
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007.who')).toBe(true)
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007.file')).toBe(true)
+  expect(ops.isSiblingKey('data-fair/organization-acme/ds1/000000007')).toBe(false)
+})
+
+test('latestKey and nextIndex ignore .who keys too', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000000',
+    'data-fair/organization-acme/ds1/000000001',
+    'data-fair/organization-acme/ds1/000000001.who',
+    'data-fair/organization-acme/ds1/000000001.file'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
+
+test('a lone ‹i›.who key must never win latest, even though it sorts lexically after its revision', () => {
+  const keys = [
+    'data-fair/organization-acme/ds1/000000001',
+    // orphan who for a revision write that has not landed yet (or never will, crash residue)
+    'data-fair/organization-acme/ds1/000000002.who'
+  ]
+  expect(ops.latestKey(keys)).toBe('data-fair/organization-acme/ds1/000000001')
+  expect(ops.nextIndex(keys)).toBe(2)
+})
+
+// ---------------------------------------------------------------------------------------------
+// T5: purge per-suffix retention — the `.who` sibling's own (shorter) window must drive both the
+// purge's age pre-filter and the scope watermark floor, or a lapsed `.who` stays "provably young"
+// until the (longer) revision horizon, silently breaking the shorter GDPR-bounded promise.
+// ---------------------------------------------------------------------------------------------
+
+test('retentionMsFor: the attribution window for `.who` keys, the revision window for everything else', () => {
+  const retentionMs = 2 * 24 * 3600 * 1000
+  const attributionMs = 1 * 24 * 3600 * 1000
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007.who', retentionMs, attributionMs)).toBe(attributionMs)
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007', retentionMs, attributionMs)).toBe(retentionMs)
+  // `.file` is NOT `.who`: it shares the revision's own (longer) window, the deliberate asymmetry
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007.file', retentionMs, attributionMs)).toBe(retentionMs)
+  // line-level `.who` keys use the same suffix rule
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/lines/l1/0000000000000000-abc.who', retentionMs, attributionMs)).toBe(attributionMs)
+})
+
+test('scopeWatermarkFloor: the shorter of the two windows, since a fresh `.who` ages out sooner than a fresh revision', () => {
+  const now = Date.parse('2026-07-06T00:00:00.000Z')
+  const retentionMs = 2 * 24 * 3600 * 1000
+  const attributionMs = 1 * 24 * 3600 * 1000
+  expect(ops.scopeWatermarkFloor(now, retentionMs, attributionMs)).toBe(now + attributionMs)
+  // when attribution is (unusually) configured longer than the revision window, still the min
+  expect(ops.scopeWatermarkFloor(now, attributionMs, retentionMs)).toBe(now + attributionMs)
+})
+
+test('buildWho nests raw parts into a WhoBody, stamping the given date', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'u1', apiKeyId: 'k1', ip: '203.0.113.7', country: 'FR', asn: 3215, asnOrg: 'Orange' }, date))
+    .toEqual({ date, user: { id: 'u1' }, apiKey: { id: 'k1' }, ip: '203.0.113.7', geo: { country: 'FR', asn: 3215, asnOrg: 'Orange' } })
+})
+
+test('buildWho drops the reverse-proxy neutral fillers (country XX / asn 0 / asnOrg Unknown)', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'u1', country: 'XX', asn: 0, asnOrg: 'Unknown' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', asn: '0' }, date)).toEqual({ date, user: { id: 'u1' } })
+  // a real asn alongside a filler country: geo is still built, just without the filler field
+  expect(ops.buildWho({ userId: 'u1', country: 'XX', asn: 3215 }, date)).toEqual({ date, user: { id: 'u1' }, geo: { asn: 3215 } })
+})
+
+test('buildWho drops unvalidated proxy geo headers (no enriching haproxy L1 to trust)', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  // oversized asnOrg dropped (not truncated) — geo still built from the other fields
+  const oversizedOrg = 'a'.repeat(201)
+  expect(ops.buildWho({ userId: 'u1', country: 'FR', asn: 3215, asnOrg: oversizedOrg }, date))
+    .toEqual({ date, user: { id: 'u1' }, geo: { country: 'FR', asn: 3215 } })
+  // an asnOrg right at the boundary is kept
+  const boundaryOrg = 'a'.repeat(200)
+  expect(ops.buildWho({ userId: 'u1', asnOrg: boundaryOrg }, date))
+    .toEqual({ date, user: { id: 'u1' }, geo: { asnOrg: boundaryOrg } })
+  // lowercase, 3-letter, and injection-shaped country values are all dropped
+  expect(ops.buildWho({ userId: 'u1', country: 'fr' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', country: 'FRA' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', country: '<script>' }, date)).toEqual({ date, user: { id: 'u1' } })
+  // a valid alpha-2 code is kept
+  expect(ops.buildWho({ userId: 'u1', country: 'FR' }, date)).toEqual({ date, user: { id: 'u1' }, geo: { country: 'FR' } })
+})
+
+test('buildWho skips the readApiKey pseudo-user id', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({ userId: 'readApiKey', ip: '203.0.113.7' }, date)).toEqual({ date, ip: '203.0.113.7' })
+})
+
+test('buildWho returns undefined when nothing attributable remains', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  expect(ops.buildWho({}, date)).toBeUndefined()
+  expect(ops.buildWho({ userId: 'readApiKey', country: 'XX', asn: 0, asnOrg: 'Unknown' }, date)).toBeUndefined()
+})
+
 test('restoreUpdate writes only diverging covered keys and unsets extra ones', () => {
   const snapshot = { title: 'legit', description: 'legit desc', owner: { type: 'organization', id: 'acme' } }
   const hot = {

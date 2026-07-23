@@ -50,6 +50,7 @@ Détecter ne suffit pas si l'alerte peut être étouffée. Les événements d'al
 Par honnêteté d'évaluation, les limites assumées :
 
 - **pas de prévention** : une altération reste matériellement possible ; elle est détectée et réparable, pas empêchée ;
-- **pas d'imputation individuelle dans l'historique** : il enregistre la *catégorie* d'auteur (utilisateur, superadministrateur, traitement interne…), jamais l'identité — un choix délibéré lié à la protection des données personnelles (voir la section conformité) ; l'imputation individuelle relève du journal d'activité, qui suit son propre cycle de vie ;
+- **pas d'imputation individuelle *permanente* dans l'historique** : la révision scellée elle-même n'enregistre que la *catégorie* d'auteur (utilisateur, superadministrateur, traitement interne…), jamais l'identité — un choix délibéré lié à la protection des données personnelles (voir la section conformité), parce que le verrou d'une révision peut glisser indéfiniment tant que la ressource est vivante. L'identité, quand elle est capturée, est conservée à part, dans une **attribution bornée dans le temps** (retenue 180 jours, jamais prolongée — voir la section conformité) ; au-delà, seul le journal d'activité de la plateforme la porte, avec son propre cycle de vie ;
 - **pas de non-répudiation cryptographique** : pas de chaînage de signatures ni d'horodatage qualifié ; la confiance repose sur le verrou de conformité du stockage ;
 - **l'historique est borné** : seule la fenêtre de rétention (un an par défaut) est restaurable ; l'état *courant* vérifié, lui, reste protégé indéfiniment tant que la protection est active.
+

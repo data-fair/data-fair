@@ -18,6 +18,29 @@ test('parseLineRevisionKey round-trips, including deleted marker and encoded ids
   expect(lops.parseLineRevisionKey('data-fair/organization-acme/ds1/000000007')).toBeUndefined()
 })
 
+test('lineWhoKey appends the .who suffix to the line revision key', () => {
+  const key = lops.lineRevisionKey(owner, 'ds1', 'l1', 7, 'abc')
+  expect(lops.lineWhoKey(owner, 'ds1', 'l1', 7, 'abc')).toBe(`${key}.who`)
+})
+
+test('parseLineRevisionKey excludes .who sibling keys explicitly (not by lexical luck)', () => {
+  const who = lops.lineWhoKey(owner, 'ds1', 'l1', 7, 'deadbeef')
+  expect(lops.parseLineRevisionKey(who)).toBeUndefined()
+  const tombWho = lops.lineWhoKey(owner, 'ds1', 'l2', 9, lops.DELETED_MARKER)
+  expect(lops.parseLineRevisionKey(tombWho)).toBeUndefined()
+})
+
+test('foldLatestLineAnchors / latestLineAnchors are blind to .who siblings by construction', () => {
+  const keys = [
+    lops.lineRevisionKey(owner, 'ds1', 'l1', 3, 'bbb'),
+    lops.lineWhoKey(owner, 'ds1', 'l1', 3, 'bbb'),
+    // orphan who ahead of any landed revision for that index — must not be picked up as an anchor
+    lops.lineWhoKey(owner, 'ds1', 'l1', 4, 'ccc')
+  ]
+  const anchors = lops.latestLineAnchors(keys)
+  expect(anchors.get('l1')).toMatchObject({ i: 3, sha256: 'bbb', deleted: false })
+})
+
 test('cleanedLineBody drops every underscore-prefixed field', () => {
   expect(lops.cleanedLineBody({ a: 1, _id: 'x', _i: 2, _hash: 'h', _ext_geo: { lat: 0 }, _updatedBy: 'u' }))
     .toEqual({ a: 1 })

@@ -10,6 +10,7 @@ import {
   ensureIntegrityBucket, integrityTestClient, integrityTestStore,
   listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix
 } from '../../support/integrity.ts'
+import { Readable } from 'node:stream'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
@@ -188,11 +189,11 @@ test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async ()
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // unchanged state and a payload-bearing latest anchor → dedupe, no new revision
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // simulate an L1-era anchor: write a payload-less revision as index 1 directly to the store
   const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
@@ -221,7 +222,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
 
   // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
   const keys = await waitForIntegrityRevisions(prefix, 2)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
   const raw = await getRawDataset(dataset.id)
   expect(raw._needsHistorizing).toBeUndefined()
   const { createHash } = await import('node:crypto')
@@ -233,7 +234,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   // flag again without a change → relay must dedupe (clears flag, writes no new revision)
   await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForFlagCleared(dataset.id)
-  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 })
 
 test('flagging a REST dataset (no file) anchors metadata only: metadata hash present, no file hash', async () => {
@@ -265,7 +266,7 @@ test('a file replacement writes a new (second) revision', async () => {
     _needsHistorizing: {}
   })
   // 2 keys: the revision JSON + its .file payload sibling (level-2 joint anchor)
-  expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file')).length).toBe(1)
+  expect((await waitForIntegrityRevisions(prefix, 2)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 
   // replace the file; the finalize hook sets _needsHistorizing because integrity.active is true,
   // and the new file hash (dataset2.csv) differs from the anchor → relay writes revision 1. The joint
@@ -281,7 +282,7 @@ test('a file replacement writes a new (second) revision', async () => {
 
   // 4 keys: 2 revisions × (JSON + .file payload)
   const keys = await waitForIntegrityRevisions(prefix, 4)
-  expect(keys.filter(k => !k.endsWith('.file')).length).toBe(2)
+  expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
 })
 
 // ---------------------------------------------------------------------------------------------
@@ -301,9 +302,10 @@ test('a metadata-only edit references the file-owning revision; a file change ow
 
   // metadata-only edit → rev 1 references rev 0's payload, and writes NO new .file key
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'metadata only change' })
-  const afterMeta = await waitForIntegrityRevisions(prefix, 3)
+  // 5 keys: rev0 JSON+.file+.who (enable), rev1 JSON+.who (attributed user PATCH)
+  const afterMeta = await waitForIntegrityRevisions(prefix, 5)
   await waitForFlagCleared(dataset.id)
-  expect(afterMeta.filter(k => !k.endsWith('.file')).length).toBe(2) // rev 0 + rev 1
+  expect(afterMeta.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2) // rev 0 + rev 1
   expect(afterMeta.filter(k => k.endsWith('.file')).length).toBe(1) // still only rev 0's payload
   expect(afterMeta).not.toContain(`${prefix}000000001.file`)
   const rev1 = await integrityTestStore.getRevision(`${prefix}000000001`)
@@ -320,8 +322,9 @@ test('a metadata-only edit references the file-owning revision; a file change ow
     form.append('file', fs.readFileSync(path.resolve('./tests/resources/datasets/dataset2.csv')), 'dataset1.csv')
     await admin.post(`/api/v1/datasets/${dataset.id}`, form, { headers: form.getHeaders() })
   })
-  // 5 keys: rev0, rev0.file, rev1 (reference, no .file), rev2, rev2.file
-  const afterFile = await waitForIntegrityRevisions(prefix, 5)
+  // 8 keys: rev0 JSON+.file+.who, rev1 JSON+.who (reference, no .file), rev2 JSON+.file+.who
+  // (the file replacement is uploaded by the same admin session, so it's attributed too)
+  const afterFile = await waitForIntegrityRevisions(prefix, 8)
   expect(afterFile).toContain(`${prefix}000000002.file`)
   const rev2 = await integrityTestStore.getRevision(`${prefix}000000002`)
   expect(rev2.payload?.file?.i).toBeUndefined() // owns its own bytes
@@ -566,6 +569,32 @@ test('lock renewal extends the payload object too', async () => {
   expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
 })
 
+// T5: renewal is structurally `.who`-blind (T1 filters keep `.who` out of every anchor set before
+// renewal runs) — this proves it end to end: the revision's lock slides forward, the `.who`
+// sibling's own (short, fixed) lock never moves.
+test('renewal advances the anchor lock but never touches the `.who` sibling\'s retain-until', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset, latestKey } = await enabledDataset(admin)
+  const whoKey = latestKey + '.who'
+  // enable is synchronous and superadmin-attributed: rev 0 already carries a `.who`
+  const revBefore = await integrityTestStore.getRetention(latestKey)
+  const whoBefore = await integrityTestStore.getRetention(whoKey)
+  expect(whoBefore).toBeTruthy()
+
+  const soon = new Date(Date.now() + 3600 * 1000).toISOString()
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+
+  const revAfter2 = await integrityTestStore.getRetention(latestKey)
+  const whoAfter = await integrityTestStore.getRetention(whoKey)
+  expect(revAfter2!.getTime()).toBeGreaterThan(revBefore!.getTime()) // the revision's lock slid forward
+  expect(whoAfter!.getTime()).toBe(whoBefore!.getTime()) // the `.who`'s lock is untouched — never renewed
+})
+
 // ---------------------------------------------------------------------------------------------
 // purge: expired revisions age out (§3.5/§8). A stored-but-unlocked revision grounds no guarantee,
 // so it is deleted; the compliance lock itself is the authority on what is still protected.
@@ -634,6 +663,63 @@ test('purge never deletes the current anchor of an enrolled dataset, even with a
   expect(check.status).toBe('ok')
 })
 
+// ---------------------------------------------------------------------------------------------
+// T5: `.who` carries its OWN (shorter) retention and must NEVER benefit from the current-anchor
+// protection carve-out above — a lapsed `.who` ages out on schedule even at the current anchor's
+// own index, while the anchor revision itself (and the payload it references) stay protected
+// regardless of their own lock state. MinIO compliance locks can never be shortened once set, so a
+// genuinely lapsed lock is manufactured the same way as the plain-purge tests above: write short
+// from the start and let real time pass.
+// ---------------------------------------------------------------------------------------------
+
+test('purge deletes a lapsed `.who` sibling of the current anchor but keeps the anchor itself protected', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+  const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  // manufacture the NEXT revision directly (bypassing the relay), the new current anchor, with an
+  // already-short lock
+  const key = `${prefix}000000001`
+  const whoKey = `${key}.who`
+  const shortRetain = new Date(Date.now() + 2000)
+  await integrityTestStore.writeRevision(key, { hash: { metadata: 'x' }, context, dataset: { id: dataset.id } }, shortRetain)
+  await integrityTestStore.writeWho(whoKey, { date: context.date, user: { id: 'someone' } }, shortRetain)
+  await new Promise(resolve => setTimeout(resolve, 3500)) // let both locks genuinely lapse
+
+  const result = await runPurge(admin, prefix)
+  expect(result.errors).toBe(0)
+  const remaining = await listIntegrityKeys(prefix)
+  // the revision is the current anchor: the protection carve-out keeps it regardless of its own
+  // lapsed lock (never even checked) — but its `.who` is never part of that carve-out, so its
+  // equally lapsed lock is judged on its own merits, and it is deleted
+  expect(remaining).toContain(key)
+  expect(remaining).not.toContain(whoKey)
+})
+
+test('the deliberate asymmetry: a referenced `.file` payload is protected like the anchor, but a `.who` at the same index is not, even with equally lapsed locks', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+  const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  const key = `${prefix}000000001`
+  const fileKey = `${key}.file`
+  const whoKey = `${key}.who`
+  const shortRetain = new Date(Date.now() + 2000)
+  await integrityTestStore.writeRevision(key, {
+    hash: { metadata: 'x', file: 'y' }, context, dataset: { id: dataset.id }, payload: { metadata: {}, file: { size: 3 } }
+  }, shortRetain)
+  await integrityTestStore.writePayload(fileKey, Readable.from(['abc']), shortRetain)
+  await integrityTestStore.writeWho(whoKey, { date: context.date, user: { id: 'someone' } }, shortRetain)
+  await new Promise(resolve => setTimeout(resolve, 3500))
+
+  const result = await runPurge(admin, prefix)
+  expect(result.errors).toBe(0)
+  const remaining = await listIntegrityKeys(prefix)
+  expect(remaining).toContain(key) // anchor: protection carve-out
+  expect(remaining).toContain(fileKey) // referenced payload: protection carve-out — same asymmetry
+  expect(remaining).not.toContain(whoKey) // `.who`: never protected, ages out on its own lock alone
+})
+
 test('a scope is skipped without listing objects until its watermark comes due', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const prefix = `data-fair/test-purge-wm-${Date.now()}/nodataset/`
@@ -681,8 +767,11 @@ test('purge keeps every live line anchor of an enrolled rest dataset', async () 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const raw = await waitForFlagCleared(dataset.id)
   const linesPrefix = `data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`
-  const anchors = await waitForIntegrityRevisions(linesPrefix, 2)
-  expect(anchors).toHaveLength(2)
+  // the bulk write is a logged-in-admin request (T4): each line anchor also gets its own `.who`
+  // attribution sibling — 2 lines × (revision + who) = 4 keys
+  const anchors = await waitForIntegrityRevisions(linesPrefix, 4)
+  expect(anchors.filter(k => !k.endsWith('.who'))).toHaveLength(2)
+  expect(anchors.filter(k => k.endsWith('.who'))).toHaveLength(2)
 
   const result = await runPurge(admin, linesPrefix)
   expect(result.errors).toBe(0)

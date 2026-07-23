@@ -9,12 +9,13 @@ import {
   ensureIntegrityBucket, listIntegrityKeys, revisionsPrefix, waitForFlagCleared,
   waitForLinesDrained, putShadowVersion, putDeleteMarker, integrityTestStore
 } from '../../support/integrity.ts'
+import * as ops from '../../../api/src/integrity/operations.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
 
 const latestRevisionKey = async (prefix: string): Promise<string> => {
-  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.includes('/lines/'))
+  const keys = (await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who') && !k.includes('/lines/'))
   return keys.sort().at(-1)!
 }
 
@@ -85,6 +86,80 @@ test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says 
 })
 
 // ---------------------------------------------------------------------------------------------
+// T5: the `.who` attribution sibling is just another key under the same versions walk — a
+// shadow/marker attack on it surfaces exactly like an attack on the revision itself, while it
+// lives, and its own eventual (short-retention) purge leaves no trace behind: sequence-gap
+// detection is keyed off revisions only (isSiblingKey excludes `.who`), so a purged `.who`'s
+// absence is never mistaken for a missing revision.
+// ---------------------------------------------------------------------------------------------
+
+test('a shadowed `.who` sibling is a confirmed trail anomaly while it lives, without affecting the data verdict', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  // enable is superadmin-attributed: rev 0 carries a `.who` — shadow it (store-credentialed
+  // rewrite), same attack as on a revision JSON
+  const whoKey = ops.whoKey(dataset.owner, dataset.id, 0)
+  const shadow = { date: new Date().toISOString(), user: { id: 'attacker' } }
+  await putShadowVersion(whoKey, shadow)
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok') // `.who` content is never part of the data verdict
+  expect(check.trail.status).toBe('altered')
+  const anomaly = check.trail.anomalies.find((a: any) => a.kind === 'version-divergence')
+  expect(anomaly).toBeTruthy()
+  expect(anomaly.key).toBe(whoKey)
+})
+
+test('a delete-marker hiding a `.who` sibling is a confirmed trail anomaly while it lives', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  const whoKey = ops.whoKey(dataset.owner, dataset.id, 0)
+  await putDeleteMarker(whoKey)
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  expect(check.trail.status).toBe('altered')
+  const anomaly = check.trail.anomalies.find((a: any) => a.kind === 'delete-marker')
+  expect(anomaly).toBeTruthy()
+  expect(anomaly.key).toBe(whoKey)
+})
+
+test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a kept anchor', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  const prefix = revisionsPrefix(dataset)
+  const rev0 = await integrityTestStore.getRevision(`${prefix}000000000`)
+  const key1 = `${prefix}000000001`
+  const whoKey1 = `${key1}.who`
+  // manufacture the next anchor directly (bypassing the relay), content-consistent with rev 0 so
+  // the data verdict stays 'ok', with a normal long lock — only its `.who` is left short-lived
+  await integrityTestStore.writeRevision(key1, {
+    ...rev0, context: { ...rev0.context, operation: 'update', date: new Date().toISOString() }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+  await integrityTestStore.writeWho(whoKey1, { date: new Date().toISOString(), user: { id: 'someone' } }, new Date(Date.now() + 2000))
+  await new Promise(resolve => setTimeout(resolve, 3500)) // let the `.who` lock genuinely lapse
+
+  await admin.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+    { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })
+  const remaining = await listIntegrityKeys(prefix)
+  expect(remaining).toContain(key1) // the anchor survives (protection carve-out, and its own lock is long anyway)
+  expect(remaining).not.toContain(whoKey1) // the `.who` is gone: fully reclaimed, no residue
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  expect(check.trail.status).toBe('ok') // no sequence-gap / anomaly manufactured from the `.who`'s absence
+})
+
+// ---------------------------------------------------------------------------------------------
 // T3: terminal trail revisions (disable / delete) + the daily store-vs-Mongo scope audit
 // ---------------------------------------------------------------------------------------------
 
@@ -146,7 +221,7 @@ test('crash residue (terminal latest on an active dataset) self-heals through th
   await waitForFlagCleared(dataset.id)
 
   // simulate a disable that crashed after the terminal revision, before the Mongo flip
-  const keys = (await listIntegrityKeys(revisionsPrefix(dataset))).filter(k => !k.endsWith('.file') && !k.includes('/lines/')).sort()
+  const keys = (await listIntegrityKeys(revisionsPrefix(dataset))).filter(k => !k.endsWith('.file') && !k.endsWith('.who') && !k.includes('/lines/')).sort()
   const latest = await integrityTestStore.getRevision(keys.at(-1)!)
   const nextIndex = keys.length
   const nextKey = `${revisionsPrefix(dataset)}${String(nextIndex).padStart(9, '0')}`

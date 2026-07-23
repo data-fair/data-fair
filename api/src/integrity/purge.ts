@@ -18,6 +18,14 @@
 // written after T can expire sooner than that). Scopes are discovered from S3, not from Mongo, so
 // the tail of a *deleted* dataset still ages out (§8) instead of being orphaned forever.
 //
+// **Retention is per-key, not per-scope** (T5): the `.who` attribution sibling carries its OWN,
+// shorter retention (config `integrity.attribution.retentionDays`), distinct from the revision's
+// own (config `integrity.retention.days`) — see `WhoBody`/`whoKey` in operations.ts and
+// README.md invariant 15. Both the age pre-filter and the "T + retention" watermark term above
+// use `ops.retentionMsFor(key, …)` / `ops.scopeWatermarkFloor(…)`, never a single global window —
+// otherwise a lapsed `.who` would stay "provably young" until the (longer) revision horizon,
+// silently keeping it around past its own shorter, GDPR-bounded promise.
+//
 // **Why a post-list check is still needed** (the "delayed locks"): unlike a backup bucket, locks
 // here get *extended* — renewal slides the current anchor (§3.4) and a revision referencing an
 // earlier payload extends that payload at write time (§3.5). So object age is only a *lower* bound
@@ -66,6 +74,11 @@ export const purgeExpiredRevisions = async (
   opts?: { prefix?: string, ignoreAge?: boolean, skewMarginMs?: number, ignoreWatermark?: boolean }
 ): Promise<PurgeResult> => {
   const retentionMs = (config.integrity?.retention?.days ?? 365) * 24 * 3600 * 1000
+  // the `.who` attribution sibling's OWN (shorter) window (T5): threaded into both the age
+  // pre-filter and the scope watermark floor below via ops.retentionMsFor/ops.scopeWatermarkFloor —
+  // a single global retentionMs would keep a lapsed `.who` "provably young" until the revision's
+  // (longer) horizon, silently breaking its shorter GDPR-bounded promise.
+  const attributionRetentionMs = (config.integrity?.attribution?.retentionDays ?? 180) * 24 * 3600 * 1000
   const skewMarginMs = opts?.skewMarginMs ?? CLOCK_SKEW_MARGIN_MS
   const now = Date.now()
   const result: PurgeResult = { deleted: 0, kept: 0, errors: 0, scopes: 0, skipped: 0, markerScopes: {} }
@@ -92,12 +105,16 @@ export const purgeExpiredRevisions = async (
     const datasetId = parts[2]
     if (!datasetId || !(await datasetActive(datasetId))) return protectedSet
     if (parts[3] === 'lines') {
-      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker).map((v) => v.key))].sort()
+      // explicit sibling exclusion: a `.who` key is a strict string extension of its own revision
+      // key (‹i›-‹sha›.who), so it sorts lexically AFTER it — without filtering it out here it
+      // could itself be picked as "latest" and wrongly protected, while the real revision key it
+      // shadows would NOT be in protectedSet and could be purged out from under it
+      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker && !ops.isSiblingKey(v.key)).map((v) => v.key))].sort()
       const latest = revKeys.at(-1)
       // a tombstone latest is deliberately NOT protected: a deleted line's history ages out whole
       if (latest && !latest.endsWith(`-${DELETED_MARKER}`)) protectedSet.add(latest)
     } else {
-      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker && !ops.isPayloadKey(v.key)).map((v) => v.key))].sort()
+      const revKeys = [...new Set(group.filter((v) => !v.deleteMarker && !ops.isSiblingKey(v.key)).map((v) => v.key))].sort()
       const latest = revKeys.at(-1)
       if (latest) {
         protectedSet.add(latest)
@@ -132,19 +149,23 @@ export const purgeExpiredRevisions = async (
   const purgeScope = async (scopePrefix: string): Promise<Date> => {
     result.scopes++
     // any object written from now on expires no sooner than this — the floor for a scope that
-    // ends up holding nothing purgeable
-    let nextEligible = now + retentionMs
+    // ends up holding nothing purgeable. A `.who` written after this pass ages out at the
+    // (shorter) attribution window, so the floor must use the shorter of the two windows.
+    let nextEligible = ops.scopeWatermarkFloor(now, retentionMs, attributionRetentionMs)
 
     const flush = async (group: StoredVersion[], seqId: string): Promise<void> => {
       const protectedSet = await protectedKeys(group, seqId)
       const candidates: StoredVersion[] = []
       for (const v of group) {
         if (v.isLatest && protectedSet.has(v.key)) { result.kept++; continue }
+        // per-key window: a `.who` sibling's own (shorter) attribution retention, the revision's
+        // full retention otherwise (T5) — see ops.retentionMsFor
+        const keyRetentionMs = ops.retentionMsFor(v.key, retentionMs, attributionRetentionMs)
         // sound pre-filter: a lock is never earlier than lastModified + retention, so a young
         // object is provably still protected and needs no round-trip to rule out
-        if (!opts?.ignoreAge && !v.deleteMarker && v.lastModified && v.lastModified.getTime() + retentionMs > now) {
+        if (!opts?.ignoreAge && !v.deleteMarker && v.lastModified && v.lastModified.getTime() + keyRetentionMs > now) {
           result.kept++
-          nextEligible = Math.min(nextEligible, v.lastModified.getTime() + retentionMs)
+          nextEligible = Math.min(nextEligible, v.lastModified.getTime() + keyRetentionMs)
           continue
         }
         candidates.push(v)

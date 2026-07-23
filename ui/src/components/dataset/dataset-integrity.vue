@@ -299,6 +299,16 @@
           <template #item.origin="{ item }">
             {{ t('origin_' + item.origin) }}
           </template>
+          <template #item.who="{ item }">
+            <span
+              v-if="item.who"
+              class="text-caption"
+            >{{ formatWho(item.who) }}</span>
+            <span
+              v-else
+              class="text-caption text-disabled"
+            >—</span>
+          </template>
           <template #item.reason="{ item }">
             <span
               v-if="item.reason"
@@ -600,6 +610,16 @@
             <template #item.origin="{ item }">
               {{ t('origin_' + item.origin) }}
             </template>
+            <template #item.who="{ item }">
+              <span
+                v-if="item.who"
+                class="text-caption"
+              >{{ formatWho(item.who) }}</span>
+              <span
+                v-else
+                class="text-caption text-disabled"
+              >—</span>
+            </template>
             <template #item.reason="{ item }">
               <span
                 v-if="item.reason"
@@ -709,6 +729,7 @@ fr:
   colOperation: Opération
   colDate: Date
   colOriginator: Auteur
+  colAttribution: Attribution
   colReason: Raison
   colHash: Empreinte
   op_create: Création
@@ -809,6 +830,7 @@ en:
   colOperation: Operation
   colDate: Date
   colOriginator: Author
+  colAttribution: Attribution
   colReason: Reason
   colHash: Hash
   op_create: Create
@@ -887,7 +909,7 @@ en:
 
 <script setup lang="ts">
 import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
-import type { Dataset } from '#api/types'
+import type { Dataset, WhoHint } from '#api/types'
 
 const { t, locale } = useI18n()
 const datasetStore = useDatasetStore()
@@ -900,10 +922,20 @@ const adminMode = computed(() => !!session.state.user?.adminMode)
 // `lines` (anchored/pending/overGate) is computed on the fly by GET _integrity for enrolled REST
 // datasets — it is not part of the stored/public Dataset schema, hence the local extension
 type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean } }
-type RevisionEntry = { i: number, hash: { file?: string, metadata?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number }
-type RevisionDetail = { i: number, hash: { file?: string, metadata?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any> }
-type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean }
-type LineRevisionDetail = { i: number, hash: { sha256?: string }, context: any, line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }, payload?: Record<string, any>, current?: Record<string, any> }
+type RevisionEntry = { i: number, hash: { file?: string, metadata?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number, who?: WhoHint }
+type RevisionDetail = { i: number, hash: { file?: string, metadata?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any>, who?: WhoHint }
+type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean, who?: WhoHint }
+type LineRevisionDetail = { i: number, hash: { sha256?: string }, context: any, line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }, payload?: Record<string, any>, current?: Record<string, any>, who?: WhoHint }
+
+// Attribution column (T6, design §3): raw ids only, no display-name resolution (GDPR
+// minimization, deliberate — see docs/plans/2026-07-22-integrity-attribution-design.md §3/§6.2).
+// Absent when the `.who` sibling never existed (worker/propagation write) or has aged out (normal
+// after the 180-day attribution retention, § design doc §1.2) — blank, not an error state.
+const formatWho = (who?: WhoHint): string => {
+  if (!who) return ''
+  const actor = who.user?.id ?? (who.apiKey ? `apiKey:${who.apiKey.id}` : undefined)
+  return [actor, who.ip, who.geo?.country].filter(Boolean).join(' · ')
+}
 
 const state = ref<IntegrityState | null>(null)
 
@@ -919,6 +951,7 @@ const headers = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
+  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: t('colHash'), key: 'hash', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
@@ -1090,6 +1123,7 @@ const lineRevisionHeaders = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
+  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])

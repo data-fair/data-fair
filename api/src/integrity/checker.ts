@@ -219,7 +219,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
 
   // trail verdict: sequence gaps + date skew (incremental — only revisions the trail check has
   // not yet date-verified; `deep` re-verifies the whole window) + ack filtering
-  const seqIndexes = datasetKeys.filter((k) => !ops.isPayloadKey(k)).map(ops.parseRevisionIndex)
+  const seqIndexes = datasetKeys.filter((k) => !ops.isSiblingKey(k)).map(ops.parseRevisionIndex)
   trailAnomalies.push(...ops.sequenceGapAnomalies(prefix, seqIndexes))
   const skewToleranceMs = (config.integrity?.trail?.dateSkewHours ?? 48) * 3600 * 1000
   const latestIndex = ops.parseRevisionIndex(latest)
