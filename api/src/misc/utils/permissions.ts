@@ -12,7 +12,6 @@ import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
 import { whoFromReq } from '../../integrity/who.ts'
-import { isWriteLockRefused } from './write-lock.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
@@ -20,10 +19,6 @@ import { isWriteLockRefused } from './write-lock.ts'
 // keep working; config-free consumers import them directly from req-context.ts.
 import { defineReqContext, reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
 export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
-// isCoveredMutation / WRITE_LOCK_READONLY_EXCEPTIONS are the config-free write-lock predicate
-// surface (write-lock.ts) — re-exported so existing `permissions.<name>` consumers and the
-// write-lock unit/drift tests can both reach them.
-export { isCoveredMutation, WRITE_LOCK_READONLY_EXCEPTIONS } from './write-lock.ts'
 
 // the operation gating the current route (class/id/track), exposed downstream as the x-operation header
 export type ReqOperation = { class: string, id: string, track?: string }
@@ -36,10 +31,6 @@ const resourceTypesLabels: Record<ResourceType, string> = {
   applications: 'L\'application',
   'remote-services': 'Le service distant'
 }
-
-// apiKey-only write lock (design doc §5.2, T8): the covered-mutation predicate and the refusal
-// check itself live in the config-free write-lock.ts (so they stay unit-testable and importable
-// by the drift-ratchet test); imported above, re-exported below.
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
@@ -55,10 +46,7 @@ export const middleware = function (operationId: string, operationClass: string,
       return
     }
     if (can(reqResourceType(req), reqResource(req), operationId, sessionState, reqBypassPermissions(req))) {
-      if (isWriteLockRefused(reqResourceType(req), reqResource(req), operationClass, operationId, sessionState)) {
-        res.status(403).type('text/plain').send(req.__('errors.writeLockApiKeyOnly'))
-        return
-      }
+      // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
       const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'

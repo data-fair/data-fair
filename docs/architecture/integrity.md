@@ -53,12 +53,7 @@ lost; `trailAck` is a pointer whose authority is the locked ackTrail revision bo
 (§3.3); and the check itself gains a second verdict — **trail coherence** — computed from the
 store's version stacks and provider dates, which a **store-credentialed** adversary (stolen bucket
 keys) cannot forge: shadowing a revision or hiding keys behind delete markers is detectable because
-the original versions are undeletable and `LastModified` is provider-stamped. `integrity.writeLock`
-(T8, §7.1) joins this hint list too: tampering it off in Mongo does not hide the writes that follow
-— they still stamp, anchor and attribute exactly as if the lock had stayed on, so the flag carries
-no false sense of security either way; it is process discipline, not a covered guarantee, which is
-also why it is deliberately excluded from the anchor hash (§5's denylist) rather than protected by
-it. The guarantee is thus tamper-evidence against **anyone who cannot destroy locked versions**,
+the original versions are undeletable and `LastModified` is provider-stamped. The guarantee is thus tamper-evidence against **anyone who cannot destroy locked versions**,
 with the first-write lie (above) and operator/provider collusion (§13) as the stated residual
 limits.
 
@@ -832,9 +827,6 @@ The integrity API splits read from write:
   window), `POST …/_integrity/_fix`, and `POST …/_integrity/trail/_ack { reason }` (round 3 —
   acknowledges the trail anomalies the fresh check surfaces, as a locked ackTrail revision).
   All are gated by admin mode (never grantable through permissions).
-  **Behavior change on this branch:** `PUT …/_integrity` now responds with the full integrity
-  state (previously just `{ active }`), and an empty body no longer disables integrity — the
-  request body is parsed as `{ active?, writeLock? }` and only the fields present are applied.
   `_check` and `_fix` are **synchronous** and respond with the fresh check verdict — `_fix`
   re-anchors inline, then runs the check and returns its result.
 - **Reads are open to the owner account's admins** via the registered admin-class operations
@@ -871,29 +863,6 @@ The integrity API splits read from write:
   ids as stored, with **no display-name resolution**: looking one up would re-personalize what
   minimization deliberately stripped (§8), and the id is already meaningful to the owner admin and
   resolvable through the directory while the user still exists.
-- **apiKey-only write lock (T8, `integrity.writeLock: 'apiKey'`).** Process discipline, not a
-  threat-model extension: once set, every user-facing covered mutation must be authenticated by
-  an API key — no accidental UI edits, and combined with `who.apiKey.id` (the `.who` sibling,
-  §3.1) the trail↔journal review becomes near-mechanical. Set/cleared only through the same superadmin
-  `PUT /datasets/{id}/_integrity` body as enable/disable; refused (400) without
-  `integrity.active`, and refused (400) when `dataset.extras.applications` is non-empty (an
-  application already references the dataset — anonymous-write application keys are incoherent
-  with an apiKey-only lock; this is a point-in-time gate at lock-set time on the dataset's own
-  configuration surface, not a continuously re-validated invariant against applications wired up
-  afterwards). Enforced in **one central place**, the permission-resolution middleware
-  (`api/src/misc/utils/permissions.ts`): once `can(...)` grants an operation, a second check
-  refuses it with 403 when the resource is a locked dataset, the operation is a covered mutation
-  (the `write` class, plus the `admin`-class operations that mutate covered content or ACLs —
-  `delete`, `setPermissions`, `changeOwner`, `writePublications`, `writePublicationSites`,
-  `writeExports`, `setReadApiKey` — plus the `manageOwnLines`-class mutations (`createOwnLine`,
-  `updateOwnLine`, `patchOwnLine`, `bulkOwnLines`, `deleteOwnLine`), belt-and-braces: `lineOwnership`
-  and integrity are mutually exclusive today, covered anyway so this gate cannot silently fail open
-  if that refusal ever loosens; the read-only admin operations and the `_integrity`
-  management routes themselves, which never carry a permission class, are unaffected), and the
-  session is not `reqSession(req).isApiKey`. This refuses **superadmin sessions and
-  application-key pseudo-sessions too** — discipline applies to everyone, and an application key
-  is not an API key. Internal pipeline writers (workers, finalize, extenders, TTL) never traverse
-  this middleware, so they are unaffected by construction.
 
 ### 7.2 Store access
 
@@ -1027,7 +996,7 @@ plan → build, test-first), not here.
 | Target 3 — REST lines | per-line locked revisions (pure level 2 — the fold-based level 1 was deliberately dropped: it cannot see a content edit that leaves `_hash` untouched) | `2026-07-20-integrity-target3-lines-design.md` |
 | Pre-release hardening | sha256 file hashes, pipeline-routed restore, locking, race nets, renewal alerting, storage quota, env wiring | `2026-07-21-integrity-followups-plan.md` |
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
-| A2 — bounded attribution + apiKey-only write lock | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture, `integrity.writeLock: 'apiKey'` enforced centrally in the permission layer | `2026-07-22-integrity-attribution-design.md` |
+| A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
 guarantee honest until they land):
@@ -1087,18 +1056,11 @@ Decided / resolved (one line each; details in the linked docs):
   see §1/§3.3/§3.5 and `2026-07-22-integrity-trail-coherence-design.md`. The guarantee now
   reads: tamper-evident against anyone who cannot destroy locked versions, with the
   stamp-forging first-write lie (§1) and operator/provider collusion (§13) as residual limits.
-- **A2 — bounded attribution + apiKey-only write lock: delivered (2026-07-22/23).** `who.apiKey.id`
-  capture and `integrity.writeLock` — see §7.1 and `2026-07-22-integrity-attribution-design.md`.
-  Honest framing kept from the assessment note: the lock is process discipline (a revocable
-  credential behind every write on a locked dataset), not an extension of the tamper-evidence
-  threat model above.
-
-## 13. Alternatives considered & deliberately not adopted
-
-These are closed decisions, recorded to avoid relitigation. The first three follow from the threat
-model in §1 (detection + audit + repair against a tenant admin — not cryptographic
-non-repudiation against the operator/provider).
-
+- **A2 — bounded attribution: delivered (2026-07-22/23).** `who.apiKey.id` capture — see §7.1
+  and `2026-07-22-integrity-attribution-design.md`. The second half of the original A2 sketch —
+  the apiKey-only write lock — was **extracted from that iteration**: it is now part of the
+  level-3 locking plan (see the tamper-evident-freeze assessment,
+  `2026-07-23-integrity-level3-lock-notes.md`), so both lock surfaces get designed together.
 - **Passive change-stream mirror (CDC) as the write wrapper.** Rejected: it loses the operation
   context, and an uncontrolled background edit *is* the breach to detect — catching it up would
   hide exactly what must surface. The transactional outbox keeps CDC's reliability with context.

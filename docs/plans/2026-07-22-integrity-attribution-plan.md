@@ -1,6 +1,8 @@
 # Integrity — bounded attribution siblings (`.who`) + A2 — implementation plan
 
-Status: built (T1-T9), see design doc.
+Status: built (T1-T7, T9), see design doc. **T8 was built then extracted (reverted 2026-07-23):**
+the apiKey-only write lock now belongs to the level-3 locking plan studied on `feat-integrity9`
+(`2026-07-23-integrity-level3-lock-notes.md`).
 
 Design: [2026-07-22-integrity-attribution-design.md](./2026-07-22-integrity-attribution-design.md).
 Branch `feat-integrity-8`. Repo protocol: test commit → impl commit per step; dev env for the
@@ -110,7 +112,7 @@ worktree is started by the maintainer; run only the related specs while iteratin
 - API spec: write with an org API key → `.who` carries the key's opaque id and no user id
   leakage of the pseudo user; adminMode+asAccount write → key id recorded.
 
-## T8 — A2: apiKey-only write lock
+## T8 — A2: apiKey-only write lock (EXTRACTED — moved to the feat-integrity9 locking plan)
 
 - Model: `integrity.writeLock?: 'apiKey'` set/cleared through `PUT /datasets/{id}/_integrity`
   body (superadmin both ways, existing `reqAdminMode` route); requires `integrity.active`;

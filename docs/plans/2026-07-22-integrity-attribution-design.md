@@ -1,6 +1,10 @@
 # Integrity — bounded attribution siblings (`.who`) + API-key attribution & write lock (A2)
 
-> Status: **built (T1-T9), 2026-07-23** — see `docs/architecture/integrity.md` §1/§3.1/§3.4/§3.5/
+> Status: **built, 2026-07-23** — attribution only: **T8 (apiKey-only write lock) was built then
+> extracted (reverted) on 2026-07-23** — the maintainer reclassified it as part of the level-3
+> locking plan studied on `feat-integrity9` (tamper-evident freeze,
+> `2026-07-23-integrity-level3-lock-notes.md`), so both lock surfaces get designed together there.
+> §5.2 below is kept as the original sketch that plan inherits. Otherwise T1-T7+T9 built — see `docs/architecture/integrity.md` §1/§3.1/§3.4/§3.5/
 > §5/§7/§8/§10/§12/§13 and `api/src/integrity/README.md`. **Out-of-repo action item for the
 > maintainer:** add the 180-day attribution-retention clause to the privacy policy / DPA (§6.2 —
 > the stated journal-vs-`.who` asymmetry must be documented there, not only here). Branch:

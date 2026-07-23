@@ -53,6 +53,3 @@ Par honnêteté d'évaluation, les limites assumées :
 - **pas de non-répudiation cryptographique** : pas de chaînage de signatures ni d'horodatage qualifié ; la confiance repose sur le verrou de conformité du stockage ;
 - **l'historique est borné** : seule la fenêtre de rétention (un an par défaut) est restaurable ; l'état *courant* vérifié, lui, reste protégé indéfiniment tant que la protection est active.
 
-### Une discipline de processus complémentaire : l'écriture réservée aux clés d'API
-
-Indépendamment des garanties ci-dessus, un jeu de données peut être configuré pour n'accepter d'écriture (interface comprise) que via une **clé d'API** — y compris pour les actions superadministrateur courantes. Ce n'est **pas une extension du modèle de menace** : cela ne rend rien plus difficile à falsifier techniquement. C'est une discipline opérationnelle — aucune modification accidentelle depuis l'interface, chaque écriture légitime rattachée à un identifiant révocable — qui, combinée à l'attribution ci-dessus, rend le rapprochement entre l'historique et le journal d'activité quasi mécanique sur un jeu de données ainsi verrouillé.

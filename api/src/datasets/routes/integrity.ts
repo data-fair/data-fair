@@ -29,8 +29,10 @@ export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const dataset = reqDataset(req)
-    const body = (req.body ?? {}) as { active?: boolean, writeLock?: 'apiKey' | null }
-    res.status(200).json(await integrityService.putIntegrityConfig(dataset, body, reqReason(req), whoFromReq(req)))
+    const active = !!req.body?.active
+    if (active) await integrityService.enableIntegrity(dataset, whoFromReq(req))
+    else await integrityService.disableIntegrity(dataset, reqReason(req), whoFromReq(req))
+    res.status(200).json({ active })
   })
 
   router.get('/:datasetId/_integrity', readDataset({ noCache: true }), permissions.middleware('readIntegrity', 'admin'), async (req, res) => {

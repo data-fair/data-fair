@@ -24,10 +24,6 @@ Pour un jeu éditable, le panneau ajoute le décompte des lignes protégées et,
 
 Si le second verdict détecte une manipulation de l'entrepôt lui-même (révision masquée ou réécrite, incohérence de dates), une alerte distincte l'affiche avec le détail de chaque anomalie et son niveau de certitude. Après enquête — typiquement : rotation des accès de stockage, vérification des sauvegardes — le superadministrateur peut **acquitter** les anomalies examinées. L'acquittement est lui-même une révision scellée, motivée et datée : il fait taire les anomalies passées en revue, jamais les futures — toute nouvelle manipulation ressort immédiatement.
 
-### Le verrou d'écriture réservé aux clés d'API
-
-Un bouton dédié du panneau (superadministrateur, avec boîte de dialogue de confirmation) active ou désactive l'exigence d'une clé d'API pour toute écriture sur le jeu de données. Tant qu'il est actif, un indicateur visible rappelle la contrainte partout où une action d'écriture serait normalement proposée depuis l'interface à une session utilisateur ordinaire.
-
 ### Ce qu'en voit un auditeur
 
 L'historique des révisions se lit comme un registre : qui-catégorie a fait quoi, quand, et pourquoi quand un motif a été saisi. Les motifs libres saisis lors des restaurations, réconciliations, désactivations et acquittements y sont conservés à demeure — ce qu'un administrateur peut écrire, un auditeur peut le lire. Le croisement avec le journal d'activité de la plateforme (qui, lui, porte les identités) permet de rattacher chaque révision à une action individuelle.
