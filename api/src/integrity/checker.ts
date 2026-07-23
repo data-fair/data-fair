@@ -81,7 +81,7 @@ export const compareDatasetLines = async (dataset: DatasetInternal, store: Retur
 // stays valid until its existing retain-until, leaving lead time to react.
 const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, latestKey: string, latestRevision: RevisionBody): Promise<void> => {
   const retentionDays = config.integrity?.retention?.days ?? 365
-  if (!ops.needsRenewal((dataset.integrity as any)?.lastRevision?.retainUntil, Date.now(), retentionDays)) return
+  if (!ops.needsRenewal(dataset.integrity?.lastRevision?.retainUntil, Date.now(), retentionDays)) return
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
   try {
@@ -119,7 +119,7 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
 // anchors are deliberately skipped — a deleted line's history ages out.
 const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, anchors: Map<string, lops.LatestLineAnchor>): Promise<void> => {
   const retentionDays = config.integrity?.retention?.days ?? 365
-  if (!ops.needsRenewal((dataset.integrity as any)?.linesRenewal?.retainUntil, Date.now(), retentionDays)) return
+  if (!ops.needsRenewal(dataset.integrity?.linesRenewal?.retainUntil, Date.now(), retentionDays)) return
   const date = new Date().toISOString()
   const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
   let renewed = 0
@@ -154,8 +154,8 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   // Both clocks are seeded: the index clock has its own stale sweep (a pinned-unknown index
   // verdict leaves the overall clock advancing, see the final $set below).
   const seedDefinitive = (date: string): Record<string, string> => ({
-    ...((dataset.integrity as any)?.lastDefinitiveCheck ? {} : { 'integrity.lastDefinitiveCheck': date }),
-    ...((dataset.integrity as any)?.lastDefinitiveIndexCheck ? {} : { 'integrity.lastDefinitiveIndexCheck': date })
+    ...(dataset.integrity?.lastDefinitiveCheck ? {} : { 'integrity.lastDefinitiveCheck': date }),
+    ...(dataset.integrity?.lastDefinitiveIndexCheck ? {} : { 'integrity.lastDefinitiveIndexCheck': date })
   })
   if (isRestDataset(dataset as any)) {
     // orphaned per-line stamps: a line write that raced the relay's final hint clear left stamps
@@ -229,7 +229,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   const latestIndex = ops.parseRevisionIndex(latest)
   const latestSkew = ops.dateSkewAnomaly(latest, latestRevision.context.date, datasetView.current.get(latest)?.lastModified, skewToleranceMs)
   if (latestSkew) trailAnomalies.push(latestSkew)
-  const trailCursor = opts?.deep ? -1 : ((dataset.integrity as any)?.lastCheck?.trailCursor ?? -1)
+  const trailCursor = opts?.deep ? -1 : (dataset.integrity?.lastCheck?.trailCursor ?? -1)
   for (const i of seqIndexes.filter((n) => n > trailCursor && n !== latestIndex).sort((a, b) => a - b)) {
     const key = ops.revisionKey(dataset.owner, dataset.id, i)
     try {
@@ -241,8 +241,8 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     }
   }
   let anomalies = trailAnomalies
-  const trailAck = (dataset.integrity as any)?.trailAck
-  if (anomalies.length && Number.isInteger(trailAck?.i)) {
+  const trailAck = dataset.integrity?.trailAck
+  if (anomalies.length && trailAck && Number.isInteger(trailAck.i)) {
     // the Mongo pointer is a hint: authority is the locked ackTrail revision body itself — a
     // forged pointer to a non-ack revision verifies false and filters nothing
     try {
@@ -271,14 +271,14 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   // hash the live doc, freshly re-read (the caller's copy may be a cleaned/projected response doc)
   const freshDoc = await mongo.datasets.findOne({ id: dataset.id })
   if (!freshDoc || ops.metadataHash(freshDoc) !== expected.metadata) breach.push('metadata')
-  if (freshDoc?.integrity?.active && !(freshDoc.integrity as any).lastRevision) {
+  if (freshDoc?.integrity?.active && !freshDoc.integrity.lastRevision) {
     // externally lost lastRevision mirror: the renewal gate (needsRenewal(undefined) === false)
     // would silently stop sliding the anchor's lock — heal it from the store, the authoritative
     // source, and patch the in-memory doc so this very pass can renew if due
     const retainUntil = await store.getRetention(latest)
     const lastRevision = { i: ops.parseRevisionIndex(latest), hash: latestRevision.hash, date: latestRevision.context.date, retainUntil: retainUntil?.toISOString() }
     await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastRevision': lastRevision } })
-    ;(dataset.integrity as any).lastRevision = lastRevision
+    dataset.integrity!.lastRevision = lastRevision
   }
 
   let linesResult: { checked: number, diverged: number, sample: string[] } | undefined
@@ -332,7 +332,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
       // sweep's dedup split relies on this ordering). A non-definitive index still seeds an
       // absent clock (pre-field enrollments) so the pin cannot stay silent forever.
       'integrity.lastDefinitiveCheck': date,
-      ...(definitiveIndex || !(dataset.integrity as any)?.lastDefinitiveIndexCheck ? { 'integrity.lastDefinitiveIndexCheck': date } : {})
+      ...(definitiveIndex || !dataset.integrity?.lastDefinitiveIndexCheck ? { 'integrity.lastDefinitiveIndexCheck': date } : {})
     }
   })
   // entry-alert + periodic re-alert while the state persists, dedup cleared on recovery (§S3)

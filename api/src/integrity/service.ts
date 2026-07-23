@@ -345,7 +345,7 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, w
 // was served stays auditable after the repair destroys the live divergence (design: no silent
 // auto-repair). Returns the reindex patch result (returnDocument:'after') so a caller that must
 // re-check sees the pending, non-finalized doc.
-const journalIndexRepairAndReindex = async (dataset: DatasetInternal, index: Check['index'], reason?: string) => {
+const journalIndexRepairAndReindex = async (dataset: DatasetInternal, index: NonNullable<NonNullable<DatasetInternal['integrity']>['lastCheck']>['index'], reason?: string) => {
   await journals.log('datasets', dataset as any, {
     type: 'integrity-index-repair',
     data: JSON.stringify({
@@ -365,7 +365,7 @@ export const reindexForIntegrity = async (dataset: DatasetInternal, reason?: str
 
 const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string): Promise<{ ok: true }> => {
   requireActive(dataset)
-  await journalIndexRepairAndReindex(dataset, (dataset.integrity as any)?.lastCheck?.index, reason)
+  await journalIndexRepairAndReindex(dataset, dataset.integrity?.lastCheck?.index, reason)
   return { ok: true }
 }
 
@@ -385,8 +385,8 @@ const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: stri
   const anomalies = before.trail?.anomalies ?? []
   if (!anomalies.length) throw httpError(400, 'no trail anomalies to acknowledge')
   let fingerprints = anomalies.map(ops.anomalyFingerprint)
-  const prevAck = (dataset.integrity as any)?.trailAck
-  if (Number.isInteger(prevAck?.i)) {
+  const prevAck = dataset.integrity?.trailAck
+  if (prevAck && Number.isInteger(prevAck.i)) {
     try {
       const prevRev = await store.getRevision(ops.revisionKey(dataset.owner, dataset.id, prevAck.i))
       if (prevRev.context.operation === 'ackTrail' && prevRev.ack?.fingerprints) {

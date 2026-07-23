@@ -11,7 +11,7 @@ import * as notifications from '../misc/utils/notifications.ts'
 // `dedupKey` defaults to the event key; pass a distinct one when two sources share an event
 // (dataset-level vs lines renewal) so one recovering does not clear the other's cadence.
 export const maybeAlert = async (dataset: DatasetInternal, eventKey: string, isBad: boolean, dedupKey = eventKey): Promise<boolean> => {
-  const alerts: Record<string, string> = (dataset.integrity as any)?.alerts ?? {}
+  const alerts: Record<string, string> = dataset.integrity?.alerts ?? {}
   if (!isBad) {
     if (alerts[dedupKey]) await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { [`integrity.alerts.${dedupKey}`]: '' } })
     return false
