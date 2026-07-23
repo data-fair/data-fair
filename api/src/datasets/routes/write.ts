@@ -26,6 +26,7 @@ import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import { emit as workerPing } from '../../workers/ping.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { createDataset, applyPatch, cancelDraft } from '../service.ts'
+import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import * as restDatasetsUtils from '../utils/rest.ts'
@@ -184,7 +185,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
 
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-      await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
+      await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
 
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
@@ -232,7 +233,7 @@ export const registerWriteRoutes = (router: Router) => {
     }
 
     const patch = { status: 'validated', validateDraft: true }
-    await applyPatch(dataset, patch)
+    await applyPatch(dataset, patch, undefined, undefined, whoFromReq(req))
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' } as Event)
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
     eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
@@ -254,7 +255,7 @@ export const registerWriteRoutes = (router: Router) => {
     }
     const patch = { draft: null }
     await cancelDraft(dataset)
-    await applyPatch(datasetFull, patch)
+    await applyPatch(datasetFull, patch, undefined, undefined, whoFromReq(req))
     // the draft may have left a failed task progress (e.g. unicity error during indexing);
     // no worker will run on the dataset after the cancellation, so clear it here
     await clearTaskProgress(dataset.id)

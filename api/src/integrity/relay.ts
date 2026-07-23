@@ -80,6 +80,20 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
     origin: hint?.origin ?? 'worker',
     date,
     ...(hint?.reason ? { reason: hint.reason } : {})
+    // NOTE: `who` deliberately never rides `context` (the revision JSON) — see README invariant
+    // #15 / design §6.4. It only ever lives in the short-retention `.who` sibling below.
+  }
+  // who-FIRST (target 8, design §1.3): a crash between this write and the revision write below
+  // is recovered by retry-forward (the relay recomputes the same index `i` and re-PUTs both) —
+  // the stray `.who` version left behind is bounded garbage that ages out at its own retention.
+  // The reverse order would lose attribution forever: a retry after a crash there would dedupe
+  // against the already-landed revision and return early, never reaching an unwritten `.who`.
+  // Only reached for a genuinely fresh revision (past the dedupe early-return above), and skipped
+  // outright when the attribution kill switch is off.
+  const who = hint?.who
+  if (ops.shouldWriteWho(who, config.integrity!.attribution?.active)) {
+    const attributionRetainUntil = ops.computeAttributionRetainUntil(config.integrity!.attribution?.retentionDays)
+    await store.writeWho(ops.whoKey(dataset.owner, dataset.id, i), { ...who, date }, attributionRetainUntil)
   }
   // payload FIRST, revision JSON second: a crash in between leaves an orphan .file that ages
   // out harmlessly — the reverse would leave a revision claiming a payload it doesn't have

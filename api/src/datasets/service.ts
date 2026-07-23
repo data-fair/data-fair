@@ -439,7 +439,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 }
 
-export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean) => {
+export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean, who?: integrityOps.WhoHint) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
@@ -479,7 +479,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     const coveredRemoved = removedRestProps.some((df) => !df.key.startsWith('_'))
     if (dataset.integrity?.active && coveredRemoved) {
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
-      const context = patch._needsHistorizing?.context ?? { operation: 'update', origin: 'user' }
+      const context = patch._needsHistorizing?.context ?? { operation: 'update', origin: 'user', ...(who ? { who } : {}) }
       await restDatasetsUtils.collection(dataset).updateMany({},
         { $unset: unset, $set: { _needsHistorizing: { context } } })
     } else {
@@ -539,7 +539,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
       // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
       // generic update/user context before finalize gets to preserve it
-      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user' } }
+      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user', ...(who ? { who } : {}) } }
     }
   }
 

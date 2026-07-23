@@ -36,7 +36,8 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
+import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
@@ -419,7 +420,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset, historizeContext?: HistorizeContextHint) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset, historizeContext?: HistorizeContextHint, who?: WhoHint) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -477,7 +478,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation.fullBody._needsHistorizing = {
         context: historizeContext ?? {
           operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
-          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker'
+          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+          ...(who ? { who } : {})
         }
       }
     }
@@ -784,7 +786,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 }
 
 const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset)
+  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset, undefined, whoFromReq(req))
 }
 
 // _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
@@ -799,7 +801,8 @@ type TransactionStreamOptions = {
   linesOwner?: Account,
   validate?: ValidateFunction,
   tmpDataset?: RestDataset,
-  summary: Summary
+  summary: Summary,
+  who?: WhoHint
 }
 
 class TransactionStream extends Writable {
@@ -816,7 +819,7 @@ class TransactionStream extends Writable {
   }
 
   async applyTransactions () {
-    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
+    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset, undefined, this.options.who)
 
     if (this.options.summary._ids) {
       if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
@@ -1220,7 +1223,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset, who: whoFromReq(req) })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -1335,7 +1338,7 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary })
+  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, who: whoFromReq(req) })
   await pump(filesStream, transactionStream)
 
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })

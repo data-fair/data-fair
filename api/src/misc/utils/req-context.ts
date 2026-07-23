@@ -82,6 +82,15 @@ const bypassPermissionsCtx = defineReqContext<BypassPermissions>('bypassPermissi
 export const setReqBypassPermissions = bypassPermissionsCtx.set
 export const reqBypassPermissions = bypassPermissionsCtx.getOptional
 
+// the opaque id of the API key that authenticated this request, set by the api-key middleware
+// (misc/utils/api-key.ts) on every settings-key branch — NOT on the resource-scoped `_readApiKey`
+// read-only pseudo-user branch. Consumed by integrity/who.ts to fill `.who.apiKey.id` (T7, design
+// §5.1) — deliberately never threaded into `RevisionContext` (the locked revision JSON stays
+// identity-free, see integrity/who.ts).
+const apiKeyRefCtx = defineReqContext<string>('apiKeyRef')
+export const setReqApiKeyRef = apiKeyRefCtx.set
+export const reqApiKeyRef = apiKeyRefCtx.getOptional
+
 const publicOperationCtx = defineReqContext<boolean>('publicOperation')
 export const setReqPublicOperation = publicOperationCtx.set
 export const reqPublicOperation = publicOperationCtx.getOptional

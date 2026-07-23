@@ -12,10 +12,21 @@ export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fix
 // actor CATEGORY, never an identity: user ids are personal data and must not enter the
 // undeletable WORM store — identity-level attribution lives in the events/journal system
 export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+// per-revision attribution (the `.who` sibling, target 8): actor identity, unlike RevisionOrigin
+// above, but bounded — it never rides the revision JSON itself, only the short-retention sibling.
+// No name/email (minimization): a bare id, an opaque API-key ref, the client IP, and coarse geo
+// from trusted reverse-proxy headers.
+export type WhoHint = {
+  user?: { id: string }
+  apiKey?: { id: string }
+  ip?: string
+  geo?: { country?: string, asn?: number, asnOrg?: string }
+}
 export type HistorizeContextHint = {
   operation: RevisionOperation
   origin: RevisionOrigin
   reason?: string
+  who?: WhoHint
 }
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'

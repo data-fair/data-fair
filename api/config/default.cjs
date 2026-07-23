@@ -32,6 +32,10 @@ module.exports = {
       forcePathStyle: true,
     },
     retention: { days: 365 },
+    // the `.who` attribution sibling's OWN retention (target 8): a kill switch plus a retention
+    // shorter than (and never extended past) the revision's own retention.days above — enforced
+    // at startup by store-factory.ts.
+    attribution: { active: true, retentionDays: 180 },
     lines: { maxLines: 100000 },
     // index-consistency verdict (A1): nightly sampled compare of the ES projection vs the
     // source — windows × windowSize rows per run; sampleCap bounds persisted evidence entries

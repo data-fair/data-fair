@@ -4,7 +4,7 @@ Toute la fonctionnalité se pilote depuis l'onglet **Intégrité** de la page d'
 
 ### L'état nominal
 
-Le panneau affiche le verdict du dernier contrôle, la vérification de cohérence, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
+Le panneau affiche le verdict du dernier contrôle, la vérification de cohérence, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Quand l'attribution est disponible pour une révision — voir la section conformité —, une colonne dédiée affiche l'identifiant utilisateur ou de clé d'API, l'adresse IP et le pays, sans jamais résoudre ces identifiants en nom affiché. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
 
 ![Panneau d'intégrité — état vérifié](img/panneau-integrite-ok.png)
 

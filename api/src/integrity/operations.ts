@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import stableStringify from 'fast-json-stable-stringify'
 // type-only import, erased at runtime: this file stays pure/config-free for the unit tests
-import type { RevisionOperation, RevisionOrigin, HistorizeContextHint } from '#types/dataset/index.ts'
+import type { RevisionOperation, RevisionOrigin, HistorizeContextHint, WhoHint } from '#types/dataset/index.ts'
 
-export type { RevisionOperation, RevisionOrigin, HistorizeContextHint }
+export type { RevisionOperation, RevisionOrigin, HistorizeContextHint, WhoHint }
 
 export const INDEX_WIDTH = 9
 
@@ -44,6 +44,19 @@ export const payloadKey = (owner: { type: string, id: string }, datasetId: strin
   revisionKey(owner, datasetId, i) + PAYLOAD_SUFFIX
 
 export const isPayloadKey = (key: string): boolean => key.endsWith(PAYLOAD_SUFFIX)
+
+// The `.who` attribution sibling (target 8): same shape as the `.file` payload sibling, a short
+// fixed-retention object never referenced/renewed/dedupe-targeted — see api/src/integrity/README.md.
+export const WHO_SUFFIX = '.who'
+
+// Every sibling suffix that must be invisible to sequence-shaped listing consumers (nextIndex,
+// latestKey, and every other place that treats a prefix listing as the revision sequence).
+export const SIBLING_SUFFIXES = [PAYLOAD_SUFFIX, WHO_SUFFIX]
+
+export const isSiblingKey = (key: string): boolean => SIBLING_SUFFIXES.some((suffix) => key.endsWith(suffix))
+
+export const whoKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
+  revisionKey(owner, datasetId, i) + WHO_SUFFIX
 
 // The covered projection (spec §2): the whole doc minus underscore-prefixed fields and the
 // operational denylist; a field added to the model later is covered by default (fail-loud).
@@ -106,7 +119,7 @@ export const metadataHash = (dataset: Record<string, any>): string =>
 export const nextIndex = (keys: string[]): number => {
   let max = -1
   for (const k of keys) {
-    if (isPayloadKey(k)) continue
+    if (isSiblingKey(k)) continue
     const i = parseRevisionIndex(k)
     if (!Number.isNaN(i) && i > max) max = i
   }
@@ -114,12 +127,74 @@ export const nextIndex = (keys: string[]): number => {
 }
 
 export const latestKey = (keys: string[]): string | undefined => {
-  const revisionKeys = keys.filter((k) => !isPayloadKey(k))
+  const revisionKeys = keys.filter((k) => !isSiblingKey(k))
   if (!revisionKeys.length) return undefined
   return revisionKeys.sort().at(-1) // zero-padded ⇒ lexical sort == numeric order
 }
 
 export type RevisionContext = { operation: RevisionOperation, origin: RevisionOrigin, date: string, reason?: string }
+
+// The `.who` sibling body: WhoHint plus the stamp date (mirrors context.date semantics).
+export type WhoBody = WhoHint & { date: string }
+
+// Pseudo-user id set by the read-only API-key middleware (`_readApiKey`, resource-scoped, never
+// writes): never worth attributing, would only ever say "a read key" which is not an actor.
+const READ_API_KEY_PSEUDO_USER = 'readApiKey'
+
+// Reverse-proxy neutral fillers (haproxy L1 sends these when it has no better geo data) —
+// storing them would be indistinguishable from a real (if boring) value, so they are dropped
+// rather than kept as false precision.
+const NEUTRAL_COUNTRY = 'XX'
+const NEUTRAL_ASN_ORG = 'Unknown'
+const isNeutralAsn = (asn: string | number): boolean => String(asn) === '0'
+
+// Deployments WITHOUT the enriching haproxy L1 pass these headers straight from the client:
+// arbitrary text, forged geo, or third-party personal data could otherwise land in an undeletable
+// (180-day WORM) `.who` object. `country` must look like an ISO-3166 alpha-2 code (uppercase only —
+// a lowercase/3-letter/injection string is dropped, not normalized, so a spoofed value never masks
+// as plausible). `asnOrg` is dropped (never truncated — a truncated org name is ambiguous forensic
+// data; absence is honest) when it exceeds a sane organization-name length.
+const COUNTRY_RE = /^[A-Z]{2}$/
+const MAX_ASN_ORG_LENGTH = 200
+
+// Pure: assembles the raw parts captured at the HTTP boundary (or a lines-transaction call site)
+// into a WhoBody, dropping neutral proxy fillers and the read-key pseudo-user. Returns undefined
+// when nothing attributable remains — callers must then write no `.who` sibling at all (§1.1).
+export const buildWho = (
+  parts: { userId?: string, apiKeyId?: string, ip?: string, country?: string, asn?: string | number, asnOrg?: string },
+  date: string
+): WhoBody | undefined => {
+  const user = parts.userId && parts.userId !== READ_API_KEY_PSEUDO_USER ? { id: parts.userId } : undefined
+  const apiKey = parts.apiKeyId ? { id: parts.apiKeyId } : undefined
+  const country = parts.country && parts.country !== NEUTRAL_COUNTRY && COUNTRY_RE.test(parts.country) ? parts.country : undefined
+  const asn = parts.asn !== undefined && !isNeutralAsn(parts.asn) ? Number(parts.asn) : undefined
+  const asnOrg = parts.asnOrg && parts.asnOrg !== NEUTRAL_ASN_ORG && parts.asnOrg.length <= MAX_ASN_ORG_LENGTH ? parts.asnOrg : undefined
+  const geo = (country !== undefined || asn !== undefined || asnOrg !== undefined)
+    ? { ...(country !== undefined ? { country } : {}), ...(asn !== undefined ? { asn } : {}), ...(asnOrg !== undefined ? { asnOrg } : {}) }
+    : undefined
+  if (!user && !apiKey && !parts.ip && !geo) return undefined
+  return {
+    date,
+    ...(user ? { user } : {}),
+    ...(apiKey ? { apiKey } : {}),
+    ...(parts.ip ? { ip: parts.ip } : {}),
+    ...(geo ? { geo } : {})
+  }
+}
+
+// Pure predicate for the relay's who-first write gate (target 8, §1.3/§2.4): a `.who` sibling is
+// written only when the effective hint actually carries attribution AND the kill switch is not
+// explicitly off. Extracted so the guard is unit-testable without a live config module — the API
+// test harness has no way to flip `integrity.attribution.active` on a running server at runtime
+// (see attribution.api.spec.ts for the limitation note).
+export const shouldWriteWho = (who: WhoHint | undefined, attributionActive: boolean | undefined): who is WhoHint =>
+  !!who && attributionActive !== false
+
+// Shared retain-until formula for every `.who` write (anchorDataset AND anchorLine, target 8):
+// centralized so the two call sites cannot silently diverge (e.g. one swapping
+// `attribution?.retentionDays` for `retention?.days`). `now` is a parameter for testability.
+export const computeAttributionRetainUntil = (retentionDays: number | undefined, now: number = Date.now()): Date =>
+  new Date(now + (retentionDays ?? 180) * 24 * 3600 * 1000)
 
 // ---------------------------------------------------------------------------------------------
 // Trail coherence (round 3): the store's version stacks and provider dates are evidence the
@@ -276,6 +351,22 @@ export const restoreUpdate = (
 // in settings stays bare — the same state a topic-deletion propagation would leave.
 export const rehydrateTopics = (topics: Array<{ id: string }>, settingsTopics: any[]): any[] =>
   topics.map((t) => settingsTopics.find((st) => st.id === t.id) ?? t)
+
+// Per-key protection window (T5, purge.ts): a `.who` sibling carries its OWN, shorter attribution
+// window — everything else (revisions, `.file` payloads) uses the dataset's full retention window.
+// The purge's age pre-filter (and the nextEligible/watermark math it feeds) MUST use this per-key
+// value, or a lapsed `.who` stays "provably young" until the (longer) revision horizon, silently
+// keeping it around past the shorter, GDPR-bounded promise (README.md invariant 15).
+export const retentionMsFor = (key: string, retentionMs: number, attributionRetentionMs: number): number =>
+  key.endsWith(WHO_SUFFIX) ? attributionRetentionMs : retentionMs
+
+// The safe floor for a scope's next-eligible watermark when nothing examined pins it earlier: a
+// `.who` sibling written the instant after this pass ages out at attributionRetentionMs — sooner
+// than a revision's own (longer) retentionMs. "Nothing written after T can expire sooner than
+// this" must therefore use the SHORTER of the two windows, or the watermark could skip a scope
+// past the point a fresh `.who` written just after T has already lapsed.
+export const scopeWatermarkFloor = (now: number, retentionMs: number, attributionRetentionMs: number): number =>
+  now + Math.min(retentionMs, attributionRetentionMs)
 
 export const RENEW_INTERVAL = 1 / 12 // ≈ monthly for a 1-year retention window (hardcoded)
 

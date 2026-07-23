@@ -55,22 +55,33 @@ lost; `trailAck` is a pointer whose authority is the locked ackTrail revision bo
 (§3.3); and the check itself gains a second verdict — **trail coherence** — computed from the
 store's version stacks and provider dates, which a **store-credentialed** adversary (stolen bucket
 keys) cannot forge: shadowing a revision or hiding keys behind delete markers is detectable because
-the original versions are undeletable and `LastModified` is provider-stamped. The guarantee is thus
-tamper-evidence against **anyone who cannot destroy locked versions**, with the first-write lie
-(above) and operator/provider collusion (§13) as the stated residual limits.
+the original versions are undeletable and `LastModified` is provider-stamped. The guarantee is thus tamper-evidence against **anyone who cannot destroy locked versions**,
+with the first-write lie (above) and operator/provider collusion (§13) as the stated residual
+limits.
 
-**Trail vs. journal — the locked trail records a *kind*, not a *who*.** A revision's context
+**Trail vs. sibling vs. journal — three tiers, one for each lifetime.** A revision's context
 names the **category** of legitimate write (`operation` + an actor category `origin` —
 `user | superadmin | worker | propagation | upgrade`), never a user identity. The reason is that
 a revision is an **undeletable, compliance-locked object**: a `user:‹id›` copied into it is
 personal data (pseudonymized ≠ anonymized) that a user-erasure request could no longer reach while
-the dataset lives on — §8's wait-out only covers *dataset* deletion. **Identity-level attribution
-lives entirely in the mutable events/journal system**, which is already anonymized when an identity
-is deleted; joining the trail to the journal by date answers "*which* user" within the journal's
-own lifecycle, while the locked trail answers "was this a legitimate *kind* of write" for as long
-as the anchor exists. This keeps the WORM store free of personal data by construction (§8) without
+the dataset lives on — §8's wait-out only covers *dataset* deletion, and the anchor's own lock
+*slides forward indefinitely* while the resource is live (§3.4), so an identity embedded there would
+be undeletable for as long as the dataset exists, not merely for one retention window. **Bounded
+identity now lives in a separate, short-lived sibling** (`.who`, target 8 / A2, §3.1): the same
+compliance lock backs it, but its own retain-until is fixed at write time and **never renewed**
+(§3.4), so it ages out and is purged (§3.5) on its own short clock
+(`integrity.attribution.retentionDays`, default 180) regardless of how long the anchor it sits
+beside keeps sliding. This is deliberately a *third* tier, distinct from both ends: it is
+tamper-proof (unlike the journal) but time-bounded (unlike the anchor). **Identity-level
+attribution beyond that window lives entirely in the mutable events/journal system**, which is
+already anonymized when an identity is deleted; joining the trail to the journal by date answers
+"*which* user" for the journal's own lifecycle (weaker — date-based, and **the join does not exist
+for lines at all**, which is exactly why lines are covered by `.who` from the start), while the
+locked trail answers "was this a legitimate *kind* of write" for as long as the anchor exists. This
+keeps the WORM store's *undeletable* portion free of personal data by construction (§8) without
 losing the forensic value — legitimacy review scans the revision list for unexpected
-operation/origin combinations, which needs the write *category*, not the identity.
+operation/origin combinations, which needs the write *category*, not the identity; when identity is
+needed too, the `.who` sibling gives a tamper-proof answer for 180 days, no join required.
 
 ## 2. Core model: one mechanism, three levels
 
@@ -119,7 +130,8 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   - `context` — `{ operation, origin, date, reason? }`: the operation type, the actor
     **category** (`origin`: `user | superadmin | worker | propagation | upgrade`), a timestamp,
     and an optional free-text reason (on `fixIntegrity` only). It carries **no user identity**
-    by construction (§1's trail/journal split), so it holds no personal data — see §8.
+    by construction (§1's three-tier split), so it holds no personal data — see §8. Bounded
+    identity, when captured, lives beside it in the `.who` sibling below, not here.
   - `dataset` — `{ id, slug }`, a small denormalized descriptor of the anchored dataset.
   - `payload` — present only at level 2: `{ metadata: <covered projection>, file?: { size, i? } }`.
     `metadata` is the **full** `coveredMetadata()` projection (not merely its hash), stored so it
@@ -145,13 +157,40 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
     Every consumer of a prefix listing is **suffix-aware**: `nextIndex`, `latestKey`, the
     dedupe check, and the revisions endpoints all filter out `.file` keys before parsing an index,
     so a payload sibling is never mistaken for its own revision.
+  - **The `.who` attribution sibling (target 8 / A2) — exactly parallel to `.file`, opposite
+    lifetime.** `‹revisionKey›.who` (`WHO_SUFFIX`) carries `WhoBody`:
+    `{ date, user?: { id }, apiKey?: { id }, ip?, geo?: { country?, asn?, asnOrg? } }` — session
+    user id or API-key id (never both meaningfully — a write is authenticated one way or the
+    other), `req.ip`, and coarse geo from trusted reverse-proxy headers (`X-Country`/`X-ASN`/
+    `X-ASN-Org`; neutral fillers `XX`/`0`/`Unknown` are dropped rather than stored as false
+    precision). No name, no email, ever (minimization, §8). Every field but `date` is optional; a
+    worker/propagation revision typically has none, and then **no `.who` object is written at
+    all** — no empty siblings. Written **who-first**, before the revision JSON (and before the
+    `.file` payload too): the opposite ordering rationale from `.file` — a crash between the
+    `.who` write and the revision write is recovered by retry-forward (the relay recomputes the
+    same index and re-PUTs both), whereas the reverse order would lose attribution forever, since
+    a retry after that crash dedupes against the already-landed revision and returns early,
+    never reaching an unwritten `.who`. Locked with its **own, shorter, fixed** retain-until
+    (`integrity.attribution.retentionDays`, default 180 — a separate config knob from the
+    revision's own retention) computed **once at write time and never extended** — unlike `.file`,
+    which slides with the anchor (§3.4/§3.5), `.who` is filtered out of every anchor set *before*
+    renewal runs, so it ages out and is purged (§4.3-equivalent purge logic, §3.5) on its own
+    clock regardless of how long the revision beside it stays protected. Never a dedupe target,
+    never referenced by anything else, and **never load-bearing**: losing a `.who` (crash before
+    write, early purge, the attribution kill switch `integrity.attribution.active: false`)
+    degrades a revision to "unattributed" — exactly today's pre-attribution state — never a false
+    verdict, a blocked restore, or a skipped renewal. Same suffix-awareness requirement as
+    `.file`: `isSiblingKey`/`SIBLING_SUFFIXES` generalizes the filter so a `.who` key can never be
+    mistaken for the revision it sits beside (§7 covers who reads it; §8 covers the GDPR posture
+    in full).
 - **Key layout (flat, id-keyed, one joint sequence per dataset):**
   `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹i›` (zero-padded `‹i›`), plus the optional
-  `‹i›.file` payload sibling above. There is no
+  `‹i›.file` payload sibling and `‹i›.who` attribution sibling above. There is no
   `‹class›` segment — the file and metadata parts share a **single revision sequence** indexed
   from `0`, since they always enable, anchor and check together (per-class enable was never
   exposed). Zero-padding makes the keys sort lexically == numerically, so "latest" is the
-  lexical-max key, and the revisions endpoint pages by listing all keys under the dataset's
+  lexical-max **revision** key (siblings are filtered out first, §3.1 above), and the revisions
+  endpoint pages by listing all keys under the dataset's
   prefix, sorting/slicing them in memory, then `GET`-ing only the requested page's items. The
   goal is to retrieve a dataset's history from its id, not to browse — minimal traversability is
   fine. The per-owner
@@ -320,9 +359,18 @@ resource shapes need opposite handling:
   as the resource is current. Its lock, set when the resource last changed, will otherwise
   expire while the resource is still live, and the guarantee is lost. A fixed lock alone is
   the wrong tool.
+- **Bounded regardless of the resource's own lifetime** (the `.who` attribution sibling, target 8
+  / A2, §3.1): the third shape, deliberately **not** treated as either of the above even when it
+  sits beside a long-lived anchor. Its lock is fixed at write time
+  (`integrity.attribution.retentionDays`, default 180) and structurally excluded from every
+  renewal pass (below) — the sliding-anchor treatment that keeps `.file` protected as long as the
+  revision it belongs to is never extended to `.who`, on purpose: attribution's value (a
+  tamper-proof answer for a bounded compliance window) is orthogonal to how long the *anchor*
+  stays current, and letting it slide would silently turn a 180-day promise into an indefinite one.
 
 The lock window is therefore reframed as a fixed **protection horizon**, kept sliding
-forward for long-lived resources. Two ways to do it; we adopt the standard one as primary.
+forward for long-lived resources — except for `.who`, which stays on its own fixed clock. Two
+ways to slide the horizon; we adopt the standard one as primary.
 
 **Primary — lock renewal by extension (Option B).** Compliance mode allows *increasing* (never
 shortening) a retention period, so the protection horizon is kept ahead of the present by
@@ -344,7 +392,11 @@ under payload reference dedupe, may be an **earlier** revision's copy. Extending
 a payload's repairability from silently expiring while the revision JSON stays protected. A
 **superseded** payload (one the latest revision no longer references) stops sliding at renewal, but
 it was already extended to each referencing revision's retain-until at *write* time (§3.1, §3.5), so
-it outlives every revision that references it.
+it outlives every revision that references it. **The `.who` sibling is never a renewal target,
+structurally**: it is filtered out of the anchor set the renewal pass operates over before extension
+runs, at both the dataset and line level, so there is no code path that could accidentally extend
+it — the exclusion is not a conditional inside the renewal logic but the absence of `.who` from
+what renewal ever sees (§3.1, README.md invariant 14).
 
 > **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
 > (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
@@ -450,8 +502,25 @@ repairability irreversibly, while keeping a stale-locked anchor costs only stora
 is versioned (object-lock requires it), the purge walks *versions*, so a retried same-key PUT's
 noncurrent copies and stray delete markers are reclaimed too.
 
+**Retention is per-key, not per-scope (target 8 / A2).** The `.who` attribution sibling carries its
+**own, shorter** window (`integrity.attribution.retentionDays`, default 180) distinct from the
+revision's own (`integrity.retention.days`, default 365) — a deliberate correctness requirement,
+not a nicety: a single global retention assumption in the age pre-filter (`lastModified + retention`
+above) would keep a lapsed `.who` "provably young" until the *revision's* horizon, silently
+stretching the 180-day promise to 365 days. The purge threads a per-key retention
+(`retentionMsFor(key, retentionMs, attributionRetentionMs)`) through both the age pre-filter and the
+scope watermark floor (`scopeWatermarkFloor`, which takes the **minimum** of the two windows — a
+fresh `.who` must become eligible sooner than a fresh revision, so the watermark cannot be pinned to
+the longer window alone). **`.who` is also, deliberately, never in the protected carve-out above**:
+the current anchor set that the purge always keeps includes the latest revision and the `.file`
+payload it references, but never the `.who` beside it — the single asymmetry with `.file` in this
+whole model. The anchor's attribution ages out and is purged on schedule even while the anchor
+itself (and its `.file` payload) stays protected indefinitely; this is what makes the 180-day GDPR
+promise (§8) hold regardless of how long the dataset itself lives.
+
 This gives every resource the same guarantee as a single file: current state always restorable
-(level 2), any past state restorable within the retention window.
+(level 2), any past state restorable within the retention window — plus, where captured, a
+tamper-proof but time-bounded answer to *who* wrote it.
 
 - **Per-resource vs. per-line is only granularity.** A file or metadata doc has one anchor; an
   editable dataset has **one anchor per line**. Same model, same guarantee — the difference is
@@ -510,8 +579,9 @@ is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` side
 
 `api/config/development.cjs` points `s3` and `integrity.s3` at the same MinIO (`S3_PORT`,
 `minioadmin`/`minioadmin`; MinIO enforces credentials, unlike s3mock). `integrity.active`
-is `true` with a 1-day retention, so the capability is on by default — but it is still
-opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
+is `true` with a 2-day revision retention and a 1-day attribution retention (deliberately
+distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
+but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
 `npm run dev-fixtures` seeds **three** datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end (each is documented in detail in the fixtures script itself):
@@ -628,7 +698,11 @@ fixtures also feed the screenshots of the client-facing presentation
   enough for `timestamp3` values), which doubles as the revision index so **the relay never lists
   before writing**; the full hex SHA-256 (or the literal marker `deleted` for a tombstone) is
   embedded in the key itself, so the checker recovers every line's latest anchor hash from **LIST
-  alone** (paged, no per-object GETs). The revision payload is the **cleaned body**: the line
+  alone** (paged, no per-object GETs). A line revision may carry the same optional `‹key›.who`
+  attribution sibling as the dataset level (target 8 / A2, §3.1) — this is exactly the shape that
+  needed covering from the start of the attribution design: there is no per-line journal event at
+  all, so `.who` is the *only* tamper-proof identity source a line ever gets, bounded and never
+  renewed like its dataset-level counterpart. The revision payload is the **cleaned body**: the line
   document minus every `_`-prefixed field — internals and `_ext_*` extension outputs (rebuildable
   projections, same argument that excludes ES) are not covered content — and minus
   **extension-owned plain columns** (`extensionOwnedKeys()`: exprEval outputs and remoteService
@@ -824,11 +898,17 @@ The integrity API splits read from write:
   re-anchors inline, then runs the check and returns its result.
 - **Reads are open to the owner account's admins** via the registered admin-class operations
   `readIntegrity` / `readIntegrityRevisions`: `GET /datasets/{id}/_integrity`, `GET
-  …/_integrity/revisions`, and the `integrity` field embedded in dataset responses (which
-  drives the list breach badge and the `status=error` filter row). These are enforced with the
-  standard `permissions.middleware(...)` machinery, so an owner admin holds them implicitly and
-  a superadmin holds them via admin mode. (There is no `realtime-integrity` operation or
-  websocket channel — the admin actions are synchronous, §3.3.)
+  …/_integrity/revisions` (+ `GET …/_integrity/revisions/{i}`), and the `integrity` field embedded
+  in dataset responses (which drives the list breach badge and the `status=error` filter row).
+  These are enforced with the standard `permissions.middleware(...)` machinery, so an owner admin
+  holds them implicitly and a superadmin holds them via admin mode. (There is no
+  `realtime-integrity` operation or websocket channel — the admin actions are synchronous, §3.3.)
+  **The same `readIntegrityRevisions` gate governs `.who` reads** (target 8 / A2): both the
+  dataset-level revision endpoints and the per-line `GET …/_integrity/lines/{lineId}/revisions`
+  (+ `/revisions/{i}`) enrich each page item with its `.who` body when the sibling exists (one GET
+  per item; a 404 simply means "absent", not an error), same permission, no separate gate — this
+  was a deliberate call in the design (owner admins already see everything else about their own
+  account's activity through this same surface; attribution is not superadmin-only).
 - `clean()` (`api/src/datasets/utils/index.ts`) **strips the `integrity` field** from any
   response whose reader cannot `readIntegrity`, so anonymous/unauthorized readers never see
   breach verdicts or anchors even when they can otherwise read the dataset. This also scopes the
@@ -844,7 +924,12 @@ The integrity API splits read from write:
   Reconcile, both restores, disable and the ack offer the optional free-text `reason`, which is
   the only free-text field a WORM revision carries; both history tables render it, so what an
   admin can write is also what an auditor can read. The panel shows the trail verdict as a
-  second status row with the anomaly list (kind, key, confidence).
+  second status row with the anomaly list (kind, key, confidence). Both revision-history tables
+  (dataset-level and per-line) additionally carry an **attribution column** (target 8 / A2, en +
+  fr) showing the `.who` body when present — user id or API-key ref, IP, country flag/code — raw
+  ids as stored, with **no display-name resolution**: looking one up would re-personalize what
+  minimization deliberately stripped (§8), and the id is already meaningful to the owner admin and
+  resolvable through the directory while the user still exists.
 
 ### 7.2 Store access
 
@@ -868,15 +953,16 @@ The historized store itself is **admin-mediated**. Two access models, by provide
 Compliance-mode immutability and right-to-erasure are reconciled the only way that
 preserves the guarantee:
 
-- **The revision context holds no personal data by construction.** Since the trail/journal split
+- **The revision context holds no personal data by construction.** Since the three-tier split
   (§1), a revision's `context` records only an operation type and an actor *category*
   (`origin: user | superadmin | worker | propagation | upgrade`) — never a `user:‹id›`. At level 2
   the payload is the *covered projection*, from which `createdBy` / `updatedBy` are already
   excluded (denylist §5) and the personal-info cleanup removed them from the dataset doc besides.
-  So a **user-erasure** request no longer conflicts with the undeletable store at all: there is no
-  identity to erase inside it. Identity attribution lives in the mutable events/journal, which is
-  anonymized on identity deletion. This is what replaced the earlier "context retained even under
-  GDPR pressure" stance — retention is now a non-issue for *user* erasure.
+  So a **user-erasure** request no longer conflicts with the undeletable revision at all: there is
+  no identity to erase inside it. Identity attribution beyond the bounded `.who` window (below)
+  lives in the mutable events/journal, which is anonymized on identity deletion. This is what
+  replaced the earlier "context retained even under GDPR pressure" stance — retention is a
+  non-issue for *user* erasure as far as the undeletable revision JSON is concerned.
 - **Bounded, owner-visible retention = protection horizon.** The compliance-lock duration is
   a single fixed window that serves two roles at once (see §3.4): the protection horizon for
   long-lived resources, and the **maximum lag between a resource's deletion and full erasure
@@ -897,6 +983,45 @@ preserves the guarantee:
   once the window elapses — unchanged, and identical to the wait-out we already carry in global
   backups. The retention window (indestructible for its whole length) must still be chosen
   deliberately with this owner-level wait-out in mind.
+
+### 8.1 Bounded individual attribution (`.who`, target 8 / A2) — a second, shorter erasure clock
+
+The revision JSON's freedom from personal data (above) does not mean the platform captures no
+identity for a legitimate write — it means the identity does not live *there*. When captured, it
+lives in the `.who` sibling (§3.1), and that object gets its **own** GDPR analysis, distinct from
+the revision's:
+
+- **Lawful basis.** Security/integrity journalisation (legitimate interest): the data set
+  captured — user id or API-key id, timestamp, IP, coarse geo — is exactly the CNIL délib.
+  2021-122 journalisation scope, and the 180-day default sits mid-band (the délib. allows 6 months,
+  extensible to 1 year with justification; the *revision's own* 365-day window, §12, already sits
+  at that upper bound for a different purpose — the protection horizon, not journalisation).
+- **Erasure.** Deferred **≤ 180 days after write**, and — like the revision's own erasure above —
+  **actively performed by the purge** (§3.5), not left to a lifecycle rule: the same
+  deferred-erasure-on-WORM doctrine this section already applies at the *dataset* level is applied
+  here at the *individual write* level, with a much shorter, non-negotiable bound. The non-renewal
+  of `.who` (§3.4) is what makes this promise unconditional — there is no code path by which an
+  attribution sibling's clock could be pushed out by the dataset staying live, the way the revision
+  it sits beside is.
+- **Stated asymmetry — this is the feature, not a gap.** Journal-based identity is erased
+  *immediately* (anonymized) when a user account is deleted; `.who` attribution instead survives up
+  to 180 days **after the write**, independent of any subsequent account deletion, because it is
+  compliance-locked like everything else in this store. The two erasure timings are deliberately
+  different, and that difference is the entire value proposition of the sibling (tamper-proof
+  attribution for a bounded window that not even the platform operator can shorten) — it must be
+  documented plainly in the privacy policy / DPA (**action item, out of repo** — see the design
+  doc's status line, `2026-07-22-integrity-attribution-design.md`).
+- **Article 15 (right of access).** A subject-access request is answered by the standard
+  journalisation clause: "attribution records are retained for a maximum of 180 days for integrity
+  purposes." No per-user index over `.who` objects is built (or needed) for this — enumerating every
+  write a given user made is not currently a served query; a later mutable Mongo index remains a
+  possible addition if a DPO requires per-user enumeration, but nothing in the design depends on it.
+- **Minimization, restated.** Id-only, never name/email (a name would stay readable long after a
+  directory-side erasure; a bare id degrades gracefully into a dangling pseudonym instead); raw IP
+  plus proxy-computed coarse geo only, never in-app geo-IP resolution (§13); neutral proxy fillers
+  (`XX`/`0`/`Unknown`) are dropped rather than stored as false precision; the attribution kill
+  switch (`integrity.attribution.active: false`) lets a deployment opt out of storing IPs/geo
+  altogether, at the cost of `.who` never being written.
 
 ## 9. Storage accounting (internal to data-fair)
 
@@ -939,6 +1064,7 @@ plan → build, test-first), not here.
 | Pre-release hardening | sha256 file hashes, pipeline-routed restore, locking, race nets, renewal alerting, storage quota, env wiring | `2026-07-21-integrity-followups-plan.md` |
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
 | A1 — ES index consistency | third `'index'` verdict (count + seeded sampled windows nightly, exhaustive on `?deep=true`), both dataset families, through the alias; panel reindex journals evidence first | `2026-07-22-integrity-index-consistency-design.md` |
+| A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
 guarantee honest until they land):
@@ -968,10 +1094,10 @@ Genuinely open:
 
 - **Next actions (assessed 2026-07-22, one dedicated branch each — pre-design notes in
   [2026-07-22-integrity-next-actions-notes.md](../plans/2026-07-22-integrity-next-actions-notes.md)):**
-  **A1** ES index consistency verification is now **delivered** (see below); **A2** API-key
-  attribution in the revision context + an API-key-only write lock (partial level 3: process
-  discipline, near-mechanical trail↔journal attribution); **A3** visual revision diffs in the
-  panel.
+  **A1** ES index consistency verification and **A2** bounded attribution are both
+  **delivered** (see below; A2's second half — the apiKey-only write lock — was extracted to
+  the level-3 locking plan, `2026-07-23-integrity-level3-lock-notes.md`); **A3** visual
+  revision diffs in the panel remains.
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history. A product conversation per
   deployment, not a design gap.
@@ -1008,6 +1134,11 @@ Decided / resolved (one line each; details in the linked docs):
 - **A1 — ES index consistency verdict: delivered (2026-07-22).** Third verdict member
   `'index'`, closing the last unguarded hop between the locked store and what a reader actually
   sees — see §5 and `2026-07-22-integrity-index-consistency-design.md`.
+- **A2 — bounded attribution: delivered (2026-07-22/23).** `who.apiKey.id` capture — see §7.1
+  and `2026-07-22-integrity-attribution-design.md`. The second half of the original A2 sketch —
+  the apiKey-only write lock — was **extracted from that iteration**: it is now part of the
+  level-3 locking plan (see the tamper-evident-freeze assessment,
+  `2026-07-23-integrity-level3-lock-notes.md`), so both lock surfaces get designed together.
 
 ## 13. Alternatives considered & deliberately not adopted
 
@@ -1060,6 +1191,31 @@ non-repudiation against the operator/provider).
   Versioning is therefore enabled only because compliance lock demands it, and demoted to a
   nuisance to be swept — with one load-bearing exception: a same-key overwrite attack cannot touch
   the locked original version, which is exactly what the WORM tamper tests exercise.
+- **Attribution inside the revision JSON itself** (target 8 / A2). **Rejected:** this is the exact
+  problem §1/§8 already solve for — the revision's lock slides forward indefinitely while a
+  resource is live, so a `user:‹id›` copied into it would be undeletable personal data for as long
+  as the dataset exists, not merely for one retention window. The bounded `.who` sibling (§3.1)
+  exists precisely to give this a home with a bound.
+- **Names/emails in `.who`** (target 8 / A2). **Rejected on minimization grounds** (§8.1): a name or
+  email would remain readable inside the locked sibling for up to 180 days after a directory-side
+  erasure, which a bare id does not — the id degrades gracefully into a dangling pseudonym instead.
+- **In-app geo-IP resolution (e.g. a bundled MaxMind database)** (target 8 / A2). **Rejected:** the
+  trusted reverse-proxy ingress already enriches every request with `X-Country`/`X-ASN`/`X-ASN-Org`
+  computed from the same class of GeoLite2-derived data; an in-app dependency would duplicate that
+  infrastructure work and widen the surface of stored data (an app-side database to keep current,
+  a second place geo logic can drift) for no capability gain. Environments without the enriched
+  proxy simply store no geo — never a fallback lookup.
+- **Journal-event-id pointer in the revision context** (target 8 / A2, the pre-`.who` sketch).
+  **Rejected:** a pointer into a *mutable* store (the journal/events collection) adds no
+  tamper-proofing over the date-based join §1 already performs — it would still be trivially
+  forgeable by the same in-scope adversary who can forge the outbox stamp (§1's first-write-lie
+  limit), and it does nothing for lines, where no per-line journal event exists at all. The join
+  stays date-based where the journal exists; `.who` covers where it doesn't.
+- **`keyRef` as an additive field on `RevisionContext`** (the A2 assessment note's original sketch,
+  superseded by `who.apiKey.id`). **Rejected** once the `.who` sibling existed: putting even an
+  *opaque* key reference in the permanently-locked context would widen that object's surface for no
+  benefit — the sibling already carries exactly this fact under its own bounded, purge-enforced
+  retention, keeping the WORM-forever revision free of even opaque actor references.
 
 ## 14. Deferred scope & future directions
 

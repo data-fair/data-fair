@@ -7,6 +7,7 @@ import * as restUtils from '../datasets/utils/rest.ts'
 import { integrityStore } from './store-factory.ts'
 import type { IntegrityStore } from './store.ts'
 import * as lops from './lines-operations.ts'
+import * as ops from './operations.ts'
 import type { HistorizeContextHint, RevisionContext } from './operations.ts'
 
 const BATCH = 100
@@ -15,7 +16,10 @@ const BATCH = 100
 // the synchronous _fix path. The revision index is the line's own _i (unique, monotonic,
 // changes on every update): no LIST-before-write, retry-forward re-PUTs are idempotent
 // (a same-key PUT adds a version on the locked bucket without touching the locked one).
-export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store: IntegrityStore, retainUntil: Date, contextHint?: HistorizeContextHint): Promise<boolean> => {
+// `attributionRetainUntil` is normally computed once per relay batch (mirrors the revision
+// `retainUntil` above it, historizeLines) and passed down; synchronous single-line callers
+// (_fix's tombstone bless) may omit it and let this function compute its own from config.
+export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store: IntegrityStore, retainUntil: Date, contextHint?: HistorizeContextHint, attributionRetainUntil?: Date): Promise<boolean> => {
   // adversarial _i (§S4): a value outside the key padding would corrupt the line's whole
   // sequence ordering — refuse, loudly; the caller leaves the stamp pending so the dataset
   // stays 'unknown' and the check-stale alert surfaces the wedge if nobody remediates
@@ -31,8 +35,21 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
     date: new Date().toISOString(),
     ...(hint?.reason ? { reason: hint.reason } : {})
   }
+  // who-FIRST (target 8, README invariant #4, same rationale as anchorDataset): a crash between
+  // this write and the revision write below is recovered by retry-forward (the caller leaves the
+  // stamp pending and the relay re-visits the same line, recomputing the same key and re-PUTting
+  // both) — the reverse order would lose attribution forever, since a same-key re-PUT after a
+  // crash there is idempotent and never reaches an unwritten `.who`.
+  const who = hint?.who
+  const writeWho = async (key: string): Promise<void> => {
+    if (ops.shouldWriteWho(who, config.integrity!.attribution?.active)) {
+      const effectiveAttributionRetainUntil = attributionRetainUntil ?? ops.computeAttributionRetainUntil(config.integrity!.attribution?.retentionDays)
+      await store.writeWho(key, { ...who, date: context.date }, effectiveAttributionRetainUntil)
+    }
+  }
   const lineMeta = { _id: line._id, _i: line._i!, ...(line._updatedAt ? { _updatedAt: new Date(line._updatedAt).toISOString() } : {}) }
   if (deleted) {
+    await writeWho(lops.lineWhoKey(dataset.owner, dataset.id, line._id, line._i!, lops.DELETED_MARKER))
     await store.writeRevision(
       lops.lineRevisionKey(dataset.owner, dataset.id, line._id, line._i!, lops.DELETED_MARKER),
       { hash: {}, context, dataset: { id: dataset.id, slug: dataset.slug }, line: { ...lineMeta, deleted: true } },
@@ -45,6 +62,7 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
     const excluded = lops.extensionOwnedKeys(dataset.extensions)
     const payload = lops.cleanedLineBody(line, excluded)
     const sha256 = lops.lineSha256(line, excluded)
+    await writeWho(lops.lineWhoKey(dataset.owner, dataset.id, line._id, line._i!, sha256))
     await store.writeRevision(
       lops.lineRevisionKey(dataset.owner, dataset.id, line._id, line._i!, sha256),
       { hash: { sha256 }, context, dataset: { id: dataset.id, slug: dataset.slug }, line: lineMeta, payload },
@@ -80,9 +98,12 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
     const lines = await c.find({ _needsHistorizing: { $exists: true }, _id: { $nin: refused } }).limit(BATCH).toArray()
     if (!lines.length) break
     const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
+    // computed once per batch, like `retainUntil` above (target 8): every `.who` sibling this
+    // batch writes shares the same attribution window
+    const attributionRetainUntil = ops.computeAttributionRetainUntil(config.integrity.attribution?.retentionDays)
     // all the batch's S3 PUTs first (concurrent), then ONE Mongo round-trip for the bookkeeping:
     // a crash after some PUTs re-runs the whole batch, and same-key re-PUTs are idempotent
-    const anchored = await Promise.all(lines.map(async (line) => ({ line, ok: await anchorLine(dataset, line, store, retainUntil) })))
+    const anchored = await Promise.all(lines.map(async (line) => ({ line, ok: await anchorLine(dataset, line, store, retainUntil, undefined, attributionRetainUntil) })))
     const bookkeeping: AnyBulkWriteOperation<DatasetLine>[] = []
     for (const { line, ok } of anchored) {
       if (!ok) { refused.push(line._id); continue }

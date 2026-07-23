@@ -41,6 +41,16 @@ module.exports = {
         __format: 'json'
       }
     },
+    attribution: {
+      active: {
+        __name: 'INTEGRITY_ATTRIBUTION_ACTIVE',
+        __format: 'json'
+      },
+      retentionDays: {
+        __name: 'INTEGRITY_ATTRIBUTION_RETENTION_DAYS',
+        __format: 'json'
+      }
+    },
     lines: {
       maxLines: {
         __name: 'INTEGRITY_LINES_MAX_LINES',

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import stableStringify from 'fast-json-stable-stringify'
 import { escapeKey } from '../datasets/utils/operations.ts'
+import { WHO_SUFFIX } from './operations.ts'
 
 // _i values (timestamp3 mode: hundredths of a second since dataset creation, plus a chunk
 // discriminator) far exceed the joint anchor's 9-digit width — 16 digits keeps lexical
@@ -27,6 +28,10 @@ export const lineRevisionPrefix = (owner: { type: string, id: string }, datasetI
 export const lineRevisionKey = (owner: { type: string, id: string }, datasetId: string, lineId: string, i: number, shaOrDeleted: string): string =>
   `${lineRevisionPrefix(owner, datasetId, lineId)}${padLineIndex(i)}-${shaOrDeleted}`
 
+// The `.who` attribution sibling at line level (target 8), parallel to lineRevisionKey.
+export const lineWhoKey = (owner: { type: string, id: string }, datasetId: string, lineId: string, i: number, shaOrDeleted: string): string =>
+  lineRevisionKey(owner, datasetId, lineId, i, shaOrDeleted) + WHO_SUFFIX
+
 export type ParsedLineKey = { lineId: string, i: number, sha256?: string, deleted: boolean }
 
 export const parseLineRevisionKey = (key: string): ParsedLineKey | undefined => {
@@ -34,6 +39,10 @@ export const parseLineRevisionKey = (key: string): ParsedLineKey | undefined => 
   // …/‹datasetId›/lines/‹encodedLineId›/‹paddedI›-‹sha|deleted›
   if (parts.length < 3 || parts[parts.length - 3] !== 'lines') return undefined
   const last = parts[parts.length - 1]
+  // explicit sibling exclusion (not lexical luck): a `‹i›-‹sha›.who` key must never parse as a
+  // revision — this is what makes foldLatestLineAnchors/latestLineAnchors and lines renewal
+  // sibling-blind by construction (README.md invariant 9).
+  if (last.endsWith(WHO_SUFFIX)) return undefined
   const dash = last.indexOf('-')
   if (dash === -1) return undefined
   const i = parseInt(last.slice(0, dash), 10)
