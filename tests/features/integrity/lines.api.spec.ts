@@ -2,7 +2,7 @@
 // Target 3: per-line locked revisions for editable (REST) datasets — store layout, write-path
 // stamping, relay, enable/gate, check, restore/fix.
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared } from '../../support/integrity.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
@@ -548,4 +548,166 @@ test('disable clears per-line stamp residue', async () => {
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
   const line = await rawLine(ax, dataset.id, 'line0')
   expect(line._needsHistorizing).toBeUndefined()
+})
+
+// ---------------------------------------------------------------------------------------------
+// T4 — attribution (`.who`) on the lines write path: there is NO per-line journal event, so the
+// `.who` sibling is the ONLY tamper-proof identity join for line writes (design doc §2.3/§2.4).
+// ---------------------------------------------------------------------------------------------
+
+const linesPrefixFor = async (ax: any, datasetId: string, lineId: string) => {
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+  return `data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/${lineId}/`
+}
+
+test('line create/update/delete by a logged-in user attach a `.who` sibling carrying the user id, including on the tombstone', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [])
+  await enableAndDrain(ax, dataset.id)
+
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'hello', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+  const prefix = await linesPrefixFor(ax, dataset.id, 'l1')
+  let keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  const whoKey = keys.find(k => k.endsWith('.who'))
+  expect(whoKey).toBeTruthy()
+  let who = await integrityTestStore.getWho(whoKey!)
+  expect(who.user?.id).toBe('test_superadmin')
+  expect(who.date).toBeTruthy()
+
+  await ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'updated' })
+  await waitForLinesDrained(ax, dataset.id)
+  keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  expect(keys.filter(k => k.endsWith('.who')).length).toBe(2)
+
+  await ax.delete(`/api/v1/datasets/${dataset.id}/lines/l1`)
+  await waitForLinesDrained(ax, dataset.id)
+  keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  const deletedWhoKey = keys.find(k => k.endsWith('-deleted.who'))
+  expect(deletedWhoKey).toBeTruthy()
+  who = await integrityTestStore.getWho(deletedWhoKey!)
+  expect(who.user?.id).toBe('test_superadmin')
+  // the sibling sits right next to the tombstone revision key
+  expect(keys).toContain(deletedWhoKey!.slice(0, -'.who'.length))
+})
+
+test('a line write authenticated with an organization API key attaches `.who` with the key-session user id', async () => {
+  // org-owned dataset (test_user1 is an admin of test_org1, cf. rest-datasets-crud.api.spec.ts) +
+  // a separate superadmin session for the integrity admin actions (adminMode + org is untested
+  // combo elsewhere in the suite; superadmin acts across orgs without needing org membership)
+  const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(axOrg, [])
+  await enableAndDrain(ax, dataset.id)
+
+  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_org1', { apiKeys: [{ title: 'lines-attribution-key', scopes: ['datasets'] }] })
+  const apiKey = settingsRes.data.apiKeys[0]
+  const axApiKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
+
+  await axApiKey.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'lkey', attr1: 'x', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const prefix = await linesPrefixFor(ax, dataset.id, 'lkey')
+  const keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  const whoKey = keys.find(k => k.endsWith('.who'))
+  expect(whoKey).toBeTruthy()
+  const who = await integrityTestStore.getWho(whoKey!)
+  // T7 will additionally record who.apiKey.id — T3/T4 only resolve the key-session's user id
+  expect(who.user?.id).toBe('apiKey:' + apiKey.id)
+})
+
+test('`_fix` bless of a tampered line attaches the fixing superadmin\'s `.who` to the fresh revision', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { attr1: 'legitimate-oob-edit' } }
+  })
+  const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'attribution test' })).data
+  expect(verdict.status).toBe('ok')
+
+  const prefix = await linesPrefixFor(ax, dataset.id, 'line0')
+  const keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  const whoKeys = keys.filter(k => k.endsWith('.who')).sort()
+  // enable-backfill anchor (i=0) + the fix's bless anchor (i>0), both attributed
+  expect(whoKeys.length).toBeGreaterThanOrEqual(2)
+  const latestWho = whoKeys.at(-1)!
+  const who = await integrityTestStore.getWho(latestWho)
+  expect(who.user?.id).toBe('test_superadmin')
+})
+
+test('enable-backfill anchors every existing line with the enabling admin\'s `.who`', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
+  const whoKeys = keys.filter(k => k.endsWith('.who'))
+  expect(whoKeys.length).toBe(2) // one per backfilled line
+  for (const whoKey of whoKeys) {
+    const who = await integrityTestStore.getWho(whoKey)
+    expect(who.user?.id).toBe('test_superadmin')
+  }
+})
+
+test('a relay batch with mixed who/no-who lines writes `.who` only for the attributed write', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id) // line0 gets its backfill `.who` here
+
+  // user-authenticated write on a new line: carries who
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'attributed', attr1: 'x', attr2: 1 })
+  // raw worker-origin stamp on the pre-existing line: no who, hint-first like the relay expects
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } } }
+  })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const attributedPrefix = await linesPrefixFor(ax, dataset.id, 'attributed')
+  const attributedKeys = (await integrityTestStore.listRevisions(attributedPrefix)).map(r => r.key)
+  expect(attributedKeys.some(k => k.endsWith('.who'))).toBe(true)
+
+  const line0Prefix = await linesPrefixFor(ax, dataset.id, 'line0')
+  const line0Keys = (await integrityTestStore.listRevisions(line0Prefix)).map(r => r.key)
+  const line0RevisionKeys = line0Keys.filter(k => !k.endsWith('.who'))
+  expect(line0RevisionKeys.length).toBe(2) // backfill anchor + fresh worker-origin update
+  // only the backfill anchor (i=0) carries a `.who` — the worker-origin update added none
+  expect(line0Keys.filter(k => k.endsWith('.who')).length).toBe(1)
+})
+
+test('a line write drives the relay to write the `.who` sibling with its OWN retain-until (attribution.retentionDays), distinct from the line revision\'s (retention.days)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [])
+  await enableAndDrain(ax, dataset.id)
+
+  const before = Date.now()
+  await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'lret', attr1: 'x', attr2: 1 })
+  await waitForLinesDrained(ax, dataset.id)
+  const after = Date.now()
+
+  const prefix = await linesPrefixFor(ax, dataset.id, 'lret')
+  const keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
+  const revisionKey = keys.find(k => !k.endsWith('.who'))!
+  const whoKey = keys.find(k => k.endsWith('.who'))!
+
+  const revisionRetention = await integrityTestStore.getRetention(revisionKey)
+  const whoRetention = await integrityTestStore.getRetention(whoKey)
+  expect(revisionRetention).toBeTruthy()
+  expect(whoRetention).toBeTruthy()
+
+  // dev/test config (api/config/development.cjs): attribution.retentionDays: 1, retention.days: 2
+  const attributionRetentionMs = 1 * 24 * 3600 * 1000
+  const revisionRetentionMs = 2 * 24 * 3600 * 1000
+  const toleranceMs = 60 * 60 * 1000 // 1h, generous for relay scheduling + worker clock skew
+  expect(whoRetention!.getTime()).toBeGreaterThanOrEqual(before + attributionRetentionMs - toleranceMs)
+  expect(whoRetention!.getTime()).toBeLessThanOrEqual(after + attributionRetentionMs + toleranceMs)
+  expect(revisionRetention!.getTime()).toBeGreaterThanOrEqual(before + revisionRetentionMs - toleranceMs)
+  expect(revisionRetention!.getTime()).toBeLessThanOrEqual(after + revisionRetentionMs + toleranceMs)
+  expect(whoRetention!.getTime()).toBeLessThan(revisionRetention!.getTime())
 })
