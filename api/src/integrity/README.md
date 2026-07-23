@@ -125,3 +125,41 @@ encode the attack scenarios these invariants defend against — shadow versions,
 markers, alarm-kill flips, forged stamps and `_i` inflation, alert suppression. When you
 change behavior around an invariant, extend those suites with the attack you are defending
 against, not only the happy path.
+
+## Index verdict (A1) invariants
+
+- Every ES access in the index check goes through the dataset ALIAS (`aliasName`), never a
+  physical index name: a diverted alias is an in-scope attack and must be caught, not bypassed.
+- The sampling seed is drawn crypto-random per run and NEVER persisted before use; an explicit
+  seed is accepted only from the superadmin `_check` route (test determinism).
+- Divergence evidence (capped expected/actual excerpts) is persisted in the verdict at
+  detection time, and journaled by the reindex action BEFORE the reindex runs: the repair
+  destroys the live divergence, the journal entry survives.
+- Pending projection states (`_needsIndexing`, `_partialRestStatus`, non-finalized, missing
+  alias) downgrade the index verdict to `unknown` — never a false breach; re-checked after a
+  divergence is found (line writes do not hold the worker lock).
+- `_rand` is the only excluded compare key (index-time Math.random). `_file*` cannot occur:
+  enrollment refuses attachment datasets.
+- The file-side count check is hint-grade, not a proof: `dataset.count` is on the metadata hash
+  denylist (`EXCLUDED_TOP_LEVEL`, indexer-churn field), so a Mongo-writing adversary can forge it
+  alongside an ES tamper. The guarantee rests on the sampled windows / `?deep=true`, which
+  re-derive rows from the verified file (file-hash-covered), not on the count compare.
+- An ES doc with a missing/null/non-numeric `_i` is treated as an immediate divergence (kind
+  `surplus`, keyed by ES `_id`), never joined: it cannot be ordered against the source. The
+  sampled window query explicitly pulls `_i`-less docs (a `range: {_i: {gte}}` alone never matches
+  them) — best-effort within the window `size`: a window already full of in-range docs can push an
+  `_i`-less doc past the cut, but such a doc always inflates the ES count (caught every run) and
+  `?deep=true` reports it deterministically. `deepCompare`/`compareWindowDocs` guard their span
+  frontier with `Number.isFinite` so a stray non-finite `_i` can never collapse the span to NaN
+  and empty a batch uncompared.
+
+### A1 stated residual limit (follow-up, not fixed in this wave)
+
+- **Per-verdict `unknown`-pinning is unbounded.** `integrity-check-stale` fires off
+  `integrity.lastDefinitiveCheck`, which advances on every *overall* definitive check
+  (`ok`/`breach`). The overall check stays definitive even when the `index` member alone is
+  `unknown`, so a Mongo-writing adversary can pin the index verdict to `unknown` **forever** (an
+  orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+  `dataset.status` — both outside hash coverage) without ever tripping the stale alert. Closing
+  this needs a *per-verdict* freshness clock, deliberately deferred. Documented in the design doc
+  §3.4 correction and `docs/architecture/integrity.md` §A1.

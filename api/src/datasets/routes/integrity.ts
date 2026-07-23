@@ -56,6 +56,11 @@ export const registerIntegrityRoutes = (router: Router) => {
     res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req), whoFromReq(req)))
   })
 
+  router.post('/:datasetId/_integrity/index/_reindex', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.reindexForIntegrity(reqDataset(req), reqReason(req)))
+  })
+
   router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req), whoFromReq(req)))
@@ -78,7 +83,10 @@ export const registerIntegrityRoutes = (router: Router) => {
     // would compare fresh content against a stale anchor and report a false breach.
     // ?deep=true re-verifies date coherence over the whole retention window (nightly checks
     // only verify incrementally past the trail cursor)
-    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true' })))
+    // body.seed (superadmin-only route) pins the sampled windows for deterministic tests;
+    // nightly runs never pass one — the engine draws a fresh crypto-random seed per run
+    const seed = typeof req.body?.seed === 'string' ? req.body.seed : undefined
+    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true', seed })))
   })
 
   router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {

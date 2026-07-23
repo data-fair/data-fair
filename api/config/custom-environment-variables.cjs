@@ -57,6 +57,20 @@ module.exports = {
         __format: 'json'
       }
     },
+    index: {
+      windows: {
+        __name: 'INTEGRITY_INDEX_WINDOWS',
+        __format: 'json'
+      },
+      windowSize: {
+        __name: 'INTEGRITY_INDEX_WINDOW_SIZE',
+        __format: 'json'
+      },
+      sampleCap: {
+        __name: 'INTEGRITY_INDEX_SAMPLE_CAP',
+        __format: 'json'
+      }
+    },
     lockWaitMs: {
       __name: 'INTEGRITY_LOCK_WAIT_MS',
       __format: 'json'

@@ -3,9 +3,11 @@
 > Status: **delivered end to end** — files + metadata (one **joint anchor** per dataset: one
 > revision sequence carrying both SHA-256 hashes, one verdict, one surface), editable-dataset
 > lines (**per-line locked revision sequences**, gated ~100k live lines, opt-in per dataset),
-> level 2 (full payloads: diff, audit download, restore-from-any-revision) everywhere, and the
+> level 2 (full payloads: diff, audit download, restore-from-any-revision) everywhere, the
 > **trail-coherence & store-authority hardening** (second verdict, terminal revisions, scope
-> audit, realerts — 2026-07-22). Coverage limits are **enrollment refusals, not caveats**: a
+> audit, realerts — 2026-07-22), and the **ES index consistency verdict** (A1, third verdict
+> member `'index'` — count + seeded sampled windows nightly, exhaustive on demand, through the
+> alias, both dataset families — 2026-07-22). Coverage limits are **enrollment refusals, not caveats**: a
 > verdict never claims more than the snapshot protects (§5). Delivery history and decision
 > records live in the `docs/plans/2026-07-*-integrity-*` design docs; what remains
 > deliberately out (applications/settings metadata, attachment bytes, above-gate fold,
@@ -603,7 +605,7 @@ fixtures also feed the screenshots of the client-facing presentation
 | Data files | trivial | ✅ **delivered — always-on, no size gate** | SHA-256 of the stored bytes (teed while streaming to the locked store) |
 | Editable (REST) dataset — **Mongo lines** (source of truth) | ✅ **delivered — per-line locked revisions (detect + repair), gated ~100k live lines, opt-in per dataset; enrollment refused on lines-owner / attachment datasets (§5 limits)** | same mechanism as detect (level 1 and 2 are not separated for lines — every anchor carries its payload) | SHA-256 of the cleaned line body (stable-stringified), embedded in the revision key |
 | Dataset **attachments** (bytes beside the document) | ❌ not covered — **enrollment refused** rather than partially claimed | ❌ | n/a |
-| Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
+| **ES index** (derived, both dataset families) | ✅ **delivered (A1)** — count + seeded sampled windows nightly, exhaustive on `?deep=true`, through the alias | reindex from the verified source (panel action, evidence journaled first) | not historized (rebuildable projection) |
 
 > A fold-based level 1 over the existing per-line CRC32 `_hash` — the originally-sketched cheap
 > universal detector for datasets **above** the gate — remains a **possible later level** for that
@@ -666,7 +668,10 @@ fixtures also feed the screenshots of the client-facing presentation
   the ES `_id` is a throwaway `nanoid`, and a full reindex rebuilds the index from Mongo). So ES
   is a pure **rebuildable projection**: its integrity is *consistency with Mongo*, **repaired by
   reindex**, and it needs no locked history of its own. The historization target reduces to the **Mongo
-  lines collection** — which shrinks this "hard tail" considerably.
+  lines collection** — which shrinks this "hard tail" considerably. Not historizing ES no longer means
+  not *verifying* it: the index verdict (A1, below) checks that consistency nightly, so the
+  check chain is now locked store → source verdicts → index verdict → served data, with no
+  unguarded hop between the anchor and what a reader actually sees.
 - **Existing primitives reused** (verified in `api/src/datasets/utils/rest.ts`): a precomputed
   per-line `_hash` (CRC32 over stable-stringified data, kept as-is for its original purpose —
   conflict detection, `:269`), a unique monotonic order key `_i` (`:273`, unique index `:187`),
@@ -804,6 +809,63 @@ fixtures also feed the screenshots of the client-facing presentation
   reference tables. Enrollment above the gate is likewise refused (`409`), so this cliff is never
   silently entered either; only *growth past the gate after* enrollment continues anchoring, with a
   loud `overGate` warning rather than silent partial protection.
+
+- **ES index consistency verdict (A1, delivered).** The lines verdict above guards Mongo, the
+  source of truth — but users read datasets through ES (`/lines`), and a direct write into the
+  index served all of that data without ever touching a guarded primitive. `checkDataset` now
+  produces a third verdict member, `'index'`, for **both** file and REST datasets, closing that
+  gap. One uniform mechanism, only the source adapter differs per family:
+  - **Count check, every run.** The ES doc count **through the alias** (`aliasName(dataset)` —
+    never a physical index name, so a diverted alias is caught rather than silently trusted) is
+    compared against the authoritative count: live Mongo line count for REST — solid, because the
+    lines verdict grounds that collection in the locked store — or `dataset.count` (set by the
+    indexer from rows actually read) for file. `count` sits on the metadata hash **denylist**
+    (`EXCLUDED_TOP_LEVEL`, an indexer-churn field — covering it would WORM-churn a locked revision
+    per reindex), so a Mongo-writing adversary *can* silently adjust `dataset.count`; the file-side
+    compare is therefore a cheap tripwire, hint-grade, not a proof. It still instantly catches a
+    bulk ES add/remove by an adversary who does not also forge `dataset.count`; one who forges both
+    is caught by the sampled windows below (probabilistically, each night) or by `?deep=true`
+    (deterministically) — both re-derive rows from the file itself, whose bytes the file hash does
+    cover.
+  - **Seeded sampled windows, every run.** A **fresh crypto-random seed drawn per run and never
+    persisted before use** picks `windows` random `_i` pivots (default 8), each compared over
+    `windowSize` rows (default 128) between the ES alias and the verified source (Mongo for
+    REST, a streamed re-read of the file for file datasets) — an adversary has no way to know in
+    advance which rows tonight's run will visit, so there is no permanently-safe row to tamper.
+  - **Exhaustive on demand.** `POST /_check?deep=true` (existing route) reuses the same
+    comparison with a single window spanning every row — a full lockstep compare rather than a
+    sample.
+  - **Pending states report `unknown`, never a false breach:** `_needsIndexing` lines,
+    `_partialRestStatus`, a dataset not yet finalized/indexed, or a missing alias mid-(re)index
+    all downgrade the index verdict to `unknown`; a fresh check re-runs after any divergence is
+    found, so a transient pending state cannot mask a real one.
+
+    > **Stated residual limit (follow-up, not fixed in this wave):** the `integrity-check-stale`
+    > alert does **not** bound a *per-verdict* index `unknown`. It fires off
+    > `integrity.lastDefinitiveCheck`, which advances on every **overall** definitive check
+    > (`ok`/`breach`) — and the overall check stays definitive even while the `index` member alone
+    > is `unknown`. So a Mongo-writing adversary can pin the index verdict to `unknown` **forever**
+    > (an orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+    > `dataset.status` — both outside hash coverage) without tripping the stale alert. Closing this
+    > needs a per-verdict freshness clock, deliberately deferred (design doc §3.4 correction,
+    > `api/src/integrity/README.md` A1 invariants).
+  - **Malformed ES docs are surfaced, not dropped:** a doc with a missing/null/non-numeric `_i`
+    (unorderable, unjoinable) is recorded as a `surplus` divergence keyed by its ES `_id` — the
+    sampled window query explicitly pulls `_i`-less docs (a `range` alone never matches them), and
+    the compare guards its `_i` span frontier with `Number.isFinite` so a stray non-finite value
+    can never collapse the span to NaN and skip a whole batch uncompared.
+  - **Evidence before repair.** A capped excerpt of the expected vs. actual doc for each
+    divergent entry (`_rand`, index-time `Math.random`, is the only excluded compare key) is
+    persisted in `integrity.lastCheck.index.sample` at detection time. The panel's superadmin
+    reindex action **journals that evidence first** (`integrity-index-repair` event), then
+    triggers the standard reindex — the repair destroys the live divergence, the journal entry
+    survives it.
+
+  Config lives under the existing `integrity` block (`integrity.index.windows`,
+  `integrity.index.windowSize`, `integrity.index.sampleCap`); an explicit seed is accepted only
+  from the superadmin `_check` route, for test determinism — production nightly runs never pass
+  one. Full rationale and the rejected alternatives are in the design doc,
+  [2026-07-22-integrity-index-consistency-design.md](../plans/2026-07-22-integrity-index-consistency-design.md).
 
 ## 6. Atomicity & failure model
 
@@ -996,6 +1058,7 @@ plan → build, test-first), not here.
 | Target 3 — REST lines | per-line locked revisions (pure level 2 — the fold-based level 1 was deliberately dropped: it cannot see a content edit that leaves `_hash` untouched) | `2026-07-20-integrity-target3-lines-design.md` |
 | Pre-release hardening | sha256 file hashes, pipeline-routed restore, locking, race nets, renewal alerting, storage quota, env wiring | `2026-07-21-integrity-followups-plan.md` |
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
+| A1 — ES index consistency | third `'index'` verdict (count + seeded sampled windows nightly, exhaustive on `?deep=true`), both dataset families, through the alias; panel reindex journals evidence first | `2026-07-22-integrity-index-consistency-design.md` |
 | A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
@@ -1026,9 +1089,10 @@ Genuinely open:
 
 - **Next actions (assessed 2026-07-22, one dedicated branch each — pre-design notes in
   [2026-07-22-integrity-next-actions-notes.md](../plans/2026-07-22-integrity-next-actions-notes.md)):**
-  **A1** ES index consistency verification — the *presented* data (read through ES) is not
-  covered by any verdict today, the priority gap; **A3** visual revision diffs in the panel.
-  (**A2** delivered — see below.)
+  **A1** ES index consistency verification and **A2** bounded attribution are both
+  **delivered** (see below; A2's second half — the apiKey-only write lock — was extracted to
+  the level-3 locking plan, `2026-07-23-integrity-level3-lock-notes.md`); **A3** visual
+  revision diffs in the panel remains.
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history. A product conversation per
   deployment, not a design gap.
@@ -1056,11 +1120,21 @@ Decided / resolved (one line each; details in the linked docs):
   see §1/§3.3/§3.5 and `2026-07-22-integrity-trail-coherence-design.md`. The guarantee now
   reads: tamper-evident against anyone who cannot destroy locked versions, with the
   stamp-forging first-write lie (§1) and operator/provider collusion (§13) as residual limits.
+- **A1 — ES index consistency verdict: delivered (2026-07-22).** Third verdict member
+  `'index'`, closing the last unguarded hop between the locked store and what a reader actually
+  sees — see §5 and `2026-07-22-integrity-index-consistency-design.md`.
 - **A2 — bounded attribution: delivered (2026-07-22/23).** `who.apiKey.id` capture — see §7.1
   and `2026-07-22-integrity-attribution-design.md`. The second half of the original A2 sketch —
   the apiKey-only write lock — was **extracted from that iteration**: it is now part of the
   level-3 locking plan (see the tamper-evident-freeze assessment,
   `2026-07-23-integrity-level3-lock-notes.md`), so both lock surfaces get designed together.
+
+## 13. Alternatives considered & deliberately not adopted
+
+These are closed decisions, recorded to avoid relitigation. The first three follow from the threat
+model in §1 (detection + audit + repair against a tenant admin — not cryptographic
+non-repudiation against the operator/provider).
+
 - **Passive change-stream mirror (CDC) as the write wrapper.** Rejected: it loses the operation
   context, and an uncontrolled background edit *is* the breach to detect — catching it up would
   hide exactly what must surface. The transactional outbox keeps CDC's reliability with context.

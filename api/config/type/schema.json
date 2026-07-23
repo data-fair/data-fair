@@ -135,6 +135,14 @@
             "maxLines": { "type": "number" }
           }
         },
+        "index": {
+          "type": "object",
+          "properties": {
+            "windows": { "type": "number" },
+            "windowSize": { "type": "number" },
+            "sampleCap": { "type": "number" }
+          }
+        },
         "lockWaitMs": { "type": "number" },
         "trail": {
           "type": "object",

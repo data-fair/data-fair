@@ -169,6 +169,66 @@
         </v-alert>
       </template>
 
+      <template v-if="state.active && state.lastCheck?.index">
+        <v-divider class="my-4" />
+        <div class="text-body-2">
+          {{ t('indexVerdictTitle') }} :
+          <v-chip
+            size="small"
+            label
+            :color="state.lastCheck.index.status === 'ok' ? 'success' : (state.lastCheck.index.status === 'diverged' ? 'error' : 'warning')"
+          >
+            {{ t('indexStatus.' + state.lastCheck.index.status) }}
+          </v-chip>
+        </div>
+        <v-alert
+          v-if="state.lastCheck.index.status === 'diverged'"
+          type="error"
+          variant="outlined"
+          density="compact"
+          class="mt-2"
+          :title="t('indexDivergedTitle', { diverged: state.lastCheck.index.diverged ?? 0 })"
+        >
+          <div
+            v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
+            class="text-caption"
+          >
+            {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
+          </div>
+          <div
+            v-for="entry of state.lastCheck.index.sample ?? []"
+            :key="entry.kind + entry.key"
+            class="mt-2"
+          >
+            <v-chip
+              size="small"
+              label
+            >
+              {{ t('indexKind.' + entry.kind) }} — {{ entry.key }}
+            </v-chip>
+            <pre
+              v-if="entry.expected || entry.actual"
+              class="text-caption mt-1"
+              style="white-space: pre-wrap; overflow-x: auto;"
+            >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
+          </div>
+          <div
+            v-if="adminMode"
+            class="mt-2"
+          >
+            <v-btn
+              :prepend-icon="mdiDatabaseRefresh"
+              color="warning"
+              variant="text"
+              size="small"
+              @click="indexReindexDialog = true"
+            >
+              {{ t('indexReindex') }}
+            </v-btn>
+          </div>
+        </v-alert>
+      </template>
+
       <div class="d-flex align-center ga-2 mt-4">
         <v-spacer />
         <v-btn
@@ -495,6 +555,37 @@
     </v-dialog>
 
     <v-dialog
+      v-model="indexReindexDialog"
+      max-width="500"
+    >
+      <v-card :title="t('indexReindexTitle')">
+        <v-card-text>
+          <p class="mb-2">
+            {{ t('indexReindexText') }}
+          </p>
+          <v-text-field
+            v-model="indexReindexReason"
+            :label="t('restoreReason')"
+            density="compact"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="indexReindexDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="indexReindex.loading.value"
+            @click="indexReindex.execute()"
+          >
+            {{ t('indexReindex') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="lineRevisionsOpen"
       max-width="900"
     >
@@ -679,6 +770,23 @@ fr:
   linesRestoreOk: Restauration des lignes lancée
   lineRevisionsTitle: "Historique de la ligne {lineId}"
   lineDeletedRevision: Cette révision correspond à la suppression de la ligne.
+  indexVerdictTitle: Index de recherche (données servies)
+  indexStatus:
+    ok: cohérent
+    diverged: divergent
+    unknown: en attente
+  indexDivergedTitle: "{diverged} divergence(s) entre l'index servi et la source vérifiée"
+  indexCountMismatch: "nombre de lignes : {expected} attendues, {actual} servies"
+  indexKind:
+    edited: modifiée
+    missing: absente de l'index
+    surplus: excédentaire dans l'index
+  indexExpected: "attendu :"
+  indexActual: "servi :"
+  indexReindex: Réindexer depuis la source vérifiée
+  indexReindexTitle: Réindexer le jeu de données
+  indexReindexText: Les preuves de divergence sont consignées dans le journal, puis l'index est reconstruit depuis la source vérifiée. La prochaine vérification confirmera la cohérence.
+  indexReindexOk: Réindexation lancée
   fixTitle: Réconcilier l'état courant
   fixWarning: L'état courant du fichier, des métadonnées et de chaque ligne sera ancré comme la nouvelle référence légitime. Les divergences détectées ne seront plus signalées — à n'utiliser que si ces modifications sont connues et légitimes.
   disableTitle: Désactiver le contrôle d'intégrité
@@ -763,6 +871,23 @@ en:
   linesRestoreOk: Line restore started
   lineRevisionsTitle: "History of line {lineId}"
   lineDeletedRevision: This revision corresponds to the line's deletion.
+  indexVerdictTitle: Search index (served data)
+  indexStatus:
+    ok: consistent
+    diverged: diverged
+    unknown: pending
+  indexDivergedTitle: "{diverged} divergence(s) between the served index and the verified source"
+  indexCountMismatch: "line count: {expected} expected, {actual} served"
+  indexKind:
+    edited: edited
+    missing: missing from the index
+    surplus: surplus in the index
+  indexExpected: "expected:"
+  indexActual: "served:"
+  indexReindex: Reindex from the verified source
+  indexReindexTitle: Reindex the dataset
+  indexReindexText: The divergence evidence is recorded in the journal, then the index is rebuilt from the verified source. The next check will confirm consistency.
+  indexReindexOk: Reindex started
   fixTitle: Reconcile the current state
   fixWarning: The current state of the file, metadata and every line will be anchored as the new legitimate reference. Detected divergences will no longer be reported — use only if those changes are known and legitimate.
   disableTitle: Disable integrity checking
@@ -783,7 +908,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram } from '@mdi/js'
+import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
 import type { Dataset, WhoHint } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -966,6 +1091,22 @@ const linesRestore = useAsyncAction(async () => {
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
   return res
 }, { success: t('linesRestoreOk') })
+
+// Index reindex (round A1): the served ES index is rebuilt from the verified source. Unlike the
+// lines restore above, the endpoint only acks (the divergence evidence is already recorded in the
+// trail before the rebuild) — it doesn't return a fresh verdict, so pull one via a full load()
+// rather than swapping state directly.
+const indexReindexDialog = ref(false)
+const indexReindexReason = ref('')
+const indexReindex = useAsyncAction(async () => {
+  const body: any = {}
+  if (indexReindexReason.value) body.reason = indexReindexReason.value
+  await $fetch(`datasets/${dataset.value!.id}/_integrity/index/_reindex`, { method: 'POST', body })
+  indexReindexDialog.value = false
+  indexReindexReason.value = ''
+  await load.execute()
+  datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+}, { success: t('indexReindexOk') })
 
 // Target 3 (read side): per-line revision history, the lines counterpart of the dataset-level
 // history table + diff dialog above — same pattern, `payload`/`current` are flat line bodies here

@@ -402,16 +402,24 @@ test('a check during a pending legitimate update never reports a breach', async 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const notif = await collectNotifications()
-  // simulate a legitimate update whose relay has not run yet: new bytes + the flag, atomically
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'new legitimate content' })
+  // simulate a legitimate update whose relay has not run yet: new bytes + the flag, atomically.
+  // The _needsHistorizing flag makes any check landing in this window read 'unknown' regardless of
+  // the (legitimately) diverged file/index state — never a false breach.
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'id,label\n1,alpha\n2,beta' })
   await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
 
   // the check may hit the pending window ('unknown') or run after the relay re-anchored ('ok') — never 'breach'
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(['unknown', 'ok']).toContain(check.status)
 
-  // once the relay has anchored the new content the check is 'ok' (4 keys: 2 revisions × JSON + .file)
+  // the relay anchors the new content (4 keys: 2 revisions × JSON + .file), blessing the new bytes
+  // into the trail. A real legitimate file update ALSO rebuilds the ES projection from those bytes;
+  // the raw tamper shortcut above does not, so complete the update by reindexing (finalize re-anchors
+  // the reprocessed schema/count). Only then does the settled check converge on every verdict axis —
+  // file, metadata and the A1 index projection.
   await waitForIntegrityRevisions(prefix, 4)
+  await doAndWaitForFinalize(admin, dataset.id, () => admin.post(`/api/v1/datasets/${dataset.id}/_reindex`))
+  await waitForFlagCleared(dataset.id)
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 
   await new Promise(resolve => setTimeout(resolve, 1500)) // settle: allow a stray event to arrive
