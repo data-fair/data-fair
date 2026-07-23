@@ -12,6 +12,7 @@ import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import { isWriteLockRefused } from './write-lock.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
@@ -19,6 +20,10 @@ import { whoFromReq } from '../../integrity/who.ts'
 // keep working; config-free consumers import them directly from req-context.ts.
 import { defineReqContext, reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
 export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
+// isCoveredMutation / WRITE_LOCK_READONLY_EXCEPTIONS are the config-free write-lock predicate
+// surface (write-lock.ts) — re-exported so existing `permissions.<name>` consumers and the
+// write-lock unit/drift tests can both reach them.
+export { isCoveredMutation, WRITE_LOCK_READONLY_EXCEPTIONS } from './write-lock.ts'
 
 // the operation gating the current route (class/id/track), exposed downstream as the x-operation header
 export type ReqOperation = { class: string, id: string, track?: string }
@@ -32,28 +37,9 @@ const resourceTypesLabels: Record<ResourceType, string> = {
   'remote-services': 'Le service distant'
 }
 
-// apiKey-only write lock (design doc §5.2, T8): datasets 'admin'-class operationIds that mutate
-// covered content or ACLs — the lock gates these in addition to the whole `write` class. The
-// read-only admin operations (readIntegrity/readIntegrityRevisions/getPermissions) and the
-// `_integrity` management routes themselves (never routed through a permission class — they call
-// `reqAdminMode` directly, see datasets/routes/integrity.ts) are deliberately excluded: the lock is
-// a posture on user-facing covered mutations, not on the management surface that sets it.
-const WRITE_LOCK_ADMIN_OPERATIONS = new Set([
-  'delete', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey'
-])
-
-// True when a locked dataset (`integrity.writeLock === 'apiKey'`) refuses this operation for the
-// current session — a covered mutation (write class, or one of the admin-class mutations above)
-// not authenticated by an API key. Superadmin sessions and application-key pseudo-sessions are
-// refused too (design §5.2: discipline applies to everyone, application keys are not API keys).
-const isWriteLockRefused = (resourceType: ResourceType, resource: Resource, operationClass: string, operationId: string, sessionState: SessionState): boolean => {
-  if (resourceType !== 'datasets') return false
-  const writeLock = (resource as Resource & { integrity?: { writeLock?: string } }).integrity?.writeLock
-  if (writeLock !== 'apiKey') return false
-  const isCoveredMutation = operationClass === 'write' || (operationClass === 'admin' && WRITE_LOCK_ADMIN_OPERATIONS.has(operationId))
-  if (!isCoveredMutation) return false
-  return !(sessionState as SessionState & { isApiKey?: boolean }).isApiKey
-}
+// apiKey-only write lock (design doc §5.2, T8): the covered-mutation predicate and the refusal
+// check itself live in the config-free write-lock.ts (so they stay unit-testable and importable
+// by the drift-ratchet test); imported above, re-exported below.
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
