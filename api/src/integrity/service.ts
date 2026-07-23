@@ -12,6 +12,7 @@ import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import type { DatasetInternal, HistorizeContextHint, RestDataset, WhoHint } from '#types'
+import type { WhoBody } from './operations.ts'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import * as datasetUtils from '../datasets/utils/index.ts'
 import { preparePatch } from '../datasets/utils/patch.ts'
@@ -39,6 +40,17 @@ const retentionWindow = (): Date =>
 const getRevisionOr404 = async (key: string) => {
   return await integrityStore().getRevision(key).catch((err: any) => {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) throw httpError(404, 'unknown revision')
+    throw err
+  })
+}
+
+// The `.who` attribution sibling is normally ABSENT (worker/propagation writes carry none, and
+// every sibling ages out at the 180-day attribution retention while its revision lives on for
+// up to 365 days — design §1.1/§6.2): never let a missing/unreadable `.who` fail a revision read,
+// mirroring getRevisionOr404's own 404 normalization but swallowing rather than rethrowing.
+const getWhoOrUndefined = async (key: string): Promise<WhoBody | undefined> => {
+  return await integrityStore().getWho(key).catch((err: any) => {
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) return undefined
     throw err
   })
 }
@@ -455,16 +467,18 @@ export const listDatasetRevisions = async (dataset: DatasetInternal, page: numbe
   const keys = (await store.listRevisions(ops.revisionPrefix(dataset.owner, dataset.id), { delimiter: '/' })).map((r) => r.key)
     .filter((k) => !ops.isSiblingKey(k)).sort().reverse()
   const results = await Promise.all(pageSlice(keys, page, size).map(async (key) => {
-    const rev = await store.getRevision(key)
+    const i = ops.parseRevisionIndex(key)
+    const [rev, who] = await Promise.all([store.getRevision(key), getWhoOrUndefined(ops.whoKey(dataset.owner, dataset.id, i))])
     return {
-      i: ops.parseRevisionIndex(key),
+      i,
       hash: rev.hash,
       date: rev.context.date,
       operation: rev.context.operation,
       origin: rev.context.origin,
       ...(rev.context.reason ? { reason: rev.context.reason } : {}),
       hasPayload: !!rev.payload,
-      ...(rev.payload?.file ? { fileSize: rev.payload.file.size } : {})
+      ...(rev.payload?.file ? { fileSize: rev.payload.file.size } : {}),
+      ...(who ? { who } : {})
     }
   }))
   return { count: keys.length, results }
@@ -472,10 +486,13 @@ export const listDatasetRevisions = async (dataset: DatasetInternal, page: numbe
 
 export const getDatasetRevision = async (dataset: DatasetInternal, i: number) => {
   requireActive(dataset)
-  const rev = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))
-  const fresh = await mongo.datasets.findOne({ id: dataset.id })
+  const [rev, who, fresh] = await Promise.all([
+    getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i)),
+    getWhoOrUndefined(ops.whoKey(dataset.owner, dataset.id, i)),
+    mongo.datasets.findOne({ id: dataset.id })
+  ])
   // `current` is the live covered projection so the UI can render the metadata diff in one call
-  return { i, hash: rev.hash, context: rev.context, payload: rev.payload, current: fresh ? ops.coveredMetadata(fresh) : undefined }
+  return { i, hash: rev.hash, context: rev.context, payload: rev.payload, ...(who ? { who } : {}), current: fresh ? ops.coveredMetadata(fresh) : undefined }
 }
 
 export const readRevisionFile = async (dataset: DatasetInternal, i: number) => {
@@ -503,7 +520,7 @@ export const listLineRevisions = async (dataset: DatasetInternal, lineId: string
     .map((r) => r.key).filter((k) => !ops.isSiblingKey(k)).sort().reverse()
   const results = await Promise.all(pageSlice(keys, page, size).map(async (key) => {
     const parsed = lops.parseLineRevisionKey(key)!
-    const rev: any = await store.getRevision(key)
+    const [rev, who] = await Promise.all([store.getRevision(key) as Promise<any>, getWhoOrUndefined(key + ops.WHO_SUFFIX)])
     return {
       i: parsed.i,
       ...(parsed.deleted ? { deleted: true } : { sha256: parsed.sha256 }),
@@ -511,7 +528,8 @@ export const listLineRevisions = async (dataset: DatasetInternal, lineId: string
       operation: rev.context.operation,
       origin: rev.context.origin,
       ...(rev.context.reason ? { reason: rev.context.reason } : {}),
-      hasPayload: !!rev.payload
+      hasPayload: !!rev.payload,
+      ...(who ? { who } : {})
     }
   }))
   return { count: keys.length, results }
@@ -528,9 +546,12 @@ export const getLineRevision = async (dataset: DatasetInternal, lineId: string, 
   const keys = (await store.listRevisions(prefix)).map((r) => r.key).filter((k) => !ops.isSiblingKey(k))
   const key = keys.find((k) => k.startsWith(`${prefix}${lops.padLineIndex(i)}-`))
   if (!key) throw httpError(404, 'unknown revision')
-  const rev: any = await store.getRevision(key)
-  const currentLine = await restUtils.collection(dataset).findOne({ _id: lineId })
+  const [rev, who, currentLine]: [any, WhoBody | undefined, any] = await Promise.all([
+    store.getRevision(key),
+    getWhoOrUndefined(key + ops.WHO_SUFFIX),
+    restUtils.collection(dataset).findOne({ _id: lineId })
+  ])
   // symmetric with the payload: extension-owned columns are outside the covered body, so the
   // live projection shown against the snapshot excludes them too (no spurious diff)
-  return { i, hash: rev.hash, context: rev.context, line: rev.line, payload: rev.payload, current: currentLine ? lops.cleanedLineBody(currentLine, lops.extensionOwnedKeys(dataset.extensions)) : undefined }
+  return { i, hash: rev.hash, context: rev.context, line: rev.line, payload: rev.payload, ...(who ? { who } : {}), current: currentLine ? lops.cleanedLineBody(currentLine, lops.extensionOwnedKeys(dataset.extensions)) : undefined }
 }
