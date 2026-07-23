@@ -343,6 +343,22 @@ export const restoreUpdate = (
 export const rehydrateTopics = (topics: Array<{ id: string }>, settingsTopics: any[]): any[] =>
   topics.map((t) => settingsTopics.find((st) => st.id === t.id) ?? t)
 
+// Per-key protection window (T5, purge.ts): a `.who` sibling carries its OWN, shorter attribution
+// window — everything else (revisions, `.file` payloads) uses the dataset's full retention window.
+// The purge's age pre-filter (and the nextEligible/watermark math it feeds) MUST use this per-key
+// value, or a lapsed `.who` stays "provably young" until the (longer) revision horizon, silently
+// keeping it around past the shorter, GDPR-bounded promise (README.md invariant 15).
+export const retentionMsFor = (key: string, retentionMs: number, attributionRetentionMs: number): number =>
+  key.endsWith(WHO_SUFFIX) ? attributionRetentionMs : retentionMs
+
+// The safe floor for a scope's next-eligible watermark when nothing examined pins it earlier: a
+// `.who` sibling written the instant after this pass ages out at attributionRetentionMs — sooner
+// than a revision's own (longer) retentionMs. "Nothing written after T can expire sooner than
+// this" must therefore use the SHORTER of the two windows, or the watermark could skip a scope
+// past the point a fresh `.who` written just after T has already lapsed.
+export const scopeWatermarkFloor = (now: number, retentionMs: number, attributionRetentionMs: number): number =>
+  now + Math.min(retentionMs, attributionRetentionMs)
+
 export const RENEW_INTERVAL = 1 / 12 // ≈ monthly for a 1-year retention window (hardcoded)
 
 // Renew once the current lock is "older" than `interval` of the full retention window.
