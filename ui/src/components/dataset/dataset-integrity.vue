@@ -708,6 +708,7 @@ fr:
   part_file: Fichier de données
   part_metadata: Métadonnées
   part_lines: Lignes
+  part_index: Index de recherche
   breachTitle: Intégrité compromise
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
@@ -809,6 +810,7 @@ en:
   part_file: Data file
   part_metadata: Metadata
   part_lines: Lines
+  part_index: Search index
   breachTitle: Integrity breach
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
