@@ -6,6 +6,12 @@
 > built on this store — as trail revisions — and its honest name is a **tamper-evident freeze**,
 > not prevention. Read `docs/architecture/integrity.md` §1 (threat model, first-write lie) and
 > §3.5 (store authority) before turning this into a design.
+>
+> **Scope addition (target 8 / A2, merged 2026-07-23):** the **apiKey-only write lock** — the
+> second half of the original A2 sketch — was extracted from the attribution iteration (#520)
+> into this plan, so both lock surfaces get designed together (architecture §12 decided
+> record). It remains labeled **process discipline**, not guarantee (see §4 below); the
+> attribution half (`.who` siblings, `who.apiKey.id` capture) shipped with #520.
 
 ## Verdict
 
@@ -109,7 +115,11 @@ carries no identity, §1's trail/journal split). A forged stamp claiming `origin
 indistinguishable from the legitimate processing, so a partial lock detects nothing the current
 system doesn't and prevents nothing a raw-Mongo adversary cares about. What remains is
 app-layer authz, which the permissions system already provides. A2's API-key-only write lock is
-the honest version of this idea, correctly framed as process discipline, not guarantee.
+the honest version of this idea, correctly framed as process discipline, not guarantee — and
+since #520 extracted it into this plan (status note above), the future design covers both
+surfaces: the guarantee-bearing freeze, and the apiKey-only lock as its clearly-separated
+process-discipline sibling (now strengthened by `.who` attribution: every legitimate write under
+that lock resolves to a revocable key id for the `.who` retention window).
 
 ## 5. Loose ends for a future design
 
