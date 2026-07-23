@@ -148,6 +148,15 @@ const NEUTRAL_COUNTRY = 'XX'
 const NEUTRAL_ASN_ORG = 'Unknown'
 const isNeutralAsn = (asn: string | number): boolean => String(asn) === '0'
 
+// Deployments WITHOUT the enriching haproxy L1 pass these headers straight from the client:
+// arbitrary text, forged geo, or third-party personal data could otherwise land in an undeletable
+// (180-day WORM) `.who` object. `country` must look like an ISO-3166 alpha-2 code (uppercase only —
+// a lowercase/3-letter/injection string is dropped, not normalized, so a spoofed value never masks
+// as plausible). `asnOrg` is dropped (never truncated — a truncated org name is ambiguous forensic
+// data; absence is honest) when it exceeds a sane organization-name length.
+const COUNTRY_RE = /^[A-Z]{2}$/
+const MAX_ASN_ORG_LENGTH = 200
+
 // Pure: assembles the raw parts captured at the HTTP boundary (or a lines-transaction call site)
 // into a WhoBody, dropping neutral proxy fillers and the read-key pseudo-user. Returns undefined
 // when nothing attributable remains — callers must then write no `.who` sibling at all (§1.1).
@@ -157,9 +166,9 @@ export const buildWho = (
 ): WhoBody | undefined => {
   const user = parts.userId && parts.userId !== READ_API_KEY_PSEUDO_USER ? { id: parts.userId } : undefined
   const apiKey = parts.apiKeyId ? { id: parts.apiKeyId } : undefined
-  const country = parts.country && parts.country !== NEUTRAL_COUNTRY ? parts.country : undefined
+  const country = parts.country && parts.country !== NEUTRAL_COUNTRY && COUNTRY_RE.test(parts.country) ? parts.country : undefined
   const asn = parts.asn !== undefined && !isNeutralAsn(parts.asn) ? Number(parts.asn) : undefined
-  const asnOrg = parts.asnOrg && parts.asnOrg !== NEUTRAL_ASN_ORG ? parts.asnOrg : undefined
+  const asnOrg = parts.asnOrg && parts.asnOrg !== NEUTRAL_ASN_ORG && parts.asnOrg.length <= MAX_ASN_ORG_LENGTH ? parts.asnOrg : undefined
   const geo = (country !== undefined || asn !== undefined || asnOrg !== undefined)
     ? { ...(country !== undefined ? { country } : {}), ...(asn !== undefined ? { asn } : {}), ...(asnOrg !== undefined ? { asnOrg } : {}) }
     : undefined

@@ -832,6 +832,9 @@ The integrity API splits read from write:
   window), `POST …/_integrity/_fix`, and `POST …/_integrity/trail/_ack { reason }` (round 3 —
   acknowledges the trail anomalies the fresh check surfaces, as a locked ackTrail revision).
   All are gated by admin mode (never grantable through permissions).
+  **Behavior change on this branch:** `PUT …/_integrity` now responds with the full integrity
+  state (previously just `{ active }`), and an empty body no longer disables integrity — the
+  request body is parsed as `{ active?, writeLock? }` and only the fields present are applied.
   `_check` and `_fix` are **synchronous** and respond with the fresh check verdict — `_fix`
   re-anchors inline, then runs the check and returns its result.
 - **Reads are open to the owner account's admins** via the registered admin-class operations
@@ -882,7 +885,10 @@ The integrity API splits read from write:
   refuses it with 403 when the resource is a locked dataset, the operation is a covered mutation
   (the `write` class, plus the `admin`-class operations that mutate covered content or ACLs —
   `delete`, `setPermissions`, `changeOwner`, `writePublications`, `writePublicationSites`,
-  `writeExports`, `setReadApiKey`; the read-only admin operations and the `_integrity`
+  `writeExports`, `setReadApiKey` — plus the `manageOwnLines`-class mutations (`createOwnLine`,
+  `updateOwnLine`, `patchOwnLine`, `bulkOwnLines`, `deleteOwnLine`), belt-and-braces: `lineOwnership`
+  and integrity are mutually exclusive today, covered anyway so this gate cannot silently fail open
+  if that refusal ever loosens; the read-only admin operations and the `_integrity`
   management routes themselves, which never carry a permission class, are unaffected), and the
   session is not `reqSession(req).isApiKey`. This refuses **superadmin sessions and
   application-key pseudo-sessions too** — discipline applies to everyone, and an application key

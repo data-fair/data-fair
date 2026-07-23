@@ -274,6 +274,24 @@ test('buildWho drops the reverse-proxy neutral fillers (country XX / asn 0 / asn
   expect(ops.buildWho({ userId: 'u1', country: 'XX', asn: 3215 }, date)).toEqual({ date, user: { id: 'u1' }, geo: { asn: 3215 } })
 })
 
+test('buildWho drops unvalidated proxy geo headers (no enriching haproxy L1 to trust)', () => {
+  const date = '2026-07-22T00:00:00.000Z'
+  // oversized asnOrg dropped (not truncated) — geo still built from the other fields
+  const oversizedOrg = 'a'.repeat(201)
+  expect(ops.buildWho({ userId: 'u1', country: 'FR', asn: 3215, asnOrg: oversizedOrg }, date))
+    .toEqual({ date, user: { id: 'u1' }, geo: { country: 'FR', asn: 3215 } })
+  // an asnOrg right at the boundary is kept
+  const boundaryOrg = 'a'.repeat(200)
+  expect(ops.buildWho({ userId: 'u1', asnOrg: boundaryOrg }, date))
+    .toEqual({ date, user: { id: 'u1' }, geo: { asnOrg: boundaryOrg } })
+  // lowercase, 3-letter, and injection-shaped country values are all dropped
+  expect(ops.buildWho({ userId: 'u1', country: 'fr' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', country: 'FRA' }, date)).toEqual({ date, user: { id: 'u1' } })
+  expect(ops.buildWho({ userId: 'u1', country: '<script>' }, date)).toEqual({ date, user: { id: 'u1' } })
+  // a valid alpha-2 code is kept
+  expect(ops.buildWho({ userId: 'u1', country: 'FR' }, date)).toEqual({ date, user: { id: 'u1' }, geo: { country: 'FR' } })
+})
+
 test('buildWho skips the readApiKey pseudo-user id', () => {
   const date = '2026-07-22T00:00:00.000Z'
   expect(ops.buildWho({ userId: 'readApiKey', ip: '203.0.113.7' }, date)).toEqual({ date, ip: '203.0.113.7' })
