@@ -33,7 +33,7 @@ export default async function (dataset: DatasetInternal) {
     // storage (a NoSuchKey on S3 when reading it below). Until the root cause is fixed, log what
     // the loading dir actually contains so a wrong/absent key can be told apart from a read delay.
     // Remove this block once the root cause is identified and fixed.
-    if (!await filesStorage.pathExists(loadedFilePath)) {
+    if (!await filesStorage.fileExists(loadedFilePath)) {
       const existing = await filesStorage.lsrWithStats(loadingDir).catch(() => [])
       internalError('storer-missing-file', `loaded file missing when storer started: expected ${loadedFilePath} — loading dir contents: ${JSON.stringify(existing)}`)
     }
@@ -109,7 +109,7 @@ export default async function (dataset: DatasetInternal) {
         await filesStorage.removeFile(oldFilePath)
       }
     }
-  } else if (draft && !await filesStorage.pathExists(datasetUtils.originalFilePath(dataset))) {
+  } else if (draft && !await filesStorage.fileExists(datasetUtils.originalFilePath(dataset))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
     await filesStorage.copyFile(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))

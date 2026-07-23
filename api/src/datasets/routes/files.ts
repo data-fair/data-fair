@@ -179,7 +179,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     if (!dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-    if (await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
+    if (await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
       await downloadFileFromStorage(datasetUtils.fullFilePath(dataset), req, res)
     } else {
       await downloadFileFromStorage(datasetUtils.filePath(dataset), req, res)
@@ -191,7 +191,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/validation-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     const filePath = validationDiagnosticFilePath(dataset)
-    if (!await filesStorage.pathExists(filePath)) {
+    if (!await filesStorage.fileExists(filePath)) {
       return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-validation-diagnostic.csv`))
@@ -205,7 +205,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/cancelled-draft-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     const filePath = cancelledDraftDiagnosticFilePath(dataset)
-    if (!await filesStorage.pathExists(filePath)) {
+    if (!await filesStorage.fileExists(filePath)) {
       return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-cancelled-draft-diagnostic.csv`))
