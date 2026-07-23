@@ -92,7 +92,7 @@ export const anchorDataset = async (dataset: DatasetInternal, hint?: ops.Histori
   // outright when the attribution kill switch is off.
   const who = hint?.who
   if (ops.shouldWriteWho(who, config.integrity!.attribution?.active)) {
-    const attributionRetainUntil = new Date(Date.now() + (config.integrity!.attribution?.retentionDays ?? 180) * 24 * 3600 * 1000)
+    const attributionRetainUntil = ops.computeAttributionRetainUntil(config.integrity!.attribution?.retentionDays)
     await store.writeWho(ops.whoKey(dataset.owner, dataset.id, i), { ...who, date }, attributionRetainUntil)
   }
   // payload FIRST, revision JSON second: a crash in between leaves an orphan .file that ages

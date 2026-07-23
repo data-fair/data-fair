@@ -121,8 +121,11 @@ test('the lines relay ships a revision per stamped line and clears the flags', a
 
   const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
-  expect(keys).toHaveLength(1)
-  const rev = await integrityTestStore.getRevision(keys[0])
+  // the write is a logged-in-admin request (T4): the anchor also gets a `.who` attribution sibling
+  const revisionKeys = keys.filter(k => !k.endsWith('.who'))
+  expect(revisionKeys).toHaveLength(1)
+  expect(keys.filter(k => k.endsWith('.who'))).toHaveLength(1)
+  const rev = await integrityTestStore.getRevision(revisionKeys[0])
   expect((rev as any).payload).toMatchObject({ attr1: 'hello', attr2: 1 })
   expect((rev as any).line._id).toBe('l1')
   const line = await rawLine(ax, dataset.id, 'l1')
@@ -170,8 +173,11 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   expect(integrity.lines).toMatchObject({ anchored: 2, pending: 0 })
   const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
-  expect(keys).toHaveLength(2)
-  const rev = await integrityTestStore.getRevision(keys[0])
+  // the enabling admin's session attributes the backfill (T4): each anchor also gets a `.who`
+  const revisionKeys = keys.filter(k => !k.endsWith('.who'))
+  expect(revisionKeys).toHaveLength(2)
+  expect(keys.filter(k => k.endsWith('.who'))).toHaveLength(2)
+  const rev = await integrityTestStore.getRevision(revisionKeys[0])
   expect((rev as any).context.operation).toBe('enable')
 })
 
@@ -393,7 +399,9 @@ test('per-line revision history lists newest-first and serves the payload diff',
 
 const linesAnchorKeys = async (ax: any, datasetId: string) => {
   const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
-  return (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/`)).map(r => r.key)
+  const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/`)).map(r => r.key)
+  // anchors only: `.who` attribution siblings (T4) are never renewed and are not anchors
+  return keys.filter(k => !k.endsWith('.who'))
 }
 
 test('a due lines horizon renews every live line anchor on a passing check', async () => {
@@ -662,10 +670,13 @@ test('a relay batch with mixed who/no-who lines writes `.who` only for the attri
 
   // user-authenticated write on a new line: carries who
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'attributed', attr1: 'x', attr2: 1 })
-  // raw worker-origin stamp on the pre-existing line: no who, hint-first like the relay expects
+  // raw worker-origin stamp on the pre-existing line: no who, hint-first like the relay expects.
+  // The content must actually change too, or the recomputed sha256 (hence the revision key)
+  // matches the still-live backfill anchor exactly and no new key is written at all.
   await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
   await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
-    filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } } }
+    filter: { _id: 'line0' },
+    update: { $set: { attr1: 'worker-rewrite', _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } } }
   })
   await waitForLinesDrained(ax, dataset.id)
 

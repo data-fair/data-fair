@@ -27,6 +27,15 @@ invariants are the ones whose violation does exactly that.
    against the already-landed revision and returns early, never reaching an unwritten `.who`.
    Only written for a genuinely fresh revision (never on the dedupe path) and never when
    `config.integrity.attribution.active` is false (`operations.ts` `shouldWriteWho`).
+   **`lines-relay.ts` `anchorLine` mirrors this exactly** (target 4): there is no dedupe path to
+   worry about (the line's own `_i` is the index, no LIST-before-write), so the guard is simpler —
+   who-first, then the revision (or tombstone) JSON, using the same `shouldWriteWho` gate and the
+   same retain-until formula (`operations.ts` `computeAttributionRetainUntil`, shared by both
+   call sites so they cannot silently diverge). `who` reaches the line stamp via the route layer
+   (`whoFromReq(req)` threaded through `applyTransactions`/`TransactionStream` in
+   `datasets/utils/rest.ts`, alongside `sessionState`/`historizeContext`) — enable-backfill and
+   `_fix`'s bless get it for free because they already ride a `HistorizeContextHint` carrying
+   `who` into the same per-line stamp.
 
 ## Stamping discipline
 

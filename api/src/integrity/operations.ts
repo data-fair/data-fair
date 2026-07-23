@@ -181,6 +181,12 @@ export const buildWho = (
 export const shouldWriteWho = (who: WhoHint | undefined, attributionActive: boolean | undefined): who is WhoHint =>
   !!who && attributionActive !== false
 
+// Shared retain-until formula for every `.who` write (anchorDataset AND anchorLine, target 8):
+// centralized so the two call sites cannot silently diverge (e.g. one swapping
+// `attribution?.retentionDays` for `retention?.days`). `now` is a parameter for testability.
+export const computeAttributionRetainUntil = (retentionDays: number | undefined, now: number = Date.now()): Date =>
+  new Date(now + (retentionDays ?? 180) * 24 * 3600 * 1000)
+
 // ---------------------------------------------------------------------------------------------
 // Trail coherence (round 3): the store's version stacks and provider dates are evidence the
 // current view cannot show. These pure folds reconstruct the current view from a versions walk

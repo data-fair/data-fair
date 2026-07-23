@@ -675,8 +675,11 @@ test('purge keeps every live line anchor of an enrolled rest dataset', async () 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const raw = await waitForFlagCleared(dataset.id)
   const linesPrefix = `data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`
-  const anchors = await waitForIntegrityRevisions(linesPrefix, 2)
-  expect(anchors).toHaveLength(2)
+  // the bulk write is a logged-in-admin request (T4): each line anchor also gets its own `.who`
+  // attribution sibling — 2 lines × (revision + who) = 4 keys
+  const anchors = await waitForIntegrityRevisions(linesPrefix, 4)
+  expect(anchors.filter(k => !k.endsWith('.who'))).toHaveLength(2)
+  expect(anchors.filter(k => k.endsWith('.who'))).toHaveLength(2)
 
   const result = await runPurge(admin, linesPrefix)
   expect(result.errors).toBe(0)

@@ -497,8 +497,10 @@ export const listLineRevisions = async (dataset: DatasetInternal, lineId: string
   requireActive(dataset)
   if (!isRestDataset(dataset)) throw httpError(400, 'line revisions only apply to an editable (rest) dataset')
   const store = integrityStore()
+  // `.who` siblings share the revision's prefix (target 8, design §4.2): exclude them here too,
+  // the same sibling-awareness rule as the dataset-level listing above
   const keys = (await store.listRevisions(lops.lineRevisionPrefix(dataset.owner, dataset.id, lineId)))
-    .map((r) => r.key).sort().reverse()
+    .map((r) => r.key).filter((k) => !ops.isSiblingKey(k)).sort().reverse()
   const results = await Promise.all(pageSlice(keys, page, size).map(async (key) => {
     const parsed = lops.parseLineRevisionKey(key)!
     const rev: any = await store.getRevision(key)
@@ -521,7 +523,9 @@ export const getLineRevision = async (dataset: DatasetInternal, lineId: string, 
   const store = integrityStore()
   // the key embeds the content hash, unknown to the caller: find it by its padded-index prefix
   const prefix = lops.lineRevisionPrefix(dataset.owner, dataset.id, lineId)
-  const keys = (await store.listRevisions(prefix)).map((r) => r.key)
+  // a `.who` sibling also starts with `${prefix}${paddedI}-` (it is the revision key + suffix):
+  // exclude it explicitly rather than relying on listing order to keep the revision key first
+  const keys = (await store.listRevisions(prefix)).map((r) => r.key).filter((k) => !ops.isSiblingKey(k))
   const key = keys.find((k) => k.startsWith(`${prefix}${lops.padLineIndex(i)}-`))
   if (!key) throw httpError(404, 'unknown revision')
   const rev: any = await store.getRevision(key)
