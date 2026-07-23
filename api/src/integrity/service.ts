@@ -175,6 +175,51 @@ export const getIntegrityState = async (dataset: DatasetInternal): Promise<Recor
   return integrity
 }
 
+// apiKey-only write lock (design §5.2, T8): set/cleared ONLY through PUT _integrity (superadmin,
+// the same route as enable/disable). Re-reads the dataset fresh rather than trusting the caller's
+// (possibly pre-enable/disable-toggle) in-memory copy, since the same PUT request may flip `active`
+// and `writeLock` together. Deliberately NOT anchored/hashed (the whole `integrity` object is in
+// EXCLUDED_TOP_LEVEL, operations.ts) and not worth the dataset worker lock: it never touches
+// covered content, so it cannot race the relay/checker the way enable/disable/fix do.
+export const setWriteLock = async (datasetId: string, writeLock: 'apiKey' | null): Promise<void> => {
+  const fresh = await mongo.datasets.findOne({ id: datasetId }) as DatasetInternal | null
+  if (!fresh) throw httpError(404, 'dataset not found')
+  if (writeLock) {
+    if (!fresh.integrity?.active) throw httpError(400, 'the apiKey write lock requires integrity to be active on this dataset')
+    // anonymous-write application keys are incoherent with an apiKey-only lock (design §5.2):
+    // dataset.extras.applications is the dataset's own configuration surface listing every
+    // application that references it (kept in sync by datasets/service.ts syncApplications on
+    // every application config write) — no cross-collection applications-keys lookup needed.
+    if (((fresh as any).extras?.applications ?? []).length) {
+      throw httpError(400, 'cannot enable the apiKey write lock on a dataset referenced by an application: anonymous-write application keys are incoherent with the lock')
+    }
+    await mongo.datasets.updateOne({ id: datasetId }, { $set: { 'integrity.writeLock': 'apiKey', updatedAt: new Date().toISOString() } })
+  } else {
+    await mongo.datasets.updateOne({ id: datasetId }, { $unset: { 'integrity.writeLock': '' }, $set: { updatedAt: new Date().toISOString() } })
+  }
+}
+
+// Thin orchestration for the PUT _integrity route (conventions §1): resolves the `active` toggle
+// (only when the key is present — a writeLock-only PUT must not accidentally disable/re-enable),
+// then the `writeLock` toggle (only when present, so an active-only PUT never touches it), then
+// responds with the fresh state. Keeps routes/integrity.ts a thin adapter per its own header note.
+export const putIntegrityConfig = async (
+  dataset: DatasetInternal,
+  body: { active?: boolean, writeLock?: 'apiKey' | null },
+  reason: string | undefined,
+  who: WhoHint | undefined
+): Promise<Record<string, any>> => {
+  if ('active' in body) {
+    if (body.active) await enableIntegrity(dataset, who)
+    else await disableIntegrity(dataset, reason, who)
+  }
+  if ('writeLock' in body) {
+    await setWriteLock(dataset.id, body.writeLock === 'apiKey' ? 'apiKey' : null)
+  }
+  const fresh = await mongo.datasets.findOne({ id: dataset.id }) as DatasetInternal
+  return getIntegrityState(fresh)
+}
+
 // Shared core of _fix's bless and lines/_restore: rewrite lines through the standard transaction
 // pipeline (the rewrite itself is a legitimate write producing fresh revisions), then drain the
 // relay inline so the caller's re-check compares against anchored truth.

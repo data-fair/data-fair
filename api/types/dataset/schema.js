@@ -441,6 +441,12 @@ const datasetProperties = {
     required: ['active'],
     properties: {
       active: { type: 'boolean' },
+      // apiKey-only write lock (design §5.2, T8): absent = unlocked. Set/cleared only through
+      // PUT _integrity (superadmin, requires integrity.active); enforced centrally in the
+      // permission layer (misc/utils/permissions.ts). Deliberately NOT covered by the anchor hash
+      // (the whole `integrity` object is excluded, see integrity/operations.ts EXCLUDED_TOP_LEVEL) —
+      // tampering it off does not hide subsequent writes, they still anchor and attribute normally.
+      writeLock: { type: 'string', enum: ['apiKey'] },
       lastCheck: {
         type: 'object',
         required: ['date', 'status'],

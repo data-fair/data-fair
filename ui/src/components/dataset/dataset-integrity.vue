@@ -8,6 +8,19 @@
         :text="t('disabledInfo')"
       />
 
+      <!-- lock indicator (design §5.2, T8): visible to every viewer of the panel, not just admins —
+           anyone about to attempt a write through the normal UI (a session, never an API key) needs
+           to know upfront that it will be refused with a 403 -->
+      <v-alert
+        v-if="state.writeLock === 'apiKey'"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-2"
+        :prepend-icon="mdiLock"
+        :text="t('writeLockActiveInfo')"
+      />
+
       <template v-if="state.active">
         <v-alert
           v-if="state.lastCheck?.status === 'breach'"
@@ -209,6 +222,22 @@
           density="compact"
           hide-details
           @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
+        />
+
+        <!-- apiKey-only write lock (design §5.2, T8): requires integrity.active (mirrors the
+             server-side refusal). Locking has a consequence for the admin flipping it too — their
+             own session write access freezes just like everyone else's — so it is confirmed like
+             disable; unlocking simply restores normal write access and needs no guard. -->
+        <v-switch
+          v-if="state.active"
+          :model-value="state.writeLock === 'apiKey'"
+          :label="t('writeLockLabel')"
+          :loading="writeLockToggle.loading.value"
+          color="warning"
+          density="compact"
+          hide-details
+          class="mt-2"
+          @update:model-value="(v) => v ? writeLockDialog = true : writeLockToggle.execute(null)"
         />
       </template>
 
@@ -464,6 +493,30 @@
     </v-dialog>
 
     <v-dialog
+      v-model="writeLockDialog"
+      max-width="500"
+    >
+      <v-card :title="t('writeLockTitle')">
+        <v-card-text>
+          <p>{{ t('writeLockWarning') }}</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="writeLockDialog = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            :loading="writeLockToggle.loading.value"
+            @click="writeLockToggle.execute('apiKey')"
+          >
+            {{ t('writeLockConfirm') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="linesRestoreDialog"
       max-width="500"
     >
@@ -696,6 +749,12 @@ fr:
   ackTitle: Acquitter les anomalies d'historique
   ackWarning: "Les anomalies actuellement détectées ne seront plus signalées. L'acquittement est lui-même une révision verrouillée et tracée : toute altération ultérieure sera de nouveau détectée. À n'utiliser qu'après investigation."
   ackOk: Anomalies acquittées
+  writeLockActiveInfo: Ce jeu de données n'accepte que les écritures authentifiées par une clé d'API. Les écritures depuis cette session (utilisateur ou superadmin) seront refusées.
+  writeLockLabel: Verrouiller les écritures aux clés d'API
+  writeLockTitle: Verrouiller les écritures aux clés d'API
+  writeLockWarning: "Toute écriture couverte (données, métadonnées) non authentifiée par une clé d'API sera refusée — y compris depuis votre propre session, en mode superadmin. Seules les clés d'API resteront utilisables pour écrire ; chaque écriture ainsi verrouillée reste attribuable à une clé révocable."
+  writeLockConfirm: Verrouiller
+  writeLockOk: Configuration du verrou enregistrée
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   part_file: Data file
@@ -780,10 +839,16 @@ en:
   ackTitle: Acknowledge trail anomalies
   ackWarning: "The currently detected anomalies will no longer be reported. The acknowledgement is itself a locked, audited revision: any later alteration will be detected again. Use only after investigation."
   ackOk: Anomalies acknowledged
+  writeLockActiveInfo: This dataset only accepts writes authenticated with an API key. Writes from this session (user or superadmin) will be refused.
+  writeLockLabel: Lock writes to API keys only
+  writeLockTitle: Lock writes to API keys only
+  writeLockWarning: "Any covered write (data, metadata) not authenticated with an API key will be refused — including from your own session, even in superadmin mode. Only API keys will remain usable to write; every write locked this way stays attributable to a revocable credential."
+  writeLockConfirm: Lock
+  writeLockOk: Lock configuration saved
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram } from '@mdi/js'
+import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiLock } from '@mdi/js'
 import type { Dataset, WhoHint } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -916,6 +981,16 @@ const toggle = useAsyncAction(async (active: boolean) => {
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }, { success: t('toggleOk') })
+
+// apiKey-only write lock (design §5.2, T8): a dedicated PUT body key, independent from `active` —
+// putIntegrityConfig (api/src/integrity/service.ts) only touches whichever of `active`/`writeLock`
+// is actually present, so this never accidentally re-triggers enable/disable.
+const writeLockDialog = ref(false)
+const writeLockToggle = useAsyncAction(async (writeLock: 'apiKey' | null) => {
+  await $fetch(`datasets/${dataset.value!.id}/_integrity`, { method: 'PUT', body: { writeLock } })
+  writeLockDialog.value = false
+  await load.execute()
+}, { success: t('writeLockOk') })
 
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString(locale.value)
 

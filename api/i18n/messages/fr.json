@@ -32,7 +32,8 @@
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
 		"noCrossDomain": "Appel depuis un domaine extérieur non supporté.",
 		"urlFriendly": "\"{{value}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{slug}}\" ?",
-		"dupSlug": "Ce slug est déjà utilisé"
+		"dupSlug": "Ce slug est déjà utilisé",
+		"writeLockApiKeyOnly": "Ce jeu de données n'accepte que les écritures authentifiées par une clé d'API (verrou d'intégrité)."
 	},
 	"appRequire": {
 		"noDataset": "N'utilise pas de jeu de données comme source.",

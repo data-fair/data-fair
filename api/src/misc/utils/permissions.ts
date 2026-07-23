@@ -32,6 +32,29 @@ const resourceTypesLabels: Record<ResourceType, string> = {
   'remote-services': 'Le service distant'
 }
 
+// apiKey-only write lock (design doc §5.2, T8): datasets 'admin'-class operationIds that mutate
+// covered content or ACLs — the lock gates these in addition to the whole `write` class. The
+// read-only admin operations (readIntegrity/readIntegrityRevisions/getPermissions) and the
+// `_integrity` management routes themselves (never routed through a permission class — they call
+// `reqAdminMode` directly, see datasets/routes/integrity.ts) are deliberately excluded: the lock is
+// a posture on user-facing covered mutations, not on the management surface that sets it.
+const WRITE_LOCK_ADMIN_OPERATIONS = new Set([
+  'delete', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey'
+])
+
+// True when a locked dataset (`integrity.writeLock === 'apiKey'`) refuses this operation for the
+// current session — a covered mutation (write class, or one of the admin-class mutations above)
+// not authenticated by an API key. Superadmin sessions and application-key pseudo-sessions are
+// refused too (design §5.2: discipline applies to everyone, application keys are not API keys).
+const isWriteLockRefused = (resourceType: ResourceType, resource: Resource, operationClass: string, operationId: string, sessionState: SessionState): boolean => {
+  if (resourceType !== 'datasets') return false
+  const writeLock = (resource as Resource & { integrity?: { writeLock?: string } }).integrity?.writeLock
+  if (writeLock !== 'apiKey') return false
+  const isCoveredMutation = operationClass === 'write' || (operationClass === 'admin' && WRITE_LOCK_ADMIN_OPERATIONS.has(operationId))
+  if (!isCoveredMutation) return false
+  return !(sessionState as SessionState & { isApiKey?: boolean }).isApiKey
+}
+
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
   // pre-compute the x-operation header since it is constant per route
@@ -46,7 +69,10 @@ export const middleware = function (operationId: string, operationClass: string,
       return
     }
     if (can(reqResourceType(req), reqResource(req), operationId, sessionState, reqBypassPermissions(req))) {
-      // nothing to do, user can proceed
+      if (isWriteLockRefused(reqResourceType(req), reqResource(req), operationClass, operationId, sessionState)) {
+        res.status(403).type('text/plain').send(req.__('errors.writeLockApiKeyOnly'))
+        return
+      }
     } else {
       res.status(403).type('text/plain')
       const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'
