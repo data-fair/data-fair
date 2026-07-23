@@ -47,7 +47,7 @@ export default async function (dataset: FileDataset) {
   const tmpDir = (await tmp.dir({ tmpdir: mainTmpDir, unsafeCleanup: true, prefix: 'normalizer-' })).path
 
   try {
-    if (!await filesStorage.pathExists(originalFilePath)) {
+    if (!await filesStorage.fileExists(originalFilePath)) {
       // we should not have to do this
       // this is a weird thing, maybe an unsolved race condition ?
       // let's wait a bit and try again to mask this problem temporarily

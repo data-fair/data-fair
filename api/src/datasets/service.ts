@@ -668,7 +668,7 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
   const draftFullFilePath = fullFilePath(datasetDraft)
   const newFullFilePath = fullFilePath(patchedDataset)
   const oldFullFilePath = datasetFull.file && fullFilePath(datasetFull)
-  const hasFullFile = await filesStorage.pathExists(draftFullFilePath)
+  const hasFullFile = await filesStorage.fileExists(draftFullFilePath)
   if (hasFullFile) {
     await filesStorage.moveFile(draftFullFilePath, newFullFilePath)
   }
@@ -688,7 +688,7 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
   // a previous contribution to this dataset may have left a cancelled-draft
   // diagnostic; now that a contribution succeeded it is stale, remove it
   const staleCancelledDiagnostic = cancelledDraftDiagnosticFilePath(patchedDataset)
-  if (await filesStorage.pathExists(staleCancelledDiagnostic)) {
+  if (await filesStorage.fileExists(staleCancelledDiagnostic)) {
     await filesStorage.removeFile(staleCancelledDiagnostic)
     // the now-removed file was referenced by a past draft-cancelled event; clear
     // its hasDiagnosticFile flag so the UI stops offering a download that 404s

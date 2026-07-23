@@ -28,7 +28,7 @@ import type { Dataset, DatasetLine } from '#types'
 import type { AnyBulkWriteOperation, Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
-import { arrayBuffer } from 'stream/consumers'
+import { readAttachmentContent } from './attachment-content.ts'
 import testEvents from '../../misc/utils/test-events.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
@@ -686,19 +686,10 @@ export const prepareCalculations = (dataset: Dataset) => {
       const isURL = !!parseURL(attachmentValue).host
       if (!isURL) {
         item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
-        const filePath = attachmentPath(dataset, attachmentValue)
-        if (await filesStorage.pathExists(filePath)) {
-          const stats = await filesStorage.fileStats(filePath)
-
-          if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-            // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
-            if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
-              warning = 'Pièce jointe trop volumineuse pour être analysée'
-            } else {
-              const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
-              item._file_raw = Buffer.from(buf).toString('base64')
-            }
-          }
+        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+          const result = await readAttachmentContent(filesStorage, attachmentPath(dataset, attachmentValue), config.defaultLimits.attachmentIndexed)
+          if (result.raw) item._file_raw = result.raw
+          if (result.warning) warning = result.warning
         }
       }
     }

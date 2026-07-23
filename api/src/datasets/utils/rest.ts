@@ -996,7 +996,7 @@ const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
   const p = uploadedAttachmentPath
   if (!p) return
   try {
-    if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
+    if (await filesStorage.fileExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
     console.warn('failed to rollback uploaded attachment', p, err)
   }

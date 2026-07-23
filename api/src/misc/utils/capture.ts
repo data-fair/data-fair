@@ -128,7 +128,7 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
   const reqOpts = screenshotRequestOpts(req, isDefaultThumbnail)
 
   if (isDefaultThumbnail) {
-    if (await filesStorage.pathExists(capturePath)) {
+    if (await filesStorage.fileExists(capturePath)) {
       const stats = await filesStorage.fileStats(capturePath)
       if (resource.updatedAt && Math.floor(stats.lastModified.getTime() / 1000) >= Math.floor(new Date(resource.updatedAt).getTime() / 1000)) {
         res.set('x-capture-cache-status', 'HIT')

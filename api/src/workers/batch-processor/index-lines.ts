@@ -54,7 +54,7 @@ export default async function (dataset: DatasetInternal) {
     for (const a of newRestAttachments) {
       let newAttachments
       const filePath = join(dataDir, 'shared-tmp', a.startsWith('drop:') ? a.replace('drop:', '') : a)
-      if (!await filesStorage.pathExists(filePath)) {
+      if (!await filesStorage.fileExists(filePath)) {
         console.warn(`newRestAttachments of dataset ${dataset.id} references missing attachments file`, a)
       } else {
         if (a.startsWith('drop:')) {
@@ -93,7 +93,7 @@ export default async function (dataset: DatasetInternal) {
   const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
-    if (dataset.file && await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
+    if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
       await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
       if (!dataset.draftReason) await updateStorage(dataset, false, true)
@@ -186,7 +186,7 @@ export default async function (dataset: DatasetInternal) {
         // including the temp one built by this run)
         if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
           const srcDiagnostic = validationDiagnosticFilePath(dataset)
-          if (await filesStorage.pathExists(srcDiagnostic)) {
+          if (await filesStorage.fileExists(srcDiagnostic)) {
             await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
           }
           await journals.log('datasets', dataset, {
