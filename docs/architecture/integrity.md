@@ -290,7 +290,10 @@ where async is genuinely needed: `applyPatch`, finalize, and the bulk propagatio
   scope audit is immune. A dataset with no *definitive* verdict (ok/breach) for
   `integrity.maxUnknownDays` fires `integrity-check-stale` (`integrity.lastDefinitiveCheck`,
   seeded at enable) — the "downgrade to unknown" posture is only safe because unknowns cannot
-  silently accumulate.
+  silently accumulate. That bound is **per-verdict** where it needs to be: the `index` member,
+  the only verdict that can be individually `unknown` while the overall check stays definitive,
+  has its own clock (`integrity.lastDefinitiveIndexCheck`, dedup key `index-check-stale` on the
+  same event — see §5).
 - **Admin-triggered single-resource check** reuses the same primitive on demand.
 - **Everything that anchors or checks holds the per-dataset worker lock.** The relay tasks
   already run under the standard `datasets:‹id›` cross-pod lock; the synchronous admin actions
@@ -845,15 +848,17 @@ fixtures also feed the screenshots of the client-facing presentation
     all downgrade the index verdict to `unknown`; a fresh check re-runs after any divergence is
     found, so a transient pending state cannot mask a real one.
 
-    > **Stated residual limit (follow-up, not fixed in this wave):** the `integrity-check-stale`
-    > alert does **not** bound a *per-verdict* index `unknown`. It fires off
-    > `integrity.lastDefinitiveCheck`, which advances on every **overall** definitive check
-    > (`ok`/`breach`) — and the overall check stays definitive even while the `index` member alone
-    > is `unknown`. So a Mongo-writing adversary can pin the index verdict to `unknown` **forever**
-    > (an orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
-    > `dataset.status` — both outside hash coverage) without tripping the stale alert. Closing this
-    > needs a per-verdict freshness clock, deliberately deferred (design doc §3.4 correction,
-    > `api/src/integrity/README.md` A1 invariants).
+    > **Per-verdict freshness clock (2026-07-23 — closed the A1 residual limit):** the `index`
+    > member is the only verdict that can be individually `unknown` while the overall check stays
+    > definitive, so it carries its own clock, `integrity.lastDefinitiveIndexCheck` — advanced
+    > only when the index verdict is definitive (`ok`/`diverged`), alongside the overall clock,
+    > and never ahead of it. The stale sweep fires `integrity-check-stale` when the index clock
+    > alone goes stale (distinct dedup key `index-check-stale`, cleared only on a definitive
+    > index pass), so a Mongo-writing adversary pinning the index verdict to `unknown` (an
+    > orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
+    > `dataset.status` — both outside hash coverage) is bounded by `integrity.maxUnknownDays`
+    > like every other deferral. Design:
+    > [2026-07-23-integrity-per-verdict-freshness-design.md](../plans/2026-07-23-integrity-per-verdict-freshness-design.md).
   - **Malformed ES docs are surfaced, not dropped:** a doc with a missing/null/non-numeric `_i`
     (unorderable, unjoinable) is recorded as a `surplus` divergence keyed by its ES `_id` — the
     sampled window query explicitly pulls `_i`-less docs (a `range` alone never matches them), and
@@ -1065,6 +1070,7 @@ plan → build, test-first), not here.
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
 | A1 — ES index consistency | third `'index'` verdict (count + seeded sampled windows nightly, exhaustive on `?deep=true`), both dataset families, through the alias; panel reindex journals evidence first | `2026-07-22-integrity-index-consistency-design.md` |
 | A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
+| Per-verdict freshness clock | `integrity.lastDefinitiveIndexCheck` bounds a pinned-`unknown` index verdict (closed the A1 residual limit) | `2026-07-23-integrity-per-verdict-freshness-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
 guarantee honest until they land):

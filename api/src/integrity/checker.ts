@@ -149,10 +149,14 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
-  // an 'unknown' verdict must still start the check-stale clock (§S3) on datasets enrolled
-  // before the field existed — otherwise a permanently-unknown dataset never trips the alert
-  const seedDefinitive = (date: string): Record<string, string> =>
-    (dataset.integrity as any)?.lastDefinitiveCheck ? {} : { 'integrity.lastDefinitiveCheck': date }
+  // an 'unknown' verdict must still start the check-stale clocks (§S3) on datasets enrolled
+  // before the fields existed — otherwise a permanently-unknown dataset never trips the alert.
+  // Both clocks are seeded: the index clock has its own stale sweep (a pinned-unknown index
+  // verdict leaves the overall clock advancing, see the final $set below).
+  const seedDefinitive = (date: string): Record<string, string> => ({
+    ...((dataset.integrity as any)?.lastDefinitiveCheck ? {} : { 'integrity.lastDefinitiveCheck': date }),
+    ...((dataset.integrity as any)?.lastDefinitiveIndexCheck ? {} : { 'integrity.lastDefinitiveIndexCheck': date })
+  })
   if (isRestDataset(dataset as any)) {
     // orphaned per-line stamps: a line write that raced the relay's final hint clear left stamps
     // with no hint — the relay's task filter needs the hint, so without this net those lines
@@ -313,19 +317,31 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   }
 
   const status: 'ok' | 'breach' = breach.length ? 'breach' : 'ok'
+  // the index member is the only verdict that can be individually 'unknown' while the overall
+  // check stays definitive (ES down, pending _needsIndexing, forged non-finalized status — all
+  // outside hash coverage), so it carries its own freshness clock: without it a Mongo-writing
+  // adversary could pin the index verdict to 'unknown' forever without tripping check-stale
+  const definitiveIndex = indexResult.status !== 'unknown'
   const date = new Date().toISOString()
   await mongo.datasets.updateOne({ id: dataset.id }, {
     $set: {
       'integrity.lastCheck': { date, status, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, index: indexResult, trailCursor: latestIndex },
-      // ok and breach are both DEFINITIVE verdicts: they reset the check-stale clock (§S3) —
-      // only 'unknown' lets it run
-      'integrity.lastDefinitiveCheck': date
+      // ok and breach are both DEFINITIVE verdicts: they reset the check-stale clocks (§S3) —
+      // only 'unknown' lets them run. The index clock only ever advances here, alongside the
+      // overall one, so lastDefinitiveIndexCheck <= lastDefinitiveCheck always holds (the stale
+      // sweep's dedup split relies on this ordering). A non-definitive index still seeds an
+      // absent clock (pre-field enrollments) so the pin cannot stay silent forever.
+      'integrity.lastDefinitiveCheck': date,
+      ...(definitiveIndex || !(dataset.integrity as any)?.lastDefinitiveIndexCheck ? { 'integrity.lastDefinitiveIndexCheck': date } : {})
     }
   })
   // entry-alert + periodic re-alert while the state persists, dedup cleared on recovery (§S3)
   await maybeAlert(dataset, 'integrity-breach', status === 'breach')
   await maybeAlert(dataset, 'integrity-trail-altered', trail.status === 'altered')
   await maybeAlert(dataset, 'integrity-check-stale', false)
+  // the index-stale dedup clears only on a definitive index pass — a pass that leaves the index
+  // verdict pinned must not reset the re-alert cadence
+  if (definitiveIndex) await maybeAlert(dataset, 'integrity-check-stale', false, 'index-check-stale')
   // renewal only on a fully clean pass: under a shadow attack PutObjectRetention (keyed, no
   // version id) would extend the ATTACKER's current version while the original's lock runs out
   if (status === 'ok' && trail.status === 'ok') {
@@ -347,6 +363,23 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
   for await (const dataset of cursor) {
     try {
       if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true)) alerted.push(dataset.id)
+    } catch (err) {
+      internalError('integrity-check-stale', err)
+    }
+  }
+  // per-verdict clock (index): the pinned-index shape — index clock stale while the overall
+  // clock is fresh. The conjunct excludes datasets the loop above already alerted (sound because
+  // the index clock only advances alongside the overall one, so overall-stale implies
+  // index-stale); the distinct dedup key keeps the two cadences independent (same
+  // two-sources-one-event pattern as integrity-renewal-failed).
+  const indexCursor = mongo.datasets.find({
+    'integrity.active': true,
+    'integrity.lastDefinitiveIndexCheck': { $lt: cutoff },
+    'integrity.lastDefinitiveCheck': { $gte: cutoff }
+  }).limit(BATCH)
+  for await (const dataset of indexCursor) {
+    try {
+      if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true, 'index-check-stale')) alerted.push(dataset.id)
     } catch (err) {
       internalError('integrity-check-stale', err)
     }

@@ -153,13 +153,19 @@ against, not only the happy path.
   frontier with `Number.isFinite` so a stray non-finite `_i` can never collapse the span to NaN
   and empty a batch uncompared.
 
-### A1 stated residual limit (follow-up, not fixed in this wave)
+### Per-verdict freshness clock (closes the A1 residual limit, 2026-07-23)
 
-- **Per-verdict `unknown`-pinning is unbounded.** `integrity-check-stale` fires off
-  `integrity.lastDefinitiveCheck`, which advances on every *overall* definitive check
-  (`ok`/`breach`). The overall check stays definitive even when the `index` member alone is
-  `unknown`, so a Mongo-writing adversary can pin the index verdict to `unknown` **forever** (an
-  orphaned `_needsIndexing: true` line with no relay hint, or a forged non-finalized
-  `dataset.status` — both outside hash coverage) without ever tripping the stale alert. Closing
-  this needs a *per-verdict* freshness clock, deliberately deferred. Documented in the design doc
-  §3.4 correction and `docs/architecture/integrity.md` §A1.
+- **`unknown`-pinning is bounded for every verdict, including `index`.** The index member is the
+  only verdict that can be individually `unknown` while the overall check stays definitive
+  (every other deferral downgrades the *whole* check, which `integrity.lastDefinitiveCheck`
+  bounds; the trail verdict is binary). It therefore carries its own clock,
+  `integrity.lastDefinitiveIndexCheck`: advanced only in the final `$set` alongside the overall
+  clock and only when the index verdict is definitive (`ok`/`diverged`), seeded at enable and by
+  the `seedDefinitive` net — so **`lastDefinitiveIndexCheck <= lastDefinitiveCheck` always
+  holds**. The stale sweep's second query (`index` clock stale AND overall clock fresh — exactly
+  the pinned-index shape; the conjunct is sound because of that ordering and prevents
+  double-alerting) fires the same `integrity-check-stale` event under the distinct dedup key
+  `index-check-stale`, cleared only on a definitive index pass — the two-sources-one-event
+  pattern of `integrity-renewal-failed`. If you add a new verdict member that can be
+  individually `unknown` while the overall check stays definitive, give it its own clock the
+  same way. Design: `docs/plans/2026-07-23-integrity-per-verdict-freshness-design.md`.

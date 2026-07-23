@@ -265,3 +265,70 @@ test('index reindex action journals the evidence, repairs, and the next check is
   expect(recheck.index?.status).toBe('ok')
   expect(recheck.status).toBe('ok')
 })
+
+// ---------------------------------------------------------------------------------------------
+// Per-verdict freshness clock: a pinned-unknown index verdict cannot silently accumulate —
+// integrity-check-stale fires off integrity.lastDefinitiveIndexCheck even while the overall
+// check stays definitive (the residual limit of the A1 wave, now closed — see
+// docs/plans/2026-07-23-integrity-per-verdict-freshness-design.md)
+// ---------------------------------------------------------------------------------------------
+
+test('a pinned-unknown index verdict fires integrity-check-stale despite a fresh overall clock', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  // enable seeded the index clock alongside the overall one
+  let raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity.lastDefinitiveIndexCheck).toBeTruthy()
+
+  // the adversary shape: an orphaned _needsIndexing line (no relay hint, no real write) pins the
+  // index verdict to 'unknown' while the overall check stays definitive
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { _needsIndexing: true } }
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  expect(check.index?.status).toBe('unknown')
+  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  // the overall clock advanced (definitive check) but the index clock did not
+  expect(new Date(raw.integrity.lastDefinitiveCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
+  expect(new Date(raw.integrity.lastDefinitiveIndexCheck).getTime()).toBeLessThan(new Date(raw.integrity.lastDefinitiveCheck).getTime())
+
+  // simulate 8 pinned days (default maxUnknownDays = 7): index clock stale, overall clock fresh
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveIndexCheck': eightDaysAgo })
+  const run1 = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  expect(run1.alerted).toContain(dataset.id)
+  // dedup: a second run within the realert window stays silent
+  const run2 = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  expect(run2.alerted).not.toContain(dataset.id)
+  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity.alerts?.['index-check-stale']).toBeTruthy()
+
+  // remediation: clear the orphaned flag; a definitive index pass advances the clock and clears
+  // the dedup so a future relapse alerts immediately
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $unset: { _needsIndexing: '' } }
+  })
+  const recheck = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(recheck.index?.status).toBe('ok')
+  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(new Date(raw.integrity.lastDefinitiveIndexCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
+  expect(raw.integrity.alerts?.['index-check-stale']).toBeUndefined()
+})
+
+test('a dataset stale on the overall clock is not double-alerted by the index clock', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRestDataset(ax)
+  // both clocks stale (the overall-stale case: index clock is never ahead of the overall one)
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.lastDefinitiveCheck': eightDaysAgo,
+    'integrity.lastDefinitiveIndexCheck': eightDaysAgo
+  })
+  const run = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  expect(run.alerted).toContain(dataset.id)
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  // only the overall dedup key fired: the index loop excludes datasets the overall loop caught
+  expect(raw.integrity.alerts?.['integrity-check-stale']).toBeTruthy()
+  expect(raw.integrity.alerts?.['index-check-stale']).toBeUndefined()
+})
