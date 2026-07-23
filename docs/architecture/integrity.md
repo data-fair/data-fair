@@ -89,9 +89,14 @@ the same machinery; they differ only in what each revision stores.
   gate** — the maintainer's call: storage cost is proportional to the file size and already
   metered into the owner's existing storage consumption (§9), so there is no threshold below
   which level 2 is skipped.
-- **Level 3 — Prevention.** **Out of scope** here, and mechanically different: a superadmin
-  marks a resource read-only even to client admins. Noted for completeness; it would be a
-  separate feature, not built on this store.
+- **Level 3 — Prevention.** **Out of scope** here, but assessed (2026-07-23) and — reversing
+  the earlier "separate feature" note — it **would** be built on this store: a superadmin
+  **freeze** recorded as a locked trail revision, honestly named a *tamper-evident freeze*
+  rather than prevention (the hot stores stay mutable; app code is the only enforcement). Its
+  real value is mechanical: while frozen there are no legitimate writes, so **any** post-lock
+  revision is automatically a breach — closing §1's self-laundering first-write lie for frozen
+  datasets. See §14 and
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md).
 
 Priority: **level 1 everywhere it makes sense first**, level 2 added afterward where
 reasonable (it may never be reasonable for large editable datasets — see §5).
@@ -970,6 +975,12 @@ Genuinely open:
 - **Scope list** — exactly which data-fair resources count as "sensitive": which metadata
   collections, and which datasets opt into editable-line history. A product conversation per
   deployment, not a design gap.
+- **Level 3 — tamper-evident freeze (assessed 2026-07-23, not scheduled).** Reversible,
+  store-authoritative dataset lock as trail revisions; the strong/weak knob is checker policy,
+  not storage location, and within the threat model the reversible lock ≈ the permanent one —
+  full assessment in
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md)
+  and §14.
 
 Decided / resolved (one line each; details in the linked docs):
 
@@ -1072,6 +1083,28 @@ is precluded by the design above; each is an additive step.
   spike on Scaleway), and a fixed time-based retention (~1 year was the working number, replacing
   today's keep-forever). Deferred as a **family** — events, HTTP request logs, and any other
   append-only journal share this posture.
+- **Level 3 — the tamper-evident freeze (assessed 2026-07-23, notes in
+  [2026-07-23-integrity-level3-lock-notes.md](../plans/2026-07-23-integrity-level3-lock-notes.md)).**
+  A superadmin dataset lock, recorded as first-class trail revisions (`lock`/`unlock`, with
+  `reason`) — the Mongo flag is only the write-path mirror, cross-checked like
+  `integrity.active`. Prevention proper is unattainable (hot stores are mutable; enforcement is
+  app code the in-scope adversary bypasses), so the honest guarantee is: **while frozen, any
+  change by anyone through any path becomes a permanent breach record — any post-lock revision
+  is automatically illegitimate — and unfreezing is itself a permanent audited event.** That
+  mechanically closes §1's self-laundering first-write lie for frozen datasets (today caught
+  only by human trail-vs-journal review). Key conclusions: (a) the strong/weak knob is
+  **checker policy** (is a superadmin `unlock` revision honored?), not storage location — both
+  modes live in the store, with the mode recorded *inside* the compliance-locked lock revision
+  so it cannot be downgraded, and the relay never minting lock/unlock operations from outbox
+  stamps; (b) within the threat model (tenant admin, who cannot call the superadmin route)
+  **the reversible lock is as strong as the permanent one**, while permanent mode collides
+  with upgrade scripts, GDPR rectification, deletion/erasure (§8) and is operationally bounded
+  by renewal anyway — so the product is the reversible lock, "permanent" at most a recorded
+  intent flag; (c) **partial locks** ("only processing X may write") are cut from the
+  integrity surface: origins are claimed, not proven, so they re-open exactly the ambiguity
+  the full lock removes — that need is served by permissions and A2's API-key-only write lock
+  (process discipline, §12). Enforcement reuses the existing boundary: locked = the write
+  wrapper refuses any write that would stamp `_needsHistorizing`.
 - **Central integrity service.** Instead of an in-process module, a `registry`-style technical
   service could own S3-credential custody, revision-format governance across services, the
   audit/listing API (§7), storage accounting, and retention/lock-renewal orchestration — while
