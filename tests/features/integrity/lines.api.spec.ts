@@ -694,8 +694,10 @@ test('a line write authenticated with an organization API key attaches `.who` wi
   const whoKey = keys.find(k => k.endsWith('.who'))
   expect(whoKey).toBeTruthy()
   const who = await integrityTestStore.getWho(whoKey!)
-  // T7 will additionally record who.apiKey.id — T3/T4 only resolve the key-session's user id
   expect(who.user?.id).toBe('apiKey:' + apiKey.id)
+  // T7: the key's opaque id is recorded too, and never its title
+  expect(who.apiKey?.id).toBe(apiKey.id)
+  expect(JSON.stringify(who)).not.toContain('lines-attribution-key')
 })
 
 test('`_fix` bless of a tampered line attaches the fixing superadmin\'s `.who` to the fresh revision', async () => {

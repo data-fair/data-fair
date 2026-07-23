@@ -7,7 +7,7 @@
 // write path — user PATCH, `_fix` after tamper, dedupe suppression, and the attribution kill
 // switch.
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, setConfig, waitForFinalize } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, listIntegrityKeys,
@@ -99,6 +99,8 @@ test('a user PATCH on an enrolled dataset writes a `.who` sibling with the user 
   expect(who1.user?.id).toBe('test_superadmin')
   expect(who1.ip).toBeTruthy()
   expect(who1.date).toBeTruthy()
+  // T7: a UI-session write (no API key involved) must never carry an `apiKey` field
+  expect(who1.apiKey).toBeUndefined()
 })
 
 test('a worker-origin re-anchor (no preceding request context) writes no `.who`', async () => {
@@ -197,6 +199,77 @@ test('a user PATCH drives the async relay to write the `.who` sibling with its O
   // the 1h tolerance above), this is now a real, strict ordering assertion — not one that a
   // config-key swap could still satisfy by accident
   expect(whoRetention!.getTime()).toBeLessThan(revisionRetention!.getTime())
+})
+
+// ---------------------------------------------------------------------------------------------
+// T7: `.who.apiKey.id` — when a write is authenticated by an API key, the key's opaque id must be
+// recorded in the `.who` sibling (never in `RevisionContext`, which stays identity-free — design
+// §5.1 supersedes an older sketch that would have put a key ref on the locked revision).
+// ---------------------------------------------------------------------------------------------
+
+test('a dataset PATCH authenticated with an organization API key attaches who.apiKey with the key id, no key title leaks', async () => {
+  const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', axOrg)
+  const prefix = revisionsPrefix(dataset)
+  // superadmin acts across orgs without needing membership (same pattern as lines.api.spec.ts)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 2) // rev0 JSON + .file (enable, attributed to superadmin)
+
+  const secretTitle = 'attribution-key-secret-title'
+  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_org1', {
+    apiKeys: [{ title: secretTitle, scopes: ['datasets'] }]
+  })
+  const apiKey = settingsRes.data.apiKeys[0]
+  const axApiKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
+
+  await axApiKey.patch(`/api/v1/datasets/${dataset.id}`, { description: 'attribution api key test' })
+  await waitForIntegrityRevisions(prefix, 3) // rev1 JSON (references rev0's payload)
+  await waitForFlagCleared(dataset.id)
+
+  const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
+  expect(who1.apiKey?.id).toBe(apiKey.id)
+  // whatever the key-session resolves the user id to, assert what's actually there (T3/T4 territory)
+  expect(who1.user?.id).toBe('apiKey:' + apiKey.id)
+  // no leakage of the key TITLE anywhere in the stored `.who`
+  expect(JSON.stringify(who1)).not.toContain(secretTitle)
+
+  // the locked revision JSON itself stays identity-free: no apiKey/actor field anywhere on it
+  const rev1 = await integrityTestStore.getRevision(ops.revisionKey(dataset.owner, dataset.id, 1))
+  expect(rev1).not.toHaveProperty('apiKey')
+  expect(rev1).not.toHaveProperty('actor')
+  expect((rev1 as any).context).not.toHaveProperty('apiKey')
+  expect((rev1 as any).context).not.toHaveProperty('actor')
+  expect(Object.keys((rev1 as any).context).sort()).toEqual(['date', 'operation', 'origin'])
+  expect(JSON.stringify(rev1)).not.toContain(secretTitle)
+})
+
+test('an adminMode+asAccount API key write (the processings path) attaches who.apiKey with the key id', async () => {
+  const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const res = await superadmin.put('/api/v1/settings/user/test_user1', {
+    apiKeys: [{ title: 'processing-admin-key', scopes: ['datasets'], adminMode: true, asAccount: true }]
+  })
+  const key = res.data.apiKeys[0]
+  // only usable from inside the infrastructure (assertReqInternal) — the dev/test harness satisfies
+  // this the same way tests/features/auth/api-keys.api.spec.ts's own adminMode/asAccount test does
+  const axKey = axios({
+    headers: {
+      'x-apiKey': key.clearKey,
+      'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1') })
+    }
+  })
+
+  const dataset = await sendDataset('datasets/dataset1.csv', axKey)
+  const prefix = revisionsPrefix(dataset)
+  await superadmin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 2) // rev0 JSON + .file (enable, attributed to superadmin)
+
+  await axKey.patch(`/api/v1/datasets/${dataset.id}`, { description: 'processing admin key test' })
+  await waitForIntegrityRevisions(prefix, 3)
+  await waitForFlagCleared(dataset.id)
+
+  const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
+  expect(who1.apiKey?.id).toBe(key.id)
 })
 
 // LIMITATION (documented per the brief rather than building config-reload machinery): `setConfig`
