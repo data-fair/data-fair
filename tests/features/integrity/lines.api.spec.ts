@@ -3,8 +3,11 @@
 // stamping, relay, enable/gate, check, restore/fix.
 import { test, expect } from '@playwright/test'
 import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared } from '../../support/integrity.ts'
+import {
+  ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys
+} from '../../support/integrity.ts'
 import { waitForFinalize } from '../../support/workers.ts'
+import * as lops from '../../../api/src/integrity/lines-operations.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -455,6 +458,77 @@ test('a fresh lines horizon is not renewed, and a breach skips lines renewal ent
   expect(breach.status).toBe('breach')
   state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(state.linesRenewal.renewed).toBeUndefined() // verify-then-renew: no renewal on breach
+})
+
+// T5: lines renewal is structurally `.who`-blind too (the exhaustive renewal loop walks
+// `latestLineAnchors`, which parseLineRevisionKey already excludes `.who` from) — proved end to
+// end: every live line's revision lock slides forward, its `.who` sibling's own lock never moves.
+test('a due lines renewal advances line revision locks but never their `.who` siblings', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const linesPrefixValue = lops.linesPrefix(raw.owner, dataset.id)
+  const allKeys = (await integrityTestStore.listRevisions(linesPrefixValue)).map(r => r.key)
+  const revisionKey = allKeys.find(k => !k.endsWith('.who'))!
+  const whoKey = allKeys.find(k => k.endsWith('.who'))!
+  expect(revisionKey).toBeTruthy()
+  expect(whoKey).toBeTruthy()
+
+  const revBefore = await integrityTestStore.getRetention(revisionKey)
+  const whoBefore = await integrityTestStore.getRetention(whoKey)
+
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.linesRenewal.status).toBe('ok')
+
+  const revAfter = await integrityTestStore.getRetention(revisionKey)
+  const whoAfter = await integrityTestStore.getRetention(whoKey)
+  expect(revAfter!.getTime()).toBeGreaterThan(revBefore!.getTime())
+  expect(whoAfter!.getTime()).toBe(whoBefore!.getTime())
+})
+
+// ---------------------------------------------------------------------------------------------
+// T5: purge per-suffix retention at line level — the current (latest, non-tombstone) anchor of a
+// line is protected regardless of its own lock state (same carve-out as the dataset level), but
+// its `.who` sibling is never part of that carve-out and ages out on its own (short) lock alone.
+// Manufactured directly (bypassing the relay): MinIO compliance locks can never be shortened once
+// set, so a genuinely lapsed lock can only be produced by writing one short from the start and
+// letting real time pass.
+// ---------------------------------------------------------------------------------------------
+
+test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line revision protected', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [])
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const owner = raw.owner
+  const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  const sha = 'deadbeef'
+  const key = lops.lineRevisionKey(owner, dataset.id, 'manufactured', 0, sha)
+  const whoKey = lops.lineWhoKey(owner, dataset.id, 'manufactured', 0, sha)
+  const shortRetain = new Date(Date.now() + 2000)
+  await integrityTestStore.writeRevision(key, {
+    hash: { sha256: sha }, context, dataset: { id: dataset.id }, line: { _id: 'manufactured', _i: 0 }, payload: { attr1: 'v' }
+  }, shortRetain)
+  await integrityTestStore.writeWho(whoKey, { date: context.date, user: { id: 'someone' } }, shortRetain)
+  await new Promise(resolve => setTimeout(resolve, 3500)) // let both locks genuinely lapse
+
+  const linesPrefixValue = lops.linesPrefix(owner, dataset.id)
+  const result = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+    { prefix: linesPrefixValue, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })).data
+  expect(result.errors).toBe(0)
+  const remaining = await listIntegrityKeys(linesPrefixValue)
+  // the line revision is the line's current (latest) anchor: protected regardless of its own
+  // lapsed lock — its `.who` is never in that carve-out and is deleted on its own merits
+  expect(remaining).toContain(key)
+  expect(remaining).not.toContain(whoKey)
 })
 
 test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {

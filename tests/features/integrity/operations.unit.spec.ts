@@ -234,6 +234,32 @@ test('a lone ‹i›.who key must never win latest, even though it sorts lexical
   expect(ops.nextIndex(keys)).toBe(2)
 })
 
+// ---------------------------------------------------------------------------------------------
+// T5: purge per-suffix retention — the `.who` sibling's own (shorter) window must drive both the
+// purge's age pre-filter and the scope watermark floor, or a lapsed `.who` stays "provably young"
+// until the (longer) revision horizon, silently breaking the shorter GDPR-bounded promise.
+// ---------------------------------------------------------------------------------------------
+
+test('retentionMsFor: the attribution window for `.who` keys, the revision window for everything else', () => {
+  const retentionMs = 2 * 24 * 3600 * 1000
+  const attributionMs = 1 * 24 * 3600 * 1000
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007.who', retentionMs, attributionMs)).toBe(attributionMs)
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007', retentionMs, attributionMs)).toBe(retentionMs)
+  // `.file` is NOT `.who`: it shares the revision's own (longer) window, the deliberate asymmetry
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/000000007.file', retentionMs, attributionMs)).toBe(retentionMs)
+  // line-level `.who` keys use the same suffix rule
+  expect(ops.retentionMsFor('data-fair/organization-acme/ds1/lines/l1/0000000000000000-abc.who', retentionMs, attributionMs)).toBe(attributionMs)
+})
+
+test('scopeWatermarkFloor: the shorter of the two windows, since a fresh `.who` ages out sooner than a fresh revision', () => {
+  const now = Date.parse('2026-07-06T00:00:00.000Z')
+  const retentionMs = 2 * 24 * 3600 * 1000
+  const attributionMs = 1 * 24 * 3600 * 1000
+  expect(ops.scopeWatermarkFloor(now, retentionMs, attributionMs)).toBe(now + attributionMs)
+  // when attribution is (unusually) configured longer than the revision window, still the min
+  expect(ops.scopeWatermarkFloor(now, attributionMs, retentionMs)).toBe(now + attributionMs)
+})
+
 test('buildWho nests raw parts into a WhoBody, stamping the given date', () => {
   const date = '2026-07-22T00:00:00.000Z'
   expect(ops.buildWho({ userId: 'u1', apiKeyId: 'k1', ip: '203.0.113.7', country: 'FR', asn: 3215, asnOrg: 'Orange' }, date))

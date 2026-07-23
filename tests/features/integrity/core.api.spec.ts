@@ -10,6 +10,7 @@ import {
   ensureIntegrityBucket, integrityTestClient, integrityTestStore,
   listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix
 } from '../../support/integrity.ts'
+import { Readable } from 'node:stream'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
@@ -560,6 +561,32 @@ test('lock renewal extends the payload object too', async () => {
   expect(payloadAfter!.getTime()).toBeGreaterThan(payloadBefore!.getTime())
 })
 
+// T5: renewal is structurally `.who`-blind (T1 filters keep `.who` out of every anchor set before
+// renewal runs) — this proves it end to end: the revision's lock slides forward, the `.who`
+// sibling's own (short, fixed) lock never moves.
+test('renewal advances the anchor lock but never touches the `.who` sibling\'s retain-until', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset, latestKey } = await enabledDataset(admin)
+  const whoKey = latestKey + '.who'
+  // enable is synchronous and superadmin-attributed: rev 0 already carries a `.who`
+  const revBefore = await integrityTestStore.getRetention(latestKey)
+  const whoBefore = await integrityTestStore.getRetention(whoKey)
+  expect(whoBefore).toBeTruthy()
+
+  const soon = new Date(Date.now() + 3600 * 1000).toISOString()
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lastRenewal?.status).toBe('ok')
+
+  const revAfter2 = await integrityTestStore.getRetention(latestKey)
+  const whoAfter = await integrityTestStore.getRetention(whoKey)
+  expect(revAfter2!.getTime()).toBeGreaterThan(revBefore!.getTime()) // the revision's lock slid forward
+  expect(whoAfter!.getTime()).toBe(whoBefore!.getTime()) // the `.who`'s lock is untouched — never renewed
+})
+
 // ---------------------------------------------------------------------------------------------
 // purge: expired revisions age out (§3.5/§8). A stored-but-unlocked revision grounds no guarantee,
 // so it is deleted; the compliance lock itself is the authority on what is still protected.
@@ -626,6 +653,63 @@ test('purge never deletes the current anchor of an enrolled dataset, even with a
   // and the dataset still verifies against that anchor
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
+})
+
+// ---------------------------------------------------------------------------------------------
+// T5: `.who` carries its OWN (shorter) retention and must NEVER benefit from the current-anchor
+// protection carve-out above — a lapsed `.who` ages out on schedule even at the current anchor's
+// own index, while the anchor revision itself (and the payload it references) stay protected
+// regardless of their own lock state. MinIO compliance locks can never be shortened once set, so a
+// genuinely lapsed lock is manufactured the same way as the plain-purge tests above: write short
+// from the start and let real time pass.
+// ---------------------------------------------------------------------------------------------
+
+test('purge deletes a lapsed `.who` sibling of the current anchor but keeps the anchor itself protected', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+  const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  // manufacture the NEXT revision directly (bypassing the relay), the new current anchor, with an
+  // already-short lock
+  const key = `${prefix}000000001`
+  const whoKey = `${key}.who`
+  const shortRetain = new Date(Date.now() + 2000)
+  await integrityTestStore.writeRevision(key, { hash: { metadata: 'x' }, context, dataset: { id: dataset.id } }, shortRetain)
+  await integrityTestStore.writeWho(whoKey, { date: context.date, user: { id: 'someone' } }, shortRetain)
+  await new Promise(resolve => setTimeout(resolve, 3500)) // let both locks genuinely lapse
+
+  const result = await runPurge(admin, prefix)
+  expect(result.errors).toBe(0)
+  const remaining = await listIntegrityKeys(prefix)
+  // the revision is the current anchor: the protection carve-out keeps it regardless of its own
+  // lapsed lock (never even checked) — but its `.who` is never part of that carve-out, so its
+  // equally lapsed lock is judged on its own merits, and it is deleted
+  expect(remaining).toContain(key)
+  expect(remaining).not.toContain(whoKey)
+})
+
+test('the deliberate asymmetry: a referenced `.file` payload is protected like the anchor, but a `.who` at the same index is not, even with equally lapsed locks', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const { dataset } = await enabledDataset(admin)
+  const prefix = revisionsPrefix(dataset)
+  const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
+  const key = `${prefix}000000001`
+  const fileKey = `${key}.file`
+  const whoKey = `${key}.who`
+  const shortRetain = new Date(Date.now() + 2000)
+  await integrityTestStore.writeRevision(key, {
+    hash: { metadata: 'x', file: 'y' }, context, dataset: { id: dataset.id }, payload: { metadata: {}, file: { size: 3 } }
+  }, shortRetain)
+  await integrityTestStore.writePayload(fileKey, Readable.from(['abc']), shortRetain)
+  await integrityTestStore.writeWho(whoKey, { date: context.date, user: { id: 'someone' } }, shortRetain)
+  await new Promise(resolve => setTimeout(resolve, 3500))
+
+  const result = await runPurge(admin, prefix)
+  expect(result.errors).toBe(0)
+  const remaining = await listIntegrityKeys(prefix)
+  expect(remaining).toContain(key) // anchor: protection carve-out
+  expect(remaining).toContain(fileKey) // referenced payload: protection carve-out — same asymmetry
+  expect(remaining).not.toContain(whoKey) // `.who`: never protected, ages out on its own lock alone
 })
 
 test('a scope is skipped without listing objects until its watermark comes due', async () => {
