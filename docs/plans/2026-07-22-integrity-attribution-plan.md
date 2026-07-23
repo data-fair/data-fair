@@ -1,5 +1,7 @@
 # Integrity — bounded attribution siblings (`.who`) + A2 — implementation plan
 
+Status: built (T1-T9), see design doc.
+
 Design: [2026-07-22-integrity-attribution-design.md](./2026-07-22-integrity-attribution-design.md).
 Branch `feat-integrity-8`. Repo protocol: test commit → impl commit per step; dev env for the
 worktree is started by the maintainer; run only the related specs while iterating

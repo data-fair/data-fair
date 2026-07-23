@@ -4,7 +4,7 @@ Toute la fonctionnalité se pilote depuis l'onglet **Intégrité** de la page d'
 
 ### L'état nominal
 
-Le panneau affiche le verdict du dernier contrôle, la vérification de cohérence, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
+Le panneau affiche le verdict du dernier contrôle, la vérification de cohérence, et l'historique complet des révisions : numéro, opération, date, catégorie d'auteur, motif éventuel et empreinte. Quand l'attribution est disponible pour une révision — voir la section conformité —, une colonne dédiée affiche l'identifiant utilisateur ou de clé d'API, l'adresse IP et le pays, sans jamais résoudre ces identifiants en nom affiché. Chaque révision porteuse de contenu propose la comparaison avec l'état courant, le téléchargement du fichier scellé, et la restauration.
 
 ![Panneau d'intégrité — état vérifié](img/panneau-integrite-ok.png)
 
@@ -23,6 +23,10 @@ Pour un jeu éditable, le panneau ajoute le décompte des lignes protégées et,
 ### L'alerte de cohérence et l'acquittement
 
 Si le second verdict détecte une manipulation de l'entrepôt lui-même (révision masquée ou réécrite, incohérence de dates), une alerte distincte l'affiche avec le détail de chaque anomalie et son niveau de certitude. Après enquête — typiquement : rotation des accès de stockage, vérification des sauvegardes — le superadministrateur peut **acquitter** les anomalies examinées. L'acquittement est lui-même une révision scellée, motivée et datée : il fait taire les anomalies passées en revue, jamais les futures — toute nouvelle manipulation ressort immédiatement.
+
+### Le verrou d'écriture réservé aux clés d'API
+
+Un bouton dédié du panneau (superadministrateur, avec boîte de dialogue de confirmation) active ou désactive l'exigence d'une clé d'API pour toute écriture sur le jeu de données. Tant qu'il est actif, un indicateur visible rappelle la contrainte partout où une action d'écriture serait normalement proposée depuis l'interface à une session utilisateur ordinaire.
 
 ### Ce qu'en voit un auditeur
 

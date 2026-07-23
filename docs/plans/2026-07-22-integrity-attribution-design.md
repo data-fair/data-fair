@@ -1,6 +1,10 @@
 # Integrity — bounded attribution siblings (`.who`) + API-key attribution & write lock (A2)
 
-> Status: **designed, not built** (2026-07-22). Branch: `feat-integrity-8`. This iteration folds
+> Status: **built (T1-T9), 2026-07-23** — see `docs/architecture/integrity.md` §1/§3.1/§3.4/§3.5/
+> §5/§7/§8/§10/§12/§13 and `api/src/integrity/README.md`. **Out-of-repo action item for the
+> maintainer:** add the 180-day attribution-retention clause to the privacy policy / DPA (§6.2 —
+> the stated journal-vs-`.who` asymmetry must be documented there, not only here). Branch:
+> `feat-integrity-8`. This iteration folds
 > two threads into one delivery: (1) per-revision **actor attribution** (user id, API-key ref,
 > IP, geo) stored in **separate locked sibling objects with a short, fixed, never-renewed
 > retention**, and (2) the previously-assessed **A2** pair — API-key attribution and the
