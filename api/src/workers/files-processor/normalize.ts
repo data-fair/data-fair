@@ -20,6 +20,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
 import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
+import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import filesStorage from '#files-storage'
 import { createWriteStream } from 'node:fs'
 
@@ -82,7 +83,9 @@ export default async function (dataset: FileDataset) {
           name: filePaths[0].parsed.base,
           size: (await filesStorage.fileStats(filePath)).size,
           mimetype: mime.lookup(filePaths[0].parsed.base) as string,
-          encoding: 'utf-8',
+          // zip preserves the original bytes: the encoding detection performed on the compressed
+          // archive by the file storer is meaningless, detect from the extracted content instead
+          encoding: dataset.originalFile.explicitEncoding ?? detectEncoding(await filesStorage.fileSample(filePath)),
           schema: []
         }
       } else {
@@ -128,7 +131,8 @@ export default async function (dataset: FileDataset) {
         name: basicTypeFileName,
         size: stats.size,
         mimetype: mime.lookup(basicTypeFileName) as string,
-        encoding: 'utf-8',
+        // same as the zip case: gzip preserves the original bytes, detect from the extracted content
+        encoding: dataset.originalFile.explicitEncoding ?? detectEncoding(await filesStorage.fileSample(filePath)),
         schema: []
       }
     }
