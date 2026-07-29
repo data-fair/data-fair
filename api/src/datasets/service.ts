@@ -2,6 +2,7 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
@@ -570,9 +571,16 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
-      const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(virtualDataset as unknown as VirtualDataset)
-      if ('attachmentsAsImage' in virtualPatch || !equal(virtualPatch.schema, virtualDataset.schema)) {
-        await applyPatch(virtualDataset, { ...virtualPatch, updatedAt: patch.updatedAt })
+      try {
+        const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(virtualDataset as unknown as VirtualDataset)
+        if ('attachmentsAsImage' in virtualPatch || !equal(virtualPatch.schema, virtualDataset.schema)) {
+          await applyPatch(virtualDataset, { ...virtualPatch, updatedAt: patch.updatedAt })
+        }
+      } catch (err) {
+        // the parent virtual dataset may have become invalid (a conflict introduced by this very
+        // patch, another child deleted or not shared anymore...): don't fail this dataset's own
+        // patch for it, the parent will surface the error at its next finalization or query
+        internalError('virtual-schema-sync', err)
       }
     }
   }

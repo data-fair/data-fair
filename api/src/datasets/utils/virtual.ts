@@ -3,37 +3,59 @@ import config from '#config'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import type { AccountKeys } from '@data-fair/lib-express'
+import type { Account } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
 import { type VirtualFilter, type QueryableDescendant } from '../es/operations.ts'
 
+// distinguish "the dataset does not exist anymore" from "it exists but is not readable by the
+// account owning the virtual dataset" — and report exactly which child is at fault
+const missingChildrenDetails = async (missingIds: string[]) => {
+  const existingMissing = await mongo.datasets
+    .find({ id: { $in: missingIds } }, { projection: { id: 1, title: 1, owner: 1 } })
+    .toArray()
+  const existingMissingById = new Map(existingMissing.map(c => [c.id, c]))
+  return missingIds.map(id => {
+    const child = existingMissingById.get(id)
+    if (!child) return `le jeu de données "${id}" n'existe plus`
+    const owner = child.owner
+    const ownerLabel = owner.department
+      ? `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}" / département "${owner.departmentName ?? owner.department}"`
+      : `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}"`
+    return `le jeu de données "${child.title ?? id}" (${id}, propriété de ${ownerLabel}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel`
+  })
+}
+
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
-async function childrenSchemas (owner: AccountKeys, children: string[], blackListedFields: Set<string>) {
+async function childrenSchemas (owner: Account, children: string[], blackListedFields: Set<string>) {
   const schemas: any[] = []
-  for (const childId of children) {
-    const child = await mongo.datasets
-      .findOne({
-        id: childId,
-        $or: [
-          // the virtual dataset can have children that are either from the same owner
-          // or completely public for the "read" operations classes
-          // we could try to manage intermediate cases, but it would be complicated
-          { 'owner.id': owner.id, 'owner.type': owner.type },
-          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }
-        ]
-      }, { projection: { isVirtual: 1, virtual: 1, schema: 1 } })
-    if (!child) continue
+  // the children usable by a virtual dataset are those its owner account can read — the same
+  // permissions model applied when resolving the descendants of a query (see recurseDescendants)
+  const pseudoSessionState = getPseudoSessionState(owner, 'virtual-dataset', '_virtual-dataset', 'admin')
+  const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
+  for (const childId of [...new Set(children)]) {
+    const child = await mongo.datasets.findOne(
+      { id: childId, $or: permissionsFilter },
+      { projection: { isVirtual: 1, virtual: 1, schema: 1, owner: 1 } })
+    if (!child) {
+      // fail fast at creation / patch / finalization time with the same detailed report the
+      // query path produces, instead of silently preparing an unreconciled schema
+      const details = await missingChildrenDetails([childId])
+      throw httpError(400, `[noretry] Le schéma du jeu de données virtuel ne peut pas être établi : ${details.join(' ; ')}.`)
+    }
     if (child.isVirtual && child.virtual) {
-      // recurse only to blacklist protected fields at every level; the returned schemas are
-      // not merged into the result: a virtual child's schema is already reconciled with its own
-      // children (level by level, kept in sync by re-finalization when a descendant changes),
-      // so only direct children participate in the compatibility checks of prepareVirtualDataset
-      const grandChildrenSchemas = await childrenSchemas(owner, child.virtual.children, blackListedFields)
+      // recurse only to blacklist protected fields at every level — readability is judged level
+      // by level from the owner of each intermediate virtual dataset, like at query time (an
+      // intermediate virtual dataset can expose a child its own owner can read to accounts that
+      // cannot read that child directly). The returned schemas are not merged into the result:
+      // a virtual child's schema is already reconciled with its own children (level by level,
+      // kept in sync by re-finalization when a descendant changes), so only direct children
+      // participate in the compatibility checks of prepareVirtualDataset
+      const grandChildrenSchemas = await childrenSchemas(child.owner, child.virtual.children, blackListedFields)
       for (const s of grandChildrenSchemas) {
         for (const field of s) {
           if (!child.schema?.find(f => f.key === field.key)) blackListedFields.add(field.key)
@@ -201,23 +223,7 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
 
   if (children.length !== childrenIds.length) {
     const foundIds = new Set(children.map(c => c.id))
-    const missingIds = childrenIds.filter(id => !foundIds.has(id))
-    // re-query the missing children ignoring the permissions filter to tell apart
-    // "the dataset does not exist anymore" from "it exists but is not readable by the
-    // account owning the virtual dataset" — and report exactly which child is at fault
-    const existingMissing = await mongo.datasets
-      .find({ id: { $in: missingIds } }, { projection: { id: 1, title: 1, owner: 1 } })
-      .toArray()
-    const existingMissingById = new Map(existingMissing.map(c => [c.id, c]))
-    const details = missingIds.map(id => {
-      const child = existingMissingById.get(id)
-      if (!child) return `le jeu de données "${id}" n'existe plus`
-      const owner = child.owner
-      const ownerLabel = owner.department
-        ? `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}" / département "${owner.departmentName ?? owner.department}"`
-        : `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}"`
-      return `le jeu de données "${child.title ?? id}" (${id}, propriété de ${ownerLabel}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel`
-    })
+    const details = await missingChildrenDetails(childrenIds.filter(id => !foundIds.has(id)))
     throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
   }
   for (const child of children) {
