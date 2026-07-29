@@ -339,7 +339,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
     if (!body.title) throw httpError(400, 'Un jeu de données virtuel doit être créé avec un titre')
     if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
     dataset.virtual = dataset.virtual || { children: [] }
-    dataset.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
+    dataset.schema = virtualPatch.schema
+    if (virtualPatch.attachmentsAsImage) dataset.attachmentsAsImage = true
+    else if (virtualPatch.attachmentsAsImage === null) delete dataset.attachmentsAsImage
     if (dataset.initFrom) {
       dataset.status = 'created'
     } else {
@@ -567,15 +570,9 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
-      // prepareSchema mutates the stored field objects in place, snapshot them for the comparison
-      const previousSchema = structuredClone(virtualDataset.schema)
-      const hadAttachmentsAsImage = virtualDataset.attachmentsAsImage ?? null
-      const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset as unknown as VirtualDataset)
-      const attachmentsAsImage = virtualDataset.attachmentsAsImage ?? null
-      if (!equal(virtualDatasetSchema, previousSchema) || attachmentsAsImage !== hadAttachmentsAsImage) {
-        const virtualPatch: Record<string, any> = { schema: virtualDatasetSchema, updatedAt: patch.updatedAt }
-        if (attachmentsAsImage !== hadAttachmentsAsImage) virtualPatch.attachmentsAsImage = attachmentsAsImage
-        await applyPatch(virtualDataset, virtualPatch)
+      const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(virtualDataset as unknown as VirtualDataset)
+      if ('attachmentsAsImage' in virtualPatch || !equal(virtualPatch.schema, virtualDataset.schema)) {
+        await applyPatch(virtualDataset, { ...virtualPatch, updatedAt: patch.updatedAt })
       }
     }
   }

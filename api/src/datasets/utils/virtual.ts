@@ -32,7 +32,7 @@ async function childrenSchemas (owner: AccountKeys, children: string[], blackLis
       // recurse only to blacklist protected fields at every level; the returned schemas are
       // not merged into the result: a virtual child's schema is already reconciled with its own
       // children (level by level, kept in sync by re-finalization when a descendant changes),
-      // so only direct children participate in the compatibility checks of prepareSchema
+      // so only direct children participate in the compatibility checks of prepareVirtualDataset
       const grandChildrenSchemas = await childrenSchemas(owner, child.virtual.children, blackListedFields)
       for (const s of grandChildrenSchemas) {
         for (const field of s) {
@@ -48,9 +48,16 @@ async function childrenSchemas (owner: AccountKeys, children: string[], blackLis
 // Validate and fill a virtual dataset schema based on its children
 // @ts-ignore
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter((key: string) => capabilitiesSchema.properties[key]?.default === false)
-export const prepareSchema = async (dataset: VirtualDataset) => {
-  if (!dataset.virtual.children || !dataset.virtual.children.length) return []
-  dataset.schema = dataset.schema || []
+
+// Compute the derived state of a virtual dataset from its children: the reconciled schema and the
+// attachmentsAsImage flag (the thumbnail routines require the flag and the image concept of
+// _attachment_url to be in lockstep). Reads the children from mongo but never mutates its input:
+// it works on a deep copy of the dataset schema.
+const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema: any[], attachmentsAsImage: boolean }> => {
+  if (!dataset.virtual.children || !dataset.virtual.children.length) return { schema: [], attachmentsAsImage: false }
+  // extendedSchema (cleanSchema, fixConcepts) and the reconciliation below mutate the dataset
+  // and its field objects in place
+  dataset = { ...dataset, schema: structuredClone(dataset.schema ?? []) }
   for (const field of dataset.schema) delete field['x-extension']
   const schema = await datasetUtils.extendedSchema(mongo.db, dataset)
   const blackListedFields = new Set<string>([])
@@ -141,15 +148,24 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 
-  // attachmentsAsImage is derived state on a virtual dataset, inherited from the children like
-  // the image concept of _attachment_url above: the thumbnail routines require the flag and the
-  // concept to be in lockstep, otherwise /lines?thumbnail=true builds ids that don't resolve.
-  // Callers persist this mutation (whole document at creation, patch at finalization and sync).
   const attachmentUrlField = schema.find((f: any) => f?.key === '_attachment_url')
-  if (attachmentUrlField?.['x-refersTo'] === 'http://schema.org/image') dataset.attachmentsAsImage = true
-  else delete dataset.attachmentsAsImage
+  return {
+    schema: schema.filter((f: any) => !!f),
+    attachmentsAsImage: attachmentUrlField?.['x-refersTo'] === 'http://schema.org/image'
+  }
+}
 
-  return schema.filter((f: any) => !!f)
+// The single persistence contract for the derived state of a virtual dataset: the reconciled
+// schema, plus the attachmentsAsImage flag only when it must change on the stored document
+// (true to set it, null to unset it — the patch appliers translate null to $unset). Used by
+// every write path: creation, finalization, metadata patch, and the sync performed when a child
+// schema changes without a worker run.
+export const prepareVirtualDatasetPatch = async (dataset: VirtualDataset): Promise<{ schema: any[], attachmentsAsImage?: true | null }> => {
+  const { schema, attachmentsAsImage } = await prepareVirtualDataset(dataset)
+  const patch: { schema: any[], attachmentsAsImage?: true | null } = { schema }
+  if (attachmentsAsImage && !dataset.attachmentsAsImage) patch.attachmentsAsImage = true
+  if (!attachmentsAsImage && dataset.attachmentsAsImage) patch.attachmentsAsImage = null
+  return patch
 }
 
 // "cannot be queried" errors are thrown both while serving requests (descendants are resolved
