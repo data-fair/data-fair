@@ -48,7 +48,14 @@ export default async function (_dataset: DatasetInternal) {
     // prepareSchema runs extendedSchema itself, then reconciles the calculated fields with the
     // children schemas (e.g. _attachment_url inherits the image concept from a child with
     // attachmentsAsImage) — a plain extendedSchema call would discard that reconciliation
+    const hadAttachmentsAsImage = dataset.attachmentsAsImage ?? null
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    // persist the attachmentsAsImage flag derived from the children by prepareSchema
+    const attachmentsAsImage = dataset.attachmentsAsImage ?? null
+    if (attachmentsAsImage !== hadAttachmentsAsImage) {
+      queryableDataset.attachmentsAsImage = dataset.attachmentsAsImage
+      result.attachmentsAsImage = attachmentsAsImage
+    }
   } else {
     // Add the calculated fields to the schema
     queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)

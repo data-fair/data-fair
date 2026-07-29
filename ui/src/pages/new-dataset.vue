@@ -815,22 +815,18 @@ async function createVirtualDataset () {
     const { results: childDatasets } = await $fetch<{ results: any[] }>(`${$apiPath}/datasets`, {
       query: {
         id: virtualChildren.value.map(c => c.id).join(','),
-        select: 'id,schema,attachmentsAsImage'
+        select: 'id,schema'
       }
     })
-    let allChildrenHaveAttachmentsAsImage = true
+    // attachmentsAsImage is derived from the children by the server (see prepareSchema)
     for (const child of virtualChildren.value) {
       const childDataset = childDatasets.find(d => d.id === child.id)
-      if (!childDataset?.attachmentsAsImage) allChildrenHaveAttachmentsAsImage = false
       const schema = childDataset?.schema || []
       for (const property of schema) {
         if (!body.schema.find((p: any) => p.key === property.key)) {
           body.schema.push(property)
         }
       }
-    }
-    if (allChildrenHaveAttachmentsAsImage) {
-      body.attachmentsAsImage = true
     }
   }
 

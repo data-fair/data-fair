@@ -327,6 +327,8 @@ test.describe('virtual datasets features', () => {
     // (it used to be overwritten by a plain extendedSchema at the end of finalization)
     const v1AttachmentUrl = virtual1.schema.find((f: any) => f.key === '_attachment_url')
     assert.equal(v1AttachmentUrl?.['x-refersTo'], 'http://schema.org/image')
+    // attachmentsAsImage is derived from the children, it was not set at creation
+    assert.equal(virtual1.attachmentsAsImage, true)
 
     // level 2 virtual (of the level 1 virtual)
     res = await ax.post('/api/v1/datasets', {
@@ -342,6 +344,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(virtual2.status, 'finalized')
     const v2AttachmentUrl = virtual2.schema.find((f: any) => f.key === '_attachment_url')
     assert.equal(v2AttachmentUrl?.['x-refersTo'], 'http://schema.org/image')
+    assert.equal(virtual2.attachmentsAsImage, true)
 
     // lines are readable through the nested virtual and the attachment url is rewritten
     res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines`)
@@ -350,6 +353,12 @@ test.describe('virtual datasets features', () => {
 
     // the attachment is downloadable through the nested virtual
     res = await ax.get(`/api/v1/datasets/${virtual2.id}/attachments/${child.id}/${attachmentPath}`)
+    assert.equal(res.status, 200)
+
+    // thumbnails work through the nested virtual thanks to the derived attachmentsAsImage flag
+    res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines?thumbnail=true`)
+    assert.ok(res.data.results[0]._thumbnail)
+    res = await ax.get(res.data.results[0]._thumbnail)
     assert.equal(res.status, 200)
   })
 

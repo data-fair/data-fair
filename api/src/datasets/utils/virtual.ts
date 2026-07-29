@@ -133,6 +133,14 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 
+  // attachmentsAsImage is derived state on a virtual dataset, inherited from the children like
+  // the image concept of _attachment_url above: the thumbnail routines require the flag and the
+  // concept to be in lockstep, otherwise /lines?thumbnail=true builds ids that don't resolve.
+  // Callers persist this mutation (whole document at creation, patch at finalization and sync).
+  const attachmentUrlField = schema.find((f: any) => f?.key === '_attachment_url')
+  if (attachmentUrlField?.['x-refersTo'] === 'http://schema.org/image') dataset.attachmentsAsImage = true
+  else delete dataset.attachmentsAsImage
+
   return schema.filter((f: any) => !!f)
 }
 

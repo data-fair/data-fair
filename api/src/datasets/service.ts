@@ -569,9 +569,13 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
       // prepareSchema mutates the stored field objects in place, snapshot them for the comparison
       const previousSchema = structuredClone(virtualDataset.schema)
+      const hadAttachmentsAsImage = virtualDataset.attachmentsAsImage ?? null
       const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset as unknown as VirtualDataset)
-      if (!equal(virtualDatasetSchema, previousSchema)) {
-        await applyPatch(virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+      const attachmentsAsImage = virtualDataset.attachmentsAsImage ?? null
+      if (!equal(virtualDatasetSchema, previousSchema) || attachmentsAsImage !== hadAttachmentsAsImage) {
+        const virtualPatch: Record<string, any> = { schema: virtualDatasetSchema, updatedAt: patch.updatedAt }
+        if (attachmentsAsImage !== hadAttachmentsAsImage) virtualPatch.attachmentsAsImage = attachmentsAsImage
+        await applyPatch(virtualDataset, virtualPatch)
       }
     }
   }
