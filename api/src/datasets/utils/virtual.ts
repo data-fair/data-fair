@@ -90,8 +90,16 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
     if (matchingFields[0]['x-display']) field['x-display'] = matchingFields[0]['x-display']
     else delete field['x-display']
 
-    // Some attributes of a field have to be homogeneous accross all children
+    // Some attributes of a field have to be homogeneous accross all children.
+    // Capability keys absent from the contract are generator-owned, not user config (e.g.
+    // nativeWildcard stamped on _attachment_url by extendedSchema to reflect its ES wildcard
+    // mapping): they describe the children indices too, preserve them through the merge below
+    const ownCapabilities: Record<string, any> = field['x-capabilities'] || {}
     field['x-capabilities'] = {}
+    for (const key in ownCapabilities) {
+      // @ts-ignore
+      if (!capabilitiesSchema.properties[key]) field['x-capabilities'][key] = ownCapabilities[key]
+    }
     const xLabels: Record<string, string> = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {

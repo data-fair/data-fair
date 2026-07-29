@@ -327,6 +327,8 @@ test.describe('virtual datasets features', () => {
     // (it used to be overwritten by a plain extendedSchema at the end of finalization)
     const v1AttachmentUrl = virtual1.schema.find((f: any) => f.key === '_attachment_url')
     assert.equal(v1AttachmentUrl?.['x-refersTo'], 'http://schema.org/image')
+    // the generator-owned capability marker survives the most-restrictive capabilities merge
+    assert.equal(v1AttachmentUrl?.['x-capabilities']?.nativeWildcard, true)
     // attachmentsAsImage is derived from the children, it was not set at creation
     assert.equal(virtual1.attachmentsAsImage, true)
 
