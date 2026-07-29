@@ -14,7 +14,7 @@ import { type VirtualFilter, type QueryableDescendant } from '../es/operations.t
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
 async function childrenSchemas (owner: AccountKeys, children: string[], blackListedFields: Set<string>) {
-  let schemas: any[] = []
+  const schemas: any[] = []
   for (const childId of children) {
     const child = await mongo.datasets
       .findOne({
@@ -29,17 +29,18 @@ async function childrenSchemas (owner: AccountKeys, children: string[], blackLis
       }, { projection: { isVirtual: 1, virtual: 1, schema: 1 } })
     if (!child) continue
     if (child.isVirtual && child.virtual) {
+      // recurse only to blacklist protected fields at every level; the returned schemas are
+      // not merged into the result: a virtual child's schema is already reconciled with its own
+      // children (level by level, kept in sync by re-finalization when a descendant changes),
+      // so only direct children participate in the compatibility checks of prepareSchema
       const grandChildrenSchemas = await childrenSchemas(owner, child.virtual.children, blackListedFields)
       for (const s of grandChildrenSchemas) {
         for (const field of s) {
           if (!child.schema?.find(f => f.key === field.key)) blackListedFields.add(field.key)
         }
       }
-      schemas.push(child.schema)
-      schemas = schemas.concat(grandChildrenSchemas)
-    } else {
-      schemas.push(child.schema)
     }
+    schemas.push(child.schema)
   }
   return schemas
 }

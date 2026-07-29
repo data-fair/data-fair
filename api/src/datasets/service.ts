@@ -567,8 +567,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
+      // prepareSchema mutates the stored field objects in place, snapshot them for the comparison
+      const previousSchema = structuredClone(virtualDataset.schema)
       const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset as unknown as VirtualDataset)
-      if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
+      if (!equal(virtualDatasetSchema, previousSchema)) {
         await applyPatch(virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
       }
     }

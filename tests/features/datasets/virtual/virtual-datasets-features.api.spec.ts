@@ -289,6 +289,70 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
   })
 
+  test('a virtual dataset of a virtual dataset of a dataset with attachments re-expose those attachments', async () => {
+    const ax = testUser1
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'childattach',
+      attachmentsAsImage: true,
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const child = res.data
+
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./tests/resources/avatar.jpeg')
+    form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
+    form.append('attr1', '10')
+    res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    await waitForFinalize(ax, child.id)
+    const attachmentPath = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results[0].attachmentPath
+
+    // level 1 virtual, with a filter to check that filtered intermediate levels work too
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id], filters: [{ key: 'attr1', values: ['10'] }] },
+      title: 'virtual level 1',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const virtual1 = await waitForFinalize(ax, res.data.id)
+    assert.equal(virtual1.status, 'finalized')
+    // the finalized virtual schema keeps the concept reconciled from the child
+    // (it used to be overwritten by a plain extendedSchema at the end of finalization)
+    const v1AttachmentUrl = virtual1.schema.find((f: any) => f.key === '_attachment_url')
+    assert.equal(v1AttachmentUrl?.['x-refersTo'], 'http://schema.org/image')
+
+    // level 2 virtual (of the level 1 virtual)
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [virtual1.id] },
+      title: 'virtual level 2',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const virtual2 = await waitForFinalize(ax, res.data.id)
+    assert.equal(virtual2.status, 'finalized')
+    const v2AttachmentUrl = virtual2.schema.find((f: any) => f.key === '_attachment_url')
+    assert.equal(v2AttachmentUrl?.['x-refersTo'], 'http://schema.org/image')
+
+    // lines are readable through the nested virtual and the attachment url is rewritten
+    res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._attachment_url, `${config.publicUrl}/api/v1/datasets/${virtual2.id}/attachments/${child.id}/${attachmentPath}`)
+
+    // the attachment is downloadable through the nested virtual
+    res = await ax.get(`/api/v1/datasets/${virtual2.id}/attachments/${child.id}/${attachmentPath}`)
+    assert.equal(res.status, 200)
+  })
+
   test('A virtual dataset with geo and non-geo children supports geo queries', async () => {
     const ax = testUser1
     const geoChild = await sendDataset('datasets/dataset1.csv', ax)
