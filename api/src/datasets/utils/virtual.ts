@@ -96,6 +96,10 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
     else delete field.separator
     if (matchingFields[0]['x-display']) field['x-display'] = matchingFields[0]['x-display']
     else delete field['x-display']
+    // timeZone drives the day boundaries of date filters and aggregations, which are applied to
+    // the children indices: it must reflect the children data, not the default timezone
+    if (matchingFields[0].timeZone) field.timeZone = matchingFields[0].timeZone
+    else delete field.timeZone
 
     // Some attributes of a field have to be homogeneous accross all children.
     // Capability keys absent from the contract are generator-owned, not user config (e.g.
@@ -120,7 +124,17 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
       let format = f.format
       if (format === 'uri-reference') format = undefined
       if (format !== field.format) throw httpError(400, `[noretry] Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
-      if (f['x-refersTo'] !== field['x-refersTo']) throw httpError(400, `[noretry] Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
+      if (f['x-refersTo'] !== field['x-refersTo']) {
+        if (field.key === '_attachment_url') {
+          // children disagree on attachmentsAsImage: degrade to plain attachment links (no image
+          // concept, so no derived attachmentsAsImage flag either) instead of failing on a
+          // calculated field the user cannot edit directly
+          delete field['x-refersTo']
+          delete field['x-concept']
+        } else {
+          throw httpError(400, `[noretry] Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
+        }
+      }
       for (const key in f['x-capabilities'] || {}) {
         if (capabilitiesDefaultFalse.includes(key)) {
           if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false

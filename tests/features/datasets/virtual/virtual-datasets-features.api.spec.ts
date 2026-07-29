@@ -364,6 +364,78 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
   })
 
+  test('a virtual dataset over children disagreeing on attachmentsAsImage degrades to plain attachments', async () => {
+    const ax = testUser1
+    const children: any[] = []
+    for (const attachmentsAsImage of [true, false]) {
+      let res = await ax.post('/api/v1/datasets', {
+        isRest: true,
+        title: 'childattach ' + attachmentsAsImage,
+        attachmentsAsImage,
+        schema: [
+          { key: 'attr1', type: 'integer' },
+          { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        ]
+      })
+      const child = res.data
+      const form = new FormData()
+      form.append('attachment', fs.readFileSync('./tests/resources/avatar.jpeg'), 'dir1/avatar.jpeg')
+      form.append('attr1', '10')
+      res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+      assert.equal(res.status, 201)
+      await waitForFinalize(ax, child.id)
+      children.push(child)
+    }
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: children.map(c => c.id) },
+      title: 'a virtual dataset',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const virtualDataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(virtualDataset.status, 'finalized')
+    // the image concept and the derived attachmentsAsImage flag are dropped, not an error
+    const attachmentUrlField = virtualDataset.schema.find((f: any) => f.key === '_attachment_url')
+    assert.ok(attachmentUrlField)
+    assert.equal(attachmentUrlField['x-refersTo'], undefined)
+    assert.equal(virtualDataset.attachmentsAsImage, undefined)
+
+    // attachments are still re-exposed as plain links
+    const lines = (await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    for (const line of lines.results) {
+      assert.ok(line._attachment_url.startsWith(`${config.publicUrl}/api/v1/datasets/${virtualDataset.id}/attachments/`))
+    }
+  })
+
+  test('a virtual dataset inherits the timeZone of date fields from its children', async () => {
+    const ax = testUser1
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'child with timezone',
+      schema: [
+        { key: 'd', type: 'string', format: 'date-time', timeZone: 'Europe/Athens' }
+      ]
+    })
+    const child = res.data
+    await ax.post(`/api/v1/datasets/${child.id}/lines`, { d: '2026-07-29T10:00:00+03:00' })
+    await waitForFinalize(ax, child.id)
+
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id] },
+      title: 'a virtual dataset',
+      schema: [{ key: 'd' }]
+    })
+    const virtualDataset = await waitForFinalize(ax, res.data.id)
+    const dField = virtualDataset.schema.find((f: any) => f.key === 'd')
+    assert.equal(dField.timeZone, 'Europe/Athens')
+  })
+
   test('A virtual dataset with geo and non-geo children supports geo queries', async () => {
     const ax = testUser1
     const geoChild = await sendDataset('datasets/dataset1.csv', ax)
