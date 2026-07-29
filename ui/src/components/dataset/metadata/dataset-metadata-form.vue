@@ -206,8 +206,9 @@
           @click:clear="dataset.modified = null"
         />
 
+        <!-- on virtual datasets attachmentsAsImage is derived from the children (see prepareSchema) -->
         <v-checkbox
-          v-if="dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
+          v-if="!dataset.isVirtual && dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
           v-model="dataset.attachmentsAsImage"
           :disabled="!can('writeDescriptionBreaking')"
           :label="t('attachmentsAsImage')"

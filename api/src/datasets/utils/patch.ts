@@ -200,7 +200,9 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
-      patch.schema = await virtualDatasetsUtils.prepareSchema({ ...dataset, ...patch })
+      const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch({ ...dataset, ...patch })
+      patch.schema = virtualPatch.schema
+      if ('attachmentsAsImage' in virtualPatch) patch.attachmentsAsImage = virtualPatch.attachmentsAsImage
       patch.status = 'indexed'
     }
   } else if (patch.extensions && !dataset.isRest) {

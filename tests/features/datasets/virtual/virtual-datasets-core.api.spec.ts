@@ -609,22 +609,52 @@ test.describe('virtual datasets core', () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    const res = await testUser3.post('/api/v1/datasets', {
+    // schema preparation applies the same permissions model as querying: the creation fails
+    // fast with the detailed message instead of leaving a dataset that errors at finalization
+    await assert.rejects(testUser3.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [dataset.id]
       }
+    }), (err: any) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes(dataset.id))
+      assert.ok(err.data.includes('n\'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel'))
+      return true
     })
-    await waitForDatasetError(testUser3, res.data.id)
 
-    await assert.rejects(testUser3.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
+    // the specific permission unlocks creation, and the schema is reconciled with the shared
+    // child instead of being silently skipped
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { classes: ['read'], type: 'user', id: 'test_user3' }
+    ])
+    const res = await testUser3.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: [{ key: 'id' }]
+    })
+    const virtualDataset = await waitForFinalize(testUser3, res.data.id)
+    const idField = virtualDataset.schema.find((f: any) => f.key === 'id')
+    assert.equal(idField.type, 'string')
+    const lines = (await testUser3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+
+    // revoking the permission breaks querying with the detailed error
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [])
+    // bump the virtual dataset so its cached descendants resolution is revalidated (a permission
+    // change on a child does not touch the virtual doc, the cache may serve it for up to 30s)
+    await testUser3.patch(`/api/v1/datasets/${virtualDataset.id}`, { title: 'a virtual dataset 2' })
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${virtualDataset.id}/lines`), (err: any) => {
       assert.equal(err.status, 501)
-      // the error now pinpoints the exact child dataset that is not readable
+      // the error pinpoints the exact child dataset that is not readable
       assert.ok(err.data.includes(dataset.id))
       assert.ok(err.data.includes('n\'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel'))
       // the body is the user-facing message, not a stack trace with the worker-only [noretry] prefix
-      assert.ok(err.data.startsWith(`Le jeu de données virtuel "${res.data.id}" ne peut pas être requêté`), err.data)
+      assert.ok(err.data.startsWith(`Le jeu de données virtuel "${virtualDataset.id}" ne peut pas être requêté`), err.data)
       return true
     })
   })

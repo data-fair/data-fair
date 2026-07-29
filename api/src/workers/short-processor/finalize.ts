@@ -42,14 +42,29 @@ export default async function (_dataset: DatasetInternal) {
   // default to the generic worker context otherwise
   if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
+  debug('prepare extended schema')
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
-    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    // the prepared schema runs extendedSchema itself, then reconciles the calculated fields with
+    // the children schemas (e.g. _attachment_url inherits the image concept from a child with
+    // attachmentsAsImage) — a plain extendedSchema call would discard that reconciliation.
+    // The preparation is pure (fresh field objects): dataset.schema must be reassigned too so
+    // the cardinality/enum stamping below (which walks dataset.schema) lands on the objects
+    // persisted through result.schema
+    const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
+    dataset.schema = queryableDataset.schema = result.schema = virtualPatch.schema
+    if ('attachmentsAsImage' in virtualPatch) {
+      result.attachmentsAsImage = virtualPatch.attachmentsAsImage
+      if (virtualPatch.attachmentsAsImage) dataset.attachmentsAsImage = queryableDataset.attachmentsAsImage = true
+      else {
+        delete dataset.attachmentsAsImage
+        delete queryableDataset.attachmentsAsImage
+      }
+    }
+  } else {
+    // Add the calculated fields to the schema
+    queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   }
-
-  // Add the calculated fields to the schema
-  debug('prepare extended schema')
-  queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   // record whether the freshly-built index carries the _search catch-all fields.
   // only when an index was actually (re)built: finalize also runs after a partial REST data
   // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
