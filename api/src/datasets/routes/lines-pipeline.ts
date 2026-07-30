@@ -85,6 +85,9 @@ export interface StreamJsonContext extends NextContext {
   // (hits.total.relation === 'gte'), this lazy second ES request estimates the exact total from
   // the `_rand` sample slice. Only set by read.ts when getApproxCountMode gates pass.
   approxTotal?: () => Promise<number>
+  // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
+  // Only set when adapt actually ignored at least one word.
+  qAdapt?: { required: string[], ignored: string[] }
 }
 
 // Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await
@@ -167,6 +170,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   }
   if (total != null) head.total = total
   if (totalEstimated) head.totalRelation = 'estimate'
+  if (ctx.qAdapt) head.qAdapt = ctx.qAdapt
   const nextHref = setNextLink(res, ctx, count, lastHit)
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value

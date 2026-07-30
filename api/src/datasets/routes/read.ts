@@ -29,8 +29,9 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
-import { getApproxCountMode } from '../es/operations.ts'
+import { getApproxCountMode, parseQMode } from '../es/operations.ts'
 import { approxTotal } from '../es/approx-count.ts'
+import { runAdaptivePreflight } from '../es/adaptive-q.ts'
 
 // Formats that consume a streamed ES source (serialize row-by-row, then send the assembled body). json/csv
 // and geojson qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still
@@ -82,9 +83,32 @@ const readLines: RequestHandler = async (req, res) => {
   // on the ORIGINAL query — the geo/tile branches below mutate `query.sort`, which would
   // (correctly) disable the mode anyway, and none of those formats carry a total envelope.
   const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount)
-  const approxTotalThunk = approxCountMode
+  let approxTotalThunk = approxCountMode
     ? () => approxTotal(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
     : undefined
+
+  // q_mode=adapt: ignore over-common words in filtering (they keep scoring) so the match set
+  // stays above the cap — see es/adaptive-q.ts. The preflight rewrites the effective query to
+  // q_required BEFORE the main search; `next` links inherit it from the mutated query, so
+  // after= pages replay the exact same tightened query with no preflight (chain consistency).
+  let qAdapt: { required: string[], ignored: string[] } | undefined
+  let resolvedQMode: string | undefined
+  try {
+    resolvedQMode = query.q ? parseQMode(query.q_mode, config.elasticsearch.qModeDefault) : undefined
+  } catch (err: any) {
+    throw httpError(400, err.message)
+  }
+  if (approxCountMode && resolvedQMode === 'adapt' && !query.q_required) {
+    const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
+    observe.reqStep(req, 'adaptPreflight')
+    if (adaptResult) {
+      if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
+      // the transparency field only appears when adapt actually ignored at least one word
+      if (adaptResult.ignored.length) qAdapt = { required: adaptResult.required, ignored: adaptResult.ignored }
+      // the preflight already estimated the chosen rung's total — no separate count leg needed
+      approxTotalThunk = () => Promise.resolve(adaptResult.total)
+    }
+  }
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(query.format)
 
@@ -451,7 +475,8 @@ const readLines: RequestHandler = async (req, res) => {
     // eligible ⇒ source came from searchStream (raw _attachment_url) ⇒ rewrite in prepareResultItem;
     // otherwise it came from search() which already rewrote it
     rewriteAttachmentUrl: eligible,
-    approxTotal: approxTotalThunk
+    approxTotal: approxTotalThunk,
+    qAdapt
   })
 }
 

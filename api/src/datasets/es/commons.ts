@@ -34,7 +34,8 @@ import {
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
   descendantsFilterClause,
-  getApproxCountMode
+  getApproxCountMode,
+  parseQMode
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -330,7 +331,23 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       else must.push(qs)
     }
     if (q) {
-      must.push(buildQClauses(dataset, q, qFields, query.q_mode, sqsOptions))
+      let qMode: string
+      try {
+        qMode = parseQMode(query.q_mode, config.elasticsearch.qModeDefault)
+      } catch (err: any) {
+        throw httpError(400, err.message)
+      }
+      // q_required: words excluded from the OR relaxation — they MUST match (non-scoring filter,
+      // scores stay pure OR). Set by q_mode=adapt (read.ts pins it in next links) or manually.
+      let requiredWords: string[] | undefined
+      if (query.q_required) {
+        const qWords = new Set(q.split(/\s+/))
+        requiredWords = String(query.q_required).split(',').map((w: string) => w.trim()).filter(Boolean)
+        for (const word of requiredWords) {
+          if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+        }
+      }
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, requiredWords))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

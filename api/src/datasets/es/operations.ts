@@ -486,7 +486,8 @@ export const buildQClauses = (
   q: string,
   qFields: string[] | undefined,
   qMode: string | undefined,
-  sqsOptions: any = {}
+  sqsOptions: any = {},
+  requiredWords?: string[]
 ): any => {
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
@@ -525,7 +526,23 @@ export const buildQClauses = (
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
     }
   }
-  return { bool: { should, minimum_should_match: 1 } }
+  const scored = { bool: { should, minimum_should_match: 1 } }
+
+  // "score broad, match strict": q_mode=and and q_required tighten the MATCH SET through a
+  // non-scoring filter while scores stay pure OR — the page is OR's page restricted to the
+  // tightened set, and the selective filter leads the iteration. Requirements must NEVER move
+  // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
+  // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
+  if (qMode !== 'complete') {
+    const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
+    if (qMode === 'and' && matchFields.length) {
+      return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
+    }
+    if (requiredWords?.length && matchFields.length) {
+      return { bool: { must: [scored], filter: requiredWords.map(word => ({ multi_match: { query: word, fields: matchFields } })) } }
+    }
+  }
+  return scored
 }
 
 // Pure mapping builder used by manage-indices.indexDefinition. Given the already-extended
