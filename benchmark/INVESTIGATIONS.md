@@ -305,6 +305,194 @@ drift), not a low cap. Recorded in §5 R4 (and reframes the load-management.md �
 `terminate_after` proposal). Result:
 `experiment-2026-05-28T07-36-25-089Z.json`.
 
+## 11. Split hits/count — transparent alternative to capping `track_total_hits`
+
+Follow-up to investigation 2. Capping `track_total_hits` restores block-max-WAND but
+degrades `hits.total` to a `10000 (gte)` floor — a visible regression for API consumers.
+The alternative: keep the total, but stop computing it in the scored request. Page-1 `q`
+becomes two legs (in production, one `_msearch`): a scored top-k leg with
+`track_total_hits: false` (full WAND) plus a non-scored count leg — either an exact count
+in filter context (`size: 0`, request-cacheable) or a `random_sampler` estimate.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=count-split --profile --runs=20 --no-seed
+npm run benchmark -- experiment --name=count-split --runs=20 --cold --no-seed
+```
+
+**Outcome (2026-07-30).** Measured — with a load-focused correction. Judged on **ES work**
+(not wall-clock), the split with an *exact* count leg is roughly **load-neutral**: on the
+heavy disjunction (~839k matches, cold) scored-exact 12–15.5 ms vs wand-hits 6–7 ms +
+filter-count 8–9 ms — the same enumeration, just unscored and moved to a second request.
+Exact counting is inherently O(matches); only three things genuinely shed load:
+
+- **The cap** (`capped-hits`, `track_total_hits: 10000`): 12 → 7 ms (−42 %), top-20 identical
+  — the max load reduction, at the price of the `10 000 (gte)` floor.
+- **The sampler** (`random_sampler`): visits ~p·M docs instead of M. Cold: 3 ms at p=0.01
+  (est. +0.7 %), 2 ms at p=0.001. On this small corpus fixed overheads dominate; the ratio
+  vs full enumeration grows with match count, and sampling error *shrinks* (∝ 1/√(p·M)).
+- **The shard request cache** on repeats: both count legs are `size: 0` (sampler is
+  deterministic via fixed `seed`) → ~1 ms warm, a cache the scored request can never use.
+
+The composite that follows: **hybrid** — one scored request with `track_total_hits: 10000`
+(exact totals for the ≤10k-match majority, WAND active, nothing extra to run), and only on
+overflow (`gte`) fire the sampler count leg. Load ≈ the pure cap plus a marginal p·M
+enumeration on precisely the queries where an estimate is tightest; totals stay exact below
+10k and ~1 % accurate above. Sampler accuracy measured: p=0.01 → +0.7 % (839k) / +1.1 %
+(322k); p=0.001 → +5.9 % on 839k (too few samples below ~1M matches — pick p by corpus).
+**ES 7.17 compatibility (2026-07-30).** Production runs ES 7.17.28; `random_sampler`
+requires ES ≥ 8.2 and is NOT available there. The `rand-count` variant replaces it: every
+data-fair line carries `_rand`, a uniform integer in [0, 1 000 000) assigned at index time
+(`extensions.ts`), so an indexed BKD range filter `_rand < p·1e6` selects a stable p-sample
+and leapfrogs the main query's iterator — works on any ES version. Measured equivalent to
+`random_sampler`: 3 ms vs 3 ms cold on the heavy disjunction, estimate −1.6 % vs +0.7 % at
+p=0.01. Bonus: deterministic per dataset (request-cacheable, estimates stable across pages);
+corresponding caveat: one frozen sample per index, so per-dataset estimate bias is
+correlated across queries (error still ∝ 1/√(p·M), re-drawn on each reindex). Numeric
+`track_total_hits`, `hits.total.relation` and the `size: 0` request cache are all 7.0+.
+
+**ES 7.17 validation run (2026-07-30, `es7-copy.ts` + `es7-check.ts`).** The 2M-row
+bench-tall index was copied into a throwaway `ghcr.io/data-fair/elasticsearch:7.17.28`
+container and the count-split variants re-run over plain HTTP (the v8 JS client refuses
+7.x servers). Findings:
+
+- ✓ `rand-count` works and returns the *identical* estimate as on ES 8 (same deterministic
+  `_rand` slice): 1 ms warm (request cache) / 5 ms cold vs 15 ms for the cold exact count.
+- ✓ `random_sampler` fails with `parsing_exception: Unknown aggregation` — as predicted.
+- ✗ **Capping `track_total_hits` yields NO hits-leg speedup on 7.17**: heavy disjunction
+  scored-exact 13.5–15 ms vs capped/wand 16 ms — Lucene 8.11's WANDScorer adds bookkeeping
+  but skips nothing on this corpus, ending slightly SLOWER than the exhaustive scorer. A
+  per-term-boost skew probe (`analyse population^4 transport^0.2`) confirms it's the engine,
+  not just the corpus: ES 8.19 gains −58 % from the cap on that query (12 → 5 ms), ES 7.17
+  gains nothing (16 → 17 ms). Lucene 9 (ES 8.x) substantially reworked disjunction WAND;
+  Lucene 8.11 could not exploit even explicit score skew here. Caveat kept in view: the
+  synthetic corpus (26 uniform words, tf 1–3, 3–6-word docs) has near-flat block-max
+  impacts, the worst case for WAND; Elastic's own 7.0 benchmarks showed large disjunction
+  gains on natural (Zipfian) corpora, so real prod data should sit somewhere between —
+  unproven here.
+
+**Scale run (2026-07-30, 6M rows / 2.5M-match disjunction, x3-duplicated indices on both
+versions, cold `took` p50).** ES 8.19: scored-exact 21 ms → capped-hits 11 ms (−48 %) +
+rand-count 5 ms ⇒ strategy 16 ms (−24 % cold, −41 % warm; hits leg alone −48 % once the
+count is request-cached). ES 7.17: scored-exact 45 ms → capped-hits **51 ms (+13 %)** +
+rand-count 10 ms ⇒ strategy 61 ms (**+36 % worse** cold, ~+18 % warm) — Lucene 8.11's
+scorer-with-impacts path costs more than exhaustive scoring when nothing is skippable, and
+the penalty grows with match count. Estimate accuracy at 2.5M matches: rand-count −1.6 %,
+random_sampler −1.0 % (ES 8 only). Side-finding: on force-merged indices (0 deletes) both
+versions answer *single-term* exact counts from `docFreq` metadata in ~0–1 ms
+(`Weight#count` shortcut) — the counting problem is specific to multi-term/multi-field
+disjunctions, which is exactly the production `q` shape.
+
+Consequence for the strategy on prod 7.17: **superseded by §12** — the real-corpus run
+showed the 7.17 regression above was corpus pathology (the synthetic uniform vocabulary is
+WAND's worst case; on natural text the cap wins on both versions). Keep the synthetic
+corpus as a stress test, not as the rollout verdict.
+
+Caveats: 2M-row in-RAM single-shard corpus (ms-scale, run-to-run variance ±30 %; the
+scored-vs-unscored gap should widen with real multi-field dis_max `q`); a 10M+ seed would
+show the sampler asymptote honestly; the harness ran on ES 8.19 (Lucene 9) — Lucene 8.11's
+WAND is the same design but absolute numbers on 7.17 will differ. Recorded in
+`load-management.md` §9. Raw results:
+`benchmark/results/experiment-2026-07-30T09-12-50-274Z.json` (warm + profile),
+`experiment-2026-07-30T09-13-19-388Z.json` (cold), `experiment-2026-07-30T09-23-56-439Z.json`
+(cold, incl. `capped-hits`).
+
+---
+
+## 12. Real-corpus validation — RNA, 3.3M rows of natural French text (2026-07-30)
+
+Loaded `repertoire-national-des-associations` (opendata.koumoul.com, 3 289 936 rows —
+`titre` / `objet` / `adresse_siege` / `nom_commune_siege`) into BOTH local ES versions via
+`rna-load.ts`, with a prod-faithful mapping: keyword mains + `.text` (custom_french) +
+`.text_standard`, `copy_to` `_search` catch-all, and the SAME per-row `_rand` on both
+versions. Measured with `rna-check.ts`: `simple_query_string` over
+`[_search, _search.text_standard]`, `size: 20` — exactly the production `q` shape.
+
+**A. The `track_total_hits` cap works on both versions on natural text** (cold `took` p50;
+top-20 identical to the exact baseline in every single case, on both versions):
+
+| query | matches | ES 8.19 exact→capped | ES 7.17 exact→capped |
+|---|---:|---|---|
+| rue baudelaire | 1.43 M | 29 → 1 (−97 %) | 43.5 → 3 (−93 %) |
+| association sportive | 1.26 M | 25.5 → 3 (−88 %) | 37.5 → 18 (−52 %) |
+| club de football marseille | 2.81 M | 38 → 2 (−95 %) | 58 → 5 (−91 %) |
+| comité des fêtes saint pierre | 2.25 M | 38.5 → 5 (−87 %) | 55 → 10 (−82 %) |
+| association (single term) | 1.06 M | 20.5 → 2 (−90 %) | 30 → 4.5 (−85 %) |
+
+This **reverses §11's hold-off recommendation for 7.17**: real Zipfian text gives WAND the
+block-level score skew the synthetic corpus lacked. The weakest case (two very common
+terms, "association sportive") still halves on 7.17. Absolute costs on the real corpus are
+also ~3× the synthetic bench (multi-field `_search`, longer docs) — the strategy's
+absolute savings grow accordingly.
+
+**B. `_rand` sampled counts on the real corpus**: −1.36 % / −0.56 % error at p=0.01 on
+1.4 M / 2.8 M-match queries; count leg 8–12 ms cold on both versions (vs 30–35 ms exact on
+7.17); estimates byte-identical across versions (shared `_rand`).
+
+**C. `minimum_should_match` family as a load knob** (the "rue baudelaire" idea — require
+more terms so both scoring AND counting shrink, independently of engine optimizations):
+
+- **Plain default msm=2: refuted again on real data.** With exact counting it helped only
+  when it filtered hard (club-de-football 38 → 18 ms ES 8) and *hurt* otherwise
+  (comité-des-fêtes 38.5 → 41 ms ES 8, 55 → 62 ms ES 7) — consistent with Inv 4/E3: the
+  N-of-M scorer only earns its bookkeeping when the match set actually collapses.
+- **Hard AND (`default_operator: and`)**: 1–5 ms everywhere (vs 29–58 ms OR-exact), totals
+  become small and *meaningful* (512 instead of 1.43 M for "rue baudelaire"), but the
+  visible page changes: 13–17 of OR's top-20 remain (the dropped docs are single-term
+  matches — arguably noise, but it IS a semantics change).
+- **rare-must (the retired `common_terms` / `cutoff_frequency` semantics, client-side)**:
+  require the terms whose match count ≤ 2 % of the corpus, keep frequent terms
+  scoring-only. Best quality/cost point when a clear rare pivot exists: 1–3 ms with
+  **20/20** page overlap on club-de-football-marseille and 18/20 on rue-baudelaire.
+  Degrades when no good pivot exists (comité-des-fêtes: only "pierre" qualifies → 14/20,
+  10–18 ms). Preflight per-term counts cost 15–30 ms sequential — must be parallelized
+  (`_msearch`) and/or cached per dataset (term counts are `docFreq`-shortcut cheap on
+  merged segments).
+- **Adaptive cascade (strict → relax while the page is short)**: on all five real queries
+  the strictest level already fills 20 hits, so it settles in ONE pass at AND cost
+  (1–5.5 ms). The relax pass only triggers on genuinely narrow queries, where the relaxed
+  rerun is the query the user would have paid anyway. Quality = AND quality (13–17/20).
+- **Reverse-adaptive (sample first, then tune msm, then execute)**: ONE `_msearch` of
+  `_rand`-sampled counts at every msm level (all `size: 0`, request-cacheable) yields the
+  full strictness spectrum — e.g. `[1, 59, 589, 4289, 22356]` for the 5-term query — which
+  both PICKS the level and IS the display total. The sampler's blind spot (a level with
+  < ~500 true matches samples 0–4 docs at p=0.01) is resolved by directly probing that
+  level, cheap precisely because it's selective — and the probe returns an *exact* total
+  (512, 261, 245 on the test queries). Measured end-to-end (preflight + probe + final,
+  warm p50): 2–8 ms on ES 8 and 2–24.5 ms on ES 7 vs 22.5–59 ms baselines, with identical
+  decisions, sampled arrays and totals on both versions (shared `_rand`). Estimate
+  accuracy at the chosen level: −4.1 % (134 900 est vs 140 645 true from 1 349 sampled).
+  Weak spot: when every term is common ("association sportive"), the chosen msm=2 final
+  query itself is the cost (24.5 ms ES 7 — better than the 39.5 ms baseline but worse
+  than plain or-capped at 17 ms); the spectrum itself provides the signal to detect this
+  case (strictest-level estimate still ≫ cap) and fall back to or-capped. Side product:
+  the spectrum is UI-grade information ("512 résultats avec tous les mots · ~135 000 avec
+  au moins deux · ~1,4 M au total").
+
+- **Cap-floor variant of adapt (the retained design)**: never tighten below the
+  `track_total_hits` cap — pick the strictest level whose estimate ≥ cap; if none
+  qualifies, keep plain OR (capped + estimate). Invariant: any search totalling < cap is
+  byte-identical to today. Floor-chosen levels on the RNA queries: club-de-football →
+  msm=3 (~14 900), comité-des-fêtes → msm=3 (~58 900), association-sportive → msm=2
+  (~134 900), rue-baudelaire → unrestricted (msm=2 is only ~500). Decisions are always
+  statistically confident (≥ ~cap×p ≈ 100 samples) → the probe step becomes unnecessary.
+- **Query shape matters for the tightened final query**: `minimum_should_match` in
+  scoring position weakens WAND (comité msm=3 capped: 12 ms ES 8 / **30 ms ES 7** vs
+  plain or-capped 5 / 10.5). The right shape is **score broad, match strict**:
+  `bool { must: [OR-scored clauses], filter: [same clauses with msm] }` — the non-scoring
+  msm filter leads the conjunction, scores stay pure OR BM25 (page = OR's page restricted
+  to the tightened set, maximal overlap by construction). Measured: comité 9 ms ES 8 /
+  12 ms ES 7, club 5 / 10 ms — parity or better with plain or-capped on ES 7.
+
+ES history note: ES *had* exactly this mechanism (`common_terms` query / `cutoff_frequency`),
+deprecated in 7.3 and removed in 8.x on the grounds that BM25 + WAND made it unnecessary —
+true for *scoring* but not for *counting*: WAND cannot cap an exact count, while msm-family
+semantics shrink the counted set itself. The two levers are complementary, not competing:
+cap+sample keeps today's OR semantics bit-identical (20/20 pages everywhere); msm-family
+changes the result-set contract in exchange for meaningful totals and even lower cost.
+
+Tools: `rna-load.ts` (loader), `rna-check.ts --node=… [--cold]` (measurement).
+
 ---
 
 ## Recording results

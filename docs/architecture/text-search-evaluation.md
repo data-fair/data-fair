@@ -19,7 +19,8 @@
 4. [Experiment summary](#4-experiment-summary)
 5. [Recommendations (for the implementation worktree)](#5-recommendations-for-the-implementation-worktree)
 6. [Transition roadmap (sketch)](#6-transition-roadmap-sketch)
-7. [Open questions](#7-open-questions)
+7. [The `q_mode=or|and|adapt|<n>` proposal](#7-the-q_modeorandadaptn-proposal-2026-07-30)
+8. [Open questions](#8-open-questions)
 
 ---
 
@@ -676,7 +677,46 @@ Each step is independently revertible and never breaks an existing query URL.
 
 ---
 
-## 7. Open questions
+## 7. The `q_mode=or|and|adapt|<n>` proposal (2026-07-30)
+
+Follow-up to the real-corpus round recorded in `benchmark/INVESTIGATIONS.md` §12 (RNA,
+3.3M rows, both ES 7.17 and 8.19). Proposal under evaluation: extend `q_mode` with
+`or` (current behaviour, alias of `simple`), `and` (strict), `adapt` (one `_rand`-sampled
+`_msearch` across msm levels picks the strictness and provides the total), `<n>` (explicit
+msm); every mode runs capped totals + `_rand` sampling with API/UI disclaimers; **`adapt`
+becomes the default**. `complete` keeps its current autocomplete meaning; adapt never
+applies to it.
+
+Measured basis (warm p50, prod-faithful `_search` surface): today's OR-exact 22.5–59 ms;
+adapt end-to-end 2–8 ms (ES 8) / 2–24.5 ms (ES 7); plain cap 2–7.5 ms (ES 8) / 3–18 ms
+(ES 7). Beyond page-1 latency, adapt (unlike the cap) shrinks the *match set itself*
+(1.4 M → 512 on "rue baudelaire"), which is the only lever that helps aggregations/facets
+with a `q` filter (aggs visit every match; WAND/cap cannot help there), search exports,
+and deep `after=` pagination.
+
+Where `adapt`-as-default is genuinely breaking (ranked by likelihood):
+1. **Recall/integration traffic** that paginates or exports the *tail* of a fuzzy query —
+   the tail is exactly what adapt removes. Needs `q_mode=or` and release-notes comms.
+2. **Synonym/exploratory queries** ("vélo bicyclette"): user means OR; adapt's msm=2
+   returns the tiny both-words intersection. Top-20 overlap measured 13–17/20 on strict
+   levels — "almost always the same top results" only holds when the chosen level's match
+   set stays large; a min-results floor in the decision rule (relax when est < F) trades
+   totals-meaningfulness for page stability and is THE tunable.
+3. **Facet counts shift** (consistently with the narrowed set — coherent but visible).
+4. **Dashboards/monitoring reading totals** see step changes at deploy time.
+Mitigations: `q_mode=or` one-param escape; the chosen level pinned in the `next` link
+(after= pages must not re-decide); a transparency field returning the sampled spectrum
+(`512 with all words · ~135k with ≥2 · ~1.4M total` — UI-grade); staged default flip.
+
+Complexity: bounded — parameter parsing, one preflight `_msearch` builder + call site in
+the `/lines` path (reuses the approx-count `_rand` machinery), and a pure decision rule
+(spectrum → chosen msm + total + confidence), each unit-testable; the probe step (direct
+execution of an unconfident-but-nonzero strict level, returns exact totals) can be v1.1.
+The real cost is not code but *tuning the decision rule* to make "same top page as OR"
+true in the aggregate — measurable with `rna-check.ts` overlap metrics; a batch of real
+production query logs is the right calibration corpus.
+
+## 8. Open questions
 
 - T4 boost-value calibration needs labelled relevance data — out of harness scope; flag for
   a dedicated relevance-judgment effort.
