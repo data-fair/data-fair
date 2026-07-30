@@ -29,7 +29,7 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
-import { getApproxCountMode, parseQMode } from '../es/operations.ts'
+import { getApproxCountMode, getEstimateCountMode, parseQMode, DEFAULT_Q_MODE } from '../es/operations.ts'
 import { approxTotal } from '../es/approx-count.ts'
 import { runAdaptivePreflight } from '../es/adaptive-q.ts'
 
@@ -82,7 +82,10 @@ const readLines: RequestHandler = async (req, res) => {
   // calls this lazy `_rand`-sampled estimate instead of exposing the capped floor. Computed
   // on the ORIGINAL query — the geo/tile branches below mutate `query.sort`, which would
   // (correctly) disable the mode anyway, and none of those formats carry a total envelope.
-  const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount)
+  // count=estimate keeps its cheap track_total_hits=1000 hits leg but an overflow now becomes
+  // a real sampled estimate (flagged totalRelation) instead of the old bare "1000".
+  const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount) ??
+    getEstimateCountMode(dataset, query, config.elasticsearch.approxCount)
   let approxTotalThunk = approxCountMode
     ? () => approxTotal(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
     : undefined
@@ -91,21 +94,21 @@ const readLines: RequestHandler = async (req, res) => {
   // stays above the cap — see es/adaptive-q.ts. The preflight rewrites the effective query to
   // q_required BEFORE the main search; `next` links inherit it from the mutated query, so
   // after= pages replay the exact same tightened query with no preflight (chain consistency).
-  let qAdapt: { required: string[], ignored: string[] } | undefined
+  let qAdapt: { ignored: string[] } | undefined
   let resolvedQMode: string | undefined
   try {
-    resolvedQMode = query.q ? parseQMode(query.q_mode, config.elasticsearch.qModeDefault) : undefined
+    resolvedQMode = query.q ? parseQMode(query.q_mode, DEFAULT_Q_MODE) : undefined
   } catch (err: any) {
     throw httpError(400, err.message)
   }
-  if (approxCountMode && resolvedQMode === 'adapt' && !query.q_required) {
+  if (approxCountMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_required) {
     const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
     observe.reqStep(req, 'adaptPreflight')
     if (adaptResult) {
       if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
       // the transparency field only appears when adapt actually ignored at least one word
       if (adaptResult.ignored.length) {
-        qAdapt = { required: adaptResult.required, ignored: adaptResult.ignored }
+        qAdapt = { ignored: adaptResult.ignored }
         setReqQAdaptIgnored(req, adaptResult.ignored)
       }
       // the preflight already estimated the chosen rung's total — no separate count leg needed

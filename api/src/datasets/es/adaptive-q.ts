@@ -42,8 +42,15 @@ const esSearch = async (client: Client, dataset: any, body: any, abortContext?: 
   return esResponse
 }
 
+// simple_query_string operators: a q using them is an expert query speaking sqs, not plain
+// words — adapt steps aside entirely (plain cap + sampled estimate apply) rather than risk
+// ignoring a word the user explicitly required (+), negated (-), quoted or grouped.
+const SQS_SYNTAX = /[+\-|"*()~\\]/
+
 export const runAdaptivePreflight = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<AdaptResult | null> => {
-  const words = String(query.q ?? '').trim().split(/\s+/).slice(0, 8)
+  const q = String(query.q ?? '').trim()
+  if (SQS_SYNTAX.test(q)) return null
+  const words = q.split(/\s+/).slice(0, 8)
   if (words.length < 2) return null // nothing to relax on a single word
 
   // the full OR query (all other filters included) — the preflight measures within that context

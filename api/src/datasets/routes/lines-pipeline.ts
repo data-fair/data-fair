@@ -87,7 +87,7 @@ export interface StreamJsonContext extends NextContext {
   approxTotal?: () => Promise<number>
   // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
   // Only set when adapt actually ignored at least one word.
-  qAdapt?: { required: string[], ignored: string[] }
+  qAdapt?: { ignored: string[] }
 }
 
 // Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await

@@ -769,6 +769,13 @@ const RAND_RANGE = 1_000_000
  * there is a q and no explicit sort) on a large dataset, with no param that already
  * controls counting. Returns the sampling parameters, or null for exact behaviour.
  */
+/** Sampling parameters for a dataset size — shared by the ranked-search cap mode and count=estimate. */
+export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig): { randBound: number, probability: number } => {
+  const probability = Math.min(0.5, Math.max(cfg.minProbability, cfg.sampleTarget / datasetCount))
+  const randBound = Math.round(probability * RAND_RANGE)
+  return { randBound, probability: randBound / RAND_RANGE }
+}
+
 export const getApproxCountMode = (
   dataset: { count?: number },
   query: Record<string, any>,
@@ -781,9 +788,21 @@ export const getApproxCountMode = (
   if (query.after) return null
   if (query.collapse) return null
   if (query.count === 'false' || query.count === 'estimate' || query.count === 'exact') return null
-  const probability = Math.min(0.5, Math.max(cfg.minProbability, cfg.sampleTarget / dataset.count))
-  const randBound = Math.round(probability * RAND_RANGE)
-  return { cap: cfg.cap, randBound, probability: randBound / RAND_RANGE }
+  return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
+}
+
+/** count=estimate: the cheap hits leg keeps its historical track_total_hits=1000; an overflow is
+ *  now resolved into a real sampled estimate instead of the misleading bare "1000" of before.
+ *  No dataset-size gate — count=estimate is an explicit opt-in to estimation. */
+export const getEstimateCountMode = (
+  dataset: { count?: number },
+  query: Record<string, any>,
+  cfg: ApproxCountConfig
+): ApproxCountMode | null => {
+  if (cfg.minDatasetSize == null) return null // global kill switch
+  if (query.count !== 'estimate') return null
+  if (typeof dataset.count !== 'number' || dataset.count <= 0) return null
+  return { cap: 1000, ...getSamplingParams(dataset.count, cfg) }
 }
 
 /** Extrapolate the sample-slice count; the first request saw relation "gte", so never report ≤ cap. */
@@ -793,6 +812,11 @@ export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMo
 // ---- q_mode extension: or|and|adapt on top of legacy simple|complete ----
 
 export type QMode = 'simple' | 'complete' | 'and' | 'adapt'
+
+// adapt is the default: on large datasets, ranked multi-word searches ignore their
+// over-common words in filtering (never below the cap — see adaptive-q.ts); everywhere
+// else adapt degrades to plain OR, so small/filtered/exact requests behave as always.
+export const DEFAULT_Q_MODE = 'adapt'
 
 export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   const value = raw ?? dflt

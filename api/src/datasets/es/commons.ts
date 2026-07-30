@@ -35,7 +35,8 @@ import {
   virtualFilterClauses,
   descendantsFilterClause,
   getApproxCountMode,
-  parseQMode
+  parseQMode,
+  DEFAULT_Q_MODE
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -333,7 +334,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (q) {
       let qMode: string
       try {
-        qMode = parseQMode(query.q_mode, config.elasticsearch.qModeDefault)
+        qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       } catch (err: any) {
         throw httpError(400, err.message)
       }

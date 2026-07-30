@@ -169,32 +169,30 @@ export default (
     in: 'query',
     name: 'q_mode',
     description: `
-  Ce paramètre permet d'altérer le comportement du paramètre "q".
+  Ce paramètre permet d'altérer le comportement du paramètre "q". Le mode par défaut est "adapt".
+
+  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`qAdapt\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
 
   Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
   Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
 
   Le mode "and" exige que chaque mot de la recherche soit présent (le classement des résultats reste celui de la recherche large).
-
-  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`qAdapt\`). Une recherche dont le total est sous le seuil n'est pas modifiée.
     `,
     schema: {
       title: 'Mode de recherche',
       type: 'string',
-      default: 'simple',
-      enum: ['simple', 'or', 'complete', 'and', 'adapt']
+      default: 'adapt',
+      enum: ['adapt', 'simple', 'or', 'complete', 'and']
     }
   }, {
     in: 'query',
     name: 'q_required',
     description: `
-  Liste de mots de la recherche "q" (séparés par des virgules) dont la présence est exigée dans les résultats. Filtre non-scorant : le classement reste celui de la recherche large.
-
-  Renseigné automatiquement dans les liens de pagination (\`next\`) par le mode "adapt" pour garantir des pages cohérentes.
+  Paramètre technique renseigné automatiquement par le mode "adapt" dans les liens de pagination (\`next\`) pour garantir des pages cohérentes : liste de mots de la recherche "q" (séparés par des virgules) exigés dans les résultats, en filtre non-scorant. Ne pas construire manuellement.
     `,
     schema: {
-      title: 'Mots requis',
+      title: 'Mots requis (pagination adapt)',
       type: 'string'
     }
   }, {
@@ -484,7 +482,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
 
   - **true** (défaut) : total calculé. Sur une recherche textuelle triée par pertinence dans un grand jeu de données, un total dépassant un seuil (10 000 par défaut) est estimé par échantillonnage et signalé par \`totalRelation: "estimate"\` — le classement des résultats reste exact.
   - **exact** : total exact garanti, sans estimation.
-  - **estimate** : borne rapide (comptage limité à 1000).
+  - **estimate** : total estimé à moindre coût — exact jusqu'à 1000, estimé par échantillonnage au-delà (signalé par \`totalRelation: "estimate"\`).
   - **false** : pas de calcul du total.`,
     schema: {
       title: 'Calcul du total',
@@ -722,7 +720,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                         type: 'object',
                         description: 'Présent quand q_mode=adapt a ignoré au moins un mot trop fréquent pour le filtrage (les mots ignorés comptent toujours pour le classement).',
                         properties: {
-                          required: { type: 'array', items: { type: 'string' }, description: 'Les mots exigés dans les résultats.' },
                           ignored: { type: 'array', items: { type: 'string' }, description: 'Les mots trop fréquents, ignorés pour le filtrage.' }
                         }
                       },

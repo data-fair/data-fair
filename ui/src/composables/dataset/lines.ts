@@ -58,11 +58,11 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
 
   const total = ref<number>()
   const totalRelation = ref<string>()
-  const qAdapt = ref<{ required: string[], ignored: string[] }>()
+  const qAdapt = ref<{ ignored: string[] }>()
   const next = ref<string>()
   const results = ref<ExtendedResult[]>([])
 
-  type Lines = { total: number, totalRelation?: string, qAdapt?: { required: string[], ignored: string[] }, next?: string, results: Record<string, any>[] }
+  type Lines = { total: number, totalRelation?: string, qAdapt?: { ignored: string[] }, next?: string, results: Record<string, any>[] }
   let abortController: AbortController | undefined
   const fetchResults = useAsyncAction(async (reset?: boolean) => {
     if (!next.value) return

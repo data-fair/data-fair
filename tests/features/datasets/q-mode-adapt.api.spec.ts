@@ -52,7 +52,7 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
 
   test('adapt drops the most common word from filtering until the set clears the cap', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'adapt', size: 20 } })).data
-    assert.deepEqual(res.qAdapt, { required: ['rare'], ignored: ['commun'] })
+    assert.deepEqual(res.qAdapt, { ignored: ['commun'] })
     assert.equal(res.totalRelation, 'estimate')
     assert.ok(res.total >= 140 && res.total < 280, `estimate ${res.total} implausible for true 200`)
     // ignored words still score: 'commun rare' rows outrank 'rare autre' rows
@@ -97,12 +97,26 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
     assert.equal(bad.status, 400)
   })
 
-  test('q_mode=or and default keep todays behaviour', async () => {
+  test('adapt is the default mode', async () => {
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare' } })).data
+    assert.deepEqual(res.qAdapt, { ignored: ['commun'] })
+  })
+
+  test('q_mode=or and count=exact keep the broad exact behaviour', async () => {
     for (const params of [{ q: 'commun rare', count: 'exact' }, { q: 'commun rare', q_mode: 'or', count: 'exact' }] as Record<string, any>[]) {
       const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params })).data
       assert.equal(res.total, 2200) // union (60 both-words rows counted once)
       assert.equal(res.qAdapt, undefined)
     }
+  })
+
+  test('sqs syntax in q makes adapt step aside (plain cap + estimate)', async () => {
+    // '+commun rare' is expert sqs syntax (commun required, rare optional) — adapt must not
+    // reinterpret it; the request falls back to the capped search with a sampled estimate
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: '+commun rare', q_mode: 'adapt' } })).data
+    assert.equal(res.qAdapt, undefined)
+    assert.equal(res.totalRelation, 'estimate')
+    assert.ok(res.total >= 1600 && res.total < 2600, `estimate ${res.total} implausible for true 2060`)
   })
 
   test('hint names the ignored words', async () => {

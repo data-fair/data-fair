@@ -24,8 +24,8 @@ const rows = Array.from({ length: N }, (_, i) => ({
 }))
 const EXACT = rows.filter(r => r.str.startsWith('label')).length
 
-const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000, minProbability: 0.01 }
-const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000, minProbability: 0.01 }
+const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000, minProbability: 0.01, adaptFloorSafety: 1.2 }
+const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000, minProbability: 0.01, adaptFloorSafety: 1.2 }
 // probability = clamp(1000/2500, 0.01, 0.5) = 0.4 → sampled ≈ 0.4·EXACT, stderr ≈ 2.7%
 
 test.describe('approximate count for ranked text search', () => {
@@ -94,6 +94,19 @@ test.describe('approximate count for ranked text search', () => {
     assert.equal(capped.total, exactOther)
     assert.equal(capped.totalRelation, undefined)
     await setConfig('elasticsearch.approxCount', testCfg)
+  })
+
+  test('count=estimate now resolves overflows into a real sampled estimate', async () => {
+    // historical behaviour returned a bare misleading total of 1000; the hits leg keeps its
+    // cheap track_total_hits=1000 but the response now carries the sampled estimate, flagged
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', count: 'estimate' } })).data
+    assert.equal(res.totalRelation, 'estimate')
+    assert.ok(res.total > 1000, `estimate ${res.total} must exceed the estimate probe bound`)
+    assert.ok(res.total > EXACT * 0.8 && res.total < EXACT * 1.2, `estimate ${res.total} implausibly far from ${EXACT}`)
+    // below the probe bound the total stays exact and unflagged
+    const small = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'other', count: 'estimate' } })).data
+    assert.equal(small.totalRelation, undefined)
+    assert.ok(small.total < 1000)
   })
 
   test('hint explains the estimate and stops advising count=false', async () => {

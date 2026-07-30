@@ -102,9 +102,6 @@ module.exports = {
       minProbability: 0.01, // never sample below 1% (accuracy floor near the cap boundary)
       adaptFloorSafety: 1.2 // q_mode=adapt floor = cap × probability × this safety margin (sampled docs)
     },
-    // default q_mode when the request does not set one: 'simple' (current OR behaviour) or 'adapt'
-    // (ignore over-common words in filtering — see es/adaptive-q.ts). Flip per environment.
-    qModeDefault: 'simple',
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
     acceptYellowStatus: false, // change to "true" to tolerate a single node instance
