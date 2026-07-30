@@ -7,12 +7,16 @@ import { minShouldMatchExperiments } from './experiments/min-should-match.ts'
 import { msmSearchVsSplitExperiments } from './experiments/msm-search-vs-split.ts'
 import { terminateAfterExperiments } from './experiments/terminate-after.ts'
 import { msmSkewedExperiments } from './experiments/msm-skewed.ts'
+import { countSplitExperiments } from './experiments/count-split.ts'
 
 export interface QueryVariant {
   name: string
   description: string
   /** Builds a raw ES _search body; ctx exposes the seeded preset's field names. */
   body: (ctx: SchemaContext) => Record<string, any>
+  /** For count-sampling variants that carry no random_sampler agg (e.g. a `_rand`
+   *  range filter): the sampling probability used to extrapolate hits.total. */
+  samplerProbability?: number
 }
 
 export interface Experiment {
@@ -31,7 +35,8 @@ export const allExperiments: Experiment[] = [
   ...minShouldMatchExperiments,
   ...msmSearchVsSplitExperiments,
   ...terminateAfterExperiments,
-  ...msmSkewedExperiments
+  ...msmSkewedExperiments,
+  ...countSplitExperiments
 ]
 
 const byName = new Map(allExperiments.map(e => [e.name, e]))

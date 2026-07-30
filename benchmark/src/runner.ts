@@ -12,14 +12,24 @@ export interface QueryRunSample {
   topHitIds: string[]
 }
 
-/** Pull the metrics we care about out of one ES _search response. */
-export function extractSample (response: any, roundTripMs: number, bytes: number): QueryRunSample {
+/** Pull the metrics we care about out of one ES _search response. When a sampling
+ *  probability is known (a top-level `sample` random_sampler agg, or the variant's
+ *  explicit samplerProbability for e.g. a `_rand` range filter), the sampled count
+ *  extrapolated by 1/probability becomes the total, relation 'estimate'. */
+export function extractSample (response: any, roundTripMs: number, bytes: number, samplerProbability?: number): QueryRunSample {
   const hits = response.hits
+  let totalValue = hits.total?.value ?? 0
+  let totalRelation = hits.total?.relation ?? 'eq'
+  const sampledCount = response.aggregations?.sample?.doc_count ?? (samplerProbability ? hits.total?.value : undefined)
+  if (samplerProbability && typeof sampledCount === 'number') {
+    totalValue = Math.round(sampledCount / samplerProbability)
+    totalRelation = 'estimate'
+  }
   return {
     took: response.took,
     roundTripMs,
-    totalValue: hits.total?.value ?? 0,
-    totalRelation: hits.total?.relation ?? 'eq',
+    totalValue,
+    totalRelation,
     hitsReturned: hits.hits.length,
     bytes,
     topHitIds: hits.hits.map((h: any) => h._id)
@@ -61,6 +71,8 @@ export interface RunOptions {
   warmup?: number
   cold?: boolean
   profile?: boolean
+  /** Extrapolate hits.total (or the `sample` agg doc_count) by 1/probability — see extractSample. */
+  samplerProbability?: number
 }
 
 export interface RunResult {
@@ -76,12 +88,12 @@ export interface RunResult {
   profile?: ProfileSummary
 }
 
-async function searchOnce (es: Client, index: string, body: Record<string, any>): Promise<QueryRunSample> {
+async function searchOnce (es: Client, index: string, body: Record<string, any>, samplerProbability?: number): Promise<QueryRunSample> {
   const t0 = performance.now()
   const res = await es.search({ index, ...body })
   const roundTripMs = performance.now() - t0
   const bytes = Buffer.byteLength(JSON.stringify(res))
-  return extractSample(res, roundTripMs, bytes)
+  return extractSample(res, roundTripMs, bytes, samplerProbability ?? body.aggs?.sample?.random_sampler?.probability)
 }
 
 /** Run one ES query body N times serially and aggregate the per-query metrics. */
@@ -92,12 +104,12 @@ export async function runQuery (opts: RunOptions): Promise<RunResult> {
   const warmup = opts.warmup ?? 3
   const cold = opts.cold ?? false
 
-  for (let w = 0; w < warmup; w++) await searchOnce(es, index, body)
+  for (let w = 0; w < warmup; w++) await searchOnce(es, index, body, opts.samplerProbability)
 
   const samples: QueryRunSample[] = []
   for (let r = 0; r < runs; r++) {
     if (cold) await es.indices.clearCache({ index })
-    samples.push(await searchOnce(es, index, body))
+    samples.push(await searchOnce(es, index, body, opts.samplerProbability))
   }
 
   let profile: ProfileSummary | undefined
