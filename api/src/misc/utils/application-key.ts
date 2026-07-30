@@ -2,21 +2,128 @@
 import requestIp from 'request-ip'
 import config from '#config'
 import mongo from '#mongo'
+import memoize from 'memoizee'
+import clone from '@data-fair/lib-utils/clone.js'
 import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
-import { type ApplicationKey, type RequestWithResource } from '#types'
+import { type ApplicationKey, type Resource, type BypassPermissions } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
+import { reqResource, setReqBypassPermissions } from './req-context.ts'
+import { reqPublicBaseUrl } from './public-base-url.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
 
-const matchingHost = (req: Request) => {
-  if (!req.headers.origin) return true
-  if ((req as Request & { publicBaseUrl: string }).publicBaseUrl.startsWith(req.headers.origin)) return true
-  return false
+// these lookups run in front of every data request sent by embedded apps/portals and depend
+// only on slow-moving documents -> short-TTL memoization, same pattern and 30s staleness
+// budget as memoizedGetDataset (negative results are cached too, bogus keys are also hot)
+const memoOpts = { promise: true, primitive: true, max: 10000, maxAge: 1000 * 30 }
+
+const ownerFilterFromParts = (ownerType: string, ownerId: string, ownerDep: string) => ({
+  'owner.type': ownerType,
+  'owner.id': ownerId,
+  'owner.department': ownerDep || { $exists: false }
+})
+
+const findApplicationKey = memoize(async (applicationKeyId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilterFromParts(ownerType, ownerId, ownerDep) })
+}, { ...memoOpts, profileName: 'applicationKey' })
+
+const countParentApplicationOfDataset = memoize(async (appId: string, datasetHref: string, datasetId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.db.collection('applications').countDocuments({
+    id: appId,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  })
+}, { ...memoOpts, profileName: 'applicationKeyParentDataset' })
+
+const countParentApplicationOfApp = memoize(async (parentAppId: string, appId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.db.collection('applications').countDocuments({
+    id: parentAppId,
+    'configuration.applications.id': appId,
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  })
+}, { ...memoOpts, profileName: 'applicationKeyParentApp' })
+
+const findMatchingApplication = memoize(async (appId: string, datasetHref: string, datasetId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.applications.findOne({
+    id: appId,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
+}, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
+
+// called on applications-keys writes: same-node key changes apply immediately
+// (other nodes converge within the 30s TTL)
+export const clearApplicationKeysCaches = () => {
+  findApplicationKey.clear()
+  countParentApplicationOfDataset.clear()
+  countParentApplicationOfApp.clear()
+  findMatchingApplication.clear()
 }
 
-export default async (req: RequestWithResource, res: Response, next: NextFunction) => {
+// same-origin gate for anonymous writes — compares URL origins (`startsWith` previously let
+// `app.example.co` pass for `app.example.com` because the shorter is a prefix of the longer);
+// a missing Origin header is still accepted to keep non-browser clients working
+const matchingHost = (req: Request) => {
+  if (!req.headers.origin) return true
+  return new URL(reqPublicBaseUrl(req)).origin === req.headers.origin
+}
+
+// pure application-key matching core (no req dependency) shared by the HTTP middleware below and
+// the websocket canSubscribe handler (api/src/app.js): resolves a key + calling application against
+// a dataset and returns the permission bypass it grants (or null). `appId` is the calling
+// application (referer over HTTP, message.appId over websocket); leave it undefined for the embed
+// page context, where the key's own application must reference the dataset.
+export const resolveApplicationKeyBypass = async (applicationKeyId: string, dataset: Resource, appId?: string): Promise<{ applicationKey: ApplicationKey, bypassPermissions: BypassPermissions } | null> => {
+  const ownerType = dataset.owner.type
+  const ownerId = dataset.owner.id
+  const ownerDep = dataset.owner.department || ''
+  const datasetHref = `${config.publicUrl}/api/v1/datasets/${dataset.id}`
+
+  const applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
+  if (!applicationKey) return null
+
+  let resolvedAppId = appId
+  if (resolvedAppId === undefined) {
+    // dataset embed page context: the key's own application must reference the dataset
+    resolvedAppId = applicationKey._id
+    if (!await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
+  } else if (applicationKey._id !== resolvedAppId) {
+    // the application key can be matched to a parent application key (case of dashboards, etc)
+    if (!await countParentApplicationOfApp(applicationKey._id, resolvedAppId, ownerType, ownerId, ownerDep)) return null
+  }
+
+  const cachedMatchingApplication = await findMatchingApplication(resolvedAppId, datasetHref, dataset.id, ownerType, ownerId, ownerDep)
+  // cloned: the datasetsFilters defaults below mutate the doc, the cached copy must stay pristine
+  const matchingApplication = cachedMatchingApplication && clone(cachedMatchingApplication)
+  debug('matchingApplication', matchingApplication)
+  if (!matchingApplication) return null
+
+  // apply some permissions based on app configuration
+  // some dataset might need to be readable, some other writable only for createLine, etc
+  const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && (d.href === datasetHref || d.id === dataset.id))
+  if (datasetIndex === undefined || datasetIndex === -1) {
+    debug('dataset is not referenced in app configuration')
+    return null
+  }
+  const matchingApplicationDataset = matchingApplication.configuration?.datasets?.[datasetIndex]
+  if (!matchingApplicationDataset) return null
+  debug('matchingApplicationDataset', matchingApplicationDataset)
+  const datasetFilters = matchingApplication.baseApp?.datasetsFilters?.[datasetIndex]
+  debug('matching baseApp.datasetFilters', datasetFilters)
+  if (datasetFilters?.properties) {
+    for (const key of Object.keys(datasetFilters.properties)) {
+      if (datasetFilters.properties[key].default && !(key in dataset)) matchingApplicationDataset[key] = datasetFilters.properties[key].default
+      if (datasetFilters.properties[key].const) matchingApplicationDataset[key] = datasetFilters.properties[key].const
+    }
+  }
+
+  const bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
+  return { applicationKey, bypassPermissions }
+}
+
+export default async (req: Request, res: Response, next: NextFunction) => {
   const referer = (req.headers.referer || req.headers.referrer) as string | undefined
   if (!referer) return next()
   let refererUrl
@@ -29,21 +136,16 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
   }
   if (!refererUrl) return next()
 
-  const dataset = req.resource
+  const dataset = reqResource(req)
 
-  const ownerFilter = {
-    'owner.type': dataset.owner.type,
-    'owner.id': dataset.owner.id,
-    'owner.department': dataset.owner.department ? dataset.owner.department : { $exists: false }
-  }
-  const datasetHref = `${config.publicUrl}/api/v1/datasets/${dataset.id}`
+  let applicationKeyId: string | null = null
+  // undefined keeps the dataset embed page context; a string marks an application as the caller
   let appId: string | undefined
-  let applicationKey: ApplicationKey | null = null
 
   if (refererUrl.pathname.startsWith('/data-fair/embed/dataset/')) {
     debug('referer is an embed page')
     let refererDatasetId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/embed/dataset/', '').split('/')[0])
-    let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+    applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
     if (refererDatasetId !== dataset.id) {
       const keys = refererDatasetId.split(':')
       if (keys.length > 1) {
@@ -51,23 +153,10 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         refererDatasetId = refererDatasetId.replace(keys[0] + ':', '')
       }
     }
-    if (!applicationKeyId) return next()
-    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
-    if (!applicationKey) return next()
-    appId = applicationKey._id
-    const isParentApplicationKey = await mongo.db.collection('applications')
-      .countDocuments({
-        id: applicationKey._id,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
-        ...ownerFilter
-      })
-    if (!isParentApplicationKey) return next()
-  }
-
-  if (refererUrl.pathname.startsWith('/data-fair/app/')) {
+  } else if (refererUrl.pathname.startsWith('/data-fair/app/')) {
     debug('referer is an app')
     appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
-    let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+    applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
     debug('applicationKeyId from referer searchParams', applicationKeyId)
     if (!applicationKeyId) {
       const keys = appId.split(':')
@@ -77,90 +166,57 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         appId = appId.replace(keys[0] + ':', '')
       }
     }
-    if (!applicationKeyId) return next()
-    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
-    debug('found applicationKey', applicationKey, appId)
-    if (!applicationKey) return next()
-    if (applicationKey._id !== appId) {
-      // the application key can be matched to a parent application key (case of dashboards, etc)
-      const isParentApplicationKey = await mongo.db.collection('applications')
-        .countDocuments({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
-      debug('found isParentApplicationKey', isParentApplicationKey)
-      if (!isParentApplicationKey) return next()
+  } else {
+    return next()
+  }
+
+  if (!applicationKeyId) return next()
+
+  const match = await resolveApplicationKeyBypass(applicationKeyId, dataset, appId)
+  if (!match) return next()
+  const { applicationKey, bypassPermissions } = match
+
+  // this is basically the "crowd-sourcing" use case
+  // we apply some anti-spam protection
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    debug('protect anonymous write operation with multiple security tools')
+    // 1rst level of anti-spam prevention, no cross origin requests on this route
+    if (!matchingHost(req)) {
+      return res.status(405).send(req.__('errors.noCrossDomain'))
+    }
+
+    // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
+    const anonymousToken = req.get('x-anonymousToken')
+    let tokenContent
+    if (!anonymousToken) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
+    try {
+      tokenContent = await session.verifyToken(anonymousToken)
+    } catch (err: any) {
+      if (err.name === 'NotBeforeError') {
+        return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
+      } else {
+        return res.status(401).type('text/plain').send('Invalid token')
+      }
+    }
+    if (!tokenContent.anonymousAction) return res.status(401).type('text/plain').send('Invalid token')
+
+    // 3rd level of anti-spam protection, simple rate limiting based on ip
+    if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
+      console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
+      return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
     }
   }
 
-  if (applicationKey && appId) {
-    const matchingApplication = await mongo.applications
-      .findOne({
-        id: appId,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
-        ...ownerFilter
-      }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
-    debug('matchingApplication', matchingApplication)
-    if (matchingApplication) {
-      // this is basically the "crowd-sourcing" use case
-      // we apply some anti-spam protection
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        debug('protect anonymous write operation with multiple security tools')
-        // 1rst level of anti-spam prevention, no cross origin requests on this route
-        if (!matchingHost(req)) {
-          return res.status(405).send(req.__('errors.noCrossDomain'))
-        }
-
-        // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
-        const anonymousToken = req.get('x-anonymousToken')
-        let tokenContent
-        if (!anonymousToken) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
-        try {
-          tokenContent = await session.verifyToken(anonymousToken)
-        } catch (err: any) {
-          if (err.name === 'NotBeforeError') {
-            return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
-          } else {
-            return res.status(401).type('text/plain').send('Invalid token')
-          }
-        }
-        if (!tokenContent.anonymousAction) throw new Error('wrong type of token used for anonymous action')
-
-        // 3rd level of anti-spam protection, simple rate limiting based on ip
-        if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
-          console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
-          return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
-        }
-      }
-
-      // apply some permissions based on app configuration
-      // some dataset might need to be readable, some other writable only for createLine, etc
-      const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && d.href === datasetHref)
-      if (datasetIndex === undefined || datasetIndex === -1) {
-        debug('dataset is not referenced in app configuration')
-        return next()
-      }
-      const matchingApplicationDataset = matchingApplication.configuration?.datasets?.[datasetIndex]
-      if (!matchingApplicationDataset) return next()
-      debug('matchingApplicationDataset', matchingApplicationDataset)
-      const datasetFilters = matchingApplication.baseApp?.datasetsFilters?.[datasetIndex]
-      debug('matching baseApp.datasetFilters', datasetFilters)
-      if (datasetFilters?.properties) {
-        for (const key of Object.keys(datasetFilters.properties)) {
-          if (datasetFilters.properties[key].default && !(key in dataset)) matchingApplicationDataset[key] = datasetFilters.properties[key].default
-          if (datasetFilters.properties[key].const) matchingApplicationDataset[key] = datasetFilters.properties[key].const
-        }
-      }
-
-      req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-      debug('apply bypass permissions', req.bypassPermissions)
-      if (!reqUser(req)) {
-        debug('set pseudo user')
-        setReqUser(
-          req,
-          { id: applicationKey.id, name: applicationKey.title, email: '', organizations: [] },
-          undefined, undefined, undefined,
-          { isApplicationKey: true }
-        )
-      }
-    }
+  setReqBypassPermissions(req, bypassPermissions)
+  debug('apply bypass permissions', bypassPermissions)
+  if (!reqUser(req)) {
+    debug('set pseudo user')
+    setReqUser(
+      req,
+      { id: applicationKey.id, name: applicationKey.title, email: '', organizations: [] },
+      undefined, undefined, undefined,
+      { isApplicationKey: true }
+    )
   }
   next()
 }

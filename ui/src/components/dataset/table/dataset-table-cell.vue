@@ -30,9 +30,10 @@
         v-if="result._geopoint"
         :icon="mdiMap"
         :title="t('showMapPreview')"
+        :density="dense ? 'comfortable' : 'default'"
         position="absolute"
         size="x-small"
-        variant="flat"
+        variant="text"
         style="right: 4px; top: 50%; transform: translateY(-50%); z-index: 100;"
         @click="emit('showMapPreview')"
       />
@@ -188,6 +189,7 @@ const { t } = useI18n()
 <style>
 .dataset-table-cell {
   position: relative;
+  z-index: 0;
 }
 .dataset-table-cell.sticky {
   position: sticky;

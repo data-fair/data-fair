@@ -18,13 +18,126 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
   return true
 }
 
+// The keyword `ignore_above` character limit. Values longer than this are dropped from the keyword
+// index and its doc_values (kept only in _source), so term/exists/range/sort/agg on the main keyword
+// field silently miss them. See docs/architecture/load-management.md.
+export const KEYWORD_IGNORE_ABOVE = 200
+
+// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
+// string. Only these are exposed to the ignore_above truncation problem.
+// Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
+// ignore_above limit, so they are excluded.
+// Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
+// they are also excluded — a term filter with a long operand on such a field should silently match
+// nothing rather than 400.
+const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
+export const isLengthLimitedKeyword = (prop: any): boolean =>
+  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  prop?.['x-capabilities']?.nativeWildcard !== true &&
+  prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
+
+// Exact (term/terms) filter target — OPERAND-DRIVEN, independent of whether the column currently
+// holds long values: a value longer than the limit can never be a keyword term, so
+//  - short values (≤ limit) keep the fast keyword main field
+//  - long values (> limit) route to `.wildcard` when configured, else are impossible (caller 400s).
+export const resolveExactKeywordTarget = (prop: any, values: string[]): { field: string } | { impossible: true } => {
+  if (!isLengthLimitedKeyword(prop)) return { field: prop.key }
+  const anyTooLong = values.some(v => typeof v === 'string' && v.length > KEYWORD_IGNORE_ABOVE)
+  if (!anyTooLong) return { field: prop.key }
+  if (hasCapability(prop, 'wildcard')) return { field: prop.key + '.wildcard' }
+  return { impossible: true }
+}
+
+// Existence-check fields. `flagged` = the column actually dropped values (persisted detection). When
+// not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
+// no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
+// sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
+export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
+  if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
+  if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
+  const fields = [prop.key]
+  if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
+  else if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  return fields
+}
+
+// Prefix (_starts) / range filter field. Un-flagged or non-keyword → fast keyword path, certain.
+// Flagged with `.wildcard` → route there (length-safe). Flagged without wildcard → keep keyword but
+// mark `uncertain` (a short prefix can still match a dropped long value; not validatable by operand).
+export const resolveRangeOrPrefixField = (prop: any, flagged: boolean): { field: string, uncertain: boolean } => {
+  if (!isLengthLimitedKeyword(prop) || !flagged) return { field: prop.key, uncertain: false }
+  if (hasCapability(prop, 'wildcard')) return { field: prop.key + '.wildcard', uncertain: false }
+  return { field: prop.key, uncertain: true }
+}
+
 /**
  * Require a capability on a property, throwing an HTTP error if not present
  */
 export const requiredCapability = (prop: any, filterName: string, capability: string = 'index'): void => {
   if (!hasCapability(prop, capability)) {
-    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
+}
+
+/**
+ * The single source of truth: maps each filter suffix to the capability it requires.
+ * Declared in canonical order (matches OpenAPI doc output). `_search` is any-of (text OR textStandard).
+ */
+export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
+  _eq: 'index',
+  _neq: 'index',
+  _in: 'index',
+  _nin: 'index',
+  _lt: 'index',
+  _lte: 'index',
+  _gt: 'index',
+  _gte: 'index',
+  _starts: 'index',
+  _exists: 'index',
+  _nexists: 'index',
+  _contains: 'wildcard',
+  _search: ['text', 'textStandard']
+}
+
+/**
+ * The filter suffixes valid for a column, in canonical order.
+ * NOTE: allocates — call only on error/doc paths, never on the query success path.
+ */
+export const getColumnFilters = (prop: any): string[] => {
+  const filters: string[] = []
+  for (const suffix of Object.keys(FILTER_CAPABILITIES)) {
+    const cap = FILTER_CAPABILITIES[suffix]
+    const ok = Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
+    if (ok) filters.push(suffix)
+  }
+  return filters
+}
+
+/**
+ * A fuller summary of the query operations a column supports.
+ * Mirrors the enforcement in commons.js (parseSort), values-agg.js, metric-agg.js, words-agg.js.
+ * NOTE: allocates — call only on error/doc paths.
+ */
+export const getColumnOperations = (prop: any): { filters: string[], sortable: boolean, groupable: boolean, metric: boolean, wordAgg: boolean } => {
+  const caps = prop['x-capabilities'] ?? {}
+  return {
+    filters: getColumnFilters(prop),
+    sortable: caps.values !== false || caps.insensitive !== false,
+    groupable: !String(prop.key).startsWith('_geo') && caps.values !== false,
+    metric: ['number', 'integer'].includes(prop.type) && caps.values !== false,
+    wordAgg: hasCapability(prop, 'textAgg')
+  }
+}
+
+/**
+ * A French, agent- and user-friendly sentence describing what a column supports.
+ * Appended to capability-rejection errors so the caller can self-correct.
+ * NOTE: allocates — call only on error paths.
+ */
+export const columnOperationsHint = (prop: any): string => {
+  const ops = getColumnOperations(prop)
+  const filters = ops.filters.length ? ops.filters.join(', ') : 'aucun'
+  return `Opérations disponibles sur ce champ — filtres : ${filters} ; tri : ${ops.sortable ? 'oui' : 'non'} ; groupement : ${ops.groupable ? 'oui' : 'non'}.`
 }
 
 export const tooLongError: ExtractedError = {
@@ -116,13 +229,13 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
     }
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
-      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
+      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: KEYWORD_IGNORE_ABOVE, normalizer: 'insensitive_normalizer' }
     }
     if (capabilities.wildcard) {
       // support wildcard filters
       innerFields.wildcard = { type: 'wildcard' }
     }
-    esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
+    esProp = { type: 'keyword', ignore_above: KEYWORD_IGNORE_ABOVE, fields: innerFields, index, doc_values: values }
   }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
@@ -142,11 +255,107 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
     }
   }
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
+  // _attachment_url holds an absolute URL (publicUrl + datasetId + lineId + md5 + filename) that can
+  // easily exceed the keyword ignore_above:200 limit (e.g. sha256 line ids or long filenames). Over the
+  // limit the value is dropped from the index (kept only in _source), so _exists_ / term / agg / sort
+  // silently return nothing. The wildcard type is built for long machine strings and has no such limit.
+  if (prop.key === '_attachment_url') esProp = { type: 'wildcard' }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
   if (prop.key === '_id') return null
 
   return esProp
+}
+
+// ---- metric aggregations (metric_agg, simple_metrics_agg, values_agg/geo_agg metric params) ----
+
+export const acceptedMetricAggsByType: Record<string, string[]> = {
+  number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  string: ['min', 'max', 'cardinality', 'value_count'],
+  other: ['value_count']
+}
+export const acceptedMetricAggs: string[] = []
+for (const metrics of Object.values(acceptedMetricAggsByType)) {
+  for (const metric of metrics) {
+    if (!acceptedMetricAggs.includes(metric)) acceptedMetricAggs.push(metric)
+  }
+}
+export const defaultMetricAggsByType: Record<string, string[]> = {
+  number: ['min', 'max'],
+  string: ['cardinality'],
+  other: []
+}
+
+export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+  if (field.type === 'integer' || field.type === 'number') {
+    return 'number'
+  } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
+    return 'number'
+  } else if (field.type === 'string') {
+    return 'string'
+  } else {
+    return 'other'
+  }
+}
+
+// ES types that can serve the doc-values based metric aggregations. Geo types, object/nested
+// and disabled mappings cannot.
+const METRIC_AGGREGATABLE_ES_TYPES = new Set(['long', 'integer', 'double', 'boolean', 'date', 'keyword', 'wildcard'])
+
+// Whether metric aggregations can run at all on the column. Derived from the actual ES mapping
+// (esProperty) so it cannot drift from it: geometry-concept columns are mapped
+// {type: keyword, doc_values: false}, `values: false` columns lose their doc_values, the geo
+// calculated columns are geo_point / geo_shape, etc. Aggregating on any of those makes ES fail
+// the whole request ("all shards failed" / fielddata errors).
+export const isMetricAggregatable = (prop: any): boolean => {
+  const esProp = esProperty(prop, '')
+  if (!esProp?.type || !METRIC_AGGREGATABLE_ES_TYPES.has(esProp.type)) return false
+  return esProp.doc_values !== false
+}
+
+export const assertMetricAccepted = (field: any, metric: string): void => {
+  const acceptedAggs = acceptedMetricAggsByType[getMetricType(field)]
+  if (!acceptedAggs?.includes(metric)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+  }
+  if (!isMetricAggregatable(field)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. Ce champ ne supporte pas les agrégations de métriques.`)
+  }
+}
+
+// The effective columns list of /simple_metrics_agg — shared by the aggregations builder
+// (metric-agg.ts) and the per-request hint (query-advice.ts) so they always agree.
+// Explicit `fields` values are strictly validated (400 before any ES call); the default list
+// keeps only the columns that can actually serve the requested (or default) metrics, so it
+// never produces an ES-level failure.
+export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>): string[] => {
+  const globalMetrics: string[] | undefined = query.metrics ? String(query.metrics).split(',') : undefined
+  if (globalMetrics) {
+    for (const metric of globalMetrics) {
+      if (!acceptedMetricAggs.includes(metric)) throw httpError(400, `La métrique "${metric}" n'existe pas.`)
+    }
+  }
+  if (query.fields) {
+    const fields: string[] = String(query.fields).split(',')
+    for (const key of fields) {
+      const field = dataset.schema.find((f: any) => f.key === key)
+      if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!hasCapability(field, 'values')) {
+        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+      }
+      if (!isMetricAggregatable(field)) {
+        throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}. Ce champ ne supporte pas les agrégations de métriques.`)
+      }
+      if (globalMetrics) {
+        for (const metric of globalMetrics) assertMetricAccepted(field, metric)
+      }
+    }
+    return fields
+  }
+  return dataset.schema
+    .filter((f: any) => !f['x-calculated'] && hasCapability(f, 'values') && isMetricAggregatable(f))
+    .filter((f: any) => !globalMetrics || globalMetrics.every(m => acceptedMetricAggsByType[getMetricType(f)].includes(m)))
+    .map((f: any) => f.key)
 }
 
 // A dataset whose `q` query would otherwise expand into a huge `fields` array is given a
@@ -392,4 +601,128 @@ export const escapeFilter = (val: any): any => {
     ) return '\\' + char
     else return char
   }).join('')
+}
+
+/**
+ * ES field to aggregate on for a schema property in a unique constraint.
+ * String columns use the base keyword field, or the length-safe `.wildcard`
+ * sub-field when the wildcard capability is enabled (avoids ignore_above:200
+ * silently dropping long values from the aggregation).
+ */
+export const unicityAggField = (prop: any): string => {
+  if (isLengthLimitedKeyword(prop) && hasCapability(prop, 'wildcard')) return `${prop.key}.wildcard`
+  return prop.key
+}
+
+/**
+ * Human-readable label for one part of a unicity duplicate-group composite key (used to build
+ * `DuplicateGroup.keyLabel`, itself written as `raw_value` in the validation diagnostic CSV).
+ * ES composite `terms` sources on `date`/`date-time` columns return the raw epoch-millis bucket
+ * key, which is meaningless to a user reading the CSV — convert it to the date the user would
+ * recognize: `YYYY-MM-DD` for `format: 'date'` (mirrors the slicing convention already used for
+ * date buckets in `es/values.ts`), full ISO 8601 for `format: 'date-time'`. Every other column
+ * type (string, number, boolean, …) is passed through as its string form, unchanged.
+ * Defensive: composite `terms` sources never enable `missing_bucket`, and ES always emits a
+ * finite numeric key for a `date`-mapped field, so a null/undefined/non-finite/non-numeric key
+ * should never reach here — but a stray one must never crash the indexer, so it degrades to ''
+ * / the raw string instead of throwing (a bad `Date` would otherwise throw a RangeError on
+ * NaN/±Infinity, or silently produce "Invalid Date").
+ */
+export const unicityKeyPartLabel = (prop: any, value: any): string => {
+  if (value === null || value === undefined) return ''
+  const isDateColumn = prop?.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')
+  if (isDateColumn && Number.isFinite(value)) {
+    const iso = new Date(value).toISOString()
+    return prop.format === 'date' ? iso.slice(0, 10) : iso
+  }
+  return String(value)
+}
+
+/**
+ * Builds the aggregations object for the words aggregation.
+ * significant_text is costly, and we look for approximative statistics in words-agg
+ * not for exhaustivity, so we run it on a sample.
+ */
+export const buildWordsAggs = (aggType: 'terms' | 'significant_text', field: string, size: number) => {
+  const aggs: Record<string, any> = {
+    sample: {
+      sampler: {
+        shard_size: 1000
+      },
+      aggregations: {
+        words: {
+          [aggType]: { field, size }
+        }
+      }
+    }
+  }
+
+  if (aggType === 'significant_text') {
+    aggs.sample.aggregations.words.significant_text.filter_duplicate_text = true
+  }
+
+  return aggs
+}
+
+// ---- Scoped filters for virtual datasets ----
+
+// element of dataset.virtual.filters (see contract in api/types/dataset/schema.js)
+export type VirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+
+// One arrival of a non-virtual descendant of a virtual dataset, as resolved by the traversal in
+// utils/virtual.ts and attached to the queryable dataset as `dataset.descendants` — the single
+// source of truth for both the multi-index target (aliasName) and the scoped filters below.
+// `index` is resolved by the producer so this module stays config-free.
+// `filters` holds the merged filters of the virtual ancestors on this path; absent = unfiltered.
+// The array is ARRIVAL-based: a descendant reachable both through a filtered and an unfiltered path
+// appears twice, once with filters and once without, which gives union-of-paths semantics below.
+export interface QueryableDescendant {
+  id: string
+  index: string
+  filters?: VirtualFilter[]
+}
+
+// translate dataset.virtual.filters into ES filter clauses
+export const virtualFilterClauses = (filters: VirtualFilter[]): any[] => {
+  const clauses: any[] = []
+  for (const f of filters) {
+    if (!f.values || !f.values.length) continue
+    if (f.operator === 'nin') {
+      if (f.values.length === 1) clauses.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
+      else clauses.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
+    } else {
+      if (f.values.length === 1) clauses.push({ term: { [f.key]: f.values[0] } })
+      else clauses.push({ terms: { [f.key]: f.values } })
+    }
+  }
+  return clauses
+}
+
+// a single filter clause restricting each filtered descendant's subtree to the rows matching
+// the merged filters of its virtual ancestors. term/terms on the _index metafield match index
+// aliases, so the same names used by aliasName work here.
+// returns null when no descendant carries filters: an unfiltered virtual dataset must add no
+// clause at all, keeping its query shape identical to a non-virtual one.
+export const descendantsFilterClause = (descendants: QueryableDescendant[] | undefined): any | null => {
+  // cheap fail-loud check: this is a programming error (a caller that resolved descendants in a
+  // stale shape, or not at all), never user input, so it is an internal 500-class error. Types
+  // alone cannot be trusted here, the repo's tsc is not clean.
+  if (!Array.isArray(descendants)) throw new Error('[internal] missing descendants on a virtual dataset, refusing to query it unscoped')
+  // validate every element up front, before the early return below, so a malformed descendant is
+  // always caught rather than only when some sibling happens to carry filters
+  for (const descendant of descendants) {
+    if (!descendant.index) throw new Error(`[internal] descendant ${descendant.id} has no resolved index, refusing to query it unscoped`)
+  }
+  if (!descendants.some(d => d.filters?.length)) return null
+  const should: any[] = []
+  const unfilteredIndices = new Set<string>()
+  for (const descendant of descendants) {
+    if (!descendant.filters?.length) unfilteredIndices.add(descendant.index)
+  }
+  if (unfilteredIndices.size) should.push({ terms: { _index: [...unfilteredIndices] } })
+  for (const descendant of descendants) {
+    if (!descendant.filters?.length) continue
+    should.push({ bool: { filter: [{ term: { _index: descendant.index } }, ...virtualFilterClauses(descendant.filters)] } })
+  }
+  return { bool: { minimum_should_match: 1, should } }
 }

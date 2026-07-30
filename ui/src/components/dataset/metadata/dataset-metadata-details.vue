@@ -63,7 +63,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('dataUpdated') }}
           </div>
-          <div>{{ dataset.dataUpdatedBy?.name }} {{ formatDate(dataset.dataUpdatedAt) }}</div>
+          <div>{{ formatDate(dataset.dataUpdatedAt) }}</div>
         </v-list-item>
       </v-col>
 
@@ -77,7 +77,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('metadataUpdated') }}
           </div>
-          <div>{{ dataset.updatedBy?.name }} {{ formatDate(dataset.updatedAt) }}</div>
+          <div>{{ formatDate(dataset.updatedAt) }}</div>
         </v-list-item>
       </v-col>
 
@@ -90,7 +90,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('created') }}
           </div>
-          <div>{{ dataset.createdBy?.name }} {{ formatDate(dataset.createdAt) }}</div>
+          <div>{{ formatDate(dataset.createdAt) }}</div>
         </v-list-item>
       </v-col>
 

@@ -1,12 +1,12 @@
 import * as journals from '../../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
-import * as csvSniffer from '../../misc/utils/csv-sniffer.js'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as csvSniffer from '../../misc/utils/csv-sniffer.ts'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetsService from '../../datasets/service.js'
-import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.js'
-import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.js'
+import * as datasetsService from '../../datasets/service.ts'
+import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
+import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.ts'
 import outOfCharacter from 'out-of-character'
 import debugLib from 'debug'
 import type { Event, FileDataset } from '#types'
@@ -19,7 +19,7 @@ export default async function (dataset: FileDataset) {
 
   debug('extract file sample')
   const fileSample = await filesStorage.fileSample(datasetUtils.filePath(dataset))
-  if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
+  if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonnage du fichier tabulaire, il est vide')
   let decodedSample
   try {
     decodedSample = (dataset.file.encoding === 'UTF-8' || !dataset.file.encoding)
@@ -74,8 +74,18 @@ export default async function (dataset: FileDataset) {
       }
     }
   }
-  if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    throw httpError(400, `[noretry] Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
+  // the concept counts whether auto-detected on this analysis (file.schema) or manually
+  // designated on a previous cycle (schema, kept across re-analysis) — otherwise the
+  // warning would re-appear on every re-upload of an already-designated dataset.
+  const hasDocumentConcept = dataset.file.schema.some(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') ||
+    !!dataset.schema?.some(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (attachments.length && !hasDocumentConcept) {
+    // non-blocking: attachments are dropped at finalize; the message tells the user to
+    // designate the column before re-uploading (re-uploading first would just drop them again).
+    await journals.log('datasets', dataset, {
+      type: 'error',
+      data: `Des pièces jointes ont été chargées mais aucune colonne n'a pu être associée automatiquement aux fichiers ; elles n'ont donc pas été conservées. Attribuez le concept « Document Numérique Attaché » à la colonne contenant les chemins vers les pièces jointes, puis rechargez les pièces jointes. Exemples de fichiers attendus : ${attachments.slice(0, 3).join(', ')}.`
+    } as Event)
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {

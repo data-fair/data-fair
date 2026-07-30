@@ -198,6 +198,9 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
     assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
     assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    // the localized "cause" param must be interpolated into the notification body
+    assert.ok(notifications[2].body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${notifications[2].body.fr}"`)
+    assert.ok(notifications[2].body.en.includes('manual validation'), `en body should mention the cause, got "${notifications[2].body.en}"`)
   })
 
   test('create a draft when updating the data file and cancel it', async () => {

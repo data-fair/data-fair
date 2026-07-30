@@ -3,8 +3,37 @@
 // It is strongly recommended to use CommonJS in NodeJS.
 // https://docs.sheetjs.com/docs/getting-started/installation/nodejs#usage
 import Module from 'node:module'
+import { prepareResultItem, prepareResultContext } from '../es/commons.ts'
+import { getFlatten } from '../utils/flatten.ts'
 const require = Module.createRequire(import.meta.url)
 const XLSX = require('@e965/xlsx')
+
+// Excel hard limit: a cell may not hold more than 32767 characters.
+export const MAX_CELL_LENGTH = 32767
+
+// Truncates string cells longer than MAX_CELL_LENGTH, in place. Skips the header
+// row (row 0). Only strings can exceed the limit, so numbers/dates/nullish are
+// ignored. The per-cell cost is a single O(1) length comparison; slice() runs
+// only in the rare over-limit case.
+// @param {any[][]} dataArray
+// @returns {{ count: number, columns: string[] }}
+export const truncateCells = (/** @type {any[][]} */ dataArray) => {
+  let count = 0
+  const columns = new Set()
+  const header = dataArray[0]
+  for (let r = 1; r < dataArray.length; r++) {
+    const row = dataArray[r]
+    for (let c = 0; c < row.length; c++) {
+      const v = row[c]
+      if (typeof v === 'string' && v.length > MAX_CELL_LENGTH) {
+        row[c] = v.slice(0, MAX_CELL_LENGTH)
+        count++
+        columns.add(header[c])
+      }
+    }
+  }
+  return { count, columns: [...columns] }
+}
 
 // cf https://stackoverflow.com/a/57673262
 const val2string = (val) => {
@@ -17,7 +46,24 @@ function fitToColumn (arrayOfArray) {
   return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => val2string(a2[i]).length))) }))
 }
 
-export default ({ results, bookType, query, dataset, downloadUrl, labels, datasetsMetadata }) => {
+/**
+ * @param {{ rawBuffer: Uint8Array, bookType: string, query: any, dataset: any, publicBaseUrl: string, downloadUrl: string, labels: any, datasetsMetadata: any }} params
+ */
+export default ({ rawBuffer, bookType, query, dataset, publicBaseUrl, downloadUrl, labels, datasetsMetadata }) => {
+  // Zero-copy path: the main thread transferred the RAW ES response bytes — parse here (wrap without
+  // copying, see rawEsBuffer2geojson) and run the SAME per-hit preparation read.ts used to run.
+  // ctx.rewriteAttachmentUrl reproduces search()'s _attachment_url rewrite (same shared function, same
+  // URLs — the contract the streamed json/csv/geojson modes already rely on). count + lastHitSort go
+  // back so read.ts reproduces the exact Link header the buffered path emitted.
+  const esResponse = JSON.parse(Buffer.from(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.byteLength).toString())
+  const hits = esResponse.hits.hits
+  const flatten = getFlatten(dataset, query.arrays === 'true')
+  const resultCtx = prepareResultContext(dataset, query)
+  resultCtx.rewriteAttachmentUrl = true
+  const results = hits.map((/** @type {any} */ hit) => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
+  const count = hits.length
+  const lastHitSort = hits[hits.length - 1]?.sort
+
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
   const allProperties = dataset.schema.filter(f => !f['x-calculated'])
@@ -38,6 +84,8 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       return value
     }))
   }
+  const truncate = bookType !== 'ods'
+  const truncation = truncate ? truncateCells(dataArray) : { count: 0, columns: [] }
   const dataSheet = XLSX.utils.aoa_to_sheet(dataArray, { cellDates: true })
   dataSheet['!cols'] = fitToColumn(dataArray)
   XLSX.utils.book_append_sheet(workbook, dataSheet, labels.data)
@@ -90,6 +138,16 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     }
   }
 
+  if (truncation.count > 0) {
+    metadataArray.push([
+      'truncated',
+      labels.truncated,
+      labels.truncatedValue
+        .replace('{count}', truncation.count)
+        .replace('{columns}', truncation.columns.join(', '))
+    ])
+  }
+  if (truncate) truncateCells(metadataArray)
   const metadataSheet = XLSX.utils.aoa_to_sheet(metadataArray, { cellDates: true })
   metadataSheet['!cols'] = fitToColumn(metadataArray)
   XLSX.utils.book_append_sheet(workbook, metadataSheet, labels.metadata)
@@ -111,6 +169,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       concept?.title || ''
     ])
   }
+  if (truncate) truncateCells(schemaArray)
   const schemaSheet = XLSX.utils.aoa_to_sheet(schemaArray, { cellDates: true })
   schemaSheet['!cols'] = fitToColumn(schemaArray)
   XLSX.utils.book_append_sheet(workbook, schemaSheet, labels.schema)
@@ -126,6 +185,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       }
     }
   }
+  if (truncate) truncateCells(labelsArray)
   const labelsSheet = XLSX.utils.aoa_to_sheet(labelsArray, { cellDates: true })
   labelsSheet['!cols'] = fitToColumn(labelsArray)
   XLSX.utils.book_append_sheet(workbook, labelsSheet, labels.labels)
@@ -139,10 +199,11 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     [labels.sort, query.sort],
     [labels.q, query.q]
   ]
+  if (truncate) truncateCells(queryArray)
   const querySheet = XLSX.utils.aoa_to_sheet(queryArray, { cellDates: true })
   querySheet['!cols'] = fitToColumn(queryArray)
   XLSX.utils.book_append_sheet(workbook, querySheet, labels.query)
 
   const result = XLSX.write(workbook, { type: 'buffer', cellDates: true, bookType, compression: true })
-  return result
+  return { sheet: result, count, lastHitSort }
 }

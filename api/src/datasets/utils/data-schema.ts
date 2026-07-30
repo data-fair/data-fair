@@ -2,7 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.js'
-import * as geoUtils from './geo.js'
+import * as geoUtils from './geo.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import * as settingsUtils from '../../misc/utils/settings.ts'
 import { cleanJsonSchemaProperty } from '@data-fair/data-fair-shared/schema.js'
@@ -150,10 +150,15 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
       schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: 'Type mime du fichier', description: 'Résultat d\'une détection automatique.' })
       schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: 'La taille en octet du fichier', description: 'Résultat d\'une détection automatique.' })
     }
+    // _attachment_url is mapped as an ES "wildcard" field (see esProperty): it holds a long absolute URL
+    // and only needs existence/exact filtering, not analyzed full-text or case-insensitive sub-fields.
+    // Disabling those capabilities keeps the list of queryable fields consistent with the wildcard mapping
+    // (which has no .text / .text_standard / .keyword_insensitive inner fields).
+    const attachmentUrlCapabilities = { text: false, textStandard: false, insensitive: false, nativeWildcard: true }
     if (dataset.attachmentsAsImage) {
-      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire de l\'image jointe', 'x-refersTo': 'http://schema.org/image' })
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire de l\'image jointe', 'x-refersTo': 'http://schema.org/image', 'x-capabilities': attachmentUrlCapabilities })
     } else {
-      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire du fichier joint' })
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire du fichier joint', 'x-capabilities': attachmentUrlCapabilities })
     }
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {

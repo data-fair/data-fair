@@ -4,16 +4,27 @@ import multer from 'multer'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
-import * as datasetUtils from './index.js'
+import * as datasetUtils from './index.ts'
 import { tmpDir, fsyncFile } from './files.ts'
-import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
-import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.js'
+import promisifyMiddleware from '../../misc/utils/promisify-middleware.ts'
+import { reqDatasetOptional, reqDraftOptional } from '../../misc/utils/req-context.ts'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
 import tmp from 'tmp-promise'
 import { pipeline } from 'node:stream/promises'
+import { Transform } from 'node:stream'
+import { createHash } from 'node:crypto'
 
-const fallbackMimeTypes = {
+// a pass-through stream that md5-hashes the bytes flowing through it, so the file's md5 is computed
+// in a single pass during upload — no local temp copy (S3 streams straight through) and no re-read.
+const md5Tee = () => {
+  const hash = createHash('md5')
+  const stream = new Transform({ transform (chunk, _enc, cb) { hash.update(chunk); cb(null, chunk) } })
+  return { stream, digest: () => hash.digest('hex') }
+}
+
+export const fallbackMimeTypes: Record<string, string> = {
   dbf: 'application/dbase',
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
@@ -29,29 +40,35 @@ const storage = {
   async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
     try {
       const filename = file.fieldname === 'attachments' ? 'attachments.zip' : file.originalname
-      if (req.dataset) {
-        const destination = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' || req._draft })
+      const dataset = reqDatasetOptional(req)
+      const tee = md5Tee()
+      if (dataset) {
+        const destination = datasetUtils.loadingDir({ ...dataset, draftReason: req.query.draft === 'true' || reqDraftOptional(req) })
         const finalPath = path.join(destination, filename)
-        await filesStorage.writeStream(file.stream, finalPath)
+        // forward a source read error to the tee so the storage upload rejects instead of hanging
+        file.stream.on('error', (err: any) => tee.stream.destroy(err))
+        await filesStorage.writeStream(file.stream.pipe(tee.stream), finalPath)
         const stats = await filesStorage.fileStats(finalPath)
         cb(null, {
           destination,
           filename,
           path: finalPath,
-          size: stats.size
+          size: stats.size,
+          md5: tee.digest()
         })
       } else {
         const destination = await tmp.tmpName({ tmpdir: tmpDir })
         const finalPath = path.join(destination, filename)
         await fs.ensureFile(finalPath)
-        await pipeline(file.stream, fs.createWriteStream(finalPath))
+        await pipeline(file.stream, tee.stream, fs.createWriteStream(finalPath))
         await fsyncFile(finalPath)
         const stats = await fs.stat(finalPath)
         cb(null, {
           destination,
           filename,
           path: finalPath,
-          size: stats.size
+          size: stats.size,
+          md5: tee.digest()
         })
       }
     } catch (err) {
@@ -65,7 +82,7 @@ const storage = {
       delete file.destination
       delete file.filename
       delete file.path
-      if (req.dataset) {
+      if (reqDatasetOptional(req)) {
         await filesStorage.removeFile(path)
       } else {
         await fs.remove(path)

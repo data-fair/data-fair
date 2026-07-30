@@ -128,7 +128,7 @@
 <script setup lang="ts">
 import { type DatasetFilter } from '~/composables/dataset/filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset/lines'
-import { type TableHeaderWithProperty } from './use-headers'
+import { type TableHeaderWithProperty, type TableSort } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
@@ -142,7 +142,7 @@ const { headers } = defineProps({
   hovered: { type: Object as () => ExtendedResultValue, default: null }
 })
 
-const sort = defineModel<{ direction: 1 | -1, key: string }>('sort')
+const sort = defineModel<TableSort>('sort')
 
 const emit = defineEmits<{
   hide: [header: TableHeaderWithProperty],

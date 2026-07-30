@@ -22,10 +22,25 @@ module.exports = {
     endpoint: `http://localhost:${process.env.S3_PORT}`,
     bucket: 'bucketdev',
     credentials: {
-      accessKeyId: '',
-      secretAccessKey: '',
+      accessKeyId: 'minioadmin',
+      secretAccessKey: 'minioadmin',
     },
     forcePathStyle: true
+  },
+  integrity: {
+    active: true,
+    s3: {
+      region: 'us-east-1',
+      endpoint: `http://localhost:${process.env.S3_PORT}`,
+      bucket: 'data-fair-integrity',
+      credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
+      forcePathStyle: true,
+    },
+    retention: { days: 2 },
+    // must stay <= retention.days above (startup assert in store-factory.ts) — deliberately
+    // shorter than retention.days (not equal) so tests can actually distinguish the two windows
+    attribution: { active: true, retentionDays: 1 },
+    lockWaitMs: 2000, // fast 409 in dev/tests when the per-dataset lock is held
   },
   directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
@@ -34,6 +49,7 @@ module.exports = {
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
   privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
+  privateRegistryUrl: `http://localhost:${process.env.REGISTRY_PORT}`,
   brand: {
     embed: '<div>application embed</div>'
   },
@@ -100,10 +116,9 @@ module.exports = {
     identities: 'identities-test-key',
     limits: 'limits-test-key',
     events: 'secret-notifications',
-    catalogs: 'secret-catalogs'
-  },
-  nuxtBuild: {
-    active: false
+    catalogs: 'secret-catalogs',
+    sendMails: 'testkey',
+    registry: 'secret-registry-internal'
   },
   applications: [{
     title: 'App test1',
@@ -141,7 +156,6 @@ module.exports = {
   assertImmutable: true,
   remoteAttachmentCacheDuration: 1000,
   compatODS: true,
-  browserLogLevel: 'debug',
   catalogs: [{
     title: 'Data.gouv.fr',
     href: 'https://www.data.gouv.fr'
@@ -149,7 +163,6 @@ module.exports = {
     title: 'Mydatacatalogue',
     href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
-  proxyNuxt: true,
   extraNavigationItems: [
     {
       id: 'test',

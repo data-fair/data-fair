@@ -49,14 +49,21 @@ defence; the in-app limiter (§4) backs it up and adds cost-awareness.
 - `express.json({ limit: '1000kb' })` body parser, bypassed for routes ending in `_bulk` or
   containing `bulk-searchs` (those stream).
 - Graceful shutdown via `http-terminator`.
-- Rate-limiting middleware is mounted on `/api/v1/datasets` and `/api/v1/compat-ods`.
+- Rate-limiting middleware is applied **per-route** inside the datasets and ODS routers — a single shared
+  `rateLimiting.middleware` instance placed right after each `apiKeyMiddlewareRead/Write/Admin`. It
+  deliberately runs *after* api-key resolution so a request authenticated with an api key is throttled at
+  the `user` tier rather than as anonymous; the trade-off is that each route opts in (routes with no
+  api-key middleware — e.g. `_diagnose`, `_reindex`, `read-api-key` — are not throttled, which is fine for
+  those admin paths). Remote-service proxy traffic uses its own `rateLimiting.remoteServiceMiddleware`.
 
 ## 4. In-app rate limiting (`api/src/misc/utils/rate-limiting.ts`)
 
-Implementation: the `limiter` library, **in-memory, per pod**. Because the limiters live in process
-memory, correctness across replicas relies on the reverse proxy hashing by client IP
-(`upstream-hash-by: $remote_addr`). Stale limiters/buckets are swept every 20 min. A limiter is
-keyed by `throttlingKey + (userId | clientIp) + limitType`. Limit types come from
+Implementation: homegrown `TokenBucket` + `SweptStore` (`api/src/misc/utils/`), **in-memory, per
+pod** (the `limiter` library was dropped after causing two production memory leaks — see below).
+Because the limiters live in process memory, correctness across replicas relies on the reverse
+proxy hashing by client IP (`upstream-hash-by: $remote_addr`). Stale limiters/buckets are swept
+every 20 min (one `SweptStore` rule for all three registries). A limiter is keyed by
+`throttlingKey + (userId | clientIp) + limitType`. Limit types come from
 `config.defaultLimits.apiRate` (`api/config/default.cjs`):
 
 | limitType | window | requests / window | `dynamic` bandwidth | `static` bandwidth |
@@ -67,12 +74,36 @@ keyed by `throttlingKey + (userId | clientIp) + limitType`. Limit types come fro
 | `postApplicationKey` | 60 s | 1 | — | — |
 | `appCaptures` | 60 s | 5 | — | — |
 
-Each request consumes **exactly one token** (`consume()` → `tryRemoveTokens(1)`), regardless of how
-expensive the query is. Bandwidth is throttled separately: handlers call `res.throttle()` /
+Each request consumes **exactly one token** (`consume()` → `TokenBucket.tryTake(1)`), regardless of
+how expensive the query is. Bandwidth is throttled separately: handlers call `res.throttle()` /
 `res.throttleEnd()` which wrap the response body in a token-bucket `Transform` (bucket size = rate ×
-4 burst factor). The middleware picks `user` vs `anonymous` based on `reqUser(req)`; specific limit
-types are passed explicitly elsewhere (application keys, captures, remote services). The header
-`x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>` bypasses everything (internal callers).
+4 burst factor). All buckets start **full**: the burst allowance is immediately usable, then
+sustained transfers converge to the configured rate. The middleware picks `user` vs `anonymous`
+based on `reqUser(req)`; specific limit types are passed explicitly elsewhere (application keys,
+captures, remote services). The header `x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>`
+bypasses everything (internal callers).
+
+The wait for bandwidth tokens lives in `api/src/misc/utils/throttle-wait.ts` and deliberately does
+**not** delegate the wait to the bucket (the dropped `limiter` library's `removeTokens` retried by
+awaited recursion, so under a saturated bucket every losing retry added a retained
+Promise+PromiseReaction level to a chain that only collapsed on the final grant — a prod pod
+accumulated millions of retained promises this way, chains up to ~12k hops, and died in a GC spiral
+every ~4 h; its abandoned waits also kept running after abort and still debited the bucket when
+granted, starving live waiters). `removeTokensOrAborted` instead polls `tryTake` in a flat loop
+with an abortable sleep sized by `msUntil`: O(1) retained memory per waiter, and an aborted waiter
+(client disconnect) exits without ever consuming tokens. On top of that, at most `maxPendingSends`
+(100) sends may wait on one bucket (i.e. per client × bandwidth type); beyond the cap the response
+is torn down (`df_throttle_queue_full_total{limitType}`) instead of queued, because each queued
+send pins its full response body for the whole starvation window — the same incident had ~1400
+queued responses pinning 700+ MB of buffers on a single per-IP bucket.
+
+> **Who counts as a "user":** the limiter keys the tier and the bucket off `rateLimitUser(req)`, not
+> `reqUser(req)` directly. It returns the request's user **except** for application-key sessions
+> (the pseudo-user the application-key middleware sets for embed / public `?key=` access, flagged
+> `isApplicationKey`), which are deliberately rate-limited as anonymous (by IP) — they are public-style
+> traffic the anonymous tier is meant to bound. Real users (JWT/cookie) and api keys get the `user`
+> tier. Because the limiter runs per-route after the api-key middleware (§3), `reqUser` is already
+> populated when it reads it.
 
 > **Weakness:** uniform cost-per-request, plus per-pod / per-IP scope. A burst of expensive queries
 > from one IP is allowed up to 600/min (anon) or 1200/min (user); a *distributed* flood (many IPs,
@@ -250,6 +281,30 @@ the ODS `records` catch skips its error log for `499`.
 
 For status `504` and `429`, `manageESError` (and the equivalent ODS-compat catch blocks) append the
 same `queryAdvice(req)` query-shape hint (see §4) to the message before it is returned.
+
+### `keyword ignore_above:200` truncation and per-request filter routing
+
+String columns (plain string or `uri-reference` format) are mapped as `{type:keyword, ignore_above:200}` (constant `KEYWORD_IGNORE_ABOVE = 200`, `api/src/datasets/es/operations.ts`). Elasticsearch silently **drops values longer than 200 characters from the keyword index and its `doc_values`** — the value is kept in `_source` but invisible to term/exists/range/sort and terms-aggregations on the main keyword field. Full-text sub-fields (`.text`, `.text_standard`) and the `q=` catch-all (`_search`) are unaffected. Fields mapped as ES `wildcard` type (e.g. `_attachment_url`, which carries `x-capabilities.nativeWildcard: true`) have no such limit and are excluded from the detection and routing logic by `isLengthLimitedKeyword`.
+
+**Detection at finalize time.** During finalization, `datasetInfos` (`manage-indices.ts`) runs a `_ignored` metadata-field terms aggregation (size 200) against the live index. `computeIgnoredKeywordFields` (`diagnose-warnings.ts`) maps the raw ignored field names (`key` and `key.keyword_insensitive`) back to schema columns that satisfy `isLengthLimitedKeyword`. The result is persisted as `dataset._esIgnoredKeywordFields: string[]` (an internal field stripped from public API output alongside `_esCopyToSearch`, in `api/src/datasets/utils/index.ts`). The flag refreshes on every finalize; for REST datasets a long value written between two finalizes is not flagged until the next finalize run.
+
+**Per-request filter routing** (`commons.ts`, pure resolvers in `operations.ts`).
+
+- `_eq` / `_in` / `_neq` / `_nin` — **operand-driven**, independent of the flag. A value longer than 200 characters can never be a keyword term: it routes to `.wildcard` when the column has the `wildcard` capability, and returns **400** otherwise. Short values (≤ 200 chars) keep the fast keyword main field unconditionally.
+- `_exists` / `_nexists` — **flag-gated**. Un-flagged columns use the fast keyword `exists` query. Flagged columns route to `.wildcard` (if configured) or, lacking that, union the keyword field with `.text_standard` (or `.text`) so that long values — which always produce at least one analyzed token — are also found. For a pure-keyword column (no `.text` / `.text_standard` sub-field) the union fallback is keyword-only, which cannot cover dropped long values; that case is surfaced by the `queryAdviceUncertainFilter` per-request hint instead.
+- `_starts` / `_gt` / `_gte` / `_lt` / `_lte` — **flag-gated**. Un-flagged columns keep the keyword path. Flagged columns route to `.wildcard` (if configured), or stay on the keyword path and set `uncertain: true` (a short prefix or range bound can still miss long dropped values; this feeds the `queryAdviceUncertainFilter` hint below).
+- The ODS-compat `where … =` equality path (`api-compat/ods/where.pegjs`) calls `resolveExactKeywordTarget` and throws **400** on `impossible`.
+
+**Visibility surfaces.**
+
+1. **Superadmin `esWarning` triage list.** `IgnoredKeywordValues` is ranked above `ShardingRecommended` in `WARNING_PRIORITY` (`diagnose-warnings.ts`), so it wins `pickPrimaryCode` when both apply. A flagged column is *actionable* (`isIgnoredColumnActionable`) when truncation still breaks an operation it offers: it lacks a `wildcard` alternative (filtering still degraded) **or** still advertises the sort/group capabilities (`values` / `insensitive`). This matters because `.wildcard` routing repairs filtering but NOT sorting or grouping — those read the truncated keyword / `keyword_insensitive` fields, so a wildcard-capable column that still sorts/groups is also flagged. The message is descriptive (the long values are excluded from exact-match filtering, sorting and grouping; review the column's technical capabilities) and does not prescribe a single fix.
+2. **Owner journal event.** At finalize, if any actionable column is newly flagged (not previously in `_esIgnoredKeywordFields`), a de-duped `ignored-keyword-values` journal event is written (type registered in `shared/events.json` with `warning` color; journal-only, no user notification). The event data lists the affected columns and the affected operations, leaving the remediation (enable `wildcard` for filtering, and/or disable sortable/groupable) to the owner.
+3. **Per-request 400 / correctness hint.** Impossible `_eq`/`_in`/`_neq`/`_nin` operands return `400`. For flagged columns where routing cannot fully compensate (uncertain `_starts`/range, or `_exists`/`_nexists` with no analyzed sub-field), `uncertainFilterAdvice` (`query-advice.ts`) appends a `queryAdviceUncertainFilter` localized sentence to the `hint` field via `attachQueryHint`. The hint is consumer-facing — it states the limitation and the affected columns only, without the owner-level "enable wildcard / reprocess" remediation. It fires regardless of query duration (correctness advisory, not a performance advisory).
+4. **Metrics hint on `/simple_metrics_agg`.** Metric aggregations read doc_values, so on a flagged column they are computed on incomplete data (dropped long values are invisible to `min`/`max`/`cardinality`/`value_count`). `truncatedMetricsAdvice` (`query-advice.ts`) flags the aggregated columns that are in `_esIgnoredKeywordFields`, using the same `hint` channel. The effective columns list comes from `getSimpleMetricsFields` (`es/operations.ts`), shared with the aggregation builder so the hint and the query always agree — the default list only keeps columns whose ES mapping can serve metric aggregations (`isMetricAggregatable`: excludes geometry-concept columns mapped without doc_values, geo calculated columns, object columns, `values: false` columns), and explicit `fields`/`metrics` values are validated with a `400` before any ES call.
+
+**Backfill upgrade script.** `api/upgrade/6.12.0/ignored-keyword-fields.ts` backfills `_esIgnoredKeywordFields` for pre-existing finalized datasets by running the `_ignored` terms aggregation directly. It calls `es.connect()` itself because the upgrade runner executes before `es.init()`. Empty-array writes (`[]`) mark a dataset processed (idempotent: already-backfilled datasets are skipped). Datasets that cannot be reached (missing index, etc.) are skipped with a debug log.
+
+**Non-goals.** Case-insensitive sort/aggregation on values longer than 200 characters (`.keyword_insensitive` is also capped at `ignore_above:200` but is left untouched — long values were already invisible there). Rewriting `qs=`/Lucene field references or ODS `where … in (…)` multi-value clauses (covered by the admin warning, not fixed in the query layer).
 
 ### ES cluster configuration (deployment repos — reference only)
 

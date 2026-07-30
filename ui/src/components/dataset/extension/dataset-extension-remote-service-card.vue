@@ -47,11 +47,11 @@
                 <v-text-field
                   :model-value="extension.overwrite?.[propKey]?.['x-originalName']"
                   :placeholder="extension.propertyPrefix + '.' + propKey"
-                  :rules="[v => validPropertyOverwrite(propKey, v) || '']"
+                  :rules="[v => validPropertyOverwrite(propKey, v)]"
                   :label="propKey"
                   validate-on="eager"
                   density="comfortable"
-                  hide-details
+                  hide-details="auto"
                   class="mb-2"
                   @update:model-value="val => setOverwriteOriginalName(propKey, val)"
                 />
@@ -133,6 +133,7 @@
 fr:
   additionalCols: Colonnes additionnelles
   allColsOut: Toutes les colonnes
+  duplicateKeyCol: "Cette clé est déjà utilisée par la colonne \"{col}\""
   confirmDeleteTooltip: Supprimer l'extension
   confirmDeleteTitle: Supprimer l'extension
   confirmDeleteText: Êtes-vous sûr de vouloir supprimer cette extension ? Les colonnes ajoutées par cet enrichissement seront supprimées.
@@ -149,6 +150,7 @@ fr:
 en:
   additionalCols: Additional columns
   allColsOut: All the columns
+  duplicateKeyCol: "This key is already used by column \"{col}\""
   confirmDeleteTooltip: Delete the extension
   confirmDeleteTitle: Delete the extension
   confirmDeleteText: Are you sure you want to delete this extension? The columns added by this enrichment will be removed.
@@ -226,23 +228,43 @@ const overwriteKeys = computed(() =>
     : selectFieldsData.value?.fieldsAndTags?.map((p: any) => p.name).filter(Boolean)
 )
 
-function validPropertyOverwrite (name: string, newName: string | null) {
+function validPropertyOverwrite (name: string, newName: string | null): true | string {
   newName = newName?.trim() ?? null
   if (!newName) return true
   const key = escapeKey(newName)
-  return !props.dataset.schema.some((f: any) => {
-    if (f['x-extension'] === extension.value.remoteService + '/' + extension.value.action) {
-      if (extension.value.select?.includes(newName) && name !== newName) return true
-      if (extension.value.overwrite) {
-        for (const [overwriteKey, overwriteValue] of Object.entries(extension.value.overwrite)) {
-          if (overwriteKey !== name && (overwriteValue as any)['x-originalName']?.trim() && escapeKey((overwriteValue as any)['x-originalName'].trim()) === key) return true
-        }
-      }
-      return false
+  const extId = extension.value.remoteService + '/' + extension.value.action
+
+  // conflict with a non-extension schema field
+  for (const f of props.dataset.schema) {
+    if (f['x-extension'] !== extId && f.key === key) {
+      return t('duplicateKeyCol', { col: f.title || f['x-originalName'] || f.key })
     }
-    return f.key === key
-  })
+  }
+
+  // conflict with a selected column name in the same extension
+  if (extension.value.select?.includes(newName) && name !== newName) {
+    return t('duplicateKeyCol', { col: newName })
+  }
+
+  // conflict with another overwrite in the same extension
+  if (extension.value.overwrite) {
+    for (const [overwriteKey, overwriteValue] of Object.entries(extension.value.overwrite as Record<string, any>)) {
+      const otherName = overwriteValue['x-originalName']?.trim()
+      if (overwriteKey !== name && otherName && escapeKey(otherName) === key) {
+        return t('duplicateKeyCol', { col: otherName })
+      }
+    }
+  }
+
+  return true
 }
+
+watch(() => extension.value.select, (newSelect) => {
+  if (!extension.value.overwrite || !newSelect?.length) return
+  for (const key of Object.keys(extension.value.overwrite)) {
+    if (!newSelect.includes(key)) delete extension.value.overwrite[key]
+  }
+})
 
 function setOverwriteOriginalName (propKey: string, value: string) {
   value = value?.trim()

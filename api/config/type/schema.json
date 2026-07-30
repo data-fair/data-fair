@@ -29,9 +29,6 @@
     "datasetStateRetries",
     "cache",
     "tiles",
-    "analytics",
-    "browserLogLevel",
-    "nuxtDev",
     "applicationsDirectories",
     "applications",
     "applicationsPrivateMapping",
@@ -52,7 +49,9 @@
     "assertImmutable",
     "remoteAttachmentCacheDuration",
     "extensionUpdateDelay",
-    "apiKeysMaxDuration"
+    "extensionsBatchSize",
+    "apiKeysMaxDuration",
+    "apiKeysExpirationCron"
   ],
   "properties": {
     "mode": {
@@ -61,9 +60,6 @@
     },
     "port": {
       "type": "number"
-    },
-    "listenWhenReady": {
-      "type": "boolean"
     },
     "publicUrl": {
       "type": "string"
@@ -102,6 +98,63 @@
         "multipartChunkSize": { "type": "number" }
       }
     },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "active": { "type": "boolean" },
+        "s3": {
+          "type": "object",
+          "properties": {
+            "region": { "type": "string" },
+            "endpoint": { "type": "string" },
+            "bucket": { "type": "string" },
+            "credentials": {
+              "type": "object",
+              "properties": {
+                "accessKeyId": { "type": "string" },
+                "secretAccessKey": { "type": "string" }
+              }
+            },
+            "forcePathStyle": { "type": "boolean" }
+          }
+        },
+        "retention": {
+          "type": "object",
+          "properties": { "days": { "type": "number" } }
+        },
+        "attribution": {
+          "type": "object",
+          "properties": {
+            "active": { "type": "boolean" },
+            "retentionDays": { "type": "number" }
+          }
+        },
+        "lines": {
+          "type": "object",
+          "properties": {
+            "maxLines": { "type": "number" }
+          }
+        },
+        "index": {
+          "type": "object",
+          "properties": {
+            "windows": { "type": "number" },
+            "windowSize": { "type": "number" },
+            "sampleCap": { "type": "number" }
+          }
+        },
+        "lockWaitMs": { "type": "number" },
+        "trail": {
+          "type": "object",
+          "properties": {
+            "dateSkewHours": { "type": "number" }
+          }
+        },
+        "realertDays": { "type": "number" },
+        "maxUnknownDays": { "type": "number" }
+      }
+    },
+    "integrityCheckCron": { "type": "string" },
     "sessionDomain": {
       "type": ["string", "null"]
     },
@@ -136,6 +189,9 @@
       "type": ["string", "null"]
     },
     "privateOpenapiViewerUrl": {
+      "type": ["string", "null"]
+    },
+    "privateRegistryUrl": {
       "type": ["string", "null"]
     },
     "subscriptionUrl": {
@@ -249,10 +305,11 @@
     },
     "worker": {
       "type": "object",
-      "required": ["interval", "baseConcurrency", "errorRetryDelay", "closeTimeout"],
+      "required": ["interval", "baseConcurrency", "concurrencyLimitPerAccount", "errorRetryDelay", "closeTimeout"],
       "properties": {
         "interval": { "type": "number" },
         "baseConcurrency": { "type": "number" },
+        "concurrencyLimitPerAccount": { "type": "number" },
         "errorRetryDelay": { "type": "number" },
         "closeTimeout": { "type": "number" }
       }
@@ -274,7 +331,9 @@
         "catalogs": { "type": ["string", "null"] },
         "notifications": { "type": ["string", "null"] },
         "events": { "type": ["string", "null"] },
-        "ignoreRateLimiting": { "type": ["string", "null"] }
+        "sendMails": { "type": ["string", "null"] },
+        "ignoreRateLimiting": { "type": ["string", "null"] },
+        "registry": { "type": ["string", "null"] }
       }
     },
     "locks": {
@@ -298,26 +357,19 @@
         "publicMaxAge": { "type": "number" },
         "timestampedPublicMaxAge": { "type": "number" },
         "mongoSize": { "type": "number" },
-        "reverseProxyCache": { "type": "boolean" }
+        "reverseProxyCache": { "type": "boolean" },
+        "disabled": { "type": "boolean" }
       }
     },
     "tiles": {
       "type": "object",
-      "required": ["geojsonvtTolerance", "vtPrepareMaxZoom", "maxThreads"],
+      "required": ["geojsonvtTolerance", "vtPrepareMaxZoom", "maxThreads", "simplifyMaxVertices"],
       "properties": {
         "geojsonvtTolerance": { "type": "number" },
         "vtPrepareMaxZoom": { "type": "number" },
-        "maxThreads": { "type": "number" }
+        "maxThreads": { "type": "number" },
+        "simplifyMaxVertices": { "type": "number" }
       }
-    },
-    "analytics": {
-      "type": "object"
-    },
-    "browserLogLevel": {
-      "type": "string"
-    },
-    "nuxtDev": {
-      "type": "boolean"
     },
     "applicationsDirectories": {
       "type": "array",
@@ -368,9 +420,6 @@
       "type": "boolean"
     },
     "disablePublicationSites": {
-      "type": "boolean"
-    },
-    "proxyNuxt": {
       "type": "boolean"
     },
     "ogr2ogr": {
@@ -455,11 +504,17 @@
     "extensionUpdateDelay": {
       "type": "number"
     },
+    "extensionsBatchSize": {
+      "type": "number"
+    },
     "compatODS": {
       "type": "boolean"
     },
     "apiKeysMaxDuration": {
       "type": "number"
+    },
+    "apiKeysExpirationCron": {
+      "type": "string"
     }
   },
   "$defs": {

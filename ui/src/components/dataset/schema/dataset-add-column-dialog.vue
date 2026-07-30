@@ -22,7 +22,7 @@
             <v-text-field
               v-model="newColumnKey"
               :label="t('columnName')"
-              :rules="[v => !!v || t('required'), v => validNewColumnKey(v) || t('keyExists')]"
+              :rules="[v => !!v || t('required'), v => validNewColumnKey(v)]"
               hide-details="auto"
               class="mb-4"
               autofocus
@@ -62,7 +62,7 @@ fr:
   columnName: Nom de la colonne
   columnType: Type
   required: Champ requis
-  keyExists: Cette clé existe déjà
+  keyExistsFor: "Cette clé est déjà utilisée par la colonne \"{col}\""
   cancel: Annuler
   add: Ajouter
 en:
@@ -70,7 +70,7 @@ en:
   columnName: Column name
   columnType: Type
   required: Required field
-  keyExists: This key already exists
+  keyExistsFor: "This key is already used by column \"{col}\""
   cancel: Cancel
   add: Add
 </i18n>
@@ -96,10 +96,12 @@ const isFormValid = ref(false)
 const newColumnKey = ref('')
 const newColumnType = ref(propertyTypes[0])
 
-const validNewColumnKey = (name: string) => {
-  if (!name) return false
+const validNewColumnKey = (name: string): true | string => {
+  if (!name) return true
   const key = escapeKey(name)
-  return !props.schema.find((p: any) => p.key === key)
+  const conflict = props.schema.find((p: any) => p.key === key)
+  if (!conflict) return true
+  return t('keyExistsFor', { col: conflict.title || conflict['x-originalName'] || conflict.key })
 }
 
 const addColumn = () => {

@@ -1,24 +1,26 @@
 <template>
   <v-btn-group density="compact">
-    <v-btn
-      v-if="selectedResults.some(r => r._id === result._id)"
-      :title="t('unselectLine')"
-      color="primary"
-      :size="dense ? 'md' : 'large'"
-      variant="text"
-      :icon="mdiCheckboxMarked"
-      :disabled="saving"
-      @click="selectedResults = selectedResults.filter(r => r !== result)"
-    />
-    <v-btn
-      v-else
-      :size="dense ? 'md' : 'large'"
-      variant="text"
-      :title="t('selectLine')"
-      :icon="mdiCheckboxBlankOutline"
-      :disabled="saving"
-      @click="selectedResults.push(result)"
-    />
+    <template v-if="canBulkLines">
+      <v-btn
+        v-if="selectedResults.some(r => r._id === result._id)"
+        :title="t('unselectLine')"
+        color="primary"
+        :size="dense ? 'md' : 'large'"
+        variant="text"
+        :icon="mdiCheckboxMarked"
+        :disabled="saving"
+        @click="selectedResults = selectedResults.filter(r => r !== result)"
+      />
+      <v-btn
+        v-else
+        :size="dense ? 'md' : 'large'"
+        variant="text"
+        :title="t('selectLine')"
+        :icon="mdiCheckboxBlankOutline"
+        :disabled="saving"
+        @click="selectedResults.push(result)"
+      />
+    </template>
     <v-btn
       v-if="canDeleteLine"
       :size="dense ? 'md' : 'large'"
@@ -74,4 +76,5 @@ const { saving } = useDatasetEdition()
 
 const canDeleteLine = can('deleteLine')
 const canUpdateLine = can('updateLine')
+const canBulkLines = can('bulkLines')
 </script>

@@ -11,7 +11,8 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Dataset description**: set description (1 tool + 1 subagent)
 - **Dataset changes**: read diff (1 tool + 1 subagent)
 - **Dataset expressions**: context, sample, test, set (4 tools + 1 subagent)
-- **Applications**: list, describe, list base apps (3 tools)
+- **Applications**: list, describe, get config, list base apps (4 tools)
+- **Application metadata**: set summary, set description (2 tools + 2 subagents + 2 action buttons)
 - **Application config**: VJSF sub-agent (1 subagent)
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
@@ -19,7 +20,9 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Application creation**: wizard stepper tools (4 tools + 1 action button)
 - **Dataset creation**: wizard stepper tools (5 tools + 1 action button)
 
-**Total: 34 tools, 8 subagents, 10 action buttons**
+- **Page guidance**: dataset and application detail pages (shared renderer)
+
+**Total: 37 tools, 10 subagents, 12 action buttons**
 
 ---
 

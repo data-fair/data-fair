@@ -35,6 +35,14 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
     res.set('Content-Disposition', cd)
   }
 
+  // HEAD must return GET's headers (Content-Length, Last-Modified) with no body — streaming the
+  // throttled body would hang until the file fully drains, timing out crawlers (e.g. hydra).
+  if (req.method === 'HEAD') {
+    body.destroy()
+    res.end()
+    return
+  }
+
   try {
     // @ts-ignore
     if (res.throttle) await pipeline(body, res.throttle('static'), res)

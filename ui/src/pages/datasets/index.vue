@@ -259,7 +259,7 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity',
   }
   if (q.value) params.q = q.value
   else params.sort = sort.value

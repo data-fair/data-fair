@@ -29,28 +29,22 @@
             v-if="group"
             :key="group"
             :label="group"
-            :model-value="groupStatus[group] !== 'none'"
-            :color="groupStatus[group] === 'some' ? 'grey' : 'primary'"
+            :model-value="groupStatus[group] === 'all'"
+            :indeterminate="groupStatus[group] === 'some'"
+            color="primary"
             density="compact"
             hide-details
-            @update:model-value="value => toggleGroup(group, !!value)"
+            @update:model-value="() => toggleGroup(group, groupStatus[group] !== 'all')"
           >
             <template #append>
               <v-btn
-                v-if="unfoldedGroups[group]"
-                :key="'fold-down-' + group"
-                :icon="mdiMenuDown"
-                style="margin-top:-8px;"
-                :title="t('fold')"
-                @click="unfoldedGroups[group] = false"
-              />
-              <v-btn
-                v-if="!unfoldedGroups[group]"
-                :key="'fold-up-' + group"
-                :icon="mdiMenuLeft"
-                style="margin-top:-8px;"
-                :title="t('unfold')"
-                @click="unfoldedGroups[group] = true"
+                :icon="unfoldedGroups[group] ? mdiChevronDown : mdiChevronRight"
+                variant="text"
+                size="small"
+                density="comfortable"
+                :title="unfoldedGroups[group] ? t('fold') : t('unfold')"
+                :aria-expanded="!!unfoldedGroups[group]"
+                @click.stop="unfoldedGroups[group] = !unfoldedGroups[group]"
               />
             </template>
           </v-checkbox>
@@ -60,14 +54,13 @@
           >
             <v-checkbox
               v-show="!prop['x-group'] || unfoldedGroups[prop['x-group']]"
-              :value="prop.key"
               :label="prop.title || prop['x-originalName'] || prop.key"
-              :model-value="cols"
+              :model-value="cols.includes(prop.key)"
               color="primary"
               density="compact"
               hide-details
               :class="{'ml-3': !!prop['x-group']}"
-              @update:model-value="newCols => {cols = newCols ?? []}"
+              @update:model-value="checked => toggleCol(prop.key, !!checked)"
             />
           </template>
         </template>
@@ -92,7 +85,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiMenuLeft, mdiMenuDown, mdiTableColumnPlusAfter } from '@mdi/js'
+import { mdiChevronDown, mdiChevronRight, mdiTableColumnPlusAfter } from '@mdi/js'
 
 const cols = defineModel<string[]>({ default: [] })
 
@@ -129,6 +122,14 @@ const groupStatus = computed(() => {
   return statuses
 })
 
+const toggleCol = (key: string, checked: boolean) => {
+  if (checked) {
+    if (!cols.value.includes(key)) cols.value = [...cols.value, key]
+  } else {
+    cols.value = cols.value.filter(k => k !== key)
+  }
+}
+
 const toggleGroup = (group: string, value: boolean) => {
   if (value) {
     const newCols = [...cols.value]
@@ -140,7 +141,7 @@ const toggleGroup = (group: string, value: boolean) => {
     cols.value = newCols
   } else {
     cols.value = cols.value.filter(v => {
-      const prop = selectableProps.value.find(fh => fh.value === v)
+      const prop = selectableProps.value.find(fh => fh.key === v)
       return prop?.['x-group'] !== group
     })
   }

@@ -135,6 +135,7 @@ fr:
   metrics: Audience
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
+  agentsActivity: Suivi des agents
   subscription: Abonnement
   assistance: Assistance
   services: Services distants
@@ -144,6 +145,7 @@ fr:
   elasticsearch: Elasticsearch
   baseApplications: Modèles d'application
   accountsManagement: Gestion des comptes
+  registry: Registre
   apiDoc: Utiliser l'API
   group:
     content: Contenus
@@ -170,6 +172,7 @@ en:
   metrics: Audience
   metricsSub: Downloads, API
   events: Traceability (beta)
+  agentsActivity: Agents activity
   subscription: Subscription
   assistance: Support
   services: Remote services
@@ -179,6 +182,7 @@ en:
   elasticsearch: Elasticsearch
   baseApplications: Application models
   accountsManagement: Accounts management
+  registry: Registry
   apiDoc: Use the API
   group:
     content: Contents

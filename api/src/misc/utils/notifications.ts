@@ -1,5 +1,5 @@
 import config from '#config'
-import axios from './axios.js'
+import axios from './axios.ts'
 import debugLib from 'debug'
 import i18n from 'i18n'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -89,6 +89,7 @@ export const subscribe = async (req, subscription) => {
     ...subscription
   }
   debug('send subscription', subscription)
+  if (process.env.NODE_ENV === 'development') return
   await axios.post(`${config.privateEventsUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
     .catch(err => { internalError('subscribe-push', err) })
 }

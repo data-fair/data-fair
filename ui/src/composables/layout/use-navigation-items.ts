@@ -9,6 +9,7 @@ import {
   mdiCog,
   mdiTransitConnection,
   mdiCogTransferOutline,
+  mdiPackageVariantClosed,
   mdiHarddisk,
   mdiCloud,
   mdiInformation,
@@ -129,6 +130,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdmin.value && $uiConfig.eventsIntegration) {
       monitor.push({ to: '/events', icon: mdiClipboardTextClock, title: t('events') })
     }
+    if ($uiConfig.agentsIntegration && canAdmin.value) {
+      monitor.push({ to: '/agents-activity', icon: mdiRobotOutline, title: t('agentsActivity') })
+    }
     if (monitor.length) groups.push({ key: 'monitor', title: t('group.monitor'), items: monitor })
 
     // Help group
@@ -177,11 +181,16 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
         admin.push({ to: '/admin/base-apps', icon: mdiApps, title: t('baseApplications') })
       }
       admin.push({ href: `${$sdUrl}/admin/users`, icon: mdiAccountSupervisor, title: t('accountsManagement') })
-      if ($uiConfig.catalogsIntegration) {
-        admin.push({ to: '/admin/catalogs-plugins', icon: mdiTransitConnection, title: t('catalogs'), subtitle: 'Plugins' })
-      }
-      if ($uiConfig.processingsIntegration) {
-        admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
+      if ($uiConfig.registryIntegration) {
+        admin.push({ to: '/admin/registry', icon: mdiPackageVariantClosed, title: t('registry') })
+      } else {
+        // retro-compat with older catalogs/processings services that haven't moved their plugins management to the registry
+        if ($uiConfig.catalogsIntegration) {
+          admin.push({ to: '/admin/catalogs-plugins', icon: mdiTransitConnection, title: t('catalogs'), subtitle: 'Plugins' })
+        }
+        if ($uiConfig.processingsIntegration) {
+          admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
+        }
       }
       for (const extra of ($uiConfig.extraAdminNavigationItems ?? [])) {
         admin.push({

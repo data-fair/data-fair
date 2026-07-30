@@ -196,5 +196,13 @@
       "id": "test_org6",
       "name": "Test Org 6"
     }]
+  },
+  {
+    "id": "dev_fixtures",
+    "name": "Fixtures Demo",
+    "members": [{
+      "id": "albanm",
+      "role": "admin"
+    }]
   }
 ]

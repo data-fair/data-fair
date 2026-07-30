@@ -75,6 +75,14 @@
         :selected-cols="cols"
         :total="total"
       />
+      <v-btn
+        v-if="fullscreenTo"
+        :title="t('fullscreen')"
+        :icon="mdiOpenInNew"
+        :to="fullscreenTo"
+        color="primary"
+        size="large"
+      />
     </v-btn-group>
   </v-toolbar>
   <v-toolbar
@@ -162,6 +170,7 @@
               :fixed="fixed === header.key"
               :header="header as TableHeaderWithProperty"
               :no-fix="selectable || edit"
+              :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
               @hide="hideHeader(header)"
@@ -211,7 +220,7 @@
                 :selected="selectedItem === item._id"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
-                @show-map-preview="showMapPreview = item._id"
+                @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
                 @filter="f => !noInteraction && addFilter(f)"
                 @edit="showEditDialog = item"
@@ -244,7 +253,7 @@
             :selected="selectedItem === item._id"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
-            @show-map-preview="showMapPreview = item._id"
+            @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
             @filter="f => !noInteraction && addFilter(f)"
             @edit="showEditDialog = item"
@@ -320,6 +329,7 @@
     :model-value="!!showMapPreview"
     :scrim="false"
     max-width="800"
+    @update:model-value="closeMapPreview"
   >
     <v-card v-if="showMapPreview">
       <v-btn
@@ -352,6 +362,7 @@
     v-if="edit"
     :model-value="!!showDeleteDialog"
     max-width="500"
+    persistent
   >
     <v-card :title="t('deleteLine')">
       <v-card-text>
@@ -382,6 +393,7 @@
     v-if="edit"
     :model-value="!!showEditDialog"
     max-width="800"
+    persistent
   >
     <v-card
       :loading="!editedLine"
@@ -437,6 +449,7 @@
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
+    fullscreen: Afficher en plein écran
   en:
     cancel: Cancel
     delete: Delete
@@ -447,13 +460,16 @@
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
+    fullscreen: Show fullscreen
 </i18n>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
 import type { VVirtualScroll, VForm } from 'vuetify/components'
-import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
+import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
-import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
+import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
+import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -465,7 +481,7 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys } = defineProps({
+const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
@@ -474,6 +490,7 @@ const { height, noInteraction, edit, selectable, pagination, searchOnly, synthet
   searchOnly: { type: Boolean, default: false },
   syntheticColumns: { type: Array as () => SyntheticColumn[], default: () => [] },
   headerKeys: { type: Boolean, default: false },
+  fullscreenTo: { type: Object as () => RouteLocationRaw, default: undefined },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -501,8 +518,8 @@ const pageSize = computed(() => {
   return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
 })
 
-const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
-  get () {
+const sort = computed<TableSort | undefined>({
+  get (): TableSort | undefined {
     if (!sortStr.value) return undefined
     if (sortStr.value.startsWith('-')) return { direction: -1, key: sortStr.value.slice(1) }
     return { direction: 1, key: sortStr.value }
@@ -552,7 +569,8 @@ const filterHelpContext = computed(() => {
   const d = dataset.value
   if (!d) return ''
   const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
-  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent. After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding select=col1,col2,col3 from the columns keys.`
+  const columns = d.schema?.filter((f: any) => !['_i', '_id', '_rand'].includes(f.key)).map((f: any) => `${f.key} (${f.title || f.key}, ${f.type})`).join(', ')
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent.${columns ? ` When you delegate to the dataset_data subagent, pass it these known columns so it can query directly without re-fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding select=col1,col2,col3 from the columns keys.`
 })
 
 const dataQualityContext = computed(() => {
@@ -569,6 +587,20 @@ const extraParams = computed(() => ({
 }))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+
+// caption under a date-time column header stating the timezone its values are displayed in
+// (the offset comes from a real cell so it is DST-correct); empty when values are shown in the
+// viewer's own timezone (UTC-stored / offset-less) — the per-cell tooltip covers that case
+const dateTimeColumnZone = (header: TableHeader): string | undefined => {
+  if (header.property?.format !== 'date-time') return undefined
+  // timeZone is part of the runtime schema but absent from the generated SchemaProperty type
+  const fieldTimeZone = (header.property as { timeZone?: string | null }).timeZone
+  const sample = results.value.find(r => r.raw?.[header.key] != null)?.raw[header.key]
+  const label = dateTimeZoneLabel(sample, { timeZone: fieldTimeZone })
+  if (label) return label
+  if (sample === undefined && fieldTimeZone) return fieldTimeZone
+  return undefined
+}
 
 // Pagination mode: slice results into pages, fetch more via next when needed
 const paginationPage = ref(0)
@@ -670,6 +702,15 @@ const mapHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
 })
 const showMapPreview = ref<string>()
+let lastMapPreviewSelect = 0
+const selectMapPreview = (id?: string) => {
+  lastMapPreviewSelect = Date.now()
+  showMapPreview.value = id
+}
+const closeMapPreview = () => {
+  if (Date.now() - lastMapPreviewSelect < 100) return
+  showMapPreview.value = undefined
+}
 
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 

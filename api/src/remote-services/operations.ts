@@ -1,5 +1,5 @@
-import * as findUtils from '../misc/utils/find.js'
-import { prepareMarkdownContent } from '../misc/utils/markdown.js'
+import * as findUtils from '../misc/utils/find.ts'
+import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
 import soasLoader from 'soas'
 import * as ajv from '../misc/utils/ajv.ts'
 import { type SessionState } from '@data-fair/lib-express'

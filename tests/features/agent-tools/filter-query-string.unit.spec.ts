@@ -1,0 +1,89 @@
+import { test } from '@playwright/test'
+import assert from 'node:assert/strict'
+import { buildFilterQueryString, formatSchemaColumns, filtersGuide } from '../../../agent-tools/_utils.ts'
+
+test.describe('buildFilterQueryString', () => {
+  test('returns undefined when no params', () => {
+    assert.equal(buildFilterQueryString({}), undefined)
+  })
+
+  test('emits _c_q for full-text search (so URL sync to table/map works)', () => {
+    const qs = buildFilterQueryString({ q: 'Paris' })
+    assert.equal(qs, '_c_q=Paris')
+  })
+
+  test('emits _c_bbox / _c_geo_distance / _c_date_match', () => {
+    const qs = buildFilterQueryString({
+      bbox: '-2.5,43,3,47',
+      geoDistance: '2.35,48.85,10km',
+      dateMatch: '2024-01-01'
+    })
+    const params = new URLSearchParams(qs)
+    assert.equal(params.get('_c_bbox'), '-2.5,43,3,47')
+    assert.equal(params.get('_c_geo_distance'), '2.35,48.85,10km')
+    assert.equal(params.get('_c_date_match'), '2024-01-01')
+    assert.equal(params.get('bbox'), null)
+    assert.equal(params.get('geo_distance'), null)
+    assert.equal(params.get('date_match'), null)
+  })
+
+  test('column filters keep their suffix form (no _c_ prefix)', () => {
+    const qs = buildFilterQueryString({ filters: { nom_search: 'Jean', age_lte: '30' } })
+    const params = new URLSearchParams(qs)
+    assert.equal(params.get('nom_search'), 'Jean')
+    assert.equal(params.get('age_lte'), '30')
+  })
+
+  test('strips bare _geo_distance from sort and omits the param when empty', () => {
+    const qs = buildFilterQueryString({ sort: '_geo_distance' })
+    assert.equal(qs, undefined)
+  })
+
+  test('keeps sort/select unchanged', () => {
+    const qs = buildFilterQueryString({ sort: 'name,-age', select: 'a,b' })
+    const params = new URLSearchParams(qs)
+    assert.equal(params.get('sort'), 'name,-age')
+    assert.equal(params.get('select'), 'a,b')
+  })
+
+  test('combines everything into a URL-safe string', () => {
+    const qs = buildFilterQueryString({
+      q: 'hello',
+      filters: { status_eq: 'active' },
+      geoDistance: '2.35,48.85,10km'
+    })
+    const params = new URLSearchParams(qs)
+    assert.equal(params.get('_c_q'), 'hello')
+    assert.equal(params.get('status_eq'), 'active')
+    assert.equal(params.get('_c_geo_distance'), '2.35,48.85,10km')
+  })
+})
+
+test.describe('formatSchemaColumns', () => {
+  // _geopoint/_geocorners are stored lat,lon; geo_distance/bbox filters use lon,lat.
+  // The agent must see the contrast where it reads the field, or it inverts the filter.
+  test('warns that geo columns use the reverse coordinate order for filters', () => {
+    const rows = formatSchemaColumns([
+      { key: '_geopoint', type: 'string', title: 'Coordonnée', description: 'Centroïde au format "lat,lon"' },
+      { key: '_geocorners', type: 'array', title: 'Boite', description: 'tableau au format "lat,lon"' }
+    ])
+    assert.ok(rows)
+    assert.ok(rows[0].includes('lon,lat'), '_geopoint row should mention the reverse lon,lat order')
+    assert.ok(rows[1].includes('lon,lat'), '_geocorners row should mention the reverse lon,lat order')
+  })
+
+  test('does not add the geo warning to ordinary columns', () => {
+    const rows = formatSchemaColumns([{ key: 'ville', type: 'string', title: 'Ville' }])
+    assert.ok(rows)
+    assert.ok(!rows[0].includes('REVERSE'))
+  })
+})
+
+test.describe('filtersGuide', () => {
+  test('lists the real suffixes and the error-driven correction rule', () => {
+    for (const s of ['_eq', '_in', '_gte', '_lte', '_starts', '_search', '_contains', '_exists']) {
+      assert.ok(filtersGuide.includes(s), `missing ${s}`)
+    }
+    assert.ok(/error/i.test(filtersGuide)) // mentions reacting to rejection errors
+  })
+})

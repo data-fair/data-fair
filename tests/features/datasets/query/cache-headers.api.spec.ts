@@ -62,6 +62,26 @@ test.describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'if-modified-since': res.headers['last-modified'] } }), (err: any) => err.status === 304)
   })
 
+  test('HEAD on /lines returns the exact GET headers and no body', async () => {
+    // /lines no longer goes through express's res.send (the body parts are written sequentially, see
+    // sendPreparedParts) so the HEAD handling that used to live inside res.send is reproduced there —
+    // this pins the observable contract: same status/ETag/Content-Length/Content-Type as GET, empty body
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+
+    const get = await ax.get(`/api/v1/datasets/${id}/lines`)
+    // explicit Content-Length: without it Node falls back to chunked transfer encoding — an observable
+    // header change (and it would make the equality below vacuous)
+    assert.ok(Number(get.headers['content-length']) > 0, 'GET /lines must carry an explicit Content-Length')
+    const head = await ax.head(`/api/v1/datasets/${id}/lines`)
+    assert.equal(head.status, 200)
+    assert.equal(head.headers.etag, get.headers.etag)
+    assert.equal(head.headers['content-type'], get.headers['content-type'])
+    assert.equal(head.headers['content-length'], get.headers['content-length'])
+    assert.ok(!head.data, 'HEAD must not carry a body')
+  })
+
   test('Manage public cache-control header based on permissions', async () => {
     const ax = testUser1
     const axAnonymous = anonymous

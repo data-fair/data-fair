@@ -1,6 +1,6 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
-import { trackEmbed } from './nuxt.js'
+import { trackEmbed } from './embed.js'
 import express from 'express'
 import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'
@@ -41,7 +41,6 @@ export const run = async () => {
 
   if (config.mode.includes('server')) {
     const limits = await import('./limits/router.ts')
-    const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
     session.init(config.privateDirectoryUrl || config.directoryUrl)
@@ -80,10 +79,6 @@ export const run = async () => {
     })
 
     app.use((await import('cors')).default())
-    app.use((req, res, next) => {
-      if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-      else next()
-    })
 
     const bodyParser = express.json({ limit: '1000kb' })
     app.use((req, res, next) => {
@@ -99,17 +94,20 @@ export const run = async () => {
     app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
-    app.use((await import('./misc/utils/expect-type.js')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+    app.use((await import('./misc/utils/expect-type.ts')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
+    const { setReqPublicBaseUrl, setReqPublicWsBaseUrl } = await import('./misc/utils/public-base-url.ts')
+    const { setReqPublicationSite, setReqMainPublicationSite } = await import('./misc/utils/publication-sites.ts')
     const parsedPublicUrl = new URL(config.publicUrl)
 
     app.use('/', async (req, res, next) => {
       const mainDomain = reqIsInternal(req) || reqHost(req) === parsedPublicUrl.host
-      req.publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
-      req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
-      debugDomain('req.publicBaseUrl', req.publicBaseUrl)
+      const publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
+      setReqPublicBaseUrl(req, publicBaseUrl)
+      setReqPublicWsBaseUrl(req, publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/')
+      debugDomain('req.publicBaseUrl', publicBaseUrl)
 
       const siteUrl = mainDomain ? parsedPublicUrl.origin : reqSiteUrl(req)
       const settings = await memoizedGetPublicationSiteSettings(siteUrl, mainDomain && req.query.publicationSites, mongo.db)
@@ -124,13 +122,13 @@ export const run = async () => {
         }
         if (mainDomain) {
           if (publicationSite.url === siteUrl) {
-            req.mainPublicationSite = publicationSite
+            setReqMainPublicationSite(req, publicationSite)
           }
           if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
-            req.publicationSite = publicationSite
+            setReqPublicationSite(req, publicationSite)
           }
         } else {
-          req.publicationSite = publicationSite
+          setReqPublicationSite(req, publicationSite)
         }
       }
       next()
@@ -141,18 +139,20 @@ export const run = async () => {
     app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
-    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.js')).default)
+    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.ts')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
-    app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
-    app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
+    app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.ts')).default)
+    // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
+    // requests authenticated with an api key are throttled at the `user` tier rather than as anonymous
+    app.use('/api/v1/datasets', (await import('./datasets/router.ts')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
-    app.use('/api/v1/admin', (await import('./admin/router.js')).default)
-    app.use('/api/v1/identities', (await import('./identities/router.js')).default)
-    app.use('/api/v1/activity', (await import('./activity/router.js')).default)
+    app.use('/api/v1/admin', (await import('./admin/router.ts')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.ts')).default)
+    app.use('/api/v1/activity', (await import('./activity/router.ts')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
-      app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
+      app.use('/api/v1/compat-ods', (await import('./api-compat/ods/index.ts')).default)
     }
     if (process.env.NODE_ENV === 'development') {
       app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)
@@ -163,12 +163,13 @@ export const run = async () => {
     })
 
     // External applications proxy
-    const serviceWorkers = await import('./misc/utils/service-workers.js')
+    const serviceWorkers = await import('./misc/utils/service-workers.ts')
+    const { reqApplicationOptional } = await import('./applications/middlewares.ts')
     app.get('/app-sw.js', (req, res) => {
       res.setHeader('Content-Type', 'application/javascript')
-      res.send(serviceWorkers.sw(req.application))
+      res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
-    app.use('/app', (await import('./applications/proxy.js')).default)
+    app.use('/app', (await import('./applications/proxy.ts')).default)
 
     // self hosting of streamsaver man in the middle service worker
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183
@@ -222,23 +223,27 @@ export const run = async () => {
           return directives
         }
       },
-      privateDirectoryUrl: config.privateDirectoryUrl
+      // serveSpa's getSiteHashes fetches `${privateDirectoryUrl}/simple-directory/api/sites/_hashes`
+      // to fill the {PUBLIC_SITE_INFO_HASH}/{THEME_CSS_HASH} placeholders in index.html.
+      // In a dual-machine deployment (data-fair split from simple-directory) privateDirectoryUrl
+      // is unset, so this fetch hit `null/...` and the SPA shipped the unresolved placeholders
+      // (the session util then throws "vuetifySessionOptions requires fetching site info").
+      // Fall back to the origin of the public directoryUrl — which the reverse proxy routes to
+      // simple-directory — mirroring the directoryUrl fallback already used by session.init and
+      // the jwks status check.
+      privateDirectoryUrl: config.privateDirectoryUrl || new URL(config.directoryUrl).origin
     }))
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
-    httpTerminator = createHttpTerminator({ server })
+    // wait up for in-flight requests to finish on shutdown before forcibly closing sockets
+    httpTerminator = createHttpTerminator({ server, gracefulTerminationTimeout: 5000 })
     // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
     // timeout is often 60s on the reverse proxy, better to a have a longer one here
     // so that interruption is managed downstream instead of here
     server.keepAliveTimeout = (60 * 1000) + 1000
     server.headersTimeout = (60 * 1000) + 2000
     server.requestTimeout = (15 * 60 * 1000)
-
-    if (!config.listenWhenReady) {
-      server.listen(config.port)
-      await eventPromise(server, 'listening')
-    }
   }
 
   await mongo.init()
@@ -262,6 +267,12 @@ export const run = async () => {
       internalError('workers-loop-error', error)
       throw error
     })
+    const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
+    apiKeysExpirationWorker.start()
+    if (config.integrity?.active) {
+      const integrityChecker = await import('./integrity/checker.ts')
+      integrityChecker.start()
+    }
   }
 
   if (config.mode.includes('server')) {
@@ -272,8 +283,9 @@ export const run = async () => {
 
     const permissions = await import('./misc/utils/permissions.ts')
     const { readApiKey } = await import('./misc/utils/api-key.ts')
+    const { resolveApplicationKeyBypass } = await import('./misc/utils/application-key.ts')
     await Promise.all([
-      (await import('./misc/utils/cache.js')).init(),
+      (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
@@ -285,23 +297,28 @@ export const run = async () => {
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
-        return permissions.can(type, resource, `realtime-${subject}`, sessionState)
+        // browsers send no Referer on a websocket handshake, so the HTTP application-key path
+        // cannot apply here; resolve the same bypass from the key passed in the subscribe message
+        let bypassPermissions
+        if (type === 'datasets' && message.applicationKey) {
+          // re-read through the typed collection (db.collection(type) above yields an untyped doc)
+          const dataset = await mongo.datasets.findOne({ id })
+          if (dataset) {
+            const match = await resolveApplicationKeyBypass(message.applicationKey, dataset, message.appId)
+            bypassPermissions = match?.bypassPermissions
+          }
+        }
+        return permissions.can(type, resource, `realtime-${subject}`, sessionState, bypassPermissions)
       })
     ])
-    // At this stage the server is ready to respond to API requests
-    app.set('api-ready', true)
 
-    app.use((req, res, next) => {
-      if (!req.app.get('ui-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-      else next()
-    })
-
-    app.set('ui-ready', true)
-
-    if (config.listenWhenReady) {
-      server.listen(config.port)
-      await eventPromise(server, 'listening')
-    }
+    // at this stage the server is fully ready to respond to requests, we can open the port
+    // deep accept backlog: a single thread does both accept() and request work, so any event-loop hitch
+    // pauses accepting and connections queue in the kernel. The default 511 overflowed in production
+    // (TcpExt ListenOverflows) under connection bursts, dropping SYNs incl. the liveness probe's.
+    // Requires net.core.somaxconn >= 4096 on the node (checked: 4096), the kernel clamps silently otherwise.
+    server.listen({ port: config.port, backlog: 4096 })
+    await eventPromise(server, 'listening')
   }
 
   if (config.observer.active) {
@@ -324,6 +341,10 @@ export const stop = async () => {
 
   if (config.mode.includes('worker')) {
     await (await import('./workers/index.ts')).stop()
+    await (await import('./settings/api-keys-expiration-worker.ts')).stop()
+    if (config.integrity?.active) {
+      await (await import('./integrity/checker.ts')).stop()
+    }
   }
 
   await locks.stop()

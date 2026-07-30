@@ -30,8 +30,8 @@ const axiosOpts = { baseURL }
 export const axios = (opts = {}) => axiosBuilder({ ...axiosOpts, ...opts })
 export const anonymousAx = axios()
 
-export const axiosAuth = (email: string, org?: string, adminMode = false, opts = {}) => {
-  return _axiosAuth({
+export const axiosAuth = async (email: string, org?: string, adminMode = false, opts = {}) => {
+  return await _axiosAuth({
     email,
     password: 'passwd',
     directoryUrl,

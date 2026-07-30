@@ -1,4 +1,4 @@
-import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty } from './_utils.js'
+import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },
@@ -51,7 +51,7 @@ export const schema = {
         description: 'Dataset license information (must be included in responses)'
       },
       topics: { type: 'array' as const, items: { type: 'string' as const }, description: 'Topics/categories the dataset belongs to' },
-      spatial: { type: 'object' as const, description: 'Spatial coverage information' },
+      spatial: { type: 'string' as const, description: 'Spatial coverage information (free-text description)' },
       temporal: { type: 'object' as const, description: 'Temporal coverage information' },
       frequency: { type: 'string' as const, description: 'Update frequency of the dataset' },
       geolocalized: { type: 'boolean' as const, description: 'Whether the dataset has geographic data' },
@@ -83,11 +83,11 @@ export const schema = {
 /**
  * Build structuredContent from raw API dataset + sample lines data.
  */
-export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): Record<string, any> {
+export function buildStructuredContent (fetchedData: any, sampleLines?: any[], link?: string): Record<string, any> {
   const dataset: any = {
     id: fetchedData.id,
     title: fetchedData.title,
-    page: fetchedData.page,
+    page: link ?? fetchedData.page,
     count: fetchedData.count
   }
 
@@ -100,7 +100,11 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): 
   }
   if (fetchedData.keywords) dataset.keywords = fetchedData.keywords
   if (fetchedData.origin) dataset.origin = fetchedData.origin
-  if (fetchedData.license) dataset.license = fetchedData.license
+  // Pick only the declared fields — the raw API license/timePeriod may carry extra keys
+  // (and structuredContent is validated by MCP hosts under additionalProperties:false).
+  if (fetchedData.license) {
+    dataset.license = pick(fetchedData.license, ['href', 'title'])
+  }
   if (fetchedData.topics) dataset.topics = fetchedData.topics.map((topic: any) => topic.title)
   if (fetchedData.spatial) dataset.spatial = fetchedData.spatial
   if (fetchedData.temporal) dataset.temporal = fetchedData.temporal
@@ -113,7 +117,7 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): 
 
   if (fetchedData.timePeriod) {
     dataset.temporalDataset = true
-    dataset.timePeriod = fetchedData.timePeriod
+    dataset.timePeriod = pick(fetchedData.timePeriod, ['startDate', 'endDate'])
   }
 
   if (fetchedData.schema) {
@@ -151,8 +155,15 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): 
  * Serialize full dataset metadata + schema into markdown.
  * Used by describe_dataset and read_dataset_info tools.
  */
-export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[] }): { text: string, structuredContent: Record<string, any> } {
-  const structuredContent = buildStructuredContent(fetchedData, options?.sampleLines)
+/**
+ * @param options.datasetLink overrides the link for the dataset. Defaults to the API
+ * `page` field (public/portal page — right for portal & MCP). The back-office integration
+ * passes a current-site builder so links don't point at the portal/primary site when the
+ * back-office is served on a secondary domain. See list-datasets.formatResult.
+ */
+export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[], datasetLink?: (d: any) => string }): { text: string, structuredContent: Record<string, any> } {
+  const link = options?.datasetLink ? options.datasetLink(fetchedData) : fetchedData.page
+  const structuredContent = buildStructuredContent(fetchedData, options?.sampleLines, link)
 
   const meta: string[] = [
     `# ${fetchedData.title}`,
@@ -177,7 +188,7 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   if (fetchedData.timePeriod) {
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
   }
-  if (fetchedData.page) meta.push(`- **Link:** ${fetchedData.page}`)
+  if (link) meta.push(`- **Link:** ${link}`)
 
   const schemaRows = formatSchemaColumns(fetchedData.schema)
   const sections = [...meta]

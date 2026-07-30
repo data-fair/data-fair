@@ -126,6 +126,20 @@ test.describe('publication sites', () => {
     assert.equal(publishedApp.image, `${publicUrl2}/uploads/app-image.png`)
   })
 
+  test('POST application targeting a publication site builds well-formed links', async () => {
+    const ax = testUser1Org
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' })
+    await clearPublicationSitesCache()
+
+    // on the main domain a publication site is put in context through the publicationSites query param;
+    // the POST 201 response must then build links with the canonical clean(app, publicBaseUrl, publicationSite) order
+    const res = await ax.post('/api/v1/applications?publicationSites=data-fair-portals:portal1', { url: mockAppUrl('monapp1'), title: 'pub app' })
+    assert.equal(res.status, 201)
+    // swapped clean() args put the publicationSite object in the publicUrl slot -> "[object Object]" in URLs
+    assert.ok(res.data.href && !res.data.href.includes('[object Object]'), `unexpected href: ${res.data.href}`)
+    assert.ok(res.data.exposedUrl && !res.data.exposedUrl.includes('[object Object]'), `unexpected exposedUrl: ${res.data.exposedUrl}`)
+  })
+
   test('department admin should fail to publish dataset on org site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
@@ -217,6 +231,23 @@ test.describe('publication sites', () => {
     } finally {
       events.close()
     }
+  })
+
+  test('POST org-root publication site must not clobber a department settings doc', async () => {
+    // a department settings doc with its own publication site
+    await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://portal.com' })
+
+    // create an org-root publication site (no org-root settings doc exists yet, only the department one)
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://portal.com' })
+
+    // the department site must survive — a replaceOne filtering on owner without the
+    // department:{$exists:false} clause would replace the department doc instead
+    const depSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    assert.ok(depSites.some((s: any) => s.id === 'dep-portal' && s.department === 'dep1'), 'department publication site should survive')
+
+    // and the org-root site exists too
+    const orgSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    assert.ok(orgSites.some((s: any) => s.id === 'org-portal'), 'org-root publication site should exist')
   })
 
   test('contrib can publish on a "staging" publication site', async () => {

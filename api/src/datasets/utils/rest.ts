@@ -5,8 +5,7 @@ import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { ajv } from '@data-fair/data-fair-shared/ajv.js'
-import { errorsText } from '@data-fair/lib-validation'
+import { ajv, errorsText, localize } from '@data-fair/data-fair-shared/ajv.js'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.ts'
 import multer from 'multer'
@@ -16,33 +15,40 @@ import moment from 'moment'
 import crc from 'crc'
 import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
+import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.ts'
-import * as findUtils from '../../misc/utils/find.js'
-import * as fieldsSniffer from './fields-sniffer.js'
-import { transformFileStreams, formatLine } from './data-streams.js'
+import { extensionOwnedKeys } from '../../integrity/lines-operations.ts'
+import * as findUtils from '../../misc/utils/find.ts'
+import * as fieldsSniffer from './fields-sniffer.ts'
+import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
+import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
-import { aliasName } from '../es/commons.js'
-import indexStream from '../es/index-stream.js'
-import { initDatasetIndex, switchAlias } from '../es/manage-indices.js'
-import { tabularTypes } from './types.js'
+import { aliasName } from '../es/commons.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
+import indexStream from '../es/index-stream.ts'
+import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
+import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
+import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
   _id: string,
@@ -56,6 +62,13 @@ type Operation = {
 
 dayjs.extend(duration)
 
+// module-local request context: set by the fixFormBody middleware, read by the
+// createOrUpdateLine/patchLine handlers when they assemble the manageAttachment context.
+// No legacyProp: nothing outside this module touches it.
+const restFixedFormBody = defineReqContext<boolean>('restFixedFormBody')
+const setReqFixedFormBody = restFixedFormBody.set
+const reqFixedFormBodyOptional = restFixedFormBody.getOptional
+
 export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),
   minThreads: 0,
@@ -66,8 +79,7 @@ export const sheet2csvPiscina = new Piscina({
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
 function cleanLine (line: DatasetLine) {
-  delete line._needsIndexing
-  delete line._needsExtending
+  stripTransientLineFlags(line)
   delete line._deleted
   delete line._action
   delete line._error
@@ -109,7 +121,7 @@ export const uploadAttachment = multer({
 export const fixFormBody: RequestHandler = (req, res, next) => {
   if (req.body?._body) {
     req.body = JSON.parse(req.body._body)
-    req._fixedFormBody = true
+    setReqFixedFormBody(req, true)
   }
   next()
 }
@@ -175,8 +187,58 @@ export const initDataset = async (dataset: RestDataset) => {
   await Promise.all([
     c.createIndex({ _needsIndexing: 1 }, { sparse: true }),
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
+    c.createIndex({ _needsHistorizing: 1 }, { sparse: true }),
     c.createIndex({ _i: -1 }, { unique: true })
   ])
+  await configureConstraintIndexes(dataset)
+}
+
+// index names are derived from the constraint's content (declared property order), not its
+// position in the array, so that removing/reordering a constraint never makes a survivor's
+// name collide with a stale index of a different keySpec (MongoDB IndexKeySpecsConflict, code 86)
+const constraintIndexName = (constraint: any) =>
+  `${CONSTRAINT_INDEX_PREFIX}${crc.crc32(JSON.stringify(constraint.properties)).toString(16)}`
+
+export const configureConstraintIndexes = async (dataset: RestDataset) => {
+  const c = collection(dataset)
+  const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
+  const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
+
+  // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
+  // Doing this before dropping stale indexes means that if a createIndex throws 11000
+  // (existing data violates a new/changed constraint) and the PATCH aborts, no surviving
+  // constraint's index has been dropped yet — it stays enforced.
+  for (const constraint of constraints) {
+    const keySpec: Record<string, 1> = {}
+    const partial: Record<string, any> = { _deleted: false }
+    for (const key of constraint.properties) {
+      keySpec[key] = 1
+      partial[key] = { $exists: true }
+    }
+    try {
+      await c.createIndex(keySpec, {
+        unique: true,
+        name: constraintIndexName(constraint),
+        partialFilterExpression: partial
+      })
+    } catch (err: any) {
+      if (err.code === 11000) {
+        throw httpError(400, `Les données existantes du jeu de données violent la contrainte d'unicité sur (${constraint.properties.join(', ')}).`)
+      }
+      throw err
+    }
+  }
+
+  // drop constraint indexes that no longer correspond to a current constraint
+  let existing: any[] = []
+  try { existing = await c.indexes() } catch { existing = [] }
+  for (const idx of existing) {
+    if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
+      await c.dropIndex(idx.name).catch((err: any) => {
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+      })
+    }
+  }
 }
 
 export const configureHistory = async (dataset: RestDataset) => {
@@ -195,8 +257,7 @@ export const configureHistory = async (dataset: RestDataset) => {
       let revisionsBulkOp = rc.initializeUnorderedBulkOp()
       for await (const line of collection(dataset).find<DatasetLine>({})) {
         const revision: DatasetLineRevision = { ...line, _action: 'create', _lineId: line._id }
-        delete revision._needsIndexing
-        delete revision._needsExtending
+        stripTransientLineFlags(revision)
         delete revision._id
         if (!revision._deleted) delete revision._deleted
         revisionsBulkOp.insert(revision)
@@ -331,8 +392,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
         revision._updatedBy = sessionState.user.id
         revision._updatedByName = sessionState.user.name
       }
-      delete revision._needsIndexing
-      delete revision._needsExtending
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
     }
     await revisionsBulkOp.execute()
@@ -360,7 +420,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset, historizeContext?: HistorizeContextHint, who?: WhoHint) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -373,6 +433,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
   const primaryKeyProjection = getPrimaryKeyProjection(dataset)
+
+  // integrity (target 3): hint-first ordering — mark the dataset as having pending line
+  // stamps BEFORE any line stamp is written, so a crash between the two leaves a harmless
+  // empty hint (relay clears it), never orphaned stamps. Skipped for tmp-collection writes
+  // (drop mode), which are refused on enrolled datasets anyway.
+  const historizeLines = !!dataset.integrity?.active && !tmpDataset
+  if (historizeLines && transacs.length) {
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+  }
 
   // prepare future results that will be completed by the following loops
   const operations = []
@@ -405,6 +474,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
+    if (historizeLines) {
+      operation.fullBody._needsHistorizing = {
+        context: historizeContext ?? {
+          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+          ...(who ? { who } : {})
+        }
+      }
+    }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
@@ -426,10 +504,21 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
+  // index for the result-completion loops below (operations.find was an O(N) scan per mongo result,
+  // O(N²) per chunk); chunks are deduplicated upstream but keep the FIRST occurrence per _id to match
+  // operations.find semantics exactly
+  const operationsById = new Map<string, Operation>()
+  for (const op of operations) {
+    if (!operationsById.has(op._id)) operationsById.set(op._id, op)
+  }
+
   // fill data with previous bodies for patch operations
   if (patchPreviousFilters.length) {
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
+    let pp = 0
     for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
+      // per-result separator pass + body spreads + getLineHash add up, so yield like the build loop above
+      if (++pp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
       // manage the case of older data that was stored when we didn't apply the separator before storing lines
       for (const f of dataset.schema) {
@@ -442,7 +531,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           operation.body = { ...previousBody, ...operation.body }
           Object.assign(operation.fullBody, operation.body)
@@ -460,7 +549,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingPatchPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -471,18 +560,20 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // check delete operations and complete their primary key info
   if (deletePreviousFilters.length) {
     const missingDeletePrevious = new Set(deletePreviousFilters.map(f => f._id))
+    let dp = 0
     for await (const deletePrevious of c.find({ $or: deletePreviousFilters }).project(primaryKeyProjection)) {
+      if (++dp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted, ...previousBody } = deletePrevious
       if (!_deleted) {
         missingDeletePrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation) {
           Object.assign(operation.fullBody, previousBody)
         }
       }
     }
     for (const _id of missingDeletePrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation) {
         operation._status = 404
         operation._error = 'ligne non trouvée'
@@ -508,10 +599,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       continue
     } if (validate) {
       if (!validate(operation.body)) {
+        // localize in place via the shared Proxy localizer (preserves user-provided
+        // errorMessage text), then build a value-aware message so the rejected value
+        // is visible even to a caller that only logs the returned validation errors.
+        localize.fr(validate.errors)
+        const message = errorsText(validate.errors, '', operation.body)
         if (dataset.nonBlockingValidation) {
-          operation._warning = errorsText(validate.errors, '')
+          operation._warning = message
         } else {
-          operation._error = errorsText(validate.errors, '')
+          operation._error = message
           operation._status = 400
           continue
         }
@@ -557,11 +653,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // untouched here — overwriting their _status would let the failing line be persisted.
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
+    let cp = 0
     for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
+      if (++cp % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       const { _id, _hash, _deleted } = checkPrevious
       if (!_deleted) {
         missingCheckPrevious.delete(_id)
-        const operation = operations.find(op => op._id === _id)
+        const operation = operationsById.get(_id)
         if (operation && !operation._error) {
           if (operation._action === 'create') {
             operation._status = 409
@@ -577,7 +675,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       }
     }
     for (const _id of missingCheckPrevious) {
-      const operation = operations.find(op => op._id === _id)
+      const operation = operationsById.get(_id)
       if (operation && !operation._error) {
         if (operation._action === 'create') {
           operation._status = 201
@@ -613,7 +711,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       for (const writeError of err.writeErrors) {
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
-          if (writeError.err.errmsg?.includes('_i_')) {
+          if (writeError.err.errmsg?.includes(CONSTRAINT_INDEX_PREFIX)) {
+            operation._status = 409
+            // the errmsg names the violated index (constraint_unique_<hash>), map it back to
+            // the constraint so the message can name the columns
+            const failedConstraint = (dataset.constraints ?? []).find(ct => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            operation._error = failedConstraint
+              ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
+              : "valeur en double sur une contrainte d'unicité"
+          } else if (writeError.err.errmsg?.includes('_i_')) {
             console.error(writeError)
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
@@ -648,8 +754,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       const revision = getLineFromOperation(operation) as unknown as DatasetLineRevision
       delete revision._id
       revision._lineId = operation._id
-      delete revision._needsIndexing
-      delete revision._needsExtending
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
       hasRevisionsBulkOp = true
     }
@@ -671,7 +776,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       {
         $set: {
           dataUpdatedAt: updatedAt.toISOString(),
-          dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+          dataUpdatedBy: { id: sessionState.user.id },
           _modified: computeModified({ ...dataset, dataUpdatedAt: updatedAt.toISOString() })
         }
       })
@@ -681,7 +786,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 }
 
 const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(req.dataset, reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
+  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset, undefined, whoFromReq(req))
 }
 
 // _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
@@ -696,22 +801,25 @@ type TransactionStreamOptions = {
   linesOwner?: Account,
   validate?: ValidateFunction,
   tmpDataset?: RestDataset,
-  summary: Summary
+  summary: Summary,
+  who?: WhoHint
 }
 
 class TransactionStream extends Writable {
   options: TransactionStreamOptions
   i: number
   transactions: DatasetLineAction[]
+  transactionIds: Set<string>
   constructor (options: TransactionStreamOptions) {
     super({ objectMode: true })
     this.options = options
     this.i = 0
     this.transactions = []
+    this.transactionIds = new Set()
   }
 
   async applyTransactions () {
-    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
+    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset, undefined, this.options.who)
 
     if (this.options.summary._ids) {
       if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
@@ -722,6 +830,7 @@ class TransactionStream extends Writable {
     }
 
     this.transactions = []
+    this.transactionIds.clear()
     if (bulkOpResult) {
       this.options.summary.nbCreated += bulkOpResult.upsertedCount
       this.options.summary.nbCreated += bulkOpResult.insertedCount
@@ -767,14 +876,18 @@ class TransactionStream extends Writable {
     }
 
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
-    if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
+    if (chunk._id && this.transactionIds.has(chunk._id)) {
       await this.applyTransactions()
       // weirdly the separation of transactions is not always sufficient to ensure that the operations
       // are performed in the same order (some test regularly breaks)
+      // TODO: the mechanism is _i time-bucket separation between batches (10ms buckets in
+      // timestamp3 mode + random per-batch component); replacing the sleep with monotonic
+      // batch timestamps requires validating against the rest test suite
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     this.transactions.push(chunk)
+    if (chunk._id) this.transactionIds.add(chunk._id)
 
     // WARNING: changing this number has impact on the _i generation logic
     if (this.transactions.length > config.mongo.maxBulkOps) await this.applyTransactions()
@@ -791,18 +904,27 @@ class TransactionStream extends Writable {
   }
 }
 
-const compileSchema = (dataset: RestDataset, adminMode: boolean) => {
+// memoized: ajv.compile is codegen (ms-scale, main-thread) and was run per write request;
+// worse, each call leaked an entry in ajv's internal strong-ref schema cache.
+// keyed on dataset.updatedAt: any schema change bumps it
+const compileSchema = memoize((dataset: RestDataset, adminMode: boolean) => {
   const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
   return ajv.compile(schema)
-}
+}, {
+  profileName: 'compileRestSchema',
+  primitive: true,
+  max: 1000,
+  maxAge: 1000 * 60, // 1min
+  normalizer: ([dataset, adminMode]: [RestDataset, boolean]) => `${dataset.id}:${dataset.updatedAt}:${adminMode}`
+})
 
-async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
-  if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
-    const fileName = req.body[pathField.key].replace(lineId + '/', '')
+async function checkMatchingAttachment (body: Record<string, any>, lineId: string, dir: string, pathField: { key: string }) {
+  if (pathField && body[pathField.key] && body[pathField.key].startsWith(lineId + '/')) {
+    const fileName = body[pathField.key].replace(lineId + '/', '')
     try {
       const files = await filesStorage.lsr(dir)
       if (files.some(f => f === fileName)) return true
@@ -813,54 +935,68 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
   return false
 }
 
-async function manageAttachment (req: RequestWithRestDataset & { body: any }, keepExisting: boolean) {
-  if (req.is('multipart/form-data') && !req._fixedFormBody) {
-    req._rawBody = { ...req.body }
+// express-free attachment handling. The caller assembles the context from req and
+// gets back any rawBody / uploadedAttachmentPath it needs to keep for the rest of
+// the request (originally req._rawBody / req._uploadedAttachmentPath).
+type ManageAttachmentContext = {
+  dataset: RestDataset,
+  body: Record<string, any>,
+  file?: ReqFile,
+  isMultipart: boolean,
+  fixedFormBody: boolean,
+  lineId?: string | string[]
+}
+
+async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boolean): Promise<{ rawBody?: Record<string, any>, uploadedAttachmentPath?: string }> {
+  let rawBody: Record<string, any> | undefined
+  if (ctx.isMultipart && !ctx.fixedFormBody) {
+    rawBody = { ...ctx.body }
     // When taken from form-data everything is string.. convert to actual types
-    for (const f of req.dataset.schema) {
+    for (const f of ctx.dataset.schema) {
       if (!f['x-calculated']) {
-        if (req.body[f.key] !== undefined) {
-          const value = fieldsSniffer.format(req.body[f.key], f)
-          if (value === null) delete req.body[f.key]
-          else req.body[f.key] = value
+        if (ctx.body[f.key] !== undefined) {
+          const value = fieldsSniffer.format(ctx.body[f.key], f)
+          if (value === null) delete ctx.body[f.key]
+          else ctx.body[f.key] = value
         }
       }
     }
   }
-  const lineId = req.params.lineId || req.body._id
-  const dir = attachmentPath(req.dataset, lineId)
+  const lineId = ctx.lineId || ctx.body._id
+  const dir = attachmentPath(ctx.dataset, lineId)
 
-  const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  const pathField = ctx.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
-  if (req.file) {
+  let uploadedAttachmentPath: string | undefined
+  if (ctx.file) {
     // An attachment was uploaded
-    if (!req.dataset.rest?.history) await filesStorage.removeDir(dir)
-    const fileMd5 = await md5File(req.file.path)
-    const relativePath = path.join(lineId, fileMd5, req.file.originalname)
-    await filesStorage.moveFromFs(req.file.path, attachmentPath(req.dataset, relativePath))
+    if (!ctx.dataset.rest?.history) await filesStorage.removeDir(dir)
+    const fileMd5 = await md5File(ctx.file.path)
+    const relativePath = path.join(lineId, fileMd5, ctx.file.originalname)
+    await filesStorage.moveFromFs(ctx.file.path, attachmentPath(ctx.dataset, relativePath))
     if (!pathField) {
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
-    req.body[pathField.key] = relativePath
+    ctx.body[pathField.key] = relativePath
     // remember the new attachment path so the caller can roll it back if the
     // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
-    req._uploadedAttachmentPath = attachmentPath(req.dataset, relativePath)
+    uploadedAttachmentPath = attachmentPath(ctx.dataset, relativePath)
   } else if (!keepExisting && pathField) {
-    if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
+    if (!await checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
       await filesStorage.removeDir(dir)
     }
   }
+  return { rawBody, uploadedAttachmentPath }
 }
 
 // Remove an attachment that was just uploaded by manageAttachment when the
 // surrounding transaction is rejected — otherwise the file lingers on disk
 // without any database row referencing it.
-const rollbackUploadedAttachment = async (req: RequestWithRestDataset) => {
-  const p = req._uploadedAttachmentPath
+const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
+  const p = uploadedAttachmentPath
   if (!p) return
-  delete req._uploadedAttachmentPath
   try {
-    if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
+    if (await filesStorage.fileExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
     console.warn('failed to rollback uploaded attachment', p, err)
   }
@@ -889,9 +1025,11 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const c = collection(req.dataset)
+  const dataset = reqRestDataset(req)
+  const c = collection(dataset)
   const filter: Filter<DatasetLine> = { _id: req.params.lineId }
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const line = await c.findOne(filter)
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
@@ -906,82 +1044,94 @@ export const readLine = async (req: RequestWithRestDataset, res: Response, next:
 }
 
 export const deleteLine = async (req: RequestWithRestDataset & { params: { lineId: string } }, res: Response, next: NextFunction) => {
-  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const dataset = reqRestDataset(req)
+  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
-  await commitLines(req.dataset, [req.params.lineId])
+  await commitLines(dataset, [req.params.lineId])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset, true)
+  const dataset = reqRestDataset(req)
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
   req.body._id = definedId || nanoid()
-  await manageAttachment(req, false)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
   const fullLine = { _action: 'createOrUpdate', ...req.body }
-  formatLine(fullLine, req.dataset.schema)
+  formatLine(fullLine, dataset.schema)
 
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
-    await rollbackUploadedAttachment(req)
+    await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
-  await commitLines(req.dataset, [fullLine._id])
+  await commitLines(dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
+  const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  await manageAttachment(req, true)
+  const dataset = reqRestDataset(req)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
-  formatLine(fullLine, req.dataset.schema)
+  formatLine(fullLine, dataset.schema)
 
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
-    await rollbackUploadedAttachment(req)
+    await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
-  await commitLines(req.dataset, [fullLine._id])
+  await commitLines(dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
+  const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  await initDataset(req.dataset)
-  const indexName = await initDatasetIndex(req.dataset)
-  await switchAlias(req.dataset, indexName)
+  const dataset = reqRestDataset(req)
+  // integrity (target 3): dropping the collection would silently destroy the lines the locked
+  // anchors still vouch for — deletions must go through the transaction path (tombstones)
+  if (dataset.integrity?.active) throw httpError(400, 'suppression de toutes les lignes refusée tant que le suivi d\'intégrité est actif')
+  await initDataset(dataset)
+  const indexName = await initDatasetIndex(dataset)
+  await switchAlias(dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
-  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
 
 export const bulkLines = async (req: RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
+  const dataset = reqRestDataset(req)
   try {
-    const validate = compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode)
+    const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
+    // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
+    // locked anchors still vouch for — bulk deletions must go through the transaction path
+    if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
@@ -989,7 +1139,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // If attachments are sent, add them to the existing ones
     const attachmentsFile = req.files?.attachments?.[0]
     if (attachmentsFile) {
-      await mongo.datasets.updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
+      await mongo.datasets.updateOne({ id: dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
@@ -1000,7 +1150,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // pipeline instead of crashing the process with an unhandled 'error' event.
     let getInputStream: () => Readable
     let mimeType, skipDecoding
-    const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
+    const transactionSchema = [...dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
     let fileProps = {
       fieldsDelimiter: req.query.sep || ',',
       escape: '"',
@@ -1052,7 +1202,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     let tmpDataset: RestDataset | undefined
     if (drop) {
-      tmpDataset = { ...req.dataset, id: req.dataset.id + '-' + nanoid() + '-tmp-bulk' }
+      tmpDataset = { ...dataset, id: dataset.id + '-' + nanoid() + '-tmp-bulk' }
       await initDataset(tmpDataset)
     }
 
@@ -1062,7 +1212,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     // mandatory extensions force in-memory processing — reject upfront when the
     // request would have been queued for async indexing (see commitLines below).
-    const hasMandatoryExtension = !!(req.dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
+    const hasMandatoryExtension = !!(dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
     const willGoAsync = req.query.async === 'true' || (!isNaN(contentLength) && contentLength > config.elasticsearch.maxBulkChars)
     if (hasMandatoryExtension && willGoAsync) {
       return res.status(400).type('text/plain').send(
@@ -1070,10 +1220,10 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       )
     }
 
-    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset, who: whoFromReq(req) })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -1099,18 +1249,18 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           summary.cancelled = true
           await collection(tmpDataset).drop()
         } else {
-          await createTmpMissingRevisions(tmpDataset, req.dataset, reqSessionAuthenticated(req))
-          await collection(req.dataset).drop()
-          await collection(tmpDataset).rename(collectionName(req.dataset))
+          await createTmpMissingRevisions(tmpDataset, dataset, reqSessionAuthenticated(req))
+          await collection(dataset).drop()
+          await collection(tmpDataset).rename(collectionName(dataset))
           summary.dropped = true
-          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
         if (!attachmentsFile && req.query.async !== 'true' && summary._ids && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars) {
-          await commitLines(req.dataset, [...summary._ids])
+          await commitLines(dataset, [...summary._ids])
           summary.indexedAt = new Date().toISOString()
         } else {
-          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
         }
       }
     } catch (err: any) {
@@ -1146,12 +1296,12 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     delete result._ids
 
     await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${req.dataset.slug} (${req.dataset.id}), ${JSON.stringify(result)}`, { req, account: req.dataset.owner as Account }))
+      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { req, account: dataset.owner as Account }))
 
     res.write(JSON.stringify(result, null, 2))
     res.end()
 
-    storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
     // best-effort cleanup: never let a temp-file removal error (e.g. the file
     // already gone) mask the response or escape as an unhandled rejection
@@ -1162,7 +1312,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 }
 
 export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const dataset = req.dataset
+  const dataset = reqRestDataset(req)
   const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
 
   const pathField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -1188,22 +1338,24 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary })
+  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, who: whoFromReq(req) })
   await pump(filesStream, transactionStream)
 
-  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
-  await storageUtils.updateStorage(req.dataset)
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await storageUtils.updateStorage(dataset)
 
   res.send(summary)
 }
 
 export const readRevisions = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  if (!req.dataset.rest.history) {
+  const dataset = reqRestDataset(req)
+  if (!dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
-  const rc = revisionsCollection(req.dataset)
+  const rc = revisionsCollection(dataset)
   const filter: Filter<DatasetLineRevision> = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const countFilter = { ...filter }
   if (req.query.before && typeof req.query.before === 'string') filter._i = { $lt: parseInt(req.query.before) }
 
@@ -1220,7 +1372,7 @@ export const readRevisions = async (req: RequestWithRestDataset, res: Response, 
   const response: { total: number, results: Partial<DatasetLineRevision>[], next?: string } = { total, results }
 
   if (size && results.length === size) {
-    const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
+    const nextLinkURL = new URL(`${reqPublicBaseUrl(req)}${req.originalUrl}`)
     for (const key of Object.keys(req.query)) {
       if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
     }
@@ -1256,23 +1408,22 @@ export const readStreams = async (dataset: RestDataset, filter = {}, progress?: 
 }
 
 export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDataset['extensions']) => {
-  const patchedKeys: string[] = []
-  for (const extension of extensions ?? []) {
-    if (extension.type === 'remoteService' && extension.propertyPrefix) {
-      patchedKeys.push(extension.propertyPrefix)
-      if (extension.overwrite) {
-        for (const key in extension.overwrite) {
-          // @ts-ignore
-          if (extension.overwrite[key]['x-originalName']) {
-            // @ts-ignore
-            patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
-          }
-        }
-      }
-    }
-    if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
-  }
+  // INVARIANT (integrity): the columns written back here are exactly the ones the integrity
+  // module excludes from the covered line body — the extender writes OUTSIDE the transaction
+  // pipeline (unstamped), so any column it wrote that the relay/checker still covered would
+  // false-breach every organic write-then-extend flow. extensionOwnedKeys IS that exclusion
+  // set: one shared source of truth instead of two mirrored implementations, so the write-back
+  // and the coverage exclusion can never drift apart.
+  const patchedKeys = [...extensionOwnedKeys(extensions)]
   const c = collection(dataset)
+  // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
+  let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
+  const flush = async () => {
+    if (!bulkOps.length) return
+    const ops = bulkOps
+    bulkOps = []
+    await c.bulkWrite(ops, { ordered: false })
+  }
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
@@ -1282,7 +1433,16 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
           if (key in item && patch.$set) patch.$set[key] = item[key]
           else if (patch.$unset) patch.$unset[key] = item[key]
         }
-        await c.updateOne({ _id: item._id }, patch)
+        bulkOps.push({ updateOne: { filter: { _id: item._id }, update: patch } })
+        if (bulkOps.length >= config.mongo.maxBulkOps) await flush()
+        cb()
+      } catch (err: any) {
+        cb(err)
+      }
+    },
+    async final (cb) {
+      try {
+        await flush()
         cb()
       } catch (err: any) {
         cb(err)
@@ -1293,34 +1453,47 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
 
 class MarkIndexedStream extends Writable {
   c: Collection<DatasetLine>
-  i: number = 0
-  bulkOp: UnorderedBulkOperation | null = null
+  buffer: DatasetLine[] = []
 
   constructor (dataset: RestDataset) {
     super({ objectMode: true })
     this.c = collection(dataset)
   }
 
-  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
-    try {
-      this.i = this.i || 0
-      this.bulkOp = this.bulkOp || this.c.initializeUnorderedBulkOp()
-      const line = await this.c.findOne({ _id: chunk._id })
+  // batched read-back: one $in query per batch instead of one findOne per line
+  async flush () {
+    if (!this.buffer.length) return
+    const chunks = this.buffer
+    this.buffer = []
+    const updatedAts = new Map<string, number>()
+    const cursor = this.c.find({ _id: { $in: chunks.map(c => c._id) } }, { projection: { _updatedAt: 1 } })
+    for await (const line of cursor) {
+      if (line._updatedAt) updatedAts.set(line._id, line._updatedAt.getTime())
+    }
+    let i = 0
+    const bulkOp = this.c.initializeUnorderedBulkOp()
+    for (const chunk of chunks) {
       // if the line was updated in the interval since reading for indexing
       // do not mark it as properly indexed
-      if (chunk._updatedAt && line?._updatedAt && chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
-        this.i += 1
+      if (chunk._updatedAt && updatedAts.get(chunk._id) === chunk._updatedAt.getTime()) {
+        i += 1
         if (chunk._deleted) {
-          this.bulkOp.find({ _id: chunk._id }).deleteOne()
+          // integrity (target 3): a tombstone awaiting historization must survive until its
+          // deletion revision ships — the lines relay purges it once both flags are gone
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: false } }).deleteOne()
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: true } }).updateOne({ $unset: { _needsIndexing: '' } })
         } else {
-          this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
+          bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }
       }
-      if (this.i === config.mongo.maxBulkOps) {
-        await this.bulkOp.execute()
-        this.i = 0
-        this.bulkOp = null
-      }
+    }
+    if (i) await bulkOp.execute()
+  }
+
+  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
+    try {
+      this.buffer.push(chunk)
+      if (this.buffer.length >= config.mongo.maxBulkOps) await this.flush()
       cb()
     } catch (err: any) {
       cb(err)
@@ -1329,7 +1502,7 @@ class MarkIndexedStream extends Writable {
 
   async _final (cb: (err?: Error) => void) {
     try {
-      if (this.bulkOp && this.i) await this.bulkOp.execute()
+      await this.flush()
       cb()
     } catch (err: any) {
       cb(err)

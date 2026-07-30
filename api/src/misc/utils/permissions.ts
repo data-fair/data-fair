@@ -1,4 +1,4 @@
-import type { Response, NextFunction, RequestHandler } from 'express'
+import type { Request, Response, NextFunction, RequestHandler } from 'express'
 import type { AccountKeys, SessionState } from '@data-fair/lib-express'
 import type { RequestWithResource, ResourceType, Permission, Resource, BypassPermissions } from '#types'
 
@@ -6,36 +6,52 @@ import config from '#config'
 import mongo from '#mongo'
 import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
-import * as apiDocsUtil from './api-docs.ts'
-import * as visibilityUtils from './visibility.js'
+import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
+import * as visibilityUtils from './visibility.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
+import { stampHistorize } from '../../integrity/operations.ts'
+import { whoFromReq } from '../../integrity/who.ts'
+// The cross-cutting resource / resourceType / bypassPermissions / publicOperation
+// request-context accessors live in the config-free req-context.ts (so config-free
+// consumers can import them without pulling in #config) — see code-conventions.md §2.
+// They are re-exported here so existing `permissions.<accessor>` namespace consumers
+// keep working; config-free consumers import them directly from req-context.ts.
+import { defineReqContext, reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
+export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
 
-const resourceTypesLabels = {
+// the operation gating the current route (class/id/track), exposed downstream as the x-operation header
+export type ReqOperation = { class: string, id: string, track?: string }
+const operationCtx = defineReqContext<ReqOperation>('operation')
+export const setReqOperation = operationCtx.set
+export const reqOperation = operationCtx.get
+
+const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
   applications: 'L\'application',
-  catalogs: 'Le connecteur'
+  'remote-services': 'Le service distant'
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
-export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
+export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
   // pre-compute the x-operation header since it is constant per route
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
   const operationHeader = JSON.stringify(operation)
 
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
-    if ((acceptMissing && !req.resource)) {
+    if (acceptMissing && !reqResourceOptional(req)) {
       next()
       return
     }
-    if (can(req.resourceType, req.resource, operationId, sessionState, req.bypassPermissions)) {
+    if (can(reqResourceType(req), reqResource(req), operationId, sessionState, reqBypassPermissions(req))) {
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
-      const denomination = resourceTypesLabels[req.resourceType] || 'La ressource'
+      const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'
       if (operationId === 'readDescription') {
+        const resource = reqResource(req)
         if (!sessionState.user) {
           res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
           return
@@ -44,15 +60,15 @@ export const middleware = function (operationId: string, operationClass: string,
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
-          if (can(req.resourceType, req.resource, operationId, altSessionState, req.bypassPermissions)) {
+          if (can(reqResourceType(req), resource, operationId, altSessionState, reqBypassPermissions(req))) {
             // expose x-owner so the UI can offer a "switch active account" action without parsing the error body
-            if (req.resource?.owner) {
-              const ownerKey = req.resource.owner.department
-                ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
-                : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+            if (resource.owner) {
+              const ownerKey = resource.owner.department
+                ? { type: resource.owner.type, id: resource.owner.id, department: resource.owner.department } as AccountKeys
+                : { type: resource.owner.type, id: resource.owner.id } as AccountKeys
               res.setHeader('x-owner', JSON.stringify(ownerKey))
             }
-            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
+            res.send(`${denomination} ${resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
             return
           }
         }
@@ -64,19 +80,20 @@ export const middleware = function (operationId: string, operationClass: string,
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    req.publicOperation = can(req.resourceType, req.resource, operationId, { lang: 'fr' })
+    setReqPublicOperation(req, can(reqResourceType(req), reqResource(req), operationId, { lang: 'fr' }))
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
-    if (req.resource) {
-      res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title ?? '') }))
-      if (req.resource.owner) {
-        const ownerKey = req.resource.owner.department
-          ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
-          : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+    const resource = reqResourceOptional(req)
+    if (resource) {
+      res.setHeader('x-resource', JSON.stringify({ type: reqResourceType(req), id: resource.id, title: encodeURIComponent(resource.title ?? '') }))
+      if (resource.owner) {
+        const ownerKey = resource.owner.department
+          ? { type: resource.owner.type, id: resource.owner.id, department: resource.owner.department } as AccountKeys
+          : { type: resource.owner.type, id: resource.owner.id } as AccountKeys
         res.setHeader('x-owner', JSON.stringify(ownerKey))
       }
     }
-    ;(req as any).operation = operation
+    setReqOperation(req, operation)
     res.setHeader('x-operation', operationHeader)
     next()
   }
@@ -84,9 +101,9 @@ export const middleware = function (operationId: string, operationClass: string,
 
 /** Express middleware that checks the user can perform a given operation class on the resource's owner (used for cross-owner actions). */
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
-    const owner: AccountKeys = ignoreDepartment ? { ...req.resource.owner, department: undefined } : req.resource.owner
-    if (!canDoForOwner(owner, req.resourceType, operationClass, reqSession(req))) {
+  return function (req: Request, res: Response, next: NextFunction) {
+    const owner: AccountKeys = ignoreDepartment ? { ...reqResource(req).owner, department: undefined } : reqResource(req).owner
+    if (!canDoForOwner(owner, reqResourceType(req), operationClass, reqSession(req))) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
     }
     next()
@@ -101,17 +118,17 @@ export const getOwnerRole = (owner: AccountKeys, sessionState: SessionState | un
 
 /** Returns the operation classes the session can perform by virtue of being a member of the resource owner (admin/contrib/null). */
 const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourceType: ResourceType) => {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const ownerRole = getOwnerRole(owner, sessionState)
   if (!ownerRole) return null
   // classes of operations the user can do based on him being member of the resource's owner
   if (ownerRole === config.adminRole || (sessionState.user?.adminMode)) {
     return Object.keys(operationsClasses)
-      .concat(apiDocsUtil.contribOperationsClasses[resourceType] || [])
-      .concat(apiDocsUtil.adminOperationsClasses[resourceType] || [])
+      .concat(permissionsClasses.contribOperationsClasses[resourceType] || [])
+      .concat(permissionsClasses.adminOperationsClasses[resourceType] || [])
   }
   if (ownerRole === config.contribRole) {
-    return apiDocsUtil.contribOperationsClasses[resourceType] || []
+    return permissionsClasses.contribOperationsClasses[resourceType] || []
   }
   return null
 }
@@ -151,7 +168,7 @@ export const can = function (resourceType: ResourceType, resource: Resource, ope
 
 /** Lists every operationId the session can perform on the given resource (combining owner role, explicit permissions and bypasses). */
 export const list = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const operations = new Set<string>([])
 
   // apply specific permissions from application key
@@ -189,7 +206,7 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
     operations.add(op)
   }
   for (const opClass of permission.classes ?? []) {
-    const classOps = apiDocsUtil.operationsClasses[resourceType][opClass]
+    const classOps = permissionsClasses.operationsClasses[resourceType][opClass]
     if (!classOps) {
       continue
     }
@@ -205,7 +222,7 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
  * `list` is excluded on purpose: one can mark a resource publicly usable without making it appear in listings.
  */
 export const isPublic = function (resourceType: ResourceType, resource: Resource) {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const publicOperations = new Set<string>()
   if (operationsClasses.read) {
     for (const operationClass of operationsClasses.read) {
@@ -232,15 +249,13 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 
 /** Builds the Mongo `$or` clauses matching resources on which the session can perform the given operation(s). */
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
-  const ignoreDepartment = resourceType === 'catalogs'
-
   const operationFilter = []
   for (const op of operation.split(',')) {
-    const operationClass = apiDocsUtil.classByOperation[resourceType][op]
+    const operationClass = permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (apiDocsUtil.operationsClasses[resourceType][operation]) {
+    } else if (permissionsClasses.operationsClasses[resourceType][operation]) {
       operationFilter.push({ classes: op })
     }
   }
@@ -263,12 +278,12 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
 
       if (sessionState.organization) {
         const listRoles = ['admin']
-        if (resourceType && apiDocsUtil.contribOperationsClasses[resourceType] && apiDocsUtil.contribOperationsClasses[resourceType].includes('list')) {
+        if (resourceType && permissionsClasses.contribOperationsClasses[resourceType] && permissionsClasses.contribOperationsClasses[resourceType].includes('list')) {
           listRoles.push('contrib')
         }
         // user is privileged admin or owner of organization with or without department
         if (listRoles.includes(sessionState.organization.role)) {
-          if (sessionState.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
+          if (sessionState.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id })
         }
 
@@ -330,7 +345,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
   const router = Router()
 
   router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
-    res.status(200).send(req.resource.permissions || [])
+    res.status(200).send(reqResource(req).permissions || [])
   }) as RequestHandler)
 
   router.put('', middleware('setPermissions', 'admin') as RequestHandler, (async (req, res, next) => {
@@ -346,7 +361,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     }
     const resources = mongo.db.collection(resourceType)
     try {
-      const resource = await req.resource
+      const resource = await reqResource(req)
       const wasPublic = isPublic(resourceType, resource)
       const willBePublic = isPublic(resourceType, { ...resource, permissions })
 
@@ -364,7 +379,14 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
           }
         }
       }
-      await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body, updatedAt: new Date().toISOString() } })
+      const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
+      if (resourceType === 'datasets' && (resource as any).integrity?.active) {
+        // also covers the publications.$.status='waiting' write just above (same request)
+        // ACL changes are among the highest-forensic-value writes (design §2.2): attach who
+        const who = whoFromReq(req)
+        stampHistorize(permissionsUpdate, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
+      }
+      await resources.updateOne({ id: resource.id }, permissionsUpdate)
 
       if (!wasPublic && willBePublic && onPublicCallback) {
         await onPublicCallback(req, { ...resource, permissions: req.body })

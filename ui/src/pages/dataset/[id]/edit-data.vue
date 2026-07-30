@@ -5,6 +5,10 @@
     fluid
   >
     <dataset-table
+      v-model:cols="cols"
+      v-model:display="display"
+      v-model:q="q"
+      v-model:sort="sort"
       :height="contentHeight"
       edit
     />
@@ -36,6 +40,11 @@ const store = useDatasetStore()
 const { dataset } = store
 
 useDatasetWatch(store, ['info'])
+
+const cols = useStringsArraySearchParam('cols')
+const display = useStringSearchParam('display', 'table')
+const q = useStringSearchParam('q')
+const sort = useStringSearchParam('sort')
 
 const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
 

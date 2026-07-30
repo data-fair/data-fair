@@ -4,6 +4,7 @@ import { withQuery } from 'ufo'
 import { useDisplay } from 'vuetify'
 import truncateMiddle from 'truncate-middle'
 import { MaybeRefOrGetter } from 'vue'
+import { dateTimeInOwnTimeZone } from './format-date-logic'
 
 export type ExtendedResultValue = {
   raw: number | boolean | string,
@@ -99,6 +100,9 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
           if (property.key === '_updatedByName' && raw._updatedBy && !raw._updatedBy.startsWith('apiKey:')) {
             extendedValue.formatted = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`
           }
+          if (property.key === '_ownerName' && raw._owner) {
+            extendedValue.formatted = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
+          }
           if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && raw[property.key]) {
             extendedValue.formatted = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
           }
@@ -155,10 +159,9 @@ export const formatValue = (value: any, property: SchemaProperty, truncate: numb
   if (value === undefined || value === null) return ''
   if (property['x-labels'] && property['x-labels']['' + value]) return property['x-labels']['' + value] as string
   if (property.format === 'date-time') {
-    return localeDayjs.dayjs(value).format('lll')
-    // TODO: test this and recreate the functionality if needed
-    // we use parseZone to show the data in the originally stored timezone
-    // return moment.parseZone(value).format('lll')
+    // show the date-time in its own stored timezone, not the viewer's browser timezone
+    // (see format-date-logic.ts and docs/architecture/date-management.md)
+    return dateTimeInOwnTimeZone(localeDayjs.dayjs, value).format('lll')
   }
   if (property.format === 'date') {
     return localeDayjs.dayjs(value).format('L')

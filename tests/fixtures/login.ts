@@ -9,6 +9,15 @@ async function performLogin (page: any, context: any, baseUrl: string, url: stri
   await page.getByLabel('Adresse mail').fill(`${user}@test.com`)
   await page.getByLabel('Mot de passe').fill('passwd')
   await page.getByRole('button', { name: 'Se connecter' }).click()
+  // super-admin accounts get an "activate admin mode for this session?" interstitial that blocks
+  // the redirect; keep a normal session (the dedicated adminMode fixtures handle the admin case).
+  // Regular users redirect straight to fullUrl, so race the two outcomes to avoid a fixed wait.
+  const normalSession = page.getByRole('button', { name: 'Session Normale' })
+  const sawInterstitial = await Promise.race([
+    normalSession.waitFor({ state: 'visible', timeout: 10000 }).then(() => true, () => false),
+    page.waitForURL(fullUrl, { timeout: 10000 }).then(() => false, () => false)
+  ])
+  if (sawInterstitial) await normalSession.click()
   await page.waitForURL(fullUrl, { timeout: 10000 })
   const cookies = await context.cookies()
   cookieCache.set(user, cookies)

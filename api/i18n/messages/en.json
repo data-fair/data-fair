@@ -20,6 +20,13 @@
 		"queryAdviceSize": "request fewer results per page (lower size)",
 		"queryAdviceSelect": "use the select parameter to return only the columns you need",
 		"queryAdviceQFields": "restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column",
+		"queryAdviceIgnoredIntro": "Some parameters were ignored",
+		"queryAdviceUncertainIntro": "some filters may return incomplete results: values longer than %s characters are not exactly indexed on the following column(s)",
+		"queryAdviceConceptUseColumn": "%s → use %s instead (the _c_ prefix is reserved for concept filters, not columns)",
+		"queryAdviceConceptUnknown": "%s was ignored — the _c_ prefix is for concept filters and matched no concept in this dataset",
+		"queryAdviceUnknownParam": "%s is not a recognized query parameter and was ignored",
+		"queryAdviceUncertainFilter": "\"%s\"",
+		"queryAdviceTruncatedMetricsIntro": "some metrics may be computed on incomplete data: values longer than %s characters are not taken into account on the following column(s)",
 		"exceedAnonymousRateLimiting": "Trop many messages in a short interval. Please wait and try again.",
 		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
 		"requireAnonymousToken": "An anonymous token is required.",
@@ -87,7 +94,9 @@
 		"url": "URL",
 		"select": "Selected columns",
 		"sort": "Sort",
-		"q": "Text search"
+		"q": "Text search",
+		"truncated": "Truncated cells",
+		"truncatedValue": "{count} cell(s) exceeding Excel's limit of 32767 characters were truncated. Affected columns: {columns}."
 	},
 	"notifications": {
 		"datasets": {
@@ -154,6 +163,26 @@
 			"draft-draft-cancelled": {
 				"title": "Draft cancelled {{label}}",
 				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
+			},
+			"integrity-breach": {
+				"title": "Integrity breach",
+				"body": "Dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check on its data file or metadata)."
+			},
+			"integrity-renewal-failed": {
+				"title": "Integrity lock renewal failed",
+				"body": "The protection lock of dataset {{label}} could not be renewed. If this persists, the integrity guarantee will lapse when the current lock expires."
+			},
+			"integrity-check-stale": {
+				"title": "Integrity check overdue",
+				"body": "Dataset {{label}} has produced no definitive integrity verdict for too long (pending writes, a stuck pipeline or a store outage). Its protection state is currently unverified."
+			},
+			"integrity-scope-incoherent": {
+				"title": "Integrity protection incoherence",
+				"body": "The integrity store still protects dataset {{label}} but the database says its protection is off (or the dataset is gone) with no signed-off disable. This looks like an out-of-band disarm — review it."
+			},
+			"integrity-trail-altered": {
+				"title": "Integrity trail altered",
+				"body": "The revision trail of dataset {{label}} shows signs of alteration (shadowed or hidden revisions). The original locked revisions are intact; review the anomalies in the integrity panel."
 			}
 		},
 		"applications": {
@@ -176,6 +205,18 @@
 			"published-topic": {
 				"title": "Publication of {{label}} in {{topic}}",
 				"body": "The application {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
+			}
+		}
+	},
+	"mails": {
+		"api-key": {
+			"expiring": {
+				"subject": "Your API key {{title}} is about to expire",
+				"text": "API key {{title}} expires on {{expireAt}}."
+			},
+			"expired": {
+				"subject": "Your API key {{title}} expires on {{expireAt}}",
+				"text": "API key {{title}} expires on {{expireAt}}."
 			}
 		}
 	}

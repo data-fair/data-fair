@@ -26,8 +26,8 @@ const s3Config = {
   endpoint: `http://localhost:${s3Port}`,
   bucket: 'bucketdev',
   credentials: {
-    accessKeyId: '',
-    secretAccessKey: ''
+    accessKeyId: 'minioadmin',
+    secretAccessKey: 'minioadmin'
   },
   forcePathStyle: true
 }

@@ -206,8 +206,9 @@
           @click:clear="dataset.modified = null"
         />
 
+        <!-- on virtual datasets attachmentsAsImage is derived from the children (see prepareSchema) -->
         <v-checkbox
-          v-if="dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
+          v-if="!dataset.isVirtual && dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
           v-model="dataset.attachmentsAsImage"
           :disabled="!can('writeDescriptionBreaking')"
           :label="t('attachmentsAsImage')"
@@ -346,9 +347,7 @@ en:
 import { withQuery } from 'ufo'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { VDateInput } from 'vuetify/labs/VDateInput'
 import equal from 'fast-deep-equal'
-import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 const dataset = defineModel<any>({ required: true })
 
 const { t, locale } = useI18n()
@@ -364,8 +363,8 @@ const props = withDefaults(defineProps<{
 const owner = computed(() => dataset.value?.owner)
 const licensesFetch = useFetch<any[]>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/licenses` : null)
 const topicsFetch = useFetch<any[]>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/topics` : null)
-
-const { datasetsMetadata } = useDatasetsMetadata(owner)
+const datasetsMetadataFetch = useFetch<Record<string, any>>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/datasets-metadata` : null)
+const datasetsMetadata = datasetsMetadataFetch.data
 
 // --- Modified field detection ---
 

@@ -1,8 +1,8 @@
 import config from '#config'
 import es from '#es'
 import type { Dataset } from '#types'
-import { prepareQuery, aliasName } from './commons.js'
-import { type EsAbortContext, timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 
 async function * iterHits (dataset: Dataset, query: { size: number } & Record<string, string | number> = { size: 1000 }, abortContext?: EsAbortContext) {
   const esQuery = prepareQuery(dataset, query, undefined, undefined, true, true)

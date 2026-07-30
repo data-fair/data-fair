@@ -145,6 +145,15 @@ const createApplicationStore = (id: string) => {
     watch: false
   })
 
+  // number of parent applications using this one (reverse reference, like virtual datasets for a dataset)
+  const nbParentAppsFetch = useFetch<{ count: number }>(() => {
+    if (!application.value) return null
+    return `${$apiPath}/applications`
+  }, {
+    query: computed(() => ({ application: id, size: 0 }))
+  })
+  const nbParentApps = computed(() => nbParentAppsFetch.data.value?.count ?? 0)
+
   const permissionsFetch = useFetch<Permission[]>($apiPath + `/applications/${id}/permissions`, { immediate: false, watch: false })
   const permissions = ref<Permission[] | null>(null)
   watch(permissionsFetch.data, () => {
@@ -201,6 +210,7 @@ const createApplicationStore = (id: string) => {
     savePermissions,
     datasetsFetch,
     childrenAppsFetch,
+    nbParentApps,
     remove,
     changeOwner,
   }

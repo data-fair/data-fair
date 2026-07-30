@@ -53,7 +53,7 @@
     >
       <!-- Action buttons row -->
       <div
-        v-if="editable && dataset && !dataset.isVirtual"
+        v-if="editable && dataset && !dataset.isVirtual && columnEditable"
         class="d-flex justify-end ga-1 mb-2"
       >
         <confirm-menu
@@ -130,7 +130,7 @@
         v-if="column"
         :model-value="column['x-refersTo'] ?? undefined"
         :label="t('concept')"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
         :items="filteredVocabularyItems"
         :custom-filter="conceptFilter"
         item-value="value"
@@ -157,7 +157,7 @@
         v-if="column && column.type === 'string'"
         :model-value="(column as any).separator ?? undefined"
         :label="t('sep')"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
         :items="[', ', '; ', ' - ', ' / ', ' | ']"
         density="comfortable"
         class="mb-2"
@@ -175,7 +175,7 @@
         v-if="column && showDisplayFormat"
         v-model="displayFormat"
         :label="t('xDisplay')"
-        :disabled="!editable"
+        :disabled="!editable || !columnEditable"
         :items="displayFormatItems"
         class="mb-2"
         density="comfortable"
@@ -286,6 +286,11 @@ const currentFileColumn = computed(() => {
   if (!props.column || !dataset.value?.file?.schema) return null
   const col = props.column
   return dataset.value.file.schema.find((c: any) => c.key === col.key)
+})
+
+const columnEditable = computed(() => {
+  const col = props.column as any
+  return !!col && !(col['x-extension'] && col['x-extension'] !== col.key)
 })
 
 type VocabSubheader = { type: 'subheader', title: string }

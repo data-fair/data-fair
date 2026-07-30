@@ -446,7 +446,7 @@ const settings = settingsEditFetch.data
 function normalizeSettings (s: any) {
   if (!s) return
   const dm = s.datasetsMetadata = s.datasetsMetadata || {}
-  for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords']) {
+  for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
 }

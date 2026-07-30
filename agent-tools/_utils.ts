@@ -3,6 +3,19 @@ export function cleanRow (row: any): any {
   return clean
 }
 
+/**
+ * Copy only the listed keys (that are defined) from an object. Used to keep
+ * structuredContent in sync with output schemas declared with additionalProperties:false:
+ * raw API sub-objects (e.g. license, timePeriod) may carry extra keys that MCP hosts reject.
+ */
+export function pick<T extends Record<string, any>> (obj: T, keys: (keyof T)[]): Partial<T> {
+  const result: Partial<T> = {}
+  for (const key of keys) {
+    if (obj[key] !== undefined) result[key] = obj[key]
+  }
+  return result
+}
+
 export function csvEscape (value: any): string {
   if (value == null) return ''
   const s = String(value)
@@ -28,27 +41,58 @@ export function normalizeSort (sort: string): string {
   }).filter(Boolean).join(',')
 }
 
-export const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (see server instructions for available suffixes). All values must be strings, even for numbers/dates. If a column key has underscores (e.g., code_postal), just append the suffix: code_postal_eq. Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }'
+// Full filtering guide — the single rich source. Embedded once into the dataset_data
+// subagent prompt. Covers column filters AND the geo/temporal params (bbox, geoDistance,
+// dateMatch), so the spec lives in one place instead of being repeated across every tool.
+export const filtersGuide = `Filtering covers column filters (the \`filters\` object) plus three separate geo/temporal params (bbox, geoDistance, dateMatch).
+
+Column filters — key-value pairs, key = column_key + suffix. All values are strings, even for numbers/dates. If a column key has underscores (e.g. code_postal), just append the suffix: code_postal_eq.
+
+Suffixes:
+- _eq / _neq: equals / not equals
+- _in / _nin: in / not in a comma-separated list
+- _gt / _gte / _lt / _lte: numeric or date range comparisons
+- _starts: value starts with a string (prefix)
+- _exists / _nexists: column has / has no value
+- _search: free-text word search (DEFAULT choice for matching text)
+- _contains: substring match — only on columns explicitly enabled for it
+
+Columns support the suffixes that make sense for their data. Just try the suffix you need; if it's rejected, the 400 error lists what that column supports — read it and adapt. Never prefix a column filter with _c_ (reserved for concept filters, silently ignored otherwise): use the bare column_key + suffix (ville_eq, not _c_ville_eq).
+Example filters: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }
+
+Geo/temporal params are top-level, not part of the filters object, and only apply to geolocalized/temporal datasets:
+- bbox — bounding box "lonMin,latMin,lonMax,latMax" (longitude before latitude). Example: "-2.5,43,3,47".
+- geoDistance — proximity "lon,lat,distance" (longitude first). Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.
+- dateMatch — a single date "YYYY-MM-DD" to match that day, or "YYYY-MM-DD,YYYY-MM-DD" for an overlapping range. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".`
+
+// Terse, self-contained stub kept on the filters param. Enough for a flat WebMCP client to
+// build the common filters; the full suffix table and geo/date detail live in filtersGuide.
+export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes include _eq, _in, _gt/_lt, _search and more; if one is rejected the 400 error lists what the column supports. Never _c_-prefix a column filter (use ville_eq, not _c_ville_eq).'
 
 const datasetIdProperty = { type: 'string' as const, description: 'The exact dataset ID from the "id" field in list_datasets results. Do not use the title or slug.' }
 
 export const filterProperties = {
   filters: { type: 'object' as const, description: filtersDescription, properties: {} },
-  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax". Example: "-2.5,43,3,47".' },
-  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Restricts results to within a distance from a point. Format: "lon,lat,distance". Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.' },
-  dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets with date fields). Accepts a single date "YYYY-MM-DD" to match that day, or a date range "YYYY-MM-DD,YYYY-MM-DD" to match an overlapping period. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".' }
+  bbox: { type: 'string' as const, description: 'Bounding box "lonMin,latMin,lonMax,latMax" (lon before lat), e.g. "-2.5,43,3,47". Geolocalized datasets only.' },
+  geoDistance: { type: 'string' as const, description: 'Proximity filter "lon,lat,distance" (lon first), e.g. "2.35,48.85,10km"; distance "0" = point-in-polygon. Geolocalized datasets only.' },
+  dateMatch: { type: 'string' as const, description: 'Date "YYYY-MM-DD" (single day) or "YYYY-MM-DD,YYYY-MM-DD" (range), e.g. "2023-11-21". Temporal datasets only.' }
 } as const
 
 export { datasetIdProperty }
 
 /**
  * Build the filter-relevant query params from common tool input params.
- * Returns a URL query string (e.g. "nom_search=Jean&geo_distance=2.35,48.85,10km").
+ * Returns a URL query string (e.g. "nom_search=Jean&_c_geo_distance=2.35,48.85,10km").
  * Excludes pagination (size, page) and tool-specific params (metric, field, etc.).
+ *
+ * `q`, `bbox`, `geo_distance` and `date_match` are emitted with the `_c_` prefix
+ * (concept filters) so they survive the table/map URL sync, which only forwards
+ * `_c_`-prefixed params through `useConceptFilters`. The API accepts both forms
+ * interchangeably.
  */
 export function buildFilterQueryString (params: { q?: string, filters?: Record<string, any>, sort?: string, select?: string, bbox?: string, geoDistance?: string, dateMatch?: string }): string | undefined {
   const searchParams = new URLSearchParams()
-  if (params.q) searchParams.set('q', params.q)
+  if (params.q) searchParams.set('_c_q', params.q)
   if (params.filters) {
     for (const [key, value] of Object.entries(params.filters)) searchParams.set(key, String(value))
   }
@@ -57,11 +101,25 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
     if (normalized) searchParams.set('sort', normalized)
   }
   if (params.select) searchParams.set('select', params.select)
-  if (params.bbox) searchParams.set('bbox', params.bbox)
-  if (params.geoDistance) searchParams.set('geo_distance', params.geoDistance)
-  if (params.dateMatch) searchParams.set('date_match', params.dateMatch)
+  if (params.bbox) searchParams.set('_c_bbox', params.bbox)
+  if (params.geoDistance) searchParams.set('_c_geo_distance', params.geoDistance)
+  if (params.dateMatch) searchParams.set('_c_date_match', params.dateMatch)
   const qs = searchParams.toString()
   return qs || undefined
+}
+
+/**
+ * Consumer-side counterpart to buildFilterQueryString, for browser apps that feed a
+ * filterQuery into their `navigate` tool. The dataset_data subagent returns filterQuery as
+ * a complete query string and the caller is told to pass it verbatim, but LLMs sometimes
+ * wrap it as "filterQuery=<the whole query string>". Detect that single-param mistake and
+ * return the inner query string; otherwise return the input unchanged.
+ */
+export function unwrapFilterQuery (query: string | undefined): string | undefined {
+  if (!query) return query
+  const match = /^filterQuery=(.+)$/s.exec(query.trim())
+  if (!match) return query
+  try { return decodeURIComponent(match[1]) } catch { return match[1] }
 }
 
 /**
@@ -74,6 +132,8 @@ export function formatSchemaColumns (schema: any[]): string[] | undefined {
     .map((col: any) => {
       const notes: string[] = []
       if (col.description) notes.push(col.description)
+      // _geopoint/_geocorners are stored lat,lon — warn that geo_distance/bbox filters use the reverse order
+      if (col.key === '_geopoint' || col.key === '_geocorners') notes.push('⚠️ geo_distance/bbox filters use the REVERSE order (lon,lat)')
       if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
       if (col.enum) {
         const shown = col.enum.slice(0, 20).join(', ')

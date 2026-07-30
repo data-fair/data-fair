@@ -7,7 +7,7 @@ import mongo from '#mongo'
 import { tmpDir, validationDiagnosticFilePath } from './files.ts'
 import type { Dataset } from '#types'
 
-export type DiagnosticErrorType = 'validation' | 'extension'
+export type DiagnosticErrorType = 'validation' | 'extension' | 'unicity'
 
 export type DiagnosticErrorEntry = {
   line: number
@@ -111,7 +111,7 @@ export class DiagnosticWriter {
       await this.closeStream().catch(() => {})
     }
     await fs.remove(this.tmpPath).catch(() => {})
-    if (await filesStorage.pathExists(this.targetPath)) {
+    if (await filesStorage.fileExists(this.targetPath)) {
       await filesStorage.removeFile(this.targetPath)
     }
     await this.clearStaleJournalFlags()

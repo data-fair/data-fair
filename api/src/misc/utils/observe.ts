@@ -2,7 +2,7 @@
 
 import client from 'prom-client'
 import debug from 'debug'
-import { type Request } from 'express'
+import { type Request, type Response } from 'express'
 import { reqUser } from '@data-fair/lib-express'
 
 const debugReq = debug('df:observe:req')
@@ -19,6 +19,55 @@ const reqStepHisto = new client.Histogram({
 })
 
 const reqObserveKey = Symbol('reqObserveKey')
+
+// /lines usage metrics: how many reads, in which format, through which SERVING MODE — i.e. how much of
+// the traffic benefits from an optimized path — and how big the responses are (the memory-relevant
+// quantity for the streamed-source rollout, see docs/architecture/read-lines-efficiency.md).
+// Modes: 'streamed' (asStream source + splitter), 'raw-worker' (zero-copy raw ES buffer transferred to a
+// render worker: pbf tiles / shp), 'cache' (vector-tile cache hit, no ES query at all),
+// 'buffered' (legacy full-parse path — the non-optimized baseline).
+const readLinesTotal = new client.Counter({
+  name: 'df_read_lines_total',
+  help: 'Count of /lines requests by output format, serving mode and status class',
+  labelNames: ['format', 'mode', 'status']
+})
+const readLinesBytes = new client.Histogram({
+  name: 'df_read_lines_bytes',
+  help: 'Body size in bytes of successful /lines responses by output format and serving mode',
+  // 10KB / 100KB / 500KB (the once-considered streaming threshold) / 2MB / 10MB / 50MB
+  buckets: [10000, 100000, 500000, 2000000, 10000000, 50000000],
+  labelNames: ['format', 'mode']
+})
+
+// bounded label set — anything else (an invalid ?format=… that falls through to json output) is 'other'
+const READ_LINES_FORMATS = new Set(['json', 'csv', 'geojson', 'xlsx', 'ods', 'wkt', 'shp', 'pbf'])
+const readLinesKey = Symbol('readLinesKey')
+type ReadLinesObserved = { format: string, mode: 'buffered' | 'streamed' | 'raw-worker' | 'cache' }
+
+// Called once at the top of readLines. The mode defaults to 'buffered' and is upgraded by readLinesMode()
+// at the exact point an optimized path is chosen, so the counters reflect the OUTCOME of mode selection,
+// not a prediction. Metrics are observed on response finish: the byte count is the Content-Length that
+// res.send set (uncompressed body bytes, after the whole body was assembled), and errors surfaced by the
+// error handler are still counted with their status class.
+export const readLinesStart = (req: Request, res: Response) => {
+  const rawFormat = (req.query.format as string) || 'json'
+  const format = ['mvt', 'vt', 'pbf'].includes(rawFormat) ? 'pbf' : READ_LINES_FORMATS.has(rawFormat) ? rawFormat : 'other'
+  const observed: ReadLinesObserved = { format, mode: 'buffered' }
+  ;(req as any)[readLinesKey] = observed
+  res.on('finish', () => {
+    const status = res.statusCode >= 500 ? '5xx' : res.statusCode >= 400 ? '4xx' : res.statusCode >= 300 ? '3xx' : '2xx'
+    readLinesTotal.labels(observed.format, observed.mode, status).inc()
+    if (status === '2xx') {
+      const bytes = Number(res.getHeader('content-length') ?? 0)
+      if (bytes) readLinesBytes.labels(observed.format, observed.mode).observe(bytes)
+    }
+  })
+}
+
+export const readLinesMode = (req: Request, mode: 'streamed' | 'raw-worker' | 'cache') => {
+  const observed: ReadLinesObserved | undefined = (req as any)[readLinesKey]
+  if (observed) observed.mode = mode
+}
 
 export const observeReqMiddleware = (req, res, next) => {
   const start = Date.now()

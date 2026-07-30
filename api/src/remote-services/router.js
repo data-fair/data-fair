@@ -4,21 +4,25 @@ import https from 'https'
 import express from 'express'
 import moment from 'moment'
 import slug from 'slugify'
-import axios from '../misc/utils/axios.js'
+import axios from '../misc/utils/axios.ts'
 import pump from '../misc/utils/pipe.ts'
 import CacheableLookup from 'cacheable-lookup'
 import remoteServiceAPIDocs from '../../contract/remote-service-api-docs.js'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
 import mongo from '#mongo'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
-import { httpAgent, httpsAgent } from '../misc/utils/http-agents.js'
+import { httpAgent, httpsAgent } from '../misc/utils/http-agents.ts'
 import { clean, validateOpenApi, initNew, computeActions } from './operations.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqSession, reqAdminMode } from '@data-fair/lib-express'
+import { reqSession, reqAdminMode, reqSitePathSafe } from '@data-fair/lib-express'
+import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
+import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
+import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -28,18 +32,15 @@ const cacheableLookup = new CacheableLookup()
 export const router = express.Router()
 
 router.use((req, res, next) => {
-  // @ts-ignore
-  req.resourceType = 'remote-services'
+  setReqResourceType(req, 'remote-services')
   next()
 })
 
 // Get the list of remote-services
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
-  // @ts-ignore
-  const publicBaseUrl = req.publicBaseUrl
+  const publicationSite = reqPublicationSite(req)
+  const publicBaseUrl = reqPublicBaseUrl(req)
 
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
@@ -51,10 +52,8 @@ export const actionsRouter = express.Router()
 
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
-  // @ts-ignore
-  const publicBaseUrl = req.publicBaseUrl
+  const publicationSite = reqPublicationSite(req)
+  const publicBaseUrl = reqPublicBaseUrl(req)
   // @ts-ignore
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
@@ -97,7 +96,9 @@ const readService = async (req, res, next) => {
   const service = await mongo.remoteServices
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
-  req.remoteService = req.resource = mongoEscape.unescape(service, true)
+  const svc = mongoEscape.unescape(service, true)
+  setReqRemoteService(req, svc)
+  setReqResource(req, svc)
   next()
 }
 
@@ -106,7 +107,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req,
   // TODO: allow based on privateAccess ?
   const sessionState = reqAdminMode(req)
 
-  res.status(200).send(clean(req.remoteService, sessionState, req.query.html))
+  res.status(200).send(clean(reqRemoteService(req), sessionState, req.query.html))
 })
 
 // PUT used to create or update as super admin
@@ -127,13 +128,13 @@ router.put('/:remoteServiceId', attemptInsert, readService, async (req, res) => 
   debugMasterData(`PUT remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId, newService.id)
   // preserve all readonly properties, the rest is overwritten
   const { schema: servicePatch } = await import('#doc/remote-services/patch-req/index.js')
-  for (const key of Object.keys(req.remoteService)) {
+  const svc = reqRemoteService(req)
+  for (const key of Object.keys(svc)) {
     if (!servicePatch.properties.body.properties[key]) {
-      newService[key] = req.remoteService[key]
+      newService[key] = svc[key]
     }
   }
   newService.updatedAt = moment().toISOString()
-  newService.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   if (newService.apiDoc) {
     newService.actions = computeActions(newService.apiDoc)
   }
@@ -152,7 +153,6 @@ router.patch('/:remoteServiceId', readService, async (req, res) => {
   const { body: patch } = validatePatch(req)
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   if (patch.apiDoc) {
     patch.actions = computeActions(patch.apiDoc)
   }
@@ -178,20 +178,20 @@ router.delete('/:remoteServiceId', readService, async (req, res) => {
 router.post('/:remoteServiceId/_update', readService, async (req, res) => {
   const sessionState = reqAdminMode(req)
 
-  if (!req.remoteService.url) return res.sendStatus(204)
+  const svc = reqRemoteService(req)
+  if (!svc.url) return res.sendStatus(204)
 
   debugMasterData(`Force update remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId)
 
-  const reponse = await axios.get(req.remoteService.url)
+  const reponse = await axios.get(svc.url)
   validateOpenApi(reponse.data)
-  req.remoteService.updatedAt = moment().toISOString()
-  req.remoteService.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
-  req.remoteService.apiDoc = reponse.data
-  req.remoteService.actions = computeActions(req.remoteService.apiDoc)
+  svc.updatedAt = moment().toISOString()
+  svc.apiDoc = reponse.data
+  svc.actions = computeActions(svc.apiDoc)
   await mongo.remoteServices.replaceOne({
     id: req.params.remoteServiceId
-  }, mongoEscape.escape(req.remoteService, true))
-  res.status(200).json(clean(req.remoteService, sessionState))
+  }, mongoEscape.escape(svc, true))
+  res.status(200).json(clean(svc, sessionState))
 })
 
 // use the current referer url to determine the application that was used to call this remote service
@@ -202,9 +202,10 @@ async function getAppOwner (req) {
   if (!referer) return console.warn('remote service proxy called without a referer header')
   debug('Referer URL', referer)
 
-  if (!referer.startsWith(req.publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
+  const publicBaseUrl = reqPublicBaseUrl(req)
+  if (!referer.startsWith(publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
 
-  const refererAppId = referer.startsWith(req.publicBaseUrl + '/app/') && referer.replace(req.publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
+  const refererAppId = referer.startsWith(publicBaseUrl + '/app/') && referer.replace(publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
   if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
@@ -214,9 +215,18 @@ async function getAppOwner (req) {
   return refererApp.owner
 }
 
+// the tileserver used to be consumed as a remote service pointing at koumoul.com/s/tileserver,
+// it is now a standard member of the stack exposed at /tileserver next to /data-fair on every site
+// redirect requests coming from the stored configurations of older map applications
+router.get('/tileserver-koumoul/proxy/*proxyPath', (req, res) => {
+  res.set('cache-control', 'public, max-age=3600')
+  // req.url is the raw still-encoded path + query string after the router's mount point
+  res.redirect(302, reqSitePathSafe(req) + '/tileserver' + req.url.slice('/tileserver-koumoul/proxy'.length))
+})
+
 // Use the proxy as a user of an application
 // always apply restrictive rate limiting to remote services, privileged access does not go through here
-router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remoteService'), async (req, res, next) => {
+router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 
@@ -235,7 +245,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
   const headers = {
-    'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/`
+    'x-forwarded-url': `${reqPublicBaseUrl(req)}/api/v1/remote-services/${remoteService.id}/proxy/`
   }
   // auth header, TODO handle query & cookie header types
   if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
@@ -316,5 +326,5 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
 
 // Anybody can read the API doc
 router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased(), (req, res) => {
-  res.send(remoteServiceAPIDocs(req.remoteService))
+  res.send(remoteServiceAPIDocs(reqRemoteService(req)))
 })

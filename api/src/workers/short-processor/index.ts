@@ -8,8 +8,8 @@ import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const renewApiKey = async function (dataset: DatasetInternal) {
   await mongo.connect(true)
-  const datasetsService = await import('../../datasets/service.js')
-  const readApiKeyUtils = await import('../../datasets/utils/read-api-key.js')
+  const datasetsService = await import('../../datasets/service.ts')
+  const readApiKeyUtils = await import('../../datasets/utils/read-api-key.ts')
   const debug = debugLib(`worker:read-api-key-renewer:${dataset.id}`)
 
   const patch: Partial<DatasetInternal> = { readApiKey: { ...dataset.readApiKey } }
@@ -20,7 +20,9 @@ export const renewApiKey = async function (dataset: DatasetInternal) {
 }
 
 export const manageTTL = async function (dataset: RestDataset) {
-  await mongo.connect(true)
+  // es.connect is required because applyTTL iterates elasticsearch hits (iterHits -> es.client)
+  // to find the expired lines to delete
+  await Promise.all([mongo.connect(true), es.connect()])
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
 }
@@ -71,6 +73,18 @@ export const finalize = async function (dataset: Dataset) {
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
+}
+
+export const historize = async function (dataset: Dataset) {
+  await mongo.connect(true)
+  const relay = await import('../../integrity/relay.ts')
+  await relay.historize(dataset as any)
+}
+
+export const historizeLines = async function (dataset: RestDataset) {
+  await mongo.connect(true)
+  const relay = await import('../../integrity/lines-relay.ts')
+  await relay.historizeLines(dataset)
 }
 
 if (process.env.NODE_ENV === 'development') {

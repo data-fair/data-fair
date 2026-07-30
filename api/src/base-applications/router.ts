@@ -3,13 +3,14 @@ import mongo from '#mongo'
 import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as i18nUtils from '../../i18n/utils.ts'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import { clean } from './operations.ts'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
-import { getThumbnail } from '../misc/utils/thumbnails.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
+import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 import type { BaseAppWithContext, Request } from '#types'
 import { initBaseApp, syncBaseApp } from './service.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 export { init } from './service.ts'
 
 export const router = express.Router()
@@ -84,7 +85,7 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (const result of results) {
-    clean(req.publicBaseUrl, result, req.query.thumbnail, req.query.html === 'true')
+    clean(reqPublicBaseUrl(req), result, req.query.thumbnail, req.query.html === 'true')
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }

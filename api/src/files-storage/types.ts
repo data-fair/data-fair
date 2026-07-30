@@ -13,7 +13,7 @@ export type FileBackend = {
   fileStats (path: string): Promise<{ size: number, lastModified: Date }>
   removeFile(path: string): Promise<void>
   removeDir(path: string): Promise<void>
-  readStream(path: string, ifModifiedSince?: string, range?: string, slow?: boolean): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
+  readStream(path: string, ifModifiedSince?: string, range?: string, slow?: boolean, retryMissing?: boolean): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
   moveFromFs(tmpPath: string, path: string): Promise<void>
   writeStream(readStream: Readable, path: string): Promise<void>
   writeString(path: string, content: string): Promise<void>
@@ -21,7 +21,10 @@ export type FileBackend = {
   moveFile(srcPath: string, dstPath: string): Promise<void>
   copyDir(srcPath: string, dstPath: string): Promise<void>
   moveDir(srcPath: string, dstPath: string): Promise<void>
+  // file OR directory, with prefix semantics on S3 (a strict prefix of an existing key matches)
   pathExists(path: string): Promise<boolean>
+  // exact match of a file, the only correct existence check before reading one
+  fileExists(path: string): Promise<boolean>
   zipDirectory(path: string): Promise<CentralDirectory>
   fileSample(path: string): Promise<Buffer>
   checkAccess(): Promise<void>

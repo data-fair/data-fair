@@ -31,7 +31,8 @@ test.describe('datasets - features', () => {
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
       { imageUrl: `${mockUrl}/image.png`, desc: '1 image' },
       { imageUrl: `${mockUrl}/avatar.jpg`, desc: '2 avatar' },
-      { imageUrl: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' }
+      { imageUrl: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' },
+      { imageUrl: `${mockUrl}/iiif/full/!300,300/0/default.jpg`, desc: '4 iiif comma' }
     ])
     await waitForFinalize(ax, 'thumbnails1')
 
@@ -39,12 +40,14 @@ test.describe('datasets - features', () => {
     await setupMockRoute({ path: '/image.png', status: 200, body: '', contentType: 'image/png' })
     await setupMockRoute({ path: '/avatar.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
     await setupMockRoute({ path: '/wikipedia.gif', status: 200, bodyBase64: fs.readFileSync('./tests/resources/wikipedia.gif').toString('base64'), contentType: 'image/gif' })
+    await setupMockRoute({ path: '/iiif/full/!300,300/0/default.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
 
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
-    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results.length, 4)
     assert.equal(res.data.results[0].desc, '1 image')
     assert.equal(res.data.results[1].desc, '2 avatar')
     assert.equal(res.data.results[2].desc, '3 wikipedia animated')
+    assert.equal(res.data.results[3].desc, '4 iiif comma')
     assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
 
     // Empty image should redirect
@@ -59,6 +62,40 @@ test.describe('datasets - features', () => {
     assert.equal(thumbresGif.headers['content-type'], 'image/webp')
     assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
     assert.equal(thumbresGif.headers['cache-control'], 'must-revalidate, private, max-age=0')
+
+    const thumbresIiif = await ax.get(res.data.results[3]._thumbnail)
+    assert.equal(thumbresIiif.headers['content-type'], 'image/png')
+    assert.equal(thumbresIiif.headers['x-thumbnails-cache-status'], 'MISS')
+
+    await clearMockRoutes()
+  })
+
+  test('should redirect to the original image when fetching it fails without a previous cache entry', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/thumbnails-fallback', {
+      isRest: true,
+      title: 'thumbnails-fallback',
+      schema: [{ key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
+    })
+    await ax.post('/api/v1/datasets/thumbnails-fallback/_bulk_lines', [
+      { imageUrl: `${mockUrl}/rate-limited.jpg` },
+      { imageUrl: `${mockUrl}/missing.jpg` }
+    ])
+    await waitForFinalize(ax, 'thumbnails-fallback')
+
+    // the image host answers 429 (e.g. wikimedia rate-limiting our server IP)
+    await setupMockRoute({ path: '/rate-limited.jpg', status: 429, body: 'too many requests', contentType: 'text/plain' })
+    await setupMockRoute({ path: '/missing.jpg', status: 404, body: 'not found', contentType: 'text/plain' })
+
+    const res = await ax.get('/api/v1/datasets/thumbnails-fallback/lines', { params: { thumbnail: true, sort: 'imageUrl' } })
+    // no previous cache entry to serve as stale content -> redirect to the original image instead of failing
+    await assert.rejects(ax.get(res.data.results[1]._thumbnail, { maxRedirects: 0 }), (err: any) => {
+      assert.equal(err.status, 302)
+      assert.equal(err.headers.location, `${mockUrl}/rate-limited.jpg`)
+      return true
+    })
+    // a missing image is still a 404, not a redirect
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 404)
 
     await clearMockRoutes()
   })

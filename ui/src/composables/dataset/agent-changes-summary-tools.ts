@@ -69,6 +69,9 @@ Format:
     title: t('changesSummarizerSubAgent'),
     description: t('changesSummarizerSubAgentDesc'),
     model: 'summarizer',
+    // Producer: returns a plain-text diff summary the host presents to the user. Keep it
+    // delegated even when the host enables the flatten toggle.
+    delegateOnly: true,
     prompt: changesSummarizerPrompts[locale.value] ?? changesSummarizerPrompts.en,
     tools: ['read_dataset_changes']
   })

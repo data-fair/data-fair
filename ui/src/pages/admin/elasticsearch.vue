@@ -517,7 +517,10 @@
             </v-list-item-title>
             <v-list-item-subtitle>{{ w.esWarning }}</v-list-item-subtitle>
             <template #append>
+              <!-- reindex rebuilds the index with the SAME mapping, so it cannot fix
+                   IgnoredKeywordValues (an ignore_above / capability-config issue) -->
               <v-btn
+                v-if="w.esWarning !== 'IgnoredKeywordValues'"
                 :icon="mdiPlay"
                 color="primary"
                 :title="t('warnings.reindex')"

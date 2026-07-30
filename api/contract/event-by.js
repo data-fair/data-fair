@@ -5,9 +5,6 @@ export default {
   properties: {
     id: {
       type: 'string'
-    },
-    name: {
-      type: 'string'
     }
   }
 }

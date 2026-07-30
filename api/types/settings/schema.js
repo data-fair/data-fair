@@ -239,6 +239,18 @@ export default {
           },
           clearKey: {
             type: 'string'
+          },
+          notifiedJ3At: {
+            type: 'string',
+            format: 'date-time',
+            readOnly: true,
+            description: 'Internal — timestamp set when the J-3 expiration notification was emitted. Not user-writable.'
+          },
+          notifiedJAt: {
+            type: 'string',
+            format: 'date-time',
+            readOnly: true,
+            description: 'Internal — timestamp set when the J-day expiration notification was emitted. Not user-writable.'
           }
         }
       }
@@ -252,6 +264,7 @@ export default {
       layout: {
         title: '',
         listEditMode: 'inline',
+        listActions: ['add', 'delete', 'sort'],
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {
@@ -442,6 +455,26 @@ export default {
                 if: 'parent.data.active',
                 cols: 6,
                 props: { variant: 'outlined', placeholder: 'Mots clés' }
+              }
+            }
+          }
+        },
+        conformsTo: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'Schéma',
+              type: 'boolean',
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'Libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Schéma' }
               }
             }
           }

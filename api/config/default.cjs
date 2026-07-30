@@ -1,7 +1,6 @@
 module.exports = {
   mode: 'server_worker', // can be server_worker, server or worker
   port: 8080,
-  listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
   oldPublicUrl: '', // special case when changing path of data-fair
   wsPublicUrl: 'ws://localhost:8080',
@@ -20,6 +19,40 @@ module.exports = {
     maxSingleCopySize: 5 * 1024 * 1024 * 1024, // 5GB - threshold for using multipart copy
     multipartChunkSize: 100 * 1024 * 1024, // 100MB - chunk size for multipart copy
   },
+  integrity: {
+    active: false,
+    s3: {
+      region: '',
+      endpoint: '',
+      bucket: '',
+      credentials: {
+        accessKeyId: '',
+        secretAccessKey: '',
+      },
+      forcePathStyle: true,
+    },
+    retention: { days: 365 },
+    // the `.who` attribution sibling's OWN retention (target 8): a kill switch plus a retention
+    // shorter than (and never extended past) the revision's own retention.days above — enforced
+    // at startup by store-factory.ts.
+    attribution: { active: true, retentionDays: 180 },
+    lines: { maxLines: 100000 },
+    // index-consistency verdict (A1): nightly sampled compare of the ES projection vs the
+    // source — windows × windowSize rows per run; sampleCap bounds persisted evidence entries
+    index: { windows: 8, windowSize: 128, sampleCap: 5 },
+    // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
+    // worker lock before answering 409 — it must hold that lock to not race the relay tasks
+    lockWaitMs: 10000,
+    // trail-coherence verdict: tolerated distance between a revision's claimed context.date and
+    // the provider-stamped LastModified (relay retries legitimately delay the object write)
+    trail: { dateSkewHours: 48 },
+    // re-fire a persistent bad-state event (breach / trail-altered / renewal-failed /
+    // scope-incoherent) once per window — bounds alert suppression via pre-written dedup state
+    realertDays: 7,
+    // alert when an enrolled dataset produced no definitive verdict (ok/breach) for this long
+    maxUnknownDays: 7,
+  },
+  integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
@@ -32,6 +65,7 @@ module.exports = {
   privateMetricsUrl: null,
   privateAgentsUrl: null,
   privateOpenapiViewerUrl: null,
+  privateRegistryUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
@@ -40,9 +74,9 @@ module.exports = {
     options: {} // optional mongo client options
   },
   map: {
-    // A mapbox style to display geo data
-    // style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',
-    style: './api/v1/remote-services/tileserver-koumoul/proxy/styles/klokantech-basic/style.json',
+    // a maplibre style to display geo data
+    // a relative "./" prefix is resolved against the site root, an absolute URL is used as is
+    style: './tileserver/styles/klokantech-basic/style.json',
     // The layer before which ou data layers will be inserted (empty to add layer on top of everything)
     beforeLayer: 'poi_label'
   },
@@ -172,6 +206,10 @@ module.exports = {
     // base interval for polling the database for new resources to work on
     interval: 4000,
     baseConcurrency: 2,
+    // fraction (0-1) of a worker's slots a single account/owner may use concurrently.
+    // 1 = full concurrency (a single owner can use every slot, fair-allocation rules disabled), suitable for
+    // mono-organization deployments. Lower it (e.g. 0.5) on shared multi-organization deployments.
+    concurrencyLimitPerAccount: 1,
     errorRetryDelay: 600000, // 10 minutes
     closeTimeout: 60000 // 10 minutes to finish running tasks before shutting down
   },
@@ -185,7 +223,9 @@ module.exports = {
     catalogs: null,
     notifications: null, // DEPRECATED
     events: null,
-    ignoreRateLimiting: null
+    sendMails: null,
+    ignoreRateLimiting: null,
+    registry: null // shared with the registry service; reserved for future server-to-server calls
   },
   locks: {
     // in seconds
@@ -206,11 +246,13 @@ module.exports = {
   tiles: {
     geojsonvtTolerance: 4, // slightly higher simplification than default (3)
     vtPrepareMaxZoom: 10,
-    maxThreads: 1
+    maxThreads: 1,
+    // geometries with more vertices than this are simplified (Douglas-Peucker) before
+    // being stored in the calculated _geoshape field (used for tiles/geojson/wkt/spatial
+    // queries); the raw geometry column is left at full precision. ~50000 verts ≈ 2MB.
+    // -1 disables simplification.
+    simplifyMaxVertices: 50000
   },
-  analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
-  browserLogLevel: 'error',
-  nuxtDev: false,
   // used to configure service workers in cacheFirst mode for common directories of base applications source code
   applicationsDirectories: [
     'https://koumoul.com/apps/',
@@ -233,11 +275,6 @@ module.exports = {
   }, {
     title: 'Cadastre',
     url: 'https://koumoul.com/s/cadastre/api-docs.json'
-  }, {
-    title: 'Service de données cartographiques',
-    id: 'tileserver-koumoul',
-    description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
-    server: 'https://koumoul.com/s/tileserver'
   }],
   remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   catalogs: [{
@@ -256,7 +293,6 @@ module.exports = {
   disableApplications: false,
   disableRemoteServices: false,
   disablePublicationSites: false,
-  proxyNuxt: false,
   ogr2ogr: {
     skip: false,
     timeout: 360000 // 6 minutes
@@ -307,6 +343,11 @@ module.exports = {
   assertImmutable: false,
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
+  // lines per request to a remote service (and per extensions-cache bulk read/write) when
+  // applying extensions. Large enough that the per-batch fixed costs (HTTP request, cache
+  // round-trips) stay marginal, small enough to bound the lines held in memory per batch.
+  extensionsBatchSize: 250,
   compatODS: false,
-  apiKeysMaxDuration: 2 * 365 // in days
+  apiKeysMaxDuration: 2 * 365, // in days
+  apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
 }

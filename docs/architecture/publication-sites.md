@@ -70,7 +70,7 @@ Publication sites are owned, just like every other configurable object in Data F
 
 ## 4. Permissions model
 
-Publication sites define a publish-gate that sits on top of the normal permission system. The operation is declared in `api/src/misc/utils/api-docs.ts:11,18`:
+Publication sites define a publish-gate that sits on top of the normal permission system. The operation is declared in `shared/permissions/operations.ts:200,239`:
 
 - `writePublicationSites` belongs to the **admin** class, for both datasets and applications.
 
@@ -135,7 +135,7 @@ Both `settings.staging` and `settings.contributorDepartments` are **portal-owned
 - `api/contract/publication-sites.js` — JSON schema of a publication site entry.
 - `api/src/settings/router.ts` — CRUD endpoints; also the sync entry point used by `portals`.
 - `api/src/misc/utils/publication-sites.ts` — permission gate and notifications on patch.
-- `api/src/misc/utils/api-docs.ts` — declares `writePublicationSites` as an admin operation.
+- `shared/permissions/operations.ts` — declares `writePublicationSites` as an admin operation (datasets + applications admin class).
 - `api/src/misc/utils/settings.ts` — cached settings lookup used by permission checks.
 - `api/src/datasets/service.js`, `api/src/applications/service.js` — call into `applyPatch` when resources are patched.
 - `ui/src/components/settings/settings-publication-sites.vue` — admin editor.

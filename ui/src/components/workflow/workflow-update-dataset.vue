@@ -401,6 +401,7 @@ import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
 import { type ListedDataset } from '../dataset/select/utils'
 import { type DatasetStore } from '~/composables/dataset/dataset-store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
+import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 import Debug from 'debug'
 import { mdiCancel, mdiCheckAll, mdiCog, mdiDatabase, mdiPaperclip, mdiTable, mdiZipBox } from '@mdi/js'
 import { useWindowSize } from '@vueuse/core'
@@ -411,7 +412,7 @@ const props = defineProps({
   datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
 const { sendUiNotif } = useUiNotif()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { height } = useWindowSize()
 
 const currentStep = ref(1)
@@ -521,6 +522,9 @@ const cancelUpdateDataset = () => {
   if (!cancelUpdate) return
   cancelUpdate.cancel(t('cancelled'))
 }
+
+// Warn before leaving while a file upload is running, and cancel it on confirm.
+useUploadLeaveGuard(() => updateDataset.loading.value, { locale, onConfirmLeave: cancelUpdateDataset })
 
 /*
 export default {

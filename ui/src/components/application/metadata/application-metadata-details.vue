@@ -54,7 +54,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('metadataUpdated') }}
           </div>
-          <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
+          <div>{{ formatDate(application.updatedAt) }}</div>
         </v-list-item>
       </v-col>
 
@@ -67,7 +67,25 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('created') }}
           </div>
-          <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
+          <div>{{ formatDate(application.createdAt) }}</div>
+        </v-list-item>
+      </v-col>
+
+      <v-col
+        v-if="nbParentApps > 0"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiImageMultiple">
+          <div class="text-body-small text-medium-emphasis">
+            {{ t('usedByLabel') }}
+          </div>
+          <div>
+            <router-link :to="`/applications?application=${application.id}`">
+              {{ t('nbParentApps', nbParentApps) }}
+            </router-link>
+          </div>
         </v-list-item>
       </v-col>
     </v-row>
@@ -81,20 +99,24 @@ fr:
   version: version
   metadataUpdated: Métadonnées mises à jour
   created: Création
+  usedByLabel: Utilisée par
+  nbParentApps: aucune application | 1 application | {count} applications
 en:
   owner: Owner
   baseApp: Application model
   version: version
   metadataUpdated: Metadata updated
   created: Created
+  usedByLabel: Used by
+  nbParentApps: no application | 1 application | {count} applications
 </i18n>
 
 <script setup lang="ts">
-import { mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
+import { mdiImageMultiple, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
 import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useApplicationStore from '~/composables/application/application-store'
 
-const { application, baseAppFetch } = useApplicationStore()
+const { application, baseAppFetch, nbParentApps } = useApplicationStore()
 
 const { t } = useI18n()
 const { dayjs } = useLocaleDayjs()

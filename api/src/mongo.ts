@@ -72,6 +72,7 @@ export class DfMongo {
         'rest.ttl.active_1': { 'rest.ttl.active': 1 },
         '_readApiKey.renewAt_1': { '_readApiKey.renewAt': 1 },
         _partialRestStatus_1: [{ _partialRestStatus: 1 }, { sparse: true }],
+        _needsHistorizing_1: [{ _needsHistorizing: 1 }, { sparse: true }],
         esWarning_1: { esWarning: 1 }
       },
       'remote-services': {

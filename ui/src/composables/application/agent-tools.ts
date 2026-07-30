@@ -2,17 +2,20 @@ import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
 import { createAgentTranslator, buildPaginatedQuery } from '~/composables/agent/utils'
+import { formatApplicationConfig } from './agent-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
     listApplications: 'Lister les applications',
     describeApplication: 'Décrire une application',
-    listBaseApplications: 'Lister les modèles d\'application'
+    listBaseApplications: 'Lister les modèles d\'application',
+    getApplicationConfig: 'Lire la configuration de l\'application'
   },
   en: {
     listApplications: 'List applications',
     describeApplication: 'Describe an application',
-    listBaseApplications: 'List application models'
+    listBaseApplications: 'List application models',
+    getApplicationConfig: 'Read application configuration'
   }
 }
 
@@ -97,6 +100,28 @@ export function useAgentApplicationTools (locale: Ref<string>) {
     execute: async (params) => {
       const app = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}`)
       return serializeApplicationInfo(app)
+    }
+  })
+
+  useAgentTool({
+    name: 'get_application_config',
+    description: 'Get the current validated configuration of an application (the live config, not the editable draft). Returns the configuration as JSON: selected datasets, display options, and other settings defined by the application model. Read-only — use the appConfig_form subagent to change the configuration.',
+    annotations: { title: t('getApplicationConfig'), readOnlyHint: true },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        applicationId: { type: 'string' as const, description: 'The exact application ID' }
+      },
+      required: ['applicationId'] as const
+    },
+    execute: async (params) => {
+      let config: any
+      try {
+        config = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration`)
+      } catch {
+        return 'This application is not configured yet.'
+      }
+      return formatApplicationConfig(config)
     }
   })
 

@@ -88,6 +88,8 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible de trier'))
+        // self-orienting: the error names the operations the column does support
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
@@ -96,6 +98,7 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible de grouper'))
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
@@ -168,6 +171,8 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
+        // self-orienting: the filter-loop rejection lists the column's available operations
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
@@ -249,6 +254,69 @@ test.describe('Properties capabilities', () => {
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { bbox: '-2.41,47.8,-2.35,47.9' } })
     assert.equal(res.data.total, 2)
+  })
+
+  test('q_fields with an unknown column errors instead of silently searching nothing', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-qfields', {
+      isRest: true,
+      title: 'rest-qfields',
+      schema: [{ key: 'nom', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/rest-qfields/_bulk_lines', [{ nom: 'Jean' }, { nom: 'Paul' }])
+    await waitForFinalize(ax, 'rest-qfields')
+    const res = await ax.get('/api/v1/datasets/rest-qfields/lines', { params: { q: 'Jean', q_fields: 'nom' } })
+    assert.equal(res.data.total, 1)
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-qfields/lines', { params: { q: 'Jean', q_fields: 'nom,unknownCol' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('unknownCol'))
+        return true
+      }
+    )
+  })
+
+  test('highlight on a non-text-capable column errors instead of returning empty highlights', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-highlight', {
+      isRest: true,
+      title: 'rest-highlight',
+      schema: [{ key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false } }]
+    })
+    await ax.post('/api/v1/datasets/rest-highlight/_bulk_lines', [{ code: 'ABC' }])
+    await waitForFinalize(ax, 'rest-highlight')
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-highlight/lines', { params: { q: 'ABC', highlight: 'code' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('code'))
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
+        return true
+      }
+    )
+  })
+
+  test('geo_agg metric_field referencing an unknown column errors', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-geoagg', {
+      isRest: true,
+      title: 'rest-geoagg',
+      schema: [
+        { key: 'latlon', type: 'string', 'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
+        { key: 'val', type: 'number' }
+      ]
+    })
+    await ax.post('/api/v1/datasets/rest-geoagg/_bulk_lines', [{ latlon: '48.85,2.35', val: 3 }, { latlon: '45.75,4.85', val: 7 }])
+    await waitForFinalize(ax, 'rest-geoagg')
+    // valid metric still works
+    const res = await ax.get('/api/v1/datasets/rest-geoagg/geo_agg', { params: { metric: 'avg', metric_field: 'val' } })
+    assert.equal(res.status, 200)
+    // unknown metric_field → 400
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-geoagg/geo_agg', { params: { metric: 'avg', metric_field: 'nope' } }),
+      (err: any) => { assert.equal(err.status, 400); assert.ok(err.data.includes('nope')); return true }
+    )
   })
 
   test('Disable extracting text from attachment', async () => {

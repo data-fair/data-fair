@@ -5,6 +5,18 @@ import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib
 import { type Resource, type ResourceType } from '#types'
 import { sendResourceEvent } from './notifications.ts'
 import { type DepartmentSettings } from '#types/department-settings/index.js'
+import { defineReqContext } from './req-context.ts'
+
+// publication-sites is the semantic owner of the publicationSite / mainPublicationSite request
+// context (set in app.js, read by catalog/remote-services). Loosely typed until a
+// PublicationSite-with-owner type is extracted.
+const publicationSiteCtx = defineReqContext<any>('publicationSite')
+export const setReqPublicationSite = publicationSiteCtx.set
+export const reqPublicationSite = publicationSiteCtx.getOptional
+
+const mainPublicationSiteCtx = defineReqContext<any>('mainPublicationSite')
+export const setReqMainPublicationSite = mainPublicationSiteCtx.set
+export const reqMainPublicationSite = mainPublicationSiteCtx.getOptional
 
 const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: string) => {
   const [type, id] = publicationSite.split(':')

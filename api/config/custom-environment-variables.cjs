@@ -1,6 +1,7 @@
 module.exports = {
   port: 'PORT',
   mode: 'MODE',
+  apiKeysExpirationCron: 'API_KEYS_EXPIRATION_CRON',
   publicUrl: 'PUBLIC_URL',
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
@@ -16,6 +17,80 @@ module.exports = {
       secretAccessKey: 'S3_SECRET_ACCESS_KEY',
     }
   },
+  integrity: {
+    active: {
+      __name: 'INTEGRITY_ACTIVE',
+      __format: 'json'
+    },
+    s3: {
+      region: 'INTEGRITY_S3_REGION',
+      endpoint: 'INTEGRITY_S3_ENDPOINT',
+      bucket: 'INTEGRITY_S3_BUCKET',
+      credentials: {
+        accessKeyId: 'INTEGRITY_S3_ACCESS_KEY_ID',
+        secretAccessKey: 'INTEGRITY_S3_SECRET_ACCESS_KEY',
+      },
+      forcePathStyle: {
+        __name: 'INTEGRITY_S3_FORCE_PATH_STYLE',
+        __format: 'json'
+      }
+    },
+    retention: {
+      days: {
+        __name: 'INTEGRITY_RETENTION_DAYS',
+        __format: 'json'
+      }
+    },
+    attribution: {
+      active: {
+        __name: 'INTEGRITY_ATTRIBUTION_ACTIVE',
+        __format: 'json'
+      },
+      retentionDays: {
+        __name: 'INTEGRITY_ATTRIBUTION_RETENTION_DAYS',
+        __format: 'json'
+      }
+    },
+    lines: {
+      maxLines: {
+        __name: 'INTEGRITY_LINES_MAX_LINES',
+        __format: 'json'
+      }
+    },
+    index: {
+      windows: {
+        __name: 'INTEGRITY_INDEX_WINDOWS',
+        __format: 'json'
+      },
+      windowSize: {
+        __name: 'INTEGRITY_INDEX_WINDOW_SIZE',
+        __format: 'json'
+      },
+      sampleCap: {
+        __name: 'INTEGRITY_INDEX_SAMPLE_CAP',
+        __format: 'json'
+      }
+    },
+    lockWaitMs: {
+      __name: 'INTEGRITY_LOCK_WAIT_MS',
+      __format: 'json'
+    },
+    trail: {
+      dateSkewHours: {
+        __name: 'INTEGRITY_TRAIL_DATE_SKEW_HOURS',
+        __format: 'json'
+      }
+    },
+    realertDays: {
+      __name: 'INTEGRITY_REALERT_DAYS',
+      __format: 'json'
+    },
+    maxUnknownDays: {
+      __name: 'INTEGRITY_MAX_UNKNOWN_DAYS',
+      __format: 'json'
+    }
+  },
+  integrityCheckCron: 'INTEGRITY_CHECK_CRON',
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
@@ -28,6 +103,7 @@ module.exports = {
   privateMetricsUrl: 'PRIVATE_METRICS_URL',
   privateAgentsUrl: 'PRIVATE_AGENTS_URL',
   privateOpenapiViewerUrl: 'PRIVATE_OPENAPI_VIEWER_URL',
+  privateRegistryUrl: 'PRIVATE_REGISTRY_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
     url: 'MONGO_URL',
@@ -61,10 +137,6 @@ module.exports = {
       __name: 'TILES_MAX_THREADS',
       __format: 'json'
     }
-  },
-  analytics: {
-    __name: 'ANALYTICS',
-    __format: 'json'
   },
   elasticsearch: {
     host: 'ES_HOST',
@@ -109,7 +181,9 @@ module.exports = {
     limits: 'SECRET_LIMITS',
     catalogs: 'SECRET_CATALOGS',
     events: 'SECRET_EVENTS',
-    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
+    sendMails: 'SECRET_SENDMAILS',
+    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING',
+    registry: 'SECRET_REGISTRY'
   },
   brand: {
     logo: 'BRAND_LOGO',
@@ -216,6 +290,10 @@ module.exports = {
       __name: 'WORKER_BASE_CONCURRENCY',
       __format: 'json'
     },
+    concurrencyLimitPerAccount: {
+      __name: 'WORKER_CONCURRENCY_LIMIT_PER_ACCOUNT',
+      __format: 'json'
+    },
     errorRetryDelay: {
       __name: 'WORKER_ERROR_RETRY_DELAY',
       __format: 'json'
@@ -224,11 +302,6 @@ module.exports = {
       __name: 'WORKER_CLOSE_TIMEOUT',
       __format: 'json'
     },
-  },
-  browserLogLevel: 'BROWSER_LOG_LEVEL',
-  listenWhenReady: {
-    __name: 'LISTEN_WHEN_READY',
-    __format: 'json'
   },
   applications: {
     __name: 'APPLICATIONS',
@@ -345,6 +418,10 @@ module.exports = {
   },
   extensionUpdateDelay: {
     __name: 'EXTENSION_UPDATE_DELAY',
+    __format: 'json'
+  },
+  extensionsBatchSize: {
+    __name: 'EXTENSIONS_BATCH_SIZE',
     __format: 'json'
   },
   compatODS: {

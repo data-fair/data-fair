@@ -132,6 +132,7 @@ fr:
     MissingIndex: Index Elasticsearch manquant
     IndexHealthRed: Index en statut rouge
     MissingIndexSettings: Paramètres d'index manquants
+    IgnoredKeywordValues: Valeurs longues exclues des filtres exacts, tris et regroupements
     ShardingRecommended: Sharding à ajuster
     MissingSearchOnWide: Champ _search manquant (dataset large)
     MappingNearLimit: Nombre de champs proche de la limite
@@ -149,6 +150,7 @@ en:
     MissingIndex: Elasticsearch index missing
     IndexHealthRed: Index health is red
     MissingIndexSettings: Index settings missing
+    IgnoredKeywordValues: Long values excluded from exact filters, sorting and grouping
     ShardingRecommended: Sharding recommended
     MissingSearchOnWide: Missing _search field on wide dataset
     MappingNearLimit: Mapped fields near the limit

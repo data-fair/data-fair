@@ -1,12 +1,12 @@
 import mongo from '#mongo'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import { clean, computeActions, initNew } from './operations.ts'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
 import * as settingsUtils from '../misc/utils/settings.ts'
 import debugLib from 'debug'
 import datasetAPIDocs from '../../contract/dataset-api-docs.ts'
-import axios from '../misc/utils/axios.js'
+import axios from '../misc/utils/axios.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import slug from 'slugify'
 import { type SessionState } from '@data-fair/lib-express'
@@ -111,7 +111,7 @@ export const init = async () => {
   const existingServices = await mongo.remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
   const servicesToAdd: { url: string }[] = config.remoteServices
-    .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
+    .filter(s => !existingServices.find(es => es.url === s.url))
 
   const apisToFetch = new Set(servicesToAdd.map(s => s.url).filter(Boolean))
   const apis: { url: string, api: any }[] = []
@@ -137,21 +137,6 @@ export const init = async () => {
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
 
-  for (const service of servicesToAdd) {
-    if (!service.url && service.server && service.id) {
-      servicesToInsert.push({
-        id: service.id,
-        title: service.title,
-        description: service.description ?? '',
-        url: null,
-        apiDoc: null,
-        server: service.server,
-        actions: [],
-        public: true,
-        privateAccess: []
-      })
-    }
-  }
   if (servicesToInsert.length) {
     debugMasterData('insert default remote services', servicesToInsert)
     await mongo.remoteServices.insertMany(servicesToInsert)

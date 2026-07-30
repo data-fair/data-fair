@@ -41,6 +41,24 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
+  // The back-office /table page must sync its display state with the URL the same way the embed
+  // page does, otherwise a sorted view with a column selection cannot be bookmarked nor shared.
+  // Only the filters used to be synced (they go through composables/dataset/filters.ts, which is
+  // internal to dataset-table), the other models were left unbound and stayed local to the page.
+  test('dataset /table route syncs cols, sort and display with the URL', async ({ page, goToWithAuth }) => {
+    // state is restored from the URL: a single column, sorted descending
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/table?cols=id&sort=-id`, 'test_user1')
+    await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
+    await expect(page.locator('thead th').filter({ hasText: 'id' })).toBeVisible()
+    await expect(page.locator('thead th').filter({ hasText: 'adr' })).toHaveCount(0)
+    await expect(page.locator('tbody tr').first().locator('td').first()).toHaveText('koumoul')
+
+    // and changes made from the UI are pushed back to the URL
+    await page.getByRole('button', { name: 'Choisir le type d\'affichage' }).click()
+    await page.getByText('Table dense', { exact: true }).click()
+    await expect(page).toHaveURL(/display=table-dense/)
+  })
+
   test('dataset api-doc page loads', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/api-doc`, 'test_user1')
     // d-frame is a custom element that renders hidden until loaded; check it's in the DOM

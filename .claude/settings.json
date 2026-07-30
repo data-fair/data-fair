@@ -7,8 +7,8 @@
       "NotebookEdit",
       "WebFetch",
       "WebSearch",
-      "mcp__playwright-test",
-      "mcp__vuetify"
+      "mcp__playwright-test__*",
+      "mcp__vuetify__*"
     ],
     "deny": []
   },

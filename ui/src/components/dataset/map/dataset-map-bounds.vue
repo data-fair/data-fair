@@ -23,6 +23,7 @@ import maplibregl, { LayerSpecification, LngLatBoundsLike } from 'maplibre-gl'
 import { useTheme } from 'vuetify'
 import bbox from '@turf/bbox'
 import bboxPolygon from '@turf/bbox-polygon'
+import { useMapStyle } from './use-map-style'
 
 // @ts-ignore
 maplibregl.config.CSP_NONCE = $cspNonce
@@ -54,7 +55,7 @@ const dataLayers: LayerSpecification[] = [{
     'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.5, 24, 9]
   }
 }]
-const style = $uiConfig.map.style.replace('./', `${$siteUrl}/data-fair/`)
+const { style } = useMapStyle()
 
 watch(datasetBbox, (box) => {
   if (!box) return

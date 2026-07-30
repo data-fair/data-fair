@@ -5,7 +5,7 @@ import type { BaseApp } from './base-app/index.js'
 export type { Application, ApplicationExt } from './application/index.ts'
 export type { AppConfig } from './app-config/index.js'
 export type { BaseApp } from './base-app/index.js'
-export type { Dataset, DatasetExt, DatasetInternal, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, FileDataset, SchemaProperty } from './dataset/index.ts'
+export type { Dataset, DatasetExt, DatasetInternal, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, FileDataset, SchemaProperty, HistorizeContextHint, WhoHint, QueryableDescendant } from './dataset/index.ts'
 export type { Event } from './event/index.js'
 export { type Settings, resolvedSchema as settingsSchema } from './settings/index.js'
 export type { Topic } from './topic/index.js'
@@ -15,20 +15,17 @@ export type { Permission } from './permissions/index.js'
 export type { RemoteService } from './remote-service/index.js'
 export type { PublicationSite } from './publication-site/index.js'
 
-export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
+export type Request = ExpressRequest & { query: Record<string, string> }
 
-export type ResourceType = 'datasets' | 'applications' | 'catalogs'
-export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt'>
+export type ResourceType = 'datasets' | 'applications' | 'remote-services'
+export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt' | 'finalizedAt'>
   & { _readApiKey?: { current: string, previous: string } }
 export type BypassPermissions = {
   operations?: string[],
   classes?: string[]
 }
 export type RequestWithResource = Request & {
-  resourceType: ResourceType,
-  resource: Resource,
-  bypassPermissions?: BypassPermissions,
-  publicOperation?: boolean
+  resource: Resource
 }
 
 export type ApplicationKey = {

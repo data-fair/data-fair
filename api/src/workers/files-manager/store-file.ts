@@ -1,9 +1,9 @@
 import fs from 'fs-extra'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetsService from '../../datasets/service.js'
+import * as datasetsService from '../../datasets/service.ts'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'
-import chardet from 'chardet'
+import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import JSONStream from 'JSONStream'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
@@ -29,13 +29,19 @@ export default async function (dataset: DatasetInternal) {
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
 
-    if (!await filesStorage.pathExists(loadedFilePath)) {
-      // we should not have to do this
-      // this is a weird thing, maybe an unsolved race condition ?
-      // let's wait a bit and try again to mask this problem temporarily
-      internalError('storer-missing-file', 'file missing when storer started working ' + loadedFilePath)
-      await new Promise(resolve => setTimeout(resolve, 10000))
+    // TEMPORARY diagnostic: some uploads reach the storer with their loaded file missing from
+    // storage (a NoSuchKey on S3 when reading it below). Until the root cause is fixed, log what
+    // the loading dir actually contains so a wrong/absent key can be told apart from a read delay.
+    // Remove this block once the root cause is identified and fixed.
+    if (!await filesStorage.fileExists(loadedFilePath)) {
+      const existing = await filesStorage.lsrWithStats(loadingDir).catch(() => [])
+      internalError('storer-missing-file', `loaded file missing when storer started: expected ${loadedFilePath} — loading dir contents: ${JSON.stringify(existing)}`)
     }
+
+    // the file was just written by the upload (a separate process), but some S3 providers
+    // do not guarantee read-after-write consistency across connections/processes: the reads
+    // below (fileSample, readStream with retryMissing, moveFile after them) absorb the
+    // transient NoSuchKey via the backend's retry-on-missing logic instead of failing here.
 
     // manage some special cases of invalid files
     // some ESRI files have invalid geojson with stuff like this:
@@ -46,7 +52,7 @@ export default async function (dataset: DatasetInternal) {
       await fs.ensureFile(fixedFile.path)
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(
-        (await filesStorage.readStream(loadedFilePath)).body,
+        (await filesStorage.readStream(loadedFilePath, undefined, undefined, undefined, true)).body,
         split2(),
         new Transform({
           objectMode: true,
@@ -85,8 +91,7 @@ export default async function (dataset: DatasetInternal) {
     } else {
       const fileSample = await filesStorage.fileSample(loadedFilePath)
       debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
-      const encoding = chardet.detect(fileSample)
-      if (encoding) datasetFile.encoding = encoding
+      datasetFile.encoding = detectEncoding(fileSample)
       debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
     }
 
@@ -104,7 +109,7 @@ export default async function (dataset: DatasetInternal) {
         await filesStorage.removeFile(oldFilePath)
       }
     }
-  } else if (draft && !await filesStorage.pathExists(datasetUtils.originalFilePath(dataset))) {
+  } else if (draft && !await filesStorage.fileExists(datasetUtils.originalFilePath(dataset))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
     await filesStorage.copyFile(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))

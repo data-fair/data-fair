@@ -19,21 +19,25 @@
   </template>
 
   <div v-else>
-    <v-avatar
-      v-if="property.key === '_updatedByName' && extendedValue.formatted.startsWith($sdUrl)"
-      :size="28"
-      :title="extendedValue.raw"
-    >
-      <img :src="extendedValue.formatted">
-    </v-avatar>
+    <!-- color pin is an extra decoration displayed alongside the value -->
     <div
       v-if="property['x-refersTo'] === 'https://schema.org/color' && extendedValue.raw"
       class="item-value-color-pin"
       :style="`background-color:${extendedValue.raw}`"
     />
 
+    <!-- updatedByName / ownerName: show the user/owner avatar followed by their name (not the avatar URL) -->
+    <template v-if="(property.key === '_updatedByName' || property.key === '_ownerName') && extendedValue.formatted.startsWith($sdUrl)">
+      <v-avatar
+        :size="28"
+        :image="extendedValue.formatted"
+        class="me-2"
+      />
+      <span class="pr-2">{{ extendedValue.raw }}</span>
+    </template>
+
     <v-tooltip
-      v-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
+      v-else-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
       location="top"
     >
       <template #activator="{props}">
@@ -41,9 +45,10 @@
           class="text-body-medium"
           v-bind="props"
         >
-          <v-avatar :size="28">
-            <img :src="extendedValue.formatted">
-          </v-avatar>
+          <v-avatar
+            :size="28"
+            :image="extendedValue.formatted"
+          />
         </span>
       </template>
       <!-- TODO: fetch account name ? -->
@@ -52,6 +57,8 @@
     <span
       v-else
       class="pr-2"
+      :class="{ 'item-value-date-time': !!dateTimeTitle }"
+      :title="dateTimeTitle || undefined"
     >
       {{ extendedValue.formatted }}
     </span>
@@ -62,6 +69,7 @@
       <v-btn
         v-if="extendedValue.displayDetail"
         :icon="dense ? mdiLoupe : mdiMagnifyPlus"
+        :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
@@ -72,6 +80,7 @@
         v-if="!filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
         :loading="filterLoading"
+        :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
@@ -87,15 +96,22 @@ fr:
   filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
   showFullValue: Afficher la valeur entière
   download: "Télécharger {name} (nouvelle fenêtre)"
+  dtSource: Source
+  dtUtc: UTC
+  dtLocal: Votre fuseau
 en:
   filterValue: Filter the lines that have the same value in this column
   showFullValue: Show full value
   download: "Download {name} (new window)"
+  dtSource: Source
+  dtUtc: UTC
+  dtLocal: Your timezone
 </i18n>
 
 <script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResultValue } from '../../../composables/dataset/lines'
+import { dateTimeBreakdown } from '../../../composables/dataset/format-date-logic'
 import { mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({
@@ -113,6 +129,21 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const localeDayjs = useLocaleDayjs()
+const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+// native-title tooltip for a date-time cell: its value in the source timezone, in UTC and in the
+// viewer's own timezone — only set when those equivalents actually differ (see format-date-logic)
+const dtLabelKeys = { source: 'dtSource', utc: 'dtUtc', local: 'dtLocal' } as const
+const dateTimeTitle = computed(() => {
+  if (property.format !== 'date-time') return ''
+  const lines = dateTimeBreakdown(localeDayjs.dayjs, extendedValue.raw, viewerZone)
+  if (lines.length <= 1) return ''
+  return lines.map(line => {
+    const zoneSuffix = (line.zone && line.kind !== 'utc') ? ` (${line.zone})` : ''
+    return `${t(dtLabelKeys[line.kind])} : ${line.time}${zoneSuffix}`
+  }).join('\n')
+})
 </script>
 
 <style>
@@ -125,6 +156,11 @@ const { t } = useI18n()
   top: 8px;
   left: 2px;
   border: 2px solid #ccc;
+}
+.item-value-date-time {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
 }
 .item-value-hover-actions {
   position: absolute;

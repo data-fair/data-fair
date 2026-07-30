@@ -8,10 +8,10 @@ import { Readable, compose } from 'node:stream'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
 import resolvePath from 'resolve-path'
-import { displayBytes } from '../../misc/utils/bytes.js'
+import { displayBytes } from '../../misc/utils/bytes.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetUtils from '../../datasets/utils/index.js'
-import * as datasetService from '../../datasets/service.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
+import * as datasetService from '../../datasets/service.ts'
 import { fsyncFile, tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
@@ -20,6 +20,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
 import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
+import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import filesStorage from '#files-storage'
 import { createWriteStream } from 'node:fs'
 
@@ -47,7 +48,7 @@ export default async function (dataset: FileDataset) {
   const tmpDir = (await tmp.dir({ tmpdir: mainTmpDir, unsafeCleanup: true, prefix: 'normalizer-' })).path
 
   try {
-    if (!await filesStorage.pathExists(originalFilePath)) {
+    if (!await filesStorage.fileExists(originalFilePath)) {
       // we should not have to do this
       // this is a weird thing, maybe an unsolved race condition ?
       // let's wait a bit and try again to mask this problem temporarily
@@ -82,7 +83,9 @@ export default async function (dataset: FileDataset) {
           name: filePaths[0].parsed.base,
           size: (await filesStorage.fileStats(filePath)).size,
           mimetype: mime.lookup(filePaths[0].parsed.base) as string,
-          encoding: 'utf-8',
+          // zip preserves the original bytes: the encoding detection performed on the compressed
+          // archive by the file storer is meaningless, detect from the extracted content instead
+          encoding: dataset.originalFile.explicitEncoding ?? detectEncoding(await filesStorage.fileSample(filePath)),
           schema: []
         }
       } else {
@@ -128,7 +131,8 @@ export default async function (dataset: FileDataset) {
         name: basicTypeFileName,
         size: stats.size,
         mimetype: mime.lookup(basicTypeFileName) as string,
-        encoding: 'utf-8',
+        // same as the zip case: gzip preserves the original bytes, detect from the extracted content
+        encoding: dataset.originalFile.explicitEncoding ?? detectEncoding(await filesStorage.fileSample(filePath)),
         schema: []
       }
     }
@@ -156,7 +160,7 @@ export default async function (dataset: FileDataset) {
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
-      const icalendar = await import('../../misc/utils/icalendar.js')
+      const icalendar = await import('../../misc/utils/icalendar.ts')
       const { stringify: csvStrStream } = await import('csv-stringify')
 
       const { eventsStream, infos } = await icalendar.parse(originalFilePath)

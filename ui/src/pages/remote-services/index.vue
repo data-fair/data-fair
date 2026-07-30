@@ -23,10 +23,10 @@
 
 <i18n lang="yaml">
 fr:
-  remoteServices: Services interopérables
+  remoteServices: Services distants
   description: Cet espace vous permet de gérer les services Web configurés pour l'interopérabilité. Ces services sont généralement utilisés pour proposer des capacités d'enrichissement aux utilisateurs. Un service interopérable peut également être un jeu de données data-fair (local ou distant).
 en:
-  remoteServices: Interoperable services
+  remoteServices: Remote services
   description: This page lets you manage the Web services configured for interoperability. These services are mostly used to propose extentions to the users. An interoperable service can also be a data-fair dataset (local or remote).
 </i18n>
 

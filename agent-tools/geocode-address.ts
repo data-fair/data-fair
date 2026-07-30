@@ -78,7 +78,7 @@ export function formatResult (data: any, params: Params): { text: string, struct
     text = `No results found for "${params.q}".`
   } else {
     const lines = results.map((r: any) =>
-      `- **${r.label}** (score: ${r.score?.toFixed?.(2) ?? r.score}, type: ${r.type})\n  Coordinates: ${r.latitude}, ${r.longitude}\n  Postal code: ${r.postcode}, City: ${r.city} (${r.citycode})\n  Context: ${r.context}`
+      `- **${r.label}** (score: ${r.score?.toFixed?.(2) ?? r.score}, type: ${r.type})\n  Coordinates: lon=${r.longitude}, lat=${r.latitude}\n  Postal code: ${r.postcode}, City: ${r.city} (${r.citycode})\n  Context: ${r.context}`
     )
     text = `**${features.length}** result(s) for "${params.q}":\n\n${lines.join('\n\n')}`
   }

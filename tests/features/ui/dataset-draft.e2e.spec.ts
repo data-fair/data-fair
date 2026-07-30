@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, setupMockRoute, clearMockRoutes, getRawDataset, waitForDatasetError } from '../../support/workers.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 
@@ -113,6 +113,90 @@ test.describe('dataset draft mode - file-new', () => {
     await validateBtn.click()
     // After validation the worker processes the dataset; the draft banner should disappear
     await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).not.toBeVisible({ timeout: 30000 })
+  })
+})
+
+/**
+ * Drive a file-new draft into error status: configure a geocoder extension while the
+ * mock geocoder returns a 500. With errorRetryDelay=0 the automatic retry also fails
+ * instantly, leaving the draft in the terminal error state (no pending errorRetry).
+ */
+async function createFileNewDraftInError (ax: any, timeoutMs = 30000) {
+  const form = new FormData()
+  const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+other,unknown address
+`
+  form.append('file', content, 'dataset-draft-error.csv')
+  const res = await ax.post('/api/v1/datasets', form, {
+    headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+    params: { draft: true }
+  })
+  await waitForFinalizedPolling(ax, res.data.id, { draft: true })
+
+  const rawDataset = await getRawDataset(res.data.id)
+  rawDataset.draft.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+  await setupMockRoute({ path: '/geocoder/coords', status: 500, body: 'some error', contentType: 'text/plain' })
+  await ax.patch(`/api/v1/datasets/${rawDataset.id}`, {
+    schema: rawDataset.draft.schema,
+    extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+  }, { params: { draft: true } })
+  const dataset = await waitForDatasetError(ax, rawDataset.id, { draft: true })
+
+  // wait for the terminal error state (automatic retry consumed, no errorRetry left)
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const raw = await getRawDataset(dataset.id)
+    if (raw.draft?.status === 'error' && !raw.draft.errorRetry) return dataset
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  throw new Error(`Dataset ${dataset.id} did not reach terminal draft error state within ${timeoutMs}ms`)
+}
+
+test.describe('dataset draft mode - file-new draft in error', () => {
+  let datasetId: string
+
+  test.beforeAll(async () => {
+    test.setTimeout(60000)
+    await clean()
+    await clearMockRoutes()
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await createFileNewDraftInError(ax)
+    datasetId = dataset.id
+  })
+
+  test('draft in error shows the error message and a retry button', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+
+    // Draft banner still visible, with the last draft error message
+    await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).toBeVisible({ timeout: 15000 })
+    const ax = await axiosAuth('test_user1@test.com')
+    const journal = (await ax.get(`/api/v1/datasets/${datasetId}/journal`)).data
+    const errorEvent = journal.find((e: any) => e.type === 'error' && e.draft)
+    expect(errorEvent).toBeTruthy()
+    // scoped to the alert: the same message also appears in the journal list
+    await expect(page.locator('.v-alert').getByText(errorEvent.data.split('\n')[0])).toBeVisible()
+
+    // Retry button present; validate and cancel buttons absent
+    await expect(page.getByRole('button', { name: /Relancer|Restart/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).not.toBeVisible()
+    await expect(page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })).not.toBeVisible()
+  })
+
+  // Mutating test last — retries the draft processing (draft leaves the error state)
+  test('retry button resumes processing and recovers once the cause is fixed', async ({ page, goToWithAuth }) => {
+    // heal the mock geocoder before retrying
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 30, lon: 30 } } })
+
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const retryBtn = page.getByRole('button', { name: /Relancer|Restart/ })
+    await expect(retryBtn).toBeVisible({ timeout: 15000 })
+    await retryBtn.click()
+
+    // The draft reprocesses successfully and reaches finalized: validate button appears
+    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible({ timeout: 30000 })
+    // and the error message from the superseded failed round is no longer displayed
+    await expect(page.locator('.v-alert').getByText('500 - some error')).not.toBeVisible()
   })
 })
 

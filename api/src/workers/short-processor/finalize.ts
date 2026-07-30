@@ -1,22 +1,24 @@
 // Finalize dataset for publication
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
-import { datasetWarning } from '../../datasets/es/manage-indices.js'
+import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
 import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
-import * as geoUtils from '../../datasets/utils/geo.js'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import { isIgnoredColumnActionable } from '../../datasets/es/diagnose-warnings.ts'
+import * as geoUtils from '../../datasets/utils/geo.ts'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetService from '../../datasets/service.js'
+import * as datasetService from '../../datasets/service.ts'
 import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import * as virtualDatasetsUtils from '../../datasets/utils/virtual.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
 import mongo from '#mongo'
+import * as journals from '../../misc/utils/journals.ts'
 
 import debugLib from 'debug'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
-import type { DatasetInternal, Nullable } from '#types'
+import type { DatasetInternal, Nullable, Event } from '#types'
 import { isVirtualDataset } from '#types/dataset/index.ts'
 import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
 
@@ -31,15 +33,38 @@ export default async function (_dataset: DatasetInternal) {
   const queryableDataset = { ...dataset }
 
   const result: Partial<Nullable<DatasetInternal>> = { status: 'finalized', schema: dataset.schema }
+  // Intentionally unconditional (no `!dataset.draftReason` guard). applyPatch (below) prefixes keys
+  // with `draft.` based on its TARGET's draftReason, which routes this correctly: a plain draft
+  // finalize persists `draft._needsHistorizing` (never matched by the relay filter → drafts are NOT
+  // historized), while a draft validation patches the published doc → top-level flag → anchored.
+  // preserve a caller-provided context (e.g. the _restore route rides its 'restore' context
+  // through the draft: mergeDraft overlays draft._needsHistorizing onto the working doc);
+  // default to the generic worker context otherwise
+  if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
+  debug('prepare extended schema')
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
-    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    // the prepared schema runs extendedSchema itself, then reconciles the calculated fields with
+    // the children schemas (e.g. _attachment_url inherits the image concept from a child with
+    // attachmentsAsImage) — a plain extendedSchema call would discard that reconciliation.
+    // The preparation is pure (fresh field objects): dataset.schema must be reassigned too so
+    // the cardinality/enum stamping below (which walks dataset.schema) lands on the objects
+    // persisted through result.schema
+    const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
+    dataset.schema = queryableDataset.schema = result.schema = virtualPatch.schema
+    if ('attachmentsAsImage' in virtualPatch) {
+      result.attachmentsAsImage = virtualPatch.attachmentsAsImage
+      if (virtualPatch.attachmentsAsImage) dataset.attachmentsAsImage = queryableDataset.attachmentsAsImage = true
+      else {
+        delete dataset.attachmentsAsImage
+        delete queryableDataset.attachmentsAsImage
+      }
+    }
+  } else {
+    // Add the calculated fields to the schema
+    queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   }
-
-  // Add the calculated fields to the schema
-  debug('prepare extended schema')
-  queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   // record whether the freshly-built index carries the _search catch-all fields.
   // only when an index was actually (re)built: finalize also runs after a partial REST data
   // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
@@ -136,7 +161,22 @@ export default async function (_dataset: DatasetInternal) {
     await progress.inc()
   }
 
-  result.esWarning = await datasetWarning(dataset)
+  const finalizeDiag = await datasetFinalizeDiagnostics(dataset)
+  result.esWarning = finalizeDiag.esWarning
+  result._esIgnoredKeywordFields = finalizeDiag.ignoredKeywordFields
+
+  const prevIgnored = new Set<string>((dataset as any)._esIgnoredKeywordFields ?? [])
+  const actionable = finalizeDiag.ignoredKeywordFields.filter((key: string) => {
+    const p = (result.schema ?? dataset.schema ?? []).find((f: any) => f.key === key)
+    return p && isIgnoredColumnActionable(p)
+  })
+  const isNew = actionable.some((k: string) => !prevIgnored.has(k))
+  if (actionable.length && isNew) {
+    await journals.log('datasets', dataset, {
+      type: 'ignored-keyword-values',
+      data: `Colonnes concernées : ${actionable.join(', ')}. Elles contiennent des valeurs de plus de 200 caractères, silencieusement exclues du filtrage exact, du tri et du regroupement. Vérifiez la configuration technique (capacités) de ces colonnes.`
+    } as Event).catch(() => {})
+  }
 
   if (isRestDataset(dataset)) {
     await restDatasetsUtils.configureHistory(dataset)
@@ -146,8 +186,8 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
-    dataset.descendants = descendants.map(d => d.id)
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
+    dataset.descendants = descendants
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
       result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt

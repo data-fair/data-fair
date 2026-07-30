@@ -16,7 +16,8 @@
           <v-btn
             color="primary"
             variant="flat"
-            @click="patchDataset.execute({})"
+            :loading="retryProcessing.loading.value"
+            @click="retryProcessing.execute()"
           >
             {{ t('restart') }}
           </v-btn>
@@ -49,7 +50,7 @@
 
     <v-alert
       v-if="dataset.draftReason"
-      :type="(draftError || draftValidationError) ? 'warning' : 'info'"
+      :type="dataset.status === 'error' ? 'error' : draftValidationError ? 'warning' : 'info'"
       variant="outlined"
     >
       <p v-if="dataset.draftReason.key === 'file-new'">
@@ -65,13 +66,6 @@
       </p>
 
       <template v-if="dataset.status === 'finalized'">
-        <p
-          v-if="draftError"
-          class="mt-4 font-weight-bold"
-          style="white-space: pre-line"
-        >
-          {{ draftError.data }}
-        </p>
         <p
           v-if="draftValidationError"
           class="mt-4 font-weight-bold"
@@ -96,16 +90,24 @@
         </p>
       </template>
 
+      <p
+        v-if="dataset.status === 'error' && lastDraftError"
+        class="mt-4 font-weight-bold"
+        style="white-space: pre-line"
+      >
+        {{ lastDraftError.data }}
+      </p>
+
       <template
         v-if="journal"
         #append
       >
         <v-btn
           v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-          :disabled="!can('cancelDraft').value || validateDraft.loading.value"
+          :disabled="!can('cancelDraft').value || validateDraft.loading.value || retryProcessing.loading.value"
           :loading="cancelDraft.loading.value"
-          :color="!(draftError || draftValidationError) ? 'warning' : undefined"
-          :class="dataset.status === 'finalized' ? 'mr-2' : ''"
+          :color="!draftValidationError ? 'warning' : undefined"
+          :class="dataset.status === 'finalized' || dataset.status === 'error' ? 'mr-2' : ''"
           variant="flat"
           @click="cancelDraft.execute()"
         >
@@ -115,11 +117,21 @@
           v-if="dataset.status === 'finalized'"
           :disabled="!can('validateDraft').value || cancelDraft.loading.value"
           :loading="validateDraft.loading.value"
-          :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+          :color="draftValidationError ? 'warning' : 'primary'"
           variant="flat"
           @click="validateDraft.execute()"
         >
           {{ t('validateDraft') }}
+        </v-btn>
+        <v-btn
+          v-if="dataset.status === 'error'"
+          :disabled="cancelDraft.loading.value"
+          :loading="retryProcessing.loading.value"
+          color="primary"
+          variant="flat"
+          @click="retryProcessing.execute()"
+        >
+          {{ t('restart') }}
         </v-btn>
       </template>
     </v-alert>
@@ -165,7 +177,7 @@ const events = allEvents.dataset as Record<string, { icon: string, color?: strin
 const { t, locale } = useI18n()
 
 const datasetStore = useDatasetStore()
-const { dataset, journal, journalFetch, can, patchDataset } = datasetStore
+const { dataset, journal, journalFetch, can, retryProcessing } = datasetStore
 if (!journalFetch.initialized.value) journalFetch.refresh()
 
 const lastProdEvent = computed(() => {
@@ -175,8 +187,11 @@ const lastProdEvent = computed(() => {
   return null
 })
 
-const draftError = computed(() => getLastDraftEvent('error'))
 const draftValidationError = computed(() => getLastDraftEvent('validation-error'))
+// when the draft processing itself failed (status 'error') the relevant message is simply
+// the newest draft error event; getLastDraftEvent cannot find it as it only scans events
+// older than the last finalize-end
+const lastDraftError = computed(() => journal.value?.find(e => e.type === 'error' && e.draft))
 
 const getLastDraftEvent = (eventType: string) => {
   if (dataset.value?.status !== 'finalized') return null
@@ -184,6 +199,9 @@ const getLastDraftEvent = (eventType: string) => {
   for (const event of journal.value ?? []) {
     if (inCurrentDraft && !event.draft) break
     if (inCurrentDraft && event.type === 'finalize-end') break
+    // an error event terminates its processing round: anything older belongs to a round
+    // that was since superseded by the successful one that (re-)finalized the draft
+    if (inCurrentDraft && (event.type === 'error' || event.type === 'error-retry')) break
     if (event.type === 'finalize-end') inCurrentDraft = true
     if (inCurrentDraft && event.type === eventType) return event
   }

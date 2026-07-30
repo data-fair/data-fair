@@ -1,7 +1,7 @@
 import type { ResourceType } from '#types'
 import { workers, tasks, pendingTasks } from './tasks.ts'
 import type { Task, WorkerId } from './types.ts'
-import mergeDraft from '../datasets/utils/merge-draft.js'
+import mergeDraft from '../datasets/utils/merge-draft.ts'
 import locks from '@data-fair/lib-node/locks.js'
 import mongo from '#mongo'
 import config from '#config'
@@ -13,7 +13,7 @@ import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram, Gauge } from 'prom-client'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { type AccountKeys } from '@data-fair/lib-express'
+import { computeExcludedOwners } from './concurrency.ts'
 
 const debug = debugLib('workers')
 
@@ -49,37 +49,17 @@ export const hook = async (key: string) => {
   return newResource
 }
 
-const matchOwner = (o1: AccountKeys, o2: AccountKeys) => o1.type === o2.type && o1.id === o2.id
-
 const getWorkersStatus = () => {
   return (Object.keys(workers) as WorkerId[])
     .map(key => {
       const pending = pendingTasks[key] ?? {}
       const maxConcurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
       const currentConcurrency = Object.keys(pending).length
-      const excludedOwners: AccountKeys[] = []
-      if (maxConcurrency >= 2) {
-        // 1rst rule: prevent a owner from using more than half the available slots
-        const maxOwnerConcurrency = Math.floor(maxConcurrency / 2)
-        for (const task of Object.values(pending)) {
-          if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
-            const nbOwnerTasks = Object.values(pending).filter(t => matchOwner(t.owner, task.owner)).length
-            if (nbOwnerTasks >= maxOwnerConcurrency) {
-              debug('owner uses more than half concurrency slots for worker, exclude them', key, task.owner)
-              excludedOwners.push(task.owner)
-            }
-          }
-        }
-        // 2nd rule: prevent a owner who already has a running task from using the last slot
-        if (Object.keys(pending).length >= maxConcurrency - 1) {
-          for (const task of Object.values(pending)) {
-            if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
-              debug('owner uses a concurrency slot for worker and there is only one left, exclude them', key, task.owner)
-              excludedOwners.push(task.owner)
-            }
-          }
-        }
-      }
+      // concurrencyLimitPerAccount is the fraction (0-1) of a worker's slots a single owner may use.
+      // At 1 (the default) a single owner can use all the slots, which suits small mono-organization
+      // deployments. Lower it (e.g. 0.5) on shared multi-organization deployments. See ./concurrency.ts.
+      const excludedOwners = computeExcludedOwners(maxConcurrency, Object.values(pending), config.worker.concurrencyLimitPerAccount)
+      if (excludedOwners.length) debug('exclude owners from fair allocation on worker', key, excludedOwners)
       return { key, maxConcurrency, currentConcurrency, excludedOwners }
     })
 }
@@ -193,8 +173,11 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
         } else {
           await journals.log(type, newResource as any, { type: task.eventsPrefix + '-end' } as any, noStoreEvent)
         }
+        // special case of a draft auto-cancelled during the task: 'validate' (process-file
+        // validation/extension errors) and 'index' (unicity gate) can both end with the draft
+        // cancelled and the dataset reverted to its published (final) state
         finalTask = task.eventsPrefix === 'finalize' ||
-          (task.eventsPrefix === 'validate' && resource.draftReason && !newResource.draft && newResource.status) // special case of cancelled draft
+          ((task.eventsPrefix === 'validate' || task.eventsPrefix === 'index') && resource.draftReason && !newResource.draft && newResource.status)
       }
       await progress?.end(false, finalTask)
     }
@@ -213,7 +196,8 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     console.warn(`failure in worker ${task.name} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
 
     // some error are caused by bad input, we should not retry these
-    let retry = !errorMessage.startsWith('[noretry] ')
+    // they are signalled either by a [noretry] message prefix or a noRetry property on the error
+    let retry = !errorMessage.startsWith('[noretry] ') && err?.noRetry !== true
     if (!retry) {
       debug('error message started by [noretry]')
       errorMessage = errorMessage.replace('[noretry] ', '')

@@ -24,6 +24,7 @@ export const schema = {
           type: 'object' as const,
           properties: {
             id: { type: 'string' as const, description: 'Unique dataset ID (required for describe_dataset and search_data tools)' },
+            slug: { type: 'string' as const, description: 'Human-readable unique identifier for the dataset, used in portal URLs' },
             title: { type: 'string' as const, description: 'Dataset title' },
             page: { type: 'string' as const, description: 'Link to the dataset page (must be included in responses as citation source)' },
             summary: { type: 'string' as const, description: 'A summary of the dataset content' }
@@ -46,7 +47,7 @@ export function buildQuery (params: Params, catalogMode?: boolean): { path: stri
   const size = Math.min(Math.max(params.size || 10, 1), 50)
   const page = Math.max(params.page || 1, 1)
   const query: Record<string, string> = {
-    select: 'id,title,summary,topics,count',
+    select: 'id,title,summary,topics,count,slug',
     size: String(size),
     page: String(page)
   }
@@ -58,22 +59,35 @@ export function buildQuery (params: Params, catalogMode?: boolean): { path: stri
   }
 }
 
-export function formatResult (data: any, page: number, size: number): { text: string, structuredContent: Record<string, any> } {
+/**
+ * @param options.datasetLink overrides the link used for each dataset. Defaults to the
+ * API `page` field (the public/portal page — right for portal & MCP consumers). The
+ * back-office integration passes a builder that points at the current site's back-office
+ * page, since `page` would otherwise link to the portal/primary site when the back-office
+ * is served on a secondary domain.
+ */
+export function formatResult (data: any, page: number, size: number, options?: { datasetLink?: (d: any) => string }): { text: string, structuredContent: Record<string, any> } {
   const rows = data.results ?? []
+  const link = (d: any): string | undefined => (options?.datasetLink ? options.datasetLink(d) : d.page)
   const results = rows.map((d: any) => {
     const r: any = {
       id: d.id,
       title: d.title,
-      page: d.page
+      page: link(d)
     }
+    if (d.slug) r.slug = d.slug
     if (d.summary) r.summary = d.summary
     return r
   })
 
   const lines = rows.map((d: any) => {
-    const parts = [`- **${d.title || d.id}** (id: \`${d.id}\`)`,
+    const idPart = d.slug ? `id: \`${d.id}\`, slug: \`${d.slug}\`` : `id: \`${d.id}\``
+    const parts = [`- **${d.title || d.id}** (${idPart})`,
       `  Status: ${d.status || 'unknown'}, ${d.count ?? '?'} rows, updated ${d.updatedAt || '?'}`]
     if (d.topics?.length) parts.push(`  Topics: ${d.topics.map((t: any) => t.title).join(', ')}`)
+    const datasetUrl = link(d)
+    // absolute link — use it verbatim, and as the base for table/map views ({link}/table?<filterQuery>)
+    if (datasetUrl) parts.push(`  Link: ${datasetUrl}`)
     return parts.join('\n')
   })
 

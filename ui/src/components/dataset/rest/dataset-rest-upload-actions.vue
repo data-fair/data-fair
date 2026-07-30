@@ -79,12 +79,12 @@
                 accept=".zip"
               />
             </template>
-            <v-progress-linear
+            <file-upload-progress
               v-if="upload.loading.value"
-              v-model="uploadProgress"
+              :percent="uploadProgress?.percent"
+              :total="uploadProgress?.total"
               class="my-1"
               style="max-width: 500px;"
-              color="primary"
             />
           </div>
         </v-form>
@@ -104,8 +104,7 @@
         </v-btn>
         <template v-else>
           <v-btn
-            :disabled="upload.loading.value"
-            @click="dialog = false"
+            @click="upload.loading.value ? cancelSource?.cancel(t('cancelled')) : (dialog = false)"
           >
             {{ t('cancel') }}
           </v-btn>
@@ -129,6 +128,7 @@ fr:
   loadLines: Charger plusieurs lignes depuis un fichier
   selectFile: Sélectionnez ou glissez/déposez un fichier
   cancel: Annuler
+  cancelled: Chargement annulé
   load: Charger
   ok: Ok
   separator: Séparateur
@@ -139,6 +139,7 @@ en:
   loadLines: Load multiple lines from a file
   selectFile: Select or drag and drop a file
   cancel: Cancel
+  cancelled: Loading cancelled
   load: Load
   ok: Ok
   separator: Separator
@@ -149,9 +150,10 @@ en:
 
 <script setup lang="ts">
 import { type RestActionsSummary } from '#api/types'
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { AxiosRequestConfig, type CancelTokenSource } from 'axios'
+import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const { dataset, id: datasetId } = useDatasetStore()
 
@@ -160,7 +162,7 @@ const dialog = ref(false)
 const file = ref<File>()
 const attachmentsFile = ref<File>()
 const result = ref<RestActionsSummary>()
-const uploadProgress = ref<number>()
+const uploadProgress = ref<{ percent?: number, total?: number }>()
 const csvSep = ref(',')
 const drop = ref(false)
 
@@ -171,19 +173,23 @@ watch(dialog, () => {
   result.value = undefined
   file.value = undefined
   attachmentsFile.value = undefined
-  uploadProgress.value = 0
+  uploadProgress.value = undefined
   csvSep.value = ','
   drop.value = false
 })
 
+let cancelSource: CancelTokenSource
+
 const upload = useAsyncAction(async () => {
   if (!file.value) return
+  cancelSource = axios.CancelToken.source()
   const options: AxiosRequestConfig = {
     onUploadProgress: (e) => {
       if (e.lengthComputable) {
-        uploadProgress.value = e.total && ((e.loaded / e.total) * 100)
+        uploadProgress.value = { percent: e.total && ((e.loaded / e.total) * 100), total: e.total }
       }
     },
+    cancelToken: cancelSource.token,
     params: { draft: true }
   }
   if (isCSV.value) {
@@ -200,6 +206,7 @@ const upload = useAsyncAction(async () => {
   try {
     result.value = await axios.post(`${$apiPath}/datasets/${datasetId}/_bulk_lines`, formData, options).then(r => r.data)
   } catch (error: any) {
+    if (axios.isCancel(error)) return
     if (typeof (error.response && error.response.data) === 'object') {
       result.value = error.response.data
     } else {
@@ -207,6 +214,9 @@ const upload = useAsyncAction(async () => {
     }
   }
 })
+
+// Warn before leaving while a file upload is running, and cancel it on confirm.
+useUploadLeaveGuard(() => upload.loading.value, { locale, onConfirmLeave: () => cancelSource?.cancel(t('cancelled')) })
 </script>
 
 <style lang="css" scoped>

@@ -2,7 +2,7 @@ import path from 'node:path'
 import type { DatasetTask } from './types.ts'
 import { Piscina } from 'piscina'
 import config from '#config'
-import { basicTypes, csvTypes } from '../datasets/utils/types.js'
+import { basicTypes, csvTypes } from '../datasets/utils/types.ts'
 import moment from 'moment'
 import { piscinaGauge } from '../misc/utils/metrics.ts'
 import { type ResourceType } from '#types'
@@ -232,6 +232,38 @@ const datasetTasks: DatasetTask[] = [{
       { isRest: true, status: 'finalized', _partialRestStatus: 'indexed' }
     ]
   }),
+}, {
+  name: 'historize',
+  worker: 'shortProcessor',
+  // gated to the settled states, like historizeLines below: a covered patch can set the stamp
+  // AND pipeline work in the same write (schema/extensions patch, pipeline-routed restore), so
+  // an unnarrowed filter would durably match this dataset together with extend/indexLines —
+  // the transient statuses (and extend's settled-status needsUpdate trigger) belong to the
+  // pipeline, which re-stamps on finalize *preserving* a pre-set context (see
+  // short-processor/finalize.ts). Anchoring only at settle also avoids historizing interim
+  // covered states mid-pipeline. Same visible deferral as historizeLines: the checker reports
+  // 'unknown' while the stamp is pending.
+  mongoFilter: () => ({
+    _needsHistorizing: { $exists: true },
+    status: { $in: ['finalized', 'error'] },
+    _partialRestStatus: null,
+    extensions: { $not: { $elemMatch: { active: true, needsUpdate: true } } }
+  })
+}, {
+  name: 'historizeLines',
+  worker: 'shortProcessor',
+  // gated to the settled REST state (status finalized, no pending partial pass) so this stays
+  // exclusive of finalize/indexLines/extend, which all own the transient states in between — a
+  // hint set while a dataset is still mid its very first pipeline run just waits it out. Also
+  // defers to a pending dataset-level _needsHistorizing (the metadata anchor, e.g. re-stamped by
+  // every finalize pass on an integrity-active dataset): both hints can legitimately be pending
+  // together, so this orders them rather than racing the same document across two tasks at once.
+  // narrowed beyond the hint flag to keep dev's exclusive-task-selection assertion quiet
+  // (finalize/indexLines/extend run at other statuses; the dataset-level historize outbox
+  // must clear first). Deliberate consequence: a dataset stuck in status 'error' accepts
+  // line writes but defers draining until it recovers — the checker reports 'unknown'
+  // while stamps are pending, so the deferral is visible, not silent
+  mongoFilter: () => ({ isRest: true, status: 'finalized', _partialRestStatus: null, _needsHistorizing: { $exists: false }, _needsHistorizingLines: true })
 }, {
   name: 'renewApiKey',
   worker: 'shortProcessor',

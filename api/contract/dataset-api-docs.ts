@@ -4,12 +4,13 @@ import _config from 'config'
 import prettyBytes from 'pretty-bytes'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as masterData from './master-data.js'
+import { datasetContext, isDatasetOperationApplicable } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import capabilities from './capabilities.js'
-import * as datasetUtils from '../src/datasets/utils/index.js'
-import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
+import * as datasetUtils from '../src/datasets/utils/index.ts'
+import { acceptedMetricAggs } from '../src/datasets/es/operations.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
-import { hasCapability } from '../src/datasets/es/commons.js'
+import { getColumnFilters } from '../src/datasets/es/commons.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -143,28 +144,10 @@ export default (
   const filterItems: any[] = []
   if (!isSampleDataset) {
     for (const p of schema) {
-      if (hasCapability(p, 'index') || hasCapability(p, 'wildcard') || hasCapability(p, 'text') || hasCapability(p, 'textStandard')) {
-        filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
-      }
-      if (hasCapability(p, 'index')) {
-        filterItems.push(p.key + '_eq')
-        filterItems.push(p.key + '_neq')
-        filterItems.push(p.key + '_in')
-        filterItems.push(p.key + '_nin')
-        filterItems.push(p.key + '_lt')
-        filterItems.push(p.key + '_lte')
-        filterItems.push(p.key + '_gt')
-        filterItems.push(p.key + '_gte')
-        filterItems.push(p.key + '_starts')
-        filterItems.push(p.key + '_exists')
-        filterItems.push(p.key + '_nexists')
-      }
-      if (hasCapability(p, 'wildcard')) {
-        filterItems.push(p.key + '_contains')
-      }
-      if (hasCapability(p, 'textStandard') || hasCapability(p, 'text')) {
-        filterItems.push(p.key + '_search')
-      }
+      const colFilters = getColumnFilters(p)
+      if (!colFilters.length) continue
+      filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
+      for (const suffix of colFilters) filterItems.push(p.key + suffix)
     }
   }
 
@@ -566,7 +549,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'calculated',
-        description: "Inclure les colonnes calculées (non issues du fichier d'origine).",
+        description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
+          'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +
+          '*Exception : avec le format `mimeType=application/schema+json` elles sont par défaut exclues.*',
         required: false,
         schema: {
           title: 'Inclure les colonnes calculées',
@@ -1241,23 +1226,16 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
 
   // Variant-specific pruning is skipped in merged mode so the root doc keeps every route.
   if (!merged) {
-    if ((ds as any).isVirtual || (ds as any).isRest || (ds as any).isMetaOnly) {
-      delete api.paths['/raw']
-      delete api.paths['/convert']
-      delete api.paths['/full']
-      delete api.paths['/data-files']
-      delete api.paths['/data-files/{filePath}']
-    }
-
-    if ((ds as any).isMetaOnly) {
-      delete api.paths['/lines']
-      delete api.paths['/schema']
-      delete api.paths['/safe-schema']
-      delete api.paths['/words_agg']
-      delete api.paths['/metric_agg']
-      delete api.paths['/values/{field}']
-      delete api.paths['/values-labels/{field}']
-      delete api.paths['/values_agg']
+    // Dataset-type route gating uses the shared appliesTo predicates (the same list that drives the
+    // permission picker). Field-dependent schema pruning is handled below.
+    const datasetCtx = datasetContext(ds)
+    for (const [path, methods] of Object.entries(api.paths) as [string, any][]) {
+      for (const op of Object.values(methods) as any[]) {
+        if (op?.operationId && !isDatasetOperationApplicable(op.operationId, datasetCtx)) {
+          delete api.paths[path]
+          break
+        }
+      }
     }
 
     if (textAggProperties.length === 0) {

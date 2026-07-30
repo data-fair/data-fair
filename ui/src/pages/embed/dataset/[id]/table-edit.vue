@@ -22,12 +22,16 @@
 
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
+import { useDatasetWatch } from '~/composables/dataset/watch'
 
 const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/embed/dataset/[id]/table-edit'>()
 
-provideDatasetStore(route.params.id, undefined, true)
+const store = provideDatasetStore(route.params.id, undefined, true)
+// subscribe to background changes so the editable embed refreshes its rows
+// like the back-office table (reloads on finalize-end via the changed finalizedAt)
+useDatasetWatch(store, ['info'])
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')

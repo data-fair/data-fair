@@ -111,6 +111,9 @@ Prometheus counter.
 | `memoizedGetPublicationSiteSettings` | `api/src/misc/utils/settings.ts:45` | 1 min | publication-site settings lookups |
 | `memoizedGetFreshDataset` | `api/src/applications/utils.ts:53` | 1 min | dataset snapshot used when rendering applications |
 | `getCompatODS` | `api/src/api-compat/ods/index.ts:55` | 1 min | ODS-compat resource resolution |
+| `findApplicationKey` + 3 siblings | `api/src/misc/utils/application-key.ts` | 30 s | the 3-4 lookups of the application-key middleware, in front of every embed/app data request; negative results cached; `matchingApplication` is cloned on use (mutated downstream); cleared on applications/applications-keys writes (same-node changes apply immediately) |
+| `findApiKeySettings` | `api/src/misc/utils/api-key.ts` | 30 s | settings lookup behind `x-apiKey` auth; negative results cached; cleared on settings writes (same-node key revocation is immediate) |
+| `compileSchema` (rest validators) | `api/src/datasets/utils/rest.ts` | 1 min | ajv compile per (dataset, `updatedAt`, adminMode); also bounds ajv's internal schema cache |
 | `memoizedPrepare` (markdown → HTML) | `api/src/misc/utils/markdown.js:26` | 1 h | key includes `updatedAt` ⇒ self-invalidating |
 | `memoizedCompileFlatten` | `api/src/datasets/utils/flatten.ts:50` | 1 h | key includes `finalizedAt` ⇒ self-invalidating |
 | `getFilterableFields` | `api/src/datasets/es/commons.js:196` | 1 h | ES query-building helper |

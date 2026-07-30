@@ -168,7 +168,7 @@
             v-if="apiKey.expireAt"
             class="mb-4"
           >
-            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
+            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('L') }}
           </p>
         </v-card-text>
 
@@ -249,7 +249,6 @@ en:
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 import { mdiPlus } from '@mdi/js'
-import { VDateInput } from 'vuetify/labs/VDateInput'
 
 const { restrictedScopes } = defineProps<{
   restrictedScopes?: string[]

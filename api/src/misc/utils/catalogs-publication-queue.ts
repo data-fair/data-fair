@@ -1,5 +1,5 @@
 import { internalError } from '@data-fair/lib-node/observer.js'
-import axios from './axios.js'
+import axios from './axios.ts'
 import Debug from 'debug'
 
 const debug = Debug('catalogs-publication-queue')

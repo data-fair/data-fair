@@ -60,6 +60,11 @@ export const validationDiagnosticFilePath = (dataset: any) => {
   return resolvePath(dataFilesDir(dataset), 'validation-diagnostic.csv')
 }
 
+export const cancelledDraftDiagnosticFilePath = (dataset: any) => {
+  // always the main (non-draft) dir: this file outlives the cancelled draft
+  return resolvePath(dataFilesDir({ ...dataset, draftReason: null }), 'cancelled-draft-diagnostic.csv')
+}
+
 export const loadedAttachmentsFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), 'attachments.zip')
 }
@@ -159,11 +164,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
 /**
  * @param {string} p
  */
-export const fsyncFile = async (p: string) => {
-  const fd = await fs.open(p, 'r')
-  await fs.fsync(fd)
-  await fs.close(fd)
-}
+export { fsyncFile } from '../../files-storage/operations.ts'
 
 export const cleanTmp = async () => {
   debugCleanTmp('check tmp dir for old files')

@@ -1,6 +1,6 @@
 import config from '#config'
 import mongo from '#mongo'
-import axios from '../misc/utils/axios.js'
+import axios from '../misc/utils/axios.ts'
 import jsonRefs from 'json-refs'
 import i18n from 'i18n'
 import * as parse5 from 'parse5'

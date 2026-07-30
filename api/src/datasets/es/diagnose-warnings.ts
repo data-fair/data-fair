@@ -2,7 +2,7 @@
 // Inputs: a dataset object, the esInfos snapshot returned by manage-indices.datasetInfos(),
 // and the relevant elasticsearch config subtree. Outputs: a Warning[].
 
-import { hasManyQSearchFields } from './operations.ts'
+import { hasManyQSearchFields, isLengthLimitedKeyword, hasCapability } from './operations.ts'
 
 export type WarningSeverity = 'info' | 'warning' | 'error'
 
@@ -10,6 +10,7 @@ export type WarningCode =
   | 'MissingIndex'
   | 'IndexHealthRed'
   | 'MissingIndexSettings'
+  | 'IgnoredKeywordValues'
   | 'ShardingRecommended'
   | 'MissingSearchOnWide'
   | 'MappingNearLimit'
@@ -45,6 +46,7 @@ export const WARNING_PRIORITY: readonly WarningCode[] = [
   'MissingIndex',
   'IndexHealthRed',
   'MissingIndexSettings',
+  'IgnoredKeywordValues',
   'ShardingRecommended',
   'MissingSearchOnWide',
   'MappingNearLimit',
@@ -54,6 +56,26 @@ export const WARNING_PRIORITY: readonly WarningCode[] = [
   'ShardSizeOutOfBand',
   'OrphanIndices'
 ] as const
+
+// Schema columns (length-limited keyword) that ES actually dropped values from — detected via the
+// `_ignored` metadata field (collected into esInfos.ignoredFields). The main keyword field is `key`;
+// its case-insensitive twin is `key.keyword_insensitive`; either appearing means the column truncated.
+// Includes wildcard-capable columns (their queries still need routing to `.wildcard`).
+export const computeIgnoredKeywordFields = (dataset: any, esInfos: any): string[] => {
+  const ignored = new Set<string>(esInfos?.ignoredFields ?? [])
+  if (!ignored.size) return []
+  return (dataset?.schema ?? [])
+    .filter((p: any) => isLengthLimitedKeyword(p) && (ignored.has(p.key) || ignored.has(p.key + '.keyword_insensitive')))
+    .map((p: any) => p.key)
+}
+
+// A flagged column is worth warning about when truncation actually breaks an operation it still
+// offers. The `.wildcard` routing repairs exact/existence/prefix/range filtering, but it does NOT
+// repair sorting or grouping — those read the truncated keyword / keyword_insensitive fields. So a
+// column is "actionable" when it lacks a wildcard alternative (filtering still degraded) OR still
+// advertises the sort/group capabilities (`values`) or case-insensitive sort (`insensitive`).
+export const isIgnoredColumnActionable = (prop: any): boolean =>
+  !hasCapability(prop, 'wildcard') || hasCapability(prop, 'values') || hasCapability(prop, 'insensitive')
 
 const skipDataset = (dataset: any): boolean => {
   if (!dataset) return true
@@ -118,6 +140,20 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
       code: 'MissingSearchOnWide',
       severity: 'warning',
       message: 'wide dataset is missing the _search catch-all field; reindex to apply the optimization'
+    })
+  }
+
+  const flagged = computeIgnoredKeywordFields(dataset, esInfos)
+  const actionable = flagged.filter((key: string) => {
+    const p = (dataset.schema ?? []).find((f: any) => f.key === key)
+    return p && isIgnoredColumnActionable(p)
+  })
+  if (actionable.length) {
+    warnings.push({
+      code: 'IgnoredKeywordValues',
+      severity: 'warning',
+      message: `column(s) ${actionable.join(', ')} contain values longer than 200 characters; such values are silently excluded from exact-match filtering, sorting and grouping. Review the technical capabilities configured on these columns.`,
+      details: { columns: actionable }
     })
   }
 

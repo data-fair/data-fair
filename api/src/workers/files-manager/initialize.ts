@@ -1,9 +1,9 @@
 import path from 'path'
 import { Readable, Transform, compose } from 'node:stream'
 import * as restUtils from '../../datasets/utils/rest.ts'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetsService from '../../datasets/service.js'
+import * as datasetsService from '../../datasets/service.ts'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import * as permissionsUtils from '../../misc/utils/permissions.ts'
 import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../../datasets/utils/files.ts'
@@ -100,6 +100,7 @@ export default async function (dataset: DatasetInternal) {
       if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
       if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
       if (parentDataset.projection) patch.projection = parentDataset.projection
+      if (parentDataset.conformsTo) patch.conformsTo = parentDataset.conformsTo
     }
 
     if (dataset.initFrom.parts.includes('extensions')) {
@@ -121,8 +122,8 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
       if (isVirtualDataset(parentDataset)) {
-        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
-        parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
+        // 'owner' is required to resolve the per-descendant attachment paths below
+        parentDataset.descendants = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
       }
       if (isRestDataset(dataset)) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
@@ -209,7 +210,7 @@ export default async function (dataset: DatasetInternal) {
               }
             }
           }),
-          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }, { select: csvSelect })
+          ...(await import('../../datasets/utils/outputs.ts')).csvStreams({ ...dataset, ...patch }, { select: csvSelect })
         )
         await filesStorage.writeStream(readStream, filePath)
         const loadedFileStats = await filesStorage.fileStats(filePath)
@@ -232,10 +233,12 @@ export default async function (dataset: DatasetInternal) {
         let relPath = attachment
         let copyPath = attachmentPath(parentDataset, attachment)
         if (isVirtualDataset(parentDataset)) {
-          parentDataset.descendantsFull = parentDataset.descendantsFull ?? await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
-          parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
+          if (!parentDataset.descendants) {
+            // 'owner' is required to resolve the per-descendant attachment paths below
+            parentDataset.descendants = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
+          }
           const pathParts = new URL(attachment).pathname.split('/')
-          const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])
+          const descendant = parentDataset.descendants.find(d => d.id === pathParts[5])
           if (!descendant) continue
           relPath = pathParts.slice(7).join('/')
           copyPath = attachmentPath(descendant, relPath)

@@ -1,5 +1,5 @@
 import { marked } from 'marked'
-import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.ts'
 
 export const clean = (publicUrl: string, baseApp: any, thumbnail?: string, html = false) => {
   baseApp.title = baseApp.title || baseApp.meta.title

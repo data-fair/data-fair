@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 // @ts-ignore -- shared module
 import exprEvalFactory from '#shared/expr-eval.js'
+import { escapeKey } from '~/utils/escape-key'
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 const exprEval = exprEvalFactory(timezone)
@@ -67,3 +68,28 @@ export const useExprEvalValidation = (
 }
 
 export default useExprEvalValidation
+
+/**
+ * True when any `remoteService` extension has overwrite keys that conflict with each
+ * other or with an existing non-extension schema column.
+ */
+export const hasInvalidRemoteServiceExtension = (dataset: any): boolean => {
+  const extensions = (dataset?.extensions ?? []).filter((e: any) => e.type === 'remoteService')
+  for (const ext of extensions) {
+    if (!ext.overwrite) continue
+    const seenKeys = new Set<string>()
+    for (const overwriteValue of Object.values(ext.overwrite as Record<string, any>)) {
+      const originalName = overwriteValue?.['x-originalName']?.trim()
+      if (!originalName) continue
+      const key = escapeKey(originalName)
+      if (seenKeys.has(key)) return true
+      seenKeys.add(key)
+      const conflictsWithSchema = (dataset?.schema ?? []).some((f: any) => {
+        if (f['x-extension'] === ext.remoteService + '/' + ext.action) return false
+        return f.key === key
+      })
+      if (conflictsWithSchema) return true
+    }
+  }
+  return false
+}

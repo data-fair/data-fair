@@ -3,14 +3,17 @@ import config from '#config'
 import * as journals from '../../misc/utils/journals.ts'
 import { jsonSchema } from '../../datasets/utils/data-schema.ts'
 import * as ajv from '../../misc/utils/ajv.ts'
+import { valueAtPointer } from '@data-fair/data-fair-shared/ajv.js'
 import pump from '../../misc/utils/pipe.ts'
 import { sendResourceEvent } from '../../misc/utils/notifications.ts'
-import * as datasetUtils from '../../datasets/utils/index.js'
-import * as datasetsService from '../../datasets/service.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
+import * as datasetsService from '../../datasets/service.ts'
 import * as schemaUtils from '../../datasets/utils/data-schema.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
-import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.js'
+import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.ts'
 import { DiagnosticWriter } from '../../datasets/utils/diagnostic-file.ts'
+import filesStorage from '#files-storage'
+import { validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as extensionsUtils from '../../datasets/utils/extensions.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import truncateMiddle from 'truncate-middle'
@@ -55,7 +58,10 @@ class ValidateStream extends Writable {
     const writerErrors = rawErrors.length
       ? rawErrors.map(err => {
         const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
-        const rawValue = field ? String((chunk as any)?.[field] ?? '') : ''
+        // resolve the actual rejected value via the JSON-pointer so nested/array
+        // paths (e.g. /attr3/1) are handled, not just top-level fields.
+        const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
+        const rawValue = resolved === undefined ? '' : String(resolved)
         return {
           field,
           message: err?.message ?? JSON.stringify(err),
@@ -204,11 +210,21 @@ export default async function (dataset: DatasetInternal) {
     // and emit a draft-cancelled event with breakdown counts instead of a
     // validation-error event that would reference a nonexistent file.
     if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
-      await writer.discard()
+      // Finalize the diagnostic to its normal (draft) path, then move it out of the
+      // draft directory into a stable slot on the main dataset before cancelDraft
+      // wipes the draft dir — so the contributor keeps a downloadable report.
+      const fileResult = await writer.finalize()
+      const srcDiagnostic = validationDiagnosticFilePath(dataset)
+      if (await filesStorage.fileExists(srcDiagnostic)) {
+        await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
+      }
       delete patch.validateDraft
       await journals.log('datasets', dataset, {
         type: 'draft-cancelled',
         data: `annulation automatique : ${summary}`,
+        hasDiagnosticFile: true,
+        diagnosticErrorCount: fileResult.count,
+        diagnosticCapped: fileResult.capped,
         validationErrorCount: nbValidationErrors,
         extensionErrorCount: blockingExtensionErrors
       } as any)

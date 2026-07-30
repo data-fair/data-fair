@@ -114,6 +114,9 @@ Example of a good summary (French):
     title: t('summarizerSubAgent'),
     description: t('summarizerSubAgentDesc'),
     model: 'summarizer',
+    // Producer: the summarize-dataset action consumes its returned summary and applies it via
+    // set_dataset_summary. Keep it delegated even when the host enables the flatten toggle.
+    delegateOnly: true,
     prompt: summarizerPrompts[locale.value] ?? summarizerPrompts.en,
     tools: ['read_dataset_info']
   })

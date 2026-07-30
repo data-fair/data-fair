@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import * as datasetUtils from '../src/datasets/utils/index.js'
+import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 async function main () {
   await mongo.connect()

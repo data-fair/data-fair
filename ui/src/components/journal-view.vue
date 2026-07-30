@@ -51,7 +51,7 @@
             {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
           </span>
           <v-btn
-            v-if="event.type === 'validation-error' && (event as any).hasDiagnosticFile && diagnosticDownloadHref(event)"
+            v-if="(event as any).hasDiagnosticFile && diagnosticDownloadHref(event)"
             variant="text"
             size="small"
             color="error"
@@ -64,15 +64,28 @@
       </template>
     </v-list-item>
   </v-list>
+  <div
+    v-if="visibleCount < filteredEvents.length"
+    class="text-center my-2"
+  >
+    <v-btn
+      variant="text"
+      @click="visibleCount += 100"
+    >
+      {{ t('showMore') }}
+    </v-btn>
+  </div>
 </template>
 
 <i18n lang="yaml">
 fr:
   draft: Brouillon
   downloadDiagnostic: Télécharger le diagnostic
+  showMore: Voir plus
 en:
   draft: Draft
   downloadDiagnostic: Download diagnostic
+  showMore: Show more
 </i18n>
 
 <script setup lang="ts">
@@ -99,6 +112,11 @@ const { journal, type, after } = defineProps<{
 const datasetStore = inject<DatasetStore | undefined>(datasetStoreKey, undefined)
 const diagnosticDownloadHref = (event: Event) => {
   if (type !== 'dataset' || !datasetStore) return undefined
+  // an auto-cancelled contribution stores its diagnostic in a distinct slot on the
+  // main dataset (the draft is gone), served by a dedicated route, no ?draft
+  if (event.type === 'draft-cancelled') {
+    return `${datasetStore.resourceUrl.value}/cancelled-draft-diagnostic.csv`
+  }
   const qs = event.draft ? '?draft=true' : ''
   return `${datasetStore.resourceUrl.value}/validation-diagnostic.csv${qs}`
 }
@@ -106,13 +124,15 @@ const diagnosticDownloadHref = (event: Event) => {
 const eventTypes = eventsList[type]
 const draftEventTypes = eventsList[`${type}-draft`]
 
+const filteredEvents = computed(() => journal.filter(event => !!eventTypes[event.type] && (!after || event.date >= after)))
+
+const visibleCount = ref(10)
+
 const groupedEvents = computed(() => {
   const groups = []
   let currentGroup: { draft: boolean, events: Event[] } = { draft: false, events: [] }
-  const events = journal.filter(event => !!eventTypes[event.type])
 
-  for (const event of events) {
-    if (after && event.date < after) continue
+  for (const event of filteredEvents.value.slice(0, visibleCount.value)) {
     if (!!event.draft !== currentGroup.draft) {
       groups.push(currentGroup)
       currentGroup = { draft: !!event.draft, events: [] }
