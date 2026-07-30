@@ -81,6 +81,10 @@ export interface StreamJsonContext extends NextContext {
   // Source came from searchStream (its hits still hold the raw stored `_attachment_url`) → prepareResultItem
   // must rewrite it. False when the source is search()'s esResponse (already rewritten). See commons.ts.
   rewriteAttachmentUrl?: boolean
+  // Approximate-count mode (see es/approx-count.ts): when the capped ranked search overflows
+  // (hits.total.relation === 'gte'), this lazy second ES request estimates the exact total from
+  // the `_rand` sample slice. Only set by read.ts when getApproxCountMode gates pass.
+  approxTotal?: () => Promise<number>
 }
 
 // Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await
@@ -153,8 +157,16 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   if (hint) head.hint = hint
   // total lives in the tail envelope (absent when track_total_hits:false — after= pages, count=false);
   // the buffered source's tail() is the esResponse itself, so both sources share this exact read.
-  const total = tail?.hits?.total?.value
+  // In approximate-count mode a capped overflow ('gte') is replaced by the `_rand`-sampled estimate,
+  // flagged with totalRelation — below the cap ES reports 'eq' and the response is unchanged.
+  let total = tail?.hits?.total?.value
+  let totalEstimated = false
+  if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
+    total = await ctx.approxTotal()
+    totalEstimated = true
+  }
   if (total != null) head.total = total
+  if (totalEstimated) head.totalRelation = 'estimate'
   const nextHref = setNextLink(res, ctx, count, lastHit)
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
@@ -197,6 +209,8 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
 export interface StreamGeojsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
   bbox?: any // value or Promise — awaited only after the hits are drained (lets the agg overlap consumption)
+  // Same approximate-count hook as StreamJsonContext — see there.
+  approxTotal?: () => Promise<number>
 }
 
 // GeoJSON is not a "hard" format: each hit maps to one Feature (geo.hit2feature) and the bbox comes from a
@@ -226,7 +240,12 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
   const bbox = await ctx.bbox
 
   setNextLink(res, ctx, count, lastHit)
-  const total = tail?.hits?.total?.value
-  const { parts, length, etag } = acc.finish(geojsonBodyPrefix(total), geojsonBodySuffix(bbox))
+  let total = tail?.hits?.total?.value
+  let totalEstimated = false
+  if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
+    total = await ctx.approxTotal()
+    totalEstimated = true
+  }
+  const { parts, length, etag } = acc.finish(geojsonBodyPrefix(total, totalEstimated), geojsonBodySuffix(bbox))
   sendPreparedParts(req, res, parts, length, etag)
 }

@@ -29,6 +29,8 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
+import { getApproxCountMode } from '../es/operations.ts'
+import { approxTotal } from '../es/approx-count.ts'
 
 // Formats that consume a streamed ES source (serialize row-by-row, then send the assembled body). json/csv
 // and geojson qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still
@@ -73,6 +75,16 @@ const readLines: RequestHandler = async (req, res) => {
 
   // case of own lines query
   if (req.params.owner) query.owner = req.params.owner
+
+  // Approximate-count mode for ranked text searches on large datasets: prepareQuery caps
+  // track_total_hits to the same mode's cap; when the count overflows ('gte') the pipeline
+  // calls this lazy `_rand`-sampled estimate instead of exposing the capped floor. Computed
+  // on the ORIGINAL query — the geo/tile branches below mutate `query.sort`, which would
+  // (correctly) disable the mode anyway, and none of those formats carry a total envelope.
+  const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount)
+  const approxTotalThunk = approxCountMode
+    ? () => approxTotal(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
+    : undefined
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(query.format)
 
@@ -327,7 +339,7 @@ const readLines: RequestHandler = async (req, res) => {
     // streamGeojson still surfaces the error before anything is sent.
     const bboxPromise = esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
     bboxPromise.catch(() => {})
-    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise })
+    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise, approxTotal: approxTotalThunk })
     observe.reqStep(req, 'bboxAgg')
     return
   }
@@ -438,7 +450,8 @@ const readLines: RequestHandler = async (req, res) => {
     esSearchDurationMs,
     // eligible ⇒ source came from searchStream (raw _attachment_url) ⇒ rewrite in prepareResultItem;
     // otherwise it came from search() which already rewrote it
-    rewriteAttachmentUrl: eligible
+    rewriteAttachmentUrl: eligible,
+    approxTotal: approxTotalThunk
   })
 }
 

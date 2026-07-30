@@ -33,7 +33,8 @@ import {
   resolveRangeOrPrefixField,
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
-  descendantsFilterClause
+  descendantsFilterClause,
+  getApproxCountMode
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -208,7 +209,11 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   } else if (query.count === 'estimate') {
     esQuery.track_total_hits = 1000
   } else {
-    esQuery.track_total_hits = true
+    // ranked text searches on large datasets cap the exact count (restoring block-max-WAND);
+    // an overflowing total is then estimated from the `_rand` sample slice by the route
+    // (see approx-count.ts). count=exact keeps the exact behaviour (the helper returns null).
+    const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount)
+    esQuery.track_total_hits = approxCountMode ? approxCountMode.cap : true
   }
 
   // Pagination

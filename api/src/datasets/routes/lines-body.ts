@@ -111,10 +111,11 @@ export const jsonBodySuffix = ']}'
 export const buildJsonBody = (head: Record<string, any>, rows: string[]): string =>
   jsonBodyPrefix(head) + rows.join(',') + jsonBodySuffix
 
-// FeatureCollection body, key order type → total? → features → bbox? (matches the buffered
-// `res.send(result2geojson(esResponse) + bbox)` output). Same prefix/suffix sharing as the json envelope.
-export const geojsonBodyPrefix = (total: number | undefined | null): string =>
-  '{"type":"FeatureCollection"' + (total != null ? ',"total":' + total : '') + ',"features":['
+// FeatureCollection body, key order type → total? → totalRelation? → features → bbox? (matches the
+// buffered `res.send(result2geojson(esResponse) + bbox)` output; totalRelation is the approximate-count
+// flag, see approx-count.ts). Same prefix/suffix sharing as the json envelope.
+export const geojsonBodyPrefix = (total: number | undefined | null, totalEstimated?: boolean): string =>
+  '{"type":"FeatureCollection"' + (total != null ? ',"total":' + total : '') + (totalEstimated ? ',"totalRelation":"estimate"' : '') + ',"features":['
 export const geojsonBodySuffix = (bbox: any): string =>
   ']' + (bbox !== undefined ? ',"bbox":' + JSON.stringify(bbox) : '') + '}'
 export const buildGeojsonBody = (total: number | undefined | null, features: string[], bbox: any): string =>
