@@ -772,3 +772,30 @@ export const getApproxCountMode = (
 /** Extrapolate the sample-slice count; the first request saw relation "gte", so never report ≤ cap. */
 export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMode): number =>
   Math.max(mode.cap + 1, Math.round(sampledCount / mode.probability))
+
+// ---- q_mode extension: or|and|adapt on top of legacy simple|complete ----
+
+export type QMode = 'simple' | 'complete' | 'and' | 'adapt'
+
+export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
+  const value = raw ?? dflt
+  if (value === 'or' || value === 'simple') return 'simple'
+  if (value === 'complete' || value === 'and' || value === 'adapt') return value
+  throw new Error(`q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
+}
+
+/**
+ * Adaptive strictness decision from a `_rand`-sampled spectrum of candidate rungs
+ * (strictest first). THE INVARIANT: adapt never tightens a search below the exactness
+ * horizon (the track_total_hits cap) — the chosen rung is the strictest one whose sampled
+ * support clears floorSample = cap × probability × safety, or the loosest rung when none
+ * qualifies. A qualifying rung always has ≥ ~cap×probability samples (~100+), so every
+ * decision is statistically confident. Rung-generic on purpose: v1's ladder is
+ * "require the j rarest words" (see adaptive-q.ts) but the rule serves any ladder.
+ */
+export const decideAdaptiveRung = <T extends { sampled: number }> (
+  spectrum: T[],
+  floorSample: number
+): T => {
+  return spectrum.find(l => l.sampled >= floorSample) ?? spectrum[spectrum.length - 1]
+}
