@@ -38,15 +38,13 @@ export const queryAdvice = (req: Request): string => {
   // approximate-count mode (see datasets/es/approx-count.ts): the exact count this rule set
   // used to warn about is already replaced by a sampled estimate — explain that instead
   const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
-  const qAdaptIgnored = reqQAdaptIgnored(req)
   // 1. exact total-hits count on a list endpoint
   if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
     items.push(req.__('errors.queryAdviceCount'))
   }
-  // q_mode=adapt ignored some over-common words: name them (this message covers the estimate
-  // story too, so the generic approx-count advice is redundant then)
-  if (qAdaptIgnored?.length) items.push(req.__('errors.queryAdviceAdapt', qAdaptIgnored.join(', ')))
-  else if (approxCountMode) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
+  // the estimated-total note; redundant when the duration-independent adapt advice already
+  // explains the tightening (that message mentions count=exact too)
+  if (approxCountMode && !reqQAdaptIgnored(req)?.length) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
   if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push(req.__('errors.queryAdviceDeepPagination'))
   // 3. large aggregation fan-out
@@ -178,6 +176,18 @@ export const truncatedMetricsAdvice = (req: Request): string => {
   return ' ' + req.__('errors.queryAdviceTruncatedMetricsIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
 }
 
+/**
+ * Correctness advisory (duration-independent): q_mode=adapt changed the search semantics —
+ * some over-common words were ignored in filtering. Unlike the performance advice this must
+ * not hide behind the slow-query gate: adapt makes exactly these queries FAST, so an
+ * auto-gated notice would never fire. Suppressed only by hint=false, like ignoredParamsAdvice.
+ */
+export const adaptAdvice = (req: Request): string => {
+  const ignored = reqQAdaptIgnored(req)
+  if (!ignored?.length) return ''
+  return ' ' + req.__('errors.queryAdviceAdapt', ignored.join(', ')) + '.'
+}
+
 export type HintMode = 'auto' | 'true' | 'false'
 
 /**
@@ -224,7 +234,7 @@ export const attachQueryHint = <T extends Record<string, any>> (
     adviceReq = englishReq
   }
   // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
-  const ignored = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()].filter(Boolean).join(' ')
+  const ignored = [adaptAdvice(adviceReq).trim(), ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()].filter(Boolean).join(' ')
   // performance advice keeps its slow-auto / explicit-true gate
   const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
   const advice = [ignored, perf].filter(Boolean).join(' ')

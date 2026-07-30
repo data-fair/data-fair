@@ -14,7 +14,7 @@
 		"exceedRateLimiting": "Too much requests in a small time interval for this API.",
 		"exceedComputeBudget": "The cumulated processing time of your requests exceeds the budget allowed on this API. Please wait before trying again, or reduce the cost of your requests.",
 		"queryAdviceIntro": "Advice to optimize your queries",
-		"queryAdviceCount": "set count=false (or count=estimate) to skip the exact total-row count",
+		"queryAdviceCount": "set count=estimate (exact total up to the threshold, then estimated by sampling) or count=false to skip the exact total-row count",
 		"queryAdviceApproxCount": "beyond %s results the total of this relevance-ranked search is estimated by sampling (the ranking itself stays exact); use count=exact for an exact count",
 		"queryAdviceAdapt": "the very frequent words (%s) were ignored for filtering — they still count for ranking; use q_mode=or for the broad search and count=exact for an exact count",
 		"queryAdviceDeepPagination": "use keyset pagination via the after parameter instead of deep page/offset navigation",

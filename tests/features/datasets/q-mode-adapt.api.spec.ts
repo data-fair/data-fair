@@ -119,11 +119,15 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
     assert.ok(res.total >= 1600 && res.total < 2600, `estimate ${res.total} implausible for true 2060`)
   })
 
-  test('hint names the ignored words', async () => {
-    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'adapt', hint: 'true' } })).data
-    assert.ok(res.hint, 'hint requested explicitly must be present')
+  test('the adapt hint is duration-independent: fires by default, suppressed by hint=false', async () => {
+    // adapt makes these queries fast, so a slow-query-gated notice would never fire — the
+    // semantics change is correctness-class information, on unless explicitly disabled
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare' } })).data
+    assert.ok(res.hint, 'the adapt notice must be present without any hint param')
     assert.ok(/ignor/i.test(res.hint), res.hint)
     assert.ok(res.hint.includes('commun'), res.hint)
+    const silent = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', hint: 'false' } })).data
+    assert.equal(silent.hint, undefined)
   })
 
   test('a next-paginated chain enumerates exactly the tightened set', async () => {

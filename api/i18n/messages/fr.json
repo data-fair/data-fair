@@ -14,7 +14,7 @@
 		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
 		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",
 		"queryAdviceIntro": "Conseil pour optimiser vos requêtes",
-		"queryAdviceCount": "passez count=false (ou count=estimate) pour éviter le comptage exact du nombre total de lignes",
+		"queryAdviceCount": "passez count=estimate (total exact jusqu'au seuil puis estimé par échantillonnage) ou count=false pour éviter le comptage exact du nombre total de lignes",
 		"queryAdviceApproxCount": "au-delà de %s résultats le total de cette recherche triée par pertinence est estimé par échantillonnage (le classement des résultats reste exact) ; utilisez count=exact pour un décompte exact",
 		"queryAdviceAdapt": "les mots très fréquents (%s) ont été ignorés pour le filtrage — ils comptent toujours pour le classement ; utilisez q_mode=or pour la recherche large et count=exact pour un décompte exact",
 		"queryAdviceDeepPagination": "utilisez la pagination par clé via le paramètre after plutôt qu'une navigation profonde par page ou offset",
