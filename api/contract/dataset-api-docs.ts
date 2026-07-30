@@ -171,15 +171,31 @@ export default (
     description: `
   Ce paramètre permet d'altérer le comportement du paramètre "q".
 
-  Le mode par défaut "simple" expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
+  Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
   Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
+
+  Le mode "and" exige que chaque mot de la recherche soit présent (le classement des résultats reste celui de la recherche large).
+
+  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`qAdapt\`). Une recherche dont le total est sous le seuil n'est pas modifiée.
     `,
     schema: {
       title: 'Mode de recherche',
       type: 'string',
       default: 'simple',
-      enum: ['simple', 'complete']
+      enum: ['simple', 'or', 'complete', 'and', 'adapt']
+    }
+  }, {
+    in: 'query',
+    name: 'q_required',
+    description: `
+  Liste de mots de la recherche "q" (séparés par des virgules) dont la présence est exigée dans les résultats. Filtre non-scorant : le classement reste celui de la recherche large.
+
+  Renseigné automatiquement dans les liens de pagination (\`next\`) par le mode "adapt" pour garantir des pages cohérentes.
+    `,
+    schema: {
+      title: 'Mots requis',
+      type: 'string'
     }
   }, {
     in: 'query',
@@ -701,6 +717,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                         type: 'string',
                         enum: ['estimate'],
                         description: 'Présent quand total est une estimation par échantillonnage (recherche textuelle triée par pertinence dépassant le seuil de comptage exact). Utilisez count=exact pour forcer un décompte exact.'
+                      },
+                      qAdapt: {
+                        type: 'object',
+                        description: 'Présent quand q_mode=adapt a ignoré au moins un mot trop fréquent pour le filtrage (les mots ignorés comptent toujours pour le classement).',
+                        properties: {
+                          required: { type: 'array', items: { type: 'string' }, description: 'Les mots exigés dans les résultats.' },
+                          ignored: { type: 'array', items: { type: 'string' }, description: 'Les mots trop fréquents, ignorés pour le filtrage.' }
+                        }
                       },
                       results: {
                         type: 'array',

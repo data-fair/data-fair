@@ -24,7 +24,7 @@ import * as outputs from '../utils/outputs.ts'
 import * as cache from '../../misc/utils/cache.ts'
 import * as observe from '../../misc/utils/observe.ts'
 import * as findUtils from '../../misc/utils/find.ts'
-import { attachQueryHint } from '../../misc/utils/query-advice.ts'
+import { attachQueryHint, setReqQAdaptIgnored } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
@@ -104,7 +104,10 @@ const readLines: RequestHandler = async (req, res) => {
     if (adaptResult) {
       if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
       // the transparency field only appears when adapt actually ignored at least one word
-      if (adaptResult.ignored.length) qAdapt = { required: adaptResult.required, ignored: adaptResult.ignored }
+      if (adaptResult.ignored.length) {
+        qAdapt = { required: adaptResult.required, ignored: adaptResult.ignored }
+        setReqQAdaptIgnored(req, adaptResult.ignored)
+      }
       // the preflight already estimated the chosen rung's total — no separate count leg needed
       approxTotalThunk = () => Promise.resolve(adaptResult.total)
     }

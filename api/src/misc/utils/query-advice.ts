@@ -21,6 +21,11 @@ const nbLevels = (v: any): number => v ? String(v).split(/[;,]/).filter(Boolean)
 
 const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test(path)
 
+// read.ts stamps the q_mode=adapt outcome on the request so the hint (computed later in the
+// /lines pipeline) can name the ignored words — the advice rules are otherwise pure over req.query
+export const setReqQAdaptIgnored = (req: Request, ignored: string[]): void => { (req as any)._qAdaptIgnored = ignored }
+const reqQAdaptIgnored = (req: Request): string[] | undefined => (req as any)._qAdaptIgnored
+
 /**
  * Returns either '' or ' <intro> : <item> ; <item>.' assembled from i18n keys (via `req.__`).
  * Safe to concatenate onto any error message — '' when nothing useful applies.
@@ -33,11 +38,15 @@ export const queryAdvice = (req: Request): string => {
   // approximate-count mode (see datasets/es/approx-count.ts): the exact count this rule set
   // used to warn about is already replaced by a sampled estimate — explain that instead
   const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
+  const qAdaptIgnored = reqQAdaptIgnored(req)
   // 1. exact total-hits count on a list endpoint
   if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
     items.push(req.__('errors.queryAdviceCount'))
   }
-  if (approxCountMode) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
+  // q_mode=adapt ignored some over-common words: name them (this message covers the estimate
+  // story too, so the generic approx-count advice is redundant then)
+  if (qAdaptIgnored?.length) items.push(req.__('errors.queryAdviceAdapt', qAdaptIgnored.join(', ')))
+  else if (approxCountMode) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
   if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push(req.__('errors.queryAdviceDeepPagination'))
   // 3. large aggregation fan-out
@@ -207,6 +216,7 @@ export const attachQueryHint = <T extends Record<string, any>> (
     const englishReq = {
       path: req.path,
       query: req.query,
+      _qAdaptIgnored: reqQAdaptIgnored(req),
       __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
     } as any
     const dataset = reqDatasetOptional(req)

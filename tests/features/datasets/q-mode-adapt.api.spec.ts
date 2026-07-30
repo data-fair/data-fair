@@ -105,6 +105,13 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
     }
   })
 
+  test('hint names the ignored words', async () => {
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'adapt', hint: 'true' } })).data
+    assert.ok(res.hint, 'hint requested explicitly must be present')
+    assert.ok(/ignor/i.test(res.hint), res.hint)
+    assert.ok(res.hint.includes('commun'), res.hint)
+  })
+
   test('a next-paginated chain enumerates exactly the tightened set', async () => {
     // the download pattern: follow next links to exhaustion — must terminate, stay on the
     // pinned filter for every page, and yield exactly the tightened set (200 rows)
