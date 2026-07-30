@@ -480,9 +480,10 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     name: 'count',
     description: `Contrôle le calcul du nombre total de résultats (\`total\`).
 
-  - **true** (défaut) : total calculé. Sur une recherche textuelle triée par pertinence dans un grand jeu de données, un total dépassant un seuil (10 000 par défaut) est estimé par échantillonnage et signalé par \`totalRelation: "estimate"\` — le classement des résultats reste exact.
-  - **exact** : total exact garanti, sans estimation.
-  - **estimate** : total estimé à moindre coût — exact jusqu'à 1000, estimé par échantillonnage au-delà (signalé par \`totalRelation: "estimate"\`).
+  Par défaut le total est **exact**, sauf pour une recherche textuelle triée par pertinence dans un grand jeu de données où il est **estimé**.
+
+  - **exact** : total exact garanti.
+  - **estimate** : total exact jusqu'au seuil (10 000 par défaut), estimé par échantillonnage au-delà — signalé par \`totalRelation: "estimate"\`. Le classement des résultats reste exact.
   - **false** : pas de calcul du total.`,
     schema: {
       title: 'Calcul du total',

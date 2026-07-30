@@ -791,9 +791,10 @@ export const getApproxCountMode = (
   return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
 }
 
-/** count=estimate: the cheap hits leg keeps its historical track_total_hits=1000; an overflow is
- *  now resolved into a real sampled estimate instead of the misleading bare "1000" of before.
- *  No dataset-size gate — count=estimate is an explicit opt-in to estimation. */
+/** count=estimate: the exact same counting behaviour as the ranked-search default — exact up to
+ *  the cap, sampled estimate beyond — but as an explicit opt-in on ANY query shape (no
+ *  ranked/large-dataset gates). The count semantics collapse to one sentence: count defaults to
+ *  exact, except ranked text searches where it defaults to estimate. */
 export const getEstimateCountMode = (
   dataset: { count?: number },
   query: Record<string, any>,
@@ -802,7 +803,7 @@ export const getEstimateCountMode = (
   if (cfg.minDatasetSize == null) return null // global kill switch
   if (query.count !== 'estimate') return null
   if (typeof dataset.count !== 'number' || dataset.count <= 0) return null
-  return { cap: 1000, ...getSamplingParams(dataset.count, cfg) }
+  return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
 }
 
 /** Extrapolate the sample-slice count; the first request saw relation "gte", so never report ≤ cap. */

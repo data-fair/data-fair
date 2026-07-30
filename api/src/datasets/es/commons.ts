@@ -209,7 +209,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   } else if (query.count === 'false') {
     esQuery.track_total_hits = false
   } else if (query.count === 'estimate') {
-    esQuery.track_total_hits = 1000
+    // same cap as the ranked-search default counting mode — exact below, sampled estimate above
+    esQuery.track_total_hits = config.elasticsearch.approxCount.cap
   } else {
     // ranked text searches on large datasets cap the exact count (restoring block-max-WAND);
     // an overflowing total is then estimated from the `_rand` sample slice by the route

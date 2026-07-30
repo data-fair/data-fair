@@ -96,17 +96,19 @@ test.describe('approximate count for ranked text search', () => {
     await setConfig('elasticsearch.approxCount', testCfg)
   })
 
-  test('count=estimate now resolves overflows into a real sampled estimate', async () => {
-    // historical behaviour returned a bare misleading total of 1000; the hits leg keeps its
-    // cheap track_total_hits=1000 but the response now carries the sampled estimate, flagged
+  test('count=estimate shares the cap: exact below, sampled estimate above', async () => {
+    // historical behaviour returned a bare misleading total of 1000; count=estimate is now the
+    // ranked-search counting mode as an explicit opt-in — same cap, same sampler, any query shape
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', count: 'estimate' } })).data
     assert.equal(res.totalRelation, 'estimate')
-    assert.ok(res.total > 1000, `estimate ${res.total} must exceed the estimate probe bound`)
+    assert.ok(res.total > testCfg.cap, `estimate ${res.total} must exceed the cap`)
     assert.ok(res.total > EXACT * 0.8 && res.total < EXACT * 1.2, `estimate ${res.total} implausibly far from ${EXACT}`)
-    // below the probe bound the total stays exact and unflagged
+    // below the cap the total stays exact and unflagged
+    await setConfig('elasticsearch.approxCount', { ...testCfg, cap: 1000 })
     const small = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'other', count: 'estimate' } })).data
     assert.equal(small.totalRelation, undefined)
-    assert.ok(small.total < 1000)
+    assert.ok(small.total < 1000) // exact 357
+    await setConfig('elasticsearch.approxCount', testCfg)
   })
 
   test('hint explains the estimate and stops advising count=false', async () => {
