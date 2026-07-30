@@ -175,8 +175,12 @@ so a throttled client is told what to change, not just that it was throttled.
   `search_after` keyset pagination is the recommended path).
 - `track_total_hits`: `true` on page 1 — i.e. an **exact** hit count, which on a very large dataset
   is itself expensive; `false` when `count=false` or when `after` (keyset) is used; `1000` when
-  `count=estimate`. An exact count visits *every* match and forfeits Lucene's block-max-WAND top-k
-  skipping — measured cost and a proposed cap are in §9.
+  `count=estimate`; **capped** (`config.elasticsearch.approxCount.cap`, default 10000) on page-1
+  *ranked text searches over large datasets* (`getApproxCountMode` in `es/operations.ts`: `q`
+  present, no explicit `sort`, no `collapse`, `dataset.count ≥ approxCount.minDatasetSize`,
+  `count=exact` restores the exact behaviour). An exact count visits *every* match and forfeits
+  Lucene's block-max-WAND top-k skipping — the measured costs and the approximate-count design
+  are in §9.
 - `_source` defaults to all schema fields except the heavy geo-index fields (`_geoshape`,
   `_geocorners`); `select` validated against the schema.
 - **Not** set: `terminate_after` — a single query can scan an unbounded number of documents per
@@ -369,18 +373,23 @@ Items marked **measured** carry benchmark-harness evidence (`benchmark/`, raw re
   *direction* is consistent across four runs — a 5M-row seed would sharpen the figures.) *Proposed
   bound:* cap `track_total_hits` (`10000`) for scoring `q` requests — `hits.total.relation` becomes
   `"gte"`, which the UI already handles via `count=estimate`. A behaviour change, so it warrants its
-  own spec. **Transparent alternative, measured** (`count-split` experiment, 2026-07-30, see
-  `benchmark/INVESTIGATIONS.md` §11): keep a trustworthy total but stop computing it in the scored
-  request. Judged on ES *load* (not wall-clock), splitting off an **exact** count leg is roughly
-  load-neutral — the enumeration still happens, unscored, in a second request; it only saves work on
-  repeats (`size: 0` → shard request cache, ~1 ms warm, a cache the scored request can never use).
-  What genuinely sheds first-hit load is capping the scored request (top-20 provably identical) and
-  replacing exact overflow counting with a `random_sampler` estimate (visits ~p·M docs; error
-  ∝ 1/√(p·M), measured ~1 % at p=0.01 on ≥300k matches). *Preferred shape — hybrid:* scored request
-  with `track_total_hits: 10000`; totals ≤10k stay exact with zero extra cost, and only on `gte`
-  overflow fire a `size: 0` sampler count leg (deterministic `seed` → request-cacheable). Load ≈ the
-  pure cap; totals exact below 10k, ~1 % estimates above — arguably no observable regression for
-  consumers, since the estimate replaces a count that today is exact but astronomically large.
+  own spec. **IMPLEMENTED (2026-07-30)** as the *approximate-count mode* (plan:
+  `docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md`; full measurement trail:
+  `benchmark/INVESTIGATIONS.md` §11–12, incl. an ES 7.17 validation and a 3.3M-row real-corpus run
+  where the cap measured −52…−93 % on ES 7.17 and −87…−97 % on ES 8.19 with the top hits identical
+  in every case): `prepareQuery` caps `track_total_hits` to `approxCount.cap` on page-1 ranked `q`
+  searches over large datasets (`getApproxCountMode`); when the count overflows (`gte`) the `/lines`
+  pipeline fires a lazy second request (`es/approx-count.ts`) that counts the matches inside the
+  stable `_rand < randBound` sample slice (filter context, `size: 0` → shard-request-cacheable,
+  deliberately NOT the `random_sampler` aggregation which needs ES ≥ 8.2) and extrapolates —
+  measured ~±1 % error at p=0.01. The response carries `totalRelation: "estimate"` (json envelope +
+  geojson foreign member), the UI shows `~ N` with a tooltip, `count=exact` restores exact
+  behaviour, and searches totalling under the cap are byte-identical to before. *Rollout notes*:
+  the config gate is `approxCount.minDatasetSize` (`null` disables); before enabling on an
+  environment verify `_rand` is populated on every large index (`GET dataset-*/_count` with
+  `must_not: exists _rand` must be 0 — a failing dataset just needs re-finalization); documented
+  consumer contract: iterate `next` until absent, never compare a row counter to `total`, use
+  `count=exact` for reconciliation.
 - **No `terminate_after`** on `search.ts` or the aggregation calls — a single query can scan an
   unbounded number of documents per shard. *Proposed bound:* a config'd `terminate_after`
   (aggregations over the collected subset then become approximate — acceptable as an abuse guard).

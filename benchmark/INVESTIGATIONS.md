@@ -305,6 +305,11 @@ drift), not a low cap. Recorded in §5 R4 (and reframes the load-management.md �
 `terminate_after` proposal). Result:
 `experiment-2026-05-28T07-36-25-089Z.json`.
 
+> **Status update (2026-07-30):** the cap + `_rand`-sampled-total design below is
+> **implemented** on this branch (see `docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md`
+> Tasks 1–5 and `load-management.md` §9); the `q_mode=or|and|adapt` extension (§12-C)
+> is the remaining planned work (Tasks 6–8).
+
 ## 11. Split hits/count — transparent alternative to capping `track_total_hits`
 
 Follow-up to investigation 2. Capping `track_total_hits` restores block-max-WAND but
