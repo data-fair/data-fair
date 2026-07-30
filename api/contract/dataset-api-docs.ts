@@ -461,6 +461,23 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
+  const countParam = {
+    in: 'query',
+    name: 'count',
+    description: `Contrôle le calcul du nombre total de résultats (\`total\`).
+
+  - **true** (défaut) : total calculé. Sur une recherche textuelle triée par pertinence dans un grand jeu de données, un total dépassant un seuil (10 000 par défaut) est estimé par échantillonnage et signalé par \`totalRelation: "estimate"\` — le classement des résultats reste exact.
+  - **exact** : total exact garanti, sans estimation.
+  - **estimate** : borne rapide (comptage limité à 1000).
+  - **false** : pas de calcul du total.`,
+    schema: {
+      title: 'Calcul du total',
+      type: 'string',
+      default: 'true',
+      enum: ['true', 'false', 'estimate', 'exact']
+    }
+  }
+
   const hintParam = {
     in: 'query',
     name: 'hint',
@@ -656,6 +673,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ...hitsParams(),
           formatParam,
           htmlParam,
+          countParam,
           hintParam,
           ...filterParams,
           {
@@ -677,7 +695,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     properties: {
                       total: {
                         type: 'integer',
-                        description: 'Le nombre total de résultat si on ignore la pagination.'
+                        description: "Le nombre total de résultat si on ignore la pagination. Peut être une estimation (voir totalRelation) — pour parcourir tous les résultats suivez la propriété next jusqu'à son absence, ne comparez jamais un compteur à total."
+                      },
+                      totalRelation: {
+                        type: 'string',
+                        enum: ['estimate'],
+                        description: 'Présent quand total est une estimation par échantillonnage (recherche textuelle triée par pertinence dépassant le seuil de comptage exact). Utilisez count=exact pour forcer un décompte exact.'
                       },
                       results: {
                         type: 'array',

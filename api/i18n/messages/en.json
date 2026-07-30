@@ -15,6 +15,7 @@
 		"exceedComputeBudget": "The cumulated processing time of your requests exceeds the budget allowed on this API. Please wait before trying again, or reduce the cost of your requests.",
 		"queryAdviceIntro": "Advice to optimize your queries",
 		"queryAdviceCount": "set count=false (or count=estimate) to skip the exact total-row count",
+		"queryAdviceApproxCount": "beyond %s results the total of this relevance-ranked search is estimated by sampling (the ranking itself stays exact); use count=exact for an exact count",
 		"queryAdviceDeepPagination": "use keyset pagination via the after parameter instead of deep page/offset navigation",
 		"queryAdviceAggSize": "reduce agg_size and/or the number of grouped fields",
 		"queryAdviceSize": "request fewer results per page (lower size)",

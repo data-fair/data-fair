@@ -96,6 +96,13 @@ test.describe('approximate count for ranked text search', () => {
     await setConfig('elasticsearch.approxCount', testCfg)
   })
 
+  test('hint explains the estimate and stops advising count=false', async () => {
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', hint: 'true' } })).data
+    assert.ok(res.hint, 'hint requested explicitly must be present')
+    assert.ok(/estimé|estimated/i.test(res.hint), res.hint)
+    assert.ok(!/count=false/.test(res.hint), 'stale exact-count advice must not fire in approx mode')
+  })
+
   test('geojson envelope carries the estimated total too', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', format: 'geojson', size: 2 } })).data
     assert.ok(res.total > testCfg.cap)

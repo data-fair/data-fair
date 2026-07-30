@@ -1,6 +1,7 @@
 import { type Request } from 'express'
 import i18n from 'i18n'
-import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields } from '../../datasets/es/operations.ts'
+import config from '#config'
+import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getApproxCountMode } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqPublicOperation, reqDatasetOptional, setReqDataset } from './req-context.ts'
 
@@ -27,25 +28,29 @@ const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test
 export const queryAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
   const dataset = reqDatasetOptional(req)
-  const keys: string[] = []
+  const items: string[] = []
 
+  // approximate-count mode (see datasets/es/approx-count.ts): the exact count this rule set
+  // used to warn about is already replaced by a sampled estimate — explain that instead
+  const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
   // 1. exact total-hits count on a list endpoint
-  if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after) {
-    keys.push('errors.queryAdviceCount')
+  if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
+    items.push(req.__('errors.queryAdviceCount'))
   }
+  if (approxCountMode) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
-  if (num(q.page) >= 100 || num(q.offset) >= 1000) keys.push('errors.queryAdviceDeepPagination')
+  if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push(req.__('errors.queryAdviceDeepPagination'))
   // 3. large aggregation fan-out
-  if (num(q.agg_size) >= 100 || nbLevels(q.field) > 1) keys.push('errors.queryAdviceAggSize')
+  if (num(q.agg_size) >= 100 || nbLevels(q.field) > 1) items.push(req.__('errors.queryAdviceAggSize'))
   // 4. large page size
-  if (num(q.size) >= 1000) keys.push('errors.queryAdviceSize')
+  if (num(q.size) >= 1000) items.push(req.__('errors.queryAdviceSize'))
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
-  if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) keys.push('errors.queryAdviceSelect')
+  if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) items.push(req.__('errors.queryAdviceSelect'))
   // 6. wide dataset full-text-searched without restricting the searched columns
-  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) keys.push('errors.queryAdviceQFields')
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) items.push(req.__('errors.queryAdviceQFields'))
 
-  if (keys.length === 0) return ''
-  return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'
+  if (items.length === 0) return ''
+  return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + items.join(' ; ') + '.'
 }
 
 // Parameters recognized by the dataset data endpoints (/lines, /*_agg). Mirrors the query
