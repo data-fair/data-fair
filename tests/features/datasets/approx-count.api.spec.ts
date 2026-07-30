@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, clean, config } from '../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -31,6 +31,11 @@ const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000, minProbabi
 test.describe('approximate count for ranked text search', () => {
   test.beforeAll(async () => {
     await clean()
+    // the 2500-row fixture exceeds the default store_bytes limit — raise it so checkStorage
+    // never 429s regardless of which suites ran (and consumed storage) before this one
+    await testUser1.post('/api/v1/limits/user/test_user1',
+      { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
+      { params: { key: config.secretKeys.limits } })
     await testUser1.put('/api/v1/datasets/' + id, {
       isRest: true,
       title: id,
