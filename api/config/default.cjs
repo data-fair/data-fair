@@ -96,11 +96,9 @@ module.exports = {
     // and estimate overflowing totals from the `_rand < randBound` sample slice.
     // minDatasetSize: null disables the feature entirely.
     approxCount: {
-      minDatasetSize: 100000,
-      cap: 10000,
-      sampleTarget: 100000, // aim for ~this many docs in the sample slice
-      minProbability: 0.01, // never sample below 1% (accuracy floor near the cap boundary)
-      adaptFloorSafety: 1.2 // q_mode=adapt floor = cap × probability × this safety margin (sampled docs)
+      minDatasetSize: 100000, // only datasets at least this big use estimates (null = feature off)
+      cap: 10000, // the exactness horizon: totals up to this are exact, estimated beyond
+      sampleTarget: 100000 // the count leg scans ~this many docs whatever the dataset size
     },
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value

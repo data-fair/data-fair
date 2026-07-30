@@ -750,7 +750,6 @@ export interface ApproxCountConfig {
   minDatasetSize: number | null
   cap: number
   sampleTarget: number
-  minProbability: number
 }
 
 export interface ApproxCountMode {
@@ -769,9 +768,14 @@ const RAND_RANGE = 1_000_000
  * there is a q and no explicit sort) on a large dataset, with no param that already
  * controls counting. Returns the sampling parameters, or null for exact behaviour.
  */
+// Worst-case estimate accuracy happens on queries matching barely more than the cap: keep at
+// least this many expected samples there (error ∝ 1/√samples → worst case ~±10 %), whatever
+// the configured cap. Derived, not configured — it must track the cap to keep the guarantee.
+const MIN_BOUNDARY_SAMPLES = 100
+
 /** Sampling parameters for a dataset size — shared by the ranked-search cap mode and count=estimate. */
 export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig): { randBound: number, probability: number } => {
-  const probability = Math.min(0.5, Math.max(cfg.minProbability, cfg.sampleTarget / datasetCount))
+  const probability = Math.min(0.5, Math.max(MIN_BOUNDARY_SAMPLES / cfg.cap, cfg.sampleTarget / datasetCount))
   const randBound = Math.round(probability * RAND_RANGE)
   return { randBound, probability: randBound / RAND_RANGE }
 }
@@ -825,6 +829,12 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   if (value === 'complete' || value === 'and' || value === 'adapt') return value
   throw new Error(`q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
 }
+
+// Sampling-noise margin (~2σ at MIN_BOUNDARY_SAMPLES) protecting the never-below-cap
+// invariant: a rung qualifies only when its estimate clears cap × this margin, so a rung
+// whose TRUE total sits slightly below the cap cannot be chosen through sampling noise.
+// A statistical constant, deliberately not configuration.
+export const ADAPT_FLOOR_SAFETY = 1.2
 
 /**
  * Adaptive strictness decision from a `_rand`-sampled spectrum of candidate rungs

@@ -233,13 +233,11 @@
         "maxPageSize": { "type": "number" },
         "approxCount": {
           "type": "object",
-          "required": ["minDatasetSize", "cap", "sampleTarget", "minProbability", "adaptFloorSafety"],
+          "required": ["minDatasetSize", "cap", "sampleTarget"],
           "properties": {
             "minDatasetSize": { "type": ["number", "null"] },
             "cap": { "type": "number" },
-            "sampleTarget": { "type": "number" },
-            "minProbability": { "type": "number" },
-            "adaptFloorSafety": { "type": "number" }
+            "sampleTarget": { "type": "number" }
           }
         },
         "singleLineOpRefresh": { "type": "string" },

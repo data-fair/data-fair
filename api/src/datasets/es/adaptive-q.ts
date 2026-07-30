@@ -1,7 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, decideAdaptiveRung, buildQClauses } from './operations.ts'
+import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, decideAdaptiveRung, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
@@ -69,7 +69,7 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   // under the cap the request must run exactly as today (exact total, full OR semantics)
   if (sampledOr < mode.cap * mode.probability) return null
 
-  const floorSample = Math.ceil(mode.cap * mode.probability * config.elasticsearch.approxCount.adaptFloorSafety)
+  const floorSample = Math.ceil(mode.cap * mode.probability * ADAPT_FLOOR_SAFETY)
   const sampledByWord: Record<string, number> = {}
   for (const word of words) sampledByWord[word] = preflight.aggregations.perWord.buckets[word].doc_count
   const byRarity = [...words].sort((a, b) => sampledByWord[a] - sampledByWord[b])

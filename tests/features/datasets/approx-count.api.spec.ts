@@ -24,9 +24,9 @@ const rows = Array.from({ length: N }, (_, i) => ({
 }))
 const EXACT = rows.filter(r => r.str.startsWith('label')).length
 
-const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000, minProbability: 0.01, adaptFloorSafety: 1.2 }
-const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000, minProbability: 0.01, adaptFloorSafety: 1.2 }
-// probability = clamp(1000/2500, 0.01, 0.5) = 0.4 → sampled ≈ 0.4·EXACT, stderr ≈ 2.7%
+const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
+const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000 }
+// probability = clamp(1000/2500, floor 100/100 = 1, 0.5) = 0.5 → sampled ≈ 0.5·EXACT, stderr ≈ 2.1%
 
 test.describe('approximate count for ranked text search', () => {
   test.beforeAll(async () => {
@@ -61,7 +61,7 @@ test.describe('approximate count for ranked text search', () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', size: 3 } })).data
     assert.equal(res.totalRelation, 'estimate')
     assert.ok(res.total > testCfg.cap, `estimate ${res.total} must exceed the cap`)
-    // 0.4-probability sample of 2143 matches: ±20% is > 7 sigma, no flakiness at this width
+    // 0.5-probability sample of 2143 matches: ±20% is > 9 sigma, no flakiness at this width
     assert.ok(res.total > EXACT * 0.8 && res.total < EXACT * 1.2, `estimate ${res.total} implausibly far from ${EXACT}`)
     assert.equal(res.results.length, 3)
   })

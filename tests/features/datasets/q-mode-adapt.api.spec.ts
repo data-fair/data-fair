@@ -11,9 +11,9 @@ const testUser1 = await axiosAuth('test_user1@test.com')
 // THE INVARIANT under test: searches totalling under the cap are untouched.
 
 const id = 'qmodeadapt'
-// Deterministic word counts (test cap=100, dataset 2440 rows → probability ≈ 0.41,
-// floorSample = ceil(100 × 0.41 × 1.2) ≈ 50 sampled docs ≈ 122 true docs):
-//  - 60 rows   'commun rare …'      (AND set 60 < ~122 → 'commun' must be dropped from filtering)
+// Deterministic word counts (test cap=100, dataset 2440 rows → probability clamps to 0.5,
+// floorSample = ceil(100 × 0.5 × 1.2) = 60 sampled docs = 120 true docs):
+//  - 60 rows   'commun rare …'      (AND set 60 < ~120 → 'commun' must be dropped from filtering)
 //  - 140 rows  'rare autre …'       (count('rare') = 200 ≥ cap → the rung "require rare" qualifies)
 //  - 2000 rows 'commun seulement …' (OR union 2200 ≥ cap → adapt engages)
 //  - 200 rows  'grand ensemble …'   (AND set 200 → nothing needs dropping)
@@ -26,8 +26,8 @@ for (let i = 0; i < 2000; i++) push('commun seulement')
 for (let i = 0; i < 200; i++) push('grand ensemble')
 for (let i = 0; i < 40; i++) push('petit exemple')
 
-const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000, minProbability: 0.01, adaptFloorSafety: 1.2 }
-const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000, minProbability: 0.01, adaptFloorSafety: 1.2 }
+const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
+const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000 }
 
 test.describe('q_mode adapt — common words ignored in filtering', () => {
   test.beforeAll(async () => {

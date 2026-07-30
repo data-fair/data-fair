@@ -2,14 +2,14 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { getApproxCountMode, extrapolateApproxTotal } from '../../../api/src/datasets/es/operations.ts'
 
-const cfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000, minProbability: 0.01 }
+const cfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
 const bigDataset = { count: 1_000_000 }
 
 test('approx mode activates only for ranked q searches on large datasets', () => {
   const mode = getApproxCountMode(bigDataset, { q: 'analyse' }, cfg)
   assert.ok(mode)
   assert.equal(mode.cap, 10000)
-  // probability = clamp(100000/1000000, 0.01, 0.5) = 0.1 → randBound 100000
+  // probability = clamp(100000/1000000, floor 100/10000, 0.5) = 0.1 → randBound 100000
   assert.equal(mode.randBound, 100000)
   assert.equal(mode.probability, 0.1)
 })
@@ -31,7 +31,7 @@ test('approx mode stays off for every excluded shape', () => {
 
 test('probability is adjusted to dataset size and clamped', () => {
   assert.equal(getApproxCountMode({ count: 100000 }, { q: 'a' }, cfg)!.probability, 0.5) // clamp high
-  assert.equal(getApproxCountMode({ count: 50_000_000 }, { q: 'a' }, cfg)!.probability, 0.01) // clamp low
+  assert.equal(getApproxCountMode({ count: 50_000_000 }, { q: 'a' }, cfg)!.probability, 0.01) // derived floor: 100 samples at the cap boundary
 })
 
 test('extrapolation divides by probability and floors at cap+1', () => {
