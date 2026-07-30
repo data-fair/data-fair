@@ -8,6 +8,7 @@
     <dataset-nb-results
       :limit="0"
       :total="total"
+      :estimate="totalRelation === 'estimate'"
       class="ml-2"
       style="min-width:80px;max-width:80px;"
     />
@@ -94,6 +95,7 @@
     <dataset-nb-results
       :limit="0"
       :total="total"
+      :estimate="totalRelation === 'estimate'"
       class="ml-2"
       style="min-width:80px;max-width:80px;"
     />
@@ -586,7 +588,7 @@ const extraParams = computed(() => ({
   ...(imageField.value ? { thumbnail: '40x40' } : {})
 }))
 const indexedAt = ref<string>()
-const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+const { baseFetchUrl, total, totalRelation, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
 
 // caption under a date-time column header stating the timezone its values are displayed in
 // (the offset comes from a real cell so it is DST-correct); empty when values are shown in the

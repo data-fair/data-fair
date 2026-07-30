@@ -149,7 +149,7 @@ for (const q of QUERIES) {
     const RAND_BOUND = 10_000
     const CONFIDENT = 5 // sampled ≥ 5 → est ≥ 500 → the page will fill
     {
-      const msearchBody = []
+      const msearchBody: string[] = []
       const levels: number[] = []
       for (let msm = terms.length; msm >= 1; msm--) {
         levels.push(msm)
