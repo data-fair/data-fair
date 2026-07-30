@@ -726,3 +726,49 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
   }
   return { bool: { minimum_should_match: 1, should } }
 }
+
+// ---- Approximate counts for ranked text searches (see load-management.md §9) ----
+
+export interface ApproxCountConfig {
+  minDatasetSize: number | null
+  cap: number
+  sampleTarget: number
+  minProbability: number
+}
+
+export interface ApproxCountMode {
+  cap: number
+  /** exclusive upper bound of the `_rand` sample slice (`_rand` is uniform in [0, 1_000_000)) */
+  randBound: number
+  /** exact sampling probability = randBound / 1_000_000 */
+  probability: number
+}
+
+const RAND_RANGE = 1_000_000
+
+/**
+ * Decide whether a /lines request runs in approximate-count mode: page-1 ranked text
+ * search (q present, _score is the primary sort — commons.ts appends _score only when
+ * there is a q and no explicit sort) on a large dataset, with no param that already
+ * controls counting. Returns the sampling parameters, or null for exact behaviour.
+ */
+export const getApproxCountMode = (
+  dataset: { count?: number },
+  query: Record<string, any>,
+  cfg: ApproxCountConfig
+): ApproxCountMode | null => {
+  if (cfg.minDatasetSize == null) return null
+  if (typeof dataset.count !== 'number' || dataset.count < cfg.minDatasetSize) return null
+  if (!String(query.q ?? query._c_q ?? '').trim()) return null
+  if (query.sort) return null
+  if (query.after) return null
+  if (query.collapse) return null
+  if (query.count === 'false' || query.count === 'estimate' || query.count === 'exact') return null
+  const probability = Math.min(0.5, Math.max(cfg.minProbability, cfg.sampleTarget / dataset.count))
+  const randBound = Math.round(probability * RAND_RANGE)
+  return { cap: cfg.cap, randBound, probability: randBound / RAND_RANGE }
+}
+
+/** Extrapolate the sample-slice count; the first request saw relation "gte", so never report ≤ cap. */
+export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMode): number =>
+  Math.max(mode.cap + 1, Math.round(sampledCount / mode.probability))

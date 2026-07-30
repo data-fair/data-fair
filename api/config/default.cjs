@@ -92,6 +92,15 @@ module.exports = {
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000,
+    // Approximate counts for ranked text searches on large datasets: cap track_total_hits
+    // and estimate overflowing totals from the `_rand < randBound` sample slice.
+    // minDatasetSize: null disables the feature entirely.
+    approxCount: {
+      minDatasetSize: 100000,
+      cap: 10000,
+      sampleTarget: 100000, // aim for ~this many docs in the sample slice
+      minProbability: 0.01 // never sample below 1% (accuracy floor near the cap boundary)
+    },
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
     acceptYellowStatus: false, // change to "true" to tolerate a single node instance
