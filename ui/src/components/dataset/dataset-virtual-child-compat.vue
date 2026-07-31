@@ -74,6 +74,9 @@ const messages = computed(() => {
 
   // Per-field checks
   for (const field of props.child.schema) {
+    // calculated fields are reconciled server-side (see prepareVirtualDataset), the user cannot
+    // act on a mismatch and any transient difference would show as a spurious conflict
+    if (field['x-calculated']) continue
     const parentField = props.parentSchema.find(pf => pf.key === field.key)
     if (!parentField) continue
 

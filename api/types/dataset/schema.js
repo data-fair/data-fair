@@ -447,8 +447,86 @@ const datasetProperties = {
         properties: {
           date: { type: 'string', format: 'date-time' },
           status: { type: 'string', enum: ['ok', 'breach', 'unknown'] },
-          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata'] } }
+          breach: { type: 'array', items: { type: 'string', enum: ['file', 'metadata', 'lines', 'index'] } },
+          lines: {
+            type: 'object',
+            properties: {
+              checked: { type: 'number' },
+              diverged: { type: 'number' },
+              sample: { type: 'array', items: { type: 'string' } }
+            }
+          },
+          // verdict 3 (A1): sampled consistency of the ES projection (read through the alias)
+          // against the verified source; sample entries persist tamper EVIDENCE (capped
+          // expected/actual excerpts) because the reindex remedy destroys the live divergence
+          index: {
+            type: 'object',
+            required: ['status'],
+            properties: {
+              status: { type: 'string', enum: ['ok', 'diverged', 'unknown'] },
+              checked: { type: 'number' },
+              diverged: { type: 'number' },
+              count: {
+                type: 'object',
+                properties: { expected: { type: 'number' }, actual: { type: 'number' } }
+              },
+              sample: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['key', 'kind'],
+                  properties: {
+                    key: { type: 'string' },
+                    kind: { type: 'string', enum: ['edited', 'missing', 'surplus'] },
+                    expected: { type: 'string' },
+                    actual: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          // verdict 2 (round 3): the revision trail itself is unaltered — computed from the
+          // store's version stacks, independent of the data-vs-anchor verdict above
+          trail: {
+            type: 'object',
+            required: ['status'],
+            properties: {
+              status: { type: 'string', enum: ['ok', 'altered'] },
+              anomalies: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['kind', 'key', 'confidence'],
+                  properties: {
+                    kind: { type: 'string', enum: ['delete-marker', 'version-divergence', 'date-skew', 'sequence-gap'] },
+                    key: { type: 'string' },
+                    confidence: { type: 'string', enum: ['confirmed', 'suspect'] },
+                    detail: { type: 'string' },
+                    versionIds: { type: 'array', items: { type: 'string' } }
+                  }
+                }
+              }
+            }
+          },
+          // highest revision index already date-skew-verified (incremental trail verification)
+          trailCursor: { type: 'number' }
         }
+      },
+      // last DEFINITIVE verdict (ok/breach) — drives the check-stale alert (unknowns let it run)
+      lastDefinitiveCheck: { type: 'string', format: 'date-time' },
+      // per-verdict clock for the index member, the only verdict that can be individually
+      // 'unknown' while the overall check stays definitive — never ahead of lastDefinitiveCheck
+      lastDefinitiveIndexCheck: { type: 'string', format: 'date-time' },
+      // pointer to the latest ackTrail revision; the acked fingerprints live in its locked body
+      trailAck: {
+        type: 'object',
+        required: ['i'],
+        properties: { i: { type: 'number' } }
+      },
+      // per-event-key date of the last sent alert (realert cadence dedup, cleared on recovery)
+      alerts: {
+        type: 'object',
+        additionalProperties: { type: 'string', format: 'date-time' }
       },
       lastRevision: {
         type: 'object',
@@ -457,7 +535,7 @@ const datasetProperties = {
           i: { type: 'number' },
           hash: {
             type: 'object',
-            properties: { md5: { type: 'string' }, sha256: { type: 'string' } }
+            properties: { file: { type: 'string' }, metadata: { type: 'string' } }
           },
           date: { type: 'string', format: 'date-time' },
           retainUntil: { type: 'string', format: 'date-time' }
@@ -471,6 +549,16 @@ const datasetProperties = {
           status: { type: 'string', enum: ['ok', 'failed'] },
           retainUntil: { type: 'string', format: 'date-time' },
           error: { type: 'string' }
+        }
+      },
+      linesRenewal: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', format: 'date-time' },
+          status: { type: 'string', enum: ['ok', 'failed'] },
+          renewed: { type: 'number' },
+          failed: { type: 'number' },
+          retainUntil: { type: 'string', format: 'date-time' }
         }
       }
     }

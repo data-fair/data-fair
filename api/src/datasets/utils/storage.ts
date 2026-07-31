@@ -73,18 +73,36 @@ export const storage = async (dataset: Dataset & Pick<DatasetInternal, '_esLineB
 
   if (isVirtualDataset(dataset)) {
     const descendants = await virtualDatasetsUtils.descendants(dataset, ['storage', 'owner', 'masterData', 'count'], false)
+    // the traversal is arrival-based: the same descendant appears once per path reaching it, with
+    // the filters of that path. Group the arrivals by id so a master-data child is billed once,
+    // and count against ALL of its arrivals at once — that way the union of the paths is measured
+    // (an unfiltered arrival makes every row of the child visible again)
+    const arrivalsById = new Map<string, typeof descendants>()
+    for (const descendant of descendants) {
+      const arrivals = arrivalsById.get(descendant.id)
+      if (arrivals) arrivals.push(descendant)
+      else arrivalsById.set(descendant.id, [descendant])
+    }
     let masterDataSize = 0
     const masterDataCount = 0
-    for (const descendant of descendants) {
+    for (const arrivals of arrivalsById.values()) {
+      const descendant = arrivals[0]
       if (!descendant?.masterData?.virtualDatasets?.active) continue
       if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
       const remoteService = await mongo.remoteServices.findOne({ id: 'dataset:' + descendant.id })
       if (!remoteService) throw new Error(`missing remote service dataset:${descendant.id}`)
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }
-      queryableDataset.descendants = [descendant.id]
+      queryableDataset.descendants = arrivals
+      // the ratio measures the fraction of this master-data child's rows that this virtual dataset
+      // actually exposes — its own top-level `virtual.filters` and the filters of the intermediate
+      // virtual children on the paths reaching the child both apply — and prorates the share of the
+      // child's indexed storage billed to this virtual dataset accordingly
       const count = await esUtils.count(queryableDataset, {})
-      storageRatio *= (count / descendant.count)
+      // descendant.count is the child's own row count, read from its mongo doc — it is 0 for an
+      // empty child and undefined for one not yet finalized (see finalize.ts). Either way there are
+      // no rows to prorate a share of, so the ratio (and the billed share) is 0 rather than NaN.
+      storageRatio *= descendant.count ? count / descendant.count : 0
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }
     storage.indexed.size = masterDataSize
@@ -207,6 +225,15 @@ export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = fa
 
   const appRes = await mongo.applications.aggregate(aggQuery).toArray()
   totalStorage.size += (appRes[0] && appRes[0].size) || 0
+
+  // historized integrity storage (architecture §9): measured daily from the store's per-owner
+  // prefix (api/src/integrity/storage.ts). Read from its measurement doc, not live from S3 —
+  // this function runs on every storage-affecting change and must stay cheap. Includes the
+  // aging-out tails of deleted datasets, which hold bytes but no longer appear in the
+  // aggregation above.
+  const integrityStorage = await mongo.db.collection('integrity-storage')
+    .findOne({ 'owner.type': owner.type, 'owner.id': owner.id }, { projection: { size: 1 } })
+  totalStorage.size += integrityStorage?.size ?? 0
 
   await limits.setConsumption(owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(owner, 'indexed_bytes', totalStorage.indexed)

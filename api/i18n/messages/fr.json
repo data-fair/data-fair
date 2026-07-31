@@ -169,6 +169,22 @@
 			"integrity-breach": {
 				"title": "Atteinte à l'intégrité",
 				"body": "Le jeu de données {{label}} a été modifié hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité sur son fichier de données ou ses métadonnées)."
+			},
+			"integrity-renewal-failed": {
+				"title": "Échec du renouvellement du verrou d'intégrité",
+				"body": "Le verrou de protection du jeu de données {{label}} n'a pas pu être renouvelé. Si le problème persiste, la garantie d'intégrité expirera à l'échéance du verrou actuel."
+			},
+			"integrity-check-stale": {
+				"title": "Vérification d'intégrité en retard",
+				"body": "Le jeu de données {{label}} n'a pas produit de verdict d'intégrité définitif depuis trop longtemps (écritures en attente, pipeline bloqué ou entrepôt indisponible). Son état de protection est actuellement non vérifié."
+			},
+			"integrity-scope-incoherent": {
+				"title": "Incohérence de protection d'intégrité",
+				"body": "L'entrepôt d'intégrité protège encore le jeu de données {{label}} mais la base indique que sa protection est désactivée (ou que le jeu de données a disparu) sans désactivation signée. Cela ressemble à un désarmement hors circuit — à vérifier."
+			},
+			"integrity-trail-altered": {
+				"title": "Historique de révisions altéré",
+				"body": "L'historique de révisions du jeu de données {{label}} présente des signes d'altération (révisions masquées ou réécrites). Les révisions verrouillées d'origine sont intactes ; consultez les anomalies dans le panneau d'intégrité."
 			}
 		},
 		"applications": {

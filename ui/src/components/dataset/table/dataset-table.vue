@@ -75,6 +75,14 @@
         :selected-cols="cols"
         :total="total"
       />
+      <v-btn
+        v-if="fullscreenTo"
+        :title="t('fullscreen')"
+        :icon="mdiOpenInNew"
+        :to="fullscreenTo"
+        color="primary"
+        size="large"
+      />
     </v-btn-group>
   </v-toolbar>
   <v-toolbar
@@ -441,6 +449,7 @@
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
+    fullscreen: Afficher en plein écran
   en:
     cancel: Cancel
     delete: Delete
@@ -451,14 +460,16 @@
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
+    fullscreen: Show fullscreen
 </i18n>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
 import type { VVirtualScroll, VForm } from 'vuetify/components'
-import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
+import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
+import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -470,7 +481,7 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys } = defineProps({
+const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
@@ -479,6 +490,7 @@ const { height, noInteraction, edit, selectable, pagination, searchOnly, synthet
   searchOnly: { type: Boolean, default: false },
   syntheticColumns: { type: Array as () => SyntheticColumn[], default: () => [] },
   headerKeys: { type: Boolean, default: false },
+  fullscreenTo: { type: Object as () => RouteLocationRaw, default: undefined },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -506,8 +518,8 @@ const pageSize = computed(() => {
   return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
 })
 
-const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
-  get () {
+const sort = computed<TableSort | undefined>({
+  get (): TableSort | undefined {
     if (!sortStr.value) return undefined
     if (sortStr.value.startsWith('-')) return { direction: -1, key: sortStr.value.slice(1) }
     return { direction: 1, key: sortStr.value }

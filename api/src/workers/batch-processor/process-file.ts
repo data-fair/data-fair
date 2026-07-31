@@ -215,7 +215,7 @@ export default async function (dataset: DatasetInternal) {
       // wipes the draft dir — so the contributor keeps a downloadable report.
       const fileResult = await writer.finalize()
       const srcDiagnostic = validationDiagnosticFilePath(dataset)
-      if (await filesStorage.pathExists(srcDiagnostic)) {
+      if (await filesStorage.fileExists(srcDiagnostic)) {
         await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
       }
       delete patch.validateDraft

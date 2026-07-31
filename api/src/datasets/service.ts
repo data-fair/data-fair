@@ -2,6 +2,7 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
@@ -22,6 +23,7 @@ import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
 import { getDatasetCacheKey } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
+import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
@@ -124,7 +126,9 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     statusBreachOr = {
       $or: [
         { status: { $in: reqQuery.status.split(',') } },
-        { 'integrity.lastCheck.status': 'breach' }
+        { 'integrity.lastCheck.status': 'breach' },
+        // an altered trail is as alarming as a data breach: same error-filter surfacing
+        { 'integrity.lastCheck.trail.status': 'altered' }
       ]
     }
   }
@@ -336,7 +340,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
     if (!body.title) throw httpError(400, 'Un jeu de données virtuel doit être créé avec un titre')
     if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
     dataset.virtual = dataset.virtual || { children: [] }
-    dataset.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
+    dataset.schema = virtualPatch.schema
+    if (virtualPatch.attachmentsAsImage) dataset.attachmentsAsImage = true
+    else if (virtualPatch.attachmentsAsImage === null) delete dataset.attachmentsAsImage
     if (dataset.initFrom) {
       dataset.status = 'created'
     } else {
@@ -396,6 +403,15 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
 export const deleteDataset = async (app: any, dataset: any) => {
   const db = mongo.db
+  // terminal trail revision (integrity round 3, §S2): the trail of an enrolled dataset must end
+  // with a signed-off 'delete' revision, or the daily scope audit reads the aging-out tail as an
+  // out-of-band disarm. Written BEFORE any destructive step (revision-first ordering — the
+  // benign crash residue is a delete revision with a still-live dataset, self-healed by the
+  // checker; the reverse residue is indistinguishable from the alarm-kill attack). A store
+  // outage therefore blocks deleting an enrolled dataset: fail-loud, retry later.
+  if (dataset.integrity?.active && !dataset.draftReason) {
+    await anchorDataset(dataset, { operation: 'delete', origin: 'superadmin' }, { force: true })
+  }
   try {
     await filesStorage.removeDir(dir(dataset))
   } catch (err) {
@@ -427,7 +443,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 }
 
-export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean) => {
+export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean, who?: integrityOps.WhoHint) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
@@ -459,9 +475,20 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   if (removedRestProps && removedRestProps.length) {
     // some property was removed in rest dataset, trigger full re-indexing
-    await restDatasetsUtils.collection(dataset).updateMany({},
-      { $unset: removedRestProps.reduce<Record<string, ''>>((a, df) => { a[df.key] = ''; return a }, {}) }
-    )
+    const unset = removedRestProps.reduce<Record<string, ''>>((a, df) => { a[df.key] = ''; return a }, {})
+    // a removed non-underscore property changes every line's covered body: on an enrolled
+    // dataset this legitimate rewrite must re-anchor the lines or the next check would read
+    // them all as out-of-band edits. Hint FIRST (the historizeLines worker discovers stamped
+    // lines through the dataset-level hint), then the stamp merged into the same line write.
+    const coveredRemoved = removedRestProps.some((df) => !df.key.startsWith('_'))
+    if (dataset.integrity?.active && coveredRemoved) {
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+      const context = patch._needsHistorizing?.context ?? { operation: 'update', origin: 'user', ...(who ? { who } : {}) }
+      await restDatasetsUtils.collection(dataset).updateMany({},
+        { $unset: unset, $set: { _needsHistorizing: { context } } })
+    } else {
+      await restDatasetsUtils.collection(dataset).updateMany({}, { $unset: unset })
+    }
   }
 
   if (attemptMappingUpdate) {
@@ -501,9 +528,22 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
   // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
   // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
-  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing) {
+  // A REST dataset mid its extend/index/finalize partial-update pipeline (_partialRestStatus,
+  // already merged into `dataset` above, still truthy after this patch) settles covered fields
+  // (e.g. `schema`, recomputed at every index-lines pass) more than once before the pipeline
+  // concludes — auto-stamping here on every interim touch would momentarily make the resource
+  // match both the dataset-level historize task and whichever pipeline task (finalize/
+  // indexLines/extend) is about to run next. finalize.ts always stamps explicitly (and clears
+  // _partialRestStatus in that same write) once the pipeline settles, so defer to it rather than
+  // anchoring every interim covered-key touch along the way.
+  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing && !dataset._partialRestStatus) {
     if (integrityOps.coveredPatchKeys(patch).length) {
-      patch._needsHistorizing = { context: { operation: 'update', origin: 'user' } }
+      // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
+      // only means "re-anchor", and the pending context is the more specific one — e.g. the
+      // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
+      // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
+      // generic update/user context before finalize gets to preserve it
+      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user', ...(who ? { who } : {}) } }
     }
   }
 
@@ -531,9 +571,16 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
-      const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset as unknown as VirtualDataset)
-      if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
-        await applyPatch(virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+      try {
+        const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(virtualDataset as unknown as VirtualDataset)
+        if ('attachmentsAsImage' in virtualPatch || !equal(virtualPatch.schema, virtualDataset.schema)) {
+          await applyPatch(virtualDataset, { ...virtualPatch, updatedAt: patch.updatedAt })
+        }
+      } catch (err) {
+        // the parent virtual dataset may have become invalid (a conflict introduced by this very
+        // patch, another child deleted or not shared anymore...): don't fail this dataset's own
+        // patch for it, the parent will surface the error at its next finalization or query
+        internalError('virtual-schema-sync', err)
       }
     }
   }
@@ -632,7 +679,7 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
   const draftFullFilePath = fullFilePath(datasetDraft)
   const newFullFilePath = fullFilePath(patchedDataset)
   const oldFullFilePath = datasetFull.file && fullFilePath(datasetFull)
-  const hasFullFile = await filesStorage.pathExists(draftFullFilePath)
+  const hasFullFile = await filesStorage.fileExists(draftFullFilePath)
   if (hasFullFile) {
     await filesStorage.moveFile(draftFullFilePath, newFullFilePath)
   }
@@ -652,7 +699,7 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
   // a previous contribution to this dataset may have left a cancelled-draft
   // diagnostic; now that a contribution succeeded it is stale, remove it
   const staleCancelledDiagnostic = cancelledDraftDiagnosticFilePath(patchedDataset)
-  if (await filesStorage.pathExists(staleCancelledDiagnostic)) {
+  if (await filesStorage.fileExists(staleCancelledDiagnostic)) {
     await filesStorage.removeFile(staleCancelledDiagnostic)
     // the now-removed file was referenced by a past draft-cancelled event; clear
     // its hasDiagnosticFile flag so the UI stops offering a download that 404s

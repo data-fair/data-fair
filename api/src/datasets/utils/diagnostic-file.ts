@@ -111,7 +111,7 @@ export class DiagnosticWriter {
       await this.closeStream().catch(() => {})
     }
     await fs.remove(this.tmpPath).catch(() => {})
-    if (await filesStorage.pathExists(this.targetPath)) {
+    if (await filesStorage.fileExists(this.targetPath)) {
       await filesStorage.removeFile(this.targetPath)
     }
     await this.clearStaleJournalFlags()

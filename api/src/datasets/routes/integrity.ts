@@ -1,88 +1,108 @@
-import { type Router } from 'express'
-import { reqAdminMode } from '@data-fair/lib-express'
+// Thin adapters for the integrity admin API (conventions §1): input extraction + service calls
+// + response streaming only — the orchestration lives in api/src/integrity/service.ts.
+import { type Router, type Request } from 'express'
+import contentDisposition from 'content-disposition'
+import { reqAdminMode, reqSessionAuthenticated } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import config from '#config'
-import mongo from '#mongo'
 import { reqDataset, readDataset } from '../middlewares.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
-import { isFileDataset } from '#types/dataset/index.ts'
-import { integrityStore } from '../../integrity/store-factory.ts'
-import { revisionPrefix, parseRevisionIndex } from '../../integrity/operations.ts'
-import { anchorDataset } from '../../integrity/relay.ts'
+import * as integrityService from '../../integrity/service.ts'
+import { checkDataset } from '../../integrity/checker.ts'
+import { whoFromReq } from '../../integrity/who.ts'
+import pump from '../../misc/utils/pipe.ts'
+
+const reqReason = (req: Request): string | undefined =>
+  typeof req.body?.reason === 'string' ? req.body.reason : undefined
+
+const reqRevisionIndex = (req: Request): number => {
+  const i = parseInt(req.params.i as string, 10)
+  if (Number.isNaN(i) || i < 0) throw httpError(400, 'invalid revision index')
+  return i
+}
+
+const reqPagination = (req: Request): { page: number, size: number } => ({
+  size: Math.min(parseInt(String(req.query.size ?? '20'), 10) || 20, 100),
+  page: parseInt(String(req.query.page ?? '1'), 10) || 1
+})
 
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    const dataset: any = reqDataset(req)
+    const dataset = reqDataset(req)
     const active = !!req.body?.active
-    if (active) {
-      if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
-      if (!isFileDataset(dataset) || !dataset.originalFile?.md5) throw httpError(400, 'integrity can only be enabled on a finalized file dataset')
-      // bump updatedAt so the dataset read-cache (getDatasetFresh) detects the change; a raw
-      // updateOne leaves updatedAt untouched and reads then serve a stale doc without integrity.active
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.active': true, updatedAt: new Date().toISOString() } })
-      // anchor synchronously: enable is a rare superadmin action, and the response then reflects
-      // the anchored state. On failure (S3 down) active stays true with no anchor — the check
-      // reports 'unknown' and a later _fix retries (fail-loud, no compensating rollback).
-      await anchorDataset(dataset, { operation: 'enable', origin: 'superadmin' })
-    } else {
-      await mongo.datasets.updateOne({ id: dataset.id }, {
-        // clear the verdicts and any pending relay work: a disabled dataset must not keep showing
-        // a breach badge / error-filter listing it no longer allows acting on
-        $set: { integrity: { active: false }, updatedAt: new Date().toISOString() },
-        $unset: { _needsHistorizing: '' }
-      })
-    }
+    if (active) await integrityService.enableIntegrity(dataset, whoFromReq(req))
+    else await integrityService.disableIntegrity(dataset, reqReason(req), whoFromReq(req))
     res.status(200).json({ active })
   })
 
   router.get('/:datasetId/_integrity', readDataset({ noCache: true }), permissions.middleware('readIntegrity', 'admin'), async (req, res) => {
-    const dataset: any = reqDataset(req)
-    res.json(dataset.integrity ?? { active: false })
+    res.json(await integrityService.getIntegrityState(reqDataset(req)))
   })
 
   router.post('/:datasetId/_integrity/_fix', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    const dataset: any = reqDataset(req)
-    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
-    // synchronous re-anchor + verify: the reconcile action responds with a fresh verdict
-    await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason: typeof req.body?.reason === 'string' ? req.body.reason : undefined })
-    // the synchronous anchor above just serviced whatever a pending stamp requested: clear it so
-    // checkDataset's pending guard doesn't force an 'unknown' verdict on the fresh read below
-    await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
-    const checker = await import('../../integrity/checker.ts')
-    const fresh = await mongo.datasets.findOne({ id: dataset.id })
-    res.json(await checker.checkDataset(fresh as any))
+    res.json(await integrityService.fixIntegrity(reqDataset(req), reqReason(req), whoFromReq(req)))
+  })
+
+  router.post('/:datasetId/_integrity/_restore', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    const i = req.body?.i
+    if (!Number.isInteger(i) || i < 0) throw httpError(400, 'missing or invalid revision index "i"')
+    res.json(await integrityService.restoreRevision(req.app, reqDataset(req), i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req)))
+  })
+
+  router.post('/:datasetId/_integrity/lines/_restore', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req), whoFromReq(req)))
+  })
+
+  router.post('/:datasetId/_integrity/index/_reindex', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.reindexForIntegrity(reqDataset(req), reqReason(req)))
+  })
+
+  router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req), whoFromReq(req)))
+  })
+
+  router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const { page, size } = reqPagination(req)
+    res.json(await integrityService.listLineRevisions(reqDataset(req), req.params.lineId as string, page, size))
+  })
+
+  router.get('/:datasetId/_integrity/lines/:lineId/revisions/:i', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    res.json(await integrityService.getLineRevision(reqDataset(req), req.params.lineId as string, reqRevisionIndex(req)))
   })
 
   router.post('/:datasetId/_integrity/_check', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    const dataset: any = reqDataset(req)
+    const dataset = reqDataset(req)
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
-    const checker = await import('../../integrity/checker.ts')
-    res.json(await checker.checkDataset(dataset))
+    // same per-dataset lock as the sweep and the other admin actions: a check racing a relay
+    // would compare fresh content against a stale anchor and report a false breach.
+    // ?deep=true re-verifies date coherence over the whole retention window (nightly checks
+    // only verify incrementally past the trail cursor)
+    // body.seed (superadmin-only route) pins the sampled windows for deterministic tests;
+    // nightly runs never pass one — the engine draws a fresh crypto-random seed per run
+    const seed = typeof req.body?.seed === 'string' ? req.body.seed : undefined
+    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true', seed })))
   })
 
   router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
-    const dataset: any = reqDataset(req)
-    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
-    const store = integrityStore()
-    // zero-padded indices sort lexically == numerically; newest first = reversed
-    const keys = (await store.listRevisions(revisionPrefix(dataset.owner, dataset.id))).map((r) => r.key).sort().reverse()
-    const count = keys.length
-    const size = Math.min(parseInt(String(req.query.size ?? '20'), 10) || 20, 100)
-    const page = parseInt(String(req.query.page ?? '1'), 10) || 1
-    const results = await Promise.all(keys.slice((page - 1) * size, (page - 1) * size + size).map(async (key) => {
-      const rev = await store.getRevision(key)
-      return {
-        i: parseRevisionIndex(key),
-        hash: rev.hash,
-        date: rev.context.date,
-        operation: rev.context.operation,
-        origin: rev.context.origin,
-        ...(rev.context.reason ? { reason: rev.context.reason } : {})
-      }
-    }))
-    res.json({ count, results })
+    const { page, size } = reqPagination(req)
+    res.json(await integrityService.listDatasetRevisions(reqDataset(req), page, size))
+  })
+
+  router.get('/:datasetId/_integrity/revisions/:i', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    res.json(await integrityService.getDatasetRevision(reqDataset(req), reqRevisionIndex(req)))
+  })
+
+  router.get('/:datasetId/_integrity/revisions/:i/file', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
+    const { body, size, filename, mimetype } = await integrityService.readRevisionFile(reqDataset(req), reqRevisionIndex(req))
+    res.setHeader('content-disposition', contentDisposition(filename))
+    res.setHeader('content-type', mimetype)
+    if (size !== undefined) res.setHeader('content-length', String(size))
+    await pump(body, res)
   })
 }

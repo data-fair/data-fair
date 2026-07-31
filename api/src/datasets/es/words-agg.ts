@@ -55,11 +55,19 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 async function unstem (client: Client, dataset: any, field: string, key: any, abortContext?: EsAbortContext) {
+  // this raw query is built directly against aliasName(dataset), bypassing prepareQuery — so on its
+  // own it applies neither the top-level `virtual.filters` nor the descendants-scoped filters, and
+  // could return highlighted fragments sourced from rows a virtual dataset (or an intermediate
+  // virtual child) hides. Reuse prepareQuery's scoping (called with an empty query: only the
+  // invariant filters, no user-supplied q/qs/etc) as an extra filter alongside the term clause.
+  // For a non-virtual, unfiltered dataset this resolves to an empty/no-op bool clause, so behavior
+  // there is unchanged.
+  const scopeQuery = prepareQuery(dataset, {}).query
   const res: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: {
       size: 20,
-      query: { term: { [field]: key } },
+      query: { bool: { filter: [{ term: { [field]: key } }, scopeQuery] } },
       _source: { excludes: '*' },
       highlight: {
         fields: { [field]: {} },

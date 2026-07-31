@@ -46,3 +46,21 @@ no longer produce `/remote-services/tileserver-koumoul/proxy/...` URLs — i.e.
 when legacy map applications have been updated to target `/tileserver`
 directly and their deployed configs re-saved, or when traffic logs show the
 redirect is no longer hit.
+
+## Category coloring & legend (`?category=`)
+
+The map previews (`/dataset/{id}/map` and `/embed/dataset/{id}/map`) accept a
+`category=<field key>` query param: the field's values are fetched from
+`GET /datasets/{id}/values-labels/{field}` (alphabetical, capped at 12 + an
+"Other" bucket), each value gets a color from a theme-derived palette
+(`ui/src/components/dataset/map/category.ts` — hue rotation from the theme
+primary + 3:1 contrast alignment), the field is added to the vector-tile
+`select` so it lands in tile feature properties, and the layers switch to
+MapLibre `['match', …]` paint expressions. A legend overlay lists the values;
+clicking an entry toggles a `<field>_in` filter through the standard URL-synced
+filter params. Ineligible fields (dates, multivalued, geometry, calculated,
+`x-cardinality` > 50) degrade to the uncategorized map plus a warning chip.
+
+This is the first of the "simple preview params" family (flat, documented
+query params usable from portal iframes and AI-agent links — no JSON configs);
+see `docs/plans/2026-07-22-map-category-param-design.md`.

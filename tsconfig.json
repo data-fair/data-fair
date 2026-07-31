@@ -8,7 +8,13 @@
     "strict": true,
     "allowJs": true,
     "checkJs": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      // same alias as ui/tsconfig.json — needed when a test imports a ui module
+      // (the ui package "imports" target crosses package boundaries, which
+      // NodeNext resolution rejects)
+      "#api/types": ["./api/types/index.ts"]
+    }
   },
   "exclude": [
     "node_modules",

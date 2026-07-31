@@ -167,6 +167,22 @@
 			"integrity-breach": {
 				"title": "Integrity breach",
 				"body": "Dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check on its data file or metadata)."
+			},
+			"integrity-renewal-failed": {
+				"title": "Integrity lock renewal failed",
+				"body": "The protection lock of dataset {{label}} could not be renewed. If this persists, the integrity guarantee will lapse when the current lock expires."
+			},
+			"integrity-check-stale": {
+				"title": "Integrity check overdue",
+				"body": "Dataset {{label}} has produced no definitive integrity verdict for too long (pending writes, a stuck pipeline or a store outage). Its protection state is currently unverified."
+			},
+			"integrity-scope-incoherent": {
+				"title": "Integrity protection incoherence",
+				"body": "The integrity store still protects dataset {{label}} but the database says its protection is off (or the dataset is gone) with no signed-off disable. This looks like an out-of-band disarm — review it."
+			},
+			"integrity-trail-altered": {
+				"title": "Integrity trail altered",
+				"body": "The revision trail of dataset {{label}} shows signs of alteration (shadowed or hidden revisions). The original locked revisions are intact; review the anomalies in the integrity panel."
 			}
 		},
 		"applications": {

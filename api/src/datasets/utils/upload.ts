@@ -24,7 +24,7 @@ const md5Tee = () => {
   return { stream, digest: () => hash.digest('hex') }
 }
 
-const fallbackMimeTypes = {
+export const fallbackMimeTypes: Record<string, string> = {
   dbf: 'application/dbase',
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet',

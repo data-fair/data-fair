@@ -27,7 +27,8 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
-import { stampHistorize } from '../../integrity/operations.ts'
+import { hasAttachmentField } from '../../integrity/service.ts'
+import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -153,11 +154,24 @@ export const registerMetadataRoutes = (router: Router) => {
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
 
+      // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
+      // attachments and line ownership are outside the integrity snapshot, so acquiring them
+      // while enrolled would silently degrade the stated guarantee — refuse the transition,
+      // same posture as the owner-transfer refusal below. Disable integrity first.
+      if (dataset.integrity?.active) {
+        if (patch.rest?.lineOwnership && !dataset.rest?.lineOwnership) {
+          throw httpError(400, 'line ownership cannot be enabled while integrity is active: line owner attribution is not covered by the integrity guarantee')
+        }
+        if (patch.schema && hasAttachmentField({ ...dataset, schema: patch.schema }) && !hasAttachmentField(dataset)) {
+          throw httpError(400, 'an attachments field cannot be added while integrity is active: attachment files are not covered by the integrity guarantee')
+        }
+      }
+
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
       if (!isEmpty) {
         await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-        await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
+        await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
           .catch(err => {
             if (err.code !== 11000) throw err
             throw httpError(400, req.__('errors.dupSlug'))
@@ -190,6 +204,12 @@ export const registerMetadataRoutes = (router: Router) => {
   // Change ownership of a dataset
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
+
+    // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
+    // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
+    if (dataset.integrity?.active) {
+      return res.status(400).type('text/plain').send('Le contrôle d\'intégrité doit être désactivé avant un changement de propriétaire')
+    }
 
     const sessionState = reqSessionAuthenticated(req)
 
@@ -251,9 +271,6 @@ export const registerMetadataRoutes = (router: Router) => {
     await permissions.initResourcePermissions(patch, preservePermissions)
 
     const changeOwnerUpdate: any = { $set: patch }
-    // S3 anchor keys are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…) — after a transfer
-    // there is no anchor under the new prefix, so a re-anchor must be stamped
-    if (dataset.integrity?.active) stampHistorize(changeOwnerUpdate, { operation: 'update', origin: 'user' })
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 

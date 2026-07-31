@@ -48,6 +48,10 @@ router.delete('/', async (req, res, next) => {
       // collections without owner (blanket delete)
       mongo.applicationsKeys.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
+      mongo.db.collection('integrity-purge').deleteMany({}),
+      // the storage-accounting measure of still-locked test revisions would otherwise keep
+      // counting into the freshly-reset limits and starve the next tests' storage quota
+      mongo.db.collection('integrity-storage').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
       mongo.remoteServices.deleteMany({}),
@@ -97,10 +101,18 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
-// Patch a dataset document directly in MongoDB (test-only)
+// Patch a dataset document directly in MongoDB (test-only). The body is normally a flat object
+// of fields to $set (backward-compatible shape), but a `$unset` key is also recognized so tests
+// can simulate an out-of-band tamper that REMOVES a covered field (e.g. `file`/`originalFile`),
+// not just overwrites one.
 router.post('/patch-dataset/:datasetId', async (req, res, next) => {
   try {
-    await mongo.datasets.updateOne({ id: req.params.datasetId }, { $set: req.body })
+    const { $unset, ...flatSet } = req.body ?? {}
+    const update: any = {}
+    if (Object.keys(flatSet).length) update.$set = flatSet
+    if ($unset) update.$unset = $unset
+    if (!update.$set && !update.$unset) update.$set = {}
+    await mongo.datasets.updateOne({ id: req.params.datasetId }, update)
     res.status(204).send()
   } catch (err) {
     next(err)
@@ -224,8 +236,18 @@ router.get('/rest-collection-find-one/:datasetId', async (req, res, next) => {
 // Update one document in a REST dataset MongoDB collection
 router.post('/rest-collection-update-one/:datasetId', async (req, res, next) => {
   try {
-    const { filter, update } = req.body
-    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update)
+    const { filter, update, upsert } = req.body
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update, { upsert: !!upsert })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Delete one document in a REST dataset MongoDB collection (out-of-band tamper for integrity tests)
+router.post('/rest-collection-delete-one/:datasetId', async (req, res, next) => {
+  try {
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).deleteOne(req.body.filter)
     res.json({ ok: true })
   } catch (err) {
     next(err)
@@ -252,6 +274,144 @@ router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
   if (req.body?.delete) await filesStorage.removeFile(datasetUtils.originalFilePath(dataset))
   else await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
   res.status(204).send()
+})
+
+// Out-of-band ES tamper through the dataset's alias (integrity index-verdict tests). The alias
+// resolves to exactly one index so writes through it are accepted by ES.
+router.post('/es-tamper/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    if (req.body?.delete) {
+      await esDefault.client.deleteByQuery({ index: alias, body: { query: req.body.query }, refresh: true })
+    } else if (req.body?.insert) {
+      await esDefault.client.index({ index: alias, document: req.body.insert, refresh: true })
+    } else {
+      await esDefault.client.updateByQuery({
+        index: alias,
+        body: { query: req.body.query, script: { source: req.body.script, ...(req.body.params ? { params: req.body.params } : {}) } },
+        refresh: true
+      })
+    }
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Force a refresh of the dataset's alias so tests read a settled index before checking
+router.post('/es-refresh/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    await esDefault.client.indices.refresh({ index: aliasName(dataset) })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Divert a dataset's alias to a doctored copy of its index (in-scope attack: the check must
+// verify through the alias, never the physical index). The copy uses dynamic mapping — enough
+// for the compare, which reads _source. The orphan copy is cleaned by nothing: test-env only.
+router.post('/es-divert-alias/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const esModule = await import('#es')
+    const esDefault = esModule.default
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    const current = Object.keys(await esDefault.client.indices.getAlias({ name: alias }))[0]
+    const doctored = `${current}-doctored-${Date.now()}`
+    await esDefault.client.reindex({ body: { source: { index: current }, dest: { index: doctored } }, refresh: true, wait_for_completion: true })
+    await esDefault.client.updateByQuery({
+      index: doctored,
+      body: { query: req.body.query, script: { source: req.body.script } },
+      refresh: true
+    })
+    await esDefault.client.indices.updateAliases({ body: { actions: [{ remove: { alias, index: current } }, { add: { alias, index: doctored } }] } })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
+// and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
+// decision on a seconds-long lock instead of waiting out a full retention window.
+router.post('/integrity-purge/run', async (req, res, next) => {
+  try {
+    const { purgeExpiredRevisions } = await import('../../integrity/purge.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await purgeExpiredRevisions(integrityStore(), {
+      prefix: req.body?.prefix,
+      ignoreAge: !!req.body?.ignoreAge,
+      skewMarginMs: req.body?.skewMarginMs,
+      ignoreWatermark: !!req.body?.ignoreWatermark
+    }))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the check-stale alert sweep on demand (test-only)
+router.post('/integrity-stale/run', async (req, res, next) => {
+  try {
+    const { alertStaleChecks } = await import('../../integrity/checker.ts')
+    res.json(await alertStaleChecks())
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
+router.post('/integrity-audit/run', async (req, res, next) => {
+  try {
+    const { auditScopes } = await import('../../integrity/audit.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers }))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the integrity storage-accounting measure on demand (test-only)
+router.post('/integrity-storage/run', async (req, res, next) => {
+  try {
+    const { measureIntegrityStorage } = await import('../../integrity/storage.ts')
+    const { integrityStore } = await import('../../integrity/store-factory.ts')
+    res.json(await measureIntegrityStorage(integrityStore()))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Hold / release a lock from the locks collection (test-only): lets a test simulate a busy
+// dataset (worker task in progress) and assert the integrity admin actions answer 409
+router.post('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    res.json({ ack: await locks.acquire(req.params.key, 'test-env') })
+  } catch (err) {
+    next(err)
+  }
+})
+router.delete('/lock/:key', async (req, res, next) => {
+  try {
+    const locks = (await import('@data-fair/lib-node/locks.js')).default
+    await locks.release(req.params.key)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
 })
 
 // Trigger the api-keys expiration cron task on demand (test-only)

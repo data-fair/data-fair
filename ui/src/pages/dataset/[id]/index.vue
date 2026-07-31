@@ -183,6 +183,7 @@
           <dataset-table
             :height="windowHeight - 300"
             :pagination="true"
+            :fullscreen-to="{ path: `/dataset/${route.params.id}/table`, query: route.query }"
           />
         </v-tabs-window-item>
 

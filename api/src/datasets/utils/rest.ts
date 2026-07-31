@@ -22,10 +22,12 @@ import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.ts'
+import { extensionOwnedKeys } from '../../integrity/lines-operations.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
+import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
 import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
@@ -34,7 +36,8 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
+import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
@@ -76,8 +79,7 @@ export const sheet2csvPiscina = new Piscina({
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
 function cleanLine (line: DatasetLine) {
-  delete line._needsIndexing
-  delete line._needsExtending
+  stripTransientLineFlags(line)
   delete line._deleted
   delete line._action
   delete line._error
@@ -185,6 +187,7 @@ export const initDataset = async (dataset: RestDataset) => {
   await Promise.all([
     c.createIndex({ _needsIndexing: 1 }, { sparse: true }),
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
+    c.createIndex({ _needsHistorizing: 1 }, { sparse: true }),
     c.createIndex({ _i: -1 }, { unique: true })
   ])
   await configureConstraintIndexes(dataset)
@@ -254,8 +257,7 @@ export const configureHistory = async (dataset: RestDataset) => {
       let revisionsBulkOp = rc.initializeUnorderedBulkOp()
       for await (const line of collection(dataset).find<DatasetLine>({})) {
         const revision: DatasetLineRevision = { ...line, _action: 'create', _lineId: line._id }
-        delete revision._needsIndexing
-        delete revision._needsExtending
+        stripTransientLineFlags(revision)
         delete revision._id
         if (!revision._deleted) delete revision._deleted
         revisionsBulkOp.insert(revision)
@@ -390,8 +392,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
         revision._updatedBy = sessionState.user.id
         revision._updatedByName = sessionState.user.name
       }
-      delete revision._needsIndexing
-      delete revision._needsExtending
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
     }
     await revisionsBulkOp.execute()
@@ -419,7 +420,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset, historizeContext?: HistorizeContextHint, who?: WhoHint) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -432,6 +433,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
   const primaryKeyProjection = getPrimaryKeyProjection(dataset)
+
+  // integrity (target 3): hint-first ordering — mark the dataset as having pending line
+  // stamps BEFORE any line stamp is written, so a crash between the two leaves a harmless
+  // empty hint (relay clears it), never orphaned stamps. Skipped for tmp-collection writes
+  // (drop mode), which are refused on enrolled datasets anyway.
+  const historizeLines = !!dataset.integrity?.active && !tmpDataset
+  if (historizeLines && transacs.length) {
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+  }
 
   // prepare future results that will be completed by the following loops
   const operations = []
@@ -464,6 +474,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
+    if (historizeLines) {
+      operation.fullBody._needsHistorizing = {
+        context: historizeContext ?? {
+          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+          ...(who ? { who } : {})
+        }
+      }
+    }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
@@ -735,8 +754,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       const revision = getLineFromOperation(operation) as unknown as DatasetLineRevision
       delete revision._id
       revision._lineId = operation._id
-      delete revision._needsIndexing
-      delete revision._needsExtending
+      stripTransientLineFlags(revision)
       revisionsBulkOp.insert(revision)
       hasRevisionsBulkOp = true
     }
@@ -768,7 +786,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 }
 
 const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset)
+  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset, undefined, whoFromReq(req))
 }
 
 // _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
@@ -783,7 +801,8 @@ type TransactionStreamOptions = {
   linesOwner?: Account,
   validate?: ValidateFunction,
   tmpDataset?: RestDataset,
-  summary: Summary
+  summary: Summary,
+  who?: WhoHint
 }
 
 class TransactionStream extends Writable {
@@ -800,7 +819,7 @@ class TransactionStream extends Writable {
   }
 
   async applyTransactions () {
-    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
+    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset, undefined, this.options.who)
 
     if (this.options.summary._ids) {
       if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
@@ -977,7 +996,7 @@ const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
   const p = uploadedAttachmentPath
   if (!p) return
   try {
-    if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
+    if (await filesStorage.fileExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
     console.warn('failed to rollback uploaded attachment', p, err)
   }
@@ -1087,6 +1106,9 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  // integrity (target 3): dropping the collection would silently destroy the lines the locked
+  // anchors still vouch for — deletions must go through the transaction path (tombstones)
+  if (dataset.integrity?.active) throw httpError(400, 'suppression de toutes les lignes refusée tant que le suivi d\'intégrité est actif')
   await initDataset(dataset)
   const indexName = await initDatasetIndex(dataset)
   await switchAlias(dataset, indexName)
@@ -1107,6 +1129,9 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
   try {
     const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
+    // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
+    // locked anchors still vouch for — bulk deletions must go through the transaction path
+    if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
@@ -1198,7 +1223,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset, who: whoFromReq(req) })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -1313,7 +1338,7 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary })
+  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, who: whoFromReq(req) })
   await pump(filesStream, transactionStream)
 
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
@@ -1383,22 +1408,13 @@ export const readStreams = async (dataset: RestDataset, filter = {}, progress?: 
 }
 
 export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDataset['extensions']) => {
-  const patchedKeys: string[] = []
-  for (const extension of extensions ?? []) {
-    if (extension.type === 'remoteService' && extension.propertyPrefix) {
-      patchedKeys.push(extension.propertyPrefix)
-      if (extension.overwrite) {
-        for (const key in extension.overwrite) {
-          // @ts-ignore
-          if (extension.overwrite[key]['x-originalName']) {
-            // @ts-ignore
-            patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
-          }
-        }
-      }
-    }
-    if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
-  }
+  // INVARIANT (integrity): the columns written back here are exactly the ones the integrity
+  // module excludes from the covered line body — the extender writes OUTSIDE the transaction
+  // pipeline (unstamped), so any column it wrote that the relay/checker still covered would
+  // false-breach every organic write-then-extend flow. extensionOwnedKeys IS that exclusion
+  // set: one shared source of truth instead of two mirrored implementations, so the write-back
+  // and the coverage exclusion can never drift apart.
+  const patchedKeys = [...extensionOwnedKeys(extensions)]
   const c = collection(dataset)
   // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
   let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
@@ -1462,7 +1478,10 @@ class MarkIndexedStream extends Writable {
       if (chunk._updatedAt && updatedAts.get(chunk._id) === chunk._updatedAt.getTime()) {
         i += 1
         if (chunk._deleted) {
-          bulkOp.find({ _id: chunk._id }).deleteOne()
+          // integrity (target 3): a tombstone awaiting historization must survive until its
+          // deletion revision ships — the lines relay purges it once both flags are gone
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: false } }).deleteOne()
+          bulkOp.find({ _id: chunk._id, _needsHistorizing: { $exists: true } }).updateOne({ $unset: { _needsIndexing: '' } })
         } else {
           bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }

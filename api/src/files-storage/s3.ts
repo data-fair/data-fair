@@ -1,4 +1,4 @@
-import config from '#config'
+import type { ApiConfig } from '../../config/type/index.ts'
 import { relative as relativePath, resolve as resolvePath, join as joinPath } from 'node:path'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCopyCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, type S3ClientConfig } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
@@ -17,31 +17,34 @@ import { redactS3Config } from './operations.ts'
 
 const debug = debugModule('s3')
 
-export const dataDir = resolvePath(config.dataDir)
-
-const bucketPath = (path: string) => {
-  if (path === dataDir) return ''
-  return path.replace(dataDir + '/', '')
-}
+// explicit options instead of #config so the backend can be constructed in the test
+// process against MinIO (same pattern as IntegrityStore)
+export type S3BackendOptions = ApiConfig['s3'] & { bucket: string, dataDir: string }
 
 export class S3Backend implements FileBackend {
   private dataClient: S3Client
   private metadataClient: S3Client
+  private options: S3BackendOptions
+  private bucket: string
+  private dataDir: string
 
-  constructor () {
-    debug('create client', redactS3Config(config.s3))
+  constructor (options: S3BackendOptions) {
+    debug('create client', redactS3Config(options))
+    this.options = options
+    this.bucket = options.bucket
+    this.dataDir = resolvePath(options.dataDir)
     // Customizing the handler for high throughput
     // and splitting data and metadata client so that long running queries do not block short metadata queries
     // TODO: monitor the sockets like we do in @data-fair/lib-node/http-agents ?
     this.dataClient = new S3Client({
-      ...config.s3 as S3ClientConfig,
+      ...options as S3ClientConfig,
       requestHandler: new NodeHttpHandler({
         httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50, timeout: 60000 }),
         httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50, timeout: 60000 }),
       }),
     })
     this.metadataClient = new S3Client({
-      ...config.s3 as S3ClientConfig,
+      ...options as S3ClientConfig,
       // Customizing the handler for high throughput
       requestHandler: new NodeHttpHandler({
         httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
@@ -50,9 +53,14 @@ export class S3Backend implements FileBackend {
     })
   }
 
+  private bucketPath (path: string) {
+    if (path === this.dataDir) return ''
+    return path.replace(this.dataDir + '/', '')
+  }
+
   async checkAccess () {
     debug('check access')
-    const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: 'check-access.txt', Body: 'ok' })
+    const command = new PutObjectCommand({ Bucket: this.bucket, Key: 'check-access.txt', Body: 'ok' })
     debug('access ok')
     await this.metadataClient.send(command, { requestTimeout: 10000 })
   }
@@ -65,11 +73,11 @@ export class S3Backend implements FileBackend {
   }
 
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
-    debug('lrsWithStats', targetPath, bucketPath(targetPath))
-    const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
+    debug('lrsWithStats', targetPath, this.bucketPath(targetPath))
+    const command = new ListObjectsV2Command({ Bucket: this.bucket, Prefix: this.bucketPath(targetPath) })
     const response = await this.metadataClient.send(command)
     const filesStats = (response.Contents || []).map((obj) => ({
-      path: relativePath(targetPath, joinPath(dataDir, obj.Key!)),
+      path: relativePath(targetPath, joinPath(this.dataDir, obj.Key!)),
       size: obj.Size!,
       lastModified: obj.LastModified!,
     }))
@@ -78,13 +86,20 @@ export class S3Backend implements FileBackend {
   }
 
   async fileStats (path: string) {
-    const command = new HeadObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
-    const response = await this.metadataClient.send(command)
-    return { size: response.ContentLength!, lastModified: response.LastModified! }
+    const command = new HeadObjectCommand({ Bucket: this.bucket, Key: this.bucketPath(path) })
+    try {
+      const response = await this.metadataClient.send(command)
+      return { size: response.ContentLength!, lastModified: response.LastModified! }
+    } catch (err: any) {
+      // a HEAD 404 response has no body for the SDK to parse, so the raw error carries the
+      // meaningless message "UnknownError"; map it before it can reach a journal or a client
+      if (err.$metadata?.httpStatusCode === 404) throw httpError(404, 'file not found')
+      throw err
+    }
   }
 
   async removeFile (path: string): Promise<void> {
-    const command = new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
+    const command = new DeleteObjectCommand({ Bucket: this.bucket, Key: this.bucketPath(path) })
     await this.metadataClient.send(command)
   }
 
@@ -92,7 +107,7 @@ export class S3Backend implements FileBackend {
     // the page size cannot be too large as it is also the number of parallel deletes
     const pages = paginateListObjectsV2(
       { client: this.metadataClient, pageSize: 100 },
-      { Bucket: config.s3.bucket, Prefix: bucketPath(path) }
+      { Bucket: this.bucket, Prefix: this.bucketPath(path) }
     )
 
     for await (const page of pages) {
@@ -100,7 +115,7 @@ export class S3Backend implements FileBackend {
 
       // Map each object in the current page to a Delete promise
       const deletePromises = page.Contents.map((obj) => {
-        const deleteParams = { Bucket: config.s3.bucket, Key: obj.Key, }
+        const deleteParams = { Bucket: this.bucket, Key: obj.Key, }
         return this.metadataClient.send(new DeleteObjectCommand(deleteParams))
       })
 
@@ -113,7 +128,7 @@ export class S3Backend implements FileBackend {
     debug('readStream', path)
     const ifModifiedSinceDate = ifModifiedSince ? new Date(ifModifiedSince) : undefined
 
-    const bucketParams = { Bucket: config.s3.bucket, Key: bucketPath(path), IfModifiedSince: ifModifiedSinceDate, }
+    const bucketParams = { Bucket: this.bucket, Key: this.bucketPath(path), IfModifiedSince: ifModifiedSinceDate, }
     try {
       // retryMissing is set by callers that just wrote the file and so expect it to exist;
       // it absorbs read-after-write inconsistency on some S3 providers. It must stay off for
@@ -181,7 +196,7 @@ export class S3Backend implements FileBackend {
     // upload time instead. retryOnMissing absorbs the transient cross-connection
     // inconsistency (we write on dataClient and HEAD on metadataClient) so only a persistent
     // miss — the durable loss we actually want to catch — fails the upload.
-    await retryOnMissing(() => this.metadataClient.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })))
+    await retryOnMissing(() => this.metadataClient.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.bucketPath(path) })))
     await unlink(tmpPath)
   }
 
@@ -189,8 +204,8 @@ export class S3Backend implements FileBackend {
     const upload = new Upload({
       client: this.dataClient,
       params: {
-        Bucket: config.s3.bucket,
-        Key: bucketPath(path),
+        Bucket: this.bucket,
+        Key: this.bucketPath(path),
         Body: readStream
       }
     })
@@ -198,33 +213,33 @@ export class S3Backend implements FileBackend {
   }
 
   async writeString (path: string, content: string) {
-    const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path), Body: content })
+    const command = new PutObjectCommand({ Bucket: this.bucket, Key: this.bucketPath(path), Body: content })
     await this.dataClient.send(command)
   }
 
   async copyFile (srcPath: string, dstPath: string) {
-    const srcKey = bucketPath(srcPath)
-    const dstKey = bucketPath(dstPath)
+    const srcKey = this.bucketPath(srcPath)
+    const dstKey = this.bucketPath(dstPath)
 
-    const headResp = await this.metadataClient.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: srcKey }))
+    const headResp = await this.metadataClient.send(new HeadObjectCommand({ Bucket: this.bucket, Key: srcKey }))
     const fileSize = headResp.ContentLength!
 
-    const maxSingleCopySize = config.s3.maxSingleCopySize || 5 * 1024 * 1024 * 1024
+    const maxSingleCopySize = this.options.maxSingleCopySize || 5 * 1024 * 1024 * 1024
 
     if (fileSize < maxSingleCopySize) {
       await this.dataClient.send(new CopyObjectCommand({
-        Bucket: config.s3.bucket,
-        CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
+        Bucket: this.bucket,
+        CopySource: `${this.bucket}/${encodeURI(srcKey)}`,
         Key: dstKey,
       }))
       return
     }
 
-    const multipartChunkSize = config.s3.multipartChunkSize || 100 * 1024 * 1024
+    const multipartChunkSize = this.options.multipartChunkSize || 100 * 1024 * 1024
     const totalParts = Math.ceil(fileSize / multipartChunkSize)
 
     const createResp = await this.dataClient.send(new CreateMultipartUploadCommand({
-      Bucket: config.s3.bucket,
+      Bucket: this.bucket,
       Key: dstKey,
     }))
     const uploadId = createResp.UploadId!
@@ -236,9 +251,9 @@ export class S3Backend implements FileBackend {
         const end = Math.min(partNumber * multipartChunkSize, fileSize) - 1
 
         const copyPart = this.dataClient.send(new UploadPartCopyCommand({
-          Bucket: config.s3.bucket,
+          Bucket: this.bucket,
           Key: dstKey,
-          CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
+          CopySource: `${this.bucket}/${encodeURI(srcKey)}`,
           CopySourceRange: `bytes=${start}-${end}`,
           UploadId: uploadId,
           PartNumber: partNumber,
@@ -249,7 +264,7 @@ export class S3Backend implements FileBackend {
       const responses = await Promise.all(copyParts)
 
       await this.dataClient.send(new CompleteMultipartUploadCommand({
-        Bucket: config.s3.bucket,
+        Bucket: this.bucket,
         Key: dstKey,
         UploadId: uploadId,
         MultipartUpload: {
@@ -261,7 +276,7 @@ export class S3Backend implements FileBackend {
       }))
     } catch (err) {
       await this.dataClient.send(new AbortMultipartUploadCommand({
-        Bucket: config.s3.bucket,
+        Bucket: this.bucket,
         Key: dstKey,
         UploadId: uploadId,
       }))
@@ -278,7 +293,7 @@ export class S3Backend implements FileBackend {
     // the page size cannot be too large as it is also the number of parallel copies
     const pages = paginateListObjectsV2(
       { client: this.dataClient, pageSize: 100 },
-      { Bucket: config.s3.bucket, Prefix: bucketPath(srcPath) }
+      { Bucket: this.bucket, Prefix: this.bucketPath(srcPath) }
     )
 
     for await (const page of pages) {
@@ -287,10 +302,10 @@ export class S3Backend implements FileBackend {
       // Map each object in the current page to a Copy promise
       const copyPromises = page.Contents.map((obj) => {
         const sourceKey = obj.Key!
-        const destKey = sourceKey.replace(bucketPath(srcPath), bucketPath(dstPath))
+        const destKey = sourceKey.replace(this.bucketPath(srcPath), this.bucketPath(dstPath))
         return this.copyFile(
-          joinPath(dataDir, sourceKey),
-          joinPath(dataDir, destKey)
+          joinPath(this.dataDir, sourceKey),
+          joinPath(this.dataDir, destKey)
         )
       })
 
@@ -305,23 +320,35 @@ export class S3Backend implements FileBackend {
   }
 
   async pathExists (path: string) {
+    // prefix semantics: matches a "directory" (S3 has none, only key prefixes) as well as a
+    // file — use fileExists for files, a strict prefix of an existing key would match here
     const params = {
-      Bucket: config.s3.bucket,
-      Prefix: bucketPath(path),
+      Bucket: this.bucket,
+      Prefix: this.bucketPath(path),
       MaxKeys: 1, // We only need to know if at least one exists
     }
     const response = await this.metadataClient.send(new ListObjectsV2Command(params))
     return !!(response.Contents && response.Contents.length > 0)
   }
 
+  async fileExists (path: string) {
+    try {
+      await this.metadataClient.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.bucketPath(path) }))
+      return true
+    } catch (err: any) {
+      if (err.$metadata?.httpStatusCode === 404) return false
+      throw err
+    }
+  }
+
   async zipDirectory (path: string) {
-    return unzipper.Open.s3_v3(this.dataClient, { Bucket: config.s3.bucket, Key: bucketPath(path) })
+    return unzipper.Open.s3_v3(this.dataClient, { Bucket: this.bucket, Key: this.bucketPath(path) })
   }
 
   async fileSample (path: string) {
     const command = new GetObjectCommand({
-      Bucket: config.s3.bucket,
-      Key: bucketPath(path),
+      Bucket: this.bucket,
+      Key: this.bucketPath(path),
       Range: 'bytes=0-' + (1024 * 1024)
     })
     // fileSample is only ever called right after the file was written (storer / csv analysis),

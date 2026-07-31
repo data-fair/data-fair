@@ -31,7 +31,9 @@ import {
   resolveExactKeywordTarget,
   resolveExistsFields,
   resolveRangeOrPrefixField,
-  KEYWORD_IGNORE_ABOVE
+  KEYWORD_IGNORE_ABOVE,
+  virtualFilterClauses,
+  descendantsFilterClause
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -49,7 +51,21 @@ export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsear
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
-  if (dataset.isVirtual) return dataset.descendants.map((id: string) => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.isVirtual) {
+    // cheap fail-loud check on the shape of dataset.descendants: it is resolved by a single
+    // traversal (datasets/utils/virtual.ts) that always stamps `index`, but the repo's tsc is not
+    // clean so types alone cannot guarantee a stale caller is caught — a wrong shape must fail
+    // loudly here rather than silently produce a bad (or empty) index target.
+    if (!Array.isArray(dataset.descendants)) throw new Error(`[internal] dataset ${dataset.id} is virtual but its descendants were not resolved`)
+    const indices = new Set<string>()
+    for (const descendant of dataset.descendants) {
+      if (!descendant?.index) throw new Error(`[internal] dataset ${dataset.id} has a descendant without a resolved index`)
+      // a descendant can legitimately appear twice (reachable through both a filtered and an
+      // unfiltered path) - dedupe the index target, not the array itself
+      indices.add(descendant.index)
+    }
+    return [...indices].join(',')
+  }
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
@@ -69,7 +85,9 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
     if (key.startsWith('_geo_distance:')) {
       if (!dataset.bbox) throw httpError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
-      result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
+      // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+      // rows from a child without geo mapping sort last instead of failing the query
+      result.push({ _geo_distance: { _geopoint: { lon, lat }, order, ignore_unmapped: true } })
       continue
     }
 
@@ -232,7 +250,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if ((query.geo_distance ?? query._c_geo_distance)) {
     if (!esQuery.sort.some((s: any) => !!s._geo_distance)) {
       const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
-      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc', ignore_unmapped: true } })
     }
     if (!esQuery._source.includes('_geopoint')) {
       esQuery._source.push('_geopoint')
@@ -274,17 +292,14 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.operator === 'nin') {
-          if (f.values.length === 1) filter.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
-          else filter.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
-        } else {
-          if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-          else filter.push({ terms: { [f.key]: f.values } })
-        }
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children, read from the same
+  // dataset.descendants that drives the multi-index target (see utils/virtual.ts).
+  // null = no descendant carries filters, nothing to add.
+  if (dataset.isVirtual) {
+    const descendantsClause = descendantsFilterClause(dataset.descendants)
+    if (descendantsClause) filter.push(descendantsClause)
   }
 
   // Envorced filter in case of rest datasets with line ownership
@@ -475,7 +490,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
             type: 'envelope',
             coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
           }
-        }
+        },
+        // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+        // the non-geo child's index simply matches nothing instead of failing the query
+        ignore_unmapped: true
       }
     })
   }
@@ -501,7 +519,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
                 type: 'point',
                 coordinates: [lon, lat]
               }
-            }
+            },
+            ignore_unmapped: true
           }
         })
       } else {
@@ -513,7 +532,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
         filter.push({
           geo_distance: {
             distance,
-            _geopoint: { lat, lon }
+            _geopoint: { lat, lon },
+            ignore_unmapped: true
           }
         })
       }

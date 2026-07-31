@@ -29,6 +29,22 @@ test.describe('Many case of special file datasets', () => {
     assert.equal(dataset.schema[0].key, 'id')
   })
 
+  test('should detect the encoding of a zipped csv file', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset-latin1.zip', ax)
+    assert.equal(dataset.file.encoding, 'ISO-8859-1')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].adr, '19 rue de la voie lactée saint avé')
+  })
+
+  test('should detect the encoding of a gzipped csv file', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset-latin1.csv.gz', ax)
+    assert.equal(dataset.file.encoding, 'ISO-8859-1')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].adr, '19 rue de la voie lactée saint avé')
+  })
+
   test('should extract a zipped geojson file', async () => {
     const ax = testUser1
     const dataset = await sendDataset('geo/geojson-example.zip', ax)
