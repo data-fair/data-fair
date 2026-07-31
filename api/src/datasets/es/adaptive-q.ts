@@ -48,10 +48,16 @@ const esSearch = async (client: Client, dataset: any, body: any, abortContext?: 
 // ignoring a word the user explicitly required (+), negated (-), quoted or grouped.
 const SQS_SYNTAX = /[+\-|"*()~\\]/
 
+// Hard structural bound on the preflight fan-out: only the first MAX_ADAPT_WORDS words enter
+// the rung ladder, so an adapt request costs AT MOST 3 ES round trips whatever the query —
+// the filters-agg preflight (≤ MAX_ADAPT_WORDS buckets), one _msearch of
+// ≤ MAX_ADAPT_WORDS-1 rung counts (upper-bound-pruned), and the main search.
+const MAX_ADAPT_WORDS = 8
+
 export const runAdaptivePreflight = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<AdaptResult | null> => {
   const q = String(query.q ?? '').trim()
   if (SQS_SYNTAX.test(q)) return null
-  const words = q.split(/\s+/).slice(0, 8)
+  const words = q.split(/\s+/).slice(0, MAX_ADAPT_WORDS)
   if (words.length < 2) return null // nothing to relax on a single word
 
   // the full OR query (all other filters included) — the preflight measures within that context
@@ -99,6 +105,9 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
       {
         size: 0,
         track_total_hits: true,
+        // _msearch rejects a `timeout` querystring but accepts it per leg body — same
+        // ES-side bound as every other search (the client requestTimeout stays the backstop)
+        timeout: config.elasticsearch.searchTimeout,
         query: { bool: { filter: [orQuery, ...required.map(wordClause), randSlice] } }
       }
     ])
