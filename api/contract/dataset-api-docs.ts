@@ -496,7 +496,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const hintParam = {
     in: 'query',
     name: 'hint',
-    description: `Contrôle les conseils \`meta.hints\` de la réponse (suggestions actionnables pour optimiser ou corriger la requête).
+    description: `Contrôle les conseils \`meta.hints\` de la réponse (suggestions actionnables pour optimiser ou corriger la requête, destinées aux développeurs et toujours en anglais).
 
   - **auto** (défaut) : conseils de correction toujours, conseils de performance seulement si la requête est lente.
   - **true** : dès qu'un conseil s'applique.
@@ -728,7 +728,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                           hints: {
                             type: 'array',
                             items: { type: 'string' },
-                            description: 'Conseils actionnables pour optimiser ou corriger la requête (voir le paramètre hint).'
+                            description: 'Conseils actionnables pour optimiser ou corriger la requête, destinés aux développeurs (toujours en anglais — voir le paramètre hint).'
                           }
                         }
                       },

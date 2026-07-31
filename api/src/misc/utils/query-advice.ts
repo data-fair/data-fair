@@ -1,15 +1,19 @@
 import { type Request } from 'express'
-import i18n from 'i18n'
 import config from '#config'
 import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getApproxCountMode } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
-import { reqPublicOperation, reqDatasetOptional, setReqDataset } from './req-context.ts'
+import { reqDatasetOptional } from './req-context.ts'
 
-// Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
-// 504 "request too long", 429 ES circuit_breaking_exception). It only ever *advises* — it never
-// changes the query. Shaped for the native dataset API query params; ODS-compat requests use
-// different param names so most rules just don't fire for them (the `count` rule still recognises
-// the `.../records` path). See docs/architecture/load-management.md.
+// Builds short advisory sentences: meta.hints entries on the data endpoints and a suffix on
+// overload errors (429 compute-budget, 504 "request too long", 429 ES circuit_breaking_exception).
+// It only ever *advises* — it never changes the query. Shaped for the native dataset API query
+// params; ODS-compat requests use different param names so most rules just don't fire for them
+// (the `count` rule still recognises the `.../records` path). See docs/architecture/load-management.md.
+//
+// Deliberately NOT internationalized: the audience is developers, and public/cacheable responses
+// can't vary by the language cookie anyway (the reverse-proxy cache would mix languages), so the
+// advice is plain English everywhere. End users get localized UI built from the machine fields
+// (meta.totalMarginPct, meta.ignoredWords), never from these strings.
 
 const num = (v: any): number => {
   const n = parseInt(String(v ?? ''), 10)
@@ -22,8 +26,8 @@ const nbLevels = (v: any): number => v ? String(v).split(/[;,]/).filter(Boolean)
 const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test(path)
 
 /**
- * Returns either '' or ' <intro> : <item> ; <item>.' assembled from i18n keys (via `req.__`).
- * Safe to concatenate onto any error message — '' when nothing useful applies.
+ * Returns either '' or ' <intro>: <item>; <item>.' — safe to concatenate onto any error
+ * message, '' when nothing useful applies.
  */
 export const queryAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
@@ -36,21 +40,21 @@ export const queryAdvice = (req: Request): string => {
   // carry actionable suggestions.
   const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
   if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
-    items.push(req.__('errors.queryAdviceCount'))
+    items.push('set count=estimate (exact total up to the threshold, then estimated by sampling) or count=false to skip the exact total-row count')
   }
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
-  if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push(req.__('errors.queryAdviceDeepPagination'))
+  if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push('use keyset pagination via the after parameter instead of deep page/offset navigation')
   // 3. large aggregation fan-out
-  if (num(q.agg_size) >= 100 || nbLevels(q.field) > 1) items.push(req.__('errors.queryAdviceAggSize'))
+  if (num(q.agg_size) >= 100 || nbLevels(q.field) > 1) items.push('reduce agg_size and/or the number of grouped fields')
   // 4. large page size
-  if (num(q.size) >= 1000) items.push(req.__('errors.queryAdviceSize'))
+  if (num(q.size) >= 1000) items.push('request fewer results per page (lower size)')
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
-  if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) items.push(req.__('errors.queryAdviceSelect'))
+  if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) items.push('use the select parameter to return only the columns you need')
   // 6. wide dataset full-text-searched without restricting the searched columns
-  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) items.push(req.__('errors.queryAdviceQFields'))
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) items.push('restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column')
 
   if (items.length === 0) return ''
-  return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + items.join(' ; ') + '.'
+  return ' Advice to optimize your queries: ' + items.join('; ') + '.'
 }
 
 // Parameters recognized by the dataset data endpoints (/lines, /*_agg). Mirrors the query
@@ -101,17 +105,17 @@ export const ignoredParamsAdvice = (req: Request): string => {
       const inner = key.slice(3, suffix ? key.length - suffix.length : key.length)
       if (suffix && conceptIds.has(inner)) continue // legit concept filter that resolved (suffix required; bare _c_<concept> is dropped by commons.js)
       if (suffix && columnKeys.has(inner)) {
-        items.push(req.__('errors.queryAdviceConceptUseColumn', key, inner + suffix)) // Tier 1: typo
+        items.push(`${key} → use ${inner + suffix} instead (the _c_ prefix is reserved for concept filters, not columns)`) // Tier 1: typo
       } else {
-        items.push(req.__('errors.queryAdviceConceptUnknown', key)) // Tier 2: inert
+        items.push(`${key} was ignored — the _c_ prefix is for concept filters and matched no concept in this dataset`) // Tier 2: inert
       }
     } else {
-      items.push(req.__('errors.queryAdviceUnknownParam', key))
+      items.push(`${key} is not a recognized query parameter and was ignored`)
     }
   }
 
   if (!items.length) return ''
-  return ' ' + req.__('errors.queryAdviceIgnoredIntro') + ' : ' + items.join(' ; ') + '.'
+  return ' Some parameters were ignored: ' + items.join('; ') + '.'
 }
 
 // Correctness advisory (duration-independent): a filter on a column that ACTUALLY dropped values
@@ -143,8 +147,8 @@ export const uncertainFilterAdvice = (req: Request): string => {
   if (!flagged.size) return ''
   // consumer-facing: state the limitation and the affected columns only — the "enable wildcard /
   // reprocess" fix is an owner/admin action surfaced via the diagnose warning and journal event.
-  const items = [...flagged].map(k => req.__('errors.queryAdviceUncertainFilter', k))
-  return ' ' + req.__('errors.queryAdviceUncertainIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
+  const items = [...flagged].map(k => `"${k}"`)
+  return ` some filters may return incomplete results: values longer than ${KEYWORD_IGNORE_ABOVE} characters are not exactly indexed on the following column(s): ` + items.join(', ') + '.'
 }
 
 // Correctness advisory (duration-independent) for /simple_metrics_agg: the metrics read
@@ -165,8 +169,8 @@ export const truncatedMetricsAdvice = (req: Request): string => {
   const byKey = new Map((dataset?.schema ?? []).map((p: any) => [p.key, p]))
   const affected = fields.filter(k => flaggedSet.has(k) && isLengthLimitedKeyword(byKey.get(k)))
   if (!affected.length) return ''
-  const items = affected.map(k => req.__('errors.queryAdviceUncertainFilter', k))
-  return ' ' + req.__('errors.queryAdviceTruncatedMetricsIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
+  const items = affected.map(k => `"${k}"`)
+  return ` some metrics may be computed on incomplete data: values longer than ${KEYWORD_IGNORE_ABOVE} characters are not taken into account on the following column(s): ` + items.join(', ') + '.'
 }
 
 export type HintMode = 'auto' | 'true' | 'false'
@@ -189,26 +193,12 @@ const parseHintMode = (raw: any): HintMode => (raw === 'true' || raw === 'false'
  * duration-independent; performance advice keeps its slow-auto / explicit-true gate. Empty
  * array for hint=false or when no rule applies. The same `queryAdvice` rules also drive the
  * 429/504 error advice (as a suffix sentence there, see rate-limiting.ts).
- *
- * Public/cacheable responses are served without varying by the i18n_lang cookie, so for those
- * the entries are forced to English to keep the reverse-proxy cache coherent.
  */
 export const buildQueryHints = (req: Request, esStepDurationMs: number): string[] => {
   const mode = parseHintMode(req.query?.hint)
   if (mode === 'false') return []
-  let adviceReq: Request = req
-  if (reqPublicOperation(req)) {
-    const englishReq = {
-      path: req.path,
-      query: req.query,
-      __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
-    } as any
-    const dataset = reqDatasetOptional(req)
-    if (dataset) setReqDataset(englishReq, dataset)
-    adviceReq = englishReq
-  }
-  const hints = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()]
-  if (shouldEmitHint(mode, esStepDurationMs)) hints.push(queryAdvice(adviceReq).trim())
+  const hints = [ignoredParamsAdvice(req).trim(), uncertainFilterAdvice(req).trim(), truncatedMetricsAdvice(req).trim()]
+  if (shouldEmitHint(mode, esStepDurationMs)) hints.push(queryAdvice(req).trim())
   return hints.filter(Boolean)
 }
 
