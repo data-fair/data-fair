@@ -762,24 +762,38 @@ export interface ApproxCountMode {
 
 const RAND_RANGE = 1_000_000
 
+// Worst-case estimate accuracy happens on queries matching barely more than the cap: keep at
+// least this many expected samples there (error ∝ 1/√samples → worst case ~±10 %), whatever
+// the configured cap. Derived, not configured — it must track the cap to keep the guarantee.
+const MIN_BOUNDARY_SAMPLES = 100
+
+// Sampling more than half the dataset would cost about as much as counting it exactly.
+// Only reachable with unusual configurations (a tiny cap raises the accuracy floor) —
+// never with the defaults.
+const MAX_PROBABILITY = 0.5
+
+/**
+ * The `_rand` sampling parameters for a dataset size — shared by the ranked-search default
+ * and count=estimate. The probability balances one cost concern against one accuracy
+ * concern, under a safety ceiling.
+ */
+export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig): { randBound: number, probability: number } => {
+  const costBudget = cfg.sampleTarget / datasetCount // scan ~sampleTarget docs whatever the dataset size
+  const accuracyFloor = MIN_BOUNDARY_SAMPLES / cfg.cap // enough samples for a query right at the cap boundary
+  const probability = Math.min(MAX_PROBABILITY, Math.max(costBudget, accuracyFloor))
+  // `_rand < randBound` can only express an integer bound: quantize, then return the EXACT
+  // probability that bound implements — extrapolating with the pre-rounding value would put
+  // a systematic bias on every estimate
+  const randBound = Math.round(probability * RAND_RANGE)
+  return { randBound, probability: randBound / RAND_RANGE }
+}
+
 /**
  * Decide whether a /lines request runs in approximate-count mode: page-1 ranked text
  * search (q present, _score is the primary sort — commons.ts appends _score only when
  * there is a q and no explicit sort) on a large dataset, with no param that already
  * controls counting. Returns the sampling parameters, or null for exact behaviour.
  */
-// Worst-case estimate accuracy happens on queries matching barely more than the cap: keep at
-// least this many expected samples there (error ∝ 1/√samples → worst case ~±10 %), whatever
-// the configured cap. Derived, not configured — it must track the cap to keep the guarantee.
-const MIN_BOUNDARY_SAMPLES = 100
-
-/** Sampling parameters for a dataset size — shared by the ranked-search cap mode and count=estimate. */
-export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig): { randBound: number, probability: number } => {
-  const probability = Math.min(0.5, Math.max(MIN_BOUNDARY_SAMPLES / cfg.cap, cfg.sampleTarget / datasetCount))
-  const randBound = Math.round(probability * RAND_RANGE)
-  return { randBound, probability: randBound / RAND_RANGE }
-}
-
 export const getApproxCountMode = (
   dataset: { count?: number },
   query: Record<string, any>,
