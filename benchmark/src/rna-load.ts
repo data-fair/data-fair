@@ -59,10 +59,11 @@ const mappings = {
 // on both versions carry the same analysis plugins)
 const got = await es(values.es8!, 'GET', `/${values.analysisFrom}`)
 const analysis = (Object.values(got)[0] as any).settings.index.analysis
+// pass --es7=skip (or --es8=skip) to load a single cluster
 const targets = [
   { name: 'es8', base: values.es8! },
   { name: 'es7', base: values.es7! }
-]
+].filter(t => t.base !== 'skip')
 for (const t of targets) {
   await es(t.base, 'DELETE', `/${values.index}`).catch(() => {})
   await es(t.base, 'PUT', `/${values.index}`, {

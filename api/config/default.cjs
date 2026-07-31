@@ -98,7 +98,7 @@ module.exports = {
     approxCount: {
       minDatasetSize: 100000, // only datasets at least this big use estimates (null = feature off)
       cap: 10000, // the exactness horizon: totals up to this are exact, estimated beyond
-      sampleTarget: 100000 // the count leg scans ~this many docs whatever the dataset size
+      sampleTarget: 20000 // probe/count-leg cost budget: ~this many docs scanned whatever the dataset size (measured: probes stay 1-6ms at this size; raising it buys narrower totalMarginPct at linear probe cost)
     },
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value

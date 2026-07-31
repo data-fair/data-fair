@@ -26,7 +26,7 @@ for (let i = 0; i < 2000; i++) push('commun seulement')
 for (let i = 0; i < 200; i++) push('grand ensemble')
 for (let i = 0; i < 40; i++) push('petit exemple')
 
-const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
+const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 20000 }
 const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000 }
 
 test.describe('q_mode adapt — common words ignored in filtering', () => {

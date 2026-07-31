@@ -24,7 +24,7 @@ const rows = Array.from({ length: N }, (_, i) => ({
 }))
 const EXACT = rows.filter(r => r.str.startsWith('label')).length
 
-const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
+const defaultCfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 20000 }
 const testCfg = { minDatasetSize: 1000, cap: 100, sampleTarget: 1000 }
 // probability = clamp(1000/2500, floor 100/100 = 1, 0.5) = 0.5 → sampled ≈ 0.5·EXACT, stderr ≈ 2.1%
 

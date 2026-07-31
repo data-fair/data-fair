@@ -500,6 +500,40 @@ Tools: `rna-load.ts` (loader), `rna-check.ts --node=… [--cold]` (measurement).
 
 ---
 
+## 13. Implementation-cost audit — do the design benchmarks cover the shipped code? (2026-07-31)
+
+The design benchmarks (§11–12) measured *design-shaped* bodies; the shipped implementation
+differs in three ways that were re-measured with implementation-faithful shapes
+(`buildQClauses`-like clauses, filters-agg probe, conjunction `_msearch`,
+score-broad-match-strict main query) on the reloaded `bench-rna` corpus (3.29M rows),
+with `request_cache=false` — the earlier warm probe numbers (0–1 ms) were shard-request-cache
+flattery, and the config-derived sampling probability (sampleTarget/count, clamped) produced a
+100k-doc slice where the benchmarks had measured 33k (p=0.01).
+
+Uncached probe1 (filters agg, per-word counts + OR total), real corpus, by slice size:
+
+| words | slice 100k | 33k | 20k | 10k |
+|---|---:|---:|---:|---:|
+| 2 | 4 ms | 2 | 2 | 1 |
+| 4 | 6 ms | 3 | 2 | 1 |
+| 8 | 16 ms | 8 | 6 | 4 |
+
+probe2 (conjunction `_msearch`) is ~0 ms at every size (leapfrog on the rarest word); the
+main query adds 1–15 ms. Even at the 100k slice the feature stays net-positive everywhere
+(worst case 31 ms total vs 64 ms or-exact baseline). End-to-end through the real API at the
+worst clamp (150k-row dataset → p=0.5, slice 75k, true default config): adapt 11.8 ms vs
+count=exact 10.1 ms — roughly neutral, confirming the win is thinnest near the
+minDatasetSize gate where exact counting is already cheap.
+
+**Consequence — `sampleTarget` lowered 100000 → 20000**: probe1 drops to 1–6 ms across the
+board, and the clamp zone disappears (p=0.5 would need a ≤40k-row dataset, below
+minDatasetSize). Cost of the change: totalMarginPct ~doubles (mid-size result sets ±6→±10 %,
+large ones ±1→±2 %) — honestly reported by the field either way; the boundary worst case is
+governed by MIN_BOUNDARY_SAMPLES and unchanged. Raising sampleTarget back buys narrower
+margins at linear probe cost.
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an
