@@ -108,7 +108,7 @@ const readLines: RequestHandler = async (req, res) => {
       if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
       // the transparency field only appears when adapt actually ignored at least one word
       if (adaptResult.ignored.length) ignoredWords = adaptResult.ignored
-      // the preflight already estimated the chosen rung's total — no separate count leg needed
+      // the preflight already estimated the chosen candidate's total — no separate count leg needed
       approxTotalThunk = () => Promise.resolve({ total: adaptResult.total, marginPct: adaptResult.marginPct })
     }
   }

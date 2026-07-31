@@ -14,7 +14,7 @@ const id = 'qmodeadapt'
 // Deterministic word counts (test cap=100, dataset 2440 rows → probability clamps to 0.5,
 // floorSample = ceil(100 × 0.5 × 1.2) = 60 sampled docs = 120 true docs):
 //  - 60 rows   'commun rare …'      (AND set 60 < ~120 → 'commun' must be dropped from filtering)
-//  - 140 rows  'rare autre …'       (count('rare') = 200 ≥ cap → the rung "require rare" qualifies)
+//  - 140 rows  'rare autre …'       (count('rare') = 200 ≥ cap → the candidate "require rare" qualifies)
 //  - 2000 rows 'commun seulement …' (OR union 2200 ≥ cap → adapt engages)
 //  - 200 rows  'grand ensemble …'   (AND set 200 → nothing needs dropping)
 //  - 40 rows   'petit exemple …'    (OR union 40 < cap → invariant: untouched)

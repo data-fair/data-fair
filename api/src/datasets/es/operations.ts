@@ -839,23 +839,22 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
 }
 
 // Sampling-noise margin (~2σ at MIN_BOUNDARY_SAMPLES) protecting the never-below-cap
-// invariant: a rung qualifies only when its estimate clears cap × this margin, so a rung
-// whose TRUE total sits slightly below the cap cannot be chosen through sampling noise.
-// A statistical constant, deliberately not configuration.
+// invariant: a candidate qualifies only when its estimate clears cap × this margin, so a
+// candidate whose TRUE total sits slightly below the cap cannot be chosen through sampling
+// noise. A statistical constant, deliberately not configuration.
 export const ADAPT_FLOOR_SAFETY = 1.2
 
 /**
- * Adaptive strictness decision from a `_rand`-sampled spectrum of candidate rungs
- * (strictest first). THE INVARIANT: adapt never tightens a search below the exactness
- * horizon (the track_total_hits cap) — the chosen rung is the strictest one whose sampled
- * support clears floorSample = cap × probability × safety, or the loosest rung when none
- * qualifies. A qualifying rung always has ≥ ~cap×probability samples (~100+), so every
- * decision is statistically confident. Rung-generic on purpose: v1's ladder is
- * "require the j rarest words" (see adaptive-q.ts) but the rule serves any ladder.
+ * Pick the strictest candidate whose sampled support clears floorSample — or the last
+ * (loosest) candidate when none does. THE INVARIANT: adapt never tightens a search below
+ * the exactness horizon (the track_total_hits cap): floorSample = cap × probability ×
+ * ADAPT_FLOOR_SAFETY, so a qualifying candidate always represents ≥ cap real matches, with
+ * statistical confidence (≥ ~100 samples). Candidates are ordered strictest-first by the
+ * caller (see adaptive-q.ts).
  */
-export const decideAdaptiveRung = <T extends { sampled: number }> (
-  spectrum: T[],
+export const chooseStrictestCandidate = <T extends { sampledCount: number }> (
+  candidates: T[],
   floorSample: number
 ): T => {
-  return spectrum.find(l => l.sampled >= floorSample) ?? spectrum[spectrum.length - 1]
+  return candidates.find(candidate => candidate.sampledCount >= floorSample) ?? candidates[candidates.length - 1]
 }

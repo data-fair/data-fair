@@ -1,24 +1,27 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, decideAdaptiveRung, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
+import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, chooseStrictestCandidate, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
-// q_mode=adapt: exclude from FILTERING the most common query words — just enough of them that
-// the filtered set stays above the exactness horizon (the track_total_hits cap) — while every
-// word keeps scoring (see buildQClauses' score-broad-match-strict shape). The decision comes
-// from ONE `_rand`-sliced size:0 request (per-word sampled counts via a filters agg + the
-// sampled OR total from hits.total — 0-1ms warm, shard-request-cacheable, deterministic per
-// dataset) plus, when multi-word rungs might qualify, one _msearch of rung conjunction counts.
+// q_mode=adapt: ignore the most frequent words of the search in filtering — just enough of
+// them that the filtered set stays above the exactness horizon (the track_total_hits cap) —
+// while every word keeps scoring (see buildQClauses' score-broad-match-strict shape).
+//
+// The decision is measured on the `_rand < randBound` sample slice, so every count in this
+// module is in SAMPLED DOCS (multiply by 1/probability for real counts). One size:0 search
+// returns the sampled count of the full OR search plus a per-word sampled count (filters
+// agg); when several words might be required together, one _msearch counts those
+// combinations. All probe requests are size:0 and deterministic → shard-request-cacheable.
 //
 // Outcomes (THE INVARIANT: searches totalling under the cap run exactly as today):
-//   - OR estimate under the cap            → null (plain behaviour, exact total)
-//   - the all-words rung clears the floor  → nothing ignored (ignored: [])
-//   - some rung clears the floor           → { required: j rarest words, ignored: the rest }
-//   - no rung clears the floor             → unrestricted (required: [], plain capped OR)
-// In every non-null case `total` is the `_rand`-extrapolated estimate at the chosen rung, so
-// the /lines pipeline needs no separate count leg.
+//   - OR search under the cap       → null (plain behaviour, exact total)
+//   - all words can be required     → nothing ignored (ignored: [])
+//   - some words must be ignored    → { required: the rarest, ignored: the most frequent }
+//   - even one word is too narrow   → unrestricted (required: [], plain capped OR)
+// The chosen candidate's sampled count also provides the response total, so the /lines
+// pipeline needs no separate count leg.
 
 export interface AdaptResult {
   required: string[]
@@ -48,11 +51,19 @@ const esSearch = async (client: Client, dataset: any, body: any, abortContext?: 
 // ignoring a word the user explicitly required (+), negated (-), quoted or grouped.
 const SQS_SYNTAX = /[+\-|"*()~\\]/
 
-// Hard structural bound on the preflight fan-out: only the first MAX_ADAPT_WORDS words enter
-// the rung ladder, so an adapt request costs AT MOST 3 ES round trips whatever the query —
-// the filters-agg preflight (≤ MAX_ADAPT_WORDS buckets), one _msearch of
-// ≤ MAX_ADAPT_WORDS-1 rung counts (upper-bound-pruned), and the main search.
+// Hard structural bound on the preflight fan-out: only the first MAX_ADAPT_WORDS words are
+// considered, so an adapt request costs AT MOST 3 ES round trips whatever the query — the
+// filters-agg probe (≤ MAX_ADAPT_WORDS buckets), one _msearch of ≤ MAX_ADAPT_WORDS-1
+// combination counts, and the main search.
 const MAX_ADAPT_WORDS = 8
+
+// A possible outcome: require the `required` words (a rarest-first prefix of the query's
+// words), ignore the rest. `sampledCount` is the size of that filtered set on the sample slice.
+interface Candidate {
+  required: string[]
+  ignored: string[]
+  sampledCount: number
+}
 
 export const runAdaptivePreflight = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<AdaptResult | null> => {
   const q = String(query.q ?? '').trim()
@@ -60,76 +71,80 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   const words = q.split(/\s+/).slice(0, MAX_ADAPT_WORDS)
   if (words.length < 2) return null // nothing to relax on a single word
 
-  // the full OR query (all other filters included) — the preflight measures within that context
+  // the full OR query (all other filters included) — the probes measure within that context
   const orQuery = prepareQuery(dataset, { ...query, q_mode: 'simple', q_required: undefined }).query
-  const randSlice = { range: { _rand: { lt: mode.randBound } } }
-  const wordClause = (word: string) => buildQClauses(dataset, word, undefined, 'simple')
+  const sampleSlice = { range: { _rand: { lt: mode.randBound } } }
+  const wordMatchClauses: Record<string, any> = Object.fromEntries(words.map(word => [word, buildQClauses(dataset, word, undefined, 'simple')]))
 
-  const preflight = await esSearch(client, dataset, {
+  const probe = await esSearch(client, dataset, {
     size: 0,
     track_total_hits: true,
-    query: { bool: { filter: [orQuery, randSlice] } },
-    aggs: { perWord: { filters: { filters: Object.fromEntries(words.map(w => [w, wordClause(w)])) } } }
+    query: { bool: { filter: [orQuery, sampleSlice] } },
+    aggs: { perWord: { filters: { filters: wordMatchClauses } } }
   }, abortContext)
-  const sampledOr = preflight.hits.total.value
+  const orSampledCount = probe.hits.total.value
+  const wordSampledCount: Record<string, number> = {}
+  for (const word of words) wordSampledCount[word] = probe.aggregations.perWord.buckets[word].doc_count
+
+  // both thresholds in sampled-docs units: the cap itself, and the qualification floor
+  // (cap plus a safety margin against sampling noise)
+  const sampledCap = mode.cap * mode.probability
+  const floorSample = Math.ceil(sampledCap * ADAPT_FLOOR_SAFETY)
 
   // under the cap the request must run exactly as today (exact total, full OR semantics)
-  if (sampledOr < mode.cap * mode.probability) return null
+  if (orSampledCount < sampledCap) return null
 
-  const floorSample = Math.ceil(mode.cap * mode.probability * ADAPT_FLOOR_SAFETY)
-  const sampledByWord: Record<string, number> = {}
-  for (const word of words) sampledByWord[word] = preflight.aggregations.perWord.buckets[word].doc_count
-  const byRarity = [...words].sort((a, b) => sampledByWord[a] - sampledByWord[b])
-
-  // rungs strictest-first: require the j rarest words. j=1 counts are exact from the agg;
-  // multi-word rungs are conjunctions — count only those whose upper bound (min of member
-  // counts) clears the floor, all in one _msearch.
-  const rungs: Array<{ required: string[], ignored: string[], sampled: number }> = []
-  const toCount: Array<{ index: number, required: string[] }> = []
-  for (let j = words.length; j >= 1; j--) {
-    const required = byRarity.slice(0, j)
-    const ignored = byRarity.slice(j)
-    if (j === 1) {
-      rungs.push({ required, ignored, sampled: sampledByWord[required[0]] })
-    } else {
-      const upperBound = Math.min(...required.map(w => sampledByWord[w]))
-      rungs.push({ required, ignored, sampled: 0 })
-      if (upperBound >= floorSample) toCount.push({ index: rungs.length - 1, required })
+  // candidates strictest-first: require the `requiredCount` rarest words, ignore the rest.
+  // A single required word is already counted by the agg; a multi-word combination can only
+  // qualify if its rarest member does (its count bounds the conjunction), so only those are
+  // worth counting — all in one _msearch.
+  const wordsByRarity = [...words].sort((a, b) => wordSampledCount[a] - wordSampledCount[b])
+  const candidates: Candidate[] = []
+  const needCounting: Candidate[] = []
+  for (let requiredCount = words.length; requiredCount >= 1; requiredCount--) {
+    const candidate: Candidate = {
+      required: wordsByRarity.slice(0, requiredCount),
+      ignored: wordsByRarity.slice(requiredCount),
+      sampledCount: 0
+    }
+    candidates.push(candidate)
+    if (requiredCount === 1) {
+      candidate.sampledCount = wordSampledCount[candidate.required[0]]
+    } else if (Math.min(...candidate.required.map(word => wordSampledCount[word])) >= floorSample) {
+      needCounting.push(candidate)
     }
   }
-  rungs.push({ required: [], ignored: [], sampled: sampledOr }) // loosest rung: unrestricted
+  candidates.push({ required: [], ignored: [], sampledCount: orSampledCount }) // loosest: unrestricted
 
-  if (toCount.length) {
-    const msearchBody = toCount.flatMap(({ required }) => [
+  if (needCounting.length) {
+    const msearchBody = needCounting.flatMap(candidate => [
       {},
       {
         size: 0,
         track_total_hits: true,
-        // _msearch rejects a `timeout` querystring but accepts it per leg body — same
-        // ES-side bound as every other search (the client requestTimeout stays the backstop)
+        // _msearch rejects a `timeout` querystring but accepts it per body — same ES-side
+        // bound as every other search (the client requestTimeout stays the backstop)
         timeout: config.elasticsearch.searchTimeout,
-        query: { bool: { filter: [orQuery, ...required.map(wordClause), randSlice] } }
+        query: { bool: { filter: [orQuery, ...candidate.required.map(word => wordMatchClauses[word]), sampleSlice] } }
       }
     ])
-    // no `timeout` querystring: _msearch rejects it (the per-request timedEsCall wall-clock
-    // backstop still bounds the whole preflight)
     const res = await timedEsCall(abortContext, () => client.transport.request({
       method: 'POST',
       path: `/${aliasName(dataset)}/_msearch`,
       bulkBody: msearchBody
     }, { ...abortContext, meta: true }))
     const responses: any[] = ((res as any).body).responses
-    for (const [i, { index }] of toCount.entries()) {
+    for (const [i, candidate] of needCounting.entries()) {
       if (responses[i].error) throw httpError(500, '[internal] adapt preflight msearch failed: ' + JSON.stringify(responses[i].error).slice(0, 200))
-      rungs[index].sampled = responses[i].hits.total.value
+      candidate.sampledCount = responses[i].hits.total.value
     }
   }
 
-  const chosen = decideAdaptiveRung(rungs, floorSample)
+  const chosen = chooseStrictestCandidate(candidates, floorSample)
   return {
     required: chosen.required,
     ignored: chosen.ignored,
-    total: extrapolateApproxTotal(chosen.sampled, mode),
-    marginPct: estimateMarginPct(chosen.sampled)
+    total: extrapolateApproxTotal(chosen.sampledCount, mode),
+    marginPct: estimateMarginPct(chosen.sampledCount)
   }
 }
