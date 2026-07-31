@@ -8,7 +8,7 @@ import { reqUser } from '@data-fair/lib-express'
 const debugReq = debug('df:observe:req')
 
 // Threshold above which a request step is considered slow. Used both for the slow-request log
-// below and as the auto-mode trigger for query hints (see query-advice.ts attachQueryHint).
+// below and as the auto-mode trigger for query hints (see query-advice.ts buildQueryHints).
 export const SLOW_REQUEST_THRESHOLD_MS = 1000
 
 const reqStepHisto = new client.Histogram({

@@ -486,7 +486,8 @@ export const buildQClauses = (
   q: string,
   qFields: string[] | undefined,
   qMode: string | undefined,
-  sqsOptions: any = {}
+  sqsOptions: any = {},
+  requiredWords?: string[]
 ): any => {
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
@@ -525,7 +526,23 @@ export const buildQClauses = (
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
     }
   }
-  return { bool: { should, minimum_should_match: 1 } }
+  const scored = { bool: { should, minimum_should_match: 1 } }
+
+  // "score broad, match strict": q_mode=and and q_required tighten the MATCH SET through a
+  // non-scoring filter while scores stay pure OR — the page is OR's page restricted to the
+  // tightened set, and the selective filter leads the iteration. Requirements must NEVER move
+  // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
+  // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
+  if (qMode !== 'complete') {
+    const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
+    if (qMode === 'and' && matchFields.length) {
+      return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
+    }
+    if (requiredWords?.length && matchFields.length) {
+      return { bool: { must: [scored], filter: requiredWords.map(word => ({ multi_match: { query: word, fields: matchFields } })) } }
+    }
+  }
+  return scored
 }
 
 // Pure mapping builder used by manage-indices.indexDefinition. Given the already-extended
@@ -759,4 +776,137 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
     should.push({ bool: { filter: [{ term: { _index: descendant.index } }, ...virtualFilterClauses(descendant.filters)] } })
   }
   return { bool: { minimum_should_match: 1, should } }
+}
+
+// ---- Approximate counts for ranked text searches (see load-management.md §9) ----
+
+export interface ApproxCountConfig {
+  minDatasetSize: number | null
+  cap: number
+  sampleTarget: number
+}
+
+export interface ApproxCountMode {
+  cap: number
+  /** exclusive upper bound of the `_rand` sample slice (`_rand` is uniform in [0, 1_000_000)) */
+  randBound: number
+  /** exact sampling probability = randBound / 1_000_000 */
+  probability: number
+}
+
+const RAND_RANGE = 1_000_000
+
+// Worst-case estimate accuracy happens on queries matching barely more than the cap: keep at
+// least this many expected samples there (error ∝ 1/√samples → worst case ~±10 %), whatever
+// the configured cap. Derived, not configured — it must track the cap to keep the guarantee.
+const MIN_BOUNDARY_SAMPLES = 100
+
+// Sampling more than half the dataset would cost about as much as counting it exactly.
+// Only reachable with unusual configurations (a tiny cap raises the accuracy floor) —
+// never with the defaults.
+const MAX_PROBABILITY = 0.5
+
+/**
+ * The `_rand` sampling parameters for a dataset size — shared by the ranked-search default
+ * and count=estimate. The probability balances one cost concern against one accuracy
+ * concern, under a safety ceiling.
+ */
+export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig): { randBound: number, probability: number } => {
+  const costBudget = cfg.sampleTarget / datasetCount // scan ~sampleTarget docs whatever the dataset size
+  const accuracyFloor = MIN_BOUNDARY_SAMPLES / cfg.cap // enough samples for a query right at the cap boundary
+  const probability = Math.min(MAX_PROBABILITY, Math.max(costBudget, accuracyFloor))
+  // `_rand < randBound` can only express an integer bound: quantize, then return the EXACT
+  // probability that bound implements — extrapolating with the pre-rounding value would put
+  // a systematic bias on every estimate
+  const randBound = Math.round(probability * RAND_RANGE)
+  return { randBound, probability: randBound / RAND_RANGE }
+}
+
+/**
+ * Is this request's total estimated? The count model in one sentence: totals are exact by
+ * default, EXCEPT ranked text searches on large datasets where they are estimated —
+ * count=estimate opts any query into the same estimation, count=exact opts out. Returns
+ * the sampling mode when the total is estimated (and the feature is enabled), null when it
+ * stays exact (or is not computed at all).
+ */
+export const getCountMode = (
+  dataset: { count?: number },
+  query: Record<string, any>,
+  cfg: ApproxCountConfig
+): ApproxCountMode | null => {
+  if (cfg.minDatasetSize == null) return null // kill switch: no sampling anywhere
+  if (typeof dataset.count !== 'number' || dataset.count <= 0) return null
+  if (query.count === 'false' || query.after) return null // no total is computed at all
+  // explicit opt-in: any query shape, any dataset size
+  if (query.count === 'estimate') return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
+  if (query.count === 'exact') return null
+  // the default: only page-1 ranked text searches (q present, _score is the primary sort —
+  // commons.ts appends _score only when there is a q and no explicit sort) on large datasets
+  if (dataset.count < cfg.minDatasetSize) return null
+  if (!String(query.q ?? query._c_q ?? '').trim()) return null
+  if (query.sort || query.collapse) return null
+  return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
+}
+
+/** Extrapolate the sample-slice count; the first request saw relation "gte", so never report ≤ cap. */
+export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMode): number =>
+  Math.max(mode.cap + 1, Math.round(sampledCount / mode.probability))
+
+/**
+ * Margin of error of a sampled estimate, in percent (meta.totalMarginPct): the ~95 %
+ * confidence half-width of a binomial sample, ±1.96/√samples, rounded UP to a whole percent
+ * and clamped to [1, 100] — presented as a margin, never as a hard bound.
+ */
+export const estimateMarginPct = (sampledCount: number): number =>
+  sampledCount > 0 ? Math.min(100, Math.max(1, Math.ceil(100 * 1.96 / Math.sqrt(sampledCount)))) : 100
+
+// ---- q_mode extension: or|and|adapt on top of legacy simple|complete ----
+
+export type QMode = 'simple' | 'complete' | 'and' | 'adapt'
+
+// adapt is the default: on large datasets, ranked multi-word searches ignore their
+// over-common words in filtering (never below the cap — see adaptive-q.ts); everywhere
+// else adapt degrades to plain OR, so small/filtered/exact requests behave as always.
+export const DEFAULT_Q_MODE = 'adapt'
+
+export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
+  const value = raw ?? dflt
+  if (value === 'or' || value === 'simple') return 'simple'
+  if (value === 'complete' || value === 'and' || value === 'adapt') return value
+  throw httpError(400, `q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
+}
+
+/**
+ * Parse and validate q_required — the words a search must match (the non-scoring filter of
+ * the score-broad-match-strict shape; pinned by q_mode=adapt in next links, or set
+ * manually). Every word must be a whitespace token of q, else 400.
+ */
+export const parseQRequired = (q: string, raw: string): string[] => {
+  const qWords = new Set(q.split(/\s+/))
+  const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
+  for (const word of words) {
+    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+  }
+  return words
+}
+
+// Sampling-noise margin (~2σ at MIN_BOUNDARY_SAMPLES) protecting the never-below-cap
+// invariant: a candidate qualifies only when its estimate clears cap × this margin, so a
+// candidate whose TRUE total sits slightly below the cap cannot be chosen through sampling
+// noise. A statistical constant, deliberately not configuration.
+export const ADAPT_FLOOR_SAFETY = 1.2
+
+/**
+ * Pick the strictest candidate whose sampled support clears floorSample — or the last
+ * (loosest) candidate when none does. THE INVARIANT: adapt never tightens a search below
+ * the exactness horizon (the track_total_hits cap): floorSample = cap × probability ×
+ * ADAPT_FLOOR_SAFETY, so a qualifying candidate always represents ≥ cap real matches, with
+ * statistical confidence (≥ ~100 samples). Candidates are ordered strictest-first by the
+ * caller (see adaptive-q.ts).
+ */
+export const chooseStrictestCandidate = <T extends { sampledCount: number }> (
+  candidates: T[],
+  floorSample: number
+): T => {
+  return candidates.find(candidate => candidate.sampledCount >= floorSample) ?? candidates[candidates.length - 1]
 }

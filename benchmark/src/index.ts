@@ -1,152 +1,163 @@
 import { parseArgs } from 'node:util'
-import autocannon from 'autocannon'
-import { init, seedDatasets } from './setup.ts'
-import { scenarios, buildContext, type HttpScenario, type OneShotScenario } from './scenarios.ts'
-import { printResults, saveResults, type ScenarioResult, type HttpScenarioResult, type OneShotScenarioResult } from './reporter.ts'
-import { sampleMetrics, diffSteps, rssDeltaMb, type StepDelta } from './metrics.ts'
+import { init, getAxios } from './setup.ts'
+import { presets, getPreset } from './presets.ts'
+import { seedDataset } from './seeder.ts'
+import { resolveIndex, reindexWithShards } from './es.ts'
+import { generateSchema, schemaContext } from './generator.ts'
+import { selectExperiments } from './experiments.ts'
+import { runQuery } from './runner.ts'
+import { aggregate } from './metrics.ts'
+import { runThroughput } from './throughput.ts'
+import {
+  printExperimentReport, saveExperimentResults,
+  type ExperimentResult, type VariantResult
+} from './reporter.ts'
 
-const { values: args } = parseArgs({
-  options: {
-    scenarios: { type: 'string', default: 'reads' },
-    duration: { type: 'string', default: '10' },
-    connections: { type: 'string', default: '10' },
-    warmup: { type: 'string', default: '3' },
-    repetitions: { type: 'string' },
-    'no-save': { type: 'boolean', default: false }
-  }
-})
+const USAGE = `data-fair benchmark — Elasticsearch query evaluation harness
 
-// groups: 'reads' = all http GET scenarios, 'writes' = all oneshot + http write scenarios, 'all' = everything
-const isWrite = (s: typeof scenarios[0]) => s.kind === 'oneshot' || s.name.includes('write')
-const selectedNames = args.scenarios === 'all'
-  ? scenarios.map(s => s.name)
-  : args.scenarios === 'reads'
-    ? scenarios.filter(s => !isWrite(s)).map(s => s.name)
-    : args.scenarios === 'writes'
-      ? scenarios.filter(isWrite).map(s => s.name)
-      : args.scenarios!.split(',')
+Usage: npm run benchmark -- <command> [options]
 
-const selectedScenarios = scenarios.filter(s => selectedNames.includes(s.name))
-if (selectedScenarios.length === 0) {
-  console.error(`No matching scenarios. Available: ${scenarios.map(s => s.name).join(', ')} (or groups: reads, writes, all)`)
-  process.exit(1)
-}
+Commands:
+  seed        Generate & idempotently load datasets
+              --preset=<all|name,...>  --rows=<n>  --shards=<n>  --seed=<n>
+  experiment  Raw-ES A/B: baseline vs. variant query bodies
+              --name=<all|experiment|group>  --runs=<n>  --rows=<n>  --profile  --cold  --no-save
+              --no-seed  (skip API auth & seeding — requires an already-seeded index)
+  query       Run a real data-fair API request N times
+              --dataset=<id>  --params=<querystring>  --runs=<n>
+  throughput  Autocannon concurrency test over GET /lines
+              --scenarios=<all|name,...>  --duration=<s>  --connections=<n>  --warmup=<s>  --no-save
 
-const duration = parseInt(args.duration!)
-const connections = parseInt(args.connections!)
-const warmupDuration = parseInt(args.warmup!)
+Presets: ${Object.keys(presets).join(', ')}`
 
-async function runHttpScenario (scenario: HttpScenario, ctx: ReturnType<typeof buildContext>): Promise<HttpScenarioResult> {
-  if (scenario.prepare) await scenario.prepare(ctx)
-  const spec = scenario.request(ctx)
-  // always bypass the nginx reverse-proxy cache: we measure the API, not nginx
-  // (without this, anonymous GET scenarios are ~99% served by the proxy cache)
-  spec.headers = { 'x-cache-bypass': '1', ...spec.headers }
-  const url = ctx.baseUrl + spec.path
-
-  // probe with the exact same request shape autocannon will send
-  const probe = await ctx.anonAxios.request({
-    url: spec.path,
-    method: spec.method ?? 'GET',
-    headers: spec.headers,
-    data: spec.body
+async function seedCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      preset: { type: 'string', default: 'all' },
+      rows: { type: 'string' },
+      shards: { type: 'string' },
+      seed: { type: 'string' }
+    }
   })
-  const expected = scenario.expectStatus ?? 200
-  if (probe.status !== expected) {
-    throw new Error(`Pre-check failed for ${scenario.name}: status ${probe.status} (expected ${expected})`)
-  }
-
-  const opts = {
-    url,
-    connections,
-    method: (spec.method ?? 'GET') as 'GET' | 'POST' | 'PUT',
-    headers: spec.headers,
-    body: spec.body,
-    idReplacement: spec.idReplacement
-  }
-
-  if (warmupDuration > 0) {
-    console.log(`  warmup (${warmupDuration}s)...`)
-    await autocannon({ ...opts, duration: warmupDuration })
-  }
-
-  console.log(`  benchmarking (${duration}s, ${connections} connections)...`)
-  const before = await sampleMetrics()
-  const result = await autocannon({ ...opts, duration })
-  const after = await sampleMetrics()
-
-  return {
-    kind: 'http',
-    name: scenario.name,
-    description: scenario.description,
-    latency: { p50: result.latency.p50, p97_5: result.latency.p97_5, p99: result.latency.p99, avg: result.latency.average },
-    throughput: { avg: result.requests.average, total: result.requests.total },
-    errors: result.errors,
-    non2xx: result.non2xx,
-    duration,
-    steps: diffSteps(before, after),
-    rssDeltaMb: rssDeltaMb(before, after)
-  }
-}
-
-async function runOneShotScenario (scenario: OneShotScenario, ctx: ReturnType<typeof buildContext>): Promise<OneShotScenarioResult> {
-  const repetitions = args.repetitions ? parseInt(args.repetitions) : (scenario.repetitions ?? 1)
-  const metrics: Record<string, number[]> = {}
-  let lastSteps: StepDelta[] | undefined
-  let lastRss: number | undefined
-  for (let rep = 0; rep < repetitions; rep++) {
-    if (scenario.prepare) {
-      console.log(`  rep ${rep + 1}/${repetitions}: preparing...`)
-      await scenario.prepare(ctx)
-    }
-    console.log(`  rep ${rep + 1}/${repetitions}: running...`)
-    // sample server-side metrics around the last repetition only (one representative run)
-    const isLast = rep === repetitions - 1
-    const before = isLast ? await sampleMetrics() : null
-    const m = await scenario.run(ctx)
-    const after = isLast ? await sampleMetrics() : null
-    if (isLast) {
-      lastSteps = diffSteps(before, after)
-      lastRss = rssDeltaMb(before, after)
-    }
-    for (const [key, value] of Object.entries(m)) {
-      (metrics[key] = metrics[key] || []).push(value)
-    }
-  }
-  return { kind: 'oneshot', name: scenario.name, description: scenario.description, repetitions, metrics, steps: lastSteps, rssDeltaMb: lastRss }
-}
-
-async function main () {
-  console.log('Starting benchmark...')
-  console.log(`Scenarios: ${selectedScenarios.map(s => s.name).join(', ')}`)
-  console.log(`Duration: ${duration}s, Connections: ${connections}, Warmup: ${warmupDuration}s`)
-  console.log('')
-
   await init()
-  await seedDatasets()
-  const ctx = buildContext()
-
-  const results: ScenarioResult[] = []
-  for (const scenario of selectedScenarios) {
-    console.log(`\n[${scenario.name}] ${scenario.description}`)
-    try {
-      const result = scenario.kind === 'http'
-        ? await runHttpScenario(scenario, ctx)
-        : await runOneShotScenario(scenario, ctx)
-      results.push(result)
-    } catch (err) {
-      console.error(`  FAILED: ${err}`)
+  const names = values.preset === 'all' ? Object.keys(presets) : values.preset!.split(',')
+  for (const name of names) {
+    const spec = getPreset(name)
+    if (values.rows) spec.rows = parseInt(values.rows)
+    if (values.seed) spec.seed = parseInt(values.seed)
+    if (values.shards) spec.shards = parseInt(values.shards)
+    await seedDataset(spec)
+    if (spec.shards) {
+      const index = await resolveIndex(spec.id)
+      const copy = await reindexWithShards(index, spec.shards)
+      console.log(`[seed] ${spec.id}: ${spec.shards}-shard copy ready at ${copy}`)
     }
   }
-
-  printResults(results)
-  if (!args['no-save']) saveResults(results)
 }
 
-main().then(() => {
-  // keep-alive sockets (axios agents, autocannon) hold the event loop open: exit explicitly
-  process.exit(0)
-}, err => {
-  console.error('Benchmark failed:', err)
-  process.exit(1)
-})
+async function experimentCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      name: { type: 'string', default: 'all' },
+      runs: { type: 'string', default: '10' },
+      rows: { type: 'string' },
+      profile: { type: 'boolean', default: false },
+      cold: { type: 'boolean', default: false },
+      'no-save': { type: 'boolean', default: false },
+      // the experiments are raw-ES A/B — with an already-seeded index they don't
+      // need the web stack (nginx / simple-directory / API) at all
+      'no-seed': { type: 'boolean', default: false }
+    }
+  })
+  if (!values['no-seed']) await init()
+  const results: ExperimentResult[] = []
+  for (const exp of selectExperiments(values.name!)) {
+    const spec = getPreset(exp.preset)
+    if (values.rows) spec.rows = parseInt(values.rows)
+    if (!values['no-seed']) await seedDataset(spec)
+    const index = await resolveIndex(spec.id)
+    const ctx = schemaContext(generateSchema(spec))
+    const variants = [
+      { ...exp.baseline, isBaseline: true },
+      ...exp.variants.map(v => ({ ...v, isBaseline: false }))
+    ]
+    console.log(`\n[experiment] ${exp.name}`)
+    const variantResults: VariantResult[] = []
+    for (const v of variants) {
+      console.log(`  running variant: ${v.name}`)
+      const result = await runQuery({
+        index,
+        body: v.body(ctx),
+        runs: parseInt(values.runs!),
+        cold: values.cold,
+        profile: values.profile,
+        samplerProbability: v.samplerProbability
+      })
+      variantResults.push({ variant: v.name, description: v.description, isBaseline: v.isBaseline, result })
+    }
+    const er: ExperimentResult = {
+      experiment: exp.name,
+      description: exp.description,
+      preset: exp.preset,
+      rows: spec.rows,
+      variants: variantResults
+    }
+    printExperimentReport(er)
+    results.push(er)
+  }
+  if (!values['no-save']) saveExperimentResults(results)
+}
+
+async function queryCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      dataset: { type: 'string' },
+      params: { type: 'string', default: '' },
+      runs: { type: 'string', default: '10' }
+    }
+  })
+  if (!values.dataset) throw new Error('query: --dataset is required')
+  await init()
+  const ax = getAxios()
+  const runs = parseInt(values.runs!)
+  const url = `/api/v1/datasets/${values.dataset}/lines?${values.params}`
+  const latencies: number[] = []
+  let total = 0
+  let bytes = 0
+  for (let r = 0; r < runs; r++) {
+    const t0 = performance.now()
+    const res = await ax.get(url)
+    latencies.push(performance.now() - t0)
+    total = res.data.total
+    bytes = Buffer.byteLength(JSON.stringify(res.data))
+  }
+  const e2e = aggregate(latencies)
+  console.log('')
+  console.log(`Query: GET ${url}`)
+  console.log(`runs=${runs}  total=${total}  bytes=${bytes}`)
+  console.log(`e2e latency (ms): p50=${e2e.median.toFixed(1)}  min=${e2e.min.toFixed(1)}  max=${e2e.max.toFixed(1)}`)
+}
+
+async function main (): Promise<void> {
+  const [command, ...rest] = process.argv.slice(2)
+  switch (command) {
+    case 'seed': await seedCommand(rest); break
+    case 'experiment': await experimentCommand(rest); break
+    case 'query': await queryCommand(rest); break
+    case 'throughput': await runThroughput(rest); break
+    default: console.log(USAGE)
+  }
+}
+
+// Exit explicitly: axiosAuth keeps a token-refresh timer running, so the process
+// would otherwise hang after the command's work is done.
+main().then(
+  () => process.exit(0),
+  (err) => {
+    console.error('Benchmark failed:', err)
+    process.exit(1)
+  }
+)

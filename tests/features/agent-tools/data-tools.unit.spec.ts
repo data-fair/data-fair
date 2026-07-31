@@ -306,21 +306,31 @@ test.describe('calculate_metric formatResult', () => {
 
 // --- hint surfacing ---
 
-test.describe('formatResult surfaces the API hint', () => {
-  test('search_data includes the hint line when present', () => {
-    const { text } = searchData.formatResult({ total: 1, results: [{ a: 1 }], hint: 'Some parameters were ignored : _c_x' }, { datasetId: 'd' } as any)
-    assert.match(text, /Some parameters were ignored/)
+test.describe('formatResult surfaces the API meta', () => {
+  test('search_data includes one hint line per meta.hints entry', () => {
+    const { text } = searchData.formatResult({ total: 1, results: [{ a: 1 }], meta: { hints: ['Some parameters were ignored : _c_x', 'use select'] } }, { datasetId: 'd' } as any)
+    assert.match(text, /> Hint: Some parameters were ignored/)
+    assert.match(text, /> Hint: use select/)
   })
   test('search_data omits the hint line when absent', () => {
     const { text } = searchData.formatResult({ total: 1, results: [{ a: 1 }] }, { datasetId: 'd' } as any)
     assert.doesNotMatch(text, /Hint:/)
   })
+  test('search_data reports an estimated total with its margin', () => {
+    const { text } = searchData.formatResult({ total: 150000, results: [{ a: 1 }], meta: { totalMarginPct: 2 } }, { datasetId: 'd' } as any)
+    assert.match(text, /~150000.*±2% sampled estimate/)
+  })
+  test('search_data reports the words adapt ignored', () => {
+    const { text } = searchData.formatResult({ total: 150000, results: [{ a: 1 }], meta: { totalMarginPct: 2, ignoredWords: ['rue'] } }, { datasetId: 'd' } as any)
+    assert.match(text, /ignored for filtering/)
+    assert.match(text, /rue/)
+  })
   test('aggregate_data includes the hint line when present', () => {
-    const { text } = aggregateData.formatResult({ total: 1, total_values: 1, total_other: 0, aggs: [], hint: 'ignored param X' }, { datasetId: 'd' } as any)
+    const { text } = aggregateData.formatResult({ total: 1, total_values: 1, total_other: 0, aggs: [], meta: { hints: ['ignored param X'] } }, { datasetId: 'd' } as any)
     assert.match(text, /ignored param X/)
   })
   test('calculate_metric includes the hint line when present', () => {
-    const { text } = calculateMetric.formatResult({ total: 1, metric: 5, hint: 'ignored param Y' }, { datasetId: 'd', metric: 'avg', fieldKey: 'age' } as any)
+    const { text } = calculateMetric.formatResult({ total: 1, metric: 5, meta: { hints: ['ignored param Y'] } }, { datasetId: 'd', metric: 'avg', fieldKey: 'age' } as any)
     assert.match(text, /ignored param Y/)
   })
 })

@@ -74,7 +74,7 @@ const fakeRes = () => {
 
 test.describe('lines-pipeline parity', () => {
   test('streamJson deep-equals prepareResultItem output (incl hint)', async () => {
-    const { bufferedSource, streamJson, getFlatten, esUtils, attachQueryHint, setReqDataset, setReqPublicBaseUrl } = await load()
+    const { bufferedSource, streamJson, getFlatten, esUtils, buildQueryHints, setReqDataset, setReqPublicBaseUrl } = await load()
 
     // hint=true forces the query hint so parity covers the hint field too.
     const query = { hint: 'true' }
@@ -102,13 +102,13 @@ test.describe('lines-pipeline parity', () => {
     const esResp = esResponse()
     const ctx = esUtils.prepareResultContext(dataset, query)
     const flatten = getFlatten(dataset, (query as any).arrays === 'true')
-    let ref: any = {
+    const ref: any = {
       total: esResp.hits.total.value,
+      meta: { hints: buildQueryHints(req, 0) },
       results: esResp.hits.hits.map(h => esUtils.prepareResultItem(h, dataset, query, flatten, publicBaseUrl, ctx))
     }
-    ref = attachQueryHint(req, 0, ref)
 
-    assert.ok(ref.hint, 'reference should carry a hint so this asserts hint parity')
+    assert.ok(ref.meta.hints.length, 'reference should carry hints so this asserts meta.hints parity')
     assert.deepEqual(streamed, ref)
   })
 

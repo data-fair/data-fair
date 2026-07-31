@@ -111,10 +111,11 @@ export const jsonBodySuffix = ']}'
 export const buildJsonBody = (head: Record<string, any>, rows: string[]): string =>
   jsonBodyPrefix(head) + rows.join(',') + jsonBodySuffix
 
-// FeatureCollection body, key order type → total? → features → bbox? (matches the buffered
-// `res.send(result2geojson(esResponse) + bbox)` output). Same prefix/suffix sharing as the json envelope.
-export const geojsonBodyPrefix = (total: number | undefined | null): string =>
-  '{"type":"FeatureCollection"' + (total != null ? ',"total":' + total : '') + ',"features":['
+// FeatureCollection body, key order type → total? → meta? → features → bbox? (matches the buffered
+// `res.send(result2geojson(esResponse) + bbox)` output; meta carries the approximate-count /
+// adapt transparency fields, see lines-pipeline.ts). Same prefix/suffix sharing as the json envelope.
+export const geojsonBodyPrefix = (total: number | undefined | null, meta?: Record<string, any>): string =>
+  '{"type":"FeatureCollection"' + (total != null ? ',"total":' + total : '') + (meta ? ',"meta":' + JSON.stringify(meta) : '') + ',"features":['
 export const geojsonBodySuffix = (bbox: any): string =>
   ']' + (bbox !== undefined ? ',"bbox":' + JSON.stringify(bbox) : '') + '}'
 export const buildGeojsonBody = (total: number | undefined | null, features: string[], bbox: any): string =>

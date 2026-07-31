@@ -57,10 +57,12 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
   })
 
   const total = ref<number>()
+  type LinesMeta = { totalMarginPct?: number, ignoredWords?: string[], hints?: string[] }
+  const meta = ref<LinesMeta>()
   const next = ref<string>()
   const results = ref<ExtendedResult[]>([])
 
-  type Lines = { total: number, next?: string, results: Record<string, any>[] }
+  type Lines = { total: number, meta?: LinesMeta, next?: string, results: Record<string, any>[] }
   let abortController: AbortController | undefined
   const fetchResults = useAsyncAction(async (reset?: boolean) => {
     if (!next.value) return
@@ -115,7 +117,11 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (reset) results.value = extendedResults
     else results.value.push(...extendedResults)
     next.value = data.next
-    if (data.total !== undefined) total.value = data.total
+    if (data.total !== undefined) {
+      total.value = data.total
+      // assigned together with total (page 1 only) so navigating back to an exact query clears it
+      meta.value = data.meta
+    }
   })
 
   const reset = () => {
@@ -126,7 +132,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
   }
   watch(baseFetchUrl, reset, { immediate: true })
 
-  return { baseFetchUrl, total, next, results, fetchResults, truncate }
+  return { baseFetchUrl, total, meta, next, results, fetchResults, truncate }
 }
 
 // FieldValue is kept as `any` because dataset field values come from dynamic API responses

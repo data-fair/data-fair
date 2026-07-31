@@ -33,7 +33,11 @@ import {
   resolveRangeOrPrefixField,
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
-  descendantsFilterClause
+  descendantsFilterClause,
+  getCountMode,
+  parseQMode,
+  parseQRequired,
+  DEFAULT_Q_MODE
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -206,9 +210,14 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   } else if (query.count === 'false') {
     esQuery.track_total_hits = false
   } else if (query.count === 'estimate') {
-    esQuery.track_total_hits = 1000
+    // same cap as the ranked-search default counting mode — exact below, sampled estimate above
+    esQuery.track_total_hits = config.elasticsearch.approxCount.cap
   } else {
-    esQuery.track_total_hits = true
+    // ranked text searches on large datasets cap the exact count (restoring block-max-WAND);
+    // an overflowing total is then estimated from the `_rand` sample slice by the route
+    // (see approx-count.ts). count=exact keeps the exact behaviour (the helper returns null).
+    const countMode = getCountMode(dataset, query, config.elasticsearch.approxCount)
+    esQuery.track_total_hits = countMode ? countMode.cap : true
   }
 
   // Pagination
@@ -325,7 +334,9 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       else must.push(qs)
     }
     if (q) {
-      must.push(buildQClauses(dataset, q, qFields, query.q_mode, sqsOptions))
+      const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
+      const requiredWords = query.q_required ? parseQRequired(q, query.q_required) : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, requiredWords))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

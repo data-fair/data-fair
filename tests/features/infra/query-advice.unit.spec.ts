@@ -1,13 +1,13 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice, uncertainFilterAdvice } from '../../../api/src/misc/utils/query-advice.ts'
+import { queryAdvice, shouldEmitHint, buildQueryHints, attachQueryHints, ignoredParamsAdvice, uncertainFilterAdvice } from '../../../api/src/misc/utils/query-advice.ts'
 import { setReqDataset } from '../../../api/src/misc/utils/req-context.ts'
 
-// minimal fake of the bits of an express Request the helper reads.
-// `__` echoes the key so assertions can match on key names instead of translated text.
+// minimal fake of the bits of an express Request the helper reads (the advice strings are
+// plain English in the module — deliberately not internationalized, see query-advice.ts).
 // the dataset is set through the req-context accessor (symbol-backed), like readDataset does.
 const fakeReq = (path: string, query: Record<string, any> = {}, dataset?: any) => {
-  const req = { path, query, __: (key: string) => key } as any
+  const req = { path, query } as any
   if (dataset !== undefined) setReqDataset(req, dataset)
   return req
 }
@@ -22,68 +22,68 @@ test.describe('queryAdvice', () => {
 
   test('count rule: fires on a /lines request that asks for an exact count', () => {
     const out = queryAdvice(fakeReq('/abc/lines', {}))
-    assert.match(out, /errors\.queryAdviceIntro/)
-    assert.match(out, /errors\.queryAdviceCount/)
+    assert.match(out, /Advice to optimize your queries/)
+    assert.match(out, /count=estimate|count=false to skip the exact total-row count/)
   })
 
   test('count rule: also fires on the ODS records path', () => {
-    assert.match(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', {})), /errors\.queryAdviceCount/)
+    assert.match(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', {})), /count=estimate|count=false to skip the exact total-row count/)
   })
 
   test('count rule: does not fire outside /lines or /records', () => {
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/values_agg', { field: 'a' })), /errors\.queryAdviceCount/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/values_agg', { field: 'a' })), /count=estimate|count=false to skip the exact total-row count/)
   })
 
   test('deepPagination rule: deep native page or ODS offset fires, shallow does not', () => {
-    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '100' })), /errors\.queryAdviceDeepPagination/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '99' })), /errors\.queryAdviceDeepPagination/)
-    assert.match(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '1000' })), /errors\.queryAdviceDeepPagination/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '999' })), /errors\.queryAdviceDeepPagination/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '100' })), /keyset pagination via the after parameter/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '99' })), /keyset pagination via the after parameter/)
+    assert.match(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '1000' })), /keyset pagination via the after parameter/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '999' })), /keyset pagination via the after parameter/)
   })
 
   test('aggSize rule: agg_size >= 100 fires', () => {
-    assert.match(queryAdvice(fakeReq('/abc/values_agg', { field: 'a', agg_size: '100' })), /errors\.queryAdviceAggSize/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/values_agg', { field: 'a', agg_size: '50' })), /errors\.queryAdviceAggSize/)
+    assert.match(queryAdvice(fakeReq('/abc/values_agg', { field: 'a', agg_size: '100' })), /reduce agg_size/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/values_agg', { field: 'a', agg_size: '50' })), /reduce agg_size/)
   })
 
   test('aggSize rule: a multi-level field grouping fires even with a small agg_size', () => {
-    assert.match(queryAdvice(fakeReq('/abc/values_agg', { field: 'a;b', agg_size: '10' })), /errors\.queryAdviceAggSize/)
+    assert.match(queryAdvice(fakeReq('/abc/values_agg', { field: 'a;b', agg_size: '10' })), /reduce agg_size/)
   })
 
   test('size rule: size >= 1000 fires', () => {
-    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', size: '1000' })), /errors\.queryAdviceSize/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', size: '999' })), /errors\.queryAdviceSize/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', size: '1000' })), /fewer results per page/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', size: '999' })), /fewer results per page/)
   })
 
   test('select rule: fires only when the dataset is known, wide, and no select param', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
     const narrow = { schema: Array.from({ length: 5 }, (_, i) => ({ key: 'f' + i })) }
-    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, wide)), /errors\.queryAdviceSelect/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: 'f1,f2' }, wide)), /errors\.queryAdviceSelect/)
-    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: '*' }, wide)), /errors\.queryAdviceSelect/) // select=* == all fields
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, narrow)), /errors\.queryAdviceSelect/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' })), /errors\.queryAdviceSelect/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, wide)), /use the select parameter/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: 'f1,f2' }, wide)), /use the select parameter/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: '*' }, wide)), /use the select parameter/) // select=* == all fields
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, narrow)), /use the select parameter/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' })), /use the select parameter/)
   })
 
   test('multiple rules combine, count first', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
     const out = queryAdvice(fakeReq('/abc/lines', { page: '500', size: '2000' }, wide))
-    assert.match(out, /errors\.queryAdviceCount/)
-    assert.match(out, /errors\.queryAdviceDeepPagination/)
-    assert.match(out, /errors\.queryAdviceSize/)
-    assert.match(out, /errors\.queryAdviceSelect/)
-    assert.ok(out.indexOf('errors.queryAdviceCount') < out.indexOf('errors.queryAdviceDeepPagination'))
+    assert.match(out, /count=estimate|count=false to skip the exact total-row count/)
+    assert.match(out, /keyset pagination via the after parameter/)
+    assert.match(out, /fewer results per page/)
+    assert.match(out, /use the select parameter/)
+    assert.ok(out.indexOf('count=estimate') < out.indexOf('keyset pagination'))
   })
 
   test('qFields rule: fires on a wide dataset searched with q and no q_fields', () => {
     const wide = { schema: Array.from({ length: 31 }, (_, i) => ({ key: 'f' + i, type: 'string' })) }
     const narrow = { schema: Array.from({ length: 5 }, (_, i) => ({ key: 'f' + i, type: 'string' })) }
-    assert.match(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, wide)), /errors\.queryAdviceQFields/)
-    assert.match(queryAdvice(fakeReq('/abc/lines', { _c_q: 'x' }, wide)), /errors\.queryAdviceQFields/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x', q_fields: 'f1,f2' }, wide)), /errors\.queryAdviceQFields/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', {}, wide)), /errors\.queryAdviceQFields/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, narrow)), /errors\.queryAdviceQFields/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' })), /errors\.queryAdviceQFields/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, wide)), /q_fields=col1,col2/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { _c_q: 'x' }, wide)), /q_fields=col1,col2/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x', q_fields: 'f1,f2' }, wide)), /q_fields=col1,col2/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', {}, wide)), /q_fields=col1,col2/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, narrow)), /q_fields=col1,col2/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' })), /q_fields=col1,col2/)
   })
 })
 
@@ -103,65 +103,58 @@ test.describe('shouldEmitHint', () => {
   })
 })
 
-test.describe('attachQueryHint', () => {
-  test('prepends a trimmed advice string when a rule fires and hint=true', () => {
+test.describe('buildQueryHints / attachQueryHints', () => {
+  test('returns standalone entries when a rule fires and hint=true', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
     const req = fakeReq('/abc/lines', { hint: 'true' }, wide)
-    const out = attachQueryHint(req, 0, { total: 5, results: [] })
-    assert.ok(typeof out.hint === 'string')
-    assert.ok((out.hint as string).length > 0)
-    assert.equal((out.hint as string)[0] !== ' ', true) // leading space stripped
-    // hint must appear before existing fields so it lands first in the JSON output
-    assert.equal(Object.keys(out)[0], 'hint')
+    const hints = buildQueryHints(req, 0)
+    assert.ok(hints.length > 0)
+    for (const hint of hints) {
+      assert.ok(typeof hint === 'string' && hint.length > 0)
+      assert.equal(hint[0] !== ' ', true) // entries are trimmed
+    }
   })
-  test('does not attach when hint=false even with a slow query and matching rule', () => {
+  test('empty when hint=false even with a slow query and matching rule', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', { hint: 'false' }, wide)
-    const out = attachQueryHint(req, 99999, { total: 5 })
-    assert.equal('hint' in out, false)
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'false' }, wide), 99999), [])
   })
-  test('does not attach when hint=auto and the query was fast', () => {
+  test('no perf entries when hint=auto and the query was fast', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', {}, wide)
-    const out = attachQueryHint(req, 500, { total: 5 })
-    assert.equal('hint' in out, false)
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', {}, wide), 500), [])
   })
-  test('attaches when hint=auto and the query crossed the slow threshold', () => {
+  test('perf entries appear when hint=auto and the query crossed the slow threshold', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', {}, wide)
-    const out = attachQueryHint(req, 1500, { total: 5 })
-    assert.ok(typeof out.hint === 'string')
+    const hints = buildQueryHints(fakeReq('/abc/lines', {}, wide), 1500)
+    assert.ok(hints.some(h => /use the select parameter/.test(h)))
   })
-  test('does not attach when no rule fires (even with hint=true)', () => {
-    const req = fakeReq('/abc/lines', { hint: 'true', count: 'false', after: '["x"]' })
-    const out = attachQueryHint(req, 99999, { total: 5 })
-    assert.equal('hint' in out, false)
+  test('empty when no rule fires (even with hint=true)', () => {
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'true', count: 'false', after: '["x"]' }), 99999), [])
   })
   test('treats unknown hint values as auto', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', { hint: 'banana' }, wide)
-    assert.equal('hint' in attachQueryHint(req, 500, { total: 5 }), false)
-    assert.ok(typeof attachQueryHint(req, 1500, { total: 5 }).hint === 'string')
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'banana' }, wide), 500), [])
+    assert.ok(buildQueryHints(fakeReq('/abc/lines', { hint: 'banana' }, wide), 1500).length > 0)
   })
-  test('emits the correctness hint on a fast auto query (duration-independent)', () => {
-    const ds = { schema: [{ key: 'ville', type: 'string' }] }
-    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
-    const out = attachQueryHint(req, 0, { total: 5 })
-    assert.match(out.hint as string, /errors\.queryAdviceConceptUseColumn/)
-  })
-  test('hint=false suppresses the correctness hint too', () => {
-    const ds = { schema: [{ key: 'ville', type: 'string' }] }
-    const req = fakeReq('/abc/lines', { hint: 'false', _c_ville_eq: 'Paris' }, ds)
-    assert.equal('hint' in attachQueryHint(req, 0, { total: 5 }), false)
-  })
-  test('combines correctness advice (first) with perf advice on a slow wide query', () => {
+  test('correctness entries are duration-independent, and come before perf entries', () => {
     const ds = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })).concat([{ key: 'ville' } as any]) }
-    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
-    const out = attachQueryHint(req, 1500, { total: 5 })
-    const hint = out.hint as string
-    assert.match(hint, /errors\.queryAdviceConceptUseColumn/)
-    assert.match(hint, /errors\.queryAdviceSelect/)
-    assert.ok(hint.indexOf('errors.queryAdviceIgnoredIntro') < hint.indexOf('errors.queryAdviceIntro'))
+    const fast = buildQueryHints(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds), 0)
+    assert.ok(fast.some(h => /use ville_eq instead/.test(h)))
+    assert.ok(!fast.some(h => /use the select parameter/.test(h)))
+    const slow = buildQueryHints(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds), 1500)
+    const correctnessIdx = slow.findIndex(h => /use ville_eq instead/.test(h))
+    const perfIdx = slow.findIndex(h => /use the select parameter/.test(h))
+    assert.ok(correctnessIdx !== -1 && perfIdx !== -1 && correctnessIdx < perfIdx)
+  })
+  test('attachQueryHints merges into meta.hints, presence-as-signal', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const out: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'true' }, wide), 0, { total: 5 })
+    assert.ok(Array.isArray(out.meta.hints) && out.meta.hints.length > 0)
+    const silent: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'false' }, wide), 0, { total: 5 })
+    assert.equal('meta' in silent, false)
+    // an existing meta on the result is extended, not clobbered
+    const merged: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'true' }, wide), 0, { total: 5, meta: { totalMarginPct: 3 } } as any)
+    assert.equal(merged.meta.totalMarginPct, 3)
+    assert.ok(merged.meta.hints.length > 0)
   })
 })
 
@@ -181,10 +174,10 @@ test.describe('uncertainFilterAdvice', () => {
     assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { wild_starts: 'x' }, flagged)), '')
   })
   test('fires for _starts on a flagged plain column without wildcard', () => {
-    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { plain_starts: 'x' }, flagged)), /errors\.queryAdviceUncertainFilter/)
+    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { plain_starts: 'x' }, flagged)), /values longer than 200 characters/)
   })
   test('fires for _exists on a flagged pure-keyword column (no analyzed fallback)', () => {
-    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { bare_exists: 'true' }, flagged)), /errors\.queryAdviceUncertainFilter/)
+    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { bare_exists: 'true' }, flagged)), /values longer than 200 characters/)
   })
   test('does NOT fire for _exists on a flagged plain column (union covers it)', () => {
     assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { plain_exists: 'true' }, flagged)), '')
@@ -215,21 +208,21 @@ test.describe('ignoredParamsAdvice', () => {
 
   test('Tier 1: _c_ on a column key suggests the bare column filter', () => {
     const out = ignoredParamsAdvice(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds))
-    assert.match(out, /errors\.queryAdviceIgnoredIntro/)
-    assert.match(out, /errors\.queryAdviceConceptUseColumn/)
+    assert.match(out, /Some parameters were ignored/)
+    assert.match(out, /use ville_eq instead/)
   })
 
   test('Tier 2: _c_ matching no concept and no column is flagged as inert', () => {
-    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo_eq: 'x' }, ds)), /errors\.queryAdviceConceptUnknown/)
-    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo: 'x' }, ds)), /errors\.queryAdviceConceptUnknown/)
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo_eq: 'x' }, ds)), /matched no concept in this dataset/)
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo: 'x' }, ds)), /matched no concept in this dataset/)
   })
 
   test('unknown / misspelled parameter is flagged', () => {
-    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' }, ds)), /errors\.queryAdviceUnknownParam/)
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' }, ds)), /not a recognized query parameter/)
   })
 
   test('no schema on request: still flags unrecognized scalar params, skips column checks', () => {
-    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' })), /errors\.queryAdviceUnknownParam/)
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' })), /not a recognized query parameter/)
     assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { size: '10' })), '')
   })
 

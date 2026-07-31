@@ -169,17 +169,31 @@ export default (
     in: 'query',
     name: 'q_mode',
     description: `
-  Ce paramètre permet d'altérer le comportement du paramètre "q".
+  Ce paramètre permet d'altérer le comportement du paramètre "q". Le mode par défaut est "adapt".
 
-  Le mode par défaut "simple" expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
+  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`meta.ignoredWords\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
+
+  Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
   Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
+
+  Le mode "and" exige que chaque mot de la recherche soit présent (le classement des résultats reste celui de la recherche large).
     `,
     schema: {
       title: 'Mode de recherche',
       type: 'string',
-      default: 'simple',
-      enum: ['simple', 'complete']
+      default: 'adapt',
+      enum: ['adapt', 'simple', 'or', 'complete', 'and']
+    }
+  }, {
+    in: 'query',
+    name: 'q_required',
+    description: `
+  Paramètre technique renseigné automatiquement par le mode "adapt" dans les liens de pagination (\`next\`) pour garantir des pages cohérentes : liste de mots de la recherche "q" (séparés par des virgules) exigés dans les résultats, en filtre non-scorant. Ne pas construire manuellement.
+    `,
+    schema: {
+      title: 'Mots requis (pagination adapt)',
+      type: 'string'
     }
   }, {
     in: 'query',
@@ -461,12 +475,30 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
+  const countParam = {
+    in: 'query',
+    name: 'count',
+    description: `Contrôle le calcul du nombre total de résultats (\`total\`).
+
+  Par défaut le total est **exact**, sauf pour une recherche textuelle triée par pertinence dans un grand jeu de données où il est **estimé**.
+
+  - **exact** : total exact garanti.
+  - **estimate** : total exact jusqu'au seuil (10 000 par défaut), estimé par échantillonnage au-delà — signalé par \`meta.totalMarginPct\` (marge d'erreur en %). Le classement des résultats reste exact.
+  - **false** : pas de calcul du total.`,
+    schema: {
+      title: 'Calcul du total',
+      type: 'string',
+      default: 'true',
+      enum: ['true', 'false', 'estimate', 'exact']
+    }
+  }
+
   const hintParam = {
     in: 'query',
     name: 'hint',
-    description: `Ajouter un champ \`hint\` au corps de la réponse avec un conseil de performance le cas échéant.
+    description: `Contrôle les conseils \`meta.hints\` de la réponse (suggestions actionnables pour optimiser ou corriger la requête, destinées aux développeurs et toujours en anglais).
 
-  - **auto** (défaut) : seulement si la requête est lente.
+  - **auto** (défaut) : conseils de correction toujours, conseils de performance seulement si la requête est lente.
   - **true** : dès qu'un conseil s'applique.
   - **false** : jamais.`,
     schema: {
@@ -656,6 +688,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ...hitsParams(),
           formatParam,
           htmlParam,
+          countParam,
           hintParam,
           ...filterParams,
           {
@@ -677,7 +710,27 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     properties: {
                       total: {
                         type: 'integer',
-                        description: 'Le nombre total de résultat si on ignore la pagination.'
+                        description: "Le nombre total de résultat si on ignore la pagination. Peut être une estimation (voir meta.totalMarginPct) — pour parcourir tous les résultats suivez la propriété next jusqu'à son absence, ne comparez jamais un compteur à total."
+                      },
+                      meta: {
+                        type: 'object',
+                        description: 'Métadonnées sur la manière dont la requête a été interprétée et comptée. Présent seulement quand au moins un champ s\'applique.',
+                        properties: {
+                          totalMarginPct: {
+                            type: 'integer',
+                            description: "Présent quand total est une estimation par échantillonnage : marge d'erreur approximative en pourcentage (~95 % de confiance, arrondie au pourcent supérieur — pas une borne stricte). Utilisez count=exact pour un décompte exact."
+                          },
+                          ignoredWords: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Présent quand q_mode=adapt a ignoré des mots trop fréquents pour le filtrage (ils comptent toujours pour le classement).'
+                          },
+                          hints: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Conseils actionnables pour optimiser ou corriger la requête, destinés aux développeurs (toujours en anglais — voir le paramètre hint).'
+                          }
+                        }
                       },
                       results: {
                         type: 'array',
