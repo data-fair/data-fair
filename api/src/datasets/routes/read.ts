@@ -29,7 +29,7 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
 import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
-import { getApproxCountMode, getEstimateCountMode, parseQMode, DEFAULT_Q_MODE } from '../es/operations.ts'
+import { getCountMode, parseQMode, DEFAULT_Q_MODE } from '../es/operations.ts'
 import { approxTotal } from '../es/approx-count.ts'
 import { runAdaptivePreflight } from '../es/adaptive-q.ts'
 
@@ -84,10 +84,9 @@ const readLines: RequestHandler = async (req, res) => {
   // (correctly) disable the mode anyway, and none of those formats carry a total envelope.
   // count=estimate keeps its cheap track_total_hits=1000 hits leg but an overflow now becomes
   // a real sampled estimate (described by meta.totalMarginPct) instead of the old bare "1000".
-  const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount) ??
-    getEstimateCountMode(dataset, query, config.elasticsearch.approxCount)
-  let approxTotalThunk = approxCountMode
-    ? () => approxTotal(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
+  const countMode = getCountMode(dataset, query, config.elasticsearch.approxCount)
+  let approxTotalThunk = countMode
+    ? () => approxTotal(req.app.get('es'), dataset, query, countMode, esAbortContext)
     : undefined
 
   // q_mode=adapt: ignore over-common words in filtering (they keep scoring) so the match set
@@ -101,8 +100,8 @@ const readLines: RequestHandler = async (req, res) => {
   } catch (err: any) {
     throw httpError(400, err.message)
   }
-  if (approxCountMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_required) {
-    const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, approxCountMode, esAbortContext)
+  if (countMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_required) {
+    const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, countMode, esAbortContext)
     observe.reqStep(req, 'adaptPreflight')
     if (adaptResult) {
       if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')

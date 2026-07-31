@@ -34,7 +34,7 @@ import {
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
   descendantsFilterClause,
-  getApproxCountMode,
+  getCountMode,
   parseQMode,
   DEFAULT_Q_MODE
 } from './operations.ts'
@@ -215,8 +215,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     // ranked text searches on large datasets cap the exact count (restoring block-max-WAND);
     // an overflowing total is then estimated from the `_rand` sample slice by the route
     // (see approx-count.ts). count=exact keeps the exact behaviour (the helper returns null).
-    const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount)
-    esQuery.track_total_hits = approxCountMode ? approxCountMode.cap : true
+    const countMode = getCountMode(dataset, query, config.elasticsearch.approxCount)
+    esQuery.track_total_hits = countMode ? countMode.cap : true
   }
 
   // Pagination

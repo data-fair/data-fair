@@ -789,38 +789,27 @@ export const getSamplingParams = (datasetCount: number, cfg: ApproxCountConfig):
 }
 
 /**
- * Decide whether a /lines request runs in approximate-count mode: page-1 ranked text
- * search (q present, _score is the primary sort — commons.ts appends _score only when
- * there is a q and no explicit sort) on a large dataset, with no param that already
- * controls counting. Returns the sampling parameters, or null for exact behaviour.
+ * Is this request's total estimated? The count model in one sentence: totals are exact by
+ * default, EXCEPT ranked text searches on large datasets where they are estimated —
+ * count=estimate opts any query into the same estimation, count=exact opts out. Returns
+ * the sampling mode when the total is estimated (and the feature is enabled), null when it
+ * stays exact (or is not computed at all).
  */
-export const getApproxCountMode = (
+export const getCountMode = (
   dataset: { count?: number },
   query: Record<string, any>,
   cfg: ApproxCountConfig
 ): ApproxCountMode | null => {
-  if (cfg.minDatasetSize == null) return null
-  if (typeof dataset.count !== 'number' || dataset.count < cfg.minDatasetSize) return null
-  if (!String(query.q ?? query._c_q ?? '').trim()) return null
-  if (query.sort) return null
-  if (query.after) return null
-  if (query.collapse) return null
-  if (query.count === 'false' || query.count === 'estimate' || query.count === 'exact') return null
-  return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
-}
-
-/** count=estimate: the exact same counting behaviour as the ranked-search default — exact up to
- *  the cap, sampled estimate beyond — but as an explicit opt-in on ANY query shape (no
- *  ranked/large-dataset gates). The count semantics collapse to one sentence: count defaults to
- *  exact, except ranked text searches where it defaults to estimate. */
-export const getEstimateCountMode = (
-  dataset: { count?: number },
-  query: Record<string, any>,
-  cfg: ApproxCountConfig
-): ApproxCountMode | null => {
-  if (cfg.minDatasetSize == null) return null // global kill switch
-  if (query.count !== 'estimate') return null
+  if (cfg.minDatasetSize == null) return null // kill switch: no sampling anywhere
   if (typeof dataset.count !== 'number' || dataset.count <= 0) return null
+  // explicit opt-in: any query shape, any dataset size
+  if (query.count === 'estimate') return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
+  if (query.count === 'false' || query.count === 'exact' || query.after) return null
+  // the default: only page-1 ranked text searches (q present, _score is the primary sort —
+  // commons.ts appends _score only when there is a q and no explicit sort) on large datasets
+  if (dataset.count < cfg.minDatasetSize) return null
+  if (!String(query.q ?? query._c_q ?? '').trim()) return null
+  if (query.sort || query.collapse) return null
   return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
 }
 

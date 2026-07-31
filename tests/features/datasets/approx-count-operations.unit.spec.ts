@@ -1,12 +1,12 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { getApproxCountMode, extrapolateApproxTotal, estimateMarginPct } from '../../../api/src/datasets/es/operations.ts'
+import { getCountMode, extrapolateApproxTotal, estimateMarginPct } from '../../../api/src/datasets/es/operations.ts'
 
 const cfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
 const bigDataset = { count: 1_000_000 }
 
-test('approx mode activates only for ranked q searches on large datasets', () => {
-  const mode = getApproxCountMode(bigDataset, { q: 'analyse' }, cfg)
+test('the default: estimation activates only for ranked q searches on large datasets', () => {
+  const mode = getCountMode(bigDataset, { q: 'analyse' }, cfg)
   assert.ok(mode)
   assert.equal(mode.cap, 10000)
   // probability = clamp(100000/1000000, floor 100/10000, 0.5) = 0.1 → randBound 100000
@@ -14,24 +14,31 @@ test('approx mode activates only for ranked q searches on large datasets', () =>
   assert.equal(mode.probability, 0.1)
 })
 
-test('approx mode stays off for every excluded shape', () => {
-  assert.equal(getApproxCountMode(bigDataset, {}, cfg), null) // no q
-  assert.equal(getApproxCountMode(bigDataset, { q: '  ' }, cfg), null) // blank q
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', sort: 'field1' }, cfg), null) // explicit sort → not ranked-primary
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', after: '[10]' }, cfg), null)
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', collapse: 'field1' }, cfg), null)
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', count: 'false' }, cfg), null)
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', count: 'estimate' }, cfg), null)
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a', count: 'exact' }, cfg), null) // escape hatch
-  assert.equal(getApproxCountMode({ count: 50000 }, { q: 'a' }, cfg), null) // small dataset
-  assert.equal(getApproxCountMode({}, { q: 'a' }, cfg), null) // no count metadata → safe default off
-  assert.equal(getApproxCountMode(bigDataset, { q: 'a' }, { ...cfg, minDatasetSize: null }), null) // kill switch
-  assert.ok(getApproxCountMode(bigDataset, { _c_q: 'a' }, cfg)) // agent-context q counts as q (commons.ts)
+test('the default stays off for every excluded shape', () => {
+  assert.equal(getCountMode(bigDataset, {}, cfg), null) // no q
+  assert.equal(getCountMode(bigDataset, { q: '  ' }, cfg), null) // blank q
+  assert.equal(getCountMode(bigDataset, { q: 'a', sort: 'field1' }, cfg), null) // explicit sort → not ranked-primary
+  assert.equal(getCountMode(bigDataset, { q: 'a', after: '[10]' }, cfg), null)
+  assert.equal(getCountMode(bigDataset, { q: 'a', collapse: 'field1' }, cfg), null)
+  assert.equal(getCountMode(bigDataset, { q: 'a', count: 'false' }, cfg), null)
+  assert.equal(getCountMode(bigDataset, { q: 'a', count: 'exact' }, cfg), null) // escape hatch
+  assert.equal(getCountMode({ count: 50000 }, { q: 'a' }, cfg), null) // small dataset
+  assert.equal(getCountMode({}, { q: 'a' }, cfg), null) // no count metadata → safe default off
+  assert.equal(getCountMode(bigDataset, { q: 'a' }, { ...cfg, minDatasetSize: null }), null) // kill switch
+  assert.ok(getCountMode(bigDataset, { _c_q: 'a' }, cfg)) // agent-context q counts as q (commons.ts)
+})
+
+test('count=estimate opts any query shape into the same estimation', () => {
+  assert.ok(getCountMode(bigDataset, { count: 'estimate' }, cfg)) // no q needed
+  assert.ok(getCountMode({ count: 50000 }, { count: 'estimate' }, cfg)) // small dataset allowed
+  assert.ok(getCountMode(bigDataset, { q: 'a', sort: 'field1', count: 'estimate' }, cfg)) // sorted allowed
+  assert.equal(getCountMode(bigDataset, { count: 'estimate' }, { ...cfg, minDatasetSize: null }), null) // kill switch still wins
+  assert.equal(getCountMode({}, { count: 'estimate' }, cfg), null) // no count metadata → off
 })
 
 test('probability is adjusted to dataset size and clamped', () => {
-  assert.equal(getApproxCountMode({ count: 100000 }, { q: 'a' }, cfg)!.probability, 0.5) // clamp high
-  assert.equal(getApproxCountMode({ count: 50_000_000 }, { q: 'a' }, cfg)!.probability, 0.01) // derived floor: 100 samples at the cap boundary
+  assert.equal(getCountMode({ count: 100000 }, { q: 'a' }, cfg)!.probability, 0.5) // clamp high
+  assert.equal(getCountMode({ count: 50_000_000 }, { q: 'a' }, cfg)!.probability, 0.01) // derived floor: 100 samples at the cap boundary
 })
 
 test('estimateMarginPct: ~95% half-width, rounded up, clamped to [1, 100]', () => {

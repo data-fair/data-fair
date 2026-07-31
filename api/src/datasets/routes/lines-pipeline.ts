@@ -84,7 +84,7 @@ export interface StreamJsonContext extends NextContext {
   // Approximate-count mode (see es/approx-count.ts): when the capped ranked search overflows
   // (hits.total.relation === 'gte'), this lazy second ES request estimates the exact total from
   // the `_rand` sample slice (total + its margin of error). Only set by read.ts when the
-  // getApproxCountMode / getEstimateCountMode gates pass.
+  // getCountMode gates pass.
   approxTotal?: () => Promise<{ total: number, marginPct: number }>
   // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
   // Only set when adapt actually ignored at least one word. Lands in meta.ignoredWords.

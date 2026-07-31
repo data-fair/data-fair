@@ -1,6 +1,6 @@
 import { type Request } from 'express'
 import config from '#config'
-import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getApproxCountMode } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getCountMode } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqDatasetOptional } from './req-context.ts'
 
@@ -38,8 +38,8 @@ export const queryAdvice = (req: Request): string => {
   // counting is already estimated there, and the estimate itself is DESCRIBED by the machine
   // fields (meta.totalMarginPct / meta.ignoredWords), never restated as advice — hints only
   // carry actionable suggestions.
-  const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
-  if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
+  const countMode = dataset && isLinesOrRecords(req.path) && getCountMode(dataset, q, config.elasticsearch.approxCount)
+  if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !countMode) {
     items.push('set count=estimate (exact total up to the threshold, then estimated by sampling) or count=false to skip the exact total-row count')
   }
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
