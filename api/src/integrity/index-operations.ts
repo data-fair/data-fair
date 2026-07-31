@@ -6,9 +6,11 @@ import { isDeepStrictEqual } from 'node:util'
 export type DivergedEntry = { key: string, kind: 'edited' | 'missing' | 'surplus', expected?: string, actual?: string }
 export type WindowDoc = { join: string, i: number, doc: Record<string, any> }
 
-// index-time fields that cannot be re-derived from the source: _rand is Math.random() at index
-// time (extensions.ts). _file/_file_raw cannot occur: enrollment refuses attachment datasets.
-export const PROJECTION_EXCLUDED_KEYS = new Set(['_rand'])
+// index-time internal fields the source projection does not reproduce: _rand is Math.random()
+// at index time (extensions.ts), _bytes is the storage-accounting stamp (es/operations.ts
+// lineBytes) — operational like the metadata-excluded `storage`, not user-visible content.
+// _file/_file_raw cannot occur: enrollment refuses attachment datasets.
+export const PROJECTION_EXCLUDED_KEYS = new Set(['_rand', '_bytes'])
 
 // W pivots derived from the seed by hashing — deterministic per seed (test aiming), uniform over
 // [minI, maxI]. The nightly caller draws a fresh crypto-random seed per run and never persists it

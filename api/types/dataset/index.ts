@@ -75,6 +75,10 @@ export type DatasetInternal = Dataset & {
   // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
+  // true when this dataset's current index was fully (re)built by code that stamps
+  // the _bytes CSV-equivalent size on every line (set by the index-lines worker on
+  // full reindex only); storage() then reads indexed size as a sum over _bytes
+  _esLineBytes?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
   _needsHistorizing?: { context?: HistorizeContextHint }
   // work-queue hint for the per-line integrity relay (target 3): set BEFORE line stamps are

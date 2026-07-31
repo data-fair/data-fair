@@ -61,6 +61,6 @@ export default async function (dataset: DatasetInternal) {
     })
   }
   await datasetService.applyPatch(internalDataset, patch)
-  if (!internalDataset.draftReason) await updateStorage(internalDataset, false, true)
+  if (!internalDataset.draftReason) await updateStorage(internalDataset, { checkRemaining: true })
   debug('done')
 }

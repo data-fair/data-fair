@@ -71,5 +71,5 @@ export default async function (dataset: FileDataset) {
   if (dataset.projection) patch.projection = dataset.projection
 
   await datasetsService.applyPatch(dataset, patch)
-  if (!dataset.draftReason) await updateStorage(dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, { checkRemaining: true, esUnavailable: true })
 }

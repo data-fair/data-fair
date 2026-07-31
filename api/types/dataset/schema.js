@@ -322,7 +322,7 @@ const datasetProperties = {
             type: 'array',
             items: {
               type: 'string',
-              enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments', 'master-data']
+              enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments', 'master-data', 'lines']
             }
           }
         }
