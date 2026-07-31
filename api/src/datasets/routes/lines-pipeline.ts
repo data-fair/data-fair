@@ -19,7 +19,7 @@
 // error throws before anything is sent → a clean HTTP status.
 //
 // The output MUST be byte-identical to the pre-refactor buffered `readLines`:
-//   - JSON envelope: `{ hint?, total, next?, totalCollapse?, results:[…] }` (the exact key order Express's
+//   - JSON envelope: `{ total, next?, totalCollapse?, meta?, results:[…] }` (the exact key order Express's
 //     JSON.stringify produced for the buffered result object), assembled by splicing pre-serialized rows.
 //   - CSV: byte-equal to `outputs.results2csv` (same compileForRequest serializer, same prologue+rows).
 // Both the buffered and streamed sources flow through the SAME single path here, so parity holds by
@@ -30,7 +30,7 @@ import * as esUtils from '../es/index.ts'
 import { rewriteAttachmentUrl } from '../es/commons.ts'
 import { hit2feature } from '../utils/geo-features.ts'
 import * as outputs from '../utils/outputs.ts'
-import { attachQueryHint } from '../../misc/utils/query-advice.ts'
+import { buildQueryHints } from '../../misc/utils/query-advice.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import type { LinesSource } from './lines-source.ts'
@@ -83,11 +83,12 @@ export interface StreamJsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
   // Approximate-count mode (see es/approx-count.ts): when the capped ranked search overflows
   // (hits.total.relation === 'gte'), this lazy second ES request estimates the exact total from
-  // the `_rand` sample slice. Only set by read.ts when getApproxCountMode gates pass.
-  approxTotal?: () => Promise<number>
+  // the `_rand` sample slice (total + its margin of error). Only set by read.ts when the
+  // getApproxCountMode / getEstimateCountMode gates pass.
+  approxTotal?: () => Promise<{ total: number, marginPct: number }>
   // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
-  // Only set when adapt actually ignored at least one word.
-  qAdapt?: { ignored: string[] }
+  // Only set when adapt actually ignored at least one word. Lands in meta.ignoredWords.
+  ignoredWords?: string[]
 }
 
 // Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await
@@ -152,28 +153,29 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   }, wktYieldEvery(query))
   const tail = await safeTail(source)
 
-  // Head object in the exact key order the buffered result had: { hint, total, next?, totalCollapse? }.
-  // Serialize it, strip the closing brace, and splice `,"results":[…]}` so the bytes equal JSON.stringify
-  // of the equivalent object. `next` also goes into the Link header.
+  // Head object key order: { total, next?, totalCollapse?, meta? } — then `,"results":[…]}` is
+  // spliced so the bytes equal JSON.stringify of the equivalent object. `next` also goes into
+  // the Link header. `meta` is presence-as-signal: absent unless it has something to say.
   const head: Record<string, any> = {}
-  const hint = (attachQueryHint(req, ctx.esSearchDurationMs, {}) as Record<string, any>).hint
-  if (hint) head.hint = hint
   // total lives in the tail envelope (absent when track_total_hits:false — after= pages, count=false);
   // the buffered source's tail() is the esResponse itself, so both sources share this exact read.
   // In approximate-count mode a capped overflow ('gte') is replaced by the `_rand`-sampled estimate,
-  // flagged with totalRelation — below the cap ES reports 'eq' and the response is unchanged.
+  // described by meta.totalMarginPct — below the cap ES reports 'eq' and the response is unchanged.
+  const meta: Record<string, any> = {}
   let total = tail?.hits?.total?.value
-  let totalEstimated = false
   if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
-    total = await ctx.approxTotal()
-    totalEstimated = true
+    const estimate = await ctx.approxTotal()
+    total = estimate.total
+    meta.totalMarginPct = estimate.marginPct
   }
   if (total != null) head.total = total
-  if (totalEstimated) head.totalRelation = 'estimate'
-  if (ctx.qAdapt) head.qAdapt = ctx.qAdapt
   const nextHref = setNextLink(res, ctx, count, lastHit)
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
+  if (ctx.ignoredWords?.length) meta.ignoredWords = ctx.ignoredWords
+  const hints = buildQueryHints(req, ctx.esSearchDurationMs)
+  if (hints.length) meta.hints = hints
+  if (Object.keys(meta).length) head.meta = meta
 
   const { parts, length, etag } = acc.finish(jsonBodyPrefix(head), jsonBodySuffix)
   sendPreparedParts(req, res.type('json'), parts, length, etag)
@@ -213,8 +215,9 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
 export interface StreamGeojsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
   bbox?: any // value or Promise — awaited only after the hits are drained (lets the agg overlap consumption)
-  // Same approximate-count hook as StreamJsonContext — see there.
-  approxTotal?: () => Promise<number>
+  // Same approximate-count / adapt hooks as StreamJsonContext — see there.
+  approxTotal?: () => Promise<{ total: number, marginPct: number }>
+  ignoredWords?: string[]
 }
 
 // GeoJSON is not a "hard" format: each hit maps to one Feature (geo.hit2feature) and the bbox comes from a
@@ -244,12 +247,14 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
   const bbox = await ctx.bbox
 
   setNextLink(res, ctx, count, lastHit)
+  const meta: Record<string, any> = {}
   let total = tail?.hits?.total?.value
-  let totalEstimated = false
   if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
-    total = await ctx.approxTotal()
-    totalEstimated = true
+    const estimate = await ctx.approxTotal()
+    total = estimate.total
+    meta.totalMarginPct = estimate.marginPct
   }
-  const { parts, length, etag } = acc.finish(geojsonBodyPrefix(total, totalEstimated), geojsonBodySuffix(bbox))
+  if (ctx.ignoredWords?.length) meta.ignoredWords = ctx.ignoredWords
+  const { parts, length, etag } = acc.finish(geojsonBodyPrefix(total, Object.keys(meta).length ? meta : undefined), geojsonBodySuffix(bbox))
   sendPreparedParts(req, res, parts, length, etag)
 }

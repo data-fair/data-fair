@@ -1,7 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal } from './operations.ts'
+import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
@@ -11,7 +11,13 @@ import { type EsAbortContext, timedEsCall } from './abort.ts'
 // leapfrogs via the _rand BKD index, and eligible for the ES shard request cache on
 // repeated queries. ES 7.x-compatible on purpose — do NOT switch to the random_sampler
 // aggregation (ES ≥ 8.2 only).
-export const approxTotal = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<number> => {
+export interface ApproxTotal {
+  total: number
+  /** margin of error in percent (~95 % confidence, rounded up) — becomes meta.totalMarginPct */
+  marginPct: number
+}
+
+export const approxTotal = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<ApproxTotal> => {
   const esQuery = prepareQuery(dataset, query)
   const body = {
     size: 0,
@@ -29,5 +35,6 @@ export const approxTotal = async (client: Client, dataset: any, query: Record<st
   }, { ...abortContext, meta: true }))
   const esResponse: any = (res as any).body
   if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
-  return extrapolateApproxTotal(esResponse.hits.total.value, mode)
+  const sampled = esResponse.hits.total.value
+  return { total: extrapolateApproxTotal(sampled, mode), marginPct: estimateMarginPct(sampled) }
 }

@@ -21,11 +21,6 @@ const nbLevels = (v: any): number => v ? String(v).split(/[;,]/).filter(Boolean)
 
 const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test(path)
 
-// read.ts stamps the q_mode=adapt outcome on the request so the hint (computed later in the
-// /lines pipeline) can name the ignored words — the advice rules are otherwise pure over req.query
-export const setReqQAdaptIgnored = (req: Request, ignored: string[]): void => { (req as any)._qAdaptIgnored = ignored }
-const reqQAdaptIgnored = (req: Request): string[] | undefined => (req as any)._qAdaptIgnored
-
 /**
  * Returns either '' or ' <intro> : <item> ; <item>.' assembled from i18n keys (via `req.__`).
  * Safe to concatenate onto any error message — '' when nothing useful applies.
@@ -35,16 +30,14 @@ export const queryAdvice = (req: Request): string => {
   const dataset = reqDatasetOptional(req)
   const items: string[] = []
 
-  // approximate-count mode (see datasets/es/approx-count.ts): the exact count this rule set
-  // used to warn about is already replaced by a sampled estimate — explain that instead
+  // 1. exact total-hits count on a list endpoint. Suppressed in approximate-count mode:
+  // counting is already estimated there, and the estimate itself is DESCRIBED by the machine
+  // fields (meta.totalMarginPct / meta.ignoredWords), never restated as advice — hints only
+  // carry actionable suggestions.
   const approxCountMode = dataset && isLinesOrRecords(req.path) && getApproxCountMode(dataset, q, config.elasticsearch.approxCount)
-  // 1. exact total-hits count on a list endpoint
   if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after && !approxCountMode) {
     items.push(req.__('errors.queryAdviceCount'))
   }
-  // the estimated-total note; redundant when the duration-independent adapt advice already
-  // explains the tightening (that message mentions count=exact too)
-  if (approxCountMode && !reqQAdaptIgnored(req)?.length) items.push(req.__('errors.queryAdviceApproxCount', String(approxCountMode.cap)))
   // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
   if (num(q.page) >= 100 || num(q.offset) >= 1000) items.push(req.__('errors.queryAdviceDeepPagination'))
   // 3. large aggregation fan-out
@@ -89,7 +82,7 @@ const RECOGNIZED_PARAMS = new Set([
  * parameter. Returns '' when nothing applies. Pure — reads only req.query + the dataset context schema.
  *
  * Unlike queryAdvice (a *performance* advisory gated on slow queries), this is a *correctness*
- * signal: attachQueryHint emits it regardless of query duration, still suppressed by hint=false.
+ * signal: buildQueryHints emits it regardless of query duration, still suppressed by hint=false.
  */
 export const ignoredParamsAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
@@ -176,18 +169,6 @@ export const truncatedMetricsAdvice = (req: Request): string => {
   return ' ' + req.__('errors.queryAdviceTruncatedMetricsIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
 }
 
-/**
- * Correctness advisory (duration-independent): q_mode=adapt changed the search semantics —
- * some over-common words were ignored in filtering. Unlike the performance advice this must
- * not hide behind the slow-query gate: adapt makes exactly these queries FAST, so an
- * auto-gated notice would never fire. Suppressed only by hint=false, like ignoredParamsAdvice.
- */
-export const adaptAdvice = (req: Request): string => {
-  const ignored = reqQAdaptIgnored(req)
-  if (!ignored?.length) return ''
-  return ' ' + req.__('errors.queryAdviceAdapt', ignored.join(', ')) + '.'
-}
-
 export type HintMode = 'auto' | 'true' | 'false'
 
 /**
@@ -203,41 +184,44 @@ export const shouldEmitHint = (mode: HintMode, esStepDurationMs: number): boolea
 const parseHintMode = (raw: any): HintMode => (raw === 'true' || raw === 'false' ? raw : 'auto')
 
 /**
- * Returns the result with a `hint` string field prepended (so it appears first in the JSON) when
- * the request opted in (or the ES step was slow enough in auto mode) and at least one rule matches.
- * Returns `result` unchanged for `hint=false` or when no rule applies. The hint reuses the exact
- * same `queryAdvice` rules that drive the 429/504 error advice.
+ * The advisory sentences for a request, as an array of standalone entries (meta.hints):
+ * correctness advisories (misused/ignored params, uncertain filters, truncated metrics) are
+ * duration-independent; performance advice keeps its slow-auto / explicit-true gate. Empty
+ * array for hint=false or when no rule applies. The same `queryAdvice` rules also drive the
+ * 429/504 error advice (as a suffix sentence there, see rate-limiting.ts).
  *
- * Public/cacheable responses are served without varying by the i18n_lang cookie, so for those we
- * force the hint to English to avoid the reverse-proxy serving a French hint to an English client
- * (or vice versa) from cache.
+ * Public/cacheable responses are served without varying by the i18n_lang cookie, so for those
+ * the entries are forced to English to keep the reverse-proxy cache coherent.
  */
-export const attachQueryHint = <T extends Record<string, any>> (
-  req: Request,
-  esStepDurationMs: number,
-  result: T
-): T => {
+export const buildQueryHints = (req: Request, esStepDurationMs: number): string[] => {
   const mode = parseHintMode(req.query?.hint)
-  if (mode === 'false') return result
+  if (mode === 'false') return []
   let adviceReq: Request = req
   if (reqPublicOperation(req)) {
-    // public/cacheable responses don't vary by the i18n_lang cookie → force English so the
-    // reverse-proxy cache can't serve a French hint to an English client (or vice versa).
     const englishReq = {
       path: req.path,
       query: req.query,
-      _qAdaptIgnored: reqQAdaptIgnored(req),
       __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
     } as any
     const dataset = reqDatasetOptional(req)
     if (dataset) setReqDataset(englishReq, dataset)
     adviceReq = englishReq
   }
-  // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
-  const ignored = [adaptAdvice(adviceReq).trim(), ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()].filter(Boolean).join(' ')
-  // performance advice keeps its slow-auto / explicit-true gate
-  const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
-  const advice = [ignored, perf].filter(Boolean).join(' ')
-  if (!advice) return result
-  return { hint: advice, ...result }
+  const hints = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()]
+  if (shouldEmitHint(mode, esStepDurationMs)) hints.push(queryAdvice(adviceReq).trim())
+  return hints.filter(Boolean)
+}
+
+/**
+ * Merge the advisory entries into a result as `meta.hints` (creating or extending `meta`).
+ * Returns the result unchanged when there is nothing to say — meta stays presence-as-signal.
+ */
+export const attachQueryHints = <T extends Record<string, any>> (
+  req: Request,
+  esStepDurationMs: number,
+  result: T
+): T => {
+  const hints = buildQueryHints(req, esStepDurationMs)
+  if (!hints.length) return result
+  return { ...result, meta: { ...(result as any).meta, hints } }
 }

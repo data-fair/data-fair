@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { getApproxCountMode, extrapolateApproxTotal } from '../../../api/src/datasets/es/operations.ts'
+import { getApproxCountMode, extrapolateApproxTotal, estimateMarginPct } from '../../../api/src/datasets/es/operations.ts'
 
 const cfg = { minDatasetSize: 100000, cap: 10000, sampleTarget: 100000 }
 const bigDataset = { count: 1_000_000 }
@@ -32,6 +32,15 @@ test('approx mode stays off for every excluded shape', () => {
 test('probability is adjusted to dataset size and clamped', () => {
   assert.equal(getApproxCountMode({ count: 100000 }, { q: 'a' }, cfg)!.probability, 0.5) // clamp high
   assert.equal(getApproxCountMode({ count: 50_000_000 }, { q: 'a' }, cfg)!.probability, 0.01) // derived floor: 100 samples at the cap boundary
+})
+
+test('estimateMarginPct: ~95% half-width, rounded up, clamped to [1, 100]', () => {
+  assert.equal(estimateMarginPct(100), 20) // 196/10 = 19.6 → 20
+  assert.equal(estimateMarginPct(1000), 7) // 196/31.6 = 6.2 → 7
+  assert.equal(estimateMarginPct(14119), 2)
+  assert.equal(estimateMarginPct(10_000_000), 1) // never claims better than ±1%
+  assert.equal(estimateMarginPct(1), 100)
+  assert.equal(estimateMarginPct(0), 100) // degenerate sample → maximal margin
 })
 
 test('extrapolation divides by probability and floors at cap+1', () => {

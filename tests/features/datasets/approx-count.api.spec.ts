@@ -8,8 +8,8 @@ const testUser1 = await axiosAuth('test_user1@test.com')
 // Approximate counts for ranked text searches (see load-management.md §9 and
 // docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md). The invariant under
 // test: searches totalling under the cap behave exactly as today; above it the total
-// becomes a `_rand`-sampled estimate flagged with totalRelation, while the top hits stay
-// identical to the exact behaviour.
+// becomes a `_rand`-sampled estimate described by meta.totalMarginPct, while the top hits
+// stay identical to the exact behaviour.
 
 const N = 2500
 const id = 'approxcount'
@@ -57,9 +57,10 @@ test.describe('approximate count for ranked text search', () => {
     await setConfig('elasticsearch.approxCount', defaultCfg)
   })
 
-  test('ranked q search over the cap returns an estimated total, flagged', async () => {
+  test('ranked q search over the cap returns an estimated total, with its margin', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', size: 3 } })).data
-    assert.equal(res.totalRelation, 'estimate')
+    assert.ok(Number.isInteger(res.meta?.totalMarginPct), JSON.stringify(res.meta))
+    assert.ok(res.meta.totalMarginPct >= 1 && res.meta.totalMarginPct <= 30, `margin ${res.meta.totalMarginPct} implausible for ~1000 samples`)
     assert.ok(res.total > testCfg.cap, `estimate ${res.total} must exceed the cap`)
     // 0.5-probability sample of 2143 matches: ±20% is > 9 sigma, no flakiness at this width
     assert.ok(res.total > EXACT * 0.8 && res.total < EXACT * 1.2, `estimate ${res.total} implausibly far from ${EXACT}`)
@@ -69,7 +70,7 @@ test.describe('approximate count for ranked text search', () => {
   test('count=exact keeps todays exact behaviour', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', count: 'exact' } })).data
     assert.equal(res.total, EXACT)
-    assert.equal(res.totalRelation, undefined)
+    assert.equal(res.meta, undefined)
   })
 
   test('top hits are identical with and without the cap', async () => {
@@ -85,7 +86,7 @@ test.describe('approximate count for ranked text search', () => {
       { q: 'label', count: 'false' }
     ] as Record<string, any>[]) {
       const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params })).data
-      assert.equal(res.totalRelation, undefined, JSON.stringify(params))
+      assert.equal(res.meta, undefined, JSON.stringify(params))
       if (params.count !== 'false') assert.equal(typeof res.total, 'number')
       if (!params.sort && params.q && params.count !== 'false') assert.equal(res.total, EXACT)
     }
@@ -97,7 +98,7 @@ test.describe('approximate count for ranked text search', () => {
     await setConfig('elasticsearch.approxCount', { ...testCfg, cap: 1000 }) // raise cap above the match count
     const capped = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'other' } })).data
     assert.equal(capped.total, exactOther)
-    assert.equal(capped.totalRelation, undefined)
+    assert.equal(capped.meta, undefined)
     await setConfig('elasticsearch.approxCount', testCfg)
   })
 
@@ -105,27 +106,26 @@ test.describe('approximate count for ranked text search', () => {
     // historical behaviour returned a bare misleading total of 1000; count=estimate is now the
     // ranked-search counting mode as an explicit opt-in — same cap, same sampler, any query shape
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', count: 'estimate' } })).data
-    assert.equal(res.totalRelation, 'estimate')
+    assert.ok(Number.isInteger(res.meta?.totalMarginPct), JSON.stringify(res.meta))
     assert.ok(res.total > testCfg.cap, `estimate ${res.total} must exceed the cap`)
     assert.ok(res.total > EXACT * 0.8 && res.total < EXACT * 1.2, `estimate ${res.total} implausibly far from ${EXACT}`)
     // below the cap the total stays exact and unflagged
     await setConfig('elasticsearch.approxCount', { ...testCfg, cap: 1000 })
     const small = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'other', count: 'estimate' } })).data
-    assert.equal(small.totalRelation, undefined)
+    assert.equal(small.meta, undefined)
     assert.ok(small.total < 1000) // exact 357
     await setConfig('elasticsearch.approxCount', testCfg)
   })
 
-  test('hint explains the estimate and stops advising count=false', async () => {
+  test('hints advise, meta describes: an estimated total carries no hint restating it', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', hint: 'true' } })).data
-    assert.ok(res.hint, 'hint requested explicitly must be present')
-    assert.ok(/estimé|estimated/i.test(res.hint), res.hint)
-    assert.ok(!/count=false/.test(res.hint), 'stale exact-count advice must not fire in approx mode')
+    assert.ok(Number.isInteger(res.meta?.totalMarginPct))
+    assert.equal(res.meta.hints, undefined, JSON.stringify(res.meta.hints))
   })
 
   test('geojson envelope carries the estimated total too', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'label', format: 'geojson', size: 2 } })).data
     assert.ok(res.total > testCfg.cap)
-    assert.equal(res.totalRelation, 'estimate')
+    assert.ok(Number.isInteger(res.meta?.totalMarginPct))
   })
 })

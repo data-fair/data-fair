@@ -52,8 +52,9 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
 
   test('adapt drops the most common word from filtering until the set clears the cap', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'adapt', size: 20 } })).data
-    assert.deepEqual(res.qAdapt, { ignored: ['commun'] })
-    assert.equal(res.totalRelation, 'estimate')
+    assert.deepEqual(res.meta.ignoredWords, ['commun'])
+    assert.ok(Number.isInteger(res.meta.totalMarginPct))
+    assert.equal(res.meta.hints, undefined) // meta describes, hints only carry actionable advice
     assert.ok(res.total >= 140 && res.total < 280, `estimate ${res.total} implausible for true 200`)
     // ignored words still score: 'commun rare' rows outrank 'rare autre' rows
     assert.equal(res.results[0].str, 'commun rare')
@@ -61,22 +62,21 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
 
   test('adapt keeps every word required when the strict set already clears the cap', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'grand ensemble', q_mode: 'adapt' } })).data
-    assert.equal(res.qAdapt, undefined) // nothing was ignored → no flag, just the estimate
-    assert.equal(res.totalRelation, 'estimate')
+    assert.equal(res.meta.ignoredWords, undefined) // nothing was ignored → no field, just the estimate
+    assert.ok(Number.isInteger(res.meta.totalMarginPct))
     assert.ok(res.total >= 140 && res.total < 280, `estimate ${res.total} implausible for true 200`)
   })
 
   test('the invariant: searches under the cap are untouched by adapt', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'petit exemple', q_mode: 'adapt' } })).data
     assert.equal(res.total, 40) // exact, full OR semantics
-    assert.equal(res.totalRelation, undefined)
-    assert.equal(res.qAdapt, undefined)
+    assert.equal(res.meta, undefined)
   })
 
   test('q_required applies the filter directly, no preflight', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_required: 'rare', count: 'exact' } })).data
     assert.equal(res.total, 200)
-    assert.equal(res.qAdapt, undefined)
+    assert.equal(res.meta, undefined)
     const bad = await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_required: 'absent' } }).catch((err: any) => err)
     assert.equal(bad.status, 400) // q_required words must be tokens of q
   })
@@ -89,7 +89,7 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
   test('q_mode=and stays available as a manual mode', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'and', count: 'exact' } })).data
     assert.equal(res.total, 60) // both words required
-    assert.equal(res.qAdapt, undefined)
+    assert.equal(res.meta, undefined)
   })
 
   test('numeric q_mode is rejected', async () => {
@@ -99,14 +99,14 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
 
   test('adapt is the default mode', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare' } })).data
-    assert.deepEqual(res.qAdapt, { ignored: ['commun'] })
+    assert.deepEqual(res.meta.ignoredWords, ['commun'])
   })
 
   test('q_mode=or and count=exact keep the broad exact behaviour', async () => {
     for (const params of [{ q: 'commun rare', count: 'exact' }, { q: 'commun rare', q_mode: 'or', count: 'exact' }] as Record<string, any>[]) {
       const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params })).data
       assert.equal(res.total, 2200) // union (60 both-words rows counted once)
-      assert.equal(res.qAdapt, undefined)
+      assert.equal(res.meta, undefined)
     }
   })
 
@@ -114,20 +114,16 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
     // '+commun rare' is expert sqs syntax (commun required, rare optional) — adapt must not
     // reinterpret it; the request falls back to the capped search with a sampled estimate
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: '+commun rare', q_mode: 'adapt' } })).data
-    assert.equal(res.qAdapt, undefined)
-    assert.equal(res.totalRelation, 'estimate')
+    assert.equal(res.meta.ignoredWords, undefined)
+    assert.ok(Number.isInteger(res.meta.totalMarginPct))
     assert.ok(res.total >= 1600 && res.total < 2600, `estimate ${res.total} implausible for true 2060`)
   })
 
-  test('the adapt hint is duration-independent: fires by default, suppressed by hint=false', async () => {
-    // adapt makes these queries fast, so a slow-query-gated notice would never fire — the
-    // semantics change is correctness-class information, on unless explicitly disabled
-    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare' } })).data
-    assert.ok(res.hint, 'the adapt notice must be present without any hint param')
-    assert.ok(/ignor/i.test(res.hint), res.hint)
-    assert.ok(res.hint.includes('commun'), res.hint)
-    const silent = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', hint: 'false' } })).data
-    assert.equal(silent.hint, undefined)
+  test('the ignored words are reported once, as data — never duplicated as a hint', async () => {
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', hint: 'true' } })).data
+    assert.deepEqual(res.meta.ignoredWords, ['commun'])
+    assert.equal(res.meta.hints, undefined, JSON.stringify(res.meta.hints))
+    assert.equal(res.hint, undefined) // the legacy root field is gone
   })
 
   test('a next-paginated chain enumerates exactly the tightened set', async () => {

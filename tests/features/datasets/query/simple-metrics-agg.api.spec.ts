@@ -93,7 +93,8 @@ test.describe('simple_metrics_agg truncated-values warning', () => {
     await waitForFinalize(ax, 'sma-trunc')
 
     const res = await ax.get('/api/v1/datasets/sma-trunc/simple_metrics_agg')
-    assert.ok(typeof res.data.hint === 'string' && res.data.hint.includes('plain'), `expected a hint mentioning "plain", got: ${res.data.hint}`)
+    const hints: string[] = res.data.meta?.hints ?? []
+    assert.ok(hints.some((h: string) => h.includes('plain')), `expected a meta.hints entry mentioning "plain", got: ${JSON.stringify(hints)}`)
     // the metrics themselves are still returned
     assert.equal(res.data.metrics.n.max, 2)
   })
@@ -107,6 +108,6 @@ test.describe('simple_metrics_agg truncated-values warning', () => {
     await ax.post('/api/v1/datasets/sma-no-trunc/_bulk_lines', [{ plain: 'short' }])
     await waitForFinalize(ax, 'sma-no-trunc')
     const res = await ax.get('/api/v1/datasets/sma-no-trunc/simple_metrics_agg')
-    assert.equal(res.data.hint, undefined)
+    assert.equal(res.data.meta, undefined)
   })
 })

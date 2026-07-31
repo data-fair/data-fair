@@ -171,7 +171,7 @@ export default (
     description: `
   Ce paramètre permet d'altérer le comportement du paramètre "q". Le mode par défaut est "adapt".
 
-  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`qAdapt\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
+  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`meta.ignoredWords\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
 
   Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
@@ -483,7 +483,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   Par défaut le total est **exact**, sauf pour une recherche textuelle triée par pertinence dans un grand jeu de données où il est **estimé**.
 
   - **exact** : total exact garanti.
-  - **estimate** : total exact jusqu'au seuil (10 000 par défaut), estimé par échantillonnage au-delà — signalé par \`totalRelation: "estimate"\`. Le classement des résultats reste exact.
+  - **estimate** : total exact jusqu'au seuil (10 000 par défaut), estimé par échantillonnage au-delà — signalé par \`meta.totalMarginPct\` (marge d'erreur en %). Le classement des résultats reste exact.
   - **false** : pas de calcul du total.`,
     schema: {
       title: 'Calcul du total',
@@ -496,9 +496,9 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const hintParam = {
     in: 'query',
     name: 'hint',
-    description: `Ajouter un champ \`hint\` au corps de la réponse avec un conseil de performance le cas échéant.
+    description: `Contrôle les conseils \`meta.hints\` de la réponse (suggestions actionnables pour optimiser ou corriger la requête).
 
-  - **auto** (défaut) : seulement si la requête est lente.
+  - **auto** (défaut) : conseils de correction toujours, conseils de performance seulement si la requête est lente.
   - **true** : dès qu'un conseil s'applique.
   - **false** : jamais.`,
     schema: {
@@ -710,18 +710,26 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     properties: {
                       total: {
                         type: 'integer',
-                        description: "Le nombre total de résultat si on ignore la pagination. Peut être une estimation (voir totalRelation) — pour parcourir tous les résultats suivez la propriété next jusqu'à son absence, ne comparez jamais un compteur à total."
+                        description: "Le nombre total de résultat si on ignore la pagination. Peut être une estimation (voir meta.totalMarginPct) — pour parcourir tous les résultats suivez la propriété next jusqu'à son absence, ne comparez jamais un compteur à total."
                       },
-                      totalRelation: {
-                        type: 'string',
-                        enum: ['estimate'],
-                        description: 'Présent quand total est une estimation par échantillonnage (recherche textuelle triée par pertinence dépassant le seuil de comptage exact). Utilisez count=exact pour forcer un décompte exact.'
-                      },
-                      qAdapt: {
+                      meta: {
                         type: 'object',
-                        description: 'Présent quand q_mode=adapt a ignoré au moins un mot trop fréquent pour le filtrage (les mots ignorés comptent toujours pour le classement).',
+                        description: 'Métadonnées sur la manière dont la requête a été interprétée et comptée. Présent seulement quand au moins un champ s\'applique.',
                         properties: {
-                          ignored: { type: 'array', items: { type: 'string' }, description: 'Les mots trop fréquents, ignorés pour le filtrage.' }
+                          totalMarginPct: {
+                            type: 'integer',
+                            description: "Présent quand total est une estimation par échantillonnage : marge d'erreur approximative en pourcentage (~95 % de confiance, arrondie au pourcent supérieur — pas une borne stricte). Utilisez count=exact pour un décompte exact."
+                          },
+                          ignoredWords: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Présent quand q_mode=adapt a ignoré des mots trop fréquents pour le filtrage (ils comptent toujours pour le classement).'
+                          },
+                          hints: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Conseils actionnables pour optimiser ou corriger la requête (voir le paramètre hint).'
+                          }
                         }
                       },
                       results: {

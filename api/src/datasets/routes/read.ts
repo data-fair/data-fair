@@ -24,7 +24,7 @@ import * as outputs from '../utils/outputs.ts'
 import * as cache from '../../misc/utils/cache.ts'
 import * as observe from '../../misc/utils/observe.ts'
 import * as findUtils from '../../misc/utils/find.ts'
-import { attachQueryHint, setReqQAdaptIgnored } from '../../misc/utils/query-advice.ts'
+import { attachQueryHints } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson } from './lines-pipeline.ts'
@@ -83,7 +83,7 @@ const readLines: RequestHandler = async (req, res) => {
   // on the ORIGINAL query — the geo/tile branches below mutate `query.sort`, which would
   // (correctly) disable the mode anyway, and none of those formats carry a total envelope.
   // count=estimate keeps its cheap track_total_hits=1000 hits leg but an overflow now becomes
-  // a real sampled estimate (flagged totalRelation) instead of the old bare "1000".
+  // a real sampled estimate (described by meta.totalMarginPct) instead of the old bare "1000".
   const approxCountMode = getApproxCountMode(dataset, query, config.elasticsearch.approxCount) ??
     getEstimateCountMode(dataset, query, config.elasticsearch.approxCount)
   let approxTotalThunk = approxCountMode
@@ -94,7 +94,7 @@ const readLines: RequestHandler = async (req, res) => {
   // stays above the cap — see es/adaptive-q.ts. The preflight rewrites the effective query to
   // q_required BEFORE the main search; `next` links inherit it from the mutated query, so
   // after= pages replay the exact same tightened query with no preflight (chain consistency).
-  let qAdapt: { ignored: string[] } | undefined
+  let ignoredWords: string[] | undefined
   let resolvedQMode: string | undefined
   try {
     resolvedQMode = query.q ? parseQMode(query.q_mode, DEFAULT_Q_MODE) : undefined
@@ -107,12 +107,9 @@ const readLines: RequestHandler = async (req, res) => {
     if (adaptResult) {
       if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
       // the transparency field only appears when adapt actually ignored at least one word
-      if (adaptResult.ignored.length) {
-        qAdapt = { ignored: adaptResult.ignored }
-        setReqQAdaptIgnored(req, adaptResult.ignored)
-      }
+      if (adaptResult.ignored.length) ignoredWords = adaptResult.ignored
       // the preflight already estimated the chosen rung's total — no separate count leg needed
-      approxTotalThunk = () => Promise.resolve(adaptResult.total)
+      approxTotalThunk = () => Promise.resolve({ total: adaptResult.total, marginPct: adaptResult.marginPct })
     }
   }
 
@@ -369,7 +366,7 @@ const readLines: RequestHandler = async (req, res) => {
     // streamGeojson still surfaces the error before anything is sent.
     const bboxPromise = esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
     bboxPromise.catch(() => {})
-    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise, approxTotal: approxTotalThunk })
+    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise, approxTotal: approxTotalThunk, ignoredWords })
     observe.reqStep(req, 'bboxAgg')
     return
   }
@@ -482,7 +479,7 @@ const readLines: RequestHandler = async (req, res) => {
     // otherwise it came from search() which already rewrote it
     rewriteAttachmentUrl: eligible,
     approxTotal: approxTotalThunk,
-    qAdapt
+    ignoredWords
   })
 }
 
@@ -538,7 +535,7 @@ export const registerReadRoutes = (router: Router) => {
       return res.status(200).send(tile)
     }
 
-    result = attachQueryHint(req, esGeoAggDurationMs, result)
+    result = attachQueryHints(req, esGeoAggDurationMs, result)
     res.status(200).send(result)
   })
 
@@ -609,7 +606,7 @@ export const registerReadRoutes = (router: Router) => {
 
     if (explain) result.explain = explain
 
-    result = attachQueryHint(req, esValuesAggDurationMs, result)
+    result = attachQueryHints(req, esValuesAggDurationMs, result)
     res.status(200).send(result)
   })
 
@@ -662,7 +659,7 @@ export const registerReadRoutes = (router: Router) => {
       await manageESError(req, err)
     }
     // correctness hint only (metric_agg does not time the ES step); perf advice stays off at duration 0
-    result = attachQueryHint(req, 0, result)
+    result = attachQueryHints(req, 0, result)
     res.status(200).send(result)
   })
 
@@ -678,7 +675,7 @@ export const registerReadRoutes = (router: Router) => {
       await manageESError(req, err)
     }
     // correctness hint only (simple_metrics_agg does not time the ES step); perf advice stays off at duration 0
-    result = attachQueryHint(req, 0, result)
+    result = attachQueryHints(req, 0, result)
     res.status(200).send(result)
   })
 

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice, uncertainFilterAdvice } from '../../../api/src/misc/utils/query-advice.ts'
+import { queryAdvice, shouldEmitHint, buildQueryHints, attachQueryHints, ignoredParamsAdvice, uncertainFilterAdvice } from '../../../api/src/misc/utils/query-advice.ts'
 import { setReqDataset } from '../../../api/src/misc/utils/req-context.ts'
 
 // minimal fake of the bits of an express Request the helper reads.
@@ -103,65 +103,58 @@ test.describe('shouldEmitHint', () => {
   })
 })
 
-test.describe('attachQueryHint', () => {
-  test('prepends a trimmed advice string when a rule fires and hint=true', () => {
+test.describe('buildQueryHints / attachQueryHints', () => {
+  test('returns standalone entries when a rule fires and hint=true', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
     const req = fakeReq('/abc/lines', { hint: 'true' }, wide)
-    const out = attachQueryHint(req, 0, { total: 5, results: [] })
-    assert.ok(typeof out.hint === 'string')
-    assert.ok((out.hint as string).length > 0)
-    assert.equal((out.hint as string)[0] !== ' ', true) // leading space stripped
-    // hint must appear before existing fields so it lands first in the JSON output
-    assert.equal(Object.keys(out)[0], 'hint')
+    const hints = buildQueryHints(req, 0)
+    assert.ok(hints.length > 0)
+    for (const hint of hints) {
+      assert.ok(typeof hint === 'string' && hint.length > 0)
+      assert.equal(hint[0] !== ' ', true) // entries are trimmed
+    }
   })
-  test('does not attach when hint=false even with a slow query and matching rule', () => {
+  test('empty when hint=false even with a slow query and matching rule', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', { hint: 'false' }, wide)
-    const out = attachQueryHint(req, 99999, { total: 5 })
-    assert.equal('hint' in out, false)
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'false' }, wide), 99999), [])
   })
-  test('does not attach when hint=auto and the query was fast', () => {
+  test('no perf entries when hint=auto and the query was fast', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', {}, wide)
-    const out = attachQueryHint(req, 500, { total: 5 })
-    assert.equal('hint' in out, false)
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', {}, wide), 500), [])
   })
-  test('attaches when hint=auto and the query crossed the slow threshold', () => {
+  test('perf entries appear when hint=auto and the query crossed the slow threshold', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', {}, wide)
-    const out = attachQueryHint(req, 1500, { total: 5 })
-    assert.ok(typeof out.hint === 'string')
+    const hints = buildQueryHints(fakeReq('/abc/lines', {}, wide), 1500)
+    assert.ok(hints.some(h => /errors\.queryAdviceSelect/.test(h)))
   })
-  test('does not attach when no rule fires (even with hint=true)', () => {
-    const req = fakeReq('/abc/lines', { hint: 'true', count: 'false', after: '["x"]' })
-    const out = attachQueryHint(req, 99999, { total: 5 })
-    assert.equal('hint' in out, false)
+  test('empty when no rule fires (even with hint=true)', () => {
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'true', count: 'false', after: '["x"]' }), 99999), [])
   })
   test('treats unknown hint values as auto', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const req = fakeReq('/abc/lines', { hint: 'banana' }, wide)
-    assert.equal('hint' in attachQueryHint(req, 500, { total: 5 }), false)
-    assert.ok(typeof attachQueryHint(req, 1500, { total: 5 }).hint === 'string')
+    assert.deepEqual(buildQueryHints(fakeReq('/abc/lines', { hint: 'banana' }, wide), 500), [])
+    assert.ok(buildQueryHints(fakeReq('/abc/lines', { hint: 'banana' }, wide), 1500).length > 0)
   })
-  test('emits the correctness hint on a fast auto query (duration-independent)', () => {
-    const ds = { schema: [{ key: 'ville', type: 'string' }] }
-    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
-    const out = attachQueryHint(req, 0, { total: 5 })
-    assert.match(out.hint as string, /errors\.queryAdviceConceptUseColumn/)
-  })
-  test('hint=false suppresses the correctness hint too', () => {
-    const ds = { schema: [{ key: 'ville', type: 'string' }] }
-    const req = fakeReq('/abc/lines', { hint: 'false', _c_ville_eq: 'Paris' }, ds)
-    assert.equal('hint' in attachQueryHint(req, 0, { total: 5 }), false)
-  })
-  test('combines correctness advice (first) with perf advice on a slow wide query', () => {
+  test('correctness entries are duration-independent, and come before perf entries', () => {
     const ds = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })).concat([{ key: 'ville' } as any]) }
-    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
-    const out = attachQueryHint(req, 1500, { total: 5 })
-    const hint = out.hint as string
-    assert.match(hint, /errors\.queryAdviceConceptUseColumn/)
-    assert.match(hint, /errors\.queryAdviceSelect/)
-    assert.ok(hint.indexOf('errors.queryAdviceIgnoredIntro') < hint.indexOf('errors.queryAdviceIntro'))
+    const fast = buildQueryHints(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds), 0)
+    assert.ok(fast.some(h => /errors\.queryAdviceConceptUseColumn/.test(h)))
+    assert.ok(!fast.some(h => /errors\.queryAdviceSelect/.test(h)))
+    const slow = buildQueryHints(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds), 1500)
+    const correctnessIdx = slow.findIndex(h => /errors\.queryAdviceConceptUseColumn/.test(h))
+    const perfIdx = slow.findIndex(h => /errors\.queryAdviceSelect/.test(h))
+    assert.ok(correctnessIdx !== -1 && perfIdx !== -1 && correctnessIdx < perfIdx)
+  })
+  test('attachQueryHints merges into meta.hints, presence-as-signal', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const out: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'true' }, wide), 0, { total: 5 })
+    assert.ok(Array.isArray(out.meta.hints) && out.meta.hints.length > 0)
+    const silent: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'false' }, wide), 0, { total: 5 })
+    assert.equal('meta' in silent, false)
+    // an existing meta on the result is extended, not clobbered
+    const merged: any = attachQueryHints(fakeReq('/abc/lines', { hint: 'true' }, wide), 0, { total: 5, meta: { totalMarginPct: 3 } } as any)
+    assert.equal(merged.meta.totalMarginPct, 3)
+    assert.ok(merged.meta.hints.length > 0)
   })
 })
 

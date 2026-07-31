@@ -814,6 +814,14 @@ export const getEstimateCountMode = (
 export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMode): number =>
   Math.max(mode.cap + 1, Math.round(sampledCount / mode.probability))
 
+/**
+ * Margin of error of a sampled estimate, in percent (meta.totalMarginPct): the ~95 %
+ * confidence half-width of a binomial sample, ±1.96/√samples, rounded UP to a whole percent
+ * and clamped to [1, 100] — presented as a margin, never as a hard bound.
+ */
+export const estimateMarginPct = (sampledCount: number): number =>
+  sampledCount > 0 ? Math.min(100, Math.max(1, Math.ceil(196 / Math.sqrt(sampledCount)))) : 100
+
 // ---- q_mode extension: or|and|adapt on top of legacy simple|complete ----
 
 export type QMode = 'simple' | 'complete' | 'and' | 'adapt'

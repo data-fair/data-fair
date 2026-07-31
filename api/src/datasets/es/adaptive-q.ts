@@ -1,7 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, decideAdaptiveRung, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
+import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, decideAdaptiveRung, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
@@ -24,7 +24,8 @@ export interface AdaptResult {
   required: string[]
   ignored: string[]
   total: number
-  totalRelation: 'estimate'
+  /** margin of error in percent (~95 % confidence, rounded up) — becomes meta.totalMarginPct */
+  marginPct: number
 }
 
 const esSearch = async (client: Client, dataset: any, body: any, abortContext?: EsAbortContext): Promise<any> => {
@@ -120,6 +121,6 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
     required: chosen.required,
     ignored: chosen.ignored,
     total: extrapolateApproxTotal(chosen.sampled, mode),
-    totalRelation: 'estimate'
+    marginPct: estimateMarginPct(chosen.sampled)
   }
 }
