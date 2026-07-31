@@ -75,11 +75,17 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
 export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
   const rows = (data.results ?? []).map(cleanRow)
   const filterQueryString = buildFilterQueryString(params)
+  const totalLabel = data.meta?.totalMarginPct ? `**~${data.total}** rows found (±${data.meta.totalMarginPct}% sampled estimate)` : `**${data.total}** rows found`
   const lines = [
-    `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
+    `${totalLabel} (showing ${rows.length}, page ${params.page || 1})`,
     '',
     toCsv(rows)
   ]
+  // defensive: this tool hardcodes q_mode=complete (exempt from adapt) so ignoredWords should
+  // not appear today — but render it faithfully rather than silently dropping it if that changes
+  if (data.meta?.ignoredWords?.length) {
+    lines.push('', `Note: the very frequent words (${data.meta.ignoredWords.join(', ')}) were ignored for filtering (they still count for ranking).`)
+  }
   if (data.next) {
     // The cursor only travels back to the model through this text (the harness forwards
     // tool text, not structuredContent). Emit the URL verbatim so the model can pass it as
@@ -89,8 +95,8 @@ export function formatResult (data: any, params: Params): { text: string, struct
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)
   }
-  if (data.hint) {
-    lines.push('', `> Hint: ${data.hint}`)
+  if (data.meta?.hints?.length) {
+    lines.push('', ...data.meta.hints.map((hint: string) => `> Hint: ${hint}`))
   }
   const structuredContent: Record<string, any> = {
     datasetId: params.datasetId,
