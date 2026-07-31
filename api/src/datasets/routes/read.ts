@@ -94,12 +94,7 @@ const readLines: RequestHandler = async (req, res) => {
   // q_required BEFORE the main search; `next` links inherit it from the mutated query, so
   // after= pages replay the exact same tightened query with no preflight (chain consistency).
   let ignoredWords: string[] | undefined
-  let resolvedQMode: string | undefined
-  try {
-    resolvedQMode = query.q ? parseQMode(query.q_mode, DEFAULT_Q_MODE) : undefined
-  } catch (err: any) {
-    throw httpError(400, err.message)
-  }
+  const resolvedQMode = query.q ? parseQMode(query.q_mode, DEFAULT_Q_MODE) : undefined
   if (countMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_required) {
     const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, countMode, esAbortContext)
     observe.reqStep(req, 'adaptPreflight')

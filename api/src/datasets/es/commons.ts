@@ -334,20 +334,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       else must.push(qs)
     }
     if (q) {
-      let qMode: string
-      try {
-        qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
-      } catch (err: any) {
-        throw httpError(400, err.message)
-      }
-      let requiredWords: string[] | undefined
-      if (query.q_required) {
-        try {
-          requiredWords = parseQRequired(q, query.q_required)
-        } catch (err: any) {
-          throw httpError(400, err.message)
-        }
-      }
+      const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
+      const requiredWords = query.q_required ? parseQRequired(q, query.q_required) : undefined
       must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, requiredWords))
     }
   }

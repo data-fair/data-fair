@@ -873,20 +873,19 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   const value = raw ?? dflt
   if (value === 'or' || value === 'simple') return 'simple'
   if (value === 'complete' || value === 'and' || value === 'adapt') return value
-  throw new Error(`q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
+  throw httpError(400, `q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
 }
 
 /**
  * Parse and validate q_required — the words a search must match (the non-scoring filter of
  * the score-broad-match-strict shape; pinned by q_mode=adapt in next links, or set
- * manually). Every word must be a whitespace token of q. Throws a message string on
- * violation — the caller wraps it in a 400.
+ * manually). Every word must be a whitespace token of q, else 400.
  */
 export const parseQRequired = (q: string, raw: string): string[] => {
   const qWords = new Set(q.split(/\s+/))
   const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
   for (const word of words) {
-    if (!qWords.has(word)) throw new Error(`Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
   }
   return words
 }

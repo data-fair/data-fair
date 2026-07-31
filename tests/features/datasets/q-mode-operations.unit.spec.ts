@@ -10,16 +10,16 @@ test('parseQMode accepts the legacy and new modes', () => {
   assert.equal(parseQMode('complete', 'simple'), 'complete')
   assert.equal(parseQMode('and', 'simple'), 'and')
   assert.equal(parseQMode('adapt', 'simple'), 'adapt')
-  assert.throws(() => parseQMode('3', 'simple')) // numeric msm deliberately not supported
-  assert.throws(() => parseQMode('bogus', 'simple'))
+  assert.throws(() => parseQMode('3', 'simple'), { status: 400 }) // numeric msm deliberately not supported
+  assert.throws(() => parseQMode('bogus', 'simple'), { status: 400 })
 })
 
 test('parseQRequired accepts only whitespace tokens of q', () => {
   assert.deepEqual(parseQRequired('commun rare', 'rare'), ['rare'])
   assert.deepEqual(parseQRequired('commun rare', 'rare,commun'), ['rare', 'commun'])
   assert.deepEqual(parseQRequired('commun rare', ' rare , '), ['rare']) // trimmed, empties dropped
-  assert.throws(() => parseQRequired('commun rare', 'absent'))
-  assert.throws(() => parseQRequired('commun rare', 'rar')) // partial words are not tokens
+  assert.throws(() => parseQRequired('commun rare', 'absent'), { status: 400 })
+  assert.throws(() => parseQRequired('commun rare', 'rar'), { status: 400 }) // partial words are not tokens
 })
 
 test('chooseStrictestCandidate picks the strictest candidate clearing the floor', () => {
