@@ -97,7 +97,11 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   // candidates strictest-first: require the `requiredCount` rarest words, ignore the rest.
   // A single required word is already counted by the agg; a multi-word combination can only
   // qualify if its rarest member does (its count bounds the conjunction), so only those are
-  // worth counting — all in one _msearch.
+  // worth counting — all in one _msearch. Two probes with two mechanisms on purpose: the
+  // combinations depend on the rarity order (unknown before the agg answers), and each shape
+  // matches its execution model — a filters agg amortizes the 8 unconditional per-word counts
+  // over ONE scan of the slice, while a conjunction as a top-level query leapfrogs on its
+  // rarest word (an agg bucket cannot skip, it tests every scanned doc).
   const wordsByRarity = [...words].sort((a, b) => wordSampledCount[a] - wordSampledCount[b])
   const candidates: Candidate[] = []
   const needCounting: Candidate[] = []
