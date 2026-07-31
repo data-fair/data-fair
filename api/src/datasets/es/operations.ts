@@ -802,9 +802,10 @@ export const getCountMode = (
 ): ApproxCountMode | null => {
   if (cfg.minDatasetSize == null) return null // kill switch: no sampling anywhere
   if (typeof dataset.count !== 'number' || dataset.count <= 0) return null
+  if (query.count === 'false' || query.after) return null // no total is computed at all
   // explicit opt-in: any query shape, any dataset size
   if (query.count === 'estimate') return { cap: cfg.cap, ...getSamplingParams(dataset.count, cfg) }
-  if (query.count === 'false' || query.count === 'exact' || query.after) return null
+  if (query.count === 'exact') return null
   // the default: only page-1 ranked text searches (q present, _score is the primary sort —
   // commons.ts appends _score only when there is a q and no explicit sort) on large datasets
   if (dataset.count < cfg.minDatasetSize) return null
@@ -823,7 +824,7 @@ export const extrapolateApproxTotal = (sampledCount: number, mode: ApproxCountMo
  * and clamped to [1, 100] — presented as a margin, never as a hard bound.
  */
 export const estimateMarginPct = (sampledCount: number): number =>
-  sampledCount > 0 ? Math.min(100, Math.max(1, Math.ceil(196 / Math.sqrt(sampledCount)))) : 100
+  sampledCount > 0 ? Math.min(100, Math.max(1, Math.ceil(100 * 1.96 / Math.sqrt(sampledCount)))) : 100
 
 // ---- q_mode extension: or|and|adapt on top of legacy simple|complete ----
 
@@ -839,6 +840,21 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   if (value === 'or' || value === 'simple') return 'simple'
   if (value === 'complete' || value === 'and' || value === 'adapt') return value
   throw new Error(`q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
+}
+
+/**
+ * Parse and validate q_required — the words a search must match (the non-scoring filter of
+ * the score-broad-match-strict shape; pinned by q_mode=adapt in next links, or set
+ * manually). Every word must be a whitespace token of q. Throws a message string on
+ * violation — the caller wraps it in a 400.
+ */
+export const parseQRequired = (q: string, raw: string): string[] => {
+  const qWords = new Set(q.split(/\s+/))
+  const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
+  for (const word of words) {
+    if (!qWords.has(word)) throw new Error(`Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+  }
+  return words
 }
 
 // Sampling-noise margin (~2σ at MIN_BOUNDARY_SAMPLES) protecting the never-below-cap

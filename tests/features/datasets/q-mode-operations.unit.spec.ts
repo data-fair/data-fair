@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseQMode, chooseStrictestCandidate } from '../../../api/src/datasets/es/operations.ts'
+import { parseQMode, parseQRequired, chooseStrictestCandidate } from '../../../api/src/datasets/es/operations.ts'
 
 test('parseQMode accepts the legacy and new modes', () => {
   assert.equal(parseQMode(undefined, 'simple'), 'simple')
@@ -12,6 +12,14 @@ test('parseQMode accepts the legacy and new modes', () => {
   assert.equal(parseQMode('adapt', 'simple'), 'adapt')
   assert.throws(() => parseQMode('3', 'simple')) // numeric msm deliberately not supported
   assert.throws(() => parseQMode('bogus', 'simple'))
+})
+
+test('parseQRequired accepts only whitespace tokens of q', () => {
+  assert.deepEqual(parseQRequired('commun rare', 'rare'), ['rare'])
+  assert.deepEqual(parseQRequired('commun rare', 'rare,commun'), ['rare', 'commun'])
+  assert.deepEqual(parseQRequired('commun rare', ' rare , '), ['rare']) // trimmed, empties dropped
+  assert.throws(() => parseQRequired('commun rare', 'absent'))
+  assert.throws(() => parseQRequired('commun rare', 'rar')) // partial words are not tokens
 })
 
 test('chooseStrictestCandidate picks the strictest candidate clearing the floor', () => {

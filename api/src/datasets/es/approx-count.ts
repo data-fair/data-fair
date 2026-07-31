@@ -17,13 +17,10 @@ export interface ApproxTotal {
   marginPct: number
 }
 
-export const approxTotal = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<ApproxTotal> => {
-  const esQuery = prepareQuery(dataset, query)
-  const body = {
-    size: 0,
-    track_total_hits: true,
-    query: { bool: { filter: [esQuery.query, { range: { _rand: { lt: mode.randBound } } }] } }
-  }
+/** One raw _search with the read path's standard guards (timed/abortable, ES-side timeout,
+ *  no partial results, timed_out → 504) — the same transport shape as search.ts. Shared by
+ *  the count leg below and the adapt preflight (adaptive-q.ts). */
+export const esSearchBody = async (client: Client, dataset: any, body: any, abortContext?: EsAbortContext): Promise<any> => {
   const res = await timedEsCall(abortContext, () => client.transport.request({
     method: 'POST',
     path: `/${aliasName(dataset)}/_search`,
@@ -35,6 +32,16 @@ export const approxTotal = async (client: Client, dataset: any, query: Record<st
   }, { ...abortContext, meta: true }))
   const esResponse: any = (res as any).body
   if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
+  return esResponse
+}
+
+export const approxTotal = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<ApproxTotal> => {
+  const esQuery = prepareQuery(dataset, query)
+  const esResponse = await esSearchBody(client, dataset, {
+    size: 0,
+    track_total_hits: true,
+    query: { bool: { filter: [esQuery.query, { range: { _rand: { lt: mode.randBound } } }] } }
+  }, abortContext)
   const sampled = esResponse.hits.total.value
   return { total: extrapolateApproxTotal(sampled, mode), marginPct: estimateMarginPct(sampled) }
 }

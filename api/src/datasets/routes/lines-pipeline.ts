@@ -34,6 +34,7 @@ import { buildQueryHints } from '../../misc/utils/query-advice.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import type { LinesSource } from './lines-source.ts'
+import type { ApproxTotal } from '../es/approx-count.ts'
 import { type NextContext, nextLinkHref, linkHeaderValue, BodyAccumulator, jsonBodyPrefix, jsonBodySuffix, geojsonBodyPrefix, geojsonBodySuffix } from './lines-body.ts'
 
 export type { NextContext }
@@ -85,7 +86,7 @@ export interface StreamJsonContext extends NextContext {
   // (hits.total.relation === 'gte'), this lazy second ES request estimates the exact total from
   // the `_rand` sample slice (total + its margin of error). Only set by read.ts when the
   // getCountMode gates pass.
-  approxTotal?: () => Promise<{ total: number, marginPct: number }>
+  approxTotal?: () => Promise<ApproxTotal>
   // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
   // Only set when adapt actually ignored at least one word. Lands in meta.ignoredWords.
   ignoredWords?: string[]
@@ -113,6 +114,21 @@ export const consumeHits = async (source: LinesSource, perRow: (hit: any) => voi
     throw err
   }
   return { count, lastHit }
+}
+
+// Shared by streamJson/streamGeojson: read the total from the tail envelope and, in
+// approximate-count mode, swap a capped overflow ('gte') for the `_rand`-sampled estimate;
+// collect the transparency fields into `meta` (possibly empty — callers decide presence).
+const resolveTotalMeta = async (tail: any, ctx: { approxTotal?: () => Promise<ApproxTotal>, ignoredWords?: string[] }): Promise<{ total: number | undefined, meta: Record<string, any> }> => {
+  const meta: Record<string, any> = {}
+  let total = tail?.hits?.total?.value
+  if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
+    const estimate = await ctx.approxTotal()
+    total = estimate.total
+    meta.totalMarginPct = estimate.marginPct
+  }
+  if (ctx.ignoredWords?.length) meta.ignoredWords = ctx.ignoredWords
+  return { total, meta }
 }
 
 // Drain the rest of the stream and return the envelope, destroying the source if the drain itself fails.
@@ -159,20 +175,12 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const head: Record<string, any> = {}
   // total lives in the tail envelope (absent when track_total_hits:false — after= pages, count=false);
   // the buffered source's tail() is the esResponse itself, so both sources share this exact read.
-  // In approximate-count mode a capped overflow ('gte') is replaced by the `_rand`-sampled estimate,
-  // described by meta.totalMarginPct — below the cap ES reports 'eq' and the response is unchanged.
-  const meta: Record<string, any> = {}
-  let total = tail?.hits?.total?.value
-  if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
-    const estimate = await ctx.approxTotal()
-    total = estimate.total
-    meta.totalMarginPct = estimate.marginPct
-  }
+  // Below the cap ES reports 'eq' and the response is unchanged (see resolveTotalMeta).
+  const { total, meta } = await resolveTotalMeta(tail, ctx)
   if (total != null) head.total = total
   const nextHref = setNextLink(res, ctx, count, lastHit)
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
-  if (ctx.ignoredWords?.length) meta.ignoredWords = ctx.ignoredWords
   const hints = buildQueryHints(req, ctx.esSearchDurationMs)
   if (hints.length) meta.hints = hints
   if (Object.keys(meta).length) head.meta = meta
@@ -216,7 +224,7 @@ export interface StreamGeojsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
   bbox?: any // value or Promise — awaited only after the hits are drained (lets the agg overlap consumption)
   // Same approximate-count / adapt hooks as StreamJsonContext — see there.
-  approxTotal?: () => Promise<{ total: number, marginPct: number }>
+  approxTotal?: () => Promise<ApproxTotal>
   ignoredWords?: string[]
 }
 
@@ -247,14 +255,7 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
   const bbox = await ctx.bbox
 
   setNextLink(res, ctx, count, lastHit)
-  const meta: Record<string, any> = {}
-  let total = tail?.hits?.total?.value
-  if (total != null && tail?.hits?.total?.relation === 'gte' && ctx.approxTotal) {
-    const estimate = await ctx.approxTotal()
-    total = estimate.total
-    meta.totalMarginPct = estimate.marginPct
-  }
-  if (ctx.ignoredWords?.length) meta.ignoredWords = ctx.ignoredWords
+  const { total, meta } = await resolveTotalMeta(tail, ctx)
   const { parts, length, etag } = acc.finish(geojsonBodyPrefix(total, Object.keys(meta).length ? meta : undefined), geojsonBodySuffix(bbox))
   sendPreparedParts(req, res, parts, length, etag)
 }

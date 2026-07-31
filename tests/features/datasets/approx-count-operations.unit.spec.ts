@@ -34,6 +34,7 @@ test('count=estimate opts any query shape into the same estimation', () => {
   assert.ok(getCountMode(bigDataset, { q: 'a', sort: 'field1', count: 'estimate' }, cfg)) // sorted allowed
   assert.equal(getCountMode(bigDataset, { count: 'estimate' }, { ...cfg, minDatasetSize: null }), null) // kill switch still wins
   assert.equal(getCountMode({}, { count: 'estimate' }, cfg), null) // no count metadata → off
+  assert.equal(getCountMode(bigDataset, { count: 'estimate', after: '[10]' }, cfg), null) // after pages compute no total at all
 })
 
 test('probability is adjusted to dataset size and clamped', () => {

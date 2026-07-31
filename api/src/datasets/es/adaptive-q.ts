@@ -1,7 +1,8 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, chooseStrictestCandidate, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
+import { esSearchBody } from './approx-count.ts'
+import { type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, chooseStrictestCandidate, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
@@ -29,21 +30,6 @@ export interface AdaptResult {
   total: number
   /** margin of error in percent (~95 % confidence, rounded up) — becomes meta.totalMarginPct */
   marginPct: number
-}
-
-const esSearch = async (client: Client, dataset: any, body: any, abortContext?: EsAbortContext): Promise<any> => {
-  const res = await timedEsCall(abortContext, () => client.transport.request({
-    method: 'POST',
-    path: `/${aliasName(dataset)}/_search`,
-    body,
-    querystring: {
-      allow_partial_search_results: 'false',
-      timeout: config.elasticsearch.searchTimeout
-    }
-  }, { ...abortContext, meta: true }))
-  const esResponse: any = (res as any).body
-  if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
-  return esResponse
 }
 
 // simple_query_string operators: a q using them is an expert query speaking sqs, not plain
@@ -76,7 +62,7 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   const sampleSlice = { range: { _rand: { lt: mode.randBound } } }
   const wordMatchClauses: Record<string, any> = Object.fromEntries(words.map(word => [word, buildQClauses(dataset, word, undefined, 'simple')]))
 
-  const probe = await esSearch(client, dataset, {
+  const probe = await esSearchBody(client, dataset, {
     size: 0,
     track_total_hits: true,
     query: { bool: { filter: [orQuery, sampleSlice] } },

@@ -36,6 +36,7 @@ import {
   descendantsFilterClause,
   getCountMode,
   parseQMode,
+  parseQRequired,
   DEFAULT_Q_MODE
 } from './operations.ts'
 
@@ -339,14 +340,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       } catch (err: any) {
         throw httpError(400, err.message)
       }
-      // q_required: words excluded from the OR relaxation — they MUST match (non-scoring filter,
-      // scores stay pure OR). Set by q_mode=adapt (read.ts pins it in next links) or manually.
       let requiredWords: string[] | undefined
       if (query.q_required) {
-        const qWords = new Set(q.split(/\s+/))
-        requiredWords = String(query.q_required).split(',').map((w: string) => w.trim()).filter(Boolean)
-        for (const word of requiredWords) {
-          if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+        try {
+          requiredWords = parseQRequired(q, query.q_required)
+        } catch (err: any) {
+          throw httpError(400, err.message)
         }
       }
       must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, requiredWords))
