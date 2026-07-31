@@ -82,9 +82,12 @@ exactly-once:
 Instead `esUtils.sumBytes` (`api/src/datasets/es/sum-bytes.ts`) sums `_bytes` with a `sum`
 aggregation over the dataset's live index/alias (`size: 0, aggs: { bytes: { sum: { field:
 '_bytes' } } } }`, bounded by `config.elasticsearch.searchTimeout` and
-`allow_partial_search_results: false`). It returns `null` (caller keeps its legacy-computed
-value) for every expected can't-trust-the-sum condition, **without exception-based control
-flow**: a missing index/alias — e.g. the transient window mid-rebuild — is searched with
+`allow_partial_search_results: false`). The sum is trusted **optimistically**: once
+`_esLineBytes` is on, whatever the aggregation returns is the indexed size — there is no
+per-doc coverage verification (see the rolling-deploy caveat below for the accepted
+consequence). `sumBytes` returns `null` (caller keeps its legacy-computed value) only when
+the sum cannot be computed at all, **without exception-based control flow**: a missing
+index/alias — e.g. the transient window mid-rebuild — is searched with
 `ignore_unavailable: true` and detected as `_shards.total === 0` (an existing index has ≥ 1 shard
 even when empty, so a legitimate empty sum of 0 is not confused with "no index"). Contexts that
 have no ES client at all don't reach `sumBytes` in the first place: the files-processor worker
@@ -117,7 +120,7 @@ metric is adopted per-dataset, not globally:
   `dataset._esLineBytes` and the dataset isn't virtual, `storage.indexed = { size:
   await esUtils.sumBytes(dataset), parts: ['lines'] }` — replacing whatever the legacy computation
   above it set (data-file size for file datasets, `$collStats` size for REST collections). If the
-  sum comes back `null` (index unavailable, incomplete coverage) — or the calling context
+  sum comes back `null` (index unavailable) — or the calling context
   declared `esUnavailable` (see above) — this run **keeps the legacy-computed value** instead of
   failing the whole storage update.
 - Until a dataset's first full reindex under the new code, it silently keeps the legacy
@@ -140,13 +143,12 @@ metric is adopted per-dataset, not globally:
   stamp `_bytes`; symmetrically, a draft fully rebuilt by an old worker and then validated
   (`datasetService.validateDraft`) onto an already-marked dataset promotes an unstamped index under
   a marker that says it's stamped. Either way the symptom would be the same: `sumBytes` summing an
-  index where some docs carry `_bytes` and others don't, silently under-counting `indexed_bytes`.
-  Two protections close this: the coverage check in `sumBytes` (`api/src/datasets/es/sum-bytes.ts`)
-  compares a `value_count` aggregation on `_bytes` against `track_total_hits`, and returns `null`
-  — falling back to the legacy accounting — whenever they disagree, so a marker-lies window never
-  produces an under-count; and, independently, an admin-triggered full reindex of the dataset
-  always converges and repairs it, since a full reindex re-stamps every doc through the same
-  `IndexStream` path.
+  index where some docs carry `_bytes` and others don't, under-counting `indexed_bytes`.
+  This is **accepted**: pod version mismatches during a rolling deploy are not managed here (or
+  anywhere else in the app) — a per-request coverage verification would tax every storage update
+  forever to guard an ephemeral deploy window. The exposure is bounded to datasets whose index
+  was (re)built during the deploy itself, and any full reindex of an affected dataset converges
+  and repairs it, since a full reindex re-stamps every doc through the same `IndexStream` path.
 - Virtual datasets never take this path (`storage()` guards `!isVirtualDataset(dataset)`): they
   have no index of their own lines, so their `indexed` size stays the existing
   proportional-to-descendants `master-data` computation.
