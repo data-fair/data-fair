@@ -20,8 +20,9 @@ test('samplePivots handles degenerate domains', () => {
 
 test('normalizeProjectedDoc round-trips dates and strips excluded keys', () => {
   expect(PROJECTION_EXCLUDED_KEYS.has('_rand')).toBe(true)
+  expect(PROJECTION_EXCLUDED_KEYS.has('_bytes')).toBe(true)
   const d = new Date('2026-07-22T10:00:00.000Z')
-  const doc = normalizeProjectedDoc({ a: 1, _updatedAt: d, _rand: 42 })
+  const doc = normalizeProjectedDoc({ a: 1, _updatedAt: d, _rand: 42, _bytes: 12 })
   expect(doc).toEqual({ a: 1, _updatedAt: '2026-07-22T10:00:00.000Z' })
 })
 

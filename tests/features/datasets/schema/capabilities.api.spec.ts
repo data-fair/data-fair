@@ -335,9 +335,9 @@ test.describe('Properties capabilities', () => {
     assert.ok(dataset.schema.find((p: any) => p.key === '_file.content'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })
     assert.equal(res.data.total, 1)
-    // attachments are counted in indexed storage
-    assert.equal(dataset.storage.indexed.size, dataset.storage.size)
-    assert.equal(dataset.storage.indexed.parts.length, 2)
+    // attachments are counted in indexed storage on top of the CSV-equivalent lines size;
+    // indexed.size no longer equals the physical storage.size (see docs/architecture/storage-accounting.md)
+    assert.deepEqual(dataset.storage.indexed.parts, ['lines', 'attachments'])
 
     dataset = await doAndWaitForFinalize(ax, dataset.id, () =>
       ax.patch(`/api/v1/datasets/${dataset.id}`, {

@@ -277,5 +277,5 @@ export default async function (dataset: DatasetInternal) {
   }
 
   await datasetsService.applyPatch(dataset, patch)
-  if (activeExtensions.length && !dataset.draftReason) await updateStorage(dataset, false, true)
+  if (activeExtensions.length && !dataset.draftReason) await updateStorage(dataset, { checkRemaining: true })
 }
