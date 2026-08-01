@@ -103,6 +103,15 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
     assert.equal(bad2.status, 400) // at least one word must remain retained
   })
 
+  test('a stale q_required link (pre-rename #528) degrades gracefully', async () => {
+    // q_required shipped in #528 and was renamed before any release; a stale next link
+    // must not 400 — the unknown param is dropped (with a hint) and the preflight re-runs
+    const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_required: 'rare' } })).data
+    assert.deepEqual(res.meta.ignoredWords, ['commun']) // the preflight re-ran; q_required is inert
+    assert.ok(res.meta.hints.some((h: string) => h.includes('q_required')), JSON.stringify(res.meta.hints))
+    assert.ok(res.total >= 140 && res.total < 280)
+  })
+
   test('adapt pins the exclusion in the next link', async () => {
     const res = (await testUser1.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'commun rare', q_mode: 'adapt', size: 10 } })).data
     assert.ok(res.next.includes('q_ignored=commun'), res.next)
