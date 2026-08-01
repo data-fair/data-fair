@@ -487,7 +487,7 @@ export const buildQClauses = (
   qFields: string[] | undefined,
   qMode: string | undefined,
   sqsOptions: any = {},
-  requiredWords?: string[]
+  ignoredWords?: string[]
 ): any => {
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
@@ -528,9 +528,11 @@ export const buildQClauses = (
   }
   const scored = { bool: { should, minimum_should_match: 1 } }
 
-  // "score broad, match strict": q_mode=and and q_required tighten the MATCH SET through a
+  // "score broad, match strict": q_mode=and and q_ignored tighten the MATCH SET through a
   // non-scoring filter while scores stay pure OR — the page is OR's page restricted to the
-  // tightened set, and the selective filter leads the iteration. Requirements must NEVER move
+  // tightened set, and the filter leads the iteration. For q_ignored the filter is the OR
+  // of the retained (non-ignored) words: the match set is the plain OR minus docs that
+  // only matched ignored words — ignored words keep scoring. Requirements must NEVER move
   // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
   // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
   if (qMode !== 'complete') {
@@ -538,8 +540,14 @@ export const buildQClauses = (
     if (qMode === 'and' && matchFields.length) {
       return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
     }
-    if (requiredWords?.length && matchFields.length) {
-      return { bool: { must: [scored], filter: requiredWords.map(word => ({ multi_match: { query: word, fields: matchFields } })) } }
+    if (ignoredWords?.length && matchFields.length) {
+      const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
+      return {
+        bool: {
+          must: [scored],
+          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: matchFields } })), minimum_should_match: 1 } }]
+        }
+      }
     }
   }
   return scored
@@ -877,17 +885,65 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
 }
 
 /**
- * Parse and validate q_required — the words a search must match (the non-scoring filter of
- * the score-broad-match-strict shape; pinned by q_mode=adapt in next links, or set
- * manually). Every word must be a whitespace token of q, else 400.
+ * Parse and validate q_ignored — the words excluded from the non-scoring filter of the
+ * score-broad-match-strict shape (they keep scoring); pinned by q_mode=adapt in next
+ * links, or set manually. Every word must be a whitespace token of q, and at least one
+ * word of q must remain retained, else 400.
  */
-export const parseQRequired = (q: string, raw: string): string[] => {
+export const parseQIgnored = (q: string, raw: string): string[] => {
   const qWords = new Set(q.split(/\s+/))
   const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
   for (const word of words) {
-    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
+    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_ignored contient "${word}" qui n'est pas un mot de la recherche q.`)
   }
+  if (new Set(words).size >= qWords.size) throw httpError(400, 'Le paramètre q_ignored ne peut pas couvrir tous les mots de la recherche q.')
   return words
+}
+
+export interface OrAdaptCandidate {
+  /** the words dropped from filtering, most frequent first */
+  ignored: string[]
+  /** the words whose OR forms the non-scoring filter */
+  retained: string[]
+  /** sampled size of the retained union; null = needs an ES count (bounds could not decide) */
+  sampledCount: number | null
+}
+
+/**
+ * Candidates for OR-of-retained adapt, ordered strictest-first: ignore the k most frequent
+ * words, k = words.length-1 … 0 (k=0 = nothing ignored, the plain OR — always last).
+ * Union-size bounds fill sampledCount without an ES count where they can: a single
+ * retained word IS its solo count; union ≤ sum(solo) < floor disqualifies; union ≥
+ * max(solo) ≥ floor qualifies outright — and since every stricter candidate already
+ * failed, that candidate will be chosen, so the walk stops there (its exact sampled count
+ * is still needed, for the display total). Measured to eliminate the second probe in most
+ * real queries — benchmark/INVESTIGATIONS.md §14 finding 3.
+ */
+export const buildOrAdaptCandidates = (
+  words: string[],
+  soloSampledCount: Record<string, number>,
+  orSampledCount: number,
+  floorSample: number
+): OrAdaptCandidate[] => {
+  const byFreq = [...words].sort((a, b) => soloSampledCount[b] - soloSampledCount[a])
+  const candidates: OrAdaptCandidate[] = []
+  for (let k = words.length - 1; k >= 1; k--) {
+    const candidate: OrAdaptCandidate = { ignored: byFreq.slice(0, k), retained: byFreq.slice(k), sampledCount: null }
+    candidates.push(candidate)
+    const solos = candidate.retained.map(word => soloSampledCount[word])
+    const max = Math.max(...solos)
+    const sum = solos.reduce((a, b) => a + b, 0)
+    if (candidate.retained.length === 1) {
+      candidate.sampledCount = solos[0]
+      if (solos[0] >= floorSample) break
+    } else if (sum < floorSample) {
+      candidate.sampledCount = sum // disqualified either way — the ≤-bound is enough
+    } else if (max >= floorSample) {
+      break // qualified outright: chosen; only its display total still needs counting
+    }
+  }
+  candidates.push({ ignored: [], retained: byFreq, sampledCount: orSampledCount })
+  return candidates
 }
 
 // Sampling-noise margin (~2σ at MIN_BOUNDARY_SAMPLES) protecting the never-below-cap
@@ -895,6 +951,14 @@ export const parseQRequired = (q: string, raw: string): string[] => {
 // candidate whose TRUE total sits slightly below the cap cannot be chosen through sampling
 // noise. A statistical constant, deliberately not configuration.
 export const ADAPT_FLOOR_SAFETY = 1.2
+
+/**
+ * Minimum "bite" for an adapt ignore-set: the retained union must exclude at least 2 % of
+ * the sampled OR set, else filtering is pointless overhead (phrase-like queries whose
+ * words co-occur) and adapt reports nothing ignored. Both counts are nested on the same
+ * sample slice — the comparison is exact. A UX constant, deliberately not configuration.
+ */
+export const ADAPT_MIN_BITE = 0.98
 
 /**
  * Pick the strictest candidate whose sampled support clears floorSample — or the last

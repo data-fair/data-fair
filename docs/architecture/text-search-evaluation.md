@@ -716,6 +716,16 @@ The real cost is not code but *tuning the decision rule* to make "same top page 
 true in the aggregate — measurable with `rna-check.ts` overlap metrics; a batch of real
 production query logs is the right calibration corpus.
 
+> **Amendment (2026-08-01).** The shipped `adapt` (#528) filtered on the *conjunction* of
+> the rarest words ("require the rarest, ignore the rest"). Re-benchmarked against the
+> OR-of-retained reading — filter = union of the non-ignored words, i.e. the plain search
+> minus docs that only matched ignored words — the OR form gives identical top-20 pages,
+> is cheaper wherever both designs act, adapts in cases the conjunction lattice cannot,
+> and matches the "some words were ignored" message users actually see. Filter semantics
+> were switched accordingly and the pinned pagination param renamed `q_required` →
+> `q_ignored` (a `min-bite` guard also keeps adapt a no-op on phrase-like queries whose
+> words co-occur). Evidence and decision rule: `benchmark/INVESTIGATIONS.md` §14.
+
 ## 8. Open questions
 
 - T4 boost-value calibration needs labelled relevance data — out of harness scope; flag for
