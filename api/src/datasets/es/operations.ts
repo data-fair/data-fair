@@ -487,7 +487,7 @@ export const buildQClauses = (
   qFields: string[] | undefined,
   qMode: string | undefined,
   sqsOptions: any = {},
-  requiredWords?: string[]
+  ignoredWords?: string[]
 ): any => {
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
@@ -528,9 +528,11 @@ export const buildQClauses = (
   }
   const scored = { bool: { should, minimum_should_match: 1 } }
 
-  // "score broad, match strict": q_mode=and and q_required tighten the MATCH SET through a
+  // "score broad, match strict": q_mode=and and q_ignored tighten the MATCH SET through a
   // non-scoring filter while scores stay pure OR — the page is OR's page restricted to the
-  // tightened set, and the selective filter leads the iteration. Requirements must NEVER move
+  // tightened set, and the filter leads the iteration. For q_ignored the filter is the OR
+  // of the retained (non-ignored) words: the match set is the plain OR minus docs that
+  // only matched ignored words — ignored words keep scoring. Requirements must NEVER move
   // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
   // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
   if (qMode !== 'complete') {
@@ -538,8 +540,14 @@ export const buildQClauses = (
     if (qMode === 'and' && matchFields.length) {
       return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
     }
-    if (requiredWords?.length && matchFields.length) {
-      return { bool: { must: [scored], filter: requiredWords.map(word => ({ multi_match: { query: word, fields: matchFields } })) } }
+    if (ignoredWords?.length && matchFields.length) {
+      const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
+      return {
+        bool: {
+          must: [scored],
+          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: matchFields } })), minimum_should_match: 1 } }]
+        }
+      }
     }
   }
   return scored
@@ -874,20 +882,6 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   if (value === 'or' || value === 'simple') return 'simple'
   if (value === 'complete' || value === 'and' || value === 'adapt') return value
   throw httpError(400, `q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
-}
-
-/**
- * Parse and validate q_required — the words a search must match (the non-scoring filter of
- * the score-broad-match-strict shape; pinned by q_mode=adapt in next links, or set
- * manually). Every word must be a whitespace token of q, else 400.
- */
-export const parseQRequired = (q: string, raw: string): string[] => {
-  const qWords = new Set(q.split(/\s+/))
-  const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
-  for (const word of words) {
-    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_required contient "${word}" qui n'est pas un mot de la recherche q.`)
-  }
-  return words
 }
 
 /**

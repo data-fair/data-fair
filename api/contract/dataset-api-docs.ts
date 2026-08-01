@@ -171,7 +171,7 @@ export default (
     description: `
   Ce paramètre permet d'altérer le comportement du paramètre "q". Le mode par défaut est "adapt".
 
-  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble filtré reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`meta.ignoredWords\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
+  Le mode "adapt" ignore automatiquement pour le filtrage les mots trop fréquents — juste assez pour que l'ensemble des résultats contenant au moins un des mots restants reste au-dessus du seuil de comptage exact ; les mots ignorés comptent toujours pour le classement et sont signalés dans la réponse (\`meta.ignoredWords\`). Une recherche dont le total est sous le seuil, ou utilisant la syntaxe d'opérateurs, n'est pas modifiée.
 
   Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
@@ -187,12 +187,12 @@ export default (
     }
   }, {
     in: 'query',
-    name: 'q_required',
+    name: 'q_ignored',
     description: `
-  Paramètre technique renseigné automatiquement par le mode "adapt" dans les liens de pagination (\`next\`) pour garantir des pages cohérentes : liste de mots de la recherche "q" (séparés par des virgules) exigés dans les résultats, en filtre non-scorant. Ne pas construire manuellement.
+  Paramètre technique renseigné automatiquement par le mode "adapt" dans les liens de pagination (\`next\`) pour garantir des pages cohérentes : liste de mots de la recherche "q" (séparés par des virgules) ignorés du filtrage — les résultats contiennent au moins un des autres mots de la recherche, les mots ignorés comptent toujours pour le classement. Ne pas construire manuellement.
     `,
     schema: {
-      title: 'Mots requis (pagination adapt)',
+      title: 'Mots ignorés (pagination adapt)',
       type: 'string'
     }
   }, {

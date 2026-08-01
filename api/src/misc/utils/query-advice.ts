@@ -67,7 +67,7 @@ const RECOGNIZED_PARAMS = new Set([
   // pagination / output shaping
   'size', 'page', 'after', 'count', 'select', 'sort', 'truncate', 'thumbnail', 'html', 'format', 'hint', 'draft',
   // full-text search
-  'q', 'q_fields', 'q_mode', 'q_required', 'qs', 'highlight',
+  'q', 'q_fields', 'q_mode', 'q_ignored', 'qs', 'highlight',
   // ownership / account scoping
   'owner', 'account',
   // geo / temporal (+ their _c_ concept forms)

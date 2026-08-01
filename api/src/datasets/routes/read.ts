@@ -89,19 +89,22 @@ const readLines: RequestHandler = async (req, res) => {
     ? () => approxTotal(req.app.get('es'), dataset, query, countMode, esAbortContext)
     : undefined
 
-  // q_mode=adapt: ignore over-common words in filtering (they keep scoring) so the match set
-  // stays above the cap — see es/adaptive-q.ts. The preflight rewrites the effective query to
-  // q_required BEFORE the main search; `next` links inherit it from the mutated query, so
-  // after= pages replay the exact same tightened query with no preflight (chain consistency).
+  // q_mode=adapt: ignore over-common words in filtering (they keep scoring) so the retained
+  // union stays above the cap — see es/adaptive-q.ts. The preflight rewrites the effective
+  // query to q_ignored BEFORE the main search; `next` links inherit it from the mutated
+  // query, so after= pages replay the exact same tightened query with no preflight (chain
+  // consistency).
   let ignoredWords: string[] | undefined
   const resolvedQMode = query.q ? parseQMode(query.q_mode, DEFAULT_Q_MODE) : undefined
-  if (countMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_required) {
+  if (countMode && query.count !== 'estimate' && resolvedQMode === 'adapt' && !query.q_ignored) {
     const adaptResult = await runAdaptivePreflight(req.app.get('es'), dataset, query, countMode, esAbortContext)
     observe.reqStep(req, 'adaptPreflight')
     if (adaptResult) {
-      if (adaptResult.required.length) query.q_required = adaptResult.required.join(',')
       // the transparency field only appears when adapt actually ignored at least one word
-      if (adaptResult.ignored.length) ignoredWords = adaptResult.ignored
+      if (adaptResult.ignored.length) {
+        query.q_ignored = adaptResult.ignored.join(',')
+        ignoredWords = adaptResult.ignored
+      }
       // the preflight already estimated the chosen candidate's total — no separate count leg needed
       approxTotalThunk = () => Promise.resolve({ total: adaptResult.total, marginPct: adaptResult.marginPct })
     }

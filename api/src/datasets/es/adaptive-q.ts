@@ -2,30 +2,32 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
 import { esSearchBody } from './approx-count.ts'
-import { type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, chooseStrictestCandidate, buildQClauses, ADAPT_FLOOR_SAFETY } from './operations.ts'
+import { type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct, chooseStrictestCandidate, buildOrAdaptCandidates, type OrAdaptCandidate, buildQClauses, ADAPT_FLOOR_SAFETY, ADAPT_MIN_BITE } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
 // q_mode=adapt: ignore the most frequent words of the search in filtering — just enough of
-// them that the filtered set stays above the exactness horizon (the track_total_hits cap) —
-// while every word keeps scoring (see buildQClauses' score-broad-match-strict shape).
+// them that the RETAINED-WORD UNION stays above the exactness horizon (the track_total_hits
+// cap) — while every word keeps scoring (see buildQClauses' score-broad-match-strict shape).
+// The match set is the plain OR search minus the docs that only matched ignored words.
 //
 // The decision is measured on the `_rand < randBound` sample slice, so every count in this
 // module is in SAMPLED DOCS (multiply by 1/probability for real counts). One size:0 search
 // returns the sampled count of the full OR search plus a per-word sampled count (filters
-// agg); when several words might be required together, one _msearch counts those
-// combinations. All probe requests are size:0 and deterministic → shard-request-cacheable.
+// agg); union-size bounds decide most candidates from those alone (buildOrAdaptCandidates),
+// and the few undecided unions are counted in one _msearch. All probe requests are size:0
+// and deterministic → shard-request-cacheable.
 //
 // Outcomes (THE INVARIANT: searches totalling under the cap run exactly as today):
-//   - OR search under the cap       → null (plain behaviour, exact total)
-//   - all words can be required     → nothing ignored (ignored: [])
-//   - some words must be ignored    → { required: the rarest, ignored: the most frequent }
-//   - even one word is too narrow   → unrestricted (required: [], plain capped OR)
+//   - OR search under the cap                → null (plain behaviour, exact total)
+//   - some words can be ignored              → { ignored: the most frequent }
+//   - nothing ignorable above the floor, or
+//     ignoring would not bite (co-occurring
+//     words: the union ≈ the full OR)        → { ignored: [] } (plain capped OR, sampled total)
 // The chosen candidate's sampled count also provides the response total, so the /lines
-// pipeline needs no separate count leg.
+// pipeline needs no separate count leg. Design evidence: benchmark/INVESTIGATIONS.md §14.
 
 export interface AdaptResult {
-  required: string[]
   ignored: string[]
   total: number
   /** margin of error in percent (~95 % confidence, rounded up) — becomes meta.totalMarginPct */
@@ -37,28 +39,21 @@ export interface AdaptResult {
 // ignoring a word the user explicitly required (+), negated (-), quoted or grouped.
 const SQS_SYNTAX = /[+\-|"*()~\\]/
 
-// Hard structural bound on the preflight fan-out: only the first MAX_ADAPT_WORDS words are
-// considered, so an adapt request costs AT MOST 3 ES round trips whatever the query — the
-// filters-agg probe (≤ MAX_ADAPT_WORDS buckets), one _msearch of ≤ MAX_ADAPT_WORDS-1
-// combination counts, and the main search.
+// Hard structural bound on the preflight fan-out: only the first MAX_ADAPT_WORDS distinct
+// words are considered, so an adapt request costs AT MOST 3 ES round trips whatever the
+// query — the filters-agg probe (≤ MAX_ADAPT_WORDS buckets), one _msearch of
+// ≤ MAX_ADAPT_WORDS-1 union counts, and the main search. Words beyond the bound can never
+// be ignored — they always stay retained, the safe (looser) direction.
 const MAX_ADAPT_WORDS = 8
-
-// A possible outcome: require the `required` words (a rarest-first prefix of the query's
-// words), ignore the rest. `sampledCount` is the size of that filtered set on the sample slice.
-interface Candidate {
-  required: string[]
-  ignored: string[]
-  sampledCount: number
-}
 
 export const runAdaptivePreflight = async (client: Client, dataset: any, query: Record<string, any>, mode: ApproxCountMode, abortContext?: EsAbortContext): Promise<AdaptResult | null> => {
   const q = String(query.q ?? '').trim()
   if (SQS_SYNTAX.test(q)) return null
-  const words = q.split(/\s+/).slice(0, MAX_ADAPT_WORDS)
+  const words = [...new Set(q.split(/\s+/))].slice(0, MAX_ADAPT_WORDS)
   if (words.length < 2) return null // nothing to relax on a single word
 
   // the full OR query (all other filters included) — the probes measure within that context
-  const orQuery = prepareQuery(dataset, { ...query, q_mode: 'simple', q_required: undefined }).query
+  const orQuery = prepareQuery(dataset, { ...query, q_mode: 'simple', q_ignored: undefined }).query
   const sampleSlice = { range: { _rand: { lt: mode.randBound } } }
   const wordMatchClauses: Record<string, any> = Object.fromEntries(words.map(word => [word, buildQClauses(dataset, word, undefined, 'simple')]))
 
@@ -80,31 +75,15 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   // under the cap the request must run exactly as today (exact total, full OR semantics)
   if (orSampledCount < sampledCap) return null
 
-  // candidates strictest-first: require the `requiredCount` rarest words, ignore the rest.
-  // A single required word is already counted by the agg; a multi-word combination can only
-  // qualify if its rarest member does (its count bounds the conjunction), so only those are
-  // worth counting — all in one _msearch. Two probes with two mechanisms on purpose: the
-  // combinations depend on the rarity order (unknown before the agg answers), and each shape
-  // matches its execution model — a filters agg amortizes the 8 unconditional per-word counts
-  // over ONE scan of the slice, while a conjunction as a top-level query leapfrogs on its
-  // rarest word (an agg bucket cannot skip, it tests every scanned doc).
-  const wordsByRarity = [...words].sort((a, b) => wordSampledCount[a] - wordSampledCount[b])
-  const candidates: Candidate[] = []
-  const needCounting: Candidate[] = []
-  for (let requiredCount = words.length; requiredCount >= 1; requiredCount--) {
-    const candidate: Candidate = {
-      required: wordsByRarity.slice(0, requiredCount),
-      ignored: wordsByRarity.slice(requiredCount),
-      sampledCount: 0
-    }
-    candidates.push(candidate)
-    if (requiredCount === 1) {
-      candidate.sampledCount = wordSampledCount[candidate.required[0]]
-    } else if (Math.min(...candidate.required.map(word => wordSampledCount[word])) >= floorSample) {
-      needCounting.push(candidate)
-    }
-  }
-  candidates.push({ required: [], ignored: [], sampledCount: orSampledCount }) // loosest: unrestricted
+  // candidates strictest-first: ignore the k most frequent words, keep the rest as an OR
+  // filter. Union-size bounds fill most sampled counts without ES (see the helper's doc);
+  // the undecided unions are counted in one _msearch. Two probes with two mechanisms on
+  // purpose: the candidates depend on the frequency order (unknown before the agg answers),
+  // and each shape matches its execution model — a filters agg amortizes the unconditional
+  // per-word counts over ONE scan of the slice, while a retained-OR union as a top-level
+  // filtered query iterates only its own posting lists.
+  const candidates = buildOrAdaptCandidates(words, wordSampledCount, orSampledCount, floorSample)
+  const needCounting = candidates.filter(candidate => candidate.sampledCount === null)
 
   if (needCounting.length) {
     const msearchBody = needCounting.flatMap(candidate => [
@@ -115,7 +94,15 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
         // _msearch rejects a `timeout` querystring but accepts it per body — same ES-side
         // bound as every other search (the client requestTimeout stays the backstop)
         timeout: config.elasticsearch.searchTimeout,
-        query: { bool: { filter: [orQuery, ...candidate.required.map(word => wordMatchClauses[word]), sampleSlice] } }
+        query: {
+          bool: {
+            filter: [
+              orQuery,
+              { bool: { should: candidate.retained.map(word => wordMatchClauses[word]), minimum_should_match: 1 } },
+              sampleSlice
+            ]
+          }
+        }
       }
     ])
     const res = await timedEsCall(abortContext, () => client.transport.request({
@@ -130,9 +117,22 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
     }
   }
 
-  const chosen = chooseStrictestCandidate(candidates, floorSample)
+  const chosen = chooseStrictestCandidate(candidates as Array<OrAdaptCandidate & { sampledCount: number }>, floorSample)
+
+  // an ignore-set must actually bite: when the query's words co-occur (phrase-like
+  // searches), the retained union covers (almost) the whole OR sample — filtering would
+  // exclude (almost) nothing and reporting "ignored" words would be pure noise. The two
+  // counts are nested on the same sample slice, so this comparison is exact, not
+  // statistical; and the union grows along looseness, so if the strictest candidate does
+  // not bite, no candidate does.
+  if (chosen.ignored.length && chosen.sampledCount >= orSampledCount * ADAPT_MIN_BITE) {
+    return {
+      ignored: [],
+      total: extrapolateApproxTotal(orSampledCount, mode),
+      marginPct: estimateMarginPct(orSampledCount)
+    }
+  }
   return {
-    required: chosen.required,
     ignored: chosen.ignored,
     total: extrapolateApproxTotal(chosen.sampledCount, mode),
     marginPct: estimateMarginPct(chosen.sampledCount)
