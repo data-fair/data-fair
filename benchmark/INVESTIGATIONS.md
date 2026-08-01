@@ -534,6 +534,79 @@ margins at linear probe cost.
 
 ---
 
+## 14. `q_mode=adapt` filter semantics — AND-of-required vs OR-of-retained (2026-08-01)
+
+The shipped adapt (#528) tightens the match set to a *conjunction* of the rarest words
+("require the rarest, ignore the rest"), which is stronger than what we tell users ("some
+words were ignored") and stronger than the plan's own wording ("excludes from filtering the
+most common query words"). Re-evaluated against the natural reading — filter = **OR of the
+retained words**, i.e. the plain search minus the docs that match *only* ignored words —
+on the reloaded `bench-rna` corpus (3 289 936 docs, ES 8.19.9 + ES 7.17.28, shared
+`_rand`), implementation-faithful shapes, request cache cleared before every measured run
+(§13 methodology), shipped config on this corpus (p = 0.01, cap = 10 000,
+floorSample = 120). Tool: `rna-adapt-or.ts`. Variants:
+
+- **shipped-and** — faithful port of the merged design (filters-agg probe, conjunction
+  `_msearch` of rarest-prefix candidates, strictest above the cap floor).
+- **or-capfloor** — same strictest-first cap-floor rule transplanted to OR-land: ignore
+  the most frequent words, as many as possible while the *retained union* stays ≥ floor.
+  Union counts are needed only when bounds can't decide: union ≥ max(solo) qualifies a
+  candidate outright, sum(solo) < floor disqualifies — probe2 vanishes in most cases.
+- **or-noise2pct / or-noisecap** — fixed noise thresholds (solo count > 2 % of corpus /
+  > cap) instead of the cap-floor rule; retained union may fall below the cap.
+
+Decisions and end-to-end cost (probe1+probe2+main `took`, warm p50; cold runs and ES 8
+agree in ranking — full tables in the script output):
+
+| query | shipped-and | or-capfloor | e2e ES 7 (and → or) | e2e ES 8 (and → or) |
+|---|---|---|---|---|
+| rue baudelaire | unrestricted (~1.44 M) | nothing ignorable (~1.44 M) | 16 → 25 | 11.5 → 15 |
+| association sportive | require **both** (~140 k) | ignore `association` (~328 k) | 54 → 35 | 31 → 18.5 |
+| club de football marseille | require `football` (~44 k) | retain `football` (~44 k) | 32 → 22.5 | 15.5 → 11 |
+| comité des fêtes saint pierre | require `pierre` (~64 k) | retain `pierre` (~64 k) | 73.5 → 32 | 28 → 16 |
+| les amis de la bibliothèque | **unrestricted** (~3 M) | ignore `de,la,les` (~88 k) | 30 → 47 | 14.5 → 19.5 |
+
+Findings (decisions identical across ES versions in every case):
+
+1. **Fidelity: top-20 identical to or-exact in every cell, both designs, both versions.**
+   §12-C's rare-must degradation (14–18/20) came from putting requirements in scoring
+   position (`must`), not from the tightening itself — score-broad-match-strict restores
+   the full page. Page-1 fidelity therefore does NOT discriminate the two designs; the
+   difference is the *enumerable set* (pagination, exports, aggregations).
+2. **When the chosen candidate is a single word the two designs coincide exactly** (3 of
+   5 queries, incl. the no-op). They diverge in both remaining cases, both times in OR's
+   favour: on association-sportive AND silently intersects (140 k — excludes 188 k
+   single-word matches from the enumerable set, contradicting the "ignored" message)
+   where OR ignores the corpus's own noise word and keeps all `sportive` matches; on
+   les-amis AND finds **no qualifying conjunction and gives up** (unrestricted, ~3 M)
+   where OR's richer candidate lattice still shrinks the set 34× (~88 k).
+3. **Cost: OR is cheaper wherever the designs coincide or AND over-tightens** (73.5 → 32
+   on comité ES 7 — the conjunction `_msearch` alone cost 39 ms; the OR bounds shortcut
+   eliminated probe2 in 3 of 5 queries). OR pays more only where it works harder
+   (les-amis 30 → 47 but delivers ~88 k vs nothing; baudelaire 16 → 25 to *conclude*
+   no-op, bounded by one extra `_msearch`). Everything stays well under the or-exact
+   baselines (28–89 ms ES 7).
+4. **The OR filter is never slower than the AND filter in the main query** — association
+   sportive ES 7: 22–25 ms vs 36–38 ms. A short disjunction over mid-frequency postings
+   beats leapfrogging two ~1 M-doc iterators.
+5. **Fixed noise thresholds refuted.** solo > cap (0.3 % of this corpus) declares every
+   word noise on 4/5 queries → no relief at all; 2 %-of-corpus misses the
+   association-sportive relief and can tighten below the cap on sampling noise: les-amis
+   retained `bibliothèque` sampled 101 < floor while the TRUE count is 10 097 ≥ cap —
+   exactly the boundary noise ADAPT_FLOOR_SAFETY exists to absorb. The cap-floor
+   strictest-first rule transplants to OR unchanged and keeps the never-below-cap
+   invariant intact.
+
+**Consequence: reimplement `q_mode=adapt` with OR-of-retained filtering** — same probe1,
+bounds-guided union counts instead of conjunction counts, filter = single non-scoring
+`should` over the retained words, pagination pinned by a `q_ignored` param (the ignored
+words — the complement of today's `q_required`, whose name stops being accurate once
+nothing is conjunctively required). Semantics finally match the user-facing message: the
+result set is the plain OR search minus the docs that only matched ignored words, scores
+and page 1 unchanged.
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an
