@@ -18,7 +18,9 @@ const PATTERNS: Array<[RegExp, string, boolean]> = [
   [/\bwildcard\b/g, 'key wildcard', false],
   [/\.text_standard\b/g, 'subfield .text_standard', true],
   [/\.keyword_insensitive\b/g, 'subfield .keyword_insensitive', true],
-  [/\.wildcard\b/g, 'subfield .wildcard', true]
+  [/\.wildcard\b/g, 'subfield .wildcard', true],
+  [/\banalysis=/g, 'param analysis=', true],
+  [/\bwords_agg\b/g, 'words_agg', true]
 ]
 const EXT = /\.(js|mjs|cjs|ts|vue|json|html)$/
 const SKIP = new Set(['node_modules', '.git', '.nuxt', 'coverage', 'test', 'tests'])

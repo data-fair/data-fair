@@ -1,4 +1,4 @@
-import { es, resetIndex, bulkIndex, assert, finding, time } from './es.ts'
+import { es, resetIndex, bulkIndex, finding, time } from './es.ts'
 
 const N = 50_000
 const docs = Array.from({ length: N }, (_, i) => ({

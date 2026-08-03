@@ -1,4 +1,8 @@
-import { es, resetIndex, bulkIndex, assert, finding, ANALYSIS_SETTINGS } from './es.ts'
+import { es, resetIndex, bulkIndex, finding, ANALYSIS_SETTINGS } from './es.ts'
+
+// Use the second line of the ES error message if present (the raw JSON body),
+// else fall back to the message itself (e.g. network errors have no second line).
+const esErr = (err: any) => (err.message.split('\n')[1] ?? err.message).slice(0, 200)
 
 const SETTINGS = { settings: { analysis: ANALYSIS_SETTINGS } }
 const DOCS = [
@@ -22,10 +26,11 @@ try {
   } } })
   finding('alias INSIDE multi-fields: ACCEPTED')
 } catch (err: any) {
-  finding('alias INSIDE multi-fields: REJECTED -> ' + err.message.split('\n')[1]?.slice(0, 200))
+  finding('alias INSIDE multi-fields: REJECTED -> ' + esErr(err))
 }
 
 // --- Attempt 2: top-level dotted alias name next to a concrete keyword field ---
+let attempt2Accepted = false
 try {
   await resetIndex('spike-a-dot', { ...SETTINGS, mappings: { properties: {
     ...gen2Props,
@@ -33,7 +38,12 @@ try {
     'col1.keyword_insensitive': { type: 'alias', path: 'col1' },
     'col2.wildcard': { type: 'alias', path: 'col2' }
   } } })
+  attempt2Accepted = true
   finding('top-level dotted alias names: ACCEPTED')
+} catch (err: any) {
+  finding('top-level dotted alias names: REJECTED -> ' + esErr(err))
+}
+if (attempt2Accepted) {
   await bulkIndex('spike-a-dot', DOCS)
   // exercise every consumer surface through the aliases
   const qs = await es('POST', '/spike-a-dot/_search', { query: { query_string: { query: 'col1.text_standard:épée' } } })
@@ -44,8 +54,6 @@ try {
   finding(`sort via alias col1.keyword_insensitive order: ${sorted.hits.hits.map((h: any) => h._source.col1).join(' | ')}`)
   const agg = await es('POST', '/spike-a-dot/_search', { size: 0, aggs: { v: { terms: { field: 'col1.keyword_insensitive' } } } })
   finding(`terms agg via alias keys: ${agg.aggregations.v.buckets.map((b: any) => b.key).join(', ')}`)
-} catch (err: any) {
-  finding('top-level dotted alias names: REJECTED -> ' + err.message.split('\n')[1]?.slice(0, 200))
 }
 
 // --- Mixed-generation multi-index behavior (virtual datasets), with or without aliases ---
@@ -66,12 +74,14 @@ const multi = await es('POST', '/spike-a-gen1,spike-a-gen2/_search', { query: { 
 finding(`multi-index query_string on col1.text_standard (only gen1 has it): ${multi.hits.total.value} hits — gen2 rows silently ${multi.hits.total.value === 1 ? 'excluded' : '??'}`)
 try {
   const ms = await es('POST', '/spike-a-gen1,spike-a-gen2/_search', { sort: [{ 'col1.keyword_insensitive': 'asc' }] })
-  finding(`multi-index sort on .keyword_insensitive without unmapped_type: OK, ${ms.hits.hits.length} hits`)
+  const failReason = ms._shards.failed ? ' — ' + ms._shards.failures[0].reason.reason.slice(0, 150) : ''
+  finding(`multi-index sort without unmapped_type: HTTP 200, ${ms.hits.hits.length} hits, shards failed ${ms._shards.failed}${failReason}`)
 } catch (err: any) {
-  finding('multi-index sort on .keyword_insensitive without unmapped_type: FAILS -> ' + err.message.split('\n')[1]?.slice(0, 200))
+  finding('multi-index sort on .keyword_insensitive without unmapped_type: FAILS -> ' + esErr(err))
 }
 const ms2 = await es('POST', '/spike-a-gen1,spike-a-gen2/_search', { sort: [{ 'col1.keyword_insensitive': { order: 'asc', unmapped_type: 'keyword' } }], _source: ['col1'] })
-finding(`multi-index sort with unmapped_type: order = ${ms2.hits.hits.map((h: any) => h._source.col1).join(' | ')}`)
+const failReason2 = ms2._shards.failed ? ' — ' + ms2._shards.failures[0].reason.reason.slice(0, 150) : ''
+finding(`multi-index sort with unmapped_type: HTTP 200, shards failed ${ms2._shards.failed}${failReason2}, order = ${ms2.hits.hits.map((h: any) => h._source.col1).join(' | ')}`)
 
 for (const idx of ['spike-a-mf', 'spike-a-dot', 'spike-a-gen1', 'spike-a-gen2']) await es('DELETE', '/' + idx).catch(() => {})
 console.log('spike A done')
