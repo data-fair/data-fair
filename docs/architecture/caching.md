@@ -217,10 +217,45 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
 - **Memoize caches** are deliberately short (30 s datasets, 1 min settings/ODS, 1 h pure compiled
   artefacts whose key already includes `finalizedAt`/`updatedAt`). The dataset one additionally has
   the `getDatasetFresh` validation path and the `?updatedAt=`/`?finalizedAt=` bypass.
+- **Slug changes** bump `finalizedAt` (`datasets/utils/patch.ts`, right after `updatedAt` is stamped) —
+  see below.
 - **Cache busting**: the `x-fg87fa6658fpbuia83hb8` header/cookie (or `x-cache-bypass` in the test
   harness) makes the proxy bypass its cache; `DELETE /api/v1/test-env/dataset-cache` and
   `…/publication-sites-cache` clear the memoize caches; restarting the proxy empties the
   (ephemeral) reverse-proxy cache; restarting an API/worker process empties its memoize caches.
+
+### Why a slug change bumps `finalizedAt`
+
+On a publication site a dataset is addressed by its **slug** (`getByUniqueRef`, and `_uniqueRefs` only
+ever holds the *current* slug), so the slug is part of the proxy cache key. Changing it moves which
+dataset a URL designates, while stored entries — proxy and browser — keep revalidating against
+`Last-Modified` (= `finalizedAt` on the data endpoints). Two ways that revalidation then lies:
+
+1. `resourceBased`'s own date short-circuit is an exact match on the **second-truncated** UTC date and
+   runs *before* anything ETag-related — a mismatching `If-None-Match` does not prevent it. Two
+   datasets finalized in the same second (a batch import) collide.
+2. Express's `fresh()` treats `If-Modified-Since >= Last-Modified` as "not modified", so a slug taken
+   over by a dataset finalized **earlier** answers 304 to a client holding the previous occupant's
+   date. The body ETag saves clients that send `If-None-Match` (nginx does); one that revalidates on
+   the date alone is not covered.
+
+Either way the proxy refreshes the *previous* occupant's response for another full max-age, and repeats
+— a self-renewing stale entry, not a bounded window. So `preparePatch` sets `finalizedAt` to the next
+whole second after `updatedAt` whenever the slug actually changes (and only if the dataset was already
+finalized — its presence is a "has been finalized" flag elsewhere). Rounding up matters: a plain `now`
+still compares equal to anything served in that same second, and equal reads as "not modified" in both
+mechanisms above.
+
+`finalizedAt` is the right knob because it is what the data endpoints send as `Last-Modified` and
+timestamp their URLs with, it is in integrity's `EXCLUDED_TOP_LEVEL` (no snapshot coverage, no outbox
+stamping), and it is absent from the user-facing `_modified` (`compute-modified.ts`), from DCAT and from
+the ODS-compat surface. The cost is that the dataset's Mongo vector-tile entries (keyed on
+`finalizedAt`) are discarded and regenerate. Applications need no equivalent: their `resourceBased()`
+uses `updatedAt`, which a slug change already moves.
+
+Not covered: entries that never revalidate during their lifetime — the `publicMaxAge` window on plain
+URLs, and timestamped entries, whose keys embed `finalizedAt` so a cross-dataset collision would need
+two datasets finalized at the identical timestamp.
 
 ## Known sharp edges
 
