@@ -15,7 +15,10 @@
 > `q_mode=complete`'s startsWith clause, since a stemmed `.text` can't serve prefix matching;
 > language-less columns need none — their `.text_standard` is already unstemmed and serves
 > that role directly. `Q_SEARCH_FIELDS_THRESHOLD` was halved 30 → 15 (one analyzed subfield
-> per column, not two) to preserve the same wide/narrow boundary. This supersedes §1 in full
+> per column, not two), which preserves the wide/narrow boundary for *default* string columns —
+> the ones that used to contribute two fields. Columns that already contributed only one
+> (numbers/dates, and string columns with one of the two text capabilities disabled) now reach
+> the boundary at half as many columns; accepted as cheap. This supersedes §1 in full
 > (per-column mapping, `q` regimes, width threshold) and the
 > [T13](#t13-collapse-text--text_standard-into-a-single-analyzed-field-per-column) /
 > [§3 joint proposal](#3-joint-proposal-t13--t9) dual-analyzer discussion below — read those

@@ -259,3 +259,46 @@ test.describe('buildQClauses - catch-all clauses', () => {
     assert.ok(!JSON.stringify(fieldsLists).includes('_search'))
   })
 })
+
+// With ONE analyzed field per column (spec §2), the historical "also match the raw .text_standard
+// view" clause of default mode has nothing left of its own: its field list is a subset of the
+// scored clause's. Emitting it anyway would run the same scored query TWICE on the hottest read
+// path. It survives only where it still contributes a field the first clause lacks — the catch-all
+// `_search.text_standard`, pinned by the catch-all test above.
+test.describe('buildQClauses - no duplicate clause in default mode', () => {
+  test('narrow language dataset: exactly one simple_query_string clause', () => {
+    const ds: any = fakeDataset({
+      schema: [
+        { key: 'a', type: 'string', language: 'fr' },
+        // a pure-keyword column: reachable through its keyword view, no analyzed field
+        { key: 't', type: 'string', 'x-capabilities': { text: false, textStandard: false } }
+      ]
+    })
+    const { qSearchFields, qStandardFields } = getFilterableFields(ds, 'hello', undefined)
+    // clause B's field set (minus the position-less .prefix companion) IS a subset of clause A's
+    assert.deepEqual(qSearchFields, ['a.text', 't.keyword_insensitive'])
+    assert.deepEqual(qStandardFields, ['a.text', 'a.prefix'])
+
+    const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
+    const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string)
+    assert.equal(sqs.length, 1)
+    assert.deepEqual(sqs[0].simple_query_string.fields, ['a.text', 't.keyword_insensitive'])
+  })
+
+  test('narrow language-less dataset: exactly one simple_query_string clause', () => {
+    const ds: any = fakeDataset({ schema: [{ key: 'a', type: 'string' }, { key: 'n', type: 'integer' }] })
+    const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
+    const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string)
+    assert.equal(sqs.length, 1)
+    assert.deepEqual(sqs[0].simple_query_string.fields, ['a.text_standard', 'n.text_standard'])
+  })
+
+  test('catch-all dataset keeps the second clause (_search.text_standard is a genuine extra view)', () => {
+    const ds: any = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
+    const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
+    const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string)
+    assert.equal(sqs.length, 2)
+    assert.deepEqual(sqs[0].simple_query_string.fields, ['_search'])
+    assert.deepEqual(sqs[1].simple_query_string.fields, ['_search.text_standard'])
+  })
+})

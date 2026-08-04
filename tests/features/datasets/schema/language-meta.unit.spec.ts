@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 import path from 'node:path'
-import { resolveSearchField, esProperty, getFilterableFields, resolveExistsFields } from '../../../../api/src/datasets/es/operations.ts'
+import debugModule from 'debug'
+import { resolveSearchField, esProperty, getFilterableFields, resolveExistsFields, buildIndexMappings } from '../../../../api/src/datasets/es/operations.ts'
+
+// `UpgradeScript.exec` expects a real `Debugger` (debug's callable + namespace/enabled/extend/…),
+// not a bare `() => void`. Building one costs nothing and stays silent unless DEBUG is set.
+const debugStub = debugModule('test:upgrade-scripts')
 
 // data-schema.ts imports `#config` at module load (config.ts validates on import). The unit harness
 // doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir and load the module via
@@ -55,7 +60,7 @@ test.describe('upgrade script: stamp language', () => {
         updateOne: async (filter: any, update: any) => { updates.push({ filter, update }) }
       })
     }
-    await upgradeScript.exec(db, () => {})
+    await upgradeScript.exec(db, debugStub)
     expect(updates.map(u => u.filter._id)).toEqual([1, 2])
     expect(docs[0].schema[0].language).toBe('fr')
     expect(docs[1].schema[0].language).toBe('en') // pre-existing value preserved
@@ -63,7 +68,7 @@ test.describe('upgrade script: stamp language', () => {
     expect(docs[2].schema[0].language).toBeUndefined() // non-string untouched, no update issued
 
     updates.length = 0
-    await upgradeScript.exec(db, () => {})
+    await upgradeScript.exec(db, debugStub)
     expect(updates).toEqual([]) // idempotent re-run
   })
 })
@@ -127,6 +132,42 @@ test.describe('esProperty single analyzed field', () => {
     expect(p.fields.text).toBeUndefined(); expect(p.fields.text_standard).toBeUndefined()
     const n = esProperty({ key: 'n', type: 'number' }, 'custom_french')
     expect(n.fields.text_standard).toEqual({ type: 'text', analyzer: 'standard' })
+  })
+})
+
+// extendedSchema builds the calculated columns as FRESH literals and its output is what
+// indexDefinition / finalize consume — so it must language-stamp them too, else the most text-like
+// column of the product (the extracted attachment text) silently loses language analysis.
+test.describe('calculated columns are language-stamped', () => {
+  const attachmentDataset = () => ({
+    id: 'calc-lang',
+    schema: [{ key: 'file', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }]
+  })
+
+  test('_file.content gets a language and therefore a .text field in the generated mapping', async () => {
+    const { extendedSchema } = await load()
+    const dataset = attachmentDataset()
+    const schema = await extendedSchema(null, dataset, false)
+
+    const content = schema.find((p: any) => p.key === '_file.content')
+    expect(content.language).toBe('fr')
+
+    const { properties } = buildIndexMappings(dataset, schema, 'standard', { fr: 'custom_french' })
+    expect(properties['_file.content'].fields.text).toBeDefined()
+    expect(properties['_file.content'].fields.text.analyzer).toBe('custom_french')
+    expect(properties['_file.content'].fields.text_standard).toBeUndefined()
+    // the mime type column is a plain string too and follows the same rule
+    expect(properties['_file.content_type'].fields.text.analyzer).toBe('custom_french')
+  })
+
+  test('vetoed calculated columns are left alone', async () => {
+    const { extendedSchema } = await load()
+    const schema = await extendedSchema(null, attachmentDataset(), false)
+    // _attachment_url carries text:false + textStandard:false (it is an ES wildcard field)
+    const attachmentUrl = schema.find((p: any) => p.key === '_attachment_url')
+    expect(attachmentUrl.language).toBeUndefined()
+    // _file.content_length is an integer, never a language column
+    expect(schema.find((p: any) => p.key === '_file.content_length').language).toBeUndefined()
   })
 })
 

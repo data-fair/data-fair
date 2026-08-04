@@ -227,6 +227,16 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
   schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
 
+  // language stamping call site 3 (see the write-path and file-analysis call sites above): the
+  // calculated columns pushed here are FRESH literals with no `language`, and this array is what
+  // indexDefinition / finalize consume. Without this the most text-like column of the product
+  // (`_file.content`, the extracted attachment text) would silently fall back to `.text_standard`
+  // (standard analyzer) instead of the language-analyzed `.text` it has always had.
+  // The stamp is inert on the columns whose ES mapping is hardcoded (`_id` is not mapped at all,
+  // `_geopoint` is a geo_point) and skipped on the vetoed ones (`_attachment_url`, `_updatedBy*`,
+  // `_owner*` all carry `text: false`).
+  stampSchemaLanguage(schema, config.elasticsearch.defaultLanguage)
+
   if (fixConcept) await fixConcepts(dataset, schema)
   return schema
 }
@@ -365,9 +375,12 @@ export const schemasTransformChange = (schema, patchedSchema) => {
   return !equal(schemaTransform1, schemaTransform2)
 }
 
-// language stamping — spec docs/superpowers/specs/2026-08-03-text-indexing-unification-design.md §3
-// a plain string column with the (deprecated) language-analyzed text capability active gets the
-// platform language written into the schema, so absence genuinely means "standard analyzer"
+// language stamping — see docs/architecture/text-search-evaluation.md (status note).
+// A plain string column with the (deprecated) language-analyzed text capability active gets the
+// platform language written into the schema, so absence genuinely means "standard analyzer".
+// Called on every schema write (curateDataset), on file analysis, on extension outputs and on the
+// extended (calculated-columns-included) schema, plus once retroactively by the 6.17.1 upgrade
+// script — after which schemas are self-describing, with no read-time platform default anywhere.
 export const defaultLanguage = (prop: any, platformLanguage: string): string | undefined => {
   if (prop.language) return undefined
   if (prop.type !== 'string' || (prop.format && prop.format !== 'uri-reference')) return undefined

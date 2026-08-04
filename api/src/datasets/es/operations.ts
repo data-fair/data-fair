@@ -274,7 +274,7 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
       // unstemmed companion for q_mode=complete's prefix clause: a stemmed field cannot serve
       // prefix matching (the indexed token is shorter than what the user typed). Lean on purpose —
       // the prefix query is a constant-score Lucene PrefixQuery, so positions and norms would be
-      // dead weight (see resolveSearchField and docs/superpowers/specs Spikes G/H).
+      // dead weight (see resolveSearchField and docs/architecture/text-search-evaluation.md).
       innerFields.prefix = { type: 'text', analyzer: 'standard', index_options: 'docs', norms: false }
     } else if (search.field?.endsWith('.text_standard')) {
       // more "raw" analysis good to boost more exact matches and for wildcard queries
@@ -417,13 +417,14 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
 // their original `^3` / `^2` weight. We count the analyzed inner sub-fields (`.text` and
 // `.text_standard` separately, since that is what actually inflates the `fields` array)
 // rather than the columns. See docs/architecture/load-management.md.
-// Halved from 30: single-analyzed-field emission (esProperty, spec §2) means each plain string
-// column now contributes ONE analyzed inner field instead of two, so halving the threshold
-// preserves the pre-change wide/narrow decision boundary for string columns (16 string columns
-// was 32 > 30 before, and is 16 > 15 now — same verdict). Deliberate side effect: columns that
-// only ever contributed one field (numbers/dates, which only ever had `.text_standard`) now cross
-// the threshold at half as many columns — acceptable, a wide scalar dataset getting the catch-all
-// is cheap.
+// Halved from 30: single-analyzed-field emission (esProperty, spec §2) means a DEFAULT string
+// column (both text capabilities on) now contributes ONE analyzed inner field instead of two, so
+// halving the threshold preserves the pre-change wide/narrow decision boundary for those columns
+// only (16 default string columns was 32 > 30 before, and is 16 > 15 now — same verdict).
+// Deliberate side effect: every column that ALREADY contributed a single field — numbers/dates
+// (only ever `.text_standard`) and string columns with one of the two text capabilities disabled —
+// now crosses the threshold at half as many columns. Accepted: a wide dataset of such columns
+// getting the catch-all is cheap.
 export const Q_SEARCH_FIELDS_THRESHOLD = 15
 
 // boost-eligible columns keep a per-field entry (with `^3` / `^2`) in qSearchFields in every
@@ -618,13 +619,15 @@ export const buildQClauses = (
     if (qSearchFields.length) {
       should.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
     }
-    // in "reduced" mode we already dropped .text_standard from qSearchFields and skip this clause
-    // (qStandardFields is still populated but only meant for the complete-mode prefix query).
-    // position-less `.prefix` companions are excluded (see positionSafeFields above); for a
-    // language column that leaves nothing here (its .text is already covered by qSearchFields),
-    // same as it always did once the single-analyzed-field refactor made this clause a duplicate.
+    // Historically this clause boosted exact matches by ALSO querying the raw `.text_standard`
+    // view of columns whose `.text` was already in clause A. With one analyzed field per column
+    // (spec §2) that second view is gone: `positionSafeFields(qStandardFields)` is now a SUBSET of
+    // `qSearchFields` for every per-column regime, so emitting it would run the exact same scored
+    // query twice on the hottest read path. Emit it only when it still carries a field clause A
+    // does not have — in practice the catch-all regime, where `_search.text_standard` is a genuine
+    // second analyzed view of the same `_search` catch-all (its alignment is deferred, spec §4).
     const standardFields = positionSafeFields(qStandardFields)
-    if (standardFields.length && !reduced) {
+    if (standardFields.length && !reduced && standardFields.some(f => !qSearchFields.includes(f))) {
       should.push({ simple_query_string: { query: q, fields: standardFields, ...sqsOptions } })
     }
   }
