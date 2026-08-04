@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import path from 'node:path'
-import { resolveSearchField, esProperty } from '../../../../api/src/datasets/es/operations.ts'
+import { resolveSearchField, esProperty, getFilterableFields, resolveExistsFields } from '../../../../api/src/datasets/es/operations.ts'
 
 // data-schema.ts imports `#config` at module load (config.ts validates on import). The unit harness
 // doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir and load the module via
@@ -117,5 +117,62 @@ test.describe('esProperty single analyzed field', () => {
     expect(p.fields.text).toBeUndefined(); expect(p.fields.text_standard).toBeUndefined()
     const n = esProperty({ key: 'n', type: 'number' }, 'custom_french')
     expect(n.fields.text_standard).toEqual({ type: 'text', analyzer: 'standard' })
+  })
+})
+
+// spec §4 — the query side targets the ONE field the mapping materializes. The keyword-view and
+// wildcard fanouts are NOT part of this (a column with no analyzed field still reaches `q` through
+// its keyword view); those are pinned by tests/features/datasets/query/q-fields.unit.spec.ts.
+test.describe('routing targets the effective field', () => {
+  // getFilterableFields is memoized on `${id}:${finalizedAt}:${!!hasQ}:${qFields}`
+  let seq = 0
+  const dataset = () => ({
+    id: 'lang-route-' + (seq++),
+    finalizedAt: 'x',
+    schema: [
+      { key: 'fr1', type: 'string', language: 'fr' },
+      { key: 'std1', type: 'string' },
+      { key: 'veto1', type: 'string', language: 'fr', 'x-capabilities': { text: false } },
+      { key: 'num1', type: 'number' }
+    ]
+  })
+
+  test('qSearchFields contain exactly one analyzed entry per column', () => {
+    const ff = getFilterableFields(dataset(), true, null)
+    expect(ff.qSearchFields).toContain('fr1.text')
+    expect(ff.qSearchFields).not.toContain('fr1.text_standard')
+    expect(ff.qSearchFields).toContain('std1.text_standard')
+    // explicit text:false vetoes the language meta -> standard analysis, still searchable
+    expect(ff.qSearchFields).toContain('veto1.text_standard')
+    expect(ff.qSearchFields).not.toContain('veto1.text')
+    expect(ff.qSearchFields).toContain('num1.text_standard')
+  })
+
+  test('esFields allowlist only exposes the materialized analyzed name', () => {
+    const ff = getFilterableFields(dataset(), true, null)
+    expect(ff.esFields).toContain('fr1.text')
+    expect(ff.esFields).not.toContain('fr1.text_standard')
+    expect(ff.esFields).not.toContain('std1.text')
+    expect(ff.esFields).toContain('std1.text_standard')
+  })
+
+  test('superset guarantee: every routed field is a legacy field name', () => {
+    const ff = getFilterableFields(dataset(), true, null)
+    for (const f of [...ff.qSearchFields, ...ff.searchFields]) {
+      // `.keyword_insensitive` is routed for non-searchable string columns and `.wildcard` for
+      // wildcard columns — both are legacy field names too, so they belong in this allowlist.
+      expect(f).toMatch(/^_search|\.(text|text_standard)(\^\d)?$|\.(keyword_insensitive|wildcard)$|^[^.]+$/)
+    }
+  })
+
+  test('resolveExistsFields unions the keyword view with the effective analyzed field', () => {
+    // flagged=true is the ignore_above escape hatch: a language column must union `.text`, a
+    // language-less one `.text_standard` — never a name its mapping does not carry
+    expect(resolveExistsFields({ key: 'fr1', type: 'string', language: 'fr' }, true)).toEqual(['fr1', 'fr1.text'])
+    expect(resolveExistsFields({ key: 'std1', type: 'string' }, true)).toEqual(['std1', 'std1.text_standard'])
+    // no analyzed field at all and no wildcard -> keyword only, no safe fallback
+    expect(resolveExistsFields({ key: 'tag', type: 'string', 'x-capabilities': { text: false, textStandard: false } }, true)).toEqual(['tag'])
+    // not flagged -> fast keyword path, unchanged
+    expect(resolveExistsFields({ key: 'fr1', type: 'string', language: 'fr' }, false)).toEqual(['fr1'])
   })
 })

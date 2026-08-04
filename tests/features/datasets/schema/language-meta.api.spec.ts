@@ -126,3 +126,101 @@ test.describe('Schema language meta', () => {
     // the HTTP surface only, never import api/src directly (see capabilities.api.spec.ts / that unit spec)
   })
 })
+
+// spec §4 — q / qs / highlight / words_agg all target the ONE analyzed subfield the column
+// materializes. `fr1` is a plain string (write-path stamped to language=fr -> .text, French
+// analyzer); `std1` carries the text:false veto (-> .text_standard, standard analyzer, no language).
+test.describe('Query routing on the effective analyzed field', () => {
+  const datasetId = 'rest-lang-routing'
+
+  test.beforeAll(async () => {
+    const ax = testUser1
+    await clean()
+    await ax.post(`/api/v1/datasets/${datasetId}`, {
+      isRest: true,
+      title: datasetId,
+      schema: [
+        { key: 'fr1', type: 'string', 'x-capabilities': { textAgg: true } },
+        { key: 'std1', type: 'string', 'x-capabilities': { text: false, textAgg: true } }
+      ]
+    })
+    await ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, [
+      { fr1: 'les données publiées', std1: 'les données publiées' }
+    ])
+    const dataset = await waitForFinalize(ax, datasetId)
+    // the write path stamped only the un-vetoed column
+    assert.equal(dataset.schema.find((p: any) => p.key === 'fr1').language, 'fr')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'std1').language, undefined)
+  })
+
+  test.afterAll(async () => {
+    await clean()
+  })
+
+  test('q uses the French analyzer on the language column and standard analysis on the vetoed one', async () => {
+    const ax = testUser1
+    // stemming + asciifolding are only available through .text (custom_french)
+    let res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { q: 'donnee', q_fields: 'fr1' } })
+    assert.equal(res.data.total, 1)
+    // the vetoed column is routed to .text_standard, which does neither — the unstemmed,
+    // unaccented term must not match there
+    res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { q: 'donnee', q_fields: 'std1' } })
+    assert.equal(res.data.total, 0)
+    // ...but plain whole-token matching still works on it
+    res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { q: 'données', q_fields: 'std1' } })
+    assert.equal(res.data.total, 1)
+  })
+
+  test('qs accepts the materialized subfield and 400s on the other with a language hint', async () => {
+    const ax = testUser1
+    const res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: 'fr1.text:données' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: 'fr1.text_standard:données' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('analyse linguistique'))
+        assert.ok(err.data.includes('language'))
+        return true
+      }
+    )
+    // symmetrically, the vetoed column has no .text
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: 'std1.text:données' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('analyse linguistique'))
+        return true
+      }
+    )
+  })
+
+  test('words_agg targets the effective field and constrains the analysis param', async () => {
+    const ax = testUser1
+    // no analysis param -> whichever field exists
+    let res = await ax.get(`/api/v1/datasets/${datasetId}/words_agg`, { params: { field: 'fr1' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${datasetId}/words_agg`, { params: { field: 'std1', analysis: 'standard' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    // asking for standard analysis on a language column: that field is not materialized
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${datasetId}/words_agg`, { params: { field: 'fr1', analysis: 'standard' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('analysis=standard'))
+        return true
+      }
+    )
+  })
+
+  test('highlight targets the effective field', async () => {
+    const ax = testUser1
+    const res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { q: 'donnee', q_fields: 'fr1', highlight: 'fr1' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.ok(res.data.results[0]._highlight.fr1.join('').includes('<em class="highlighted">'))
+  })
+})

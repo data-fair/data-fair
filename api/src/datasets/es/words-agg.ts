@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint, buildWordsAggs } from './operations.ts'
+import { columnOperationsHint, buildWordsAggs, resolveSearchField } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, abortContext?: EsAbortContext) => {
@@ -16,7 +16,13 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
     throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 
-  const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
+  // the column materializes exactly one analyzed subfield (spec §2), so `analysis` no longer picks
+  // between two — it can only agree or disagree with the one that exists.
+  const search = resolveSearchField(prop)
+  if (!search.field) throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. Aucune analyse textuelle n'est activée sur cette colonne.`)
+  if (query.analysis === 'standard' && search.language) throw httpError(400, `Le paramètre analysis=standard n'est pas disponible sur le champ ${prop.key}, il utilise une analyse linguistique (language=${search.language}).`)
+  if (query.analysis && query.analysis !== 'standard' && !search.language) throw httpError(400, `Le champ ${prop.key} n'utilise pas d'analyse linguistique.`)
+  const field = search.field
   const size = Number(query.size || 20)
   if (size > 200) throw httpError(400, 'Cette aggrégation ne peut pas retourner plus de 200 mots.')
   const esQuery = prepareQuery(dataset, query)

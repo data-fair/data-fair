@@ -30,6 +30,7 @@ import {
   columnOperationsHint,
   resolveExactKeywordTarget,
   resolveExistsFields,
+  resolveSearchField,
   resolveRangeOrPrefixField,
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
@@ -118,9 +119,13 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
-const capabilitiesSuffixes = [
-  ['.text', 'text'],
-  ['.text_standard', 'textStandard'],
+// Each row is [suffix, capability, extra hint]. Validation runs against `esFields`, which lists the
+// ONE analyzed subfield each column materializes (spec §2), so an explicit `qs=` reference to the
+// other analyzed name is rejected here. The analyzed rows carry an extra hint pointing at the
+// `language` meta, because the deprecated capability title alone no longer explains the rejection.
+const capabilitiesSuffixes: [string, string, string?][] = [
+  ['.text', 'text', 'Ce sous-champ n\'est pas disponible car la colonne n\'a pas d\'analyse linguistique (paramètre "language").'],
+  ['.text_standard', 'textStandard', 'Ce sous-champ n\'est pas disponible car la colonne utilise une analyse linguistique (paramètre "language").'],
   ['.keyword_insensitive', 'insensitive'],
   ['.wildcard', 'wildcard']
 ]
@@ -155,7 +160,7 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.${suffix[2] ? ' ' + suffix[2] : ''}`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
@@ -286,12 +291,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       const prop = dataset.schema.find((p: any) => p.key === key)
-      const caps = (prop && prop['x-capabilities']) || {}
-      if (caps.text === false && caps.textStandard === false) {
+      // the column materializes at most one analyzed subfield (spec §2) — highlight targets that one
+      const search = resolveSearchField(prop)
+      if (!search.searchable || !search.field) {
         throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
       }
-      esQuery.highlight.fields[key + '.text'] = {}
-      esQuery.highlight.fields[key + '.text_standard'] = {}
+      esQuery.highlight.fields[search.field] = {}
     }
   }
 
@@ -679,6 +684,9 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   if (ctx.highlightKeys) {
     res._highlight = {}
     for (const key of ctx.highlightKeys) {
+      // deliberately reads BOTH analyzed names: prepareQuery only ever requests the one the column
+      // materializes, so exactly one of these is populated and the other stays empty. Keeping both
+      // reads makes the shaping independent of which analyzer the column ended up with.
       const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
       const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
       if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {

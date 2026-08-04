@@ -2,30 +2,35 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
 
-// a string column produces both a .text and a .text_standard inner field -> counts as 2
+// every column materializes exactly ONE analyzed inner field (spec §2) -> counts as 1. A plain
+// string column with no `language` gets .text_standard; with a `language` it gets .text instead.
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
 // an integer (or date) column produces only a .text_standard inner field -> counts as 1
 const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
 const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
 test.describe('hasManyQSearchFields', () => {
-  test('threshold is 30', () => {
-    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 30)
+  test('threshold is 15', () => {
+    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 15)
   })
-  test('counts .text and .text_standard separately', () => {
-    // string columns have both -> 15 columns == 30 inner fields (not over), 16 == 32 (over)
+  test('counts the single analyzed inner field of each column', () => {
+    // string columns have one -> 15 columns == 15 inner fields (not over), 16 == 16 (over).
+    // The threshold was halved 30 -> 15 alongside single-field emission, so this string-column
+    // decision boundary is exactly the pre-change one.
     assert.equal(hasManyQSearchFields(stringFields(15)), false)
     assert.equal(hasManyQSearchFields(stringFields(16)), true)
-    // integer/date columns have only .text_standard -> 30 columns == 30 (not over), 31 == 31 (over)
-    assert.equal(hasManyQSearchFields(intFields(30)), false)
-    assert.equal(hasManyQSearchFields(intFields(31)), true)
+    // integer/date columns also have exactly one (.text_standard) -> same boundary now. They only
+    // ever contributed one field, so halving the threshold does move THEIR boundary (30 -> 15) —
+    // a deliberate, accepted side effect: a wide scalar dataset getting the catch-all is cheap.
+    assert.equal(hasManyQSearchFields(intFields(15)), false)
+    assert.equal(hasManyQSearchFields(intFields(16)), true)
   })
   test('ignores fields with no text inner field, and _id', () => {
     assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)
-    assert.equal(hasManyQSearchFields([...stringFields(10), ...boolFields(50)]), false) // 20 inner fields
+    assert.equal(hasManyQSearchFields([...stringFields(10), ...boolFields(50)]), false) // 10 inner fields
   })
   test('ignores boost-eligible columns (they are queried per-field, not via _search)', () => {
-    // 30 plain strings = 60 inner fields => wide
+    // 30 plain strings = 30 inner fields => wide
     assert.equal(hasManyQSearchFields(stringFields(30)), true)
     // 30 columns all annotated as labels contribute 0 to the count (always per-field) => not wide
     const allLabels = Array.from({ length: 30 }, (_, i) => ({ key: 'l' + i, type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' }))
@@ -44,15 +49,28 @@ const fakeDataset = (over: any = {}) => ({ id: 'fd' + (seq++), finalizedAt: '202
 const wideSchema = (n = 32) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
 
 test.describe('getFilterableFields - regimes', () => {
-  test('full legacy: narrow dataset lists every per-field variant', () => {
+  test('full legacy: narrow dataset lists the effective analyzed field of every column', () => {
     const ds = fakeDataset({ schema: [{ key: 'a', type: 'string' }, { key: 'b', type: 'string' }] })
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, false)
     assert.equal(reduced, false)
-    // keyword main types ('a', 'b') are omitted: each column has analyzed inner fields
-    // (.text + .text_standard) which already cover `q` matching, so the keyword main is redundant.
-    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'b.text', 'b.text_standard'])
+    // keyword main types ('a', 'b') are omitted: each column has an analyzed inner field which
+    // already covers `q` matching, so the keyword main entry would be redundant. These columns
+    // carry no `language`, so their single analyzed field is .text_standard.
+    assert.deepEqual(qSearchFields, ['a.text_standard', 'b.text_standard'])
     assert.deepEqual(qStandardFields, ['a.text_standard', 'b.text_standard'])
+  })
+
+  test('a language column routes to .text, a language-less one to .text_standard', () => {
+    const ds = fakeDataset({ schema: [{ key: 'fr1', type: 'string', language: 'fr' }, { key: 'std1', type: 'string' }] })
+    const { qSearchFields, esFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(qSearchFields, ['fr1.text', 'std1.text_standard'])
+    // the esFields allowlist (which validates explicit `qs=` references) exposes only the
+    // materialized name for each column
+    assert.ok(esFields.includes('fr1.text'))
+    assert.ok(!esFields.includes('fr1.text_standard'))
+    assert.ok(esFields.includes('std1.text_standard'))
+    assert.ok(!esFields.includes('std1.text'))
   })
 
   test('pure-keyword column (text + textStandard disabled) is searched through its insensitive twin', () => {
@@ -65,7 +83,7 @@ test.describe('getFilterableFields - regimes', () => {
     const { qSearchFields, qStandardFields } = getFilterableFields(ds, 'x', undefined)
     // `tag` has no analyzed inner field, so the keyword view is the only way to search it. We use
     // `.keyword_insensitive` rather than the main type so that `q` ignores case and diacritics.
-    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag.keyword_insensitive'])
+    assert.deepEqual(qSearchFields, ['a.text_standard', 'tag.keyword_insensitive'])
     assert.deepEqual(qStandardFields, ['a.text_standard'])
   })
 
@@ -141,14 +159,16 @@ test.describe('getFilterableFields - regimes', () => {
     })
     const { qSearchFields, qStandardFields, copyToSearch } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, true)
-    // boost-eligible columns contribute their analyzed inner fields with the ^N suffix; the
-    // catch-all `_search` entry is appended last. No keyword main types: every column has
-    // analyzed inner fields.
+    // boost-eligible columns contribute their single analyzed inner field with the ^N suffix; the
+    // catch-all `_search` entry is appended last. No keyword main types: every column has an
+    // analyzed inner field.
     assert.deepEqual(qSearchFields, [
-      'label_col.text^3', 'label_col.text_standard^3',
-      'desc_col.text^2', 'desc_col.text_standard^2',
+      'label_col.text_standard^3',
+      'desc_col.text_standard^2',
       '_search'
     ])
+    // the catch-all `_search` field itself keeps its own .text_standard subfield (spec §4:
+    // alignment of `_search` is deferred), so qStandardFields is not a copy of qSearchFields here
     assert.deepEqual(qStandardFields, [
       'label_col.text_standard^3',
       'desc_col.text_standard^2',
@@ -156,11 +176,13 @@ test.describe('getFilterableFields - regimes', () => {
     ])
   })
 
-  test('reduced (dedup-only): drops .text_standard for columns that have .text, keeps it for columns where it is the only inner field', () => {
-    // mix string-fulltext columns (have .text + .text_standard) and integer columns (only .text_standard)
+  test('wide dataset, no catch-all yet: each column contributes exactly one analyzed field, whichever analyzer it uses', () => {
+    // The former "reduced" dedup (drop .text_standard when .text covers the same column) dissolved
+    // with single-field emission — there is no analyzer duplicate left to drop. What this pins now
+    // is that mixed regimes coexist: language columns route to .text, scalars to .text_standard.
     const ds = fakeDataset({
       schema: [
-        ...Array.from({ length: 20 }, (_, i) => ({ key: 's' + i, type: 'string' })),
+        ...Array.from({ length: 20 }, (_, i) => ({ key: 's' + i, type: 'string', language: 'fr' })),
         ...Array.from({ length: 5 }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
       ],
       _esCopyToSearch: false
@@ -168,16 +190,17 @@ test.describe('getFilterableFields - regimes', () => {
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, false)
     assert.equal(reduced, true)
-    // string-fulltext columns: only .text remains in qSearchFields. The keyword main type is
-    // omitted (analyzed views cover it), and .text_standard is dropped as a quasi-duplicate of .text.
+    // language string columns: only .text. The keyword main type is omitted (the analyzed view
+    // covers it) and .text_standard is never materialized on these columns at all.
     assert.ok(!qSearchFields.includes('s0'))
     assert.ok(qSearchFields.includes('s0.text'))
     assert.ok(!qSearchFields.includes('s0.text_standard'))
-    // integer columns: .text_standard is the only inner field, so it stays in qSearchFields —
-    // removing it would eject the column from `q` entirely, not deduplicate.
+    // integer columns: .text_standard is their analyzed field, so it stays in qSearchFields —
+    // removing it would eject the column from `q` entirely.
     assert.ok(qSearchFields.includes('i0.text_standard'))
-    // qStandardFields still carries every .text_standard for q_mode=complete's prefix query
-    assert.ok(qStandardFields.includes('s0.text_standard'))
+    // qStandardFields drives q_mode=complete's prefix query and now follows each column's
+    // effective field rather than always being the standard-analyzed one
+    assert.ok(qStandardFields.includes('s0.text'))
     assert.ok(qStandardFields.includes('i0.text_standard'))
     // catch-all is not in play yet (no reindex)
     assert.ok(!qSearchFields.includes('_search'))
@@ -187,8 +210,8 @@ test.describe('getFilterableFields - regimes', () => {
     const ds = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
     const { qSearchFields, copyToSearch } = getFilterableFields(ds, 'x', ['f3'])
     assert.equal(copyToSearch, false)
-    // f3 has analyzed inner fields, so its keyword main is omitted from qSearchFields
-    assert.deepEqual(qSearchFields, ['f3.text', 'f3.text_standard'])
+    // f3 has an analyzed inner field, so its keyword main is omitted from qSearchFields
+    assert.deepEqual(qSearchFields, ['f3.text_standard'])
   })
 
   test('searchFields (used for the ?qs= query_string) is unchanged in catch-all mode', () => {
@@ -196,7 +219,7 @@ test.describe('getFilterableFields - regimes', () => {
     const { searchFields } = getFilterableFields(ds, 'x', undefined)
     // searchFields still carries the keyword main type for the raw `qs=` path
     assert.ok(searchFields.includes('f0'))
-    assert.ok(searchFields.includes('f0.text'))
+    assert.ok(searchFields.includes('f0.text_standard'))
     assert.ok(!searchFields.includes('_search'))
   })
 })
@@ -214,7 +237,7 @@ test.describe('buildQClauses - catch-all clauses', () => {
     const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
     // no keyword main types contribute — every column has analyzed inner fields covered by `_search`
     const expectedQSearchFields = [
-      'label_col.text^3', 'label_col.text_standard^3',
+      'label_col.text_standard^3',
       '_search'
     ]
     assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(expectedQSearchFields)))
@@ -228,7 +251,7 @@ test.describe('buildQClauses - catch-all clauses', () => {
     const ds: any = fakeDataset({ schema: [{ key: 'a', type: 'string' }] })
     const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
     const fieldsLists = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
-    assert.ok(fieldsLists.some((f: string[]) => f.includes('a.text')))
+    assert.ok(fieldsLists.some((f: string[]) => f.includes('a.text_standard')))
     assert.ok(!JSON.stringify(fieldsLists).includes('_search'))
   })
 })

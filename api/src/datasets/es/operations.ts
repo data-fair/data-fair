@@ -83,8 +83,10 @@ export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
   const fields = [prop.key]
-  if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
-  else if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  // exactly one analyzed subfield exists per column (spec §2) — target it rather than guessing from
+  // the deprecated capability pair, which no longer describes the mapping.
+  const search = resolveSearchField(prop)
+  if (search.field) fields.push(search.field)
   return fields
 }
 
@@ -439,13 +441,20 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
   // pick the `q` regime (only when no explicit q_fields was requested)
   const copyToSearch = !!hasQ && !qFields && dataset._esCopyToSearch === true
+  // `reduced` no longer changes anything built below — with a single analyzed field per column there
+  // is no analyzer duplicate left to drop (spec §4). It is still computed and returned unchanged so
+  // consumers of the returned shape (buildQClauses' clause-B / q_mode=and match set) keep working.
   const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema)
 
   for (const f of dataset.schema) {
     const capabilities = f['x-capabilities'] || []
     if (capabilities.index !== false) esFields.push(f.key)
-    if (capabilities.text !== false) esFields.push(f.key + '.text')
-    if (capabilities.textStandard !== false) esFields.push(f.key + '.text_standard')
+    // only the ONE analyzed subfield the column actually materializes is allowed in explicit `qs=`
+    // references (spec §2/§4). Old dual-field indexes still carry the other name, but validating
+    // against the target model keeps behavior uniform across index generations — a reference to the
+    // non-materialized name gets the 400-with-hint built in commons.checkQuery.
+    const search = resolveSearchField(f)
+    if (search.field) esFields.push(search.field)
     if (capabilities.insensitive !== false) esFields.push(f.key + '.keyword_insensitive')
     if (capabilities.wildcard) esFields.push(f.key + '.wildcard')
 
@@ -493,22 +502,18 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       // time.
       const perField = isQField && (!copyToSearch || !!suffix)
 
-      if (esProp.fields.text) {
-        searchFields.push(f.key + '.text' + suffix)
-        if (perField) qSearchFields.push(f.key + '.text' + suffix)
-      }
-      if (esProp.fields.text_standard) {
-        searchFields.push(f.key + '.text_standard' + suffix)
-        if (perField) {
-          // reduced mode: deduplicate by dropping .text_standard from qSearchFields ONLY when
-          // .text already covers the column (string-fulltext columns — the two analyzers are
-          // a quasi-duplicate on the same source). For numeric/date columns where .text_standard
-          // is the only inner field we keep it: the point is to remove the analyzer duplicate,
-          // not to remove columns from the search. qStandardFields still carries it for
-          // q_mode=complete's "startsWith" prefix query.
-          if (!reduced || !esProp.fields.text) qSearchFields.push(f.key + '.text_standard' + suffix)
-          qStandardFields.push(f.key + '.text_standard' + suffix)
-        }
+      // Exactly ONE analyzed subfield exists per column (spec §2): `.text` when the column has an
+      // effective `language`, `.text_standard` otherwise. The old "reduced" dedup — drop
+      // `.text_standard` from qSearchFields when `.text` already covered the same column — has
+      // nothing left to deduplicate and dissolves (spec §4). The name is read off the mapping, not
+      // off x-capabilities, so it can never drift from esProperty.
+      const analyzed = esProp.fields.text ? '.text' : '.text_standard'
+      searchFields.push(f.key + analyzed + suffix)
+      if (perField) {
+        qSearchFields.push(f.key + analyzed + suffix)
+        // qStandardFields drives q_mode=complete's "startsWith" prefix clause: it now targets the
+        // column's effective analyzed field whichever analyzer that field carries.
+        qStandardFields.push(f.key + analyzed + suffix)
       }
     }
   }
