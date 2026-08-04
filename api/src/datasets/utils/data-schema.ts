@@ -360,3 +360,22 @@ export const schemasTransformChange = (schema, patchedSchema) => {
   const schemaTransform2 = patchedSchema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
   return !equal(schemaTransform1, schemaTransform2)
 }
+
+// language stamping — spec docs/superpowers/specs/2026-08-03-text-indexing-unification-design.md §3
+// a plain string column with the (deprecated) language-analyzed text capability active gets the
+// platform language written into the schema, so absence genuinely means "standard analyzer"
+export const defaultLanguage = (prop: any, platformLanguage: string): string | undefined => {
+  if (prop.language) return undefined
+  if (prop.type !== 'string' || (prop.format && prop.format !== 'uri-reference')) return undefined
+  if (prop['x-capabilities']?.text === false) return undefined
+  return platformLanguage
+}
+
+export const stampSchemaLanguage = (schema: any[] | undefined, platformLanguage: string): boolean => {
+  let stamped = false
+  for (const prop of schema || []) {
+    const language = defaultLanguage(prop, platformLanguage)
+    if (language) { prop.language = language; stamped = true }
+  }
+  return stamped
+}

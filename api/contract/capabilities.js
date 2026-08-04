@@ -20,14 +20,14 @@ export default {
       default: true,
       layout: 'switch',
       title: 'Texte analysé pour recherche textuelle',
-      description: 'Désactivez cette capacité dans le cas d\'un code, une url, etc. N\'importe quel contenu sur lequel la recherche de mots a peu de sens.'
+      description: 'Désactivez cette capacité dans le cas d\'un code, une url, etc. N\'importe quel contenu sur lequel la recherche de mots a peu de sens. Déprécié : remplacé par le paramètre de colonne "language" — une seule analyse textuelle par colonne.'
     },
     text: {
       type: 'boolean',
       default: true,
       layout: 'switch',
       title: 'Texte analysé spécifiquement pour la langue française',
-      description: 'Désactivez cette capacité pour tout contenu qui n\'est pas en langue française ou pour lequel la recherche de mots a peu de sens.'
+      description: 'Désactivez cette capacité pour tout contenu qui n\'est pas en langue française ou pour lequel la recherche de mots a peu de sens. Déprécié : remplacé par le paramètre de colonne "language" — une seule analyse textuelle par colonne.'
     },
     textAgg: {
       type: 'boolean',

@@ -18,6 +18,28 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
   return true
 }
 
+// single-analyzed-field resolution — spec §2. The deprecated pair degrades to `searchable`,
+// an explicit text:false vetoes the language meta, and exactly one analyzed subfield exists.
+// Every field name returned here also exists in legacy (dual-field) indexes — that superset
+// property is what lets routing ignore index age entirely.
+export const resolveSearchField = (prop: any): { searchable: boolean, language?: string, field?: string } => {
+  const capabilities = prop['x-capabilities'] || {}
+  const textOn = capabilities.text !== false
+  const standardOn = capabilities.textStandard !== false
+  if (!textOn && !standardOn) return { searchable: false }
+  // only plain string columns carry language analysis (scalars/dates only ever had .text_standard)
+  const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
+  if (isPlainString && textOn && prop.language) {
+    return { searchable: true, language: prop.language, field: prop.key + '.text' }
+  }
+  // legacy "french-only" column (textStandard:false) not yet stamped: its index carries `.text`
+  // and NOT `.text_standard`, so it must target `.text` — analyzed with the platform default by
+  // the config-bound wrapper. Stamping (§3) promotes this into the branch above.
+  if (isPlainString && textOn && !standardOn) return { searchable: true, field: prop.key + '.text' }
+  if (standardOn) return { searchable: true, field: prop.key + '.text_standard' }
+  return { searchable: false }
+}
+
 // The keyword `ignore_above` character limit. Values longer than this are dropped from the keyword
 // index and its doc_values (kept only in _source), so term/exists/range/sort/agg on the main keyword
 // field silently miss them. See docs/architecture/load-management.md.
