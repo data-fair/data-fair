@@ -40,6 +40,34 @@ test.describe('defaultLanguage / stampSchemaLanguage', () => {
   })
 })
 
+test.describe('upgrade script: stamp language', () => {
+  test('upgrade script stamps main and draft schemas, skips untouched datasets, is idempotent', async () => {
+    const upgradeScript = await import('../../../../api/upgrade/6.17.1/stamp-schema-language.ts').then(m => m.default)
+    const docs: any[] = [
+      { _id: 1, schema: [{ key: 'a', type: 'string' }] },
+      { _id: 2, schema: [{ key: 'b', type: 'string', language: 'en' }], draft: { schema: [{ key: 'c', type: 'string' }] } },
+      { _id: 3, schema: [{ key: 'd', type: 'number' }] }
+    ]
+    const updates: any[] = []
+    const db: any = {
+      collection: () => ({
+        find: () => docs,
+        updateOne: async (filter: any, update: any) => { updates.push({ filter, update }) }
+      })
+    }
+    await upgradeScript.exec(db, () => {})
+    expect(updates.map(u => u.filter._id)).toEqual([1, 2])
+    expect(docs[0].schema[0].language).toBe('fr')
+    expect(docs[1].schema[0].language).toBe('en') // pre-existing value preserved
+    expect(docs[1].draft.schema[0].language).toBe('fr') // draft covered
+    expect(docs[2].schema[0].language).toBeUndefined() // non-string untouched, no update issued
+
+    updates.length = 0
+    await upgradeScript.exec(db, () => {})
+    expect(updates).toEqual([]) // idempotent re-run
+  })
+})
+
 test.describe('resolveSearchField', () => {
   test('veto and materialization rules from the spec', () => {
     expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr' }))
