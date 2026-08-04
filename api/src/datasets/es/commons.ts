@@ -307,6 +307,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
         throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
       }
       esQuery.highlight.fields[search.field] = {}
+      // task 8: also register the unstemmed prefix companion when it differs from the analyzed
+      // field, so a q_mode=complete match that only exists there (past the stem length) is
+      // markable — see resolveSearchField and the response shaping below.
+      if (search.prefixField && search.prefixField !== search.field) {
+        esQuery.highlight.fields[search.prefixField] = {}
+      }
     }
   }
 
@@ -702,16 +708,17 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   if (ctx.highlightKeys) {
     res._highlight = {}
     for (const key of ctx.highlightKeys) {
-      // deliberately reads BOTH analyzed names: prepareQuery only ever requests the one the column
-      // materializes, so exactly one of these is populated and the other stays empty. Keeping both
-      // reads makes the shaping independent of which analyzer the column ended up with.
+      // deliberately reads all analyzed names prepareQuery could have registered: a column only
+      // ever materializes `.text_standard`, or `.text` (+ its `.prefix` prefix companion, task 8).
+      // A q_mode=complete match past the stem length only lights up `.prefix` (the stemmed `.text`
+      // stays unmatched, or shows only its no_match_size context) — prefer whichever fragment
+      // actually carries the highlight marker over one that's just fallback context.
       const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
+      const prefixHighlight = (hit.highlight && hit.highlight[key + '.prefix']) || []
       const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
-      if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
-        res._highlight[key] = textStandardHighlight
-      } else {
-        res._highlight[key] = textHighlight
-      }
+      const marked = [textHighlight, prefixHighlight, textStandardHighlight]
+        .find(h => h.length && h[0].includes('<em class="highlighted">'))
+      res._highlight[key] = marked ?? (textStandardHighlight.length ? textStandardHighlight : textHighlight)
     }
   }
 

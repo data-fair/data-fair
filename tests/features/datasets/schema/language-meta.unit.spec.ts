@@ -71,24 +71,34 @@ test.describe('upgrade script: stamp language', () => {
 test.describe('resolveSearchField', () => {
   test('veto and materialization rules from the spec', () => {
     expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr' }))
-      .toEqual({ searchable: true, language: 'fr', field: 'a.text' })
+      .toEqual({ searchable: true, language: 'fr', field: 'a.text', prefixField: 'a.prefix' })
     expect(resolveSearchField({ key: 'a', type: 'string' }))
-      .toEqual({ searchable: true, field: 'a.text_standard' })
+      .toEqual({ searchable: true, field: 'a.text_standard', prefixField: 'a.text_standard' })
     expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr', 'x-capabilities': { text: false } }))
-      .toEqual({ searchable: true, field: 'a.text_standard' }) // explicit text:false vetoes language
+      .toEqual({ searchable: true, field: 'a.text_standard', prefixField: 'a.text_standard' }) // explicit text:false vetoes language
     expect(resolveSearchField({ key: 'a', type: 'string', 'x-capabilities': { text: false, textStandard: false } }))
       .toEqual({ searchable: false })
     expect(resolveSearchField({ key: 'n', type: 'number' }))
-      .toEqual({ searchable: true, field: 'n.text_standard' }) // scalars: textStandard only
+      .toEqual({ searchable: true, field: 'n.text_standard', prefixField: 'n.text_standard' }) // scalars: textStandard only
     expect(resolveSearchField({ key: 'n', type: 'number', 'x-capabilities': { textStandard: false } }))
       .toEqual({ searchable: false })
   })
   test('legacy french-only column targets .text, stamped or not', () => {
     // its index carries .text and NOT .text_standard — targeting standard would silently under-match
     expect(resolveSearchField({ key: 'a', type: 'string', 'x-capabilities': { textStandard: false } }))
-      .toEqual({ searchable: true, field: 'a.text' })
+      .toEqual({ searchable: true, field: 'a.text', prefixField: 'a.prefix' })
     expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr', 'x-capabilities': { textStandard: false } }))
-      .toEqual({ searchable: true, language: 'fr', field: 'a.text' })
+      .toEqual({ searchable: true, language: 'fr', field: 'a.text', prefixField: 'a.prefix' })
+  })
+  test('prefixField targets an unstemmed field', () => {
+    expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr' }))
+      .toEqual({ searchable: true, language: 'fr', field: 'a.text', prefixField: 'a.prefix' })
+    expect(resolveSearchField({ key: 'a', type: 'string' }))
+      .toEqual({ searchable: true, field: 'a.text_standard', prefixField: 'a.text_standard' })
+    expect(resolveSearchField({ key: 'n', type: 'number' }))
+      .toEqual({ searchable: true, field: 'n.text_standard', prefixField: 'n.text_standard' })
+    expect(resolveSearchField({ key: 'a', type: 'string', 'x-capabilities': { text: false, textStandard: false } }))
+      .toEqual({ searchable: false })
   })
 })
 

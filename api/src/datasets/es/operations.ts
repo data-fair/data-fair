@@ -27,7 +27,12 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // (`.keyword_insensitive`, else the keyword main type), and routes `.wildcard` independently of
 // analysis. Dropping either when wiring this function into the fanout is a silent recall
 // regression — guarded by q-fields.unit, q-keyword-insensitive.api and q-wildcard-column.api.
-export const resolveSearchField = (prop: any): { searchable: boolean, language?: string, field?: string } => {
+// `prefixField` is the target for q_mode=complete's prefix clause — task 8: a `.text` field with
+// language analysis STEMS, so the indexed token can end up shorter than what the user has typed
+// so far, and a prefix match against it silently stops matching mid-word. `.text_standard` never
+// stems, so it already serves prefix directly and `prefixField` just equals `field` there. Only
+// `.text` columns get a dedicated (lean, unstemmed) `.prefix` companion — see esProperty.
+export const resolveSearchField = (prop: any): { searchable: boolean, language?: string, field?: string, prefixField?: string } => {
   const capabilities = prop['x-capabilities'] || {}
   const textOn = capabilities.text !== false
   const standardOn = capabilities.textStandard !== false
@@ -35,13 +40,13 @@ export const resolveSearchField = (prop: any): { searchable: boolean, language?:
   // only plain string columns carry language analysis (scalars/dates only ever had .text_standard)
   const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
   if (isPlainString && textOn && prop.language) {
-    return { searchable: true, language: prop.language, field: prop.key + '.text' }
+    return { searchable: true, language: prop.language, field: prop.key + '.text', prefixField: prop.key + '.prefix' }
   }
   // legacy "french-only" column (textStandard:false) not yet stamped: its index carries `.text`
   // and NOT `.text_standard`, so it must target `.text` — analyzed with the platform default by
   // the config-bound wrapper. Stamping (§3) promotes this into the branch above.
-  if (isPlainString && textOn && !standardOn) return { searchable: true, field: prop.key + '.text' }
-  if (standardOn) return { searchable: true, field: prop.key + '.text_standard' }
+  if (isPlainString && textOn && !standardOn) return { searchable: true, field: prop.key + '.text', prefixField: prop.key + '.prefix' }
+  if (standardOn) return { searchable: true, field: prop.key + '.text_standard', prefixField: prop.key + '.text_standard' }
   return { searchable: false }
 }
 
@@ -257,6 +262,11 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
       // analyzer for a legacy french-only column not yet stamped with a `language` (see
       // resolveSearchField)
       innerFields.text = { type: 'text', analyzer: defaultAnalyzer, fielddata: textFieldData }
+      // unstemmed companion for q_mode=complete's prefix clause: a stemmed field cannot serve
+      // prefix matching (the indexed token is shorter than what the user typed). Lean on purpose —
+      // the prefix query is a constant-score Lucene PrefixQuery, so positions and norms would be
+      // dead weight (see resolveSearchField and docs/superpowers/specs Spikes G/H).
+      innerFields.prefix = { type: 'text', analyzer: 'standard', index_options: 'docs', norms: false }
     } else if (search.field?.endsWith('.text_standard')) {
       // more "raw" analysis good to boost more exact matches and for wildcard queries
       innerFields.text_standard = { type: 'text', analyzer: 'standard', fielddata: textFieldData }
@@ -511,9 +521,11 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       searchFields.push(f.key + analyzed + suffix)
       if (perField) {
         qSearchFields.push(f.key + analyzed + suffix)
-        // qStandardFields drives q_mode=complete's "startsWith" prefix clause: it now targets the
-        // column's effective analyzed field whichever analyzer that field carries.
-        qStandardFields.push(f.key + analyzed + suffix)
+        // qStandardFields drives q_mode=complete's "startsWith" prefix clause: it targets the
+        // column's unstemmed prefix companion when the column is language-analyzed (task 8 —
+        // stemming would otherwise truncate the indexed token below what the user typed), else
+        // the same effective analyzed field as qSearchFields (already unstemmed).
+        qStandardFields.push((search.prefixField ?? f.key + analyzed) + suffix)
       }
     }
   }
@@ -545,6 +557,13 @@ export const buildQClauses = (
   requiredWords?: string[]
 ): any => {
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
+  // `.prefix` companions (task 8) are lean, position-less fields (index_options: 'docs') dedicated
+  // to the startsWith clause below — a phrase (quoted `q`) or proximity query against them throws
+  // ES's "field was indexed without position data; cannot run PhraseQuery". Every use of
+  // qStandardFields OTHER than that startsWith clause must exclude them; for every other column
+  // (no language, or the catch-all's `.text_standard`) prefixField already equals the analyzed
+  // field itself, so this is a no-op there.
+  const positionSafeFields = (fields: string[]): string[] => fields.filter(f => !/\.prefix(\^\d+)?$/.test(f))
   const should: any[] = []
   if (qMode === 'complete') {
     // "complete" mode, we try to accomodate for most cases and give the most intuitive results
@@ -576,9 +595,13 @@ export const buildQClauses = (
       should.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
     }
     // in "reduced" mode we already dropped .text_standard from qSearchFields and skip this clause
-    // (qStandardFields is still populated but only meant for the complete-mode prefix query)
-    if (qStandardFields.length && !reduced) {
-      should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
+    // (qStandardFields is still populated but only meant for the complete-mode prefix query).
+    // position-less `.prefix` companions are excluded (see positionSafeFields above); for a
+    // language column that leaves nothing here (its .text is already covered by qSearchFields),
+    // same as it always did once the single-analyzed-field refactor made this clause a duplicate.
+    const standardFields = positionSafeFields(qStandardFields)
+    if (standardFields.length && !reduced) {
+      should.push({ simple_query_string: { query: q, fields: standardFields, ...sqsOptions } })
     }
   }
   const scored = { bool: { should, minimum_should_match: 1 } }
@@ -589,7 +612,7 @@ export const buildQClauses = (
   // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
   // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
   if (qMode !== 'complete') {
-    const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
+    const matchFields = reduced ? qSearchFields : [...qSearchFields, ...positionSafeFields(qStandardFields)]
     if (qMode === 'and' && matchFields.length) {
       return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
     }
