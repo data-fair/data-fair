@@ -245,6 +245,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Action ID** | `help-configure-properties` |
 | **Subagent** | `property_config_advisor` (model: `summarizer`) — suggests type overrides and capability optimizations |
 | **Pattern** | Asks user what they need (type corrections, capability optimization, or both). Reads config and sample data, suggests changes with explanations, applies via `set_property_config`. Does NOT write expressions — directs to expression_helper. |
+| **Full text search** | `text`/`textStandard` are deprecated storage keys, no longer part of the `capabilities` object the tools read/write. `set_property_config` exposes a `searchable` boolean + a `language` string (plain string columns only) instead; `read_property_config` reports the resolved `searchable`/`language` state per column. This mirrors the single toggle + language selector in `dataset-property-capabilities.vue` (`ui/src/composables/dataset/agent-property-config-tools-logic.ts`: `getTextSearchKind`, `resolveTextSearch`, `buildTextSearchPatch`). |
 | **Tools** | `read_property_config`, `set_property_config` |
 | **Source** | `ui/src/composables/dataset/agent-property-config-tools.ts` |
 

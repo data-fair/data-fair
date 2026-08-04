@@ -5,17 +5,23 @@ export interface PropertyConfig {
   key: string
   typeOverride?: { type: string, format?: string } | null
   capabilities?: Record<string, boolean> | null
+  /** Language meta for the materialized analyzed field (plain string columns only). null clears it. */
+  language?: string | null
 }
 
 export const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, title: string, description: string }>
 export const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties).filter(key => capabilitiesProperties[key].default === false)
 
+// `text`/`textStandard` are deprecated-but-accepted forever (they are now the storage encoding of
+// the searchable+language pair below) — they are intentionally excluded from the "relevant"
+// capabilities a caller is expected to read/write directly. Mirrors
+// ui/src/components/dataset/dataset-property-capabilities.vue's relevantCapabilities.
 export function getRelevantCapabilities (type: string, format?: string, xRefersTo?: string): string[] {
   if (type === 'number' || type === 'integer' || type === 'boolean') {
-    return ['index', 'textStandard', 'values']
+    return ['index', 'values']
   }
   if (type === 'string' && (format === 'date' || format === 'date-time')) {
-    return ['index', 'textStandard', 'values']
+    return ['index', 'values']
   }
   if (xRefersTo === 'https://purl.org/geojson/vocab#geometry') {
     return ['geoShape', 'vtPrepare']
@@ -24,9 +30,59 @@ export function getRelevantCapabilities (type: string, format?: string, xRefersT
     return ['indexAttachment']
   }
   if (type === 'string') {
-    return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive', 'wildcard']
+    return ['index', 'textAgg', 'values', 'insensitive', 'wildcard']
   }
   return []
+}
+
+// A plain string column (no format, or the uri-reference format) is the only kind that carries a
+// `language` meta — mirrors resolveSearchField's isPlainString in api/src/datasets/es/operations.ts.
+export function isPlainStringType (type: string, format?: string): boolean {
+  return type === 'string' && (!format || format === 'uri-reference')
+}
+
+// Which text-search shape applies to this column type: 'language' (toggle + language),
+// 'plain' (bare toggle mapping to textStandard alone), or 'none' (no text-search capability).
+// Mirrors dataset-property-capabilities.vue's textSearchKind.
+export function getTextSearchKind (type: string, format?: string, xRefersTo?: string): 'language' | 'plain' | 'none' {
+  if (xRefersTo === 'https://purl.org/geojson/vocab#geometry') return 'none'
+  if (xRefersTo === 'http://schema.org/DigitalDocument') return 'none'
+  if (type === 'number' || type === 'integer' || type === 'boolean') return 'plain'
+  if (type === 'string') return isPlainStringType(type, format) ? 'language' : 'plain'
+  return 'none'
+}
+
+/** Read-back per spec §5.4: toggle = any-of gate, selector = effective language. */
+export function resolveTextSearch (
+  xCapabilities: Record<string, boolean> | undefined,
+  language: string | undefined,
+  kind: 'language' | 'plain' | 'none'
+): { searchable: boolean, language?: string | null } {
+  if (kind === 'none') return { searchable: false }
+  const textOn = xCapabilities?.text !== false
+  const standardOn = xCapabilities?.textStandard !== false
+  const searchable = textOn || standardOn
+  if (kind === 'plain') return { searchable }
+  return { searchable, language: (searchable && textOn) ? (language ?? null) : null }
+}
+
+/**
+ * Serialize a searchable+language choice into the deprecated `text`/`textStandard` capability
+ * pair per spec §5.4: off -> text:false, textStandard:false; on+language -> both absent (true);
+ * on+standard -> text:false only. For 'plain' columns, only textStandard is meaningful.
+ */
+export function buildTextSearchPatch (
+  kind: 'language' | 'plain' | 'none',
+  searchable: boolean,
+  language?: string | null
+): { capabilities: Record<string, boolean>, language?: string | null } {
+  if (kind === 'plain') return { capabilities: { textStandard: searchable } }
+  if (kind === 'language') {
+    if (!searchable) return { capabilities: { text: false, textStandard: false }, language: null }
+    if (language) return { capabilities: { text: true, textStandard: true }, language }
+    return { capabilities: { text: false, textStandard: true }, language: null }
+  }
+  return { capabilities: {} }
 }
 
 export function resolveCapabilities (xCapabilities: Record<string, boolean> | undefined, relevant: string[]): Record<string, boolean> {
@@ -65,7 +121,15 @@ export async function executeReadPropertyConfig (dataset: any, fetchSampleRowsFn
     const relevant = getRelevantCapabilities(effectiveType, effectiveFormat, col['x-refersTo'])
     const resolved = resolveCapabilities(col['x-capabilities'], relevant)
 
-    const capsStr = relevant.map(k => `${k}=${resolved[k]}`).join(', ')
+    const textSearchKind = getTextSearchKind(effectiveType, effectiveFormat, col['x-refersTo'])
+    const textSearch = resolveTextSearch(col['x-capabilities'], col.language, textSearchKind)
+    const textSearchStr = textSearchKind === 'none'
+      ? ''
+      : textSearchKind === 'plain'
+        ? `, searchable=${textSearch.searchable}`
+        : `, searchable=${textSearch.searchable}, language=${textSearch.language ?? 'standard'}`
+
+    const capsStr = relevant.map(k => `${k}=${resolved[k]}`).join(', ') + textSearchStr
 
     const parts: string[] = []
     if (col['x-refersTo']) parts.push(`concept: ${col['x-refersTo']}`)
@@ -99,9 +163,11 @@ export async function executeReadPropertyConfig (dataset: any, fetchSampleRowsFn
     ...rows,
     '',
     '## Capabilities reference',
-    ...Object.entries(capabilitiesProperties).map(([key, cap]) =>
-      `- **${key}** (default: ${cap.default}): ${cap.description}`
-    ),
+    ...Object.entries(capabilitiesProperties)
+      .filter(([key]) => key !== 'text' && key !== 'textStandard')
+      .map(([key, cap]) => `- **${key}** (default: ${cap.default}): ${cap.description}`),
+    '- **searchable** (default: true): full text search, shown for every column that supports it. Serializes to the deprecated `text`/`textStandard` capabilities.',
+    '- **language** (plain string columns only, default: platform language): language used for text analysis when searchable is true; omit/null for a standard (language-less) analysis.',
     '',
     '## Sample data (5 rows)',
     sampleCsv
@@ -122,8 +188,8 @@ export function executeSetPropertyConfig (
   }
 
   // Validate keys exist
-  const schemaKeys = new Set((dataset.schema || []).map((p: any) => p.key))
-  const unknown = params.configs.filter((c: any) => !schemaKeys.has(c.key))
+  const schemaByKey = new Map((dataset.schema || []).map((p: any) => [p.key, p]))
+  const unknown = params.configs.filter((c: any) => !schemaByKey.has(c.key))
   if (unknown.length) {
     return `Error: Unknown column keys: ${unknown.map((c: any) => c.key).join(', ')}`
   }
@@ -137,11 +203,25 @@ export function executeSetPropertyConfig (
       result.typeOverride = { type: c.typeOverrideType }
       if (c.typeOverrideFormat) result.typeOverride.format = c.typeOverrideFormat
     }
+
     if (c.resetCapabilities) {
       result.capabilities = null
-    } else if (c.capabilities) {
-      result.capabilities = diffCapabilities(c.capabilities)
+    } else {
+      const capabilities: Record<string, boolean> = c.capabilities ? { ...c.capabilities } : {}
+      let touched = !!c.capabilities
+      if (c.searchable !== undefined) {
+        const prop: any = schemaByKey.get(c.key)
+        const effectiveType = prop['x-transform']?.type || prop.type
+        const effectiveFormat = prop['x-transform']?.format || prop.format
+        const kind = getTextSearchKind(effectiveType, effectiveFormat, prop['x-refersTo'])
+        const patch = buildTextSearchPatch(kind, c.searchable, c.language)
+        Object.assign(capabilities, patch.capabilities)
+        if ('language' in patch) result.language = patch.language ?? null
+        touched = true
+      }
+      if (touched) result.capabilities = diffCapabilities(capabilities)
     }
+
     return result
   })
 
@@ -150,7 +230,9 @@ export function executeSetPropertyConfig (
   const parts: string[] = []
   const typeCount = configs.filter(c => c.typeOverride !== undefined).length
   const capCount = configs.filter(c => c.capabilities !== undefined).length
+  const langCount = configs.filter(c => c.language !== undefined).length
   if (typeCount) parts.push(`${typeCount} type override${typeCount > 1 ? 's' : ''}`)
   if (capCount) parts.push(`${capCount} capability config${capCount > 1 ? 's' : ''}`)
+  if (langCount) parts.push(`${langCount} language config${langCount > 1 ? 's' : ''}`)
   return `Successfully applied ${parts.join(' and ')}.`
 }

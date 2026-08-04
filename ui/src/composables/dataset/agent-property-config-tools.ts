@@ -41,7 +41,7 @@ export function useAgentPropertyConfigTools (
 
   useAgentTool({
     name: 'read_property_config',
-    description: 'Read the dataset schema with current type overrides, capabilities, and sample data. Returns each column\'s detected type, type override, effective capabilities (with defaults resolved), and which capabilities are relevant for its type.',
+    description: 'Read the dataset schema with current type overrides, capabilities, full text search state, and sample data. Returns each column\'s detected type, type override, effective capabilities (with defaults resolved), whether it is searchable and with which language (when applicable), and which capabilities are relevant for its type.',
     annotations: { title: t('readPropertyConfig'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -52,7 +52,7 @@ export function useAgentPropertyConfigTools (
 
   useAgentTool({
     name: 'set_property_config',
-    description: 'Set type overrides and/or capabilities for one or more schema columns. For typeOverride, pass an object with type and optional format, or null to clear. For capabilities, pass an object with only the values that should differ from defaults, or null to reset to defaults.',
+    description: 'Set type overrides, capabilities, and/or full text search for one or more schema columns. For typeOverride, pass an object with type and optional format, or null to clear. For capabilities, pass an object with only the values that should differ from defaults, or null to reset to defaults. For full text search, use searchable (and language for plain string columns) rather than the capabilities object.',
     annotations: { title: t('setPropertyConfig') },
     inputSchema: {
       type: 'object' as const,
@@ -69,10 +69,12 @@ export function useAgentPropertyConfigTools (
               clearTypeOverride: { type: 'boolean' as const, description: 'Set to true to clear any existing type override.' },
               capabilities: {
                 type: 'object' as const,
-                description: 'Capabilities to set. Pass only values differing from defaults (index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false). Omit to leave unchanged.',
+                description: 'Capabilities to set. Pass only values differing from defaults (index=true, values=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false). Does not include full text search — use searchable/language for that. Omit to leave unchanged.',
                 additionalProperties: { type: 'boolean' as const }
               },
-              resetCapabilities: { type: 'boolean' as const, description: 'Set to true to reset capabilities to defaults.' }
+              resetCapabilities: { type: 'boolean' as const, description: 'Set to true to reset capabilities to defaults.' },
+              searchable: { type: 'boolean' as const, description: 'Enable/disable full text search for this column. Serializes to the deprecated text/textStandard capabilities under the hood. Omit to leave unchanged.' },
+              language: { type: 'string' as const, description: 'Language used for text analysis (e.g. "fr"), only for plain string columns when searchable is true. Omit or leave unset for a standard (language-less) analysis.' }
             },
             required: ['key'] as const
           }
@@ -95,7 +97,8 @@ Tâche :
    - Des entiers détectés comme nombres (suggère un override vers integer)
 3. Analyse les capacités pour des opportunités d'optimisation :
    - Colonnes de texte long : désactiver \`index\` et \`values\` (le filtrage exact et le tri n'ont pas de sens pour du texte long)
-   - Texte non français : désactiver \`text\` (l'analyse spécifique au français est inutile)
+   - Contenu sur lequel chercher des mots n'a pas de sens (codes, urls, ids) : désactiver \`searchable\`
+   - Colonnes de texte non français : mettre \`searchable=true\` sans \`language\` (analyse standard) plutôt que \`language="fr"\`
    - Colonnes où un nuage de mots pourrait être utile : suggérer d'activer \`textAgg\`
    - Codes à faible cardinalité : \`wildcard\` est généralement inutile
    - IDs uniques à haute cardinalité : le tri \`insensitive\` peut être inutile
@@ -106,7 +109,7 @@ Tâche :
 Consignes :
 - Les overrides de type ne sont disponibles que pour les jeux de type fichier. Ignore les suggestions de type si ce n'est pas un fichier.
 - Pour les capacités, ne suggère que les changements avec un bénéfice clair. Ne modifie pas ce qui est déjà bien configuré.
-- Ne passe que les valeurs de capacités qui diffèrent des défauts. Les défauts sont : index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
+- Ne passe que les valeurs de capacités qui diffèrent des défauts. Les défauts sont : index=true, values=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false. La recherche textuelle (searchable/language) est distincte des capacités et à ajuster séparément.
 - N'écris PAS d'expressions de transformation. Si un override de type nécessite une expression (ex: reformater des dates), mentionne-le et indique à l'utilisateur d'utiliser l'assistant d'expressions.
 - Rédige dans la même langue que le titre du jeu et les annotations existantes.`,
     en: `You are a data configuration expert for Data Fair, an open data publishing platform. You help users optimize column types and indexing capabilities.
@@ -120,7 +123,8 @@ Task:
    - Integers detected as numbers (suggest type override to integer)
 3. Analyze capabilities for optimization opportunities:
    - Long text columns: disable \`index\` and \`values\` (exact match filtering and sorting are meaningless for long text)
-   - Non-French text: disable \`text\` (French-specific analysis is wasteful)
+   - Content where searching for words has no meaning (codes, urls, ids): disable \`searchable\`
+   - Non-French text columns: set \`searchable=true\` without \`language\` (standard analysis) rather than \`language="fr"\`
    - Columns where word cloud/word stats may be useful: suggest enabling \`textAgg\`
    - Low-cardinality codes: \`wildcard\` is usually unnecessary
    - High-cardinality unique IDs: \`insensitive\` sort may be unnecessary
@@ -131,7 +135,7 @@ Task:
 Guidelines:
 - Type overrides are only available for file datasets. Skip type suggestions if the dataset is not a file.
 - For capabilities, only suggest changes that provide clear benefits. Don't change things that are already well configured.
-- Only pass capabilities values that differ from defaults. The defaults are: index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
+- Only pass capabilities values that differ from defaults. The defaults are: index=true, values=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false. Full text search (searchable/language) is separate from capabilities and adjusted independently.
 - Do NOT write transform expressions. If a type override needs an expression (e.g., reformatting dates), mention it and tell the user to use the expression helper.
 - Write in the same language as the dataset title and existing annotations.`
   }

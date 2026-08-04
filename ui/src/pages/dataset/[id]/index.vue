@@ -857,6 +857,10 @@ useAgentPropertyConfigTools(locale, structureEditFetch.data, (configs) => {
         prop['x-capabilities'] = cfg.capabilities
       }
     }
+    if (cfg.language !== undefined) {
+      if (cfg.language === null) delete prop.language
+      else prop.language = cfg.language
+    }
   }
 })
 
