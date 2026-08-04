@@ -32,6 +32,15 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // so far, and a prefix match against it silently stops matching mid-word. `.text_standard` never
 // stems, so it already serves prefix directly and `prefixField` just equals `field` there. Only
 // `.text` columns get a dedicated (lean, unstemmed) `.prefix` companion — see esProperty.
+// EXCEPTION to the "every field name also exists in legacy indexes" invariant above: `.prefix` is
+// new in task 8, so a dataset whose schema was already stamped with a `language` (Mongo-only, no
+// reindex) does NOT have it in its ES mapping until the next reindex. Targeting `prefixField`
+// alone there would silently match zero rows (an unmapped field in a multi-field query matches
+// nothing — no error), which is worse than the stemming bug this task fixes. getFilterableFields
+// therefore unions `field` alongside `prefixField` in qStandardFields for these columns: a
+// not-yet-reindexed index still matches (degraded to master's stemmed-prefix behavior via
+// `field`), a reindexed one also gets correct unstemmed prefix matching via `prefixField`. DO NOT
+// "simplify" this back to `prefixField` alone.
 export const resolveSearchField = (prop: any): { searchable: boolean, language?: string, field?: string, prefixField?: string } => {
   const capabilities = prop['x-capabilities'] || {}
   const textOn = capabilities.text !== false
@@ -521,11 +530,19 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       searchFields.push(f.key + analyzed + suffix)
       if (perField) {
         qSearchFields.push(f.key + analyzed + suffix)
-        // qStandardFields drives q_mode=complete's "startsWith" prefix clause: it targets the
-        // column's unstemmed prefix companion when the column is language-analyzed (task 8 —
-        // stemming would otherwise truncate the indexed token below what the user typed), else
-        // the same effective analyzed field as qSearchFields (already unstemmed).
-        qStandardFields.push((search.prefixField ?? f.key + analyzed) + suffix)
+        // qStandardFields drives q_mode=complete's "startsWith" prefix clause. For a language
+        // column it is the UNION of the effective analyzed field (`.text` — degrades gracefully
+        // to master's stemmed-prefix behavior on a dataset stamped with a language but not yet
+        // reindexed, see the CAUTION above resolveSearchField) and its unstemmed `.prefix`
+        // companion (task 8 — correct, unstemmed prefix matching once reindexed). For every other
+        // column `prefixField` already equals the analyzed field, so this collapses to the single
+        // entry it always was.
+        const standardField = f.key + analyzed + suffix
+        if (search.prefixField && search.prefixField !== search.field) {
+          qStandardFields.push(standardField, search.prefixField + suffix)
+        } else {
+          qStandardFields.push(standardField)
+        }
       }
     }
   }
@@ -559,10 +576,12 @@ export const buildQClauses = (
   const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   // `.prefix` companions (task 8) are lean, position-less fields (index_options: 'docs') dedicated
   // to the startsWith clause below — a phrase (quoted `q`) or proximity query against them throws
-  // ES's "field was indexed without position data; cannot run PhraseQuery". Every use of
-  // qStandardFields OTHER than that startsWith clause must exclude them; for every other column
-  // (no language, or the catch-all's `.text_standard`) prefixField already equals the analyzed
-  // field itself, so this is a no-op there.
+  // ES's "field was indexed without position data; cannot run PhraseQuery". That includes the
+  // startsWith clause itself when `q` carries a quote (`"a b"`, `"a b"~2` — not an autocomplete-
+  // prefix case anyway): it must fall back to position-bearing fields only. Every OTHER use of
+  // qStandardFields (clause B below, the `and`/`requiredWords` match set) must exclude `.prefix`
+  // unconditionally; for every non-language column `prefixField` already equals the analyzed
+  // field, so this filter is a no-op there.
   const positionSafeFields = (fields: string[]): string[] => fields.filter(f => !/\.prefix(\^\d+)?$/.test(f))
   const should: any[] = []
   if (qMode === 'complete') {
@@ -573,8 +592,13 @@ export const buildQClauses = (
     // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
-      if (qStandardFields.length) {
-        should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
+      // a quoted `q` (`"a b"`, or the proximity form `"a b"~2`) compiles this into a Lucene
+      // PhraseQuery once `*` is appended, which needs position data `.prefix` doesn't carry — drop
+      // it and fall back to the position-bearing fields (degrades to master's stemmed-prefix
+      // behavior for a language column, same as clause B below).
+      const startsWithFields = q.includes('"') ? positionSafeFields(qStandardFields) : qStandardFields
+      if (startsWithFields.length) {
+        should.push({ simple_query_string: { query: `${q}*`, fields: startsWithFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
         should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })

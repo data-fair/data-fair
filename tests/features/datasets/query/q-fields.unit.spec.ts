@@ -198,9 +198,12 @@ test.describe('getFilterableFields - regimes', () => {
     // integer columns: .text_standard is their analyzed field, so it stays in qSearchFields —
     // removing it would eject the column from `q` entirely.
     assert.ok(qSearchFields.includes('i0.text_standard'))
-    // qStandardFields drives q_mode=complete's prefix query: language columns target their
-    // unstemmed `.prefix` companion (task 8), scalars keep their already-unstemmed .text_standard
-    assert.ok(!qStandardFields.includes('s0.text'))
+    // qStandardFields drives q_mode=complete's prefix query: language columns target the UNION of
+    // their analyzed field (.text — degrades to stemmed prefix matching on a dataset stamped with
+    // a language but not yet reindexed, where .prefix doesn't exist yet) and their unstemmed
+    // `.prefix` companion (task 8, correct once reindexed); scalars keep their already-unstemmed
+    // .text_standard, a single entry.
+    assert.ok(qStandardFields.includes('s0.text'))
     assert.ok(qStandardFields.includes('s0.prefix'))
     assert.ok(qStandardFields.includes('i0.text_standard'))
     // catch-all is not in play yet (no reindex)

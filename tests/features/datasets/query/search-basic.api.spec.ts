@@ -351,4 +351,25 @@ test.describe('search - basic', () => {
     assert.equal(res.data.total, 2)
     assert.ok(res.data.results[0]._score > res.data.results[1]._score)
   })
+
+  test('q_mode=complete with a quoted phrase does not crash on a language column\'s prefix companion', async () => {
+    // task 8: the startsWith clause targets a lean, position-less `.prefix` field on language
+    // columns (index_options: 'docs') — a quoted phrase (or proximity) query needs position data,
+    // which that field cannot provide. This must degrade to the analyzed field, not 500/400.
+    const ax = testUser1
+    await ax.put('/api/v1/datasets/qmodes-phrase', {
+      isRest: true,
+      title: 'qmodes-phrase',
+      schema: [{ key: 'content', type: 'string' }]
+    })
+    const items: Record<string, string> = {
+      p1: 'phrase 1 mot1 mot2 mot3 mot4',
+      p2: 'phrase 2 mot1 mot3 mot2 mot4'
+    }
+    await ax.post('/api/v1/datasets/qmodes-phrase/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
+    await waitForFinalize(ax, 'qmodes-phrase')
+    const res = await ax.get('/api/v1/datasets/qmodes-phrase/lines', { params: { q: '"mot1 mot2"', q_mode: 'complete' } })
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'p1')
+  })
 })

@@ -298,6 +298,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
+    // `.prefix` can only ever be matched by the q_mode=complete startsWith clause (buildQClauses) —
+    // registering it for every other mode would still be "safe" (it just never matches), but with
+    // no_match_size:300 ES generates a 300-char fallback fragment for it on EVERY hit regardless,
+    // for a field prepareResultItem discards. Gate its registration on complete mode so that cost
+    // isn't paid on every highlighted request.
+    const highlightQMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
     for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       const prop = dataset.schema.find((p: any) => p.key === key)
@@ -308,9 +314,9 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       }
       esQuery.highlight.fields[search.field] = {}
       // task 8: also register the unstemmed prefix companion when it differs from the analyzed
-      // field, so a q_mode=complete match that only exists there (past the stem length) is
-      // markable — see resolveSearchField and the response shaping below.
-      if (search.prefixField && search.prefixField !== search.field) {
+      // field and q_mode=complete is actually in play, so a match that only exists there (past the
+      // stem length) is markable — see resolveSearchField and the response shaping below.
+      if (highlightQMode === 'complete' && search.prefixField && search.prefixField !== search.field) {
         esQuery.highlight.fields[search.prefixField] = {}
       }
     }
