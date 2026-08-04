@@ -1,5 +1,13 @@
 import { es, resetIndex, bulkIndex, finding, ANALYSIS_SETTINGS, assert } from './es.ts'
 
+// OUTCOME (do not re-derive the wrong conclusion from the framing below): the global `_prefix`
+// field priced here was REJECTED. Not on cost — on capability: highlight registration is
+// per-column (`esQuery.highlight.fields[<key>.prefix]`, see es/commons.ts), and a single shared
+// field cannot tell the caller WHICH column matched. The shipped shape is a per-column `.prefix`
+// companion on language columns only (`index_options:'docs', norms:false`, see esProperty). The
+// two questions below (index_options tiering, always-on vs gated) were priced for the global
+// variant and remain useful evidence, not a live decision.
+//
 // Follow-up to Spike G (see `## Spike G` in
 // docs/superpowers/specs/2026-08-03-indexing-rework-phase0-results.md and
 // dev/spikes/indexing-rework/spike-g-prefix-options.ts). Spike G's variant d (GLOBAL CATCH-ALL,
