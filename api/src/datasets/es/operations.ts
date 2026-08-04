@@ -22,6 +22,11 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // an explicit text:false vetoes the language meta, and exactly one analyzed subfield exists.
 // Every field name returned here also exists in legacy (dual-field) indexes — that superset
 // property is what lets routing ignore index age entirely.
+// CAUTION for the routing migration: `searchable: false` means "no analyzed field", NOT "out of
+// `q`". getFilterableFields still routes such string columns to their keyword view
+// (`.keyword_insensitive`, else the keyword main type), and routes `.wildcard` independently of
+// analysis. Dropping either when wiring this function into the fanout is a silent recall
+// regression — guarded by q-fields.unit, q-keyword-insensitive.api and q-wildcard-column.api.
 export const resolveSearchField = (prop: any): { searchable: boolean, language?: string, field?: string } => {
   const capabilities = prop['x-capabilities'] || {}
   const textOn = capabilities.text !== false
