@@ -396,7 +396,14 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
 // their original `^3` / `^2` weight. We count the analyzed inner sub-fields (`.text` and
 // `.text_standard` separately, since that is what actually inflates the `fields` array)
 // rather than the columns. See docs/architecture/load-management.md.
-export const Q_SEARCH_FIELDS_THRESHOLD = 30
+// Halved from 30: single-analyzed-field emission (esProperty, spec §2) means each plain string
+// column now contributes ONE analyzed inner field instead of two, so halving the threshold
+// preserves the pre-change wide/narrow decision boundary for string columns (16 string columns
+// was 32 > 30 before, and is 16 > 15 now — same verdict). Deliberate side effect: columns that
+// only ever contributed one field (numbers/dates, which only ever had `.text_standard`) now cross
+// the threshold at half as many columns — acceptable, a wide scalar dataset getting the catch-all
+// is cheap.
+export const Q_SEARCH_FIELDS_THRESHOLD = 15
 
 // boost-eligible columns keep a per-field entry (with `^3` / `^2`) in qSearchFields in every
 // regime — so they don't contribute to the catch-all's savings and don't `copy_to` it either.
