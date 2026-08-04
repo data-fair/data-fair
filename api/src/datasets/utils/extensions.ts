@@ -580,10 +580,6 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
           if (output['x-capabilities']) field['x-capabilities'] = output['x-capabilities']
           if (output['x-labels']) field['x-labels'] = output['x-labels']
           if (output['x-separator']) field.separator = output['x-separator']
-          // spec §3 call site 3: init for new columns — extension outputs are a first-indexing
-          // source just like file analysis, stamp the same way
-          const extensionLanguage = schemaUtils.defaultLanguage(field, config.elasticsearch.defaultLanguage)
-          if (extensionLanguage) field.language = extensionLanguage
           return field
         }))
       const errorField = action.output.find((o: any) => o.name === '_error') || action.output.find(o => o.name === 'error')
@@ -613,6 +609,12 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
       extensionsFields.push(fullProperty)
     }
   }
+  // spec §3 call site 3: init for new columns — extension outputs (including the literal
+  // `_error` field pushed above) are a first-indexing source just like file analysis, stamp
+  // the same way. Stamping the whole array once it is fully built (rather than stamping
+  // individual field literals as they are constructed) means any field pushed into
+  // `extensionsFields` in the future is covered by construction — no call site can forget it.
+  schemaUtils.stampSchemaLanguage(extensionsFields, config.elasticsearch.defaultLanguage)
   const newSchema: any[] = []
   for (const prop of schema) {
     if (prop['x-extension']) {

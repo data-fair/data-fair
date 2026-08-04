@@ -8,11 +8,11 @@ import { es, resetIndex, bulkIndex, finding, ANALYSIS_SETTINGS, assert } from '.
 // two questions below (index_options tiering, always-on vs gated) were priced for the global
 // variant and remain useful evidence, not a live decision.
 //
-// Follow-up to Spike G (see `## Spike G` in
-// docs/superpowers/specs/2026-08-03-indexing-rework-phase0-results.md and
-// dev/spikes/indexing-rework/spike-g-prefix-options.ts). Spike G's variant d (GLOBAL CATCH-ALL,
-// copy_to a shared `_prefix` field with `index_options:'docs', norms:false`) cost +10.3% vs a
-// no-prefix baseline. Two design calls need pricing before a decision:
+// Follow-up to Spike G (see dev/spikes/indexing-rework/spike-g-prefix-options.ts for the full
+// harness; see docs/architecture/text-search-evaluation.md for the shipped shape this superseded —
+// a per-column `.prefix` companion on language columns, not a global field). Spike G's variant d
+// (GLOBAL CATCH-ALL, copy_to a shared `_prefix` field with `index_options:'docs', norms:false`)
+// cost +10.3% vs a no-prefix baseline. Two design calls need pricing before a decision:
 //
 // (A) The global field should ideally preserve TODAY's real full-text scoring (BM25 relevance),
 //     not the deliberately lossy `docs`/no-norms shape — positions are only needed for

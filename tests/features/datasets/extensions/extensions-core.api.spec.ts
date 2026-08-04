@@ -636,4 +636,33 @@ other,unknown address
     assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._etablissements.NOMEN_LONG, 'KOUMOUL')
   })
+
+  test('Patching schema of an extended dataset with no meaningful change stays finalized', async () => {
+    // Regression test: prepareExtensionsSchema used to stamp the `language` meta on the extension
+    // output fields but forgot to stamp the literal `_error` field pushed alongside them. The
+    // stored schema (stamped blindly by finalize/upgrade scripts) then disagreed forever with the
+    // freshly-derived schema on `<extensionKey>.error`'s `language`, so patch.ts:231 ("language
+    // changes the analyzer... requires full re-indexing") fired on every single schema patch of an
+    // extended dataset, even a complete no-op patch.
+    const ax = testUser1
+    let dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
+    await setupCoordsMock(10)
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(ax, dataset.id)
+    assert.equal(dataset.status, 'finalized')
+    const extensionKey = dataset.extensions[0].propertyPrefix
+    const errorProp = dataset.schema.find((field: any) => field.key === extensionKey + '.error')
+    assert.ok(errorProp, 'extension error field should be present in the schema')
+    assert.ok(errorProp.language, 'extension error field should be language-stamped like other string fields')
+
+    // patch again with the exact same schema: a true no-op that must not re-trigger a full reindex
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.status, 'finalized', 'a no-op schema patch of an extended dataset must not go back to a re-indexing status')
+  })
 })

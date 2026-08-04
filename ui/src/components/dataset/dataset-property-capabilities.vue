@@ -214,7 +214,11 @@ watch(dialog, (show) => {
   }
 })
 
-// searchable = text !== false || textStandard !== false, the same any-of gate as the API
+// searchable mirrors editSearchable, set on dialog open per the read-back rule above (line ~206):
+// the any-of gate (`text !== false || textStandard !== false`) for columns that can carry a
+// `language`, but `textStandard !== false` ALONE for a 'plain' column, since such a column never
+// materializes a `.text` field and the any-of gate would misread a stored `{textStandard: false}`
+// as searchable.
 const searchable = computed<boolean>({
   get: () => editSearchable.value,
   set: (value: boolean) => {

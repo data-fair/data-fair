@@ -5,8 +5,11 @@ import { waitForFinalize, doAndWaitForFinalize, clearDatasetCache } from '../../
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
-// spec docs/superpowers/specs/2026-08-03-text-indexing-unification-design.md §3
-// write-path stamping (curateDataset) + patch.ts reindex trigger on `language` change
+// `language` lifecycle (see docs/architecture/text-search-evaluation.md status note, and
+// api/src/datasets/utils/data-schema.ts's defaultLanguage/stampSchemaLanguage doc comment for the
+// full call-site list): every schema write (curateDataset) re-stamps `language` on string columns
+// where absent, BEFORE the patch.ts comparison — this covers write-path stamping and the
+// patch.ts:231 full-reindex trigger on an actual `language` change exercised below.
 test.describe('Schema language meta', () => {
   test.beforeEach(async () => {
     await clean()
