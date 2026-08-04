@@ -580,6 +580,10 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
           if (output['x-capabilities']) field['x-capabilities'] = output['x-capabilities']
           if (output['x-labels']) field['x-labels'] = output['x-labels']
           if (output['x-separator']) field.separator = output['x-separator']
+          // spec §3 call site 3: init for new columns — extension outputs are a first-indexing
+          // source just like file analysis, stamp the same way
+          const extensionLanguage = schemaUtils.defaultLanguage(field, config.elasticsearch.defaultLanguage)
+          if (extensionLanguage) field.language = extensionLanguage
           return field
         }))
       const errorField = action.output.find((o: any) => o.name === '_error') || action.output.find(o => o.name === 'error')

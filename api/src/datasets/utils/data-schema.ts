@@ -94,6 +94,10 @@ export const mergeFileSchema = (dataset: FileDataset) => {
     .concat(fileFields.filter(p => !schema.some(p2 => p.key === p2.key)))
     .concat(extensionFields.filter(p => !schema.some(p2 => p.key === p2.key)))
   dataset.schema = schema
+
+  // spec §3 call site 3: init for new columns discovered by file analysis — same rule as the
+  // write-path normalization, so a freshly analyzed column is language-stamped from the start
+  stampSchemaLanguage(dataset.schema, config.elasticsearch.defaultLanguage)
 }
 
 export const cleanSchema = (dataset) => {

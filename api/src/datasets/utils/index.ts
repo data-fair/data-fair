@@ -10,6 +10,7 @@ import * as permissions from '../../misc/utils/permissions.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as filesUtils from './files.ts'
 import * as schemaUtils from './data-schema.ts'
+import { stampSchemaLanguage } from './data-schema.ts'
 import * as readApiKeyUtils from './read-api-key.ts'
 import mergeDraft from './merge-draft.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -246,6 +247,10 @@ export const curateDataset = (dataset: any, existingDataset?: any) => {
       if (!singleSearch.id) singleSearch.id = slug(singleSearch.title, { lower: true, strict: true })
     }
   }
+
+  // spec §3 call site 2: schema-write normalization — legacy writers keep language-analyzed search,
+  // and full-schema echoes omitting `language` re-stamp to equality (no spurious reindex)
+  if (dataset.schema) stampSchemaLanguage(dataset.schema, config.elasticsearch.defaultLanguage)
 }
 
 export const titleFromFileName = (name: string) => {
