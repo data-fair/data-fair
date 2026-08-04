@@ -55,7 +55,7 @@ test.describe('getFilterableFields - regimes', () => {
     assert.deepEqual(qStandardFields, ['a.text_standard', 'b.text_standard'])
   })
 
-  test('pure-keyword column (text + textStandard disabled) keeps the keyword main type in qSearchFields', () => {
+  test('pure-keyword column (text + textStandard disabled) is searched through its insensitive twin', () => {
     const ds = fakeDataset({
       schema: [
         { key: 'a', type: 'string' },
@@ -63,9 +63,33 @@ test.describe('getFilterableFields - regimes', () => {
       ]
     })
     const { qSearchFields, qStandardFields } = getFilterableFields(ds, 'x', undefined)
-    // `tag` has no analyzed inner field, so its keyword main type is the only way to search it
-    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag'])
+    // `tag` has no analyzed inner field, so the keyword view is the only way to search it. We use
+    // `.keyword_insensitive` rather than the main type so that `q` ignores case and diacritics.
+    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag.keyword_insensitive'])
     assert.deepEqual(qStandardFields, ['a.text_standard'])
+  })
+
+  test('pure-keyword column without the insensitive capability falls back to the keyword main type', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'tag', type: 'string', 'x-capabilities': { text: false, textStandard: false, insensitive: false } }
+      ]
+    })
+    const { qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(qSearchFields, ['tag'])
+  })
+
+  test('non-string pure-keyword columns are unaffected (no insensitive inner field exists)', () => {
+    // .keyword_insensitive is only generated for string columns; a date/integer column with
+    // textStandard disabled has no keyword view at all and stays out of `q`.
+    const ds = fakeDataset({
+      schema: [
+        { key: 'n', type: 'integer', 'x-capabilities': { textStandard: false } },
+        { key: 'd', type: 'string', format: 'date', 'x-capabilities': { textStandard: false } }
+      ]
+    })
+    const { qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(qSearchFields, [])
   })
 
   test('catch-all: _esCopyToSearch dataset collapses qSearchFields to just _search (analyzed views and keyword mains both gone)', () => {

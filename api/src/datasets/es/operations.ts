@@ -447,7 +447,14 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       // It is always kept in `searchFields` for the raw `qs=` query path.
       searchFields.push(f.key)
       const hasFullText = !!(esProp.fields && (esProp.fields.text || esProp.fields.text_standard))
-      if (isQField && !hasFullText) qSearchFields.push(f.key)
+      if (isQField && !hasFullText) {
+        // prefer the `.keyword_insensitive` view when it exists: matching is still on the whole
+        // value (no analysis was requested on this column) but the normalizer (lowercase +
+        // asciifolding) applies to the query terms too, so `q` ignores case and diacritics
+        // instead of requiring the byte-exact value. Read from the mapping rather than from
+        // x-capabilities so it cannot drift from esProperty.
+        qSearchFields.push(esProp.fields?.keyword_insensitive ? f.key + '.keyword_insensitive' : f.key)
+      }
     }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
