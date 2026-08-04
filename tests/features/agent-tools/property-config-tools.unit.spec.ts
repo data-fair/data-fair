@@ -4,35 +4,40 @@ import {
   getRelevantCapabilities,
   resolveCapabilities,
   diffCapabilities,
+  getTextSearchKind,
+  buildTextSearchPatch,
   executeSetPropertyConfig
 } from '../../../ui/src/composables/dataset/agent-property-config-tools-logic.ts'
 
 // --- getRelevantCapabilities ---
+// text/textStandard are deprecated-but-accepted storage keys: they no longer appear in the
+// "relevant" capabilities list, since they are now driven via the searchable/language surface
+// (see the buildTextSearchPatch/getTextSearchKind describe blocks below).
 
 test.describe('getRelevantCapabilities', () => {
   test('returns numeric capabilities for number type', () => {
     const caps = getRelevantCapabilities('number')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for integer type', () => {
     const caps = getRelevantCapabilities('integer')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for boolean type', () => {
     const caps = getRelevantCapabilities('boolean')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns date capabilities for string with date format', () => {
     const caps = getRelevantCapabilities('string', 'date')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns date-time capabilities for string with date-time format', () => {
     const caps = getRelevantCapabilities('string', 'date-time')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns geo capabilities for geometry concept', () => {
@@ -47,12 +52,58 @@ test.describe('getRelevantCapabilities', () => {
 
   test('returns string capabilities for plain string', () => {
     const caps = getRelevantCapabilities('string')
-    assert.deepEqual(caps, ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive', 'wildcard'])
+    assert.deepEqual(caps, ['index', 'textAgg', 'values', 'insensitive', 'wildcard'])
   })
 
   test('returns empty for unknown type', () => {
     const caps = getRelevantCapabilities('array')
     assert.deepEqual(caps, [])
+  })
+})
+
+// --- getTextSearchKind / buildTextSearchPatch (searchable + language serialization) ---
+// Mirrors the spec §5.4 table also implemented in dataset-property-capabilities.vue's apply():
+// off -> text:false, textStandard:false; on+language -> both absent; on+standard -> text:false only.
+
+test.describe('getTextSearchKind', () => {
+  test('plain string columns get the language kind', () => {
+    assert.equal(getTextSearchKind('string'), 'language')
+    assert.equal(getTextSearchKind('string', 'uri-reference'), 'language')
+  })
+
+  test('non-string and date-formatted string columns get the plain kind', () => {
+    assert.equal(getTextSearchKind('number'), 'plain')
+    assert.equal(getTextSearchKind('integer'), 'plain')
+    assert.equal(getTextSearchKind('boolean'), 'plain')
+    assert.equal(getTextSearchKind('string', 'date'), 'plain')
+    assert.equal(getTextSearchKind('string', 'date-time'), 'plain')
+  })
+
+  test('geometry and attachment columns get no text-search kind', () => {
+    assert.equal(getTextSearchKind('string', undefined, 'https://purl.org/geojson/vocab#geometry'), 'none')
+    assert.equal(getTextSearchKind('string', undefined, 'http://schema.org/DigitalDocument'), 'none')
+  })
+})
+
+test.describe('buildTextSearchPatch', () => {
+  test('off -> text:false, textStandard:false, language:null', () => {
+    const patch = buildTextSearchPatch('language', false)
+    assert.deepEqual(patch, { capabilities: { text: false, textStandard: false }, language: null })
+  })
+
+  test('on + language fr -> deprecated keys absent (true), language set', () => {
+    const patch = buildTextSearchPatch('language', true, 'fr')
+    assert.deepEqual(patch, { capabilities: { text: true, textStandard: true }, language: 'fr' })
+  })
+
+  test('on + standard -> text:false only, language:null', () => {
+    const patch = buildTextSearchPatch('language', true, null)
+    assert.deepEqual(patch, { capabilities: { text: false, textStandard: true }, language: null })
+  })
+
+  test('plain kind only ever sets textStandard, never language', () => {
+    assert.deepEqual(buildTextSearchPatch('plain', false), { capabilities: { textStandard: false } })
+    assert.deepEqual(buildTextSearchPatch('plain', true), { capabilities: { textStandard: true } })
   })
 })
 
@@ -195,6 +246,35 @@ test.describe('executeSetPropertyConfig', () => {
     )
     // index=true is the default, so should be excluded. textAgg=true differs from default (false).
     assert.deepEqual(receivedConfigs[0].capabilities, { textAgg: true })
+  })
+
+  test('wires searchable+language into capabilities diff and result.language', () => {
+    const dataset = {
+      schema: [{ key: 'col1', type: 'string' }]
+    }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'col1', searchable: true, language: 'fr' }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    // on + language fr -> text/textStandard both default (true) so they diff away to {}
+    assert.deepEqual(receivedConfigs[0].capabilities, {})
+    assert.equal(receivedConfigs[0].language, 'fr')
+  })
+
+  test('wires searchable=false into capabilities diff and clears language', () => {
+    const dataset = {
+      schema: [{ key: 'col1', type: 'string' }]
+    }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'col1', searchable: false }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.deepEqual(receivedConfigs[0].capabilities, { text: false, textStandard: false })
+    assert.equal(receivedConfigs[0].language, null)
   })
 
   test('reports correct counts in summary', () => {
