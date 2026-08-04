@@ -49,8 +49,9 @@ dayjs.extend(timezone)
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
 // thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// supplies the runtime analyzer from config so mapping creation behaves unchanged
-export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
+// resolves the per-column analyzer from config: a stamped `language` picks its language analyzer,
+// unknown/legacy (no language) configs keep today's platform default
+export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.languageAnalyzers[prop.language] ?? config.elasticsearch.defaultAnalyzer)
 
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 

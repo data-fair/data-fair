@@ -13,7 +13,7 @@ const debug = debugModule('manage-indices')
 export const indexDefinition = async (dataset: any) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer, config.elasticsearch.languageAnalyzers).properties
   return body
 }
 

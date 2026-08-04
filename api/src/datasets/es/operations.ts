@@ -229,10 +229,13 @@ export const extractError = (err: any): ExtractedError => {
 // getFilterableFields, the unit-test paths) only check which inner fields exist.
 export const esProperty = (prop: any, defaultAnalyzer: string): any => {
   const capabilities = prop['x-capabilities'] || {}
-  // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
+  // single-analyzed-field resolution (spec §2, resolveSearchField) decides WHICH field exists —
+  // scalars/dates only ever materialize `.text_standard`; plain strings are resolved below.
+  const search = resolveSearchField(prop)
   const innerFields: any = {}
-  if (capabilities.textStandard !== false) {
-    // more "raw" analysis good to boost more exact matches and for wildcard queries
+  const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
+  if (search.field && !isPlainString) {
+    // scalars, dates: standard-analyzed textual matching (unchanged behavior)
     innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
   let esProp: any = {}
@@ -247,12 +250,14 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
     const textFieldData = capabilities.textAgg
-    if (capabilities.textStandard !== false) {
-      innerFields.text_standard.fielddata = textFieldData
-    }
-    if (capabilities.text !== false) {
-      // language based analysis for better recall with stemming, etc
+    if (search.field?.endsWith('.text')) {
+      // language based analysis for better recall with stemming, etc — or the platform default
+      // analyzer for a legacy french-only column not yet stamped with a `language` (see
+      // resolveSearchField)
       innerFields.text = { type: 'text', analyzer: defaultAnalyzer, fielddata: textFieldData }
+    } else if (search.field?.endsWith('.text_standard')) {
+      // more "raw" analysis good to boost more exact matches and for wildcard queries
+      innerFields.text_standard = { type: 'text', analyzer: 'standard', fielddata: textFieldData }
     }
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
@@ -586,10 +591,14 @@ export const buildQClauses = (
 // Pure mapping builder used by manage-indices.indexDefinition. Given the already-extended
 // schema and the analyzer string, returns the `properties` shape — including the catch-all
 // `_search` field and `copy_to` annotations on non-boost-eligible text columns.
+// `languageAnalyzers` resolves each column's own analyzer from its stamped `language` (falling
+// back to `defaultAnalyzer`) — the catch-all `_search` field itself keeps the platform default
+// (alignment deferred, see spec §4).
 export const buildIndexMappings = (
   dataset: any,
   jsProps: any[],
-  defaultAnalyzer: string
+  defaultAnalyzer: string,
+  languageAnalyzers: Record<string, string> = {}
 ): { properties: Record<string, any>, wide: boolean } => {
   const properties: Record<string, any> = {}
   // CSV-equivalent byte size of the line, summed by storage() for the indexed_bytes
@@ -604,7 +613,7 @@ export const buildIndexMappings = (
     }
   }
   for (const jsProp of jsProps) {
-    const esProp = esProperty(jsProp, defaultAnalyzer)
+    const esProp = esProperty(jsProp, languageAnalyzers[jsProp.language] ?? defaultAnalyzer)
     if (esProp) {
       if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard) && !isBoostEligible(jsProp)) {
         // boost-eligible columns are queried per-field with their ^3/^2 boost — no need to copy them into _search

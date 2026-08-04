@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import path from 'node:path'
-import { resolveSearchField } from '../../../../api/src/datasets/es/operations.ts'
+import { resolveSearchField, esProperty } from '../../../../api/src/datasets/es/operations.ts'
 
 // data-schema.ts imports `#config` at module load (config.ts validates on import). The unit harness
 // doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir and load the module via
@@ -89,5 +89,33 @@ test.describe('resolveSearchField', () => {
       .toEqual({ searchable: true, field: 'a.text' })
     expect(resolveSearchField({ key: 'a', type: 'string', language: 'fr', 'x-capabilities': { textStandard: false } }))
       .toEqual({ searchable: true, language: 'fr', field: 'a.text' })
+  })
+})
+
+test.describe('esProperty single analyzed field', () => {
+  test('language column gets .text only', () => {
+    const p = esProperty({ key: 'a', type: 'string', language: 'fr' }, 'custom_french')
+    expect(p.fields.text).toEqual({ type: 'text', analyzer: 'custom_french', fielddata: undefined })
+    expect(p.fields.text_standard).toBeUndefined()
+  })
+  test('language-less column gets .text_standard only', () => {
+    const p = esProperty({ key: 'a', type: 'string' }, 'custom_french')
+    expect(p.fields.text_standard).toEqual({ type: 'text', analyzer: 'standard', fielddata: undefined })
+    expect(p.fields.text).toBeUndefined()
+  })
+  test('veto: text:false + language yields .text_standard only', () => {
+    const p = esProperty({ key: 'a', type: 'string', language: 'fr', 'x-capabilities': { text: false } }, 'custom_french')
+    expect(p.fields.text).toBeUndefined()
+    expect(p.fields.text_standard).toBeDefined()
+  })
+  test('textAgg fielddata lands on the single field', () => {
+    const p = esProperty({ key: 'a', type: 'string', language: 'fr', 'x-capabilities': { textAgg: true } }, 'custom_french')
+    expect(p.fields.text.fielddata).toBe(true)
+  })
+  test('non-searchable string has no analyzed field; scalars unchanged', () => {
+    const p = esProperty({ key: 'a', type: 'string', 'x-capabilities': { text: false, textStandard: false } }, 'custom_french')
+    expect(p.fields.text).toBeUndefined(); expect(p.fields.text_standard).toBeUndefined()
+    const n = esProperty({ key: 'n', type: 'number' }, 'custom_french')
+    expect(n.fields.text_standard).toEqual({ type: 'text', analyzer: 'standard' })
   })
 })
