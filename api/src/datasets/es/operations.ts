@@ -456,6 +456,14 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
         qSearchFields.push(esProp.fields?.keyword_insensitive ? f.key + '.keyword_insensitive' : f.key)
       }
     }
+    // `.wildcard` is mapped from the wildcard capability alone (esProperty), independently of text
+    // analysis — a code column typically disables text/textStandard and enables wildcard precisely
+    // because character-group matching is the only thing that makes sense on it. So the wildcard
+    // fanout is evaluated at column level, not inside the analyzed-fields branch.
+    if (esProp.fields?.wildcard) {
+      wildcardFields.push(f.key + '.wildcard')
+      if (isQField) qWildcardFields.push(f.key + '.wildcard')
+    }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
       let suffix = ''
@@ -484,10 +492,6 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
           if (!reduced || !esProp.fields.text) qSearchFields.push(f.key + '.text_standard' + suffix)
           qStandardFields.push(f.key + '.text_standard' + suffix)
         }
-      }
-      if (esProp.fields.wildcard) {
-        wildcardFields.push(f.key + '.wildcard')
-        if (isQField) qWildcardFields.push(f.key + '.wildcard')
       }
     }
   }

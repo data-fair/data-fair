@@ -79,6 +79,33 @@ test.describe('getFilterableFields - regimes', () => {
     assert.deepEqual(qSearchFields, ['tag'])
   })
 
+  test('wildcard column keeps its .wildcard target even without analyzed inner fields', () => {
+    // `.wildcard` is mapped from the wildcard capability alone, independently of text analysis,
+    // so the query fanout must expose it for text-disabled columns too (typically codes).
+    const ds = fakeDataset({
+      schema: [
+        { key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false, wildcard: true } }
+      ]
+    })
+    const { wildcardFields, qWildcardFields, qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(wildcardFields, ['code.wildcard'])
+    assert.deepEqual(qWildcardFields, ['code.wildcard'])
+    assert.deepEqual(qSearchFields, ['code.keyword_insensitive'])
+  })
+
+  test('wildcard fanout still requires the column to be a q field', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false, wildcard: true } },
+        { key: 'other', type: 'string', 'x-capabilities': { wildcard: true } }
+      ]
+    })
+    const { wildcardFields, qWildcardFields } = getFilterableFields(ds, 'x', ['other'])
+    // wildcardFields is the full filterable set, qWildcardFields is restricted to q_fields
+    assert.deepEqual(wildcardFields, ['code.wildcard', 'other.wildcard'])
+    assert.deepEqual(qWildcardFields, ['other.wildcard'])
+  })
+
   test('non-string pure-keyword columns are unaffected (no insensitive inner field exists)', () => {
     // .keyword_insensitive is only generated for string columns; a date/integer column with
     // textStandard disabled has no keyword view at all and stays out of `q`.
