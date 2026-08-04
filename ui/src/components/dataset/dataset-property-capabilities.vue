@@ -129,6 +129,12 @@ const editCapabilities = ref<Record<string, unknown> | null>(null)
 // (whose schema no longer declares text/textStandard) never sees or reshapes these keys
 const editSearchable = ref(true)
 const editLanguage = ref<string | null>(null)
+// the stored deprecated pair, kept verbatim so apply() can put back whatever this dialog does not
+// itself express — a 'none' column (geometry / attachment) has no toggle at all, and a 'plain'
+// column's toggle only ever expresses `textStandard`. Without this, opening the dialog and
+// changing an unrelated capability would silently drop those stored values (and trigger a
+// full reindex).
+const storedTextCapabilities = ref<{ text?: unknown, textStandard?: unknown }>({})
 
 // A plain string column (no format, or the uri-reference format) is the only kind that carries a
 // `language` meta and materializes a language-analyzed field — mirrors resolveSearchField's
@@ -190,12 +196,16 @@ const languageItems = computed(() => [
 watch(dialog, (show) => {
   if (show) {
     const capabilities = props.property['x-capabilities'] ? { ...props.property['x-capabilities'] } as Record<string, unknown> : {}
-    // read-back mirrors the API's resolution (resolveSearchField): any-of gate for the toggle,
-    // effective language (text !== false) for the selector
+    // read-back mirrors the API's resolution (resolveSearchField): any-of gate for the toggle on a
+    // column that can carry a language, `textStandard` ALONE for a 'plain' column — such a column
+    // never materializes a `.text` field, so `text` is meaningless there and a stored
+    // `{textStandard: false}` (exactly what the previous UI wrote for these types) really means
+    // "not searchable". Using the any-of gate here read it back as ON while the API resolved OFF.
     const textOn = capabilities.text !== false
     const standardOn = capabilities.textStandard !== false
-    editSearchable.value = textOn || standardOn
+    editSearchable.value = textSearchKind.value === 'plain' ? standardOn : (textOn || standardOn)
     editLanguage.value = (isPlainString.value && textOn) ? ((props.property.language as string | undefined) ?? null) : null
+    storedTextCapabilities.value = { text: capabilities.text, textStandard: capabilities.textStandard }
     delete capabilities.text
     delete capabilities.textStandard
     editCapabilities.value = capabilities
@@ -227,8 +237,16 @@ function apply () {
 
   // serialization per spec §5.4: off -> text:false, textStandard:false, no language;
   // on + language L -> language: L, deprecated keys absent; on + standard -> text: false only
-  if (textSearchKind.value === 'plain') {
+  if (textSearchKind.value === 'none') {
+    // no toggle is shown for these columns — put the stored pair back untouched rather than
+    // dropping it (see storedTextCapabilities)
+    if (storedTextCapabilities.value.text !== undefined) capabilities.text = storedTextCapabilities.value.text
+    if (storedTextCapabilities.value.textStandard !== undefined) capabilities.textStandard = storedTextCapabilities.value.textStandard
+  } else if (textSearchKind.value === 'plain') {
     if (!editSearchable.value) capabilities.textStandard = false
+    // `text` has no meaning on a column that never materializes `.text`, but it is stored state we
+    // did not ask about — keep it so an unrelated edit doesn't rewrite the schema for nothing
+    if (storedTextCapabilities.value.text !== undefined) capabilities.text = storedTextCapabilities.value.text
   } else if (textSearchKind.value === 'language') {
     if (!editSearchable.value) {
       capabilities.text = false

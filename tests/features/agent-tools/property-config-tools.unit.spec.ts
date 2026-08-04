@@ -5,6 +5,7 @@ import {
   resolveCapabilities,
   diffCapabilities,
   getTextSearchKind,
+  resolveTextSearch,
   buildTextSearchPatch,
   executeSetPropertyConfig
 } from '../../../ui/src/composables/dataset/agent-property-config-tools-logic.ts'
@@ -85,6 +86,28 @@ test.describe('getTextSearchKind', () => {
   })
 })
 
+// read-back must agree with the API's resolveSearchField, kind by kind
+test.describe('resolveTextSearch', () => {
+  test('plain kind reads back textStandard ALONE', () => {
+    // `text` is never written on a plain (non-string / dated-string) column and never materializes
+    // a field there, so `{textStandard: false}` — what the previous UI wrote for these types —
+    // means "not searchable". The any-of gate read it back as ON while the API resolved OFF.
+    assert.deepEqual(resolveTextSearch({ textStandard: false }, undefined, 'plain'), { searchable: false })
+    assert.deepEqual(resolveTextSearch({}, undefined, 'plain'), { searchable: true })
+    assert.deepEqual(resolveTextSearch({ text: false }, undefined, 'plain'), { searchable: true })
+    assert.deepEqual(resolveTextSearch(undefined, undefined, 'plain'), { searchable: true })
+  })
+  test('language kind keeps the any-of gate and the effective language', () => {
+    assert.deepEqual(resolveTextSearch(undefined, 'fr', 'language'), { searchable: true, language: 'fr' })
+    assert.deepEqual(resolveTextSearch({ text: false }, 'fr', 'language'), { searchable: true, language: null })
+    assert.deepEqual(resolveTextSearch({ textStandard: false }, 'fr', 'language'), { searchable: true, language: 'fr' })
+    assert.deepEqual(resolveTextSearch({ text: false, textStandard: false }, 'fr', 'language'), { searchable: false, language: null })
+  })
+  test('none kind is never searchable', () => {
+    assert.deepEqual(resolveTextSearch({ text: false }, undefined, 'none'), { searchable: false })
+  })
+})
+
 test.describe('buildTextSearchPatch', () => {
   test('off -> text:false, textStandard:false, language:null', () => {
     const patch = buildTextSearchPatch('language', false)
@@ -104,6 +127,16 @@ test.describe('buildTextSearchPatch', () => {
   test('plain kind only ever sets textStandard, never language', () => {
     assert.deepEqual(buildTextSearchPatch('plain', false), { capabilities: { textStandard: false } })
     assert.deepEqual(buildTextSearchPatch('plain', true), { capabilities: { textStandard: true } })
+  })
+  test('stored deprecated keys the serialization does not express are carried through', () => {
+    // a 'plain' column's toggle only expresses textStandard — a stored `text` must survive
+    assert.deepEqual(buildTextSearchPatch('plain', true, undefined, { text: false }), { capabilities: { textStandard: true, text: false } })
+    // a 'none' column (geometry / attachment) has no toggle at all — the stored pair is kept whole
+    assert.deepEqual(
+      buildTextSearchPatch('none', true, undefined, { text: false, textStandard: false }),
+      { capabilities: { text: false, textStandard: false } }
+    )
+    assert.deepEqual(buildTextSearchPatch('none', true), { capabilities: {} })
   })
 })
 
@@ -275,6 +308,63 @@ test.describe('executeSetPropertyConfig', () => {
     )
     assert.deepEqual(receivedConfigs[0].capabilities, { text: false, textStandard: false })
     assert.equal(receivedConfigs[0].language, null)
+  })
+
+  test('a none-kind column keeps its stored text capabilities through an edit', () => {
+    const dataset = {
+      schema: [{
+        key: 'doc',
+        type: 'string',
+        'x-refersTo': 'http://schema.org/DigitalDocument',
+        'x-capabilities': { text: false, textStandard: false, insensitive: false }
+      }]
+    }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'doc', searchable: true }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.deepEqual(receivedConfigs[0].capabilities, { text: false, textStandard: false, insensitive: false })
+  })
+
+  test('a plain-kind column keeps its stored text key, and searchable maps to textStandard', () => {
+    const dataset = { schema: [{ key: 'n', type: 'number', 'x-capabilities': { text: false, values: false } }] }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'n', searchable: false }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.deepEqual(receivedConfigs[0].capabilities, { text: false, textStandard: false, values: false })
+  })
+
+  test('language alone is applied (and implies searchable) instead of being silently dropped', () => {
+    const dataset = { schema: [{ key: 'col1', type: 'string', 'x-capabilities': { text: false } }] }
+    let receivedConfigs: any[] = []
+    const result = executeSetPropertyConfig(
+      { configs: [{ key: 'col1', language: 'fr' }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.equal(receivedConfigs[0].language, 'fr')
+    // the text:false veto is cleared, otherwise the language would never take effect
+    assert.deepEqual(receivedConfigs[0].capabilities, {})
+    assert.ok(result.includes('1 language config'))
+  })
+
+  test('language on a column that cannot carry one is an explicit error, not a false success', () => {
+    const dataset = { schema: [{ key: 'n', type: 'number' }, { key: 'd', type: 'string', format: 'date' }] }
+    for (const key of ['n', 'd']) {
+      let called = false
+      const result = executeSetPropertyConfig(
+        { configs: [{ key, language: 'fr' }] },
+        dataset,
+        () => { called = true }
+      )
+      assert.ok(result.startsWith('Error:'), `expected an error for ${key}, got: ${result}`)
+      assert.equal(called, false)
+    }
   })
 
   test('reports correct counts in summary', () => {

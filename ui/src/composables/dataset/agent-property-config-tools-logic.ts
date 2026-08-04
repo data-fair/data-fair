@@ -52,7 +52,13 @@ export function getTextSearchKind (type: string, format?: string, xRefersTo?: st
   return 'none'
 }
 
-/** Read-back per spec §5.4: toggle = any-of gate, selector = effective language. */
+/**
+ * Read-back per spec §5.4: selector = effective language, toggle = the API's own resolution
+ * (resolveSearchField). For a 'plain' column that is `textStandard` ALONE — such a column never
+ * materializes a `.text` field, so `text` is meaningless on it and a stored `{textStandard: false}`
+ * (exactly what the previous UI wrote for these types) really means "not searchable". The any-of
+ * gate belongs only to columns that can carry a language.
+ */
 export function resolveTextSearch (
   xCapabilities: Record<string, boolean> | undefined,
   language: string | undefined,
@@ -61,8 +67,8 @@ export function resolveTextSearch (
   if (kind === 'none') return { searchable: false }
   const textOn = xCapabilities?.text !== false
   const standardOn = xCapabilities?.textStandard !== false
+  if (kind === 'plain') return { searchable: standardOn }
   const searchable = textOn || standardOn
-  if (kind === 'plain') return { searchable }
   return { searchable, language: (searchable && textOn) ? (language ?? null) : null }
 }
 
@@ -70,19 +76,30 @@ export function resolveTextSearch (
  * Serialize a searchable+language choice into the deprecated `text`/`textStandard` capability
  * pair per spec §5.4: off -> text:false, textStandard:false; on+language -> both absent (true);
  * on+standard -> text:false only. For 'plain' columns, only textStandard is meaningful.
+ * `stored` is the column's current `x-capabilities`: any deprecated key this serialization does
+ * not itself express is carried through from it, so an edit never silently drops stored state
+ * (a 'none' column has no text-search control at all; a 'plain' one only expresses textStandard).
  */
 export function buildTextSearchPatch (
   kind: 'language' | 'plain' | 'none',
   searchable: boolean,
-  language?: string | null
+  language?: string | null,
+  stored?: Record<string, boolean>
 ): { capabilities: Record<string, boolean>, language?: string | null } {
-  if (kind === 'plain') return { capabilities: { textStandard: searchable } }
+  if (kind === 'plain') {
+    const capabilities: Record<string, boolean> = { textStandard: searchable }
+    if (stored?.text !== undefined) capabilities.text = stored.text
+    return { capabilities }
+  }
   if (kind === 'language') {
     if (!searchable) return { capabilities: { text: false, textStandard: false }, language: null }
     if (language) return { capabilities: { text: true, textStandard: true }, language }
     return { capabilities: { text: false, textStandard: true }, language: null }
   }
-  return { capabilities: {} }
+  const capabilities: Record<string, boolean> = {}
+  if (stored?.text !== undefined) capabilities.text = stored.text
+  if (stored?.textStandard !== undefined) capabilities.textStandard = stored.textStandard
+  return { capabilities }
 }
 
 export function resolveCapabilities (xCapabilities: Record<string, boolean> | undefined, relevant: string[]): Record<string, boolean> {
@@ -194,6 +211,20 @@ export function executeSetPropertyConfig (
     return `Error: Unknown column keys: ${unknown.map((c: any) => c.key).join(', ')}`
   }
 
+  const kindOf = (prop: any) => getTextSearchKind(
+    prop['x-transform']?.type || prop.type,
+    prop['x-transform']?.format || prop.format,
+    prop['x-refersTo']
+  )
+
+  // `language` is only ever materialized on a plain string column: accepting it anywhere else
+  // would drop it on the floor and still report success. Validate up front so nothing is applied
+  // partially.
+  const badLanguage = params.configs.filter((c: any) => c.language !== undefined && kindOf(schemaByKey.get(c.key)) !== 'language')
+  if (badLanguage.length) {
+    return `Error: language is only available on plain string columns (no format, or the uri-reference format): ${badLanguage.map((c: any) => c.key).join(', ')}`
+  }
+
   // Build PropertyConfig array from flat params
   const configs: PropertyConfig[] = params.configs.map((c: any) => {
     const result: PropertyConfig = { key: c.key }
@@ -207,14 +238,19 @@ export function executeSetPropertyConfig (
     if (c.resetCapabilities) {
       result.capabilities = null
     } else {
-      const capabilities: Record<string, boolean> = c.capabilities ? { ...c.capabilities } : {}
+      const prop: any = schemaByKey.get(c.key)
+      const stored: Record<string, boolean> = prop['x-capabilities'] || {}
+      // an explicit `capabilities` object is the full desired diff (documented tool contract) and
+      // replaces the stored set; without one, a searchable/language-only edit must leave the
+      // column's other stored capabilities alone rather than wipe them
+      const capabilities: Record<string, boolean> = c.capabilities ? { ...c.capabilities } : { ...stored }
       let touched = !!c.capabilities
-      if (c.searchable !== undefined) {
-        const prop: any = schemaByKey.get(c.key)
-        const effectiveType = prop['x-transform']?.type || prop.type
-        const effectiveFormat = prop['x-transform']?.format || prop.format
-        const kind = getTextSearchKind(effectiveType, effectiveFormat, prop['x-refersTo'])
-        const patch = buildTextSearchPatch(kind, c.searchable, c.language)
+      if (c.searchable !== undefined || c.language !== undefined) {
+        const kind = kindOf(prop)
+        // choosing an analysis language only makes sense on a searchable column, so `language`
+        // alone implies searchable — otherwise it would be serialized away and silently lost
+        const searchable = c.searchable !== undefined ? c.searchable : true
+        const patch = buildTextSearchPatch(kind, searchable, c.language, stored)
         Object.assign(capabilities, patch.capabilities)
         if ('language' in patch) result.language = patch.language ?? null
         touched = true
