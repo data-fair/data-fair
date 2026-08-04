@@ -141,11 +141,16 @@ test.describe('Query routing on the effective analyzed field', () => {
       title: datasetId,
       schema: [
         { key: 'fr1', type: 'string', 'x-capabilities': { textAgg: true } },
-        { key: 'std1', type: 'string', 'x-capabilities': { text: false, textAgg: true } }
+        { key: 'std1', type: 'string', 'x-capabilities': { text: false, textAgg: true } },
+        // no analyzed subfield at all
+        { key: 'none1', type: 'string', 'x-capabilities': { text: false, textStandard: false } },
+        // a scalar whose only possible analyzed subfield is disabled — used to target an unmapped
+        // `.text` through the `_search` filter and silently match nothing
+        { key: 'num1', type: 'number', 'x-capabilities': { textStandard: false } }
       ]
     })
     await ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, [
-      { fr1: 'les données publiées', std1: 'les données publiées' }
+      { fr1: 'les données publiées', std1: 'les données publiées', none1: 'code-42', num1: 5 }
     ])
     const dataset = await waitForFinalize(ax, datasetId)
     // the write path stamped only the un-vetoed column
@@ -180,8 +185,9 @@ test.describe('Query routing on the effective analyzed field', () => {
       ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: 'fr1.text_standard:données' } }),
       (err: any) => {
         assert.equal(err.status, 400)
-        assert.ok(err.data.includes('analyse linguistique'))
-        assert.ok(err.data.includes('language'))
+        // the hint states what IS materialized, not a canned sentence
+        assert.ok(err.data.includes('utilise une analyse linguistique (language=fr)'))
+        assert.ok(err.data.includes('fr1.text'))
         return true
       }
     )
@@ -190,7 +196,51 @@ test.describe('Query routing on the effective analyzed field', () => {
       ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: 'std1.text:données' } }),
       (err: any) => {
         assert.equal(err.status, 400)
-        assert.ok(err.data.includes('analyse linguistique'))
+        assert.ok(err.data.includes('n\'utilise pas d\'analyse linguistique'))
+        assert.ok(err.data.includes('std1.text_standard'))
+        return true
+      }
+    )
+    // a column with NO analyzed subfield must not be told it "uses a language analysis"
+    for (const subfield of ['none1.text', 'none1.text_standard']) {
+      await assert.rejects(
+        ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { qs: `${subfield}:code-42` } }),
+        (err: any) => {
+          assert.equal(err.status, 400)
+          assert.ok(err.data.includes('Aucune analyse textuelle'))
+          assert.ok(!err.data.includes('utilise une analyse linguistique'))
+          return true
+        }
+      )
+    }
+  })
+
+  test('the _search filter targets the same effective field as q', async () => {
+    const ax = testUser1
+    // .text (custom_french): stemming + asciifolding, exactly what `q` gets on this column
+    let res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { fr1_search: 'donnee' } })
+    assert.equal(res.data.total, 1)
+    // .text_standard: neither, so only the exact token matches — the two columns must NOT behave
+    // alike, which is what the old capability-pair fan-out could not guarantee on a legacy index
+    res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { std1_search: 'donnee' } })
+    assert.equal(res.data.total, 0)
+    res = await ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { std1_search: 'données' } })
+    assert.equal(res.data.total, 1)
+    // no analyzed subfield -> reject, with the same shape as the neighbouring capability gates
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { none1_search: 'code-42' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
+        return true
+      }
+    )
+    // a scalar with textStandard:false used to target an unmapped `.text` and silently return 0
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${datasetId}/lines`, { params: { num1_search: '5' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )

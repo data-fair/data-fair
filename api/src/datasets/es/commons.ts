@@ -119,16 +119,24 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
-// Each row is [suffix, capability, extra hint]. Validation runs against `esFields`, which lists the
-// ONE analyzed subfield each column materializes (spec §2), so an explicit `qs=` reference to the
-// other analyzed name is rejected here. The analyzed rows carry an extra hint pointing at the
-// `language` meta, because the deprecated capability title alone no longer explains the rejection.
-const capabilitiesSuffixes: [string, string, string?][] = [
-  ['.text', 'text', 'Ce sous-champ n\'est pas disponible car la colonne n\'a pas d\'analyse linguistique (paramètre "language").'],
-  ['.text_standard', 'textStandard', 'Ce sous-champ n\'est pas disponible car la colonne utilise une analyse linguistique (paramètre "language").'],
+const capabilitiesSuffixes = [
+  ['.text', 'text'],
+  ['.text_standard', 'textStandard'],
   ['.keyword_insensitive', 'insensitive'],
   ['.wildcard', 'wildcard']
 ]
+const ANALYZED_SUFFIXES = new Set(['.text', '.text_standard'])
+
+// Validation runs against `esFields`, which lists the ONE analyzed subfield each column materializes
+// (spec §2), so an explicit `qs=` reference to the other analyzed name is rejected. The deprecated
+// capability title alone doesn't explain why — the `language` meta is what decides which of the two
+// names exists — so describe the column's ACTUAL state: no analyzed field at all, or which one it is.
+const analyzedSuffixHint = (prop: any): string => {
+  const search = resolveSearchField(prop)
+  if (!search.field) return ' Aucune analyse textuelle n\'est activée sur cette colonne.'
+  if (search.language) return ` Cette colonne utilise une analyse linguistique (language=${search.language}), son sous-champ analysé est "${search.field}".`
+  return ` Cette colonne n'utilise pas d'analyse linguistique (paramètre "language"), son sous-champ analysé est "${search.field}".`
+}
 function checkQuery (query: any, schema: any[], esFields: string[], currentField?: string) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
@@ -157,10 +165,12 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
   } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
-      if (!schema.find(p => p.key + suffix[0] === query.field)) {
+      const prop = schema.find(p => p.key + suffix[0] === query.field)
+      if (!prop) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.${suffix[2] ? ' ' + suffix[2] : ''}`)
+      const hint = ANALYZED_SUFFIXES.has(suffix[0]) ? analyzedSuffixHint(prop) : ''
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.${hint}`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
@@ -439,11 +449,19 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
-      const subfields = []
-      if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
-      if (prop['x-capabilities']?.text !== false) subfields.push('text')
-      if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
-      must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+      // Target the ONE analyzed subfield the column materializes (spec §2), so `_search` matches
+      // exactly what `q` matches, on legacy dual-field indexes too. The deprecated capability pair
+      // no longer describes the mapping: it used to fan out over both analyzers on an old index, and
+      // to make a scalar with textStandard:false target an unmapped `.text` (silently matching
+      // nothing) where highlight / words_agg now reject the column outright.
+      const { field } = resolveSearchField(prop)
+      if (!field) {
+        // resolveSearchField only yields no field when textStandard is explicitly disabled, so the
+        // shared capability gate emits the same 400-with-hint as the neighbouring filters
+        requiredCapability(prop, filterSuffix, 'textStandard')
+        throw httpError(400, `Impossible d'appliquer un filtre ${filterSuffix} sur le champ ${prop.key}. Aucune analyse textuelle n'est activée sur cette colonne. ${columnOperationsHint(prop)}`)
+      }
+      must.push({ simple_query_string: { query: query[queryKey], fields: [field] } })
     } else if (filterSuffix === '_exists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
       if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
