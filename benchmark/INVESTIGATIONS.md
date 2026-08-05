@@ -534,6 +534,93 @@ margins at linear probe cost.
 
 ---
 
+## 14. Is the `keyword_repeat` single-field analyzer worth it? (2026-08-05)
+
+Targets the indexing-rework question behind `dev/spikes/indexing-rework/spike-i-keyword-repeat.ts`:
+today every text column carries TWO analyzed sub-fields — `.text` (custom_french, stemmed) and
+`.text_standard` (standard, unstemmed, whose reason to exist is that `q_mode=complete`'s
+mid-typing prefix clause must not stop matching once a word is stemmed away from its surface form.
+The candidate replaces both with ONE field analyzed by `custom_french_repeat` =
+`[french_elision, lowercase, keyword_repeat, french_stop, french_stemmer, remove_duplicates,
+asciifolding]` (filter order and its rationale copied verbatim from the spike), which emits the
+surface AND the stemmed token at every position.
+
+**Hypothesis.** One repeat field costs less than dual's two fields (it drops stopwords once instead
+of indexing them with positions in `.text_standard`, and dedupes self-stemming tokens), while
+recovering dual's prefix/exact-form correctness — and collapsing the production `q` clause pair into
+a single SQS clause makes the default query cheaper too.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=text-analyzer --runs=20 --profile --no-seed
+npm run benchmark -- experiment --name=text-analyzer --runs=20 --profile --cold --no-seed
+```
+The experiment builds its own indexes (`benchmark-text-analyzer-{dual,single,repeat}`): 300k docs,
+two text columns (title ~12 words, description ~50 words), identical docs across variants, 1 shard,
+force-merged to 1 segment, `request_cache=false`, `track_total_hits: true` (prod page 1).
+
+**Corpus.** The harness generator emits 3-6 word bags from a 26-noun list — zero stopwords, zero
+inflection — on which the three analyzers would be indistinguishable. So the experiment carries its
+own corpus (`experiments/text-analyzer-corpus.ts`): 170 natural French open-data sentences with
+commune / organisation / theme / year slots, picked with a mild Zipfian skew. Measured: 28.2%
+surface stopword density, **37.1% of tokens removed by `french_stop`**, 59.7% inflected-suffix
+share, and **`keyword_repeat` genuinely doubles 80.7%** of the positions that survive stopping.
+
+**Outcome. Size: the candidate is real but modest — and the fanout win is the point, not the bytes.**
+
+| arm | store | analyzed fields (`_disk_usage`) | inverted index | Δ analyzed vs dual |
+|---|---:|---:|---:|---:|
+| dual (today) | 118.6 MB | 49.0 MB | 47.9 MB | — |
+| single (floor) | 89.9 MB | 20.4 MB | 19.8 MB | −58.5% |
+| repeat | 105.6 MB | 36.1 MB | 35.5 MB | **−26.5%** |
+
+Store Δ is only −10.9% because `_source` (60.97 MB, byte-identical in all three) dilutes it — the
+analyzed portion is the honest number. Per field: `description.text` 16.65 MB (single) → 29.72
+(repeat) vs dual's 16.65 + 23.34 = 39.99. Repeat sits at **+77% over the single-field floor**, i.e.
+it buys back dual's correctness for about half of what dual's second field costs.
+
+**Query cost: the clause collapse does NOT pay for itself — the doubled *query* eats it.**
+`took` p50, 20 runs, warm ≈ cold throughout (the corpus is memory-resident):
+
+| shape | dual | single | repeat | repeat-frq |
+|---|---:|---:|---:|---:|
+| default q, 3 terms, 143k hits | 6 ms | 4–5 ms (−17..33%) | 7 ms (**+17%**) | 4–5 ms (−17..33%) |
+| `q_mode=complete` prefix `logem*`, 52k hits | 1–2 ms | 0 ms / **0 hits** | 1–2 ms (±0%) | 1–2 ms (±0%) |
+| quoted phrase, 4 terms, 56k hits | 7 ms | 7 ms | 14.5 ms (**+107%**) | 7 ms (±0%) |
+
+A `repeat` field is analyzed with `custom_french_repeat` at SEARCH time too, so every query position
+becomes a 2-term SynonymQuery (and, for a phrase, a MultiPhraseQuery): one collapsed clause over
+doubled terms costs as much as dual's two clauses on the default query, and **twice as much on the
+positions path**. The `repeat-frq` arm — same index, query analyzed with plain `custom_french` — is
+the fix, and it is decisive: **−17..33% vs dual on default q, parity on phrase, parity on prefix,
+with identical totals and top-20 on all three shapes**. In production terms that is a
+`search_analyzer` on the field (or the query analyzer on the clause): index with repeat, search with
+custom_french, and only the startsWith clause needs the surface terms the repeat index holds.
+
+**Sanity checks (both PASS, run every time the indexes are built).**
+- Stemmed recall: repeat == dual on all 5 probes ("logements" 52 221, "communes" 99 200, …) —
+  and repeat-frq matches too, so the search-analyzer fix costs no recall.
+- Mid-typing prefix ladder (every prefix of length ≥ 2): **repeat and repeat-frq never return zero**.
+  `single` collapses exactly as predicted (`logem…logements` and `ass…associations` all zero —
+  this is why `.text_standard` exists). Unexpected: **dual's ladder is itself broken on accented
+  words** — `.text_standard` is `standard`, which does not asciifold, so every ASCII prefix of
+  "équipements" (`eq`, `equ`, … `equipements`) returns zero on dual and matches on repeat. The
+  candidate is strictly *more* correct than today's shape here.
+
+**Caveats.** 170 sentences over 300k docs gives natural per-document French but a flatter
+term-frequency curve than a real corpus, so absolute posting sizes are optimistic for every arm
+equally; ES `took` is integer-millisecond, so the 1–2 ms prefix numbers are resolution-bound (the
+e2e p50 and `profile` totals in the JSON discriminate them). A parallel dev spike
+(`spike-i2-realistic-corpus.ts`) attacks the same question at 50k docs with an independent corpus —
+the two should agree on the size direction.
+
+Results: `benchmark/results/experiment-2026-08-05T08-57-28-756Z.json` (warm + profile),
+`experiment-2026-08-05T08-57-34-808Z.json` (cold). Indexes are kept and reused on the next run
+(same convention as the seeded presets); drop them with
+`curl -XDELETE $ES/benchmark-text-analyzer-\*`.
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an

@@ -46,6 +46,9 @@ export interface ExperimentResult {
   preset: string
   rows: number
   variants: VariantResult[]
+  /** Non-latency measurements from a self-building experiment's setup (index size, sanity
+   *  checks, corpus stats) — see `Experiment.setup`. */
+  findings?: Record<string, unknown>
 }
 
 /** Signed percentage change from `baseline` to `value`. */
@@ -79,6 +82,7 @@ export function printExperimentReport (er: ExperimentResult): void {
     )
   }
   console.log('-'.repeat(100))
+  if (er.findings) console.log(`  setup findings attached to the results JSON: ${Object.keys(er.findings).join(', ')}`)
   for (const v of er.variants) {
     if (v.result.profile) {
       const top = v.result.profile.topQueryTypes.map(t => `${t.type} ${t.timeMs.toFixed(1)}ms`).join(', ')

@@ -1,12 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { allExperiments, selectExperiments } from './experiments.ts'
-import { getPreset } from './presets.ts'
-import { generateSchema, schemaContext, type SchemaContext } from './generator.ts'
+import { allExperiments, selectExperiments, experimentContext } from './experiments.ts'
+import { type SchemaContext } from './generator.ts'
 
 test('every variant body builds a valid ES query for its preset', () => {
   for (const exp of allExperiments) {
-    const ctx = schemaContext(generateSchema(getPreset(exp.preset)))
+    const ctx = experimentContext(exp)
     for (const v of [exp.baseline, ...exp.variants]) {
       const body = v.body(ctx)
       assert.ok(body.query, `${exp.name}/${v.name} produced no query`)
@@ -55,12 +54,26 @@ function isValidQueryTarget (field: string, ctx: SchemaContext): boolean {
 
 test('experiment queries target valid analyzed-text or pure-keyword fields', () => {
   for (const exp of allExperiments) {
-    const ctx = schemaContext(generateSchema(getPreset(exp.preset)))
+    const ctx = experimentContext(exp)
     for (const v of [exp.baseline, ...exp.variants]) {
       for (const field of referencedFields(v.body(ctx).query)) {
         assert.ok(isValidQueryTarget(field, ctx),
           `${exp.name}/${v.name} targets invalid field "${field}"`)
       }
     }
+  }
+})
+
+test('every experiment declares either a seeded preset or a self-built schema+setup', () => {
+  for (const exp of allExperiments) {
+    assert.ok(exp.preset ?? (exp.schema && exp.setup),
+      `${exp.name} declares neither a preset nor a schema+setup pair`)
+  }
+})
+
+test('self-building experiments name a variant per built index', () => {
+  for (const exp of allExperiments.filter(e => e.setup)) {
+    const names = new Set([exp.baseline.name, ...exp.variants.map(v => v.name)])
+    assert.equal(names.size, exp.variants.length + 1, `${exp.name} has duplicate variant names`)
   }
 })
