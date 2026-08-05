@@ -525,7 +525,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
 
   // integrity outbox (spec §4): a patch touching covered metadata fields must be anchored.
-  // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
+  // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored — they
+  // only carry the attribution forward to the anchor written when the draft is validated (below).
   // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
   // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
   // A REST dataset mid its extend/index/finalize partial-update pipeline (_partialRestStatus,
@@ -536,14 +537,29 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // indexLines/extend) is about to run next. finalize.ts always stamps explicitly (and clears
   // _partialRestStatus in that same write) once the pipeline settles, so defer to it rather than
   // anchoring every interim covered-key touch along the way.
-  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing && !dataset._partialRestStatus) {
-    if (integrityOps.coveredPatchKeys(patch).length) {
-      // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
-      // only means "re-anchor", and the pending context is the more specific one — e.g. the
-      // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
-      // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
-      // generic update/user context before finalize gets to preserve it
-      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user', ...(who ? { who } : {}) } }
+  if (dataset.integrity?.active && !patch._needsHistorizing && !dataset._partialRestStatus) {
+    // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
+    // only means "re-anchor", and the pending context is the more specific one — e.g. the
+    // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
+    // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
+    // generic update/user context before finalize gets to preserve it
+    const context = { operation: 'update', origin: 'user', ...(who ? { who } : {}) }
+    if (dataset.draftReason) {
+      // A draft write is never anchored itself (the stamp lands under the excluded `draft`
+      // subtree, which the relay's task filter — a top-level `_needsHistorizing` — never matches).
+      // But the anchor written when the draft is validated describes exactly these bytes, and its
+      // attribution has to come from somewhere: finalize preserves `_needsHistorizing` across the
+      // draft merge, so stamping here is what carries the uploader through to that anchor. Without
+      // it, finalize falls back to its anonymous `origin: 'worker'` context and every file update
+      // on an enrolled dataset reads as an internal write, attributed to nobody.
+      // Gated on `who`: only the route layer passes it (workers never do), so this stamps a user's
+      // draft write and stays out of the way of the pipeline's own interim draft patches.
+      // `patch.draftReason` means THIS write is the one opening the draft (a file upload): a stamp
+      // pending on the published doc belongs to an earlier, unrelated write that the relay will
+      // anchor on its own — never borrow its attribution for these new bytes.
+      if (who) patch._needsHistorizing = (patch.draftReason ? undefined : (dataset as any)._needsHistorizing) ?? { context }
+    } else if (integrityOps.coveredPatchKeys(patch).length) {
+      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context }
     }
   }
 

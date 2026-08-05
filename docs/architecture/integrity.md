@@ -239,6 +239,19 @@ is pending), and a dataset permanently stuck mid-pipeline defers anchoring until
 write is atomic with no multi-document transaction, and the relay only ever acts on
 already-committed state (ordering preserved).
 
+**Drafts carry a stamp they never redeem.** A file update never anchors at request time: it opens
+a draft, and the anchor describing the new bytes is written by the worker at `finalize`, once the
+draft is validated (by hand, or by the worker itself when the schema stays compatible). A stamp
+written on a draft lands under the excluded `draft` subtree, which the relay's task filter — a
+*top-level* `_needsHistorizing` — never matches, so the draft itself is never historized. Its only
+job is to carry the **context**: `applyPatch` stamps `draft._needsHistorizing` on a user's draft
+write (gated on the presence of a `who` — only the route layer supplies one, workers never do),
+`mergeDraft` overlays it onto the doc the worker sees, and `finalize` preserves it instead of
+falling back to its anonymous `origin: 'worker'` default. That is what makes the anchor of a file
+update read as a `user` write attributed to the uploader, rather than as an internal one
+attributed to nobody. A genuinely un-attributed pipeline run (remote-file auto-update,
+revalidation) supplies no `who`, keeps the `worker` default, and writes no `.who` sibling.
+
 **The outbox is only for *organic* writes.** The rare superadmin actions — `PUT _integrity`
 (enable) and `POST _integrity/_fix` (reconcile) — **bypass the outbox and anchor inline** in the
 request, calling the same `anchorDataset()` the relay uses (§3.3). The outbox/relay path remains

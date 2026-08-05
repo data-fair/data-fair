@@ -7,8 +7,11 @@
 // write path — user PATCH, `_fix` after tamper, dedupe suppression, and the attribution kill
 // switch.
 import { test, expect } from '@playwright/test'
+import fs from 'fs-extra'
+import path from 'node:path'
+import FormData from 'form-data'
 import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { sendDataset, setConfig, waitForFinalize } from '../../support/workers.ts'
+import { sendDataset, setConfig, waitForFinalize, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, listIntegrityKeys,
   waitForIntegrityRevisions, waitForFlagCleared, revisionsPrefix, waitForLinesDrained
@@ -119,6 +122,60 @@ test('a worker-origin re-anchor (no preceding request context) writes no `.who`'
   expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
 
   await expect(integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))).rejects.toMatchObject({ name: 'NoSuchKey' })
+})
+
+// A file update never anchors at request time: it lands in a draft, and the anchor is written by
+// the worker at finalize, once the draft is validated. The attribution therefore has to RIDE the
+// draft (applyPatch stamps `draft._needsHistorizing`, finalize preserves it across mergeDraft) —
+// without that, finalize falls back to its anonymous `origin: 'worker'` context and every file
+// update on an enrolled dataset reads as an internal write with no attribution at all.
+const uploadFile = async (ax: any, datasetId: string, fileName: string, params?: Record<string, any>) => {
+  const form = new FormData()
+  form.append('file', fs.readFileSync(path.resolve('./tests/resources/datasets/', fileName)), 'dataset1.csv')
+  await ax.post(`/api/v1/datasets/${datasetId}`, form, { headers: form.getHeaders(), ...(params ? { params } : {}) })
+}
+
+test('an incompatible file upload validated by hand anchors with the uploader in `.who`, not an anonymous worker context', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 3) // rev0 JSON + .file + .who (enable)
+
+  // dataset2.csv drops columns of dataset1.csv: in `compatible` draft mode (?draft=true) the
+  // worker refuses to auto-validate such a breaking change, so the draft waits for the user's
+  // explicit validation — the exact reported scenario
+  await doAndWaitForFinalize(admin, dataset.id, () => uploadFile(admin, dataset.id, 'dataset2.csv', { draft: true }))
+  expect((await getRawDataset(dataset.id)).draft).toBeTruthy() // still a pending draft, not auto-validated
+
+  await doAndWaitForFinalize(admin, dataset.id, () => admin.post(`/api/v1/datasets/${dataset.id}/draft`))
+  await waitForIntegrityRevisions(prefix, 6) // rev1 JSON + .file + .who
+  await waitForFlagCleared(dataset.id)
+
+  const rev1 = await integrityTestStore.getRevision(ops.revisionKey(dataset.owner, dataset.id, 1))
+  expect(rev1.context.origin).toBe('user') // a user put those bytes there — not the pipeline
+  const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
+  expect(who1.user?.id).toBe('test_superadmin')
+  expect(who1.ip).toBeTruthy()
+})
+
+test('a plain file replacement (draft auto-validated by the worker) carries the uploader through to the anchor too', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = revisionsPrefix(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 3)
+
+  // no ?draft param → validationMode 'always' → the worker validates the draft itself, with no
+  // second request to attribute: the upload's own attribution is the only one there ever is
+  await doAndWaitForFinalize(admin, dataset.id, () => uploadFile(admin, dataset.id, 'dataset2.csv'))
+  await waitForIntegrityRevisions(prefix, 6)
+  await waitForFlagCleared(dataset.id)
+
+  const rev1 = await integrityTestStore.getRevision(ops.revisionKey(dataset.owner, dataset.id, 1))
+  expect(rev1.context.origin).toBe('user')
+  const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
+  expect(who1.user?.id).toBe('test_superadmin')
 })
 
 test('_fix after an out-of-band tamper carries the fixing superadmin in `.who`', async () => {

@@ -37,9 +37,11 @@ export default async function (_dataset: DatasetInternal) {
   // with `draft.` based on its TARGET's draftReason, which routes this correctly: a plain draft
   // finalize persists `draft._needsHistorizing` (never matched by the relay filter → drafts are NOT
   // historized), while a draft validation patches the published doc → top-level flag → anchored.
-  // preserve a caller-provided context (e.g. the _restore route rides its 'restore' context
-  // through the draft: mergeDraft overlays draft._needsHistorizing onto the working doc);
-  // default to the generic worker context otherwise
+  // preserve a caller-provided context (the _restore route rides its 'restore' context through the
+  // draft, and a user file upload rides its attributed 'user' context the same way: mergeDraft
+  // overlays draft._needsHistorizing onto the working doc — see the draft branch of applyPatch's
+  // integrity outbox). The generic worker context is the fallback for genuinely un-attributed
+  // pipeline runs (remote-file auto-update, revalidation), NOT for a user-initiated upload
   if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
   debug('prepare extended schema')
