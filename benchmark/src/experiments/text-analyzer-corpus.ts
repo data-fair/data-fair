@@ -316,6 +316,83 @@ export interface CorpusStats {
 
 const WORD_RE = /[\p{L}\p{N}'’-]+/gu
 
+// ---------------------------------------------------------------------------------------------
+// Wide-fanout shape — reuses the same SENTENCES/fillSlots/pickSentence machinery above, but
+// instead of a title + description pair spreads the corpus over N independently-generated text
+// columns (the `wide-text` preset shape: ~40 text columns), 1-2 sentences each — see
+// `text-analyzer-wide.ts` §14.b.
+// ---------------------------------------------------------------------------------------------
+
+export const WIDE_COLUMNS = 40
+
+export interface WideTextDoc {
+  id: string
+  /** `col1`..`colN` values, in column order. */
+  cols: string[]
+}
+
+/** Deterministically generate `count` wide docs (same docs for every mapping variant). */
+export function * wideDocIterator (count: number, numCols = WIDE_COLUMNS, seed = 42): Generator<WideTextDoc, void, unknown> {
+  const rand = mulberry32(seed)
+  for (let i = 0; i < count; i++) {
+    const cols: string[] = []
+    for (let c = 0; c < numCols; c++) {
+      const nSentences = rand() < 0.5 ? 1 : 2
+      const sentences: string[] = []
+      for (let s = 0; s < nSentences; s++) sentences.push(fillSlots(pickSentence(rand), rand))
+      cols.push(sentences.join(' '))
+    }
+    yield { id: `rec-${i}`, cols }
+  }
+}
+
+/** Eager variant, for tests and corpus statistics. */
+export function generateWideDocs (count: number, numCols = WIDE_COLUMNS, seed = 42): WideTextDoc[] {
+  return [...wideDocIterator(count, numCols, seed)]
+}
+
+export interface WideCorpusStats {
+  docs: number
+  numCols: number
+  avgWordsPerCol: number
+  stopwordDensity: number
+  inflectedSuffixShare: number
+  distinctWords: number
+}
+
+/** Same local (non-ES) statistics as `corpusStats`, generalized to N columns. */
+export function wideCorpusStats (docs: WideTextDoc[], numCols = WIDE_COLUMNS): WideCorpusStats {
+  let colWords = 0
+  let stopwords = 0
+  let total = 0
+  let inflected = 0
+  let longTokens = 0
+  const distinct = new Set<string>()
+  for (const doc of docs) {
+    for (const col of doc.cols) {
+      const words = col.toLowerCase().match(WORD_RE) ?? []
+      colWords += words.length
+      for (const w of words) {
+        total++
+        distinct.add(w)
+        if (FRENCH_STOPWORDS.has(w)) stopwords++
+        if (w.length > 3) {
+          longTokens++
+          if (/(s|es|ent|ées|ée|és|é|aux|ive|ives|ment)$/.test(w)) inflected++
+        }
+      }
+    }
+  }
+  return {
+    docs: docs.length,
+    numCols,
+    avgWordsPerCol: docs.length === 0 ? 0 : colWords / (docs.length * numCols),
+    stopwordDensity: total === 0 ? 0 : stopwords / total,
+    inflectedSuffixShare: longTokens === 0 ? 0 : inflected / longTokens,
+    distinctWords: distinct.size
+  }
+}
+
 /**
  * Local (non-ES) corpus statistics — a cheap, dependency-free sanity report proving the text is
  * natural French. The authoritative token-level numbers (post-analysis stopword removal, share of

@@ -34,8 +34,12 @@ import { docIterator, generateDocs, corpusStats, type TextDoc } from './text-ana
 // Analyzers
 // ---------------------------------------------------------------------------------------------
 
-/** Verbatim copy of the analysis block from `api/src/datasets/es/manage-indices.ts` (indexBase). */
-const ANALYSIS_SETTINGS = {
+/**
+ * Verbatim copy of the analysis block from `api/src/datasets/es/manage-indices.ts` (indexBase).
+ * Exported so `text-analyzer-wide.ts` (§14.b) reuses the exact same analyzers/filters rather
+ * than risking drift between a 2-column and a 40-column copy.
+ */
+export const ANALYSIS_SETTINGS = {
   normalizer: {
     insensitive_normalizer: { type: 'custom', filter: ['lowercase', 'asciifolding'] }
   },
@@ -71,12 +75,12 @@ const ANALYSIS_SETTINGS = {
 //   folds last), so BOTH surviving copies end up accent-insensitive, and dedupe compares pre-fold
 //   token text (the conservative comparison: it won't over-merge tokens that are only equal
 //   after folding).
-const REPEAT_FILTER_ORDER = [
+export const REPEAT_FILTER_ORDER = [
   'french_elision', 'lowercase', 'keyword_repeat', 'french_stop', 'french_stemmer',
   'remove_duplicates', 'asciifolding'
 ]
 
-const ANALYSIS_SETTINGS_REPEAT = {
+export const ANALYSIS_SETTINGS_REPEAT = {
   ...ANALYSIS_SETTINGS,
   analyzer: {
     ...ANALYSIS_SETTINGS.analyzer,
@@ -181,7 +185,7 @@ function phrase (fields: string[][], quoted: string, analyzer?: string): Record<
 // query analyzer to plain custom_french — one stemmed term per position, matching the stemmed copy
 // that repeat also indexes. It isolates how much of repeat's query cost is the doubled query
 // (fixable with `search_analyzer`) rather than the doubled index (not fixable).
-const SEARCH_ANALYZER_OVERRIDE = 'custom_french'
+export const SEARCH_ANALYZER_OVERRIDE = 'custom_french'
 
 const Q_TERMS = 'logements sociaux commune'
 const TYPED_PREFIX = 'logem'
@@ -234,7 +238,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
  * 106 MB — a size A/B taken there is pure fiction). Flush, then poll until the store size is
  * stable over two consecutive reads AND the index is down to one segment.
  */
-async function waitForStableStore (es: Client, index: string): Promise<void> {
+export async function waitForStableStore (es: Client, index: string): Promise<void> {
   await es.indices.flush({ index, force: true, wait_if_ongoing: true })
   await es.indices.refresh({ index })
   let previous = -1
@@ -469,7 +473,7 @@ export function pct (baseline: number, value: number): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
 }
 
-const mb = (bytes: number): string => (bytes / 1024 / 1024).toFixed(1).padStart(8)
+export const mb = (bytes: number): string => (bytes / 1024 / 1024).toFixed(1).padStart(8)
 
 function printSetupReport (
   sizes: SizeMeasure[],

@@ -10,6 +10,7 @@ import { terminateAfterExperiments } from './experiments/terminate-after.ts'
 import { msmSkewedExperiments } from './experiments/msm-skewed.ts'
 import { countSplitExperiments } from './experiments/count-split.ts'
 import { textAnalyzerExperiments } from './experiments/text-analyzer.ts'
+import { textAnalyzerWideExperiments } from './experiments/text-analyzer-wide.ts'
 
 export interface QueryVariant {
   name: string
@@ -64,7 +65,8 @@ export const allExperiments: Experiment[] = [
   ...terminateAfterExperiments,
   ...msmSkewedExperiments,
   ...countSplitExperiments,
-  ...textAnalyzerExperiments
+  ...textAnalyzerExperiments,
+  ...textAnalyzerWideExperiments
 ]
 
 const byName = new Map(allExperiments.map(e => [e.name, e]))
