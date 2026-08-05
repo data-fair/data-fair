@@ -753,6 +753,146 @@ Results: `benchmark/results/experiment-2026-08-05T09-47-58-877Z.json` (warm + pr
 
 ---
 
+## 14.c Cost of an optional exact-match boost clause on the `frq` shape (2026-08-05)
+
+Follow-up to §14.b, now that `frq` (`repeat` index, query analyzed with plain `custom_french` — the
+search-analyzer fix) is the shape actually picked for the indexing rework: one `.text` field per
+column, indexed with `custom_french_repeat`, searched with `custom_french` (in production this is a
+mapping-level `search_analyzer`; the experiment reaches identical analysis via the query-time
+`analyzer` param, so no new index shape is needed — same `repeat` index as §14/§14.b). Open question:
+is an OPTIONAL query-side exact-match boost clause worth adding, and at what cost?
+
+**The clause.** A `should` clause on the SAME `col*.text` fields, analyzed with a new
+`custom_french_exact` (elision + lowercase + asciifolding — NO stop, NO stemmer; `EXACT_FILTER_ORDER`
+in `text-analyzer.ts`), weighted with `boost`. It targets the FOLDED SURFACE token
+`custom_french_repeat`'s keyword-marked copy already indexes (`REPEAT_FILTER_ORDER` — that copy is
+never stemmed but IS lowercased/elided/asciifolded). Bare `standard` would be wrong here: it
+lowercases but does not asciifold, so an accented query term would never hit the repeat index's
+folded postings — confirmed empirically (`_analyze`): `custom_french_exact` on `"Équipements"` emits
+one token, `equipements`, matching the index's own folded surface posting; `custom_french_repeat` on
+the same text emits `equipements` AND the stem `equip` at that position.
+
+**Hypothesis.** As an independent `should` clause, its max contribution to a doc's score is bounded
+by `boost`. Block-max WAND pruning should therefore make a small weight nearly free — but only in a
+shape where pruning can actually engage. Data-fair's own page-1 shape (`track_total_hits: true`)
+forfeits WAND entirely (§2), so the same clause on the production shape should cost close to its
+full, unpruned weight regardless of `boost`.
+
+**Setup.** Same `repeat`-shaped wide index (100k docs, 40 columns) as §14.b — no new index shape.
+`custom_french_exact` was added to the SHARED `ANALYSIS_SETTINGS_REPEAT` (`text-analyzer.ts`), which
+**forced a real rebuild**: analysis settings can't be hot-reloaded onto an open index, and the
+harness's index-reuse check was previously doc-count-only — an index built before this change would
+have been silently "reused" without the new analyzer, and every exact-clause query would 400 with an
+analyzer-not-found error. Fixed in the harness itself: `buildAndMeasure` (`text-analyzer-wide.ts`) now
+also checks `hasAnalyzer(es, index, 'custom_french_exact')` alongside the doc-count check, so a
+settings change forces the same automatic rebuild a doc-count change already did — no manual
+`curl -XDELETE` step required. All 4 wide indexes (dual, dual-catchall, repeat, repeat-catchall) were
+rebuilt once as a result of this run (100k × 40 cols each, 85-165s per index).
+
+Five arms per probe, all on the SAME `repeat` index:
+- `dual` — today's shape, ceiling/reference (unchanged from §14.b)
+- `frq` — `repeat` index, query analyzed with plain `custom_french` — the production candidate,
+  floor (no exact clause)
+- `frq+boost^1.0` / `^0.5` / `^0.2` — the `frq` clause plus an independent `should` exact clause at
+  that weight
+
+Each measured under BOTH shapes, to isolate the WAND effect from the boost weight itself:
+- **prod** — `size: 20, track_total_hits: true` (today's page-1 request; §2's WAND-forfeiting shape)
+- **topk** — `size: 20, track_total_hits: false` (pruning can engage)
+
+Run:
+```sh
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout:boost-cost --runs=20 --rows=100000 --profile --no-seed
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout:boost-cost --runs=20 --rows=100000 --cold --no-seed
+```
+
+**Outcome: the hypothesis holds — but only in the shape where pruning can engage, and this corpus
+has an important twist on what "engage" means here.**
+
+`took` p50, 20 runs, warm (cold within 1-5ms of warm on every arm and every shape — not a caching
+artifact, see caveats).
+
+Prod shape (`track_total_hits:true` — today's production shape, WAND forfeited by design, §2):
+
+| probe (hits) | dual | frq | frq+boost^1.0 | frq+boost^0.5 | frq+boost^0.2 |
+|---|---:|---:|---:|---:|---:|
+| logements (99 965) | 22.5 ms | 16.0 ms (−28.9%) | 21.0 ms (−6.7%) | 22.0 ms (−2.2%) | 23.0 ms (+2.2%) |
+| associations (88 077) | 10.0 ms | 6.0 ms (−40.0%) | 10.0 ms (±0%) | 10.0 ms (±0%) | 10.0 ms (±0%) |
+| equipements (99 964) | 21.0 ms | 14.0 ms (−33.3%) | 24.0 ms (+14.3%) | 25.0 ms (+19.0%) | 24.0 ms (+14.3%) |
+
+Top-k shape (`track_total_hits:false` — where WAND pruning can engage):
+
+| probe | dual | frq | frq+boost^1.0 | frq+boost^0.5 | frq+boost^0.2 |
+|---|---:|---:|---:|---:|---:|
+| logements | 280.5 ms | 117.5 ms (−58.1%) | 261.0 ms (−7.0%) | 168.0 ms (−40.1%) | 176.5 ms (−37.1%) |
+| associations | 95.0 ms | 31.0 ms (−67.4%) | 93.0 ms (−2.1%) | 51.0 ms (−46.3%) | 52.0 ms (−45.3%) |
+| equipements | 232.5 ms | 115.0 ms (−50.5%) | 279.0 ms (+20.0%) | 186.5 ms (−19.8%) | 194.0 ms (−16.6%) |
+
+**In the prod shape, boost cost is flat and close to dual at ANY weight.** `boost^0.2` (+2.2%, ±0%,
++14.3%) is barely distinguishable from `boost^1.0` (−6.7%, ±0%, +14.3%) — no weight is "cheap" here.
+That is the predicted signature of a shape that forfeits WAND: the exact clause must be fully scored
+for every candidate regardless of how small its maximum possible contribution is, so adding it at all
+buys back roughly all of dual's cost. Confirmed independently of the harness: re-running the bare
+`frq` query with raw `curl` at `track_total_hits:true` vs `false` on the same index (five runs each,
+`request_cache=false`) gave 13-19ms vs 112-130ms — the harness numbers are not an artifact of the
+Node ES client.
+
+**In the top-k shape, cost drops monotonically as the weight shrinks, toward the `frq` floor.**
+`boost^1.0` sits close to (or, once, above) `dual` (−7.0%, −2.1%, +20.0%) — paying almost dual's full
+second-clause cost — while `boost^0.5` and `boost^0.2` drop sharply (−37..−46%), approaching but not
+reaching `frq`'s floor. This is the WAND signature the hypothesis predicted: at `boost^0.2` a block
+whose exact-clause contribution cannot possibly change the top-20 gets skipped cheaply; at `boost^1.0`
+it usually still could, so it can't be.
+
+**Caveat that must travel with these numbers: on THIS 40-column corpus, the top-k shape's absolute
+cost is 5-12× HIGHER than the prod shape's, for every arm including `dual` and `frq` — the opposite
+of what "WAND pruning available" naively suggests.** This is the flip side of the "match-everything"
+caveat §14.b already flagged for this corpus (spreading it over 40 independent columns pushes match
+rates to 80,000-100,000 of 100,000 docs): when almost every document matches, block-max WAND has
+almost nothing to *skip*, but it still pays the bookkeeping cost of tracking block-max scores and a
+competitive-score threshold across a 40-field, multi-term disjunction — pure overhead with no payoff.
+Confirmed directly with `curl` outside the harness (bare `frq` clause: 13-19ms at
+`track_total_hits:true`, 112-130ms at `false`, same index, five runs each — see above). **The
+boost-weight GRADIENT within the top-k shape (§14.c's actual question) is real and holds regardless of
+this** — a low-weight second clause still gets pruned cheaply relative to a high-weight one, on top of
+whatever the shape's own baseline costs — but the top-k shape's absolute numbers here should not be
+read as "the fast option" on this corpus; on a realistically selective query (§6's cost curve) it very
+likely would be, and this experiment's role is only to isolate the weight-dependent gradient, which it
+does cleanly.
+
+**Ordering (one probe, "logements"): `frq+boost^0.2` reorders vs bare `frq` but doesn't reshuffle
+wholesale — 17/20 ids in common, order differs on the rest.** The three ids `frq` alone surfaces that
+`boost^0.2` drops are replaced by three others the exact clause's small extra score signal promotes —
+a real, modest ranking effect, consistent with §14.b's observation that neither `repeat` nor
+`repeat-frq` alone carries a second scored clause; the boost buys a sliver of that back.
+
+**Sanity check: PASS.** Query `"Équipements"` with `custom_french_exact` on the `repeat` index (probe
+docs found by scanning the same deterministic corpus the index was built from, not hardcoded ids):
+- match probe `rec-0.col10` ("...recense les équipements publics...", plural, the exact folded form)
+  — matched by both the exact clause AND the frq clause.
+- non-match probe `rec-21.col35` ("...taux d'équipement des ménages...", singular only, no plural
+  anywhere in the doc) — matched by the frq clause (stems both to the same root, `equip`) but NOT by
+  the exact clause.
+
+Confirms the exact clause matches the folded surface token specifically and does not blur across
+inflections the way the stemmed `frq` clause does — the intended query-side complement to the repeat
+index's stored postings, verified against real corpus documents rather than synthetic strings.
+
+**Caveats.** Same corpus caveat as §14.b (170 sentences, flatter TF curve, near-total match rate at 40
+independent columns) — here it additionally explains the top-k/prod absolute-latency inversion above.
+`frq+boost^1.0` occasionally lands ABOVE `dual` (equipements-topk: +20.0%) — plausible noise at this
+resolution (single-digit-percent deltas on an integer-millisecond clock) compounded by a
+probe-specific exact-clause match cardinality; treat single-probe outliers as noise, the three-probe
+direction (weight down ⇒ cost down, in the top-k shape only; flat and close to dual in the prod shape)
+as the signal.
+
+Results: `benchmark/results/experiment-2026-08-05T12-40-45-125Z.json` (warm + profile),
+`experiment-2026-08-05T12-42-22-551Z.json` (cold). Same index-reuse convention as §14/§14.b — the four
+wide indexes were rebuilt once for the new analyzer (see Setup); subsequent runs reuse them. Drop with
+`curl -XDELETE $ES/benchmark-text-analyzer-wide-\*`.
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an

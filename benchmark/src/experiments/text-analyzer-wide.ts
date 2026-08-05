@@ -4,7 +4,7 @@ import type { SchemaContext, SchemaField } from '../generator.ts'
 import { schemaContext } from '../generator.ts'
 import { getEsClient } from '../es.ts'
 import {
-  ANALYSIS_SETTINGS_REPEAT, SEARCH_ANALYZER_OVERRIDE, waitForStableStore, mb, pct
+  ANALYSIS_SETTINGS_REPEAT, SEARCH_ANALYZER_OVERRIDE, EXACT_ANALYZER, waitForStableStore, mb, pct
 } from './text-analyzer.ts'
 import { wideDocIterator, generateWideDocs, wideCorpusStats, WIDE_COLUMNS } from './text-analyzer-corpus.ts'
 
@@ -120,22 +120,64 @@ export const WIDE_SCHEMA: SchemaField[] = Array.from({ length: NUM_COLS }, (_, i
 const textFields = (ctx: SchemaContext): string[] => ctx.fullTextFields.map(k => `${k}.text`)
 const standardFields = (ctx: SchemaContext): string[] => ctx.fullTextFields.map(k => `${k}.text_standard`)
 
-const common = { size: 20, track_total_hits: true, request_cache: false }
+/** Production page-1 shape (today's default): total counting forces a full scan, no block-max
+ *  WAND pruning — the shape every experiment before §14.c used exclusively. */
+const PROD_COMMON = { size: 20, track_total_hits: true, request_cache: false }
+/** Top-k shape: total counting disabled so WAND pruning can actually engage — §14.c needs both
+ *  shapes measured side by side, since PROD_COMMON alone would hide any pruning effect. */
+const TOPK_COMMON = { size: 20, track_total_hits: false, request_cache: false }
 
-/** default `q`: one SQS `should` clause per field GROUP passed in. */
-function defaultQ (fields: string[][], query: string, analyzer?: string): Record<string, any> {
+export type QueryShape = 'prod' | 'topk'
+const shapeCommon = (shape: QueryShape): Record<string, any> => shape === 'prod' ? PROD_COMMON : TOPK_COMMON
+
+/** default `q`: one SQS `should` clause per field GROUP passed in. `shape` defaults to the
+ *  production page-1 shape (`PROD_COMMON`) so every pre-§14.c caller is unaffected. */
+function defaultQ (fields: string[][], query: string, analyzer?: string, shape: QueryShape = 'prod'): Record<string, any> {
   const should = fields.map(f => ({ simple_query_string: { query, fields: f, ...(analyzer ? { analyzer } : {}) } }))
-  return { query: { bool: { should, minimum_should_match: 1 } }, ...common }
+  return { query: { bool: { should, minimum_should_match: 1 } }, ...shapeCommon(shape) }
 }
 
 function startsWith (fields: string[], typed: string, analyzer?: string): Record<string, any> {
-  return { query: { simple_query_string: { query: `${typed}*`, fields, ...(analyzer ? { analyzer } : {}) } }, ...common }
+  return { query: { simple_query_string: { query: `${typed}*`, fields, ...(analyzer ? { analyzer } : {}) } }, ...PROD_COMMON }
 }
 
 function phrase (fields: string[][], quoted: string, analyzer?: string): Record<string, any> {
   const should = fields.map(f => ({ simple_query_string: { query: `"${quoted}"`, fields: f, ...(analyzer ? { analyzer } : {}) } }))
-  return { query: { bool: { should, minimum_should_match: 1 } }, ...common }
+  return { query: { bool: { should, minimum_should_match: 1 } }, ...PROD_COMMON }
 }
+
+// ---------------------------------------------------------------------------------------------
+// §14.c — cost of an optional exact-match boost clause on the `frq` shape (production candidate:
+// repeat index, query analyzed with plain `custom_french` — the `repeat-frq` arm above, renamed
+// `frq` here to match the decision it now feeds). The boost clause targets the SAME fields with
+// `custom_french_exact` (elision + lowercase + asciifolding, no stop, no stemmer — see
+// EXACT_FILTER_ORDER in text-analyzer.ts) as an independent `should` clause, weighted with `boost`.
+// Hypothesis: an independent should-clause's max contribution is bounded by its boost weight, so
+// block-max WAND pruning should make a small weight nearly free — testable only where pruning can
+// engage (TOPK_COMMON), which is why every arm below is measured under BOTH shapes.
+// ---------------------------------------------------------------------------------------------
+
+function frqClause (fields: string[], terms: string): Record<string, any> {
+  return { simple_query_string: { query: terms, fields, analyzer: SEARCH_ANALYZER_OVERRIDE } }
+}
+
+function exactClause (fields: string[], terms: string, boost: number): Record<string, any> {
+  return { simple_query_string: { query: terms, fields, analyzer: EXACT_ANALYZER, boost } }
+}
+
+function frqQuery (ctx: SchemaContext, terms: string, shape: QueryShape): Record<string, any> {
+  return { query: frqClause(textFields(ctx), terms), ...shapeCommon(shape) }
+}
+
+function frqBoostQuery (ctx: SchemaContext, terms: string, boost: number, shape: QueryShape): Record<string, any> {
+  const fields = textFields(ctx)
+  return {
+    query: { bool: { should: [frqClause(fields, terms), exactClause(fields, terms, boost)], minimum_should_match: 1 } },
+    ...shapeCommon(shape)
+  }
+}
+
+const BOOST_WEIGHTS = [1.0, 0.5, 0.2] as const
 
 // Three probe queries — different term sets / match-set sizes, so the top-20 ordering comparison
 // (item 3) is not a single anecdote. All three are drawn from STEM_PROBES-adjacent vocabulary in
@@ -152,6 +194,11 @@ const PHRASE = 'sont publiees chaque annee'
 // ---------------------------------------------------------------------------------------------
 // Index build
 // ---------------------------------------------------------------------------------------------
+
+async function hasAnalyzer (es: Client, index: string, analyzer: string): Promise<boolean> {
+  const settings: any = await es.indices.getSettings({ index })
+  return Boolean(settings[index]?.settings?.index?.analysis?.analyzer?.[analyzer])
+}
 
 async function bulkLoad (es: Client, index: string, rows: number): Promise<void> {
   const batch: any[] = []
@@ -347,6 +394,125 @@ async function compareTopK (es: Client, ctx: SchemaContext): Promise<TopKCompari
 }
 
 // ---------------------------------------------------------------------------------------------
+// §14.c exact-clause sanity check — the exact clause must match the FOLDED SURFACE token and must
+// NOT match a document that carries only a different inflection of the same lemma (the frq clause
+// matches both — that's expected, it's stemmed; it is not a bug in the exact clause). Probes are
+// found by scanning the same deterministic corpus the index was built from (seed 42), not
+// hardcoded ids, so they stay correct if the corpus generator ever changes.
+// ---------------------------------------------------------------------------------------------
+
+const EXACT_SANITY_QUERY = 'Équipements'
+const EXACT_SANITY_PLURAL = /équipements/i
+const EXACT_SANITY_SINGULAR_ONLY = /équipement(?!s)/i
+
+export interface ExactClauseSanity {
+  query: string
+  /** a doc containing the plural "équipements" — the exact folded form the query targets */
+  matchProbe: { docId: string, col: string, snippet: string, matchedByExact: boolean, matchedByFrq: boolean }
+  /** a doc containing ONLY the singular "équipement" (same lemma, different inflection, no plural
+   *  anywhere in the doc) */
+  nonMatchProbe: { docId: string, col: string, snippet: string, matchedByExact: boolean, matchedByFrq: boolean }
+  pass: boolean
+}
+
+function findExactSanityProbes (rows: number): {
+  matchProbe: { docId: string, col: number, snippet: string }
+  nonMatchProbe: { docId: string, col: number, snippet: string }
+} {
+  let matchProbe: { docId: string, col: number, snippet: string } | undefined
+  let nonMatchProbe: { docId: string, col: number, snippet: string } | undefined
+  for (const doc of wideDocIterator(rows)) {
+    if (!matchProbe) {
+      for (let c = 0; c < doc.cols.length; c++) {
+        if (EXACT_SANITY_PLURAL.test(doc.cols[c])) { matchProbe = { docId: doc.id, col: c, snippet: doc.cols[c] }; break }
+      }
+    }
+    if (!nonMatchProbe) {
+      let hasPluralAnywhere = false
+      let singular: { col: number, snippet: string } | undefined
+      for (let c = 0; c < doc.cols.length; c++) {
+        if (EXACT_SANITY_PLURAL.test(doc.cols[c])) hasPluralAnywhere = true
+        else if (EXACT_SANITY_SINGULAR_ONLY.test(doc.cols[c])) singular = { col: c, snippet: doc.cols[c] }
+      }
+      if (singular && !hasPluralAnywhere) nonMatchProbe = { docId: doc.id, col: singular.col, snippet: singular.snippet }
+    }
+    if (matchProbe && nonMatchProbe) break
+  }
+  if (!matchProbe || !nonMatchProbe) throw new Error('findExactSanityProbes: could not find both probe docs in the corpus')
+  return { matchProbe, nonMatchProbe }
+}
+
+async function docMatchesClause (es: Client, index: string, docId: string, field: string, analyzer: string): Promise<boolean> {
+  const res: any = await es.count({
+    index,
+    query: {
+      bool: {
+        must: [
+          { ids: { values: [docId] } },
+          { simple_query_string: { query: EXACT_SANITY_QUERY, fields: [field], analyzer } }
+        ]
+      }
+    }
+  })
+  return res.count === 1
+}
+
+async function runExactClauseSanity (es: Client, rows: number): Promise<ExactClauseSanity> {
+  const { matchProbe, nonMatchProbe } = findExactSanityProbes(rows)
+  const index = indexName('repeat')
+  const matchField = `${colKey(matchProbe.col)}.text`
+  const nonMatchField = `${colKey(nonMatchProbe.col)}.text`
+  const matchedByExact = await docMatchesClause(es, index, matchProbe.docId, matchField, EXACT_ANALYZER)
+  const matchedByFrq = await docMatchesClause(es, index, matchProbe.docId, matchField, SEARCH_ANALYZER_OVERRIDE)
+  const nonMatchedByExact = await docMatchesClause(es, index, nonMatchProbe.docId, nonMatchField, EXACT_ANALYZER)
+  const nonMatchedByFrq = await docMatchesClause(es, index, nonMatchProbe.docId, nonMatchField, SEARCH_ANALYZER_OVERRIDE)
+  return {
+    query: EXACT_SANITY_QUERY,
+    matchProbe: { docId: matchProbe.docId, col: colKey(matchProbe.col), snippet: matchProbe.snippet, matchedByExact, matchedByFrq },
+    nonMatchProbe: {
+      docId: nonMatchProbe.docId,
+      col: colKey(nonMatchProbe.col),
+      snippet: nonMatchProbe.snippet,
+      matchedByExact: nonMatchedByExact,
+      matchedByFrq: nonMatchedByFrq
+    },
+    pass: matchedByExact && !nonMatchedByExact
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §14.c boost ordering check — does adding the exact clause at a small weight (boost^0.2) change
+// the top-20 ranking vs the bare `frq` clause? One probe is enough: this is the ranking effect the
+// boost buys, reported alongside the cost table, not a correctness check.
+// ---------------------------------------------------------------------------------------------
+
+export interface BoostOrderingCheck {
+  probe: string
+  frq: string[]
+  frqBoost02: string[]
+  sameOrder: boolean
+  sameSet: boolean
+}
+
+async function compareBoostOrdering (es: Client, ctx: SchemaContext): Promise<BoostOrderingCheck> {
+  const probe = PROBE_QUERIES[0]
+  const fields = textFields(ctx)
+  const index = indexName('repeat')
+  const frq = await top20(es, index, frqClause(fields, probe.terms))
+  const frqBoost02 = await top20(es, index, {
+    bool: { should: [frqClause(fields, probe.terms), exactClause(fields, probe.terms, 0.2)], minimum_should_match: 1 }
+  })
+  const frqSet = new Set(frq)
+  return {
+    probe: probe.name,
+    frq,
+    frqBoost02,
+    sameOrder: JSON.stringify(frq) === JSON.stringify(frqBoost02),
+    sameSet: frq.length === frqBoost02.length && frqBoost02.every(id => frqSet.has(id))
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Mixed-fleet union check (item 4) — one multi-index search spanning a dual-shaped index and a
 // repeat-shaped index, union field list. Cheap: single search + per-index validate/explain.
 // ---------------------------------------------------------------------------------------------
@@ -408,11 +574,21 @@ async function buildAndMeasure (rows: number): Promise<ExperimentSetup> {
     const exists = await es.indices.exists({ index })
     if (exists) {
       const count: any = await es.count({ index })
-      if (count.count === rows) {
+      // §14.c added `custom_french_exact` to the shared analysis settings (ANALYSIS_SETTINGS_REPEAT).
+      // Analysis settings can't be hot-reloaded onto an open index, and this reuse check was
+      // previously doc-count-only — an index built before that change would be silently "reused"
+      // without the new analyzer, and the exact clause would fail with an analyzer-not-found error.
+      // Check for the analyzer too so a settings change forces the same rebuild a doc-count change
+      // does, instead of requiring a manual `curl -XDELETE`.
+      const upToDate = await hasAnalyzer(es, index, 'custom_french_exact')
+      if (count.count === rows && upToDate) {
         console.log(`  [text-analyzer-wide] ${index}: reusing existing index (${rows} docs)`)
         continue
       }
-      console.log(`  [text-analyzer-wide] ${index}: doc count ${count.count} != ${rows}, rebuilding`)
+      const reason = count.count !== rows
+        ? `doc count ${count.count} != ${rows}`
+        : 'missing custom_french_exact analyzer (§14.c settings change)'
+      console.log(`  [text-analyzer-wide] ${index}: ${reason}, rebuilding`)
       await es.indices.delete({ index })
     }
     console.log(`  [text-analyzer-wide] ${index}: building ${rows} docs × ${NUM_COLS} columns`)
@@ -433,13 +609,19 @@ async function buildAndMeasure (rows: number): Promise<ExperimentSetup> {
   const topKComparison = await compareTopK(es, ctx)
   const unionCheck = await runUnionCheck(es)
   const corpus = wideCorpusStats(generateWideDocs(2000))
+  const exactClauseSanity = await runExactClauseSanity(es, rows)
+  const boostOrdering = await compareBoostOrdering(es, ctx)
 
-  printSetupReport(sizes, sanity, topKComparison, unionCheck, corpus)
+  printSetupReport(sizes, sanity, topKComparison, unionCheck, corpus, exactClauseSanity, boostOrdering)
 
   const indexes: Record<string, string> = {
     dual: indexName('dual'),
     repeat: indexName('repeat'),
     'repeat-frq': indexName('repeat'),
+    frq: indexName('repeat'),
+    'frq+boost^1.0': indexName('repeat'),
+    'frq+boost^0.5': indexName('repeat'),
+    'frq+boost^0.2': indexName('repeat'),
     'dual-catchall': indexName('dual-catchall'),
     'repeat-catchall': indexName('repeat-catchall'),
     'repeat-catchall-frq': indexName('repeat-catchall')
@@ -447,7 +629,7 @@ async function buildAndMeasure (rows: number): Promise<ExperimentSetup> {
   return {
     rows,
     indexes,
-    findings: { sizes, sanity, topKComparison, unionCheck, corpus }
+    findings: { sizes, sanity, topKComparison, unionCheck, corpus, exactClauseSanity, boostOrdering }
   }
 }
 
@@ -456,7 +638,9 @@ function printSetupReport (
   sanity: WideSanityChecks,
   topKComparison: TopKComparison[],
   unionCheck: UnionCheck,
-  corpus: ReturnType<typeof wideCorpusStats>
+  corpus: ReturnType<typeof wideCorpusStats>,
+  exactClauseSanity: ExactClauseSanity,
+  boostOrdering: BoostOrderingCheck
 ): void {
   const dual = sizes.find(s => s.shape === 'dual')!
   console.log('')
@@ -499,6 +683,12 @@ function printSetupReport (
   for (const [idx, v] of Object.entries(unionCheck.perIndexValidation)) {
     console.log(`  validate[${idx}]: valid=${v.valid}`)
   }
+  console.log('')
+  console.log(`SANITY §14.c exact clause "${exactClauseSanity.query}" (matches folded surface, not other inflections): ${exactClauseSanity.pass ? 'PASS' : 'FAIL'}`)
+  console.log(`  match probe   [${exactClauseSanity.matchProbe.docId}.${exactClauseSanity.matchProbe.col}]: exact=${exactClauseSanity.matchProbe.matchedByExact} frq=${exactClauseSanity.matchProbe.matchedByFrq} — "${exactClauseSanity.matchProbe.snippet}"`)
+  console.log(`  non-match probe [${exactClauseSanity.nonMatchProbe.docId}.${exactClauseSanity.nonMatchProbe.col}]: exact=${exactClauseSanity.nonMatchProbe.matchedByExact} frq=${exactClauseSanity.nonMatchProbe.matchedByFrq} — "${exactClauseSanity.nonMatchProbe.snippet}"`)
+  console.log('')
+  console.log(`§14.c boost^0.2 ordering vs bare frq ("${boostOrdering.probe}"): ${boostOrdering.sameOrder ? 'IDENTICAL order' : (boostOrdering.sameSet ? 'same set, reordered' : 'DIFFERS')}`)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -603,9 +793,53 @@ const prefixExperiment: Experiment = {
   ]
 }
 
+const SHAPE_LABEL: Record<QueryShape, string> = {
+  prod: 'prod shape (size 20, track_total_hits:true) — today\'s production page-1 request',
+  topk: 'top-k shape (size 20, track_total_hits:false) — where WAND pruning can engage'
+}
+
+/**
+ * §14.c — cost of the optional exact-match boost clause on the `frq` shape, one experiment per
+ * (probe, shape) pair: `dual` (ceiling/reference), `frq` (floor — bare production candidate), and
+ * `frq+boost^{1.0,0.5,0.2}` (frq + an independent should exact clause at that weight). Naming
+ * follows the file's `group:sub` convention (`--name=text-analyzer:wide-fanout:boost-cost` selects
+ * all six).
+ */
+function boostCostExperiment (probeName: string, terms: string, shape: QueryShape): Experiment {
+  const label = SHAPE_LABEL[shape]
+  return {
+    name: `text-analyzer:wide-fanout:boost-cost:${probeName}-${shape}`,
+    description: `§14.c exact-match boost cost, "${terms}" over ${NUM_COLS} columns, ${label}`,
+    schema: WIDE_SCHEMA,
+    setup,
+    baseline: {
+      name: 'dual',
+      description: `bool/should of SQS over [*.text] + SQS over [*.text_standard] (${label}) — ceiling/reference`,
+      body: ctx => defaultQ([textFields(ctx), standardFields(ctx)], terms, undefined, shape)
+    },
+    variants: [
+      {
+        name: 'frq',
+        description: `one SQS over [*.text], query analyzed with custom_french (${label}) — floor, no exact clause`,
+        body: ctx => frqQuery(ctx, terms, shape)
+      },
+      ...BOOST_WEIGHTS.map(boost => ({
+        name: `frq+boost^${boost.toFixed(1)}`,
+        description: `frq clause + independent should exact clause (custom_french_exact) boost=${boost} (${label})`,
+        body: (ctx: SchemaContext) => frqBoostQuery(ctx, terms, boost, shape)
+      }))
+    ]
+  }
+}
+
+export const boostCostExperiments: Experiment[] = PROBE_QUERIES.flatMap(
+  p => (['prod', 'topk'] as const).map(shape => boostCostExperiment(p.name, p.terms, shape))
+)
+
 export const textAnalyzerWideExperiments: Experiment[] = [
   ...PROBE_QUERIES.map(p => defaultQExperiment(p.name, p.terms)),
   catchallExperiment,
   phraseExperiment,
-  prefixExperiment
+  prefixExperiment,
+  ...boostCostExperiments
 ]

@@ -80,13 +80,26 @@ export const REPEAT_FILTER_ORDER = [
   'remove_duplicates', 'asciifolding'
 ]
 
+// Filter order for the optional query-side exact-match boost clause (INVESTIGATIONS.md §14.c):
+// elision + lowercase + asciifolding, deliberately NO stop, NO stemmer. It must land on the SAME
+// folded surface token `custom_french_repeat`'s keyword-marked copy indexes (see
+// REPEAT_FILTER_ORDER — that copy is lowercased, elided and asciifolded, just never stemmed), so a
+// query analyzed with this reaches the repeat index's own surface posting. Bare `standard` would be
+// WRONG here: it lowercases but does not asciifold, so an accented query term ("Équipements") would
+// analyze to "équipements" and never hit the folded "equipements" posting the index actually holds.
+export const EXACT_FILTER_ORDER = ['french_elision', 'lowercase', 'asciifolding']
+
 export const ANALYSIS_SETTINGS_REPEAT = {
   ...ANALYSIS_SETTINGS,
   analyzer: {
     ...ANALYSIS_SETTINGS.analyzer,
-    custom_french_repeat: { tokenizer: 'standard', filter: REPEAT_FILTER_ORDER }
+    custom_french_repeat: { tokenizer: 'standard', filter: REPEAT_FILTER_ORDER },
+    custom_french_exact: { tokenizer: 'standard', filter: EXACT_FILTER_ORDER }
   }
 }
+
+/** Query-time analyzer for the exact-match boost clause (§14.c) — see EXACT_FILTER_ORDER. */
+export const EXACT_ANALYZER = 'custom_french_exact'
 
 // ---------------------------------------------------------------------------------------------
 // Variants
