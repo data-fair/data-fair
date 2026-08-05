@@ -24,12 +24,36 @@
           density="compact"
           :text="t('okBody')"
         />
+        <!-- neither ok nor breach: either no check has run yet, or one ran and could not
+             conclude ('unknown'). These read very differently to an operator, and the missing
+             anchor case is its own story — see below -->
+        <v-alert
+          v-else-if="!state.lastCheck"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          :text="t('notCheckedBody')"
+        />
+        <!-- a check ran but the store holds NO revision for this dataset: there is nothing to
+             compare against, so the guarantee is not effective. The verdict is trustworthy on
+             this point — a check that finds an anchor heals a lost `lastRevision` mirror from
+             the store before returning, so its absence here means the store is genuinely empty
+             (initial anchor write failed at enable time, or the objects are gone/elsewhere) -->
+        <v-alert
+          v-else-if="missingAnchor"
+          type="warning"
+          variant="outlined"
+          density="compact"
+          :title="t('noAnchorTitle')"
+          :text="t('noAnchorBody')"
+        />
         <v-alert
           v-else
           type="warning"
           variant="tonal"
           density="compact"
-          :text="t('notCheckedBody')"
+          :title="t('inconclusiveTitle')"
+          :text="t('inconclusiveBody')"
         />
         <!-- verdict 2 (round 3): the trail itself — independent of the data verdict above -->
         <v-alert
@@ -232,6 +256,18 @@
       <div class="d-flex align-center ga-2 mt-4">
         <v-spacer />
         <v-btn
+          v-if="state.active"
+          :prepend-icon="mdiRefresh"
+          :loading="refresh.loading.value"
+          color="primary"
+          variant="text"
+          size="small"
+          :title="t('refreshHelp')"
+          @click="refresh.execute()"
+        >
+          {{ t('refresh') }}
+        </v-btn>
+        <v-btn
           v-if="adminMode && state.active"
           :prepend-icon="mdiShieldRefresh"
           :loading="check.loading.value"
@@ -243,7 +279,7 @@
           {{ t('checkNow') }}
         </v-btn>
         <v-btn
-          v-if="adminMode && state.active && anyBreach"
+          v-if="adminMode && state.active && (anyBreach || missingAnchor)"
           :prepend-icon="mdiWrench"
           :loading="fix.loading.value"
           color="warning"
@@ -713,11 +749,17 @@ fr:
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
   notCheckedBody: L'intégrité est activée mais aucun contrôle n'a encore été effectué.
+  inconclusiveTitle: Contrôle non concluant
+  inconclusiveBody: Le dernier contrôle n'a pas pu se prononcer, le plus souvent parce qu'une écriture est encore en cours d'historisation. Un nouveau contrôle est lancé automatiquement.
+  noAnchorTitle: Aucune révision dans l'entrepôt
+  noAnchorBody: "L'intégrité est activée mais l'entrepôt ne contient aucune révision pour ce jeu de données : il n'y a rien à quoi comparer l'état courant, la garantie n'est donc pas effective. Soit l'écriture de la révision initiale a échoué à l'activation (entrepôt indisponible ou mal configuré), soit les révisions n'y sont plus. Vérifiez l'entrepôt, puis réconciliez pour y ancrer l'état courant."
   renewalFailedTitle: Renouvellement du verrou en échec
   renewalFailedBody: Le renouvellement de la protection anti-altération échoue. La garantie expirera à la date de rétention de l'ancre si le problème n'est pas résolu.
   lastCheck: Dernier contrôle
   neverChecked: Aucun contrôle effectué
   checkNow: Contrôler maintenant
+  refresh: Rafraîchir
+  refreshHelp: Relit l'état d'intégrité et l'historique des révisions.
   fix: Réconcilier
   fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
   enableLabel: Activer le contrôle d'intégrité
@@ -815,11 +857,17 @@ en:
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
   notCheckedBody: Integrity is enabled but no check has been run yet.
+  inconclusiveTitle: Inconclusive check
+  inconclusiveBody: The last check could not reach a verdict, usually because a write is still being historized. Another check runs automatically.
+  noAnchorTitle: No revision in the store
+  noAnchorBody: "Integrity is enabled but the store holds no revision for this dataset: there is nothing to compare the current state against, so the guarantee is not effective. Either the initial revision failed to be written when integrity was enabled (store unavailable or misconfigured), or the revisions are no longer there. Check the store, then reconcile to anchor the current state."
   renewalFailedTitle: Lock renewal failing
   renewalFailedBody: Renewal of the tamper-protection lock is failing. The guarantee will lapse at the anchor's retain-until date unless resolved.
   lastCheck: Last check
   neverChecked: No check run yet
   checkNow: Check now
+  refresh: Refresh
+  refreshHelp: Re-reads the integrity status and the revision history.
   fix: Reconcile
   fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
   enableLabel: Enable integrity checking
@@ -910,7 +958,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
+import { mdiShieldRefresh, mdiRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
 import type { Dataset, WhoHint } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -942,6 +990,10 @@ const formatWho = (who?: WhoHint): string => {
 const state = ref<IntegrityState | null>(null)
 
 const anyBreach = computed(() => state.value?.lastCheck?.status === 'breach')
+// enrolled, a check has run, and yet no anchor is recorded: the store holds no revision for this
+// dataset. Reconciling is exactly the remedy (it anchors the current state), so the action stays
+// offered here even though this is not a breach.
+const missingAnchor = computed(() => !!state.value?.active && !!state.value?.lastCheck && !state.value?.lastRevision)
 
 const size = 10
 const page = ref(1)
@@ -977,6 +1029,43 @@ const load = useAsyncAction(async () => {
   }
 })
 load.execute()
+
+// Re-read the state and the CURRENT page of the history, unlike load() which resets pagination:
+// a refresh only ever finds the trail grown (a new anchor), never shrunk.
+const refresh = useAsyncAction(async () => {
+  if (!dataset.value) return
+  state.value = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  if (state.value?.active) await loadRevisions.execute()
+})
+
+// Watchability on the existing journal channel (no new channel, no new permission): a new anchor
+// is always preceded by a pipeline run ending in 'finalize-end' — a file upload, a draft
+// validation, a metadata patch that triggers reindexing. The anchor itself lands slightly LATER
+// (the historize relay is a separate worker task with no journal event of its own), so a single
+// refresh on the event would still read the pre-anchor state: re-read a few times over the next
+// seconds and stop as soon as the trail has actually grown. Anything the panel cannot observe
+// this way (nightly checks, an admin action from another session) is what the refresh button and
+// the periodic checks are for.
+const ws = useWS('/data-fair/api/')
+let settleTimer: ReturnType<typeof setTimeout> | undefined
+const stopSettle = () => {
+  if (settleTimer) {
+    clearTimeout(settleTimer)
+    settleTimer = undefined
+  }
+}
+const refreshUntilAnchored = async (attempt = 0) => {
+  const before = state.value?.lastRevision?.i
+  await refresh.execute()
+  if (state.value?.lastRevision?.i !== before || attempt >= 4) return stopSettle()
+  settleTimer = setTimeout(() => refreshUntilAnchored(attempt + 1), 2000)
+}
+ws?.subscribe(`datasets/${dataset.value?.id}/journal`, (event: any) => {
+  if (event?.type !== 'finalize-end') return
+  stopSettle()
+  refreshUntilAnchored()
+})
+onUnmounted(stopSettle)
 
 // backfill progress (target 3, enrolled REST datasets): while lines are pending anchoring, poll
 // the lightweight summary every ~2s so the progress indicator reflects the relay draining, then
