@@ -37,12 +37,7 @@ and `BENCHMARK_ES_NODES` environment variables if needed.
 
 Presets: `small` (1k rows), `tall` (2M, for track_total_hits), `wide-text` (300k, ~40
 text columns), `mixed` (500k, all types). Experiments: `track-total-hits:*`,
-`search-catchall:wide-q`, `min-should-match:wide-q`, `text-analyzer:*`.
-
-Most experiments query a seeded preset index. An experiment whose subject *is* the index shape
-(mappings/analyzers differ per arm) declares a `setup` instead: it builds its own indexes,
-returns the index per variant, and attaches non-latency measurements (size, sanity checks) to the
-results JSON — see `experiments/text-analyzer.ts`. Those indexes are kept and reused between runs.
+`search-catchall:wide-q`, `min-should-match:wide-q`.
 
 ## Results
 

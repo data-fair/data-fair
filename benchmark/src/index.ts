@@ -3,7 +3,8 @@ import { init, getAxios } from './setup.ts'
 import { presets, getPreset } from './presets.ts'
 import { seedDataset } from './seeder.ts'
 import { resolveIndex, reindexWithShards } from './es.ts'
-import { selectExperiments, experimentContext, type ExperimentSetup } from './experiments.ts'
+import { generateSchema, schemaContext } from './generator.ts'
+import { selectExperiments } from './experiments.ts'
 import { runQuery } from './runner.ts'
 import { aggregate } from './metrics.ts'
 import { runThroughput } from './throughput.ts'
@@ -70,26 +71,14 @@ async function experimentCommand (argv: string[]): Promise<void> {
       'no-seed': { type: 'boolean', default: false }
     }
   })
-  const selected = selectExperiments(values.name!)
-  // self-building experiments (own mappings per variant) never touch the web stack
-  const needsApi = !values['no-seed'] && selected.some(e => !e.setup)
-  if (needsApi) await init()
+  if (!values['no-seed']) await init()
   const results: ExperimentResult[] = []
-  for (const exp of selected) {
-    let setup: ExperimentSetup | undefined
-    let index = ''
-    let rows: number
-    if (exp.setup) {
-      setup = await exp.setup(values.rows ? parseInt(values.rows) : undefined)
-      rows = setup.rows
-    } else {
-      const spec = getPreset(exp.preset!)
-      if (values.rows) spec.rows = parseInt(values.rows)
-      if (!values['no-seed']) await seedDataset(spec)
-      index = await resolveIndex(spec.id)
-      rows = spec.rows
-    }
-    const ctx = experimentContext(exp)
+  for (const exp of selectExperiments(values.name!)) {
+    const spec = getPreset(exp.preset)
+    if (values.rows) spec.rows = parseInt(values.rows)
+    if (!values['no-seed']) await seedDataset(spec)
+    const index = await resolveIndex(spec.id)
+    const ctx = schemaContext(generateSchema(spec))
     const variants = [
       { ...exp.baseline, isBaseline: true },
       ...exp.variants.map(v => ({ ...v, isBaseline: false }))
@@ -98,10 +87,8 @@ async function experimentCommand (argv: string[]): Promise<void> {
     const variantResults: VariantResult[] = []
     for (const v of variants) {
       console.log(`  running variant: ${v.name}`)
-      const variantIndex = setup ? setup.indexes[v.name] : index
-      if (!variantIndex) throw new Error(`${exp.name}: setup provided no index for variant "${v.name}"`)
       const result = await runQuery({
-        index: variantIndex,
+        index,
         body: v.body(ctx),
         runs: parseInt(values.runs!),
         cold: values.cold,
@@ -113,10 +100,9 @@ async function experimentCommand (argv: string[]): Promise<void> {
     const er: ExperimentResult = {
       experiment: exp.name,
       description: exp.description,
-      preset: exp.preset ?? 'self-built',
-      rows,
-      variants: variantResults,
-      findings: setup?.findings
+      preset: exp.preset,
+      rows: spec.rows,
+      variants: variantResults
     }
     printExperimentReport(er)
     results.push(er)

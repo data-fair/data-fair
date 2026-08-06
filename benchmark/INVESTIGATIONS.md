@@ -609,7 +609,10 @@ and page 1 unchanged.
 
 ## 15. Is the `keyword_repeat` single-field analyzer worth it? (2026-08-05)
 
-Targets the indexing-rework question behind `dev/spikes/indexing-rework/spike-i-keyword-repeat.ts`:
+> The experiment and spike code for §15/§15.b/§15.c lived on the working branch and was not
+> merged; the measured results are summarized here.
+
+Targets the indexing-rework question behind the `keyword_repeat` spike:
 today every text column carries TWO analyzed sub-fields — `.text` (custom_french, stemmed) and
 `.text_standard` (standard, unstemmed, whose reason to exist is that `q_mode=complete`'s
 mid-typing prefix clause must not stop matching once a word is stemmed away from its surface form.
@@ -634,7 +637,7 @@ force-merged to 1 segment, `request_cache=false`, `track_total_hits: true` (prod
 
 **Corpus.** The harness generator emits 3-6 word bags from a 26-noun list — zero stopwords, zero
 inflection — on which the three analyzers would be indistinguishable. So the experiment carries its
-own corpus (`experiments/text-analyzer-corpus.ts`): 170 natural French open-data sentences with
+own corpus: 170 natural French open-data sentences with
 commune / organisation / theme / year slots, picked with a mild Zipfian skew. Measured: 28.2%
 surface stopword density, **37.1% of tokens removed by `french_stop`**, 59.7% inflected-suffix
 share, and **`keyword_repeat` genuinely doubles 80.7%** of the positions that survive stopping.
@@ -683,9 +686,8 @@ custom_french, and only the startsWith clause needs the surface terms the repeat
 **Caveats.** 170 sentences over 300k docs gives natural per-document French but a flatter
 term-frequency curve than a real corpus, so absolute posting sizes are optimistic for every arm
 equally; ES `took` is integer-millisecond, so the 1–2 ms prefix numbers are resolution-bound (the
-e2e p50 and `profile` totals in the JSON discriminate them). A parallel dev spike
-(`spike-i2-realistic-corpus.ts`) attacks the same question at 50k docs with an independent corpus —
-the two should agree on the size direction.
+e2e p50 and `profile` totals in the JSON discriminate them). A parallel dev spike attacked the same
+question at 50k docs with an independent corpus — the two agreed on the size direction.
 
 Results: `benchmark/results/experiment-2026-08-05T08-57-28-756Z.json` (warm + profile),
 `experiment-2026-08-05T08-57-34-808Z.json` (cold). Indexes are kept and reused on the next run
@@ -706,8 +708,7 @@ queries every text column at once (`buildQClauses`, `api/src/datasets/es/operati
 naive's is N entries in ONE clause. At N=2 that collapse is invisible; at a realistic wide dataset
 (N=40, the `wide-text` preset's shape) it could plausibly pay for itself. It does not.
 
-**Setup** (`experiments/text-analyzer-wide.ts`, corpus reused from `text-analyzer-corpus.ts` via a
-new `wideDocIterator`/`WIDE_COLUMNS=40` export — same SENTENCES, same slot-filling, spread over 40
+**Setup** (§15's corpus reused over 40 columns — same SENTENCES, same slot-filling, spread over 40
 independently-generated columns instead of a title+description pair, 1-2 sentences each). 100k
 docs, 1 shard, force-merged to 1 segment, same `waitForStableStore` flush-and-poll fix and
 `request_cache:false`/`track_total_hits:true` production page-1 shape as §15. Four physical
@@ -836,9 +837,9 @@ mapping-level `search_analyzer`; the experiment reaches identical analysis via t
 is an OPTIONAL query-side exact-match boost clause worth adding, and at what cost?
 
 **The clause.** A `should` clause on the SAME `col*.text` fields, analyzed with a new
-`custom_french_exact` (elision + lowercase + asciifolding — NO stop, NO stemmer; `EXACT_FILTER_ORDER`
-in `text-analyzer.ts`), weighted with `boost`. It targets the FOLDED SURFACE token
-`custom_french_repeat`'s keyword-marked copy already indexes (`REPEAT_FILTER_ORDER` — that copy is
+`custom_french_exact` (elision + lowercase + asciifolding — NO stop, NO stemmer),
+weighted with `boost`. It targets the FOLDED SURFACE token
+`custom_french_repeat`'s keyword-marked copy already indexes (that copy is
 never stemmed but IS lowercased/elided/asciifolded). Bare `standard` would be wrong here: it
 lowercases but does not asciifold, so an accented query term would never hit the repeat index's
 folded postings — confirmed empirically (`_analyze`): `custom_french_exact` on `"Équipements"` emits
@@ -852,12 +853,12 @@ forfeits WAND entirely (§2), so the same clause on the production shape should 
 full, unpruned weight regardless of `boost`.
 
 **Setup.** Same `repeat`-shaped wide index (100k docs, 40 columns) as §15.b — no new index shape.
-`custom_french_exact` was added to the SHARED `ANALYSIS_SETTINGS_REPEAT` (`text-analyzer.ts`), which
+`custom_french_exact` was added to the harness's shared repeat analysis settings, which
 **forced a real rebuild**: analysis settings can't be hot-reloaded onto an open index, and the
 harness's index-reuse check was previously doc-count-only — an index built before this change would
 have been silently "reused" without the new analyzer, and every exact-clause query would 400 with an
-analyzer-not-found error. Fixed in the harness itself: `buildAndMeasure` (`text-analyzer-wide.ts`) now
-also checks `hasAnalyzer(es, index, 'custom_french_exact')` alongside the doc-count check, so a
+analyzer-not-found error. Fixed in the harness itself: its build step now
+also checked for the `custom_french_exact` analyzer alongside the doc-count check, so a
 settings change forces the same automatic rebuild a doc-count change already did — no manual
 `curl -XDELETE` step required. All 4 wide indexes (dual, dual-catchall, repeat, repeat-catchall) were
 rebuilt once as a result of this run (100k × 40 cols each, 85-165s per index).
