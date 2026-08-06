@@ -941,8 +941,13 @@ The integrity API splits read from write:
   (round 3 — stops reporting the reviewed anomalies; itself a locked, audited revision).
   Reconcile, both restores, disable and the ack offer the optional free-text `reason`, which is
   the only free-text field a WORM revision carries; both history tables render it, so what an
-  admin can write is also what an auditor can read. The panel shows the trail verdict as a
-  second status row with the anomaly list (kind, key, confidence). Both revision-history tables
+  admin can write is also what an auditor can read. Under the aggregate verdict banner the panel
+  lists **one row per verified part** — data file (file datasets), metadata, lines (REST), search
+  index, locked history — each with its own status chip, and each followed by its detail block
+  when there is one (index divergences + reindex, diverging line ids + restore, trail anomalies
+  (kind, key, confidence) + ack). The parts are only rendered for a definitive verdict: an
+  `unknown` check carries no part-level information, and showing every row as verified would
+  overstate what was established. Both revision-history tables
   (dataset-level and per-line) additionally carry an **attribution column** (target 8 / A2, en +
   fr) showing the `.who` body when present — user id or API-key ref, IP, country flag/code — raw
   ids as stored, with **no display-name resolution**: looking one up would re-personalize what

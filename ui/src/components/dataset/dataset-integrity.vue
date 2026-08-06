@@ -55,58 +55,6 @@
           :title="t('inconclusiveTitle')"
           :text="t('inconclusiveBody')"
         />
-        <!-- verdict 2 (round 3): the trail itself — independent of the data verdict above -->
-        <v-alert
-          v-if="state.lastCheck?.trail?.status === 'altered'"
-          type="error"
-          variant="outlined"
-          density="compact"
-          class="mt-1"
-          :title="t('trailAlteredTitle')"
-        >
-          <div class="text-body-2">
-            {{ t('trailAlteredBody') }}
-          </div>
-          <div
-            v-for="(anomaly, idx) of state.lastCheck!.trail!.anomalies ?? []"
-            :key="idx"
-            class="d-flex align-center ga-2 mt-1"
-          >
-            <v-chip
-              size="x-small"
-              label
-              :color="anomaly.confidence === 'confirmed' ? 'error' : 'warning'"
-            >
-              {{ t('anomaly_' + anomaly.kind) }}
-            </v-chip>
-            <code class="text-caption">{{ anomaly.key }}</code>
-            <span
-              v-if="anomaly.detail"
-              class="text-caption text-disabled"
-            >{{ anomaly.detail }}</span>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiCheckDecagram"
-              color="warning"
-              variant="text"
-              size="small"
-              :title="t('ackHelp')"
-              @click="ackDialog = true; ackReason = ''"
-            >
-              {{ t('ackTrail') }}
-            </v-btn>
-          </div>
-        </v-alert>
-        <div
-          v-else-if="state.lastCheck?.trail?.status === 'ok'"
-          class="text-caption mt-1 text-success"
-        >
-          {{ t('trailOkBody') }}
-        </div>
         <v-alert
           v-if="state.lastRenewal?.status === 'failed'"
           type="warning"
@@ -124,6 +72,174 @@
         </div>
       </template>
 
+      <!-- Per-part verdict. The check covers several parts and records a per-part breach list, so
+           every part gets its own row and chip rather than being named inside the aggregate
+           sentence above and only on failure: the search index and the revision trail are parts
+           like the others, not special cases. Shown only for a definitive verdict — an 'unknown'
+           check carries no part-level information and must not be rendered as all-clear. Each
+           row is followed by its own detail block when there is something to show. -->
+      <template v-if="state.active && verdictParts.length">
+        <v-divider class="my-4" />
+        <template
+          v-for="part of verdictParts"
+          :key="part.key"
+        >
+          <div class="d-flex align-center ga-2 mb-2">
+            <span class="text-body-2">{{ t('part_' + part.key) }}</span>
+            <v-chip
+              size="small"
+              label
+              :color="part.status === 'ok' ? 'success' : (part.status === 'unknown' ? 'warning' : 'error')"
+            >
+              {{ t('partStatus_' + part.status) }}
+            </v-chip>
+          </div>
+
+          <!-- lines: the diverging ids, with a per-line history shortcut and the bulk restore -->
+          <v-alert
+            v-if="part.key === 'lines' && (state.lastCheck?.lines?.diverged ?? 0) > 0"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="`${state.lastCheck!.lines!.diverged} ${t('linesDivergedTitle')}`"
+          >
+            <div class="d-flex flex-wrap align-center ga-2 mt-2">
+              <div
+                v-for="lineId of state.lastCheck!.lines!.sample ?? []"
+                :key="lineId"
+                class="d-flex align-center ga-1"
+              >
+                <v-chip
+                  size="small"
+                  label
+                >
+                  {{ lineId }}
+                </v-chip>
+                <v-btn
+                  :icon="mdiHistory"
+                  variant="text"
+                  size="x-small"
+                  :title="t('viewLineRevisions')"
+                  @click="openLineRevisions(lineId)"
+                />
+              </div>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiBackupRestore"
+                color="warning"
+                variant="text"
+                size="small"
+                @click="linesRestoreDialog = true"
+              >
+                {{ t('linesRestore') }}
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- search index: what diverges between the served index and the verified source -->
+          <v-alert
+            v-if="part.key === 'index' && state.lastCheck?.index?.status === 'diverged'"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="t('indexDivergedTitle', { diverged: state.lastCheck.index.diverged ?? 0 })"
+          >
+            <div
+              v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
+              class="text-caption"
+            >
+              {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
+            </div>
+            <div
+              v-for="entry of state.lastCheck.index.sample ?? []"
+              :key="entry.kind + entry.key"
+              class="mt-2"
+            >
+              <v-chip
+                size="small"
+                label
+              >
+                {{ t('indexKind.' + entry.kind) }} — {{ entry.key }}
+              </v-chip>
+              <pre
+                v-if="entry.expected || entry.actual"
+                class="text-caption mt-1"
+                style="white-space: pre-wrap; overflow-x: auto;"
+              >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiDatabaseRefresh"
+                color="warning"
+                variant="text"
+                size="small"
+                @click="indexReindexDialog = true"
+              >
+                {{ t('indexReindex') }}
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- revision trail: which anomalies were seen in the locked history, and the ack action -->
+          <v-alert
+            v-if="part.key === 'trail' && state.lastCheck?.trail?.status === 'altered'"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="t('trailAlteredTitle')"
+          >
+            <div class="text-body-2">
+              {{ t('trailAlteredBody') }}
+            </div>
+            <div
+              v-for="(anomaly, idx) of state.lastCheck!.trail!.anomalies ?? []"
+              :key="idx"
+              class="d-flex align-center ga-2 mt-1"
+            >
+              <v-chip
+                size="x-small"
+                label
+                :color="anomaly.confidence === 'confirmed' ? 'error' : 'warning'"
+              >
+                {{ t('anomaly_' + anomaly.kind) }}
+              </v-chip>
+              <code class="text-caption">{{ anomaly.key }}</code>
+              <span
+                v-if="anomaly.detail"
+                class="text-caption text-disabled"
+              >{{ anomaly.detail }}</span>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiCheckDecagram"
+                color="warning"
+                variant="text"
+                size="small"
+                :title="t('ackHelp')"
+                @click="ackDialog = true; ackReason = ''"
+              >
+                {{ t('ackTrail') }}
+              </v-btn>
+            </div>
+          </v-alert>
+        </template>
+      </template>
+
+      <!-- per-line anchoring progress (enrolled REST datasets): backfill state, not a verdict —
+           it is reported even before any check has run -->
       <template v-if="state.active && dataset?.isRest">
         <v-divider class="my-4" />
         <div class="text-body-2">
@@ -147,110 +263,6 @@
           class="mt-2"
           :text="t('linesOverGate')"
         />
-        <v-alert
-          v-if="(state.lastCheck?.lines?.diverged ?? 0) > 0"
-          type="error"
-          variant="outlined"
-          density="compact"
-          class="mt-2"
-          :title="`${state.lastCheck!.lines!.diverged} ${t('linesDivergedTitle')}`"
-        >
-          <div class="d-flex flex-wrap align-center ga-2 mt-2">
-            <div
-              v-for="lineId of state.lastCheck!.lines!.sample ?? []"
-              :key="lineId"
-              class="d-flex align-center ga-1"
-            >
-              <v-chip
-                size="small"
-                label
-              >
-                {{ lineId }}
-              </v-chip>
-              <v-btn
-                :icon="mdiHistory"
-                variant="text"
-                size="x-small"
-                :title="t('viewLineRevisions')"
-                @click="openLineRevisions(lineId)"
-              />
-            </div>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiBackupRestore"
-              color="warning"
-              variant="text"
-              size="small"
-              @click="linesRestoreDialog = true"
-            >
-              {{ t('linesRestore') }}
-            </v-btn>
-          </div>
-        </v-alert>
-      </template>
-
-      <template v-if="state.active && state.lastCheck?.index">
-        <v-divider class="my-4" />
-        <div class="text-body-2">
-          {{ t('indexVerdictTitle') }} :
-          <v-chip
-            size="small"
-            label
-            :color="state.lastCheck.index.status === 'ok' ? 'success' : (state.lastCheck.index.status === 'diverged' ? 'error' : 'warning')"
-          >
-            {{ t('indexStatus.' + state.lastCheck.index.status) }}
-          </v-chip>
-        </div>
-        <v-alert
-          v-if="state.lastCheck.index.status === 'diverged'"
-          type="error"
-          variant="outlined"
-          density="compact"
-          class="mt-2"
-          :title="t('indexDivergedTitle', { diverged: state.lastCheck.index.diverged ?? 0 })"
-        >
-          <div
-            v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
-            class="text-caption"
-          >
-            {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
-          </div>
-          <div
-            v-for="entry of state.lastCheck.index.sample ?? []"
-            :key="entry.kind + entry.key"
-            class="mt-2"
-          >
-            <v-chip
-              size="small"
-              label
-            >
-              {{ t('indexKind.' + entry.kind) }} — {{ entry.key }}
-            </v-chip>
-            <pre
-              v-if="entry.expected || entry.actual"
-              class="text-caption mt-1"
-              style="white-space: pre-wrap; overflow-x: auto;"
-            >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiDatabaseRefresh"
-              color="warning"
-              variant="text"
-              size="small"
-              @click="indexReindexDialog = true"
-            >
-              {{ t('indexReindex') }}
-            </v-btn>
-          </div>
-        </v-alert>
       </template>
 
       <div class="d-flex align-center ga-2 mt-4">
@@ -745,6 +757,11 @@ fr:
   part_metadata: Métadonnées
   part_lines: Lignes
   part_index: Index de recherche
+  part_trail: Historique verrouillé
+  partStatus_ok: vérifié
+  partStatus_diverged: divergent
+  partStatus_altered: altéré
+  partStatus_unknown: en attente
   breachTitle: Intégrité compromise
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
@@ -756,7 +773,6 @@ fr:
   renewalFailedTitle: Renouvellement du verrou en échec
   renewalFailedBody: Le renouvellement de la protection anti-altération échoue. La garantie expirera à la date de rétention de l'ancre si le problème n'est pas résolu.
   lastCheck: Dernier contrôle
-  neverChecked: Aucun contrôle effectué
   checkNow: Contrôler maintenant
   refresh: Rafraîchir
   refreshHelp: Relit l'état d'intégrité et l'historique des révisions.
@@ -814,11 +830,6 @@ fr:
   linesRestoreOk: Restauration des lignes lancée
   lineRevisionsTitle: "Historique de la ligne {lineId}"
   lineDeletedRevision: Cette révision correspond à la suppression de la ligne.
-  indexVerdictTitle: Index de recherche (données servies)
-  indexStatus:
-    ok: cohérent
-    diverged: divergent
-    unknown: en attente
   indexDivergedTitle: "{diverged} divergence(s) entre l'index servi et la source vérifiée"
   indexCountMismatch: "nombre de lignes : {expected} attendues, {actual} servies"
   indexKind:
@@ -838,7 +849,6 @@ fr:
   disableConfirm: Désactiver
   trailAlteredTitle: Historique de révisions altéré
   trailAlteredBody: "L'historique verrouillé présente des signes d'altération (révisions réécrites ou masquées). Les versions d'origine sont intactes dans l'entrepôt ; investiguez (accès à l'entrepôt compromis ?) avant d'acquitter."
-  trailOkBody: Historique de révisions vérifié, aucune altération détectée.
   anomaly_delete-marker: Révision masquée
   anomaly_version-divergence: Révision réécrite
   anomaly_date-skew: Date incohérente
@@ -854,6 +864,11 @@ en:
   part_metadata: Metadata
   part_lines: Lines
   part_index: Search index
+  part_trail: Locked history
+  partStatus_ok: verified
+  partStatus_diverged: diverged
+  partStatus_altered: altered
+  partStatus_unknown: pending
   breachTitle: Integrity breach
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
@@ -865,7 +880,6 @@ en:
   renewalFailedTitle: Lock renewal failing
   renewalFailedBody: Renewal of the tamper-protection lock is failing. The guarantee will lapse at the anchor's retain-until date unless resolved.
   lastCheck: Last check
-  neverChecked: No check run yet
   checkNow: Check now
   refresh: Refresh
   refreshHelp: Re-reads the integrity status and the revision history.
@@ -923,11 +937,6 @@ en:
   linesRestoreOk: Line restore started
   lineRevisionsTitle: "History of line {lineId}"
   lineDeletedRevision: This revision corresponds to the line's deletion.
-  indexVerdictTitle: Search index (served data)
-  indexStatus:
-    ok: consistent
-    diverged: diverged
-    unknown: pending
   indexDivergedTitle: "{diverged} divergence(s) between the served index and the verified source"
   indexCountMismatch: "line count: {expected} expected, {actual} served"
   indexKind:
@@ -947,7 +956,6 @@ en:
   disableConfirm: Disable
   trailAlteredTitle: Revision trail altered
   trailAlteredBody: "The locked history shows signs of alteration (rewritten or hidden revisions). The original versions are intact in the store; investigate (compromised store access?) before acknowledging."
-  trailOkBody: Revision trail verified, no alteration detected.
   anomaly_delete-marker: Hidden revision
   anomaly_version-divergence: Rewritten revision
   anomaly_date-skew: Inconsistent date
@@ -996,6 +1004,26 @@ const anyBreach = computed(() => state.value?.lastCheck?.status === 'breach')
 // dataset. Reconciling is exactly the remedy (it anchors the current state), so the action stays
 // offered here even though this is not a breach.
 const missingAnchor = computed(() => !!state.value?.active && !!state.value?.lastCheck && !state.value?.lastRevision)
+
+// The parts the check actually covered, each with its own status — the panel renders one row per
+// entry. `breach` is a list of the parts that diverged, so a part not in it passed. Only a
+// definitive verdict (ok | breach) carries part-level information: after an inconclusive check
+// there is nothing to say per part, and rendering every row as verified would be a lie.
+// `file` exists only on file datasets, `lines` only on REST ones; `index` and `trail` carry their
+// own status (the index can be individually pending when Elasticsearch is unreachable).
+type VerdictPart = { key: string, status: 'ok' | 'diverged' | 'altered' | 'unknown' }
+const verdictParts = computed<VerdictPart[]>(() => {
+  const lastCheck = state.value?.lastCheck
+  if (!lastCheck || (lastCheck.status !== 'ok' && lastCheck.status !== 'breach')) return []
+  const breach: string[] = lastCheck.breach ?? []
+  const parts: VerdictPart[] = []
+  if (!dataset.value?.isRest) parts.push({ key: 'file', status: breach.includes('file') ? 'diverged' : 'ok' })
+  parts.push({ key: 'metadata', status: breach.includes('metadata') ? 'diverged' : 'ok' })
+  if (dataset.value?.isRest) parts.push({ key: 'lines', status: breach.includes('lines') ? 'diverged' : 'ok' })
+  if (lastCheck.index) parts.push({ key: 'index', status: lastCheck.index.status === 'diverged' ? 'diverged' : (lastCheck.index.status === 'ok' ? 'ok' : 'unknown') })
+  if (lastCheck.trail) parts.push({ key: 'trail', status: lastCheck.trail.status === 'altered' ? 'altered' : 'ok' })
+  return parts
+})
 
 const size = 10
 const page = ref(1)
