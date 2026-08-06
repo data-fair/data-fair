@@ -55,6 +55,11 @@ export const runAdaptivePreflight = async (client: Client, dataset: any, query: 
   // the full OR query (all other filters included) — the probes measure within that context
   const orQuery = prepareQuery(dataset, { ...query, q_mode: 'simple', q_ignored: undefined }).query
   const sampleSlice = { range: { _rand: { lt: mode.randBound } } }
+  // the per-word probes deliberately omit `exactMatch` (the new-shape exact-boost clause), and that
+  // cannot skew them: `orQuery` above already carries the clause on stamped datasets, the clause is
+  // scoring-only inside a bool whose match set is pinned by the unboosted `filter` legs, and on a
+  // keyword_repeat index its terms are a subset of the plain clause's anyway (originals imply their
+  // stems; stopwords have no postings at all). Probes count docs, never score them.
   const wordMatchClauses: Record<string, any> = Object.fromEntries(words.map(word => [word, buildQClauses(dataset, word, undefined, 'simple')]))
 
   const probe = await esSearchBody(client, dataset, {

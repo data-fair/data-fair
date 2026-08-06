@@ -20,6 +20,14 @@ test.describe('hasManyQSearchFields', () => {
     assert.equal(hasManyQSearchFields(intFields(15)), false)
     assert.equal(hasManyQSearchFields(intFields(16)), true)
   })
+  test('a text-disabled string still counts 1 (its single field is .text_standard)', () => {
+    // the new-shape emission gives `{text:false}` columns a single `.text_standard` instead of a
+    // single `.text` — the counting reads whichever one the emission produced, so the wide/narrow
+    // boundary is identical for that combo.
+    const noLang = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'nl' + i, type: 'string', 'x-capabilities': { text: false } }))
+    assert.equal(hasManyQSearchFields(noLang(15)), false)
+    assert.equal(hasManyQSearchFields(noLang(16)), true)
+  })
   test('ignores fields with no text inner field, and _id', () => {
     assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)
     assert.equal(hasManyQSearchFields([...stringFields(10), ...boolFields(50)]), false) // 20 inner fields
@@ -260,12 +268,20 @@ test.describe('exact-match routing (new index shape)', () => {
     assert.deepEqual(clause.simple_query_string.fields, ['a.text'])
   })
   test('complete-mode prefix targets .text on new shape, .text_standard on legacy', () => {
-    const schema = [{ key: 'a', type: 'string' }]
+    // `i` is a scalar: it keeps a MAPPED `.text_standard` under BOTH shapes (esProperty only drops
+    // `.text_standard` on full-text strings), so the new-shape prefix list must still carry it or
+    // autocomplete over integer/number/date columns silently dies on stamped datasets.
+    const schema = [{ key: 'a', type: 'string' }, { key: 'i', type: 'integer' }]
     const legacy: any = buildQClauses({ id: 'x4', finalizedAt: 'f', schema }, 'fo', undefined, 'complete')
-    assert.deepEqual(legacy.bool.should[0].simple_query_string.fields, ['a.text_standard'])
+    assert.deepEqual(legacy.bool.should[0].simple_query_string.fields, ['a.text_standard', 'i.text_standard'])
     const fresh: any = buildQClauses({ id: 'x5', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo', undefined, 'complete')
-    assert.deepEqual(fresh.bool.should[0].simple_query_string.fields, ['a.text'])
-    assert.ok(fresh.bool.should[0].simple_query_string.query.endsWith('*'))
+    const freshPrefix = fresh.bool.should[0].simple_query_string
+    // union: `a.text` (the new-shape string field) + the legacy names. `a.text_standard` is
+    // unmapped on a new-shape index and silently ignored by simple_query_string; `i.text_standard`
+    // is real and keeps the scalar column in the prefix ladder.
+    assert.deepEqual(freshPrefix.fields, ['a.text', 'a.text_standard', 'i.text_standard'])
+    assert.ok(freshPrefix.fields.includes('i.text_standard'))
+    assert.ok(freshPrefix.query.endsWith('*'))
   })
   test('legacy datasets emit byte-identical clauses to today', () => {
     const ds = { id: 'x6', finalizedAt: 'f', schema: [{ key: 'a', type: 'string' }] }

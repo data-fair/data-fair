@@ -252,10 +252,18 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   if (isFullTextString) {
     const textFieldData = capabilities.textAgg
     if (shape.singleTextField) {
-      if (capabilities.text !== false || capabilities.textStandard !== false) {
+      if (capabilities.text !== false) {
         // single analyzed field: original AND stemmed tokens indexed (keyword_repeat),
         // queries walk only the stem list (search_analyzer) — spec 2026-08-06 §1
         innerFields.text = { type: 'text', analyzer: analyzers.index, search_analyzer: analyzers.search }
+      } else if (capabilities.textStandard !== false) {
+        // `text: false` = the owner explicitly refused language analysis on this column, so the
+        // single field must be the UNSTEMMED one — and it keeps its legacy NAME `.text_standard`.
+        // That name choice is load-bearing: the query layer derives its field lists from the
+        // legacy emission (getFilterableFields) and unions the two names, so emitting `.text`
+        // here would drop the column out of `q`/`qs` entirely on a new-shape index. Same
+        // definition as the legacy subfield — no fielddata (aggregation goes through `.words`).
+        innerFields.text_standard = { type: 'text', analyzer: 'standard' }
       }
       if (shape.wordAggField && capabilities.textAgg) {
         // aggregation-optimized field for words_agg (opt-in textAgg columns only):
@@ -587,11 +595,14 @@ export const buildQClauses = (
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
       // on a legacy index the prefix ladder lives ENTIRELY in `.text_standard` (verified: legacy
-      // `.text` alone fails the mid-typing ladder). A new-shape index has no `.text_standard`, but
-      // its `.text` indexes the original tokens alongside the stems, so the prefix works there —
-      // and prefix terms are never stemmed away. Shape-gated because unmapped fields are silently
-      // ignored: routing to the absent field would return nothing, not fall back.
-      const prefixFields = dataset._indexShape?.singleTextField ? qExactFields : qStandardFields
+      // `.text` alone fails the mid-typing ladder), so the legacy branch stays literally today's
+      // list. A new-shape index drops `.text_standard` only on FULL-TEXT STRING columns — its
+      // `.text` indexes the original tokens alongside the stems, so the prefix works there and
+      // prefix terms are never stemmed away — but scalar/date columns still carry a mapped
+      // `.text_standard`. Hence the union: the string `.text_standard` entries are unmapped and
+      // silently ignored by simple_query_string, the scalar ones keep autocomplete alive on
+      // integer/number/date columns.
+      const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
       if (prefixFields.length) {
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }

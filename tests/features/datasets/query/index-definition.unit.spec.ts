@@ -71,4 +71,20 @@ test.describe('esProperty shapes', () => {
     assert.equal(p.fields.text, undefined)
     assert.equal(p.fields.text_standard, undefined)
   })
+  test('new shape, text disabled: the single field is the unstemmed .text_standard, under that name', () => {
+    // `text: false` = language analysis explicitly refused, so the single analyzed field must be
+    // the standard one — and it MUST keep the legacy name, otherwise the query layer (which
+    // derives its lists from the legacy emission and unions the two names) drops the column
+    // out of `q`/`qs` entirely on a new-shape index.
+    const p = esProperty({ key: 'a', type: 'string', 'x-capabilities': { text: false } }, { search: 'S', index: 'I' })
+    assert.equal(p.fields.text, undefined)
+    assert.deepEqual(p.fields.text_standard, { type: 'text', analyzer: 'standard' })
+    assert.equal(p.fields.text_standard.search_analyzer, undefined)
+  })
+  test('new shape, textStandard disabled: the single .text repeat field, unchanged', () => {
+    const p = esProperty({ key: 'a', type: 'string', 'x-capabilities': { textStandard: false } }, { search: 'S', index: 'I' })
+    assert.equal(p.fields.text.analyzer, 'I')
+    assert.equal(p.fields.text.search_analyzer, 'S')
+    assert.equal(p.fields.text_standard, undefined)
+  })
 })
