@@ -9,16 +9,16 @@ const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i'
 const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
 test.describe('hasManyQSearchFields', () => {
-  test('threshold is 30', () => {
-    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 30)
+  test('threshold is 15', () => {
+    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 15)
   })
-  test('counts .text and .text_standard separately', () => {
-    // string columns have both -> 15 columns == 30 inner fields (not over), 16 == 32 (over)
+  test('counts one inner field per analyzed column (new shape)', () => {
+    // string columns count 1 (single .text) -> 15 columns == 15 inner fields (not over), 16 == 16 (over)
     assert.equal(hasManyQSearchFields(stringFields(15)), false)
     assert.equal(hasManyQSearchFields(stringFields(16)), true)
-    // integer/date columns have only .text_standard -> 30 columns == 30 (not over), 31 == 31 (over)
-    assert.equal(hasManyQSearchFields(intFields(30)), false)
-    assert.equal(hasManyQSearchFields(intFields(31)), true)
+    // integer/date columns also count 1 (.text_standard, new shape has no .text on them) -> 15 == 15 (not over), 16 == 16 (over)
+    assert.equal(hasManyQSearchFields(intFields(15)), false)
+    assert.equal(hasManyQSearchFields(intFields(16)), true)
   })
   test('ignores fields with no text inner field, and _id', () => {
     assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)

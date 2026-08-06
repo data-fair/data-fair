@@ -196,15 +196,43 @@ export const extractError = (err: any): ExtractedError => {
   return { message: parts.join(' - '), status }
 }
 
+// The mapping-emission shape esProperty / buildIndexMappings produce (see
+// docs/superpowers/specs/2026-08-06-text-indexing-repeat-design.md §3 for the full
+// `_indexShape` picture — that dataset-level stamp is wired in a later task; this task only
+// parameterizes emission on it).
+export interface IndexShape {
+  singleTextField?: boolean
+  wordAggField?: boolean
+}
+
+// New-shape indexes (spec 2026-08-06 §1, default): one analyzed `.text` field per column
+// (index analyzer indexes original + stem via keyword_repeat, search_analyzer walks only the
+// stem), plus `.words` on textAgg columns.
+export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true })
+// Legacy indexes: today's dual `.text` (defaultAnalyzer) + `.text_standard` (standard) analyzed
+// fields — the emission every existing index carries until its next reindex. Byte-for-byte
+// today's behavior, pinned by a unit test.
+export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
+
+// Dummy analyzer strings for callers that only inspect which inner fields a mapping would carry
+// (hasManyQSearchFields, getFilterableFields, isMetricAggregatable, the unit-test paths) — the
+// actual analyzer values only matter to `manage-indices` (the ES mapping creator).
+const DUMMY_ANALYZERS = { search: '', index: '' }
+
 // From a property in data-fair schema to the property in an elasticsearch mapping.
-// `defaultAnalyzer` ends up as the analyzer of the `.text` inner field — only `manage-indices`
-// (the ES mapping creator) cares about its actual value; shape inspectors (hasManyQSearchFields,
-// getFilterableFields, the unit-test paths) only check which inner fields exist.
-export const esProperty = (prop: any, defaultAnalyzer: string): any => {
+// `analyzers.index` / `analyzers.search` end up on the new-shape single `.text` field (index vs
+// search_analyzer); under the legacy shape `analyzers.search` alone is the (single) analyzer of
+// `.text`, mirroring today's `defaultAnalyzer`. `shape` picks the emission shape — see
+// NEW_INDEX_SHAPE / LEGACY_INDEX_SHAPE above.
+export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
-  // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
+  const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
+  // Non-string columns never had `.text` and keep `.text_standard` under BOTH shapes; string/
+  // uri-reference columns get `.text_standard` only under the legacy shape — the new shape
+  // replaces it with the single `.text` field emitted below.
   const innerFields: any = {}
-  if (capabilities.textStandard !== false) {
+  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField)) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
     innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
@@ -218,14 +246,27 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
-  if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
+  if (isFullTextString) {
     const textFieldData = capabilities.textAgg
-    if (capabilities.textStandard !== false) {
-      innerFields.text_standard.fielddata = textFieldData
-    }
-    if (capabilities.text !== false) {
-      // language based analysis for better recall with stemming, etc
-      innerFields.text = { type: 'text', analyzer: defaultAnalyzer, fielddata: textFieldData }
+    if (shape.singleTextField) {
+      if (capabilities.text !== false || capabilities.textStandard !== false) {
+        // single analyzed field: original AND stemmed tokens indexed (keyword_repeat),
+        // queries walk only the stem list (search_analyzer) — spec 2026-08-06 §1
+        innerFields.text = { type: 'text', analyzer: analyzers.index, search_analyzer: analyzers.search }
+      }
+      if (shape.wordAggField && capabilities.textAgg) {
+        // aggregation-optimized field for words_agg (opt-in textAgg columns only):
+        // stemmed-only tokens for merged buckets, no positions/norms (agg never scores)
+        innerFields.words = { type: 'text', analyzer: analyzers.search, index_options: 'docs', norms: false, fielddata: true }
+      }
+    } else {
+      if (capabilities.textStandard !== false) {
+        innerFields.text_standard.fielddata = textFieldData
+      }
+      if (capabilities.text !== false) {
+        // language based analysis for better recall with stemming, etc
+        innerFields.text = { type: 'text', analyzer: analyzers.search, fielddata: textFieldData }
+      }
     }
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
@@ -308,7 +349,9 @@ const METRIC_AGGREGATABLE_ES_TYPES = new Set(['long', 'integer', 'double', 'bool
 // calculated columns are geo_point / geo_shape, etc. Aggregating on any of those makes ES fail
 // the whole request ("all shards failed" / fielddata errors).
 export const isMetricAggregatable = (prop: any): boolean => {
-  const esProp = esProperty(prop, '')
+  // shape-independent: esProp.type / doc_values never differ between shapes, only .fields.text*
+  // does, so any shape works here — DUMMY_ANALYZERS (default NEW shape) keeps this cheap.
+  const esProp = esProperty(prop, DUMMY_ANALYZERS)
   if (!esProp?.type || !METRIC_AGGREGATABLE_ES_TYPES.has(esProp.type)) return false
   return esProp.doc_values !== false
 }
@@ -361,10 +404,13 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
 // A dataset whose `q` query would otherwise expand into a huge `fields` array is given a
 // `_search` catch-all field, and its `q` query targets `_search` plus the small handful of
 // boost-eligible columns (label / description / DefinedTermSet) as per-field entries with
-// their original `^3` / `^2` weight. We count the analyzed inner sub-fields (`.text` and
-// `.text_standard` separately, since that is what actually inflates the `fields` array)
-// rather than the columns. See docs/architecture/load-management.md.
-export const Q_SEARCH_FIELDS_THRESHOLD = 30
+// their original `^3` / `^2` weight. We count analyzed inner sub-fields (what actually inflates
+// the `fields` array) rather than the columns — and the count uses NEW-shape emission, where each
+// analyzed column now contributes at most ONE inner field (`.text`) instead of the legacy two
+// (`.text` + `.text_standard`), so 15 preserves the previous wide/narrow boundary for default
+// string columns (16 cols: was 32>30, now 16>15); scalar-only and half-disabled columns cross at
+// half as many inner fields as before — accepted. See docs/architecture/load-management.md.
+export const Q_SEARCH_FIELDS_THRESHOLD = 15
 
 // boost-eligible columns keep a per-field entry (with `^3` / `^2`) in qSearchFields in every
 // regime — so they don't contribute to the catch-all's savings and don't `copy_to` it either.
@@ -382,7 +428,8 @@ export const hasManyQSearchFields = (schema: any): boolean => {
     if (f.key === '_id') continue
     // boost-eligible columns are always referenced per-field, so they don't benefit from `_search`
     if (isBoostEligible(f)) continue
-    const esProp = esProperty(f, '')
+    // new-shape emission: at most one inner field per column (see Q_SEARCH_FIELDS_THRESHOLD)
+    const esProp = esProperty(f, DUMMY_ANALYZERS, NEW_INDEX_SHAPE)
     if (!esProp || !esProp.fields) continue
     if (esProp.fields.text) n++
     if (esProp.fields.text_standard) n++
@@ -421,7 +468,11 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     }
 
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    const esProp = esProperty(f, '')
+    // LEGACY shape: this task doesn't wire query routing, so getFilterableFields keeps deriving
+    // the legacy/union field lists the query layer still relies on (see the three guard specs
+    // q-fields.unit / q-keyword-insensitive.api / q-wildcard-column.api) — routing to the new
+    // shape is a later task.
+    const esProp = esProperty(f, DUMMY_ANALYZERS, LEGACY_INDEX_SHAPE)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       // keyword main type: only contributes to `qSearchFields` when the column has no analyzed
       // text inner field (no `.text`, no `.text_standard`) — i.e. a pure-keyword string column
@@ -570,12 +621,13 @@ export const buildQClauses = (
 }
 
 // Pure mapping builder used by manage-indices.indexDefinition. Given the already-extended
-// schema and the analyzer string, returns the `properties` shape — including the catch-all
+// schema and the analyzers/shape, returns the `properties` shape — including the catch-all
 // `_search` field and `copy_to` annotations on non-boost-eligible text columns.
 export const buildIndexMappings = (
   dataset: any,
   jsProps: any[],
-  defaultAnalyzer: string
+  analyzers: { search: string, index: string },
+  shape: IndexShape = NEW_INDEX_SHAPE
 ): { properties: Record<string, any>, wide: boolean } => {
   const properties: Record<string, any> = {}
   // CSV-equivalent byte size of the line, summed by storage() for the indexed_bytes
@@ -583,14 +635,19 @@ export const buildIndexMappings = (
   properties._bytes = { type: 'integer', index: false }
   const wide = hasManyQSearchFields(jsProps)
   if (wide) {
-    properties._search = {
-      type: 'text',
-      analyzer: defaultAnalyzer,
-      fields: { text_standard: { type: 'text', analyzer: 'standard' } }
+    if (shape.singleTextField) {
+      // single analyzed field, same treatment as every other column under the new shape
+      properties._search = { type: 'text', analyzer: analyzers.index, search_analyzer: analyzers.search }
+    } else {
+      properties._search = {
+        type: 'text',
+        analyzer: analyzers.search,
+        fields: { text_standard: { type: 'text', analyzer: 'standard' } }
+      }
     }
   }
   for (const jsProp of jsProps) {
-    const esProp = esProperty(jsProp, defaultAnalyzer)
+    const esProp = esProperty(jsProp, analyzers, shape)
     if (esProp) {
       if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard) && !isBoostEligible(jsProp)) {
         // boost-eligible columns are queried per-field with their ^3/^2 boost — no need to copy them into _search

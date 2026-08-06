@@ -3,7 +3,7 @@ import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
-import { buildIndexMappings } from './operations.ts'
+import { buildIndexMappings, LEGACY_INDEX_SHAPE } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
@@ -13,7 +13,15 @@ const debug = debugModule('manage-indices')
 export const indexDefinition = async (dataset: any) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
+  const analyzers = { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer }
+  // Task 2 wires the real per-dataset shape (stamped `_indexShape`, AND-merged for virtual
+  // datasets) together with query-side routing (getFilterableFields/buildQClauses) for the new
+  // shape — until then, real indices stay LEGACY: the query layer (getFilterableFields, per Step
+  // 8 of the task-1 brief) still assumes the dual `.text`/`.text_standard` fields exist, and
+  // q_mode=complete's prefix clause lives entirely in `.text_standard` on legacy indexes; emitting
+  // NEW_INDEX_SHAPE here today would silently break that clause (verified: search-basic.api's
+  // q_mode=complete prefix case loses its `.text_standard` matches with no field to fall back to).
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, analyzers, LEGACY_INDEX_SHAPE).properties
   return body
 }
 
@@ -257,6 +265,29 @@ const indexBase = (dataset: any) => {
               'french_stemmer',
               'asciifolding'
             ]
+          },
+          // index-time analyzer of the new-shape single `.text` field (spec 2026-08-06 §1): every
+          // token indexed as BOTH its original form and its stem, stacked at the same position
+          // (Lucene keyword_repeat pattern). Order validated by _analyze probes in
+          // dev/spikes/indexing-rework/spike-i-keyword-repeat.ts — copied verbatim, do not reorder:
+          // keyword_repeat sits right before french_stop/french_stemmer (stemmer skips the
+          // keyword-marked copy); french_stop is not keyword-aware and runs on both copies
+          // uniformly; remove_duplicates right after the stemmer collapses the two copies back to
+          // one when stemming was a no-op; asciifolding runs LAST (mirrors custom_french) so both
+          // surviving copies end up accent-insensitive, and folding is applied post-dedupe so
+          // dedupe compares pre-fold token text (more conservative, avoids over-merging).
+          custom_french_repeat: {
+            tokenizer: 'standard',
+            filter: [
+              'french_elision', 'lowercase', 'keyword_repeat',
+              'french_stop', 'french_stemmer', 'remove_duplicates', 'asciifolding'
+            ]
+          },
+          // exact-side of the boost clause: same normalization as the indexed ORIGINAL tokens
+          // (folded), no stemming, no stopword removal. NEVER replace with bare 'standard'.
+          custom_french_exact: {
+            tokenizer: 'standard',
+            filter: ['french_elision', 'lowercase', 'asciifolding']
           }
         }
       }

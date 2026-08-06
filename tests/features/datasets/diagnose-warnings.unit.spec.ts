@@ -103,8 +103,8 @@ test.describe('existing finalize-time codes', () => {
 })
 
 test.describe('MissingSearchOnWide', () => {
-  // hasManyQSearchFields counts analyzed inner sub-fields (.text + .text_standard);
-  // each plain string column contributes 2 inner fields. Threshold is 30 -> need ≥ 16 columns.
+  // hasManyQSearchFields counts analyzed inner sub-fields using new-shape emission: 1 inner
+  // field per analyzed column. Threshold is 15 -> need ≥ 16 columns.
   const wideSchema = Array.from({ length: 20 }, (_, i) => ({ key: `c${i}`, type: 'string' }))
   const baseDataset = { schema: wideSchema, storage: { indexed: { size: 1_000_000 } } }
   const goodSettings = { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } } }

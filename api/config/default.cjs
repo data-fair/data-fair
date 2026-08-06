@@ -87,6 +87,13 @@ module.exports = {
     options: {},
     ca: null, // the central authority for the ES cluster certificates
     defaultAnalyzer: 'custom_french',
+    // index-time analyzer of the single analyzed sub-field on new-shape indexes (spec 2026-08-06):
+    // keyword_repeat variant indexing original AND stem; queries use defaultAnalyzer via search_analyzer
+    indexTextAnalyzer: 'custom_french_repeat',
+    // search-time analyzer of the exact-match boost clause (elision+lowercase+asciifolding, no stem/stop)
+    exactMatchAnalyzer: 'custom_french_exact',
+    // weight of the exact-match boost clause; 0 disables it entirely (query-side, reindex-free)
+    exactMatchBoost: 0.5,
     maxBulkLines: 2000,
     maxBulkChars: 200000,
     maxShardSize: 10000000000, // 10go

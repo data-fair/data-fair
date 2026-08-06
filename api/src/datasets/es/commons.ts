@@ -49,8 +49,10 @@ dayjs.extend(timezone)
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
 // thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// supplies the runtime analyzer from config so mapping creation behaves unchanged
-export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
+// supplies the runtime analyzers from config; default (NEW) shape — callers needing the legacy
+// shape must call esPropertyPure directly with LEGACY_INDEX_SHAPE (see operations.ts's own
+// call sites for the pattern; no caller outside operations.ts currently needs the legacy shape)
+export const esProperty = (prop: any) => esPropertyPure(prop, { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer })
 
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
