@@ -199,14 +199,20 @@ the per-request `requestTimeout` from `es/abort.js` is the wall-clock backstop f
 ### Wide-dataset `q` catch-all (the `_search` field)
 
 On a dataset with many text-searchable columns, a `q` query expands into a `simple_query_string`
-`fields` array with one entry per analyzed sub-field per column (`.text` and `.text_standard`
-counted separately — ≈ 2 entries per string column). Beyond ~15 string columns (~30 analyzed
-sub-fields) that array becomes expensive for Elasticsearch to parse and execute, and it grows
-linearly with schema width.
+`fields` array with one entry per analyzed sub-field per column. Since the `keyword_repeat`
+indexing rework (`text-search-evaluation.md` §9), a **new-shape** index (stamped
+`_indexShape.singleTextField`, see below) carries a single analyzed field per text column
+(`.text`, index analyzer `custom_french_repeat`, `search_analyzer: custom_french`) instead of
+the legacy pair `.text` + `.text_standard`. Beyond ~15 string columns (~15 analyzed sub-fields
+on a new-shape index; unstamped legacy indexes still double that) that array becomes expensive
+for Elasticsearch to parse and execute, and it grows linearly with schema width.
 
-`hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at **30
-analyzed text inner sub-fields**, boost-eligible columns excluded from the count since they're
-queried per-field in every regime). When true, `indexDefinition` in `manage-indices.js` injects
+`hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at
+**15 analyzed text inner sub-fields**, halved from the pre-rework 30 now that new-shape emission
+is one inner field per column rather than two — the boundary in *string-column* terms is
+unchanged; boost-eligible columns are excluded from the count since they're queried per-field in
+every regime; the count always uses new-shape emission for this decision, regardless of the
+built index's actual shape). When true, `indexDefinition` in `manage-indices.js` injects
 one extra internal field into the mapping: `_search` (standard text analyzers). Every text column
 except the boost-eligible ones (annotated `rdfs:label`, `schema.org/description`, or
 `DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets the constant-size
@@ -238,6 +244,15 @@ itself is still populated so `q_mode=complete`'s `startsWith` prefix query keeps
 column. For virtual datasets, `_esCopyToSearch` bubbles up as `true` only when every descendant
 has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirely and the query
 targets only the requested columns, as before.
+
+`_indexShape` (`{singleTextField, wordAggField}`, absent = legacy) is the internal per-dataset
+stamp behind the new/legacy split above — set once, at mapping-generation time, by the same
+function that emits the mapping (so the stamp and the actual fields can never disagree), and
+consulted on every later partial mapping update so a column added to a legacy index stays
+legacy-shaped. `_esCopyToSearch` above is a narrower, older flag of the same kind (whether the
+`_search` catch-all field exists); the two are independent. Full routing rules (search-clause
+union, `words_agg` shape branch, virtual-dataset AND-merge and heterogeneity 400) are in
+`text-search-evaluation.md` §9 and its linked design note, not repeated here.
 
 **Measured** (benchmark harness, `wide-text` preset — 300k rows, 40 text columns). The
 `search-catchall` experiment: a `q` spread over the 80 per-column analyzed fields takes ~384 ms
