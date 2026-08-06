@@ -179,7 +179,7 @@ export const registerMiscRoutes = (router: Router) => {
 
   // Special route with very technical informations to help diagnose bugs, broken indices, etc.
   router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true, noCache: true }), cacheHeaders.noCache, async (req, res) => {
-    const dataset: any = reqDataset(req)
+    const dataset = reqDataset(req)
     reqAdminMode(req)
     const esInfos = await datasetInfos(dataset)
     const filesInfos = await filesStorage.lsrWithStats(datasetUtils.dir(dataset))
