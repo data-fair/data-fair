@@ -3,25 +3,28 @@ import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
-import { buildIndexMappings, LEGACY_INDEX_SHAPE } from './operations.ts'
+import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, type IndexShape } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
 
-export const indexDefinition = async (dataset: any) => {
+/**
+ * Build the ES index definition (settings + mappings) of a dataset.
+ *
+ * `shape` defaults to the shape the dataset's CURRENT index was built with (its `_indexShape`
+ * stamp, absent = legacy — design §3 uniform polarity). That default is what keeps an index
+ * internally homogeneous: a column added to a legacy index through `updateDatasetMapping` is
+ * emitted legacy-shaped, never mixing the two emissions inside one index.
+ * A FRESH index is always created with `NEW_INDEX_SHAPE` (see `initDatasetIndex`) and its caller
+ * persists that same constant as `_indexShape`, so the stamp and the mapping cannot disagree.
+ */
+export const indexDefinition = async (dataset: any, shape: IndexShape = currentIndexShape(dataset)) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
   const analyzers = { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer }
-  // Task 2 wires the real per-dataset shape (stamped `_indexShape`, AND-merged for virtual
-  // datasets) together with query-side routing (getFilterableFields/buildQClauses) for the new
-  // shape — until then, real indices stay LEGACY: the query layer (getFilterableFields, per Step
-  // 8 of the task-1 brief) still assumes the dual `.text`/`.text_standard` fields exist, and
-  // q_mode=complete's prefix clause lives entirely in `.text_standard` on legacy indexes; emitting
-  // NEW_INDEX_SHAPE here today would silently break that clause (verified: search-basic.api's
-  // q_mode=complete prefix case loses its `.text_standard` matches with no field to fall back to).
-  body.mappings.properties = buildIndexMappings(dataset, jsProps, analyzers, LEGACY_INDEX_SHAPE).properties
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, analyzers, shape).properties
   return body
 }
 
@@ -29,9 +32,12 @@ export function indexPrefix (dataset: any) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
+// a freshly created index always carries the new shape; its caller must persist
+// `_indexShape: NEW_INDEX_SHAPE` on the dataset once the index is in use (switchAlias), so that
+// query-time routing and partial mapping updates read the shape this mapping was emitted with
 export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
-  const body = await indexDefinition(dataset)
+  const body = await indexDefinition(dataset, NEW_INDEX_SHAPE)
   const res = await es.client.indices.create({
     index: tempId,
     body,
@@ -44,6 +50,9 @@ export const initDatasetIndex = async (dataset: any) => {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
+// NB: both definitions below are built with the DEFAULT shape, i.e. each dataset's own
+// `_indexShape` stamp — a partial mapping update never changes the shape of an existing index
+// (callers must therefore carry `_indexShape` on the dataset object they pass here).
 export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
   const index = aliasName(dataset)
   const newMapping = (await indexDefinition(dataset)).mappings

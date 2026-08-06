@@ -6,6 +6,7 @@ import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
 import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
+import { NEW_INDEX_SHAPE } from '../../datasets/es/operations.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -219,6 +220,10 @@ export default async function (dataset: DatasetInternal) {
     result.status = 'indexed'
     // the whole index was just rebuilt through IndexStream, so every doc carries _bytes
     result._esLineBytes = true
+    // a fresh index was built above by initDatasetIndex -> record the shape it was emitted with.
+    // Only in this branch: a partial REST update reuses the existing index, whose shape (and
+    // stamp) must not change.
+    result._indexShape = NEW_INDEX_SHAPE
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)
     result.count = indexStream.i

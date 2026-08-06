@@ -12,7 +12,12 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   if (!prop) {
     throw httpError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
-  if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
+  // the refusal must be explicit, not delegated to elasticsearch: on a new-shape index the
+  // aggregation-optimized `.words` subfield only exists on textAgg columns, and aggregating an
+  // unmapped field silently returns nothing (design §3 rule) instead of the "fielddata is
+  // disabled" error a legacy index would raise. Hence no `x-capabilities &&` guard here: a column
+  // that never declared the capability is refused the same way as one that disabled it.
+  if (!prop['x-capabilities']?.textAgg) {
     throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 

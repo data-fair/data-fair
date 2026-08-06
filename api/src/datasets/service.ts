@@ -210,7 +210,7 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
       if (fillDescendants && dataset.isVirtual) {
         // '_indexShape' lets query-time routing (e.g. words_agg, see es/operations.ts
         // resolveWordsAggField) branch per descendant's index shape without a second mongo round
-        // trip; absent on every dataset until a later task stamps it, so this is inert today.
+        // trip (absent = legacy index, uniform polarity).
         dataset.descendants = await virtualDatasetsUtils.descendants(dataset, ['_indexShape'])
       }
       if (dataset.schema) {
@@ -499,7 +499,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await updateDatasetMapping({ id: dataset.id, schema: patch.schema }, dataset)
+      // `_indexShape` must ride along: the new mapping has to be emitted with the shape of the
+      // index it is applied to (design §3), otherwise a new-shape index would be handed
+      // legacy-shaped columns (and vice-versa)
+      await updateDatasetMapping({ id: dataset.id, schema: patch.schema, _indexShape: dataset._indexShape }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing

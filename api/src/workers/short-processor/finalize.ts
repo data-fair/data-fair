@@ -186,7 +186,7 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch', '_indexShape'])
     dataset.descendants = descendants
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
@@ -194,6 +194,14 @@ export default async function (_dataset: DatasetInternal) {
       result.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
     }
     result._esCopyToSearch = descendants.length > 0 && descendants.every(d => d._esCopyToSearch === true)
+    // a virtual dataset queries every descendant index at once, so a shape-gated route is only
+    // safe when ALL of them carry the flag: AND-merge (design §3). A single legacy child keeps the
+    // parent legacy — e.g. the exact-match boost clause carries a query-time analyzer reference
+    // that a legacy index would reject with a 400.
+    result._indexShape = {
+      singleTextField: descendants.length > 0 && descendants.every(d => d._indexShape?.singleTextField === true),
+      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true)
+    }
     result.count = dataset.count = await esUtils.count(queryableDataset, {})
   }
 

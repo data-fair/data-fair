@@ -199,10 +199,9 @@ export const extractError = (err: any): ExtractedError => {
   return { message: parts.join(' - '), status }
 }
 
-// The mapping-emission shape esProperty / buildIndexMappings produce (see
-// docs/superpowers/specs/2026-08-06-text-indexing-repeat-design.md §3 for the full
-// `_indexShape` picture — that dataset-level stamp is wired in a later task; this task only
-// parameterizes emission on it).
+// The mapping-emission shape esProperty / buildIndexMappings produce. Persisted per dataset as
+// `_indexShape` when its index is (re)built, and read back here for every later emission and for
+// query-time routing — see docs/superpowers/specs/2026-08-06-text-indexing-repeat-design.md §3.
 export interface IndexShape {
   singleTextField?: boolean
   wordAggField?: boolean
@@ -216,6 +215,13 @@ export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true
 // fields — the emission every existing index carries until its next reindex. Byte-for-byte
 // today's behavior, pinned by a unit test.
 export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
+
+// The shape a mapping must be emitted with for an EXISTING index: the one this dataset's index was
+// built with, read from its `_indexShape` stamp (absent = legacy, uniform polarity — design §3).
+// This is `indexDefinition`'s default and therefore what partial mapping updates use, keeping
+// every index internally homogeneous: a column added to a legacy index is emitted legacy-shaped
+// and does NOT stamp the dataset. Fresh index creation bypasses it and passes NEW_INDEX_SHAPE.
+export const currentIndexShape = (dataset: { _indexShape?: IndexShape }): IndexShape => dataset._indexShape ?? LEGACY_INDEX_SHAPE
 
 // Dummy analyzer strings for callers that only inspect which inner fields a mapping would carry
 // (hasManyQSearchFields, getFilterableFields, isMetricAggregatable, the unit-test paths) — the
@@ -485,10 +491,13 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     }
 
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    // LEGACY shape: this task doesn't wire query routing, so getFilterableFields keeps deriving
-    // the legacy/union field lists the query layer still relies on (see the three guard specs
-    // q-fields.unit / q-keyword-insensitive.api / q-wildcard-column.api) — routing to the new
-    // shape is a later task.
+    // LEGACY shape ON PURPOSE, whatever the dataset's own `_indexShape`: the search path is a
+    // uniform UNION of both emissions' field names (design §4). Deriving the lists from the
+    // legacy emission yields that union — on a new-shape index the extra `.text_standard` entries
+    // are unmapped and silently ignored by simple_query_string, on a legacy one they carry the
+    // behavior. The few shape-gated consumers (exact-boost clause, complete-mode prefix) branch
+    // in buildQClauses instead. Guarded by q-fields.unit / q-keyword-insensitive.api /
+    // q-wildcard-column.api.
     const esProp = esProperty(f, DUMMY_ANALYZERS, LEGACY_INDEX_SHAPE)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       // keyword main type: only contributes to `qSearchFields` when the column has no analyzed

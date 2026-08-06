@@ -206,6 +206,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._newRestAttachments
   delete dataset._esCopyToSearch
   delete dataset._esLineBytes
+  delete dataset._indexShape
   delete dataset._esIgnoredKeywordFields
   delete dataset._needsHistorizing
   delete dataset._needsHistorizingLines

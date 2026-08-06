@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { buildIndexMappings, esProperty, LEGACY_INDEX_SHAPE } from '../../../../api/src/datasets/es/operations.ts'
+import { buildIndexMappings, esProperty, currentIndexShape, LEGACY_INDEX_SHAPE, NEW_INDEX_SHAPE } from '../../../../api/src/datasets/es/operations.ts'
 
 const stringField = (key: string, extra: any = {}) => ({ key, type: 'string', ...extra })
 
@@ -38,6 +38,45 @@ test.describe('buildIndexMappings - catch-all _search field', () => {
     assert.equal(properties.label_col.copy_to, undefined)
     // a boolean column has no text inner field -> not copied
     assert.equal(properties.a_bool.copy_to, undefined)
+  })
+})
+
+// `indexDefinition(dataset)` (manage-indices) emits with `currentIndexShape(dataset)` by default,
+// and `updateDatasetMapping` — the partial mapping update attempted on every schema patch — uses
+// that default for both the new and the old definition. These cases pin the rule that keeps an
+// index internally homogeneous (design §3): the shape follows the INDEX, never the code version.
+test.describe('emission shape of a partial mapping update (updateDatasetMapping path)', () => {
+  const legacyDataset: any = { id: 'legacy', schema: [stringField('a')], extensions: [] }
+
+  test('legacy dataset (no _indexShape) gaining a column emits the new column legacy-shaped', () => {
+    const patchedSchema = [...legacyDataset.schema, stringField('b')]
+    const patchedDataset = { ...legacyDataset, schema: patchedSchema }
+    // exactly indexDefinition's emission call for the NEW definition of a mapping update
+    const { properties } = buildIndexMappings(patchedDataset, patchedSchema, ANALYZERS, currentIndexShape(patchedDataset))
+    // the freshly added column must look like every other column of that legacy index
+    assert.equal(properties.b.fields.text_standard.analyzer, 'standard')
+    assert.equal(properties.b.fields.text.analyzer, ANALYZER)
+    assert.equal(properties.b.fields.text.search_analyzer, undefined)
+    // ... and identical to the pre-existing one
+    assert.deepEqual(properties.b.fields, properties.a.fields)
+    // a mapping update never stamps: the index is still legacy
+    assert.equal(patchedDataset._indexShape, undefined)
+    assert.equal(legacyDataset._indexShape, undefined)
+  })
+
+  test('new-shape dataset gaining a column emits the new column new-shaped', () => {
+    const schema = [stringField('a'), stringField('b')]
+    const dataset: any = { id: 'new', schema, extensions: [], _indexShape: NEW_INDEX_SHAPE }
+    const { properties } = buildIndexMappings(dataset, schema, ANALYZERS, currentIndexShape(dataset))
+    assert.equal(properties.b.fields.text_standard, undefined)
+    assert.equal(properties.b.fields.text.analyzer, INDEX_ANALYZER)
+    assert.equal(properties.b.fields.text.search_analyzer, ANALYZER)
+  })
+
+  test('currentIndexShape: absent stamp is legacy, stamp is followed', () => {
+    assert.deepEqual(currentIndexShape({}), LEGACY_INDEX_SHAPE)
+    assert.deepEqual(currentIndexShape({ _indexShape: NEW_INDEX_SHAPE }), NEW_INDEX_SHAPE)
+    assert.deepEqual(currentIndexShape({ _indexShape: { singleTextField: true } }), { singleTextField: true })
   })
 })
 

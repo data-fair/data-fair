@@ -33,6 +33,7 @@ import { aliasName } from '../es/commons.ts'
 import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
+import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -1116,7 +1117,9 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
-  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  // initDatasetIndex above replaced the index with a fresh one -> re-stamp its shape, otherwise a
+  // dataset whose index was legacy would keep a stale (legacy) stamp over a new-shape index
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE } })
 
   res.status(204).send()
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))

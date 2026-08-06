@@ -29,6 +29,7 @@ import { createDataset, applyPatch, cancelDraft } from '../service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
+import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import * as restDatasetsUtils from '../utils/rest.ts'
 import * as uploadUtils from '../utils/upload.ts'
 import { updateStorage } from '../utils/storage.ts'
@@ -98,7 +99,10 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       // (every doc has _bytes, vacuously true with zero docs), and the invariant holds forever
       // after since every REST write path indexes through the same stamping indexStream
       dataset._esLineBytes = true
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _esLineBytes: true } })
+      // initDatasetIndex just created a fresh index -> stamp the shape it was emitted with,
+      // exactly as the indexer worker does on a full (re)index
+      dataset._indexShape = NEW_INDEX_SHAPE
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _esLineBytes: true, _indexShape: NEW_INDEX_SHAPE } })
       await updateStorage(dataset)
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
