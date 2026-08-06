@@ -499,10 +499,16 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      // `_indexShape` must ride along: the new mapping has to be emitted with the shape of the
-      // index it is applied to (design §3), otherwise a new-shape index would be handed
-      // legacy-shaped columns (and vice-versa)
-      await updateDatasetMapping({ id: dataset.id, schema: patch.schema, _indexShape: dataset._indexShape }, dataset)
+      // the new definition must be emitted from the REAL dataset with only its schema replaced —
+      // a synthetic `{ id, schema }` silently loses everything the emission path consumes:
+      // `draftReason` (aliasName would target the PUBLISHED index while patching a draft),
+      // `_indexShape` (the shape of the index being patched — design §3), and
+      // `isRest`/`rest`/`extensions`/`attachmentsAsImage`/`file` (extendedSchema derives the
+      // calculated columns _updatedAt / _file.* / _attachment_url / _geopoint from them, and the
+      // `_search`-appeared guard below compares the two mappings field by field).
+      // `dataset` is still the pre-patch document here (applyPatch merges the patch further down),
+      // so it doubles as the old-side definition with its CURRENT schema.
+      await updateDatasetMapping({ ...dataset, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
