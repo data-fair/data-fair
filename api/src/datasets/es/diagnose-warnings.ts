@@ -135,9 +135,8 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   }
 
   const properties = esInfos.index.definition?.mappings?.properties ?? {}
-  // compared against the LIVE mapping, so it must classify with the shape that mapping was
-  // emitted with — otherwise a legacy index that was correctly narrow is reported as missing a
-  // `_search` field it should never have had
+  // compared against the LIVE mapping, so it must classify with that mapping's own shape — else a
+  // correctly-narrow legacy index is reported as missing a `_search` it should never have had
   if (hasManyQSearchFields(dataset.schema, currentIndexShape(dataset)) && !properties._search) {
     warnings.push({
       code: 'MissingSearchOnWide',

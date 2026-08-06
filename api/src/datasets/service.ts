@@ -208,9 +208,8 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        // '_indexShape' lets query-time routing (e.g. words_agg, see es/operations.ts
-        // resolveWordsAggField) branch per descendant's index shape without a second mongo round
-        // trip (absent = legacy index, uniform polarity).
+        // `_indexShape` lets query-time routing (resolveWordsAggField) branch per descendant
+        // without a second mongo round trip
         dataset.descendants = await virtualDatasetsUtils.descendants(dataset, ['_indexShape'])
       }
       if (dataset.schema) {
@@ -499,15 +498,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      // the new definition must be emitted from the REAL dataset with only its schema replaced —
-      // a synthetic `{ id, schema }` silently loses everything the emission path consumes:
-      // `draftReason` (aliasName would target the PUBLISHED index while patching a draft),
-      // `_indexShape` (the shape of the index being patched — design §3), and
-      // `isRest`/`rest`/`extensions`/`attachmentsAsImage`/`file` (extendedSchema derives the
-      // calculated columns _updatedAt / _file.* / _attachment_url / _geopoint from them, and the
-      // `_search`-appeared guard below compares the two mappings field by field).
-      // `dataset` is still the pre-patch document here (applyPatch merges the patch further down),
-      // so it doubles as the old-side definition with its CURRENT schema.
+      // must be emitted from the REAL dataset with only its schema replaced: a synthetic
+      // `{ id, schema }` loses `draftReason` (aliasName would target the published index),
+      // `_indexShape` and the fields extendedSchema derives calculated columns from.
+      // `dataset` is still pre-patch here, so it doubles as the old-side definition.
       await updateDatasetMapping({ ...dataset, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {

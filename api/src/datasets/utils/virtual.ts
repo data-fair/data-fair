@@ -166,14 +166,10 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
         if (!(key in xLabels)) xLabels[key] = f['x-labels'][key]
       }
     }
-    // default-FALSE capabilities (textAgg, wildcard, vtPrepare): true on the parent only when
-    // EVERY child declares it true. Each maps to an inner ES field that simply does not exist on
-    // the children that never opted in, and a virtual dataset queries all children indices at
-    // once — aggregating or filtering an unmapped field there returns nothing rather than
-    // failing, i.e. a silent partial answer. The veto must therefore also cover children that
-    // OMIT the key, which the previous merge could not: its `!(key in f['x-capabilities'])`
-    // branch sat inside a loop over that very object's keys and was unreachable, so one opted-in
-    // child was enough to advertise the capability for all of them.
+    // default-FALSE capabilities: true on the parent only when EVERY child declares it true. Each
+    // maps to an inner ES field absent from the children that never opted in, and querying an
+    // unmapped field across a virtual dataset's indices returns nothing rather than failing. The
+    // veto must therefore cover children that OMIT the key, not just those that set it false.
     for (const key of capabilitiesDefaultFalse) {
       if (matchingFields.every((f: any) => f['x-capabilities']?.[key] === true)) field['x-capabilities'][key] = true
     }

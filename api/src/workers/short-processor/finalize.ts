@@ -70,12 +70,9 @@ export default async function (_dataset: DatasetInternal) {
   // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
   // virtual datasets have no index of their own — handled below by bubbling up from descendants.
   if (!isVirtualDataset(dataset) && !dataset._partialRestStatus) {
-    // classified in the units of the shape the index we are describing was built with, so the flag
-    // can never disagree with the `_search` field `buildIndexMappings` actually emitted. `dataset`
-    // is the same source the stamp was written to: every stamping path (index-lines, the REST
-    // creation route, deleteAllLines) persists `_indexShape` BEFORE finalize is scheduled, and the
-    // worker re-reads the document for each task — so a fresh build is already stamped NEW here,
-    // and an untouched legacy index is (still) unstamped.
+    // classified in the units of the index being described, so the flag can never disagree with
+    // the `_search` field actually emitted. Every stamping path persists `_indexShape` before
+    // finalize is scheduled, so `dataset` is already stamped here.
     result._esCopyToSearch = hasManyQSearchFields(result.schema, currentIndexShape(dataset))
   }
 
@@ -201,9 +198,8 @@ export default async function (_dataset: DatasetInternal) {
     }
     result._esCopyToSearch = descendants.length > 0 && descendants.every(d => d._esCopyToSearch === true)
     // a virtual dataset queries every descendant index at once, so a shape-gated route is only
-    // safe when ALL of them carry the flag: AND-merge (design §3). A single legacy child keeps the
-    // parent legacy — e.g. the exact-match boost clause carries a query-time analyzer reference
-    // that a legacy index would reject with a 400.
+    // safe when ALL carry the flag: one legacy child keeps the parent legacy (the exact-match
+    // clause's analyzer reference would 400 on it).
     result._indexShape = {
       singleTextField: descendants.length > 0 && descendants.every(d => d._indexShape?.singleTextField === true),
       wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true)

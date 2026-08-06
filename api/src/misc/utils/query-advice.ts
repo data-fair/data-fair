@@ -32,8 +32,8 @@ const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test
  */
 export const queryAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
-  // the accessor is typed with the public Dataset shape, but the request always carries the stored
-  // document — and the advice needs its internal `_indexShape` to classify the query it describes
+  // the accessor is typed with the public Dataset shape, but the request carries the stored
+  // document, whose internal `_indexShape` the advice needs
   const dataset = reqDatasetOptional(req) as DatasetInternal | undefined
   const items: string[] = []
 
@@ -54,8 +54,7 @@ export const queryAdvice = (req: Request): string => {
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
   if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) items.push('use the select parameter to return only the columns you need')
   // 6. wide dataset full-text-searched without restricting the searched columns
-  // the advice describes the query actually executed on this dataset's index, so it classifies
-  // with that index's own shape — same rule as getFilterableFields, which decides the regime
+  // classified with the index's own shape, same rule as getFilterableFields
   if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema, currentIndexShape(dataset ?? {}))) items.push('restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column')
 
   if (items.length === 0) return ''

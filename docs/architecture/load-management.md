@@ -213,12 +213,11 @@ sub-fields for a new-shape index (one per analyzed column), **30** for a legacy 
 string column) — the same boundary in *string-column* terms, so a schema does not change class
 when the code ships, only when its index is rebuilt. Boost-eligible columns are excluded from the
 count since they're queried per-field in every regime. Every caller resolves the shape from the
-dataset it is describing (`currentIndexShape(dataset)`); only a caller genuinely asking "how would
-a *fresh* index classify this?" uses the new-shape default. A version-independent classification
-would be a silent corruption: for a scalar-heavy schema in the 15..30 band both sides of
-`updateDatasetMapping`'s crossing guards would read "wide" although the live legacy index has no
-`_search`, and ES would accept adding `_search` + `copy_to` in place without ever back-filling the
-existing rows.
+dataset it is describing (`currentIndexShape(dataset)`); the new-shape default is only for callers
+asking "how would a *fresh* index classify this?". Mixing the units is a silent corruption: for a
+scalar-heavy schema in the 15..30 band both sides of `updateDatasetMapping`'s crossing guard would
+read "wide" although the live legacy index has no `_search`, and ES would accept adding `_search` +
+`copy_to` in place without ever back-filling the existing rows.
 When wide, `indexDefinition` in `manage-indices.ts` injects
 one extra internal field into the mapping: `_search`. On a legacy index it is the same dual pair
 every text column carries (`defaultAnalyzer` + a `.text_standard` standard-analyzed sub-field); on
@@ -261,11 +260,10 @@ has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirel
 targets only the requested columns, as before.
 
 `_indexShape` (`{singleTextField, wordAggField}`, absent = legacy) is the internal per-dataset
-stamp behind the new/legacy split above — set once, at mapping-generation time, by the same
-function that emits the mapping (so the stamp and the actual fields can never disagree), and
-consulted on every later partial mapping update so a column added to a legacy index stays
-legacy-shaped. `_esCopyToSearch` above is a narrower, older flag of the same kind (whether the
-`_search` catch-all field exists); the two are independent. Full routing rules (search-clause
+stamp behind the new/legacy split above — written whenever a fresh index is built, and consulted on
+every later partial mapping update so a column added to a legacy index stays legacy-shaped.
+`_esCopyToSearch` above is a narrower, older flag of the same kind (whether the `_search` catch-all
+field exists); the two are independent. Full routing rules (search-clause
 union, `words_agg` shape branch, virtual-dataset AND-merge and heterogeneity 400) are in
 `text-search-evaluation.md` §9 and its linked design note, not repeated here.
 

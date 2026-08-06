@@ -86,13 +86,9 @@ module.exports = {
     nodes: null,
     options: {},
     ca: null, // the central authority for the ES cluster certificates
-    // Single source of truth for the text-analyzer family. The platform derives the two siblings
-    // by naming convention — `<defaultAnalyzer>_repeat` (index-side analyzer of the single analyzed
-    // `.text` sub-field) and `<defaultAnalyzer>_exact` (search-side analyzer of the exact-match
-    // boost clause) — see `textAnalyzers` in api/src/datasets/es/operations.ts. An override must
-    // define all three analyzers in the index settings (`indexBase` in
-    // api/src/datasets/es/manage-indices.ts) or index creation fails loudly with an
-    // unknown-analyzer error — the intended failure mode, preferable to silent recall loss.
+    // two siblings are derived from this by naming convention (`_repeat`, `_exact` — see
+    // `textAnalyzers` in api/src/datasets/es/operations.ts). Overriding it requires defining all
+    // three in `indexBase` (es/manage-indices.ts), else index creation fails on unknown analyzer.
     defaultAnalyzer: 'custom_french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,

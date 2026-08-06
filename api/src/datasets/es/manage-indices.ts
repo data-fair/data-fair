@@ -13,12 +13,8 @@ const debug = debugModule('manage-indices')
 /**
  * Build the ES index definition (settings + mappings) of a dataset.
  *
- * `shape` defaults to the shape the dataset's CURRENT index was built with (its `_indexShape`
- * stamp, absent = legacy — design §3 uniform polarity). That default is what keeps an index
- * internally homogeneous: a column added to a legacy index through `updateDatasetMapping` is
- * emitted legacy-shaped, never mixing the two emissions inside one index.
- * A FRESH index is always created with `NEW_INDEX_SHAPE` (see `initDatasetIndex`) and its caller
- * persists that same constant as `_indexShape`, so the stamp and the mapping cannot disagree.
+ * `shape` defaults to the dataset's CURRENT index shape, which keeps that index homogeneous: a
+ * column added to a legacy index is emitted legacy-shaped. Only a fresh index passes NEW_INDEX_SHAPE.
  */
 export const indexDefinition = async (dataset: any, shape: IndexShape = currentIndexShape(dataset)) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
@@ -32,9 +28,8 @@ export function indexPrefix (dataset: any) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
-// a freshly created index always carries the new shape; its caller must persist
-// `_indexShape: NEW_INDEX_SHAPE` on the dataset once the index is in use (switchAlias), so that
-// query-time routing and partial mapping updates read the shape this mapping was emitted with
+// a fresh index always carries the new shape; the caller MUST persist `_indexShape:
+// NEW_INDEX_SHAPE` once the index is in use (switchAlias) or the stamp and the mapping disagree
 export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset, NEW_INDEX_SHAPE)
@@ -50,9 +45,8 @@ export const initDatasetIndex = async (dataset: any) => {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
-// NB: both definitions below are built with the DEFAULT shape, i.e. each dataset's own
-// `_indexShape` stamp — a partial mapping update never changes the shape of an existing index
-// (callers must therefore carry `_indexShape` on the dataset object they pass here).
+// NB: both definitions below use the default shape, i.e. each dataset's own `_indexShape` — so
+// callers must pass a dataset object that actually carries it.
 export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
   const index = aliasName(dataset)
   const newMapping = (await indexDefinition(dataset)).mappings
@@ -78,10 +72,8 @@ export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
     }
     // a freshly-added column carrying a copy_to (e.g. crossing the "wide" threshold by adding columns)
     // is not in the loop above, so also force a reindex whenever the _search catch-all field appears.
-    // Both sides are classified in the units of the index being patched (see hasManyQSearchFields),
-    // so this comparison observes a real crossing — with a shape-independent classification the two
-    // definitions could agree on "wide" for an index that carries no `_search` at all, and this
-    // guard would let `_search` + `copy_to` be added in place, never back-filled.
+    // Both sides are classified in the units of the index being patched, so this observes a real
+    // crossing (see hasManyQSearchFields).
     if (newMapping.properties._search && !oldMapping.properties._search) {
       throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
@@ -281,16 +273,11 @@ export const indexBase = (dataset: any) => {
               'asciifolding'
             ]
           },
-          // index-time analyzer of the new-shape single `.text` field (spec 2026-08-06 §1): every
-          // token indexed as BOTH its original form and its stem, stacked at the same position
-          // (Lucene keyword_repeat pattern). Order validated by _analyze probes in
-          // dev/spikes/indexing-rework/spike-i-keyword-repeat.ts — copied verbatim, do not reorder:
-          // keyword_repeat sits right before french_stop/french_stemmer (stemmer skips the
-          // keyword-marked copy); french_stop is not keyword-aware and runs on both copies
-          // uniformly; remove_duplicates right after the stemmer collapses the two copies back to
-          // one when stemming was a no-op; asciifolding runs LAST (mirrors custom_french) so both
-          // surviving copies end up accent-insensitive, and folding is applied post-dedupe so
-          // dedupe compares pre-fold token text (more conservative, avoids over-merging).
+          // index-time analyzer of the new-shape single `.text` field: every token indexed as BOTH
+          // its original form and its stem at the same position (Lucene keyword_repeat pattern).
+          // Filter order is load-bearing, do not reorder: keyword_repeat must precede the stemmer
+          // (which skips the keyword-marked copy), remove_duplicates must follow it (collapses the
+          // pair when stemming was a no-op), asciifolding runs last as in custom_french.
           custom_french_repeat: {
             tokenizer: 'standard',
             filter: [
@@ -298,8 +285,9 @@ export const indexBase = (dataset: any) => {
               'french_stop', 'french_stemmer', 'remove_duplicates', 'asciifolding'
             ]
           },
-          // exact-side of the boost clause: same normalization as the indexed ORIGINAL tokens
-          // (folded), no stemming, no stopword removal. NEVER replace with bare 'standard'.
+          // exact-side of the boost clause: same normalization as the indexed ORIGINAL tokens, no
+          // stemming, no stopword removal. NEVER replace with bare 'standard' — it does not fold,
+          // so accented query terms would miss the folded postings.
           custom_french_exact: {
             tokenizer: 'standard',
             filter: ['french_elision', 'lowercase', 'asciifolding']

@@ -52,9 +52,8 @@ export const resolveExactKeywordTarget = (prop: any, values: string[]): { field:
 // not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
 // no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
 // sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
-// The analyzed leg is a UNION of both analyzed views (design §4): legacy indexes carry
-// `.text_standard` (and `.text`), new-shape indexes carry only `.text`. Unmapped fields are silently
-// ignored by ES search clauses, so listing both is safe on either shape and needs no shape branch.
+// The analyzed leg is a UNION of both analyzed views (legacy carries `.text_standard`, new-shape
+// only `.text`); ES search clauses silently ignore unmapped fields, so no shape branch is needed.
 export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
@@ -199,64 +198,48 @@ export const extractError = (err: any): ExtractedError => {
   return { message: parts.join(' - '), status }
 }
 
-// The mapping-emission shape esProperty / buildIndexMappings produce. Persisted per dataset as
-// `_indexShape` when its index is (re)built, and read back here for every later emission and for
-// query-time routing — see docs/superpowers/specs/2026-08-06-text-indexing-repeat-design.md §3.
+// The mapping-emission shape esProperty / buildIndexMappings produce, persisted per dataset as
+// `_indexShape` when its index is (re)built. Absent = legacy (uniform polarity).
 export interface IndexShape {
   singleTextField?: boolean
   wordAggField?: boolean
 }
 
-// Derives the text-analyzer family from the single configured `defaultAnalyzer` by naming
-// convention: `<defaultAnalyzer>_repeat` (index-side analyzer of the single analyzed `.text`
-// sub-field) and `<defaultAnalyzer>_exact` (search-side analyzer of the exact-match boost clause).
-// The shipped `custom_french` family is defined this way in `indexBase`
-// (api/src/datasets/es/manage-indices.ts); an override must define all three analyzers there or
-// index creation fails loudly with an unknown-analyzer error. Pure.
+// The analyzer family is derived from `defaultAnalyzer` by naming convention; all three must be
+// defined in `indexBase` (manage-indices.ts) or index creation fails with an unknown-analyzer error.
 export const textAnalyzers = (defaultAnalyzer: string) => ({
   search: defaultAnalyzer,
   index: defaultAnalyzer + '_repeat',
   exact: defaultAnalyzer + '_exact'
 })
 
-// Weight of the exact-match boost clause. A deliberate static: the boost intensity is a design
-// decision, not an ops knob — changing it is a code release, and it only affects query scoring
-// (no reindex required).
+// Weight of the exact-match boost clause. Query-scoring only (no reindex), so a code constant
+// rather than an ops knob.
 export const EXACT_MATCH_BOOST = 0.5
 
-// New-shape indexes (spec 2026-08-06 §1, default): one analyzed `.text` field per column
-// (index analyzer indexes original + stem via keyword_repeat, search_analyzer walks only the
-// stem), plus `.words` on textAgg columns.
+// New shape: one analyzed `.text` per column (indexed original + stem via keyword_repeat, searched
+// on the stem), plus `.words` on textAgg columns.
 export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true })
-// Legacy indexes: today's dual `.text` (defaultAnalyzer) + `.text_standard` (standard) analyzed
-// fields — the emission every existing index carries until its next reindex. Byte-for-byte
-// today's behavior, pinned by a unit test.
+// Legacy shape: dual `.text` + `.text_standard`, what every index carries until its next reindex.
 export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
 
-// The shape a mapping must be emitted with for an EXISTING index: the one this dataset's index was
-// built with, read from its `_indexShape` stamp (absent = legacy, uniform polarity — design §3).
-// This is `indexDefinition`'s default and therefore what partial mapping updates use, keeping
-// every index internally homogeneous: a column added to a legacy index is emitted legacy-shaped
-// and does NOT stamp the dataset. Fresh index creation bypasses it and passes NEW_INDEX_SHAPE.
+// The shape an EXISTING index was built with. Used as `indexDefinition`'s default so a partial
+// mapping update keeps the index homogeneous; a fresh build passes NEW_INDEX_SHAPE instead.
 export const currentIndexShape = (dataset: { _indexShape?: IndexShape }): IndexShape => dataset._indexShape ?? LEGACY_INDEX_SHAPE
 
-// Dummy analyzer strings for callers that only inspect which inner fields a mapping would carry
-// (hasManyQSearchFields, getFilterableFields, isMetricAggregatable, the unit-test paths) — the
-// actual analyzer values only matter to `manage-indices` (the ES mapping creator).
+// For callers that only inspect WHICH inner fields a mapping carries; only manage-indices (the
+// actual mapping creator) needs real analyzer names.
 const DUMMY_ANALYZERS = { search: '', index: '' }
 
 // From a property in data-fair schema to the property in an elasticsearch mapping.
-// `analyzers.index` / `analyzers.search` end up on the new-shape single `.text` field (index vs
-// search_analyzer); under the legacy shape `analyzers.search` alone is the (single) analyzer of
-// `.text`, mirroring today's `defaultAnalyzer`. `shape` picks the emission shape — see
-// NEW_INDEX_SHAPE / LEGACY_INDEX_SHAPE above.
+// New shape: `analyzers.index` / `analyzers.search` are the `.text` analyzer / search_analyzer.
+// Legacy shape: `analyzers.search` alone is `.text`'s analyzer, as `defaultAnalyzer` was.
 export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
   const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
-  // Non-string columns never had `.text` and keep `.text_standard` under BOTH shapes; string/
-  // uri-reference columns get `.text_standard` only under the legacy shape — the new shape
-  // replaces it with the single `.text` field emitted below.
+  // Non-string columns keep `.text_standard` under both shapes; full-text strings lose it under the
+  // new shape, replaced by the single `.text` field emitted below.
   const innerFields: any = {}
   if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField)) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
@@ -277,15 +260,12 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
     if (shape.singleTextField) {
       if (capabilities.text !== false) {
         // single analyzed field: original AND stemmed tokens indexed (keyword_repeat),
-        // queries walk only the stem list (search_analyzer) — spec 2026-08-06 §1
+        // queries walk only the stem list (search_analyzer)
         innerFields.text = { type: 'text', analyzer: analyzers.index, search_analyzer: analyzers.search }
       } else if (capabilities.textStandard !== false) {
-        // `text: false` = the owner explicitly refused language analysis on this column, so the
-        // single field must be the UNSTEMMED one — and it keeps its legacy NAME `.text_standard`.
-        // That name choice is load-bearing: the query layer derives its field lists from the
-        // legacy emission (getFilterableFields) and unions the two names, so emitting `.text`
-        // here would drop the column out of `q`/`qs` entirely on a new-shape index. Same
-        // definition as the legacy subfield — no fielddata (aggregation goes through `.words`).
+        // `text: false` means the single field must be the unstemmed one, and it must keep the
+        // legacy NAME: getFilterableFields derives its lists from the legacy emission, so naming
+        // it `.text` here would drop the column out of `q`/`qs` on a new-shape index.
         innerFields.text_standard = { type: 'text', analyzer: 'standard' }
       }
       if (shape.wordAggField && capabilities.textAgg) {
@@ -383,8 +363,7 @@ const METRIC_AGGREGATABLE_ES_TYPES = new Set(['long', 'integer', 'double', 'bool
 // calculated columns are geo_point / geo_shape, etc. Aggregating on any of those makes ES fail
 // the whole request ("all shards failed" / fielddata errors).
 export const isMetricAggregatable = (prop: any): boolean => {
-  // shape-independent: esProp.type / doc_values never differ between shapes, only .fields.text*
-  // does, so any shape works here — DUMMY_ANALYZERS (default NEW shape) keeps this cheap.
+  // shape-independent: only `.fields.text*` differ between shapes, never type / doc_values
   const esProp = esProperty(prop, DUMMY_ANALYZERS)
   if (!esProp?.type || !METRIC_AGGREGATABLE_ES_TYPES.has(esProp.type)) return false
   return esProp.doc_values !== false
@@ -441,12 +420,9 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
 // their original `^3` / `^2` weight. We count analyzed inner sub-fields (what actually inflates
 // the `fields` array) rather than the columns. See docs/architecture/load-management.md.
 //
-// BOTH the count and the threshold are SHAPE-DEPENDENT, and they must stay paired: a new-shape
-// index emits at most ONE analyzed inner field per column (`.text`), a legacy one up to two
-// (`.text` + `.text_standard`). 15 and 30 are the SAME boundary expressed in each shape's unit
-// for a default string column (16 columns: legacy 32>30, new 16>15). Counting in one shape's unit
-// against the other's threshold silently reclassifies scalar-heavy datasets — see
-// `hasManyQSearchFields` below.
+// Count and threshold are shape-dependent and MUST stay paired: a new-shape index emits at most
+// one analyzed inner field per column, a legacy one up to two, so 15 and 30 are the same boundary
+// in each shape's unit. Mixing them silently reclassifies scalar-heavy datasets.
 export const Q_SEARCH_FIELDS_THRESHOLD = 15
 // same boundary, in legacy (dual inner field) units — applies to every index not yet rebuilt
 export const LEGACY_Q_SEARCH_FIELDS_THRESHOLD = 30
@@ -462,16 +438,11 @@ const BOOST_REFERS_TO = new Set([
 ])
 export const isBoostEligible = (prop: any): boolean => BOOST_REFERS_TO.has(prop['x-refersTo'])
 
-// Wide/narrow classification of a schema, for a GIVEN index shape. Wideness drives emission
-// (`_search` + `copy_to` in buildIndexMappings), the stored `_esCopyToSearch` flag and the query
-// -time `reduced` regime — all of which describe one concrete index, so they must all be resolved
-// against the shape THAT index was built with (`currentIndexShape(dataset)`), never against a
-// version-independent constant. Classifying a legacy index with new-shape units both flips its
-// `reduced` regime at deploy (ranking change on an untouched index) and, worse, makes both sides
-// of `updateDatasetMapping`'s crossing guards agree on `wide:true` so `_search` + `copy_to` get
-// added IN PLACE to a legacy index — accepted by ES, never back-filled, `q` then answers from an
-// empty catch-all. Default shape is NEW like `esProperty`'s, for callers that legitimately ask
-// "how would a freshly built index classify this schema?".
+// Wide/narrow classification of a schema, for a GIVEN index shape. Every caller describing a
+// concrete index must pass that index's own shape (`currentIndexShape(dataset)`): classifying a
+// legacy index in new-shape units makes both sides of `updateDatasetMapping`'s crossing guard read
+// "wide", so `_search` + `copy_to` are added in place and never back-filled. The NEW default is
+// only for callers asking "how would a fresh index classify this schema?".
 export const hasManyQSearchFields = (schema: any, shape: IndexShape = NEW_INDEX_SHAPE): boolean => {
   if (!schema) return false
   let n = 0
@@ -497,19 +468,16 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   const wildcardFields: string[] = []
   const qSearchFields: string[] = []
   const qStandardFields: string[] = []
-  // the analyzed `.text` views alone (with their boost suffixes). Two new-shape-only consumers:
-  // the exact-match boost clause (query-time `custom_french_exact`) and q_mode=complete's prefix
-  // clause, which on a `singleTextField` index has no `.text_standard` to run on. Both are gated
-  // on `dataset._indexShape?.singleTextField` in buildQClauses — this list is always computed but
-  // stays unused on legacy datasets.
+  // the analyzed `.text` views alone. Always computed, but only consumed on new-shape datasets
+  // (exact-match boost clause, and complete-mode's prefix clause which has no `.text_standard`
+  // left to run on there) — both gated in buildQClauses.
   const qExactFields: string[] = []
   const qWildcardFields: string[] = []
   const esFields: string[] = []
 
   // pick the `q` regime (only when no explicit q_fields was requested)
   const copyToSearch = !!hasQ && !qFields && dataset._esCopyToSearch === true
-  // wideness follows the dataset's OWN index, like every other emission decision: a legacy index
-  // keeps the classification it had before the single-field rework until it is actually rebuilt
+  // wideness follows the dataset's OWN index, so a legacy index keeps its pre-rework regime
   const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema, currentIndexShape(dataset))
 
   for (const f of dataset.schema) {
@@ -526,13 +494,10 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     }
 
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    // LEGACY shape ON PURPOSE, whatever the dataset's own `_indexShape`: the search path is a
-    // uniform UNION of both emissions' field names (design §4). Deriving the lists from the
-    // legacy emission yields that union — on a new-shape index the extra `.text_standard` entries
-    // are unmapped and silently ignored by simple_query_string, on a legacy one they carry the
-    // behavior. The few shape-gated consumers (exact-boost clause, complete-mode prefix) branch
-    // in buildQClauses instead. Guarded by q-fields.unit / q-keyword-insensitive.api /
-    // q-wildcard-column.api.
+    // LEGACY shape ON PURPOSE whatever the dataset's own `_indexShape`: the legacy emission IS the
+    // union of both shapes' field names, and the search path must keep emitting that union while
+    // legacy indexes exist (unmapped `.text_standard` entries are ignored by simple_query_string).
+    // Shape-gated consumers branch in buildQClauses instead.
     const esProp = esProperty(f, DUMMY_ANALYZERS, LEGACY_INDEX_SHAPE)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       // keyword main type: only contributes to `qSearchFields` when the column has no analyzed
@@ -614,11 +579,9 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
 // Builds the `q`-side `should`/`minimum_should_match` bool clause used inside `prepareQuery`.
 // Pure: caller resolves `q` (already trimmed) and supplies `qMode` / `sqsOptions`.
-// `exactMatch` (new-shape only, resolved by the caller from config) adds the scoring-only
-// exact-match boost clause. It carries a query-time `analyzer:` reference, which MUST exist in
-// the target index's settings — sending it at a legacy index 400s. Hence the caller gates it on
-// `dataset._indexShape?.singleTextField`; legacy datasets need no clause anyway, their
-// `.text_standard` union clause already is the (untuned) exact boost. See design §1/§5.1.
+// `exactMatch` adds the scoring-only exact-match boost clause. It carries a query-time `analyzer:`
+// reference that only new-shape index settings define, so the caller gates it on
+// `_indexShape.singleTextField` — a legacy index 400s on it, and needs no clause anyway.
 export const buildQClauses = (
   dataset: any,
   q: string,
@@ -638,14 +601,9 @@ export const buildQClauses = (
     // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
-      // on a legacy index the prefix ladder lives ENTIRELY in `.text_standard` (verified: legacy
-      // `.text` alone fails the mid-typing ladder), so the legacy branch stays literally today's
-      // list. A new-shape index drops `.text_standard` only on FULL-TEXT STRING columns — its
-      // `.text` indexes the original tokens alongside the stems, so the prefix works there and
-      // prefix terms are never stemmed away — but scalar/date columns still carry a mapped
-      // `.text_standard`. Hence the union: the string `.text_standard` entries are unmapped and
-      // silently ignored by simple_query_string, the scalar ones keep autocomplete alive on
-      // integer/number/date columns.
+      // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
+      // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
+      // but scalar/date columns still carry `.text_standard`, hence the union rather than a swap.
       const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
       if (prefixFields.length) {
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
@@ -673,10 +631,9 @@ export const buildQClauses = (
     if (qStandardFields.length && !reduced) {
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
     }
-    // scoring-only exact-match boost (new shape only, see the exactMatch doc above): same fields,
-    // but analyzed without stemming so a literal term match outranks a merely stem-equal one.
-    // Deliberately NOT added in complete mode (its prefix/phrase clauses carry their own
-    // semantics — design §7 leaves the twin as a possible later tuning).
+    // scoring-only exact-match boost: same fields, analyzed without stemming so a literal match
+    // outranks a merely stem-equal one. Not added in complete mode, whose clauses have their own
+    // semantics.
     if (exactMatch && qExactFields.length) {
       should.push({ simple_query_string: { query: q, fields: qExactFields, analyzer: exactMatch.analyzer, boost: exactMatch.boost, ...sqsOptions } })
     }
@@ -721,12 +678,11 @@ export const buildIndexMappings = (
   // CSV-equivalent byte size of the line, summed by storage() for the indexed_bytes
   // metric. Aggregated only (doc_values), never searched.
   properties._bytes = { type: 'integer', index: false }
-  // classified in the units of the shape we are emitting — the caller resolved it from the target
-  // index (`currentIndexShape` for a partial update, NEW_INDEX_SHAPE for a fresh build)
+  // classified in the units of the shape we are emitting, never another one
   const wide = hasManyQSearchFields(jsProps, shape)
   if (wide) {
     if (shape.singleTextField) {
-      // single analyzed field, same treatment as every other column under the new shape
+      // single analyzed field, same treatment as every other column
       properties._search = { type: 'text', analyzer: analyzers.index, search_analyzer: analyzers.search }
     } else {
       properties._search = {
@@ -902,9 +858,8 @@ export interface QueryableDescendant {
   id: string
   index: string
   filters?: VirtualFilter[]
-  // present once the projection that resolves descendants requests it (see
-  // `datasets/utils/virtual.ts` `descendants(dataset, extraProperties)`); absent = not requested,
-  // never confuse with "requested and legacy" (which is `{}`, per the uniform-polarity rule §3).
+  // only present when `descendants(dataset, extraProperties)` requested it — absent means "not
+  // requested", not "legacy" (legacy is `{}`).
   _indexShape?: IndexShape
 }
 
@@ -953,17 +908,10 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
   return { bool: { minimum_should_match: 1, should } }
 }
 
-// Routes words_agg to the field carrying the aggregation-optimized subfield for the dataset's
-// index shape (design §3-§4). `_indexShape.wordAggField` is stamped whenever a FRESH index is
-// built (the indexer worker, the REST creation route, deleteAllLines) — never by a partial
-// mapping update; a virtual dataset gets it AND-merged from its descendants at finalize. Absent =
-// legacy, per the uniform-polarity rule, so an unstamped dataset resolves exactly like before the
-// rework. For a virtual dataset the flag must be uniform across every resolved
-// descendant: aggregations have no union across heterogeneous shapes (an unmapped `.words` field
-// on some children would silently return zero buckets from those children, not an error), so a
-// mixed-shape virtual dataset is refused loudly (400) rather than answering partially — never
-// inferred, never silent (design §3 rule). Pure: reads only the already-resolved `dataset` /
-// `query` shapes, so it is unit-testable independently of the ES call.
+// Routes words_agg to the subfield carrying word aggregations for this dataset's index shape.
+// Unlike the search path there is NO union across shapes: aggregating an unmapped `.words` returns
+// zero buckets instead of an error, so a virtual dataset whose descendants mix shapes is refused
+// (400) rather than answering from a subset of children.
 export const resolveWordsAggField = (dataset: any, query: Record<string, any>): string => {
   if (dataset.isVirtual) {
     const shapes = (dataset.descendants ?? []).map((d: QueryableDescendant) => d._indexShape?.wordAggField === true)

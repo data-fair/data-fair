@@ -75,10 +75,9 @@ export type DatasetInternal = Dataset & {
   // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
-  // shape of the mapping this dataset's current index was built with (set by the index-lines
-  // worker on full reindex only, and by the REST index-creation paths; for virtual datasets:
-  // AND-merge over descendants, set by the finalize worker). Absent = legacy shape, per flag —
-  // see docs/superpowers/specs/2026-08-06-text-indexing-repeat-design.md §3
+  // shape of the mapping this dataset's current index was built with (set on full reindex and by
+  // the REST index-creation paths; AND-merged over descendants for virtual datasets). Absent =
+  // legacy shape, per flag.
   _indexShape?: { singleTextField?: boolean, wordAggField?: boolean }
   // true when this dataset's current index was fully (re)built by code that stamps
   // the _bytes CSV-equivalent size on every line (set by the index-lines worker on

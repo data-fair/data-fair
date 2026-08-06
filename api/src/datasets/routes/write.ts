@@ -99,8 +99,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       // (every doc has _bytes, vacuously true with zero docs), and the invariant holds forever
       // after since every REST write path indexes through the same stamping indexStream
       dataset._esLineBytes = true
-      // initDatasetIndex just created a fresh index -> stamp the shape it was emitted with,
-      // exactly as the indexer worker does on a full (re)index
+      // initDatasetIndex just created a fresh index -> stamp its shape, as the indexer worker does
       dataset._indexShape = NEW_INDEX_SHAPE
       await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _esLineBytes: true, _indexShape: NEW_INDEX_SHAPE } })
       await updateStorage(dataset)

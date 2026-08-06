@@ -153,7 +153,6 @@ module.exports = {
       __format: 'json'
     },
     ca: 'ES_CA',
-    // the two sibling analyzers derive from this by naming convention, see default.cjs
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',

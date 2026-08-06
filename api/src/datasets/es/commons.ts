@@ -49,10 +49,8 @@ dayjs.extend(timezone)
 // (every suffix is underscore-prefixed, so none is a suffix-substring of another).
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
-// NB: no config-bound `esProperty` wrapper is re-exported here. Every emission call site resolves
-// the analyzers AND the index shape explicitly (`indexDefinition` in manage-indices.ts), and the
-// inspection call sites use the pure helper with dummy analyzers — a wrapper hiding either would
-// silently emit new-shape mappings for legacy indexes.
+// NB: no config-bound `esProperty` wrapper is re-exported here — every call site must resolve the
+// index shape explicitly, a wrapper hiding it would emit new-shape mappings for legacy indexes.
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
@@ -337,8 +335,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (q) {
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
-      // exact-match boost clause: only on indexes whose settings actually define the query-time
-      // analyzer (new shape) — legacy indexes never got `<defaultAnalyzer>_exact` defined.
+      // only new-shape index settings define the `_exact` query-time analyzer
       const exactMatch = (dataset as any)._indexShape?.singleTextField
         ? { analyzer: textAnalyzers(config.elasticsearch.defaultAnalyzer).exact, boost: EXACT_MATCH_BOOST }
         : undefined
@@ -439,12 +436,9 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
-      // Only a plain/uri-reference string can ever carry `.text` (the `text` capability is
-      // meaningless for other types, which never materialize `.text` under any index shape) —
-      // every other analyzed-capable type (integer, number, date, date-time) only ever carries
-      // `.text_standard`. Restricting the candidate list by type keeps this from targeting an
-      // unmapped subfield, which would make simple_query_string silently return zero results
-      // instead of the intended 400 (never-silent-zero).
+      // only plain/uri-reference strings ever carry `.text`; other analyzed types only ever get
+      // `.text_standard`. Targeting an unmapped subfield would make simple_query_string return
+      // zero results silently instead of the intended 400.
       const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
       const subfields = []
       if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')

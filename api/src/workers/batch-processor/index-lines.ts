@@ -220,9 +220,7 @@ export default async function (dataset: DatasetInternal) {
     result.status = 'indexed'
     // the whole index was just rebuilt through IndexStream, so every doc carries _bytes
     result._esLineBytes = true
-    // a fresh index was built above by initDatasetIndex -> record the shape it was emitted with.
-    // Only in this branch: a partial REST update reuses the existing index, whose shape (and
-    // stamp) must not change.
+    // only in this branch: a partial REST update reuses the index, whose stamp must not change
     result._indexShape = NEW_INDEX_SHAPE
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)
