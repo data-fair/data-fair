@@ -931,10 +931,13 @@ The integrity API splits read from write:
   response whose reader cannot `readIntegrity`, so anonymous/unauthorized readers never see
   breach verdicts or anchors even when they can otherwise read the dataset. This also scopes the
   list breach badge to authorized readers.
-- **UI:** the integrity tab is shown when the reader holds `readIntegrity` (or is in admin
-  mode); the enable/disable switch and the check/fix action buttons inside it render only in
-  admin mode. The status alerts and revision-history table are visible to every viewer of the
-  tab. The three actions that change the trail or the protection state are **confirmed in a
+- **UI:** the integrity tab is shown when the reader holds `readIntegrity` **and integrity is
+  active on the dataset**, or whenever the reader is in admin mode; the enable/disable switch and
+  the check/fix action buttons inside it render only in admin mode. Hence the active condition on
+  the reader side: with integrity off, a reader has no status, no history and no action available
+  — the tab would be empty — while a superadmin always needs it, since the switch that turns
+  integrity on lives in it. The status alerts and revision-history table are visible to every
+  viewer of the tab. The three actions that change the trail or the protection state are **confirmed in a
   dialog stating their consequence**: restore (overwrites data), reconcile (blesses the current
   state as legitimate, so pending divergences stop being reported), **disable** (clears the
   verdicts and stops renewal — additive *enable* needs no such guard) and **trail-anomaly ack**

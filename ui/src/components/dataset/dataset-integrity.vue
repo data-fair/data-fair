@@ -22,8 +22,9 @@
         />
       </template>
 
-      <!-- only for readers without the switch above (owner admins): for them this is the sole
-           indication that nothing is being checked -->
+      <!-- readers without the switch above only reach this while integrity is being turned off
+           under them (the tab itself is hidden to them once it is off) — keep telling them why
+           the panel emptied rather than showing a blank tab -->
       <v-alert
         v-if="!state.active && !adminMode"
         type="info"
