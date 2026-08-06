@@ -21,7 +21,7 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
-import { getDatasetCacheKey } from './operations.ts'
+import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
@@ -253,23 +253,11 @@ export const getDatasetFresh = async (datasetId: string, publicationSite: string
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const projection: Record<string, number> = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
-  if (useDraft) projection['draft.updatedAt'] = 1
-  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection: datasetFreshnessProjection(useDraft) })
   if (!fresh) return {} // dataset was deleted
 
-  // check top-level updatedAt, finalizedAt and status
-  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt || cached.datasetFull.finalizedAt !== fresh.finalizedAt || cached.datasetFull.status !== fresh.status || cached.datasetFull.errorStatus !== fresh.errorStatus || cached.datasetFull.errorRetry !== fresh.errorRetry) {
+  if (!isCachedDatasetFresh(cached.datasetFull, fresh, useDraft)) {
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
-  }
-
-  // when using draft mode, also check draft.updatedAt to detect draft-only changes
-  if (useDraft) {
-    const cachedDraftUpdatedAt = cached.datasetFull.draft?.updatedAt
-    const freshDraftUpdatedAt = fresh.draft?.updatedAt
-    if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
-      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
-    }
   }
 
   // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)
