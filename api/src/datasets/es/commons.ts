@@ -437,9 +437,16 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
+      // Only a plain/uri-reference string can ever carry `.text` (the `text` capability is
+      // meaningless for other types, which never materialize `.text` under any index shape) —
+      // every other analyzed-capable type (integer, number, date, date-time) only ever carries
+      // `.text_standard`. Restricting the candidate list by type keeps this from targeting an
+      // unmapped subfield, which would make simple_query_string silently return zero results
+      // instead of the intended 400 (never-silent-zero).
+      const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
       const subfields = []
       if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
-      if (prop['x-capabilities']?.text !== false) subfields.push('text')
+      if (isPlainString && prop['x-capabilities']?.text !== false) subfields.push('text')
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {
