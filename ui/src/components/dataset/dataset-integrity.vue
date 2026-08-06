@@ -764,6 +764,7 @@ fr:
   fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
   enableLabel: Activer le contrôle d'intégrité
   checkOk: Contrôle effectué
+  checkPendingRelay: "Le contrôle n'a pas pu conclure : une écriture est encore en cours d'historisation, l'état affiché reste celui du contrôle précédent. Réessayez dans quelques instants."
   fixOk: Réconciliation effectuée
   toggleOk: Configuration enregistrée
   loadError: Impossible de charger l'état d'intégrité.
@@ -872,6 +873,7 @@ en:
   fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
   enableLabel: Enable integrity checking
   checkOk: Check completed
+  checkPendingRelay: "The check could not conclude: a write is still being historized, so the status shown is still the previous check's. Try again shortly."
   fixOk: Reconciliation completed
   toggleOk: Configuration saved
   loadError: Could not load the integrity status.
@@ -1091,11 +1093,19 @@ watch(() => state.value?.lines?.pending, (pending) => {
 }, { immediate: true })
 onUnmounted(stopLinesPoll)
 
+// A check that runs while a write is still being historized cannot conclude, and the checker
+// deliberately records NOTHING in that case (it returns a bare `{status:'unknown'}`, no date —
+// the relay will drain and the next check gets a real verdict). Reporting that as a plain
+// "check completed" leaves the panel showing the previous verdict unchanged, which reads as a
+// button that does nothing: name the two outcomes apart instead.
+const { sendUiNotif } = useUiNotif()
 const check = useAsyncAction(async () => {
-  await $fetch(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
+  const res = await $fetch<{ status: string, date?: string }>(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
-}, { success: t('checkOk') })
+  const recorded = res.status !== 'unknown' || !!res.date
+  sendUiNotif({ type: recorded ? 'success' : 'warning', msg: recorded ? t('checkOk') : t('checkPendingRelay') })
+})
 
 // reconcile blesses the current state into the WORM trail: the optional reason is the only
 // free-text audit field a revision carries, so it is offered here rather than API-only
