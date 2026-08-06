@@ -3,6 +3,7 @@ import config from '#config'
 import { hasManyQSearchFields, currentIndexShape, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getCountMode } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqDatasetOptional } from './req-context.ts'
+import type { DatasetInternal } from '#types'
 
 // Builds short advisory sentences: meta.hints entries on the data endpoints and a suffix on
 // overload errors (429 compute-budget, 504 "request too long", 429 ES circuit_breaking_exception).
@@ -31,7 +32,9 @@ const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test
  */
 export const queryAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
-  const dataset = reqDatasetOptional(req)
+  // the accessor is typed with the public Dataset shape, but the request always carries the stored
+  // document — and the advice needs its internal `_indexShape` to classify the query it describes
+  const dataset = reqDatasetOptional(req) as DatasetInternal | undefined
   const items: string[] = []
 
   // 1. exact total-hits count on a list endpoint. Suppressed in approximate-count mode:
