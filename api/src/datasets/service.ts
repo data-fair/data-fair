@@ -208,7 +208,10 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
+        // '_indexShape' lets query-time routing (e.g. words_agg, see es/operations.ts
+        // resolveWordsAggField) branch per descendant's index shape without a second mongo round
+        // trip; absent on every dataset until a later task stamps it, so this is inert today.
+        dataset.descendants = await virtualDatasetsUtils.descendants(dataset, ['_indexShape'])
       }
       if (dataset.schema) {
         for (const prop of dataset.schema) {

@@ -856,6 +856,10 @@ export interface QueryableDescendant {
   id: string
   index: string
   filters?: VirtualFilter[]
+  // present once the projection that resolves descendants requests it (see
+  // `datasets/utils/virtual.ts` `descendants(dataset, extraProperties)`); absent = not requested,
+  // never confuse with "requested and legacy" (which is `{}`, per the uniform-polarity rule §3).
+  _indexShape?: IndexShape
 }
 
 // translate dataset.virtual.filters into ES filter clauses
@@ -901,6 +905,31 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
     should.push({ bool: { filter: [{ term: { _index: descendant.index } }, ...virtualFilterClauses(descendant.filters)] } })
   }
   return { bool: { minimum_should_match: 1, should } }
+}
+
+// Routes words_agg to the field carrying the aggregation-optimized subfield for the dataset's
+// index shape (design §3-§4). `_indexShape.wordAggField` is stamped per dataset at finalize time
+// (later task); absent = legacy, per the uniform-polarity rule, so an unstamped dataset resolves
+// exactly like today. For a virtual dataset the flag must be uniform across every resolved
+// descendant: aggregations have no union across heterogeneous shapes (an unmapped `.words` field
+// on some children would silently return zero buckets from those children, not an error), so a
+// mixed-shape virtual dataset is refused loudly (400) rather than answering partially — never
+// inferred, never silent (design §3 rule). Pure: reads only the already-resolved `dataset` /
+// `query` shapes, so it is unit-testable independently of the ES call.
+export const resolveWordsAggField = (dataset: any, query: Record<string, any>): string => {
+  if (dataset.isVirtual) {
+    const shapes = (dataset.descendants ?? []).map((d: QueryableDescendant) => d._indexShape?.wordAggField === true)
+    if (shapes.length && shapes.every(Boolean)) return query.field + '.words'
+    if (shapes.some(Boolean)) {
+      throw httpError(400, 'Cette agrégation est indisponible tant que les jeux enfants ne sont pas tous ré-indexés dans un format homogène.')
+    }
+    return query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
+  }
+  if (dataset._indexShape?.wordAggField) {
+    if (query.analysis === 'standard') throw httpError(400, 'Le paramètre analysis=standard n\'est plus disponible sur ce jeu de données, l\'analyse suit la langue de la colonne.')
+    return query.field + '.words'
+  }
+  return query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
 }
 
 // ---- Approximate counts for ranked text searches (see load-management.md §9) ----
