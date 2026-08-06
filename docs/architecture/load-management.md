@@ -222,7 +222,8 @@ existing rows.
 When wide, `indexDefinition` in `manage-indices.ts` injects
 one extra internal field into the mapping: `_search`. On a legacy index it is the same dual pair
 every text column carries (`defaultAnalyzer` + a `.text_standard` standard-analyzed sub-field); on
-a new-shape index it is a single analyzed field like every other column (`indexTextAnalyzer` at
+a new-shape index it is a single analyzed field like every other column (`<defaultAnalyzer>_repeat`
+— derived by naming convention, see `textAnalyzers` in `api/src/datasets/es/operations.ts` — at
 index time, `defaultAnalyzer` as `search_analyzer`). Every text column
 except the boost-eligible ones (annotated `rdfs:label`, `schema.org/description`, or
 `DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets a constant-size list —

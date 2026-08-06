@@ -207,6 +207,23 @@ export interface IndexShape {
   wordAggField?: boolean
 }
 
+// Derives the text-analyzer family from the single configured `defaultAnalyzer` by naming
+// convention: `<defaultAnalyzer>_repeat` (index-side analyzer of the single analyzed `.text`
+// sub-field) and `<defaultAnalyzer>_exact` (search-side analyzer of the exact-match boost clause).
+// The shipped `custom_french` family is defined this way in `indexBase`
+// (api/src/datasets/es/manage-indices.ts); an override must define all three analyzers there or
+// index creation fails loudly with an unknown-analyzer error. Pure.
+export const textAnalyzers = (defaultAnalyzer: string) => ({
+  search: defaultAnalyzer,
+  index: defaultAnalyzer + '_repeat',
+  exact: defaultAnalyzer + '_exact'
+})
+
+// Weight of the exact-match boost clause. A deliberate static: the boost intensity is a design
+// decision, not an ops knob — changing it is a code release, and it only affects query scoring
+// (no reindex required).
+export const EXACT_MATCH_BOOST = 0.5
+
 // New-shape indexes (spec 2026-08-06 §1, default): one analyzed `.text` field per column
 // (index analyzer indexes original + stem via keyword_repeat, search_analyzer walks only the
 // stem), plus `.words` on textAgg columns.

@@ -3,7 +3,7 @@ import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
-import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, type IndexShape } from './operations.ts'
+import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, textAnalyzers, type IndexShape } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
@@ -23,7 +23,7 @@ const debug = debugModule('manage-indices')
 export const indexDefinition = async (dataset: any, shape: IndexShape = currentIndexShape(dataset)) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  const analyzers = { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer }
+  const analyzers = textAnalyzers(config.elasticsearch.defaultAnalyzer)
   body.mappings.properties = buildIndexMappings(dataset, jsProps, analyzers, shape).properties
   return body
 }

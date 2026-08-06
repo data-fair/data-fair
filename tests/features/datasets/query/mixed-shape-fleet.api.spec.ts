@@ -19,7 +19,9 @@ const {
   buildQClauses,
   buildIndexMappings,
   NEW_INDEX_SHAPE,
-  LEGACY_INDEX_SHAPE
+  LEGACY_INDEX_SHAPE,
+  textAnalyzers,
+  EXACT_MATCH_BOOST
 } = await import('../../../../api/src/datasets/es/operations.ts')
 const { indexBase } = await import('../../../../api/src/datasets/es/manage-indices.ts')
 const { prepareQuery } = await import('../../../../api/src/datasets/es/commons.ts')
@@ -32,7 +34,8 @@ const NEW_INDEX = 'test-mixed-shape-new'
 // no auth on the dev ES cluster, same convention as tests/features/infra/es-error.api.spec.ts
 const client: any = new Client({ node: `http://localhost:${process.env.ES_PORT}` })
 
-const analyzers = { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer }
+const analyzers = textAnalyzers(config.elasticsearch.defaultAnalyzer)
+const exactMatchAnalyzer = analyzers.exact
 
 // jsProps mirror what `datasetUtils.extendedSchema` would hand to `buildIndexMappings` for a
 // dataset whose schema holds a single plain full-text string column: the column itself, plus `_i`
@@ -183,16 +186,16 @@ test.describe('mixed-shape fleet (raw ES fixtures)', () => {
     const clauseLegacy = qLegacy.query.bool.must[0]
 
     // clause-level assertion
-    const exactClause = clauseNew.bool.should.find((c: any) => c.simple_query_string?.analyzer === config.elasticsearch.exactMatchAnalyzer)
+    const exactClause = clauseNew.bool.should.find((c: any) => c.simple_query_string?.analyzer === exactMatchAnalyzer)
     assert.ok(exactClause, 'expected an exact-boost should clause on the new-shape dataset')
-    assert.equal(exactClause.simple_query_string.boost, config.elasticsearch.exactMatchBoost)
+    assert.equal(exactClause.simple_query_string.boost, EXACT_MATCH_BOOST)
     assert.deepEqual(exactClause.simple_query_string.fields, ['text1.text'])
     assert.equal(
-      clauseLegacy.bool.should.some((c: any) => c.simple_query_string?.analyzer === config.elasticsearch.exactMatchAnalyzer),
+      clauseLegacy.bool.should.some((c: any) => c.simple_query_string?.analyzer === exactMatchAnalyzer),
       false,
       'the exact-boost clause must not be emitted for the legacy dataset object'
     )
-    assert.equal(JSON.stringify(clauseLegacy).includes(config.elasticsearch.exactMatchAnalyzer), false)
+    assert.equal(JSON.stringify(clauseLegacy).includes(exactMatchAnalyzer), false)
 
     // execution: exact-match doc (d2) must outrank the stem-only match (d1) on the new index
     const rankQueryNew = structuredClone(qNew)
@@ -212,9 +215,9 @@ test.describe('mixed-shape fleet (raw ES fixtures)', () => {
     // dataset object (simulating the bug the gating in commons.ts prevents) and send it to
     // fixture-legacy, whose settings deliberately do not define `custom_french_exact` (see
     // legacySettings above) -- the same gap a genuine pre-feature legacy index has in production.
-    const buggyExactMatch = { analyzer: config.elasticsearch.exactMatchAnalyzer, boost: config.elasticsearch.exactMatchBoost }
+    const buggyExactMatch = { analyzer: exactMatchAnalyzer, boost: EXACT_MATCH_BOOST }
     const buggyClause = buildQClauses(legacyDataset, q, undefined, undefined, {}, undefined, buggyExactMatch)
-    assert.ok(JSON.stringify(buggyClause).includes(config.elasticsearch.exactMatchAnalyzer))
+    assert.ok(JSON.stringify(buggyClause).includes(exactMatchAnalyzer))
     await assert.rejects(
       client.search({ index: LEGACY_INDEX, query: buggyClause, size: 1 }),
       (err: any) => {

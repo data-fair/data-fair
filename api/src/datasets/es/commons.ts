@@ -24,6 +24,8 @@ import {
   hasManyQSearchFields,
   getFilterableFields,
   buildQClauses,
+  textAnalyzers,
+  EXACT_MATCH_BOOST,
   FILTER_CAPABILITIES,
   getColumnFilters,
   columnOperationsHint,
@@ -336,9 +338,9 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
       // exact-match boost clause: only on indexes whose settings actually define the query-time
-      // analyzer (new shape); `exactMatchBoost: 0` disables it fleet-wide without a reindex.
-      const exactMatch = (dataset as any)._indexShape?.singleTextField && config.elasticsearch.exactMatchBoost > 0
-        ? { analyzer: config.elasticsearch.exactMatchAnalyzer, boost: config.elasticsearch.exactMatchBoost }
+      // analyzer (new shape) — legacy indexes never got `<defaultAnalyzer>_exact` defined.
+      const exactMatch = (dataset as any)._indexShape?.singleTextField
+        ? { analyzer: textAnalyzers(config.elasticsearch.defaultAnalyzer).exact, boost: EXACT_MATCH_BOOST }
         : undefined
       must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch))
     }

@@ -756,10 +756,11 @@ No dedicated release-notes staging location exists in this repo; listed here per
 design (`2026-08-06-text-indexing-repeat-design.md` §5) for whoever cuts the next changelog.
 
 - **Ranking change.** Today's accidental exact-match boost (two analyzed fields both scoring
-  the same term ⇒ roughly +153% weight) becomes a deliberate, configurable clause
-  (`config.elasticsearch.exactMatchBoost`, default **0.5**; `1.0` ≈ old strength, `0` disables,
-  reindex-free) — and it is now fold-insensitive (`eleve` exact-boosts «élevé»). Applies to
-  new-shape datasets only; legacy datasets keep today's ranking automatically.
+  the same term ⇒ roughly +153% weight) becomes a deliberate clause with a static boost
+  (`EXACT_MATCH_BOOST = 0.5` in `api/src/datasets/es/operations.ts` — a code constant, not
+  config; changing it is a code release, query-side only, no reindex) — and it is now
+  fold-insensitive (`eleve` exact-boosts «élevé»). Applies to new-shape datasets only; legacy
+  datasets keep today's ranking automatically.
 - **Pure-stopword queries stop matching** (e.g. `q=les`) on new-shape datasets — they used to
   match via `.text_standard`; arguably a fix.
 - **`analysis=standard` on `words_agg` is rejected (400)** on new-shape datasets — the field
