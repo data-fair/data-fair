@@ -950,10 +950,13 @@ The integrity API splits read from write:
   when there is one (index divergences + reindex, diverging line ids + restore, trail anomalies
   (kind, key, confidence) + ack). The parts are only rendered for a definitive verdict: an
   `unknown` check carries no part-level information, and showing every row as verified would
-  overstate what was established. Both revision-history tables
-  (dataset-level and per-line) additionally carry an **attribution column** (target 8 / A2, en +
-  fr) showing the `.who` body when present — user id or API-key ref, IP, country flag/code — raw
-  ids as stored, with **no display-name resolution**: looking one up would re-personalize what
+  overstate what was established. In both revision-history tables
+  (dataset-level and per-line) the author column carries the **attribution** (target 8 / A2, en +
+  fr) under the write category: the `.who` body when present — user id or API-key ref, IP, country
+  flag/code. Category and identity are separate properties (one inside the locked revision, the
+  other in its short-retention sibling) but they answer one question, so they share a column rather
+  than leaving a mostly-empty second one. Identities are shown as raw ids
+  as stored, with **no display-name resolution**: looking one up would re-personalize what
   minimization deliberately stripped (§8), and the id is already meaningful to the owner admin and
   resolvable through the directory while the user still exists.
 

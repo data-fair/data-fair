@@ -347,18 +347,17 @@
           <template #item.operation="{ item }">
             {{ t('op_' + item.operation) }}
           </template>
+          <!-- write category and identity are two different properties (the category is inside
+               the locked revision, the identity in its short-retention `.who` sibling) but they
+               answer one question — who made this write — so they share a column -->
           <template #item.origin="{ item }">
-            {{ t('origin_' + item.origin) }}
-          </template>
-          <template #item.who="{ item }">
-            <span
+            <div>{{ t('origin_' + item.origin) }}</div>
+            <div
               v-if="item.who"
-              class="text-body-small"
-            >{{ formatWho(item.who) }}</span>
-            <span
-              v-else
-              class="text-body-small text-disabled"
-            >—</span>
+              class="text-body-small text-medium-emphasis"
+            >
+              {{ formatWho(item.who) }}
+            </div>
           </template>
           <template #item.reason="{ item }">
             <span
@@ -659,17 +658,13 @@
               {{ t('op_' + item.operation) }}
             </template>
             <template #item.origin="{ item }">
-              {{ t('origin_' + item.origin) }}
-            </template>
-            <template #item.who="{ item }">
-              <span
+              <div>{{ t('origin_' + item.origin) }}</div>
+              <div
                 v-if="item.who"
-                class="text-body-small"
-              >{{ formatWho(item.who) }}</span>
-              <span
-                v-else
-                class="text-body-small text-disabled"
-              >—</span>
+                class="text-body-small text-medium-emphasis"
+              >
+                {{ formatWho(item.who) }}
+              </div>
             </template>
             <template #item.reason="{ item }">
               <span
@@ -792,7 +787,6 @@ fr:
   colOperation: Opération
   colDate: Date
   colOriginator: Auteur
-  colAttribution: Attribution
   colReason: Raison
   colHash: Empreinte
   op_create: Création
@@ -899,7 +893,6 @@ en:
   colOperation: Operation
   colDate: Date
   colOriginator: Author
-  colAttribution: Attribution
   colReason: Reason
   colHash: Hash
   op_create: Create
@@ -1038,7 +1031,6 @@ const headers = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
-  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: t('colHash'), key: 'hash', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
@@ -1255,7 +1247,6 @@ const lineRevisionHeaders = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
-  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
