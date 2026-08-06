@@ -127,8 +127,11 @@ export default (
     .filter((p: any) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
   const textSearchProperties = stringProperties
     .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
+  // textAgg is an opt-in (default false) capability: only columns that explicitly declare it
+  // carry the field word aggregations run on. A column with no x-capabilities at all is refused
+  // by words_agg exactly like one that disabled it, so it must not be listed here either.
   const textAggProperties = stringProperties
-    .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
+    .filter((p: any) => p['x-capabilities']?.textAgg === true)
   const valuesProperties = schema
     .filter((p: any) => !p.key.startsWith('_geo'))
     .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
@@ -1082,7 +1085,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           }, {
             in: 'query',
             name: 'analysis',
-            description: "Le type d'analyse textuelle effectuée sur la colonne.\n\nL'analyse \"**lang**\" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL'analyse \"**standard**\" effectue un travail plus basique d'extraction de mots bruts depuis le texte.",
+            description: "Le type d'analyse textuelle effectuée sur la colonne.\n\nL'analyse \"**lang**\" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL'analyse \"**standard**\" effectue un travail plus basique d'extraction de mots bruts depuis le texte.\n\n**Paramètre en fin de vie** : il est refusé (erreur 400) sur les jeux de données indexés dans le format le plus récent, où l'analyse suit systématiquement la langue de la colonne. Il n'est encore accepté que sur les jeux de données qui n'ont pas été ré-indexés depuis.",
             schema: {
               title: "Type d'analyse à effectuer",
               type: 'string',

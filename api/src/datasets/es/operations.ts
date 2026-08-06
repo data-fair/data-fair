@@ -937,9 +937,11 @@ export const descendantsFilterClause = (descendants: QueryableDescendant[] | und
 }
 
 // Routes words_agg to the field carrying the aggregation-optimized subfield for the dataset's
-// index shape (design §3-§4). `_indexShape.wordAggField` is stamped per dataset at finalize time
-// (later task); absent = legacy, per the uniform-polarity rule, so an unstamped dataset resolves
-// exactly like today. For a virtual dataset the flag must be uniform across every resolved
+// index shape (design §3-§4). `_indexShape.wordAggField` is stamped whenever a FRESH index is
+// built (the indexer worker, the REST creation route, deleteAllLines) — never by a partial
+// mapping update; a virtual dataset gets it AND-merged from its descendants at finalize. Absent =
+// legacy, per the uniform-polarity rule, so an unstamped dataset resolves exactly like before the
+// rework. For a virtual dataset the flag must be uniform across every resolved
 // descendant: aggregations have no union across heterogeneous shapes (an unmapped `.words` field
 // on some children would silently return zero buckets from those children, not an error), so a
 // mixed-shape virtual dataset is refused loudly (400) rather than answering partially — never

@@ -764,8 +764,19 @@ design (`2026-08-06-text-indexing-repeat-design.md` §5) for whoever cuts the ne
   match via `.text_standard`; arguably a fix.
 - **`analysis=standard` on `words_agg` is rejected (400)** on new-shape datasets — the field
   serving word aggregations follows the column's own analysis; legacy datasets are unaffected.
+- **`words_agg` on a column that never declared the "word statistics" capability now 400s** with
+  the standard capability message, where a legacy index answered with an elasticsearch "fielddata
+  is disabled" error. The refusal had to become explicit: on a new-shape index the field serving
+  the aggregation only exists on opt-in columns, and aggregating an unmapped field returns an
+  empty result instead of failing. Same message for a column that disabled the capability and one
+  that never declared it.
 - **`words_agg` on a virtual dataset whose children mix old and new index shapes now 400s**
   explicitly instead of silently answering from a subset of children — resolves once every
   child is reindexed to the same shape.
+- **A virtual dataset advertises an opt-in capability (word statistics, character-group filtering)
+  only when EVERY child column declares it**, where it used to be enough for one child to. Same
+  reason: the capability maps to an inner field the other children do not have, and querying it
+  there returns nothing rather than failing. Enable the capability on the remaining children to
+  get it back on the parent.
 - **`qs=` references to `col.text_standard` go inert on new indexes** (the field is no longer
   mapped there); no known local ecosystem users at time of writing.

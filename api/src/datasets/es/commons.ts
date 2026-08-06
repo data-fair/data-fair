@@ -19,7 +19,6 @@ import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
   hasCapability,
   requiredCapability,
-  esProperty as esPropertyPure,
   Q_SEARCH_FIELDS_THRESHOLD,
   isBoostEligible,
   hasManyQSearchFields,
@@ -48,12 +47,10 @@ dayjs.extend(timezone)
 // (every suffix is underscore-prefixed, so none is a suffix-substring of another).
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
-// thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// supplies the runtime analyzers from config; default (NEW) shape — callers needing the legacy
-// shape must call esPropertyPure directly with LEGACY_INDEX_SHAPE (see operations.ts's own
-// call sites for the pattern; no caller outside operations.ts currently needs the legacy shape)
-export const esProperty = (prop: any) => esPropertyPure(prop, { search: config.elasticsearch.defaultAnalyzer, index: config.elasticsearch.indexTextAnalyzer })
-
+// NB: no config-bound `esProperty` wrapper is re-exported here. Every emission call site resolves
+// the analyzers AND the index shape explicitly (`indexDefinition` in manage-indices.ts), and the
+// inspection call sites use the pure helper with dummy analyzers — a wrapper hiding either would
+// silently emit new-shape mappings for legacy indexes.
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
