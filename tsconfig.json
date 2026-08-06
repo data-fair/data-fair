@@ -23,10 +23,6 @@
     "parquet_writer",
     "ui",
     "test-it",
-    "tmp",
-    // deliberately odd, standalone JS snippets: they are the INPUT DATA of the capabilities-usage
-    // scanner's self-test (dev/spikes/indexing-rework/scan-capabilities-usage.ts), not code we run
-    // or maintain. Type-checking them would only pressure us to change the test data.
-    "dev/spikes/indexing-rework/scan-test-fixture"
+    "tmp"
   ]
 }
