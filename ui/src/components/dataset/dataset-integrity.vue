@@ -15,11 +15,17 @@
           class="mb-2"
           @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
         />
-        <v-divider class="mb-4" />
+        <!-- nothing follows the switch when integrity is off: no rule to draw either -->
+        <v-divider
+          v-if="state.active"
+          class="mb-4"
+        />
       </template>
 
+      <!-- only for readers without the switch above (owner admins): for them this is the sole
+           indication that nothing is being checked -->
       <v-alert
-        v-if="!state.active"
+        v-if="!state.active && !adminMode"
         type="info"
         variant="tonal"
         :text="t('disabledInfo')"
