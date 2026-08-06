@@ -73,6 +73,23 @@ test.describe('emission shape of a partial mapping update (updateDatasetMapping 
     assert.equal(properties.b.fields.text.search_analyzer, ANALYZER)
   })
 
+  // wideness is an emission decision like any other, so it follows the index too: a scalar-heavy
+  // schema in the 15..30 band must keep the classification its legacy index was built with
+  test('a band-shaped schema stays narrow on a legacy index and is wide on a new one', () => {
+    const schema = Array.from({ length: 20 }, (_, i) => ({ key: 'n' + i, type: 'integer' }))
+    const legacy: any = { id: 'band-legacy', schema, extensions: [] }
+    const legacyRes = buildIndexMappings(legacy, schema, ANALYZERS, currentIndexShape(legacy))
+    assert.equal(legacyRes.wide, false)
+    assert.equal(legacyRes.properties._search, undefined)
+    assert.equal(legacyRes.properties.n0.copy_to, undefined)
+
+    const fresh: any = { id: 'band-new', schema, extensions: [], _indexShape: NEW_INDEX_SHAPE }
+    const freshRes = buildIndexMappings(fresh, schema, ANALYZERS, currentIndexShape(fresh))
+    assert.equal(freshRes.wide, true)
+    assert.equal(freshRes.properties._search.type, 'text')
+    assert.equal(freshRes.properties.n0.copy_to, '_search')
+  })
+
   test('currentIndexShape: absent stamp is legacy, stamp is followed', () => {
     assert.deepEqual(currentIndexShape({}), LEGACY_INDEX_SHAPE)
     assert.deepEqual(currentIndexShape({ _indexShape: NEW_INDEX_SHAPE }), NEW_INDEX_SHAPE)

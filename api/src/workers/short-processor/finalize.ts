@@ -2,7 +2,7 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
-import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, currentIndexShape } from '../../datasets/es/operations.ts'
 import { isIgnoredColumnActionable } from '../../datasets/es/diagnose-warnings.ts'
 import * as geoUtils from '../../datasets/utils/geo.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
@@ -70,7 +70,13 @@ export default async function (_dataset: DatasetInternal) {
   // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
   // virtual datasets have no index of their own — handled below by bubbling up from descendants.
   if (!isVirtualDataset(dataset) && !dataset._partialRestStatus) {
-    result._esCopyToSearch = hasManyQSearchFields(result.schema)
+    // classified in the units of the shape the index we are describing was built with, so the flag
+    // can never disagree with the `_search` field `buildIndexMappings` actually emitted. `dataset`
+    // is the same source the stamp was written to: every stamping path (index-lines, the REST
+    // creation route, deleteAllLines) persists `_indexShape` BEFORE finalize is scheduled, and the
+    // worker re-reads the document for each task — so a fresh build is already stamped NEW here,
+    // and an untouched legacy index is (still) unstamped.
+    result._esCopyToSearch = hasManyQSearchFields(result.schema, currentIndexShape(dataset))
   }
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)

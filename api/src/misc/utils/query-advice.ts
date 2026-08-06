@@ -1,6 +1,6 @@
 import { type Request } from 'express'
 import config from '#config'
-import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getCountMode } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, currentIndexShape, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields, getCountMode } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqDatasetOptional } from './req-context.ts'
 
@@ -51,7 +51,9 @@ export const queryAdvice = (req: Request): string => {
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
   if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) items.push('use the select parameter to return only the columns you need')
   // 6. wide dataset full-text-searched without restricting the searched columns
-  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) items.push('restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column')
+  // the advice describes the query actually executed on this dataset's index, so it classifies
+  // with that index's own shape — same rule as getFilterableFields, which decides the regime
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema, currentIndexShape(dataset ?? {}))) items.push('restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column')
 
   if (items.length === 0) return ''
   return ' Advice to optimize your queries: ' + items.join('; ') + '.'

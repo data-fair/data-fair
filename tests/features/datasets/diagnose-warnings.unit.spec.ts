@@ -103,8 +103,9 @@ test.describe('existing finalize-time codes', () => {
 })
 
 test.describe('MissingSearchOnWide', () => {
-  // hasManyQSearchFields counts analyzed inner sub-fields using new-shape emission: 1 inner
-  // field per analyzed column. Threshold is 15 -> need ≥ 16 columns.
+  // the warning compares against the LIVE mapping, so wideness is classified with the shape that
+  // mapping was emitted with: these unstamped datasets are legacy (2 analyzed inner sub-fields per
+  // string column, threshold 30) -> 20 string columns = 40 inner fields, wide either way.
   const wideSchema = Array.from({ length: 20 }, (_, i) => ({ key: `c${i}`, type: 'string' }))
   const baseDataset = { schema: wideSchema, storage: { indexed: { size: 1_000_000 } } }
   const goodSettings = { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } } }
@@ -137,6 +138,21 @@ test.describe('MissingSearchOnWide', () => {
     }
     const w = computeFinalizeWarnings(narrow, esInfos, baseEsConfig)
     assert.equal(w.find(x => x.code === 'MissingSearchOnWide'), undefined)
+  })
+
+  // a scalar-heavy schema sits in the band where the two shapes disagree (20 <= 30 legacy,
+  // 20 > 15 new). The legacy index it describes is correctly narrow — reporting it as missing a
+  // field it should never have had would push the whole fleet to a pointless reindex.
+  test('does not fire on a legacy index whose schema is only wide in new-shape units', () => {
+    const band = { schema: Array.from({ length: 20 }, (_, i) => ({ key: `n${i}`, type: 'integer' })), storage: { indexed: { size: 1_000_000 } } }
+    const esInfos = {
+      indices: [],
+      index: { health: 'green', definition: { ...goodSettings, mappings: { properties: { n0: {} } } } }
+    }
+    assert.equal(computeFinalizeWarnings(band, esInfos, baseEsConfig).find(x => x.code === 'MissingSearchOnWide'), undefined)
+    // once rebuilt new-shape, the same schema IS wide and the missing catch-all is a real finding
+    const rebuilt = { ...band, _indexShape: { singleTextField: true, wordAggField: true } }
+    assert.ok(computeFinalizeWarnings(rebuilt, esInfos, baseEsConfig).find(x => x.code === 'MissingSearchOnWide'))
   })
 })
 

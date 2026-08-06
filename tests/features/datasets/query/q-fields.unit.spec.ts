@@ -1,16 +1,19 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
+import { Q_SEARCH_FIELDS_THRESHOLD, LEGACY_Q_SEARCH_FIELDS_THRESHOLD, NEW_INDEX_SHAPE, LEGACY_INDEX_SHAPE, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
 
-// a string column produces both a .text and a .text_standard inner field -> counts as 2
+// counting is per ANALYZED INNER FIELD, and the default shape of these helpers is the new one:
+// a string column produces a single .text inner field -> counts as 1 (legacy: .text +
+// .text_standard -> 2)
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
-// an integer (or date) column produces only a .text_standard inner field -> counts as 1
+// an integer (or date) column produces only a .text_standard inner field -> counts as 1 under both shapes
 const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
 const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
 test.describe('hasManyQSearchFields', () => {
-  test('threshold is 15', () => {
+  test('threshold is 15 new-shape, 30 legacy', () => {
     assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 15)
+    assert.equal(LEGACY_Q_SEARCH_FIELDS_THRESHOLD, 30)
   })
   test('counts one inner field per analyzed column (new shape)', () => {
     // string columns count 1 (single .text) -> 15 columns == 15 inner fields (not over), 16 == 16 (over)
@@ -43,6 +46,27 @@ test.describe('hasManyQSearchFields', () => {
     assert.equal(hasManyQSearchFields(undefined), false)
     assert.equal(hasManyQSearchFields(null), false)
   })
+  // the count and the threshold are one pair per shape: the SAME schema must keep the SAME
+  // classification a legacy index has always had, and only be reclassified once rebuilt.
+  test('the string-column boundary is identical under both shapes', () => {
+    for (const [shape, n] of [[LEGACY_INDEX_SHAPE, 15], [NEW_INDEX_SHAPE, 15]] as const) {
+      assert.equal(hasManyQSearchFields(stringFields(n), shape), false)
+      assert.equal(hasManyQSearchFields(stringFields(n + 1), shape), true)
+    }
+  })
+  test('a scalar-heavy schema in the 15..30 band is narrow legacy and wide new-shape', () => {
+    // 20 numeric columns = 20 inner fields under BOTH shapes: 20 <= 30 (legacy, narrow) but
+    // 20 > 15 (new shape, wide). Classifying such a legacy index with the new threshold flips
+    // its `reduced` regime and lets `_search` be added in place — the C1 regression.
+    const band = intFields(20)
+    assert.equal(hasManyQSearchFields(band, LEGACY_INDEX_SHAPE), false)
+    assert.equal(hasManyQSearchFields(band, NEW_INDEX_SHAPE), true)
+    // a `{text:false}` string column is emitted identically under both shapes, so it lands in the
+    // band the same way
+    const noLangBand = Array.from({ length: 20 }, (_, i) => ({ key: 'nl' + i, type: 'string', 'x-capabilities': { text: false } }))
+    assert.equal(hasManyQSearchFields(noLangBand, LEGACY_INDEX_SHAPE), false)
+    assert.equal(hasManyQSearchFields(noLangBand, NEW_INDEX_SHAPE), true)
+  })
 })
 
 // getFilterableFields is memoized on `${id}:${finalizedAt}:${!!hasQ}:${qFields}` — give each
@@ -50,6 +74,20 @@ test.describe('hasManyQSearchFields', () => {
 let seq = 0
 const fakeDataset = (over: any = {}) => ({ id: 'fd' + (seq++), finalizedAt: '2026-01-01', schema: [], ...over })
 const wideSchema = (n = 32) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
+
+test.describe('getFilterableFields - wideness follows the dataset index shape', () => {
+  // a band-shaped schema: the `reduced` regime must stay off on a legacy (unstamped) dataset and
+  // turn on only once the dataset carries a new-shape stamp
+  const bandSchema = () => [...intFields(20), { key: 'txt', type: 'string' }]
+  test('legacy dataset in the band keeps the narrow regime', () => {
+    const ds = fakeDataset({ schema: bandSchema() })
+    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, false)
+  })
+  test('new-shape dataset in the band gets the reduced regime', () => {
+    const ds = fakeDataset({ schema: bandSchema(), _indexShape: NEW_INDEX_SHAPE })
+    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, true)
+  })
+})
 
 test.describe('getFilterableFields - regimes', () => {
   test('full legacy: narrow dataset lists every per-field variant', () => {

@@ -422,12 +422,19 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
 // `_search` catch-all field, and its `q` query targets `_search` plus the small handful of
 // boost-eligible columns (label / description / DefinedTermSet) as per-field entries with
 // their original `^3` / `^2` weight. We count analyzed inner sub-fields (what actually inflates
-// the `fields` array) rather than the columns — and the count uses NEW-shape emission, where each
-// analyzed column now contributes at most ONE inner field (`.text`) instead of the legacy two
-// (`.text` + `.text_standard`), so 15 preserves the previous wide/narrow boundary for default
-// string columns (16 cols: was 32>30, now 16>15); scalar-only and half-disabled columns cross at
-// half as many inner fields as before — accepted. See docs/architecture/load-management.md.
+// the `fields` array) rather than the columns. See docs/architecture/load-management.md.
+//
+// BOTH the count and the threshold are SHAPE-DEPENDENT, and they must stay paired: a new-shape
+// index emits at most ONE analyzed inner field per column (`.text`), a legacy one up to two
+// (`.text` + `.text_standard`). 15 and 30 are the SAME boundary expressed in each shape's unit
+// for a default string column (16 columns: legacy 32>30, new 16>15). Counting in one shape's unit
+// against the other's threshold silently reclassifies scalar-heavy datasets — see
+// `hasManyQSearchFields` below.
 export const Q_SEARCH_FIELDS_THRESHOLD = 15
+// same boundary, in legacy (dual inner field) units — applies to every index not yet rebuilt
+export const LEGACY_Q_SEARCH_FIELDS_THRESHOLD = 30
+export const qSearchFieldsThreshold = (shape: IndexShape): number =>
+  shape.singleTextField ? Q_SEARCH_FIELDS_THRESHOLD : LEGACY_Q_SEARCH_FIELDS_THRESHOLD
 
 // boost-eligible columns keep a per-field entry (with `^3` / `^2`) in qSearchFields in every
 // regime — so they don't contribute to the catch-all's savings and don't `copy_to` it either.
@@ -438,20 +445,29 @@ const BOOST_REFERS_TO = new Set([
 ])
 export const isBoostEligible = (prop: any): boolean => BOOST_REFERS_TO.has(prop['x-refersTo'])
 
-export const hasManyQSearchFields = (schema: any): boolean => {
+// Wide/narrow classification of a schema, for a GIVEN index shape. Wideness drives emission
+// (`_search` + `copy_to` in buildIndexMappings), the stored `_esCopyToSearch` flag and the query
+// -time `reduced` regime — all of which describe one concrete index, so they must all be resolved
+// against the shape THAT index was built with (`currentIndexShape(dataset)`), never against a
+// version-independent constant. Classifying a legacy index with new-shape units both flips its
+// `reduced` regime at deploy (ranking change on an untouched index) and, worse, makes both sides
+// of `updateDatasetMapping`'s crossing guards agree on `wide:true` so `_search` + `copy_to` get
+// added IN PLACE to a legacy index — accepted by ES, never back-filled, `q` then answers from an
+// empty catch-all. Default shape is NEW like `esProperty`'s, for callers that legitimately ask
+// "how would a freshly built index classify this schema?".
+export const hasManyQSearchFields = (schema: any, shape: IndexShape = NEW_INDEX_SHAPE): boolean => {
   if (!schema) return false
   let n = 0
   for (const f of schema) {
     if (f.key === '_id') continue
     // boost-eligible columns are always referenced per-field, so they don't benefit from `_search`
     if (isBoostEligible(f)) continue
-    // new-shape emission: at most one inner field per column (see Q_SEARCH_FIELDS_THRESHOLD)
-    const esProp = esProperty(f, DUMMY_ANALYZERS, NEW_INDEX_SHAPE)
+    const esProp = esProperty(f, DUMMY_ANALYZERS, shape)
     if (!esProp || !esProp.fields) continue
     if (esProp.fields.text) n++
     if (esProp.fields.text_standard) n++
   }
-  return n > Q_SEARCH_FIELDS_THRESHOLD
+  return n > qSearchFieldsThreshold(shape)
 }
 
 // CAUTION for any routing migration: a column with no analyzed subfield (text and textStandard
@@ -475,7 +491,9 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
   // pick the `q` regime (only when no explicit q_fields was requested)
   const copyToSearch = !!hasQ && !qFields && dataset._esCopyToSearch === true
-  const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema)
+  // wideness follows the dataset's OWN index, like every other emission decision: a legacy index
+  // keeps the classification it had before the single-field rework until it is actually rebuilt
+  const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema, currentIndexShape(dataset))
 
   for (const f of dataset.schema) {
     const capabilities = f['x-capabilities'] || []
@@ -686,7 +704,9 @@ export const buildIndexMappings = (
   // CSV-equivalent byte size of the line, summed by storage() for the indexed_bytes
   // metric. Aggregated only (doc_values), never searched.
   properties._bytes = { type: 'integer', index: false }
-  const wide = hasManyQSearchFields(jsProps)
+  // classified in the units of the shape we are emitting — the caller resolved it from the target
+  // index (`currentIndexShape` for a partial update, NEW_INDEX_SHAPE for a fresh build)
+  const wide = hasManyQSearchFields(jsProps, shape)
   if (wide) {
     if (shape.singleTextField) {
       // single analyzed field, same treatment as every other column under the new shape

@@ -77,7 +77,11 @@ export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
       }
     }
     // a freshly-added column carrying a copy_to (e.g. crossing the "wide" threshold by adding columns)
-    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears
+    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears.
+    // Both sides are classified in the units of the index being patched (see hasManyQSearchFields),
+    // so this comparison observes a real crossing — with a shape-independent classification the two
+    // definitions could agree on "wide" for an index that carries no `_search` at all, and this
+    // guard would let `_search` + `copy_to` be added in place, never back-filled.
     if (newMapping.properties._search && !oldMapping.properties._search) {
       throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
