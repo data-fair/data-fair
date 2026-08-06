@@ -228,9 +228,6 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
     // x-capabilities changes affect ES analyzers/normalizers and require full re-indexing
     patch.status = reindexerStatus
-  } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && df.language !== f.language))) {
-    // language changes the analyzer of the single analyzed subfield and requires full re-indexing
-    patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {

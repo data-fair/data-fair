@@ -609,12 +609,6 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
       extensionsFields.push(fullProperty)
     }
   }
-  // spec §3 call site 3: init for new columns — extension outputs (including the literal
-  // `_error` field pushed above) are a first-indexing source just like file analysis, stamp
-  // the same way. Stamping the whole array once it is fully built (rather than stamping
-  // individual field literals as they are constructed) means any field pushed into
-  // `extensionsFields` in the future is covered by construction — no call site can forget it.
-  schemaUtils.stampSchemaLanguage(extensionsFields, config.elasticsearch.defaultLanguage)
   const newSchema: any[] = []
   for (const prop of schema) {
     if (prop['x-extension']) {

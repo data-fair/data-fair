@@ -94,10 +94,6 @@ export const mergeFileSchema = (dataset: FileDataset) => {
     .concat(fileFields.filter(p => !schema.some(p2 => p.key === p2.key)))
     .concat(extensionFields.filter(p => !schema.some(p2 => p.key === p2.key)))
   dataset.schema = schema
-
-  // spec §3 call site 3: init for new columns discovered by file analysis — same rule as the
-  // write-path normalization, so a freshly analyzed column is language-stamped from the start
-  stampSchemaLanguage(dataset.schema, config.elasticsearch.defaultLanguage)
 }
 
 export const cleanSchema = (dataset) => {
@@ -226,16 +222,6 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
   schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
-
-  // language stamping call site 3 (see the write-path and file-analysis call sites above): the
-  // calculated columns pushed here are FRESH literals with no `language`, and this array is what
-  // indexDefinition / finalize consume. Without this the most text-like column of the product
-  // (`_file.content`, the extracted attachment text) would silently fall back to `.text_standard`
-  // (standard analyzer) instead of the language-analyzed `.text` it has always had.
-  // The stamp is inert on the columns whose ES mapping is hardcoded (`_id` is not mapped at all,
-  // `_geopoint` is a geo_point) and skipped on the vetoed ones (`_attachment_url`, `_updatedBy*`,
-  // `_owner*` all carry `text: false`).
-  stampSchemaLanguage(schema, config.elasticsearch.defaultLanguage)
 
   if (fixConcept) await fixConcepts(dataset, schema)
   return schema
@@ -373,26 +359,4 @@ export const schemasTransformChange = (schema, patchedSchema) => {
   const schemaTransform1 = schema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
   const schemaTransform2 = patchedSchema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
   return !equal(schemaTransform1, schemaTransform2)
-}
-
-// language stamping — see docs/architecture/text-search-evaluation.md (status note).
-// A plain string column with the (deprecated) language-analyzed text capability active gets the
-// platform language written into the schema, so absence genuinely means "standard analyzer".
-// Called on every schema write (curateDataset), on file analysis, on extension outputs and on the
-// extended (calculated-columns-included) schema, plus once retroactively by the 6.17.1 upgrade
-// script — after which schemas are self-describing, with no read-time platform default anywhere.
-export const defaultLanguage = (prop: any, platformLanguage: string): string | undefined => {
-  if (prop.language) return undefined
-  if (prop.type !== 'string' || (prop.format && prop.format !== 'uri-reference')) return undefined
-  if (prop['x-capabilities']?.text === false) return undefined
-  return platformLanguage
-}
-
-export const stampSchemaLanguage = (schema: any[] | undefined, platformLanguage: string): boolean => {
-  let stamped = false
-  for (const prop of schema || []) {
-    const language = defaultLanguage(prop, platformLanguage)
-    if (language) { prop.language = language; stamped = true }
-  }
-  return stamped
 }

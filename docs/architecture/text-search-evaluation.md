@@ -7,24 +7,6 @@
 > (4) open questions / recommended directions. Companion: `benchmark/INVESTIGATIONS.md`
 > (the executable backlog) and `load-management.md` (the broader load picture).
 
-> **Status (2026-08-04).** Iteration 1 of the indexing rework has shipped: every analyzed
-> string column now materializes exactly **one** analyzed subfield instead of two — `.text`
-> (language analyzer) when the new property-level `language` meta is set, else
-> `.text_standard` (standard analyzer). Language columns additionally get a lean unstemmed
-> `.prefix` companion (`text`/`standard`/`index_options:docs`/`norms:false`) for
-> `q_mode=complete`'s startsWith clause, since a stemmed `.text` can't serve prefix matching;
-> language-less columns need none — their `.text_standard` is already unstemmed and serves
-> that role directly. `Q_SEARCH_FIELDS_THRESHOLD` was halved 30 → 15 (one analyzed subfield
-> per column, not two), which preserves the wide/narrow boundary for *default* string columns —
-> the ones that used to contribute two fields. Columns that already contributed only one
-> (numbers/dates, and string columns with one of the two text capabilities disabled) now reach
-> the boundary at half as many columns; accepted as cheap. This supersedes §1 in full
-> (per-column mapping, `q` regimes, width threshold) and the
-> [T13](#t13-collapse-text--text_standard-into-a-single-analyzed-field-per-column) /
-> [§3 joint proposal](#3-joint-proposal-t13--t9) dual-analyzer discussion below — read those
-> as the design threads that led here, not the shipped shape. Full design:
-> `2026-08-03-text-indexing-unification-design.md`.
-
 ## Contents
 
 1. [Current state — the text-search shape today](#1-current-state)
@@ -56,11 +38,6 @@ rollout (`0bc454fb4`) and load-management.md §6.
 | `.text_standard` | `x-capabilities.textStandard !== false` (default on) | `standard` | "Raw" matches — boost exact matches; used by `q_mode=complete`'s `q*` prefix |
 | `.keyword_insensitive` | `x-capabilities.insensitive !== false` | `insensitive_normalizer` | Diacritic/case-insensitive sort, not search |
 | `.wildcard` | `x-capabilities.wildcard === true` (opt-in) | (wildcard type) | `*q*` contains queries |
-
-> *Correction (see status note above)*: as shipped, `.text` and `.text_standard` are never
-> both built for the same column. `.text_standard` now exists only on columns without a
-> `language`, where it also serves `q_mode=complete`'s prefix clause; columns with a
-> `language` use the new `.prefix` companion for that instead.
 
 Numeric and date columns get a single `.text_standard` inner field so they can be matched textually.
 
@@ -98,9 +75,6 @@ of `.text`/`.text_standard` entries*, not columns; boost-eligible excluded). Cro
 threshold (in either direction) or a change to a column's boost eligibility forces a full
 reindex — `updateDatasetMapping` rejects in-place mapping updates whose `copy_to` shape
 would change.
-
-> *Correction (see status note above)*: `Q_SEARCH_FIELDS_THRESHOLD` is now **15**, not 30 —
-> halved because each column contributes one analyzed subfield instead of two.
 
 ---
 

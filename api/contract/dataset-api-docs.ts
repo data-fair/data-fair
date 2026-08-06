@@ -1082,10 +1082,11 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           }, {
             in: 'query',
             name: 'analysis',
-            description: "Le type d'analyse textuelle effectuée sur la colonne.\n\nL'analyse \"**lang**\" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL'analyse \"**standard**\" effectue un travail plus basique d'extraction de mots bruts depuis le texte.\n\nChaque colonne n'est indexée qu'avec une seule de ces analyses, déterminée par sa configuration technique : \"**lang**\" si une langue est définie sur la colonne, \"**standard**\" sinon. Ce paramètre est donc optionnel et sans effet quand il correspond à l'analyse de la colonne ; demander l'autre analyse renvoie une erreur 400.",
+            description: "Le type d'analyse textuelle effectuée sur la colonne.\n\nL'analyse \"**lang**\" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL'analyse \"**standard**\" effectue un travail plus basique d'extraction de mots bruts depuis le texte.",
             schema: {
               title: "Type d'analyse à effectuer",
               type: 'string',
+              default: 'lang',
               enum: ['lang', 'standard']
             }
           },

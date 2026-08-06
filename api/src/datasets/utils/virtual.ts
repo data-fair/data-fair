@@ -122,10 +122,6 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
     // the children indices: it must reflect the children data, not the default timezone
     if (matchingFields[0].timeZone) field.timeZone = matchingFields[0].timeZone
     else delete field.timeZone
-    // language selects which analyzer materialized the children's single analyzed subfield: it
-    // must reflect the children data, not the platform default (same homogenization as timeZone)
-    if (matchingFields[0].language) field.language = matchingFields[0].language
-    else delete field.language
 
     // Some attributes of a field have to be homogeneous accross all children.
     // Capability keys absent from the contract are generator-owned, not user config (e.g.

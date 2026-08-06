@@ -218,7 +218,7 @@
     },
     "elasticsearch": {
       "type": "object",
-      "required": ["host", "auth", "nodes", "options", "ca", "defaultAnalyzer", "defaultLanguage", "languageAnalyzers", "maxBulkLines", "maxBulkChars", "maxShardSize", "nbReplicas", "maxPageSize", "approxCount", "singleLineOpRefresh", "searchTimeout", "acceptYellowStatus", "diagnose"],
+      "required": ["host", "auth", "nodes", "options", "ca", "defaultAnalyzer", "maxBulkLines", "maxBulkChars", "maxShardSize", "nbReplicas", "maxPageSize", "approxCount", "singleLineOpRefresh", "searchTimeout", "acceptYellowStatus", "diagnose"],
       "properties": {
         "host": { "type": "string" },
         "auth": { "type": ["object", "null"] },
@@ -226,11 +226,6 @@
         "options": { "type": "object" },
         "ca": { "type": ["string", "null"] },
         "defaultAnalyzer": { "type": "string" },
-        "defaultLanguage": { "type": "string" },
-        "languageAnalyzers": {
-          "type": "object",
-          "additionalProperties": { "type": "string" }
-        },
         "maxBulkLines": { "type": "number" },
         "maxBulkChars": { "type": "number" },
         "maxShardSize": { "type": "number" },

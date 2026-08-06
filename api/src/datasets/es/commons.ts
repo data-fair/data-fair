@@ -30,7 +30,6 @@ import {
   columnOperationsHint,
   resolveExactKeywordTarget,
   resolveExistsFields,
-  resolveSearchField,
   resolveRangeOrPrefixField,
   KEYWORD_IGNORE_ABOVE,
   virtualFilterClauses,
@@ -50,9 +49,8 @@ dayjs.extend(timezone)
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
 // thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// resolves the per-column analyzer from config: a stamped `language` picks its language analyzer,
-// unknown/legacy (no language) configs keep today's platform default
-export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.languageAnalyzers[prop.language] ?? config.elasticsearch.defaultAnalyzer)
+// supplies the runtime analyzer from config so mapping creation behaves unchanged
+export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
 
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
@@ -125,18 +123,6 @@ const capabilitiesSuffixes = [
   ['.keyword_insensitive', 'insensitive'],
   ['.wildcard', 'wildcard']
 ]
-const ANALYZED_SUFFIXES = new Set(['.text', '.text_standard'])
-
-// Validation runs against `esFields`, which lists the ONE analyzed subfield each column materializes
-// (spec §2), so an explicit `qs=` reference to the other analyzed name is rejected. The deprecated
-// capability title alone doesn't explain why — the `language` meta is what decides which of the two
-// names exists — so describe the column's ACTUAL state: no analyzed field at all, or which one it is.
-const analyzedSuffixHint = (prop: any): string => {
-  const search = resolveSearchField(prop)
-  if (!search.field) return ' Aucune analyse textuelle n\'est activée sur cette colonne.'
-  if (search.language) return ` Cette colonne utilise une analyse linguistique (language=${search.language}), son sous-champ analysé est "${search.field}".`
-  return ` Cette colonne n'utilise pas d'analyse linguistique (paramètre "language"), son sous-champ analysé est "${search.field}".`
-}
 function checkQuery (query: any, schema: any[], esFields: string[], currentField?: string) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
@@ -165,12 +151,10 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
   } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
-      const prop = schema.find(p => p.key + suffix[0] === query.field)
-      if (!prop) {
+      if (!schema.find(p => p.key + suffix[0] === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      const hint = ANALYZED_SUFFIXES.has(suffix[0]) ? analyzedSuffixHint(prop) : ''
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.${hint}`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
@@ -298,27 +282,15 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
-    // `.prefix` can only ever be matched by the q_mode=complete startsWith clause (buildQClauses) —
-    // registering it for every other mode would still be "safe" (it just never matches), but with
-    // no_match_size:300 ES generates a 300-char fallback fragment for it on EVERY hit regardless,
-    // for a field prepareResultItem discards. Gate its registration on complete mode so that cost
-    // isn't paid on every highlighted request.
-    const highlightQMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
     for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       const prop = dataset.schema.find((p: any) => p.key === key)
-      // the column materializes at most one analyzed subfield (spec §2) — highlight targets that one
-      const search = resolveSearchField(prop)
-      if (!search.searchable || !search.field) {
+      const caps = (prop && prop['x-capabilities']) || {}
+      if (caps.text === false && caps.textStandard === false) {
         throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
       }
-      esQuery.highlight.fields[search.field] = {}
-      // task 8: also register the unstemmed prefix companion when it differs from the analyzed
-      // field and q_mode=complete is actually in play, so a match that only exists there (past the
-      // stem length) is markable — see resolveSearchField and the response shaping below.
-      if (highlightQMode === 'complete' && search.prefixField && search.prefixField !== search.field) {
-        esQuery.highlight.fields[search.prefixField] = {}
-      }
+      esQuery.highlight.fields[key + '.text'] = {}
+      esQuery.highlight.fields[key + '.text_standard'] = {}
     }
   }
 
@@ -461,19 +433,11 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
-      // Target the ONE analyzed subfield the column materializes (spec §2), so `_search` matches
-      // exactly what `q` matches, on legacy dual-field indexes too. The deprecated capability pair
-      // no longer describes the mapping: it used to fan out over both analyzers on an old index, and
-      // to make a scalar with textStandard:false target an unmapped `.text` (silently matching
-      // nothing) where highlight / words_agg now reject the column outright.
-      const { field } = resolveSearchField(prop)
-      if (!field) {
-        // resolveSearchField only yields no field when textStandard is explicitly disabled, so the
-        // shared capability gate emits the same 400-with-hint as the neighbouring filters
-        requiredCapability(prop, filterSuffix, 'textStandard')
-        throw httpError(400, `Impossible d'appliquer un filtre ${filterSuffix} sur le champ ${prop.key}. Aucune analyse textuelle n'est activée sur cette colonne. ${columnOperationsHint(prop)}`)
-      }
-      must.push({ simple_query_string: { query: query[queryKey], fields: [field] } })
+      const subfields = []
+      if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
+      if (prop['x-capabilities']?.text !== false) subfields.push('text')
+      if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
+      must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
       if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
@@ -714,17 +678,13 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   if (ctx.highlightKeys) {
     res._highlight = {}
     for (const key of ctx.highlightKeys) {
-      // deliberately reads all analyzed names prepareQuery could have registered: a column only
-      // ever materializes `.text_standard`, or `.text` (+ its `.prefix` prefix companion, task 8).
-      // A q_mode=complete match past the stem length only lights up `.prefix` (the stemmed `.text`
-      // stays unmatched, or shows only its no_match_size context) — prefer whichever fragment
-      // actually carries the highlight marker over one that's just fallback context.
       const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
-      const prefixHighlight = (hit.highlight && hit.highlight[key + '.prefix']) || []
       const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
-      const marked = [textHighlight, prefixHighlight, textStandardHighlight]
-        .find(h => h.length && h[0].includes('<em class="highlighted">'))
-      res._highlight[key] = marked ?? (textStandardHighlight.length ? textStandardHighlight : textHighlight)
+      if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
+        res._highlight[key] = textStandardHighlight
+      } else {
+        res._highlight[key] = textHighlight
+      }
     }
   }
 

@@ -35,17 +35,3 @@ test.describe('buildIndexMappings - catch-all _search field', () => {
     assert.equal(properties.a_bool.copy_to, undefined)
   })
 })
-
-test.describe('buildIndexMappings - per-column language analyzer', () => {
-  test('a column with `language` picks its own analyzer; one without keeps the default', () => {
-    const schema = [
-      stringField('title', { language: 'fr' }),
-      stringField('notes')
-    ]
-    const dataset: any = { id: 'lang', schema, extensions: [] }
-    const { properties } = buildIndexMappings(dataset, schema, ANALYZER, { fr: 'custom_french' })
-    assert.equal(properties.title.fields.text.analyzer, 'custom_french')
-    assert.equal(properties.notes.fields.text_standard.analyzer, 'standard')
-    assert.equal(properties.notes.fields.text, undefined)
-  })
-})

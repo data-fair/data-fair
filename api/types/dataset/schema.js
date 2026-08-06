@@ -1115,12 +1115,6 @@ const dataset = {
         },
         'x-calculated': { type: 'boolean' },
         'x-capabilities': capabilities,
-        language: {
-          type: 'string',
-          title: 'Langue du contenu textuel',
-          description: 'Langue utilisée pour l\'analyse de la recherche textuelle de cette colonne. Absent = analyse standard sans langue.',
-          maxLength: 10
-        },
         'x-labels': {
           type: 'object',
           patternProperties: {
