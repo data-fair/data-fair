@@ -12,13 +12,8 @@
           color="primary"
           density="compact"
           hide-details
-          class="mb-2"
-          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
-        />
-        <!-- nothing follows the switch when integrity is off: no rule to draw either -->
-        <v-divider
-          v-if="state.active"
           class="mb-4"
+          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
         />
       </template>
 
@@ -330,8 +325,7 @@
       </div>
 
       <template v-if="state.active">
-        <v-divider class="my-4" />
-        <h4 class="text-subtitle-1 mb-2">
+        <h4 class="text-subtitle-1 mb-2 mt-6">
           {{ t('historyTitle') }}
         </h4>
         <v-data-table-server
