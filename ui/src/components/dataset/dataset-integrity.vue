@@ -1,6 +1,23 @@
 <template>
   <div class="pa-4">
     <template v-if="state">
+      <!-- the switch that decides everything below it comes first (disabling clears the verdicts
+           and stops lock renewal — anchors then age out at retention — so it is confirmed, unlike
+           the additive enable which needs no guard) -->
+      <template v-if="adminMode">
+        <v-switch
+          :model-value="state.active"
+          :label="t('enableLabel')"
+          :loading="toggle.loading.value"
+          color="primary"
+          density="compact"
+          hide-details
+          class="mb-2"
+          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
+        />
+        <v-divider class="mb-4" />
+      </template>
+
       <v-alert
         v-if="!state.active"
         type="info"
@@ -66,9 +83,9 @@
         />
         <div
           v-if="state.lastCheck"
-          class="text-caption mt-1"
+          class="text-caption text-medium-emphasis mt-1"
         >
-          {{ t('lastCheck') }}: {{ formatDate(state.lastCheck.date) }}
+          {{ t('lastCheck') }} : {{ formatDate(state.lastCheck.date) }}
         </div>
       </template>
 
@@ -78,8 +95,10 @@
            like the others, not special cases. Shown only for a definitive verdict — an 'unknown'
            check carries no part-level information and must not be rendered as all-clear. Each
            row is followed by its own detail block when there is something to show. -->
-      <template v-if="state.active && verdictParts.length">
-        <v-divider class="my-4" />
+      <div
+        v-if="state.active && verdictParts.length"
+        class="mt-4"
+      >
         <template
           v-for="part of verdictParts"
           :key="part.key"
@@ -236,13 +255,12 @@
             </div>
           </v-alert>
         </template>
-      </template>
+      </div>
 
       <!-- per-line anchoring progress (enrolled REST datasets): backfill state, not a verdict —
            it is reported even before any check has run -->
       <template v-if="state.active && dataset?.isRest">
-        <v-divider class="my-4" />
-        <div class="text-body-2">
+        <div class="text-body-2 mt-4">
           {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
         </div>
         <template v-if="(state.lines?.pending ?? 0) > 0">
@@ -303,22 +321,6 @@
           {{ t('fix') }}
         </v-btn>
       </div>
-
-      <template v-if="adminMode">
-        <v-divider class="my-4" />
-
-        <!-- disabling clears the verdicts and stops lock renewal (anchors then age out at
-             retention): confirm it, unlike the additive enable which needs no guard -->
-        <v-switch
-          :model-value="state.active"
-          :label="t('enableLabel')"
-          :loading="toggle.loading.value"
-          color="primary"
-          density="compact"
-          hide-details
-          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
-        />
-      </template>
 
       <template v-if="state.active">
         <v-divider class="my-4" />
