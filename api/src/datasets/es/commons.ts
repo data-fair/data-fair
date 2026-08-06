@@ -338,7 +338,12 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (q) {
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
-      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords))
+      // exact-match boost clause: only on indexes whose settings actually define the query-time
+      // analyzer (new shape); `exactMatchBoost: 0` disables it fleet-wide without a reindex.
+      const exactMatch = (dataset as any)._indexShape?.singleTextField && config.elasticsearch.exactMatchBoost > 0
+        ? { analyzer: config.elasticsearch.exactMatchAnalyzer, boost: config.elasticsearch.exactMatchBoost }
+        : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

@@ -42,8 +42,10 @@ test.describe('keyword ignore_above resolvers', () => {
     assert.deepEqual(resolveExistsFields(plainStr, false), ['c'])
   })
 
-  test('exists fields: flagged plain column unions keyword + .text_standard', () => {
-    assert.deepEqual(resolveExistsFields(plainStr, true), ['c', 'c.text_standard'])
+  test('exists fields: flagged plain column unions keyword + both analyzed views', () => {
+    // union of `.text_standard` (legacy indexes) and `.text` (new single-text-field shape); the
+    // one that is unmapped on the target index is silently ignored by ES, so no shape branch.
+    assert.deepEqual(resolveExistsFields(plainStr, true), ['c', 'c.text_standard', 'c.text'])
   })
 
   test('exists fields: flagged wildcard column uses .wildcard', () => {

@@ -52,12 +52,15 @@ export const resolveExactKeywordTarget = (prop: any, values: string[]): { field:
 // not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
 // no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
 // sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
+// The analyzed leg is a UNION of both analyzed views (design §4): legacy indexes carry
+// `.text_standard` (and `.text`), new-shape indexes carry only `.text`. Unmapped fields are silently
+// ignored by ES search clauses, so listing both is safe on either shape and needs no shape branch.
 export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
   const fields = [prop.key]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
-  else if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
   return fields
 }
 
@@ -447,6 +450,12 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   const wildcardFields: string[] = []
   const qSearchFields: string[] = []
   const qStandardFields: string[] = []
+  // the analyzed `.text` views alone (with their boost suffixes). Two new-shape-only consumers:
+  // the exact-match boost clause (query-time `custom_french_exact`) and q_mode=complete's prefix
+  // clause, which on a `singleTextField` index has no `.text_standard` to run on. Both are gated
+  // on `dataset._indexShape?.singleTextField` in buildQClauses — this list is always computed but
+  // stays unused on legacy datasets.
+  const qExactFields: string[] = []
   const qWildcardFields: string[] = []
   const esFields: string[] = []
 
@@ -512,7 +521,10 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
       if (esProp.fields.text) {
         searchFields.push(f.key + '.text' + suffix)
-        if (perField) qSearchFields.push(f.key + '.text' + suffix)
+        if (perField) {
+          qSearchFields.push(f.key + '.text' + suffix)
+          qExactFields.push(f.key + '.text' + suffix)
+        }
       }
       if (esProp.fields.text_standard) {
         searchFields.push(f.key + '.text_standard' + suffix)
@@ -533,9 +545,11 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   if (copyToSearch) {
     qSearchFields.push('_search')
     qStandardFields.push('_search.text_standard')
+    // on a new-shape index `_search` IS the single analyzed field (no `.text_standard` twin)
+    qExactFields.push('_search')
   }
 
-  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qWildcardFields, esFields, copyToSearch, reduced }
+  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qExactFields, qWildcardFields, esFields, copyToSearch, reduced }
 }, {
   profileName: 'getFilterableFields',
   primitive: true,
@@ -548,15 +562,21 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
 // Builds the `q`-side `should`/`minimum_should_match` bool clause used inside `prepareQuery`.
 // Pure: caller resolves `q` (already trimmed) and supplies `qMode` / `sqsOptions`.
+// `exactMatch` (new-shape only, resolved by the caller from config) adds the scoring-only
+// exact-match boost clause. It carries a query-time `analyzer:` reference, which MUST exist in
+// the target index's settings — sending it at a legacy index 400s. Hence the caller gates it on
+// `dataset._indexShape?.singleTextField`; legacy datasets need no clause anyway, their
+// `.text_standard` union clause already is the (untuned) exact boost. See design §1/§5.1.
 export const buildQClauses = (
   dataset: any,
   q: string,
   qFields: string[] | undefined,
   qMode: string | undefined,
   sqsOptions: any = {},
-  ignoredWords?: string[]
+  ignoredWords?: string[],
+  exactMatch?: { analyzer: string, boost: number }
 ): any => {
-  const { qSearchFields, qStandardFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
+  const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
   if (qMode === 'complete') {
     // "complete" mode, we try to accomodate for most cases and give the most intuitive results
@@ -566,8 +586,14 @@ export const buildQClauses = (
     // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
-      if (qStandardFields.length) {
-        should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
+      // on a legacy index the prefix ladder lives ENTIRELY in `.text_standard` (verified: legacy
+      // `.text` alone fails the mid-typing ladder). A new-shape index has no `.text_standard`, but
+      // its `.text` indexes the original tokens alongside the stems, so the prefix works there —
+      // and prefix terms are never stemmed away. Shape-gated because unmapped fields are silently
+      // ignored: routing to the absent field would return nothing, not fall back.
+      const prefixFields = dataset._indexShape?.singleTextField ? qExactFields : qStandardFields
+      if (prefixFields.length) {
+        should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
         should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
@@ -591,6 +617,13 @@ export const buildQClauses = (
     // (qStandardFields is still populated but only meant for the complete-mode prefix query)
     if (qStandardFields.length && !reduced) {
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
+    }
+    // scoring-only exact-match boost (new shape only, see the exactMatch doc above): same fields,
+    // but analyzed without stemming so a literal term match outranks a merely stem-equal one.
+    // Deliberately NOT added in complete mode (its prefix/phrase clauses carry their own
+    // semantics — design §7 leaves the twin as a possible later tuning).
+    if (exactMatch && qExactFields.length) {
+      should.push({ simple_query_string: { query: q, fields: qExactFields, analyzer: exactMatch.analyzer, boost: exactMatch.boost, ...sqsOptions } })
     }
   }
   const scored = { bool: { should, minimum_should_match: 1 } }

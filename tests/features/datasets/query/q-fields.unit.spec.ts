@@ -232,3 +232,47 @@ test.describe('buildQClauses - catch-all clauses', () => {
     assert.ok(!JSON.stringify(fieldsLists).includes('_search'))
   })
 })
+
+test.describe('exact-match routing (new index shape)', () => {
+  test('qExactFields lists .text entries with boosts, plus _search in catch-all', () => {
+    const ds = {
+      id: 'x1',
+      finalizedAt: 'f',
+      schema: [
+        { key: 'a', type: 'string' },
+        { key: 'label_col', type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' },
+        { key: 'n', type: 'number' }
+      ]
+    }
+    const ff = getFilterableFields(ds, 'foo', undefined)
+    assert.deepEqual(ff.qExactFields, ['a.text', 'label_col.text^3'])
+    const wide = { id: 'x2', finalizedAt: 'f', _esCopyToSearch: true, schema: ds.schema }
+    assert.ok(getFilterableFields(wide, 'foo', undefined).qExactFields.includes('_search'))
+  })
+  test('exact-boost clause emitted only when exactMatch is passed', () => {
+    const ds = { id: 'x3', finalizedAt: 'f', schema: [{ key: 'a', type: 'string' }] }
+    const plain: any = buildQClauses(ds, 'foo', undefined, 'simple')
+    assert.ok(!JSON.stringify(plain).includes('custom_french_exact'))
+    const boosted: any = buildQClauses(ds, 'foo', undefined, 'simple', {}, undefined, { analyzer: 'custom_french_exact', boost: 0.5 })
+    const clause = boosted.bool.should.find((c: any) => c.simple_query_string?.analyzer === 'custom_french_exact')
+    assert.ok(clause)
+    assert.equal(clause.simple_query_string.boost, 0.5)
+    assert.deepEqual(clause.simple_query_string.fields, ['a.text'])
+  })
+  test('complete-mode prefix targets .text on new shape, .text_standard on legacy', () => {
+    const schema = [{ key: 'a', type: 'string' }]
+    const legacy: any = buildQClauses({ id: 'x4', finalizedAt: 'f', schema }, 'fo', undefined, 'complete')
+    assert.deepEqual(legacy.bool.should[0].simple_query_string.fields, ['a.text_standard'])
+    const fresh: any = buildQClauses({ id: 'x5', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo', undefined, 'complete')
+    assert.deepEqual(fresh.bool.should[0].simple_query_string.fields, ['a.text'])
+    assert.ok(fresh.bool.should[0].simple_query_string.query.endsWith('*'))
+  })
+  test('legacy datasets emit byte-identical clauses to today', () => {
+    const ds = { id: 'x6', finalizedAt: 'f', schema: [{ key: 'a', type: 'string' }] }
+    // no _indexShape, no exactMatch: default-mode shape is exactly clause A + clause B
+    const out: any = buildQClauses(ds, 'foo', undefined, 'simple')
+    assert.equal(out.bool.should.length, 2)
+    assert.deepEqual(out.bool.should[0].simple_query_string.fields, ['a.text', 'a.text_standard'])
+    assert.deepEqual(out.bool.should[1].simple_query_string.fields, ['a.text_standard'])
+  })
+})
