@@ -85,7 +85,7 @@
         />
         <div
           v-if="state.lastCheck"
-          class="text-caption text-medium-emphasis mt-1"
+          class="text-body-small text-medium-emphasis mt-1"
         >
           {{ t('lastCheck') }} : {{ formatDate(state.lastCheck.date) }}
         </div>
@@ -106,7 +106,7 @@
           :key="part.key"
         >
           <div class="d-flex align-center ga-2 mb-2">
-            <span class="text-body-2">{{ t('part_' + part.key) }}</span>
+            <span class="text-body-medium">{{ t('part_' + part.key) }}</span>
             <v-chip
               size="small"
               label
@@ -173,7 +173,7 @@
           >
             <div
               v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
-              class="text-caption"
+              class="text-body-small"
             >
               {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
             </div>
@@ -190,7 +190,7 @@
               </v-chip>
               <pre
                 v-if="entry.expected || entry.actual"
-                class="text-caption mt-1"
+                class="text-body-small mt-1"
                 style="white-space: pre-wrap; overflow-x: auto;"
               >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
             </div>
@@ -219,7 +219,7 @@
             class="mt-2 mb-3"
             :title="t('trailAlteredTitle')"
           >
-            <div class="text-body-2">
+            <div class="text-body-medium">
               {{ t('trailAlteredBody') }}
             </div>
             <div
@@ -234,10 +234,10 @@
               >
                 {{ t('anomaly_' + anomaly.kind) }}
               </v-chip>
-              <code class="text-caption">{{ anomaly.key }}</code>
+              <code class="text-body-small">{{ anomaly.key }}</code>
               <span
                 v-if="anomaly.detail"
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >{{ anomaly.detail }}</span>
             </div>
             <div
@@ -262,11 +262,11 @@
       <!-- per-line anchoring progress (enrolled REST datasets): backfill state, not a verdict —
            it is reported even before any check has run -->
       <template v-if="state.active && dataset?.isRest">
-        <div class="text-body-2 mt-4">
+        <div class="text-body-medium mt-4">
           {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
         </div>
         <template v-if="(state.lines?.pending ?? 0) > 0">
-          <div class="text-caption mt-1">
+          <div class="text-body-small mt-1">
             {{ state.lines!.pending }} {{ t('linesPending') }}
           </div>
           <v-progress-linear
@@ -325,7 +325,7 @@
       </div>
 
       <template v-if="state.active">
-        <h4 class="text-subtitle-1 mb-2 mt-6">
+        <h4 class="text-title-medium mb-2 mt-6">
           {{ t('historyTitle') }}
         </h4>
         <v-data-table-server
@@ -342,7 +342,7 @@
             {{ formatDate(item.date) }}
           </template>
           <template #item.hash="{ item }">
-            <code class="text-caption">{{ (item.hash.file ?? item.hash.metadata ?? '').slice(0, 12) }}…</code>
+            <code class="text-body-small">{{ (item.hash.file ?? item.hash.metadata ?? '').slice(0, 12) }}…</code>
           </template>
           <template #item.operation="{ item }">
             {{ t('op_' + item.operation) }}
@@ -353,21 +353,21 @@
           <template #item.who="{ item }">
             <span
               v-if="item.who"
-              class="text-caption"
+              class="text-body-small"
             >{{ formatWho(item.who) }}</span>
             <span
               v-else
-              class="text-caption text-disabled"
+              class="text-body-small text-disabled"
             >—</span>
           </template>
           <template #item.reason="{ item }">
             <span
               v-if="item.reason"
-              class="text-caption"
+              class="text-body-small"
             >{{ item.reason }}</span>
             <span
               v-else
-              class="text-caption text-disabled"
+              class="text-body-small text-disabled"
             >—</span>
           </template>
           <template #item.actions="{ item }">
@@ -401,7 +401,7 @@
             </template>
             <span
               v-else
-              class="text-caption text-disabled"
+              class="text-body-small text-disabled"
             >{{ t('noPayload') }}</span>
           </template>
         </v-data-table-server>
@@ -426,7 +426,7 @@
         <v-card-text v-if="diffData">
           <p
             v-if="!diffKeys.length"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('noDiff') }}
           </p>
@@ -434,21 +434,21 @@
             v-for="key of diffKeys"
             :key="key"
           >
-            <h4 class="text-subtitle-2 mt-2">
+            <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
             <v-row dense>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffRevision') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.payload.metadata[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.payload.metadata[key]) }}</pre>
               </v-col>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffCurrent') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.current?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.current?.[key]) }}</pre>
               </v-col>
             </v-row>
           </template>
@@ -664,21 +664,21 @@
             <template #item.who="{ item }">
               <span
                 v-if="item.who"
-                class="text-caption"
+                class="text-body-small"
               >{{ formatWho(item.who) }}</span>
               <span
                 v-else
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >—</span>
             </template>
             <template #item.reason="{ item }">
               <span
                 v-if="item.reason"
-                class="text-caption"
+                class="text-body-small"
               >{{ item.reason }}</span>
               <span
                 v-else
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >—</span>
             </template>
             <template #item.actions="{ item }">
@@ -693,7 +693,7 @@
               />
               <span
                 v-else
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >{{ t('noPayload') }}</span>
             </template>
           </v-data-table-server>
@@ -715,13 +715,13 @@
         <v-card-text v-if="lineDiffData">
           <p
             v-if="lineDiffData.line?.deleted"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('lineDeletedRevision') }}
           </p>
           <p
             v-else-if="!lineDiffKeys.length"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('noDiff') }}
           </p>
@@ -729,21 +729,21 @@
             v-for="key of lineDiffKeys"
             :key="key"
           >
-            <h4 class="text-subtitle-2 mt-2">
+            <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
             <v-row dense>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffRevision') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.payload?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.payload?.[key]) }}</pre>
               </v-col>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffCurrent') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.current?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.current?.[key]) }}</pre>
               </v-col>
             </v-row>
           </template>
