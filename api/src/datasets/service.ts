@@ -208,7 +208,9 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
+        // `_indexShape` lets query-time routing (resolveWordsAggField) branch per descendant
+        // without a second mongo round trip
+        dataset.descendants = await virtualDatasetsUtils.descendants(dataset, ['_indexShape'])
       }
       if (dataset.schema) {
         for (const prop of dataset.schema) {
@@ -484,7 +486,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await updateDatasetMapping({ id: dataset.id, schema: patch.schema }, dataset)
+      // must be emitted from the REAL dataset with only its schema replaced: a synthetic
+      // `{ id, schema }` loses `draftReason` (aliasName would target the published index),
+      // `_indexShape` and the fields extendedSchema derives calculated columns from.
+      // `dataset` is still pre-patch here, so it doubles as the old-side definition.
+      await updateDatasetMapping({ ...dataset, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing

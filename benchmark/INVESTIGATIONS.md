@@ -607,6 +607,366 @@ and page 1 unchanged.
 
 ---
 
+## 15. Is the `keyword_repeat` single-field analyzer worth it? (2026-08-05)
+
+> The experiment and spike code for §15/§15.b/§15.c lived on the working branch and was not
+> merged; the measured results are summarized here.
+
+Targets the indexing-rework question behind the `keyword_repeat` spike:
+today every text column carries TWO analyzed sub-fields — `.text` (custom_french, stemmed) and
+`.text_standard` (standard, unstemmed, whose reason to exist is that `q_mode=complete`'s
+mid-typing prefix clause must not stop matching once a word is stemmed away from its surface form.
+The candidate replaces both with ONE field analyzed by `custom_french_repeat` =
+`[french_elision, lowercase, keyword_repeat, french_stop, french_stemmer, remove_duplicates,
+asciifolding]` (filter order and its rationale copied verbatim from the spike), which emits the
+surface AND the stemmed token at every position.
+
+**Hypothesis.** One repeat field costs less than dual's two fields (it drops stopwords once instead
+of indexing them with positions in `.text_standard`, and dedupes self-stemming tokens), while
+recovering dual's prefix/exact-form correctness — and collapsing the production `q` clause pair into
+a single SQS clause makes the default query cheaper too.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=text-analyzer --runs=20 --profile --no-seed
+npm run benchmark -- experiment --name=text-analyzer --runs=20 --profile --cold --no-seed
+```
+The experiment builds its own indexes (`benchmark-text-analyzer-{dual,single,repeat}`): 300k docs,
+two text columns (title ~12 words, description ~50 words), identical docs across variants, 1 shard,
+force-merged to 1 segment, `request_cache=false`, `track_total_hits: true` (prod page 1).
+
+**Corpus.** The harness generator emits 3-6 word bags from a 26-noun list — zero stopwords, zero
+inflection — on which the three analyzers would be indistinguishable. So the experiment carries its
+own corpus: 170 natural French open-data sentences with
+commune / organisation / theme / year slots, picked with a mild Zipfian skew. Measured: 28.2%
+surface stopword density, **37.1% of tokens removed by `french_stop`**, 59.7% inflected-suffix
+share, and **`keyword_repeat` genuinely doubles 80.7%** of the positions that survive stopping.
+
+**Outcome. Size: the candidate is real but modest — and the fanout win is the point, not the bytes.**
+
+| arm | store | analyzed fields (`_disk_usage`) | inverted index | Δ analyzed vs dual |
+|---|---:|---:|---:|---:|
+| dual (today) | 118.6 MB | 49.0 MB | 47.9 MB | — |
+| single (floor) | 89.9 MB | 20.4 MB | 19.8 MB | −58.5% |
+| repeat | 105.6 MB | 36.1 MB | 35.5 MB | **−26.5%** |
+
+Store Δ is only −10.9% because `_source` (60.97 MB, byte-identical in all three) dilutes it — the
+analyzed portion is the honest number. Per field: `description.text` 16.65 MB (single) → 29.72
+(repeat) vs dual's 16.65 + 23.34 = 39.99. Repeat sits at **+77% over the single-field floor**, i.e.
+it buys back dual's correctness for about half of what dual's second field costs.
+
+**Query cost: the clause collapse does NOT pay for itself — the doubled *query* eats it.**
+`took` p50, 20 runs, warm ≈ cold throughout (the corpus is memory-resident):
+
+| shape | dual | single | repeat | repeat-frq |
+|---|---:|---:|---:|---:|
+| default q, 3 terms, 143k hits | 6 ms | 4–5 ms (−17..33%) | 7 ms (**+17%**) | 4–5 ms (−17..33%) |
+| `q_mode=complete` prefix `logem*`, 52k hits | 1–2 ms | 0 ms / **0 hits** | 1–2 ms (±0%) | 1–2 ms (±0%) |
+| quoted phrase, 4 terms, 56k hits | 7 ms | 7 ms | 14.5 ms (**+107%**) | 7 ms (±0%) |
+
+A `repeat` field is analyzed with `custom_french_repeat` at SEARCH time too, so every query position
+becomes a 2-term SynonymQuery (and, for a phrase, a MultiPhraseQuery): one collapsed clause over
+doubled terms costs as much as dual's two clauses on the default query, and **twice as much on the
+positions path**. The `repeat-frq` arm — same index, query analyzed with plain `custom_french` — is
+the fix, and it is decisive: **−17..33% vs dual on default q, parity on phrase, parity on prefix,
+with identical totals and top-20 on all three shapes**. In production terms that is a
+`search_analyzer` on the field (or the query analyzer on the clause): index with repeat, search with
+custom_french, and only the startsWith clause needs the surface terms the repeat index holds.
+
+**Sanity checks (both PASS, run every time the indexes are built).**
+- Stemmed recall: repeat == dual on all 5 probes ("logements" 52 221, "communes" 99 200, …) —
+  and repeat-frq matches too, so the search-analyzer fix costs no recall.
+- Mid-typing prefix ladder (every prefix of length ≥ 2): **repeat and repeat-frq never return zero**.
+  `single` collapses exactly as predicted (`logem…logements` and `ass…associations` all zero —
+  this is why `.text_standard` exists). Unexpected: **dual's ladder is itself broken on accented
+  words** — `.text_standard` is `standard`, which does not asciifold, so every ASCII prefix of
+  "équipements" (`eq`, `equ`, … `equipements`) returns zero on dual and matches on repeat. The
+  candidate is strictly *more* correct than today's shape here.
+
+**Caveats.** 170 sentences over 300k docs gives natural per-document French but a flatter
+term-frequency curve than a real corpus, so absolute posting sizes are optimistic for every arm
+equally; ES `took` is integer-millisecond, so the 1–2 ms prefix numbers are resolution-bound (the
+e2e p50 and `profile` totals in the JSON discriminate them). A parallel dev spike attacked the same
+question at 50k docs with an independent corpus — the two agreed on the size direction.
+
+Results: `benchmark/results/experiment-2026-08-05T08-57-28-756Z.json` (warm + profile),
+`experiment-2026-08-05T08-57-34-808Z.json` (cold). Indexes are kept and reused on the next run
+(same convention as the seeded presets); drop them with
+`curl -XDELETE $ES/benchmark-text-analyzer-\*`.
+
+---
+
+## 15.b Does WIDE fanout flip the naive `repeat` shape's sign? (2026-08-05)
+
+Follow-up to §15, at the scale that matters for the decision it feeds. The repo owner has since
+picked the SIMPLE shape as the preferred candidate for the indexing rework: one `.text` field per
+column, analyzed with `custom_french_repeat` for BOTH indexing and search — no `search_analyzer`
+override (`repeat-frq`'s fix), no extra boost clause. §15 measured 2 text columns, where that
+"naive" shape was already worse than dual (+17% default q, **+107% phrase**). But production `q`
+queries every text column at once (`buildQClauses`, `api/src/datasets/es/operations.ts`): dual's
+`fields` array is 2N entries (N `.text` + N `.text_standard`) split across TWO bool/should clauses,
+naive's is N entries in ONE clause. At N=2 that collapse is invisible; at a realistic wide dataset
+(N=40, the `wide-text` preset's shape) it could plausibly pay for itself. It does not.
+
+**Setup** (§15's corpus reused over 40 columns — same SENTENCES, same slot-filling, spread over 40
+independently-generated columns instead of a title+description pair, 1-2 sentences each). 100k
+docs, 1 shard, force-merged to 1 segment, same `waitForStableStore` flush-and-poll fix and
+`request_cache:false`/`track_total_hits:true` production page-1 shape as §15. Four physical
+indexes:
+
+| shape | mapping | serves |
+|---|---|---|
+| `dual` | N × `{text: custom_french, text_standard: standard}` | `dual` (today) |
+| `dual-catchall` | dual's mapping + `copy_to: _search` on every column, `_search: {text: custom_french, fields.text_standard: standard}` | `dual-catchall` (today, wide dataset) |
+| `repeat` | N × `{text: custom_french_repeat}` | `repeat` (naive) + `repeat-frq` (query analyzed with plain `custom_french`) |
+| `repeat-catchall` | repeat's mapping + `copy_to: _search`, `_search: {text: custom_french_repeat}` (one field) | `repeat-catchall` + `repeat-catchall-frq` |
+
+Run:
+```sh
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout --runs=20 --rows=100000 --profile --no-seed
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout --runs=20 --rows=100000 --cold --no-seed
+```
+
+**Verdict: no, the fanout does not flip the sign. The naive shape loses on every measured query
+type, at every fanout regime (bare per-column AND catch-all), by roughly the same margins §15 found
+at 2 columns. Only `repeat-frq` (a `search_analyzer` override) wins.**
+
+`took` p50, 20 runs, warm ≈ cold throughout (identical within 1ms on every arm — corpus is
+memory-resident at 100k docs same as §15's 300k):
+
+| shape | dual | repeat (naive) | repeat-frq |
+|---|---:|---:|---:|
+| default q "logements sociaux commune", 99 965 hits, 40 per-column fields/clause | 23 ms | 28 ms (**+21.7%**) | 15 ms (−34.8%) |
+| default q "associations sportives", 88 077 hits | 10 ms | 11 ms (+10.0%) | 6 ms (−40.0%) |
+| default q "equipements sportifs communes", 99 964 hits | 21 ms | 27 ms (+28.6%) | 14 ms (−33.3%) |
+| catch-all q "logements sociaux commune" (constant 1-2 fields regardless of N), 99 965 hits | 8 ms | 9 ms (**+12.5%**) | 5 ms (−37.5%) |
+| phrase "sont publiees chaque annee", 91 458 hits | 47 ms | 87.5 ms (**+86.2%**) | 47 ms (±0%) |
+| `q_mode=complete` prefix "logem*", 89 726 hits | 5 ms | 5 ms (±0%) | 4 ms (−20%, noisy at this resolution) |
+
+The three default-q probes were picked to vary the match-set shape, but all three land on
+80,000-100,000 hits out of 100k docs — spreading a French corpus over 40 independent columns means
+almost every document contains *some* column matching a common word, so this is closer to a
+match-everything scan than a selective query. That is a fair worst case for the question being
+asked (it stresses raw per-hit scoring cost, where block-max-WAND has the least to skip), but it
+means these numbers should not be read as "typical" `q` cost — see search-catchall-curve (§6) for
+the cost curve at realistic selectivity.
+
+**The catch-all row is the decisive evidence against the "field-count fanout is the real cost"
+reading of §15.** Catch-all already collapses the field count to near-nothing (2 fields dual-catchall
+vs 1 field repeat-catchall — nothing left for wide fanout to save), and naive `repeat-catchall`
+*still* costs +12.5% over `dual-catchall`, for the same reason §15 found at 2 raw columns: a
+`repeat`-mapped field is analyzed with `custom_french_repeat` at search time too, so every query
+position becomes a 2-term SynonymQuery — that doubling costs more than the field-count halving
+saves, whether the field count is 40, 2, or (via catch-all) 1. The wide per-column rows (+10..+29%)
+and the catch-all row (+12.5%) tell the same story at very different absolute field counts: the
+clause-count collapse is real but structurally smaller than the query-side doubling it's paired
+with, at any fanout. `repeat-frq` removes the doubling (query analyzed with plain `custom_french`)
+and wins by the same −33..−44% margin in both regimes — consistent with §15's 2-column −17..−33%,
+slightly larger here because the per-column regime has more fields to save on.
+
+**Phrase confirms the same split as §15, worse in absolute terms at width:** naive's
+MultiPhraseQuery-over-doubled-positions cost (+86.2%, essentially §15's +107% again) is unaffected
+by clause count — a phrase query was always a single clause on both shapes, at 2 columns or 40 —
+and `repeat-frq` is again the fix (parity). **Prefix is a wash on all three arms**, as at 2 columns:
+`q_mode=complete`'s startsWith clause was already single-clause on both dual (`.text_standard`) and
+repeat (`.text`), so there was no collapse to win there in the first place — the 5 ms/4 ms spread is
+resolution noise (`took` is integer-millisecond; e2e p50 in the JSON — 6.2–6.7 ms across all three —
+confirms parity).
+
+**Size (40-col confirmation of §15's number):**
+
+| shape | store | analyzed (`_disk_usage`) | inverted | `_search` field |
+|---|---:|---:|---:|---:|
+| dual | 630.7 MB | 210.2 MB | 202.6 MB | — |
+| dual-catchall | 863.3 MB (+36.9%) | 210.2 MB (−0.0%) | 202.5 MB | 232.4 MB |
+| repeat | 573.1 MB (−9.1%) | 152.7 MB (**−27.4%**) | 148.8 MB | — |
+| repeat-catchall | 748.9 MB (+18.7%) | 152.7 MB (−27.4%) | 148.8 MB | 175.5 MB |
+
+**−27.4%** analyzed-portion vs dual, matching §15's 2-column −26.5% almost exactly — the size win is
+scale-invariant, as expected (it's a per-token property of the analyzer, not a fanout effect).
+
+**Top-20 ordering (item 3): none of the three probes rank identically on any arm vs dual — expected,
+not a bug.** Overlap of the top-20 id sets with dual's:
+
+| probe | repeat ∩ dual | repeat-frq ∩ dual |
+|---|---:|---:|
+| logements | 15/20 | 11/20 |
+| associations | 16/20 | 15/20 |
+| equipements | 12/20 | 10/20 |
+
+Neither candidate arm has a second scored clause — dual's bool/should sums TWO clause scores
+(`.text` stemmed + `.text_standard` raw) for any doc matching both, which is real extra scoring
+signal neither `repeat` nor `repeat-frq` (one clause) carries. That accounts for most of the
+reordering, and it is not specific to `repeat-frq` losing "intrinsic exact-boost" from
+`keyword_repeat`'s doubled positions — if anything, naive `repeat` tracks dual's order marginally
+*better* than `repeat-frq` on 2 of 3 probes (43/60 ids in common across the three probes vs 36/60),
+consistent with the doubled surface-form term at each position recovering a sliver of the exact-match
+weight that `repeat-frq`'s single stemmed term discards entirely. Neither is dual's order — a
+migration to either shape is a genuine (small) ranking change, not just a cost change.
+
+**Mixed-fleet union check (item 4, compat during a rolling migration): PASS.** One search across
+`[benchmark-text-analyzer-wide-dual, benchmark-text-analyzer-wide-repeat]` with the union field list
+`['*.text', '*.text_standard']`: `_shards.failed: 0/2`, 186 684 merged hits, both indexes
+contributing hits, no errors. `indices.validateQuery(explain:true)` per index confirms *each side
+resolves its own analyzer independently and correctly* in the same multi-index request — dual's
+explanation carries `col_i.text:loge` (stemmed, `custom_french`) alongside `col_i.text_standard:logements`
+(raw, `standard`); repeat's carries `Synonym(col_i.text:loge col_i.text:logements)` per column (the
+doubled `custom_french_repeat` term, since the union query passes no analyzer override and each
+index's own field mapping wins). `.text_standard` simply has no match on the repeat side — no error,
+no cross-contamination. A rolling per-dataset migration from dual to repeat is safe to query across
+during the transition.
+
+**Caveats.** Same corpus caveat as §15 (170 sentences, flatter TF curve than a real corpus) — worse
+here because 40 independent draws per doc pushes match rates to 80-100k/100k, closer to a full scan
+than typical `q` selectivity; treat the default-q absolute numbers as a stress case, not a typical
+one. `took` remains integer-ms; prefix's ±1ms spread is at the resolution floor.
+
+Results: `benchmark/results/experiment-2026-08-05T09-47-58-877Z.json` (warm + profile),
+`experiment-2026-08-05T09-48-39-052Z.json` (cold). Same index-reuse convention as §15; drop with
+`curl -XDELETE $ES/benchmark-text-analyzer-wide-\*`.
+
+---
+
+## 15.c Cost of an optional exact-match boost clause on the `frq` shape (2026-08-05)
+
+Follow-up to §15.b, now that `frq` (`repeat` index, query analyzed with plain `custom_french` — the
+search-analyzer fix) is the shape actually picked for the indexing rework: one `.text` field per
+column, indexed with `custom_french_repeat`, searched with `custom_french` (in production this is a
+mapping-level `search_analyzer`; the experiment reaches identical analysis via the query-time
+`analyzer` param, so no new index shape is needed — same `repeat` index as §15/§15.b). Open question:
+is an OPTIONAL query-side exact-match boost clause worth adding, and at what cost?
+
+**The clause.** A `should` clause on the SAME `col*.text` fields, analyzed with a new
+`custom_french_exact` (elision + lowercase + asciifolding — NO stop, NO stemmer),
+weighted with `boost`. It targets the FOLDED SURFACE token
+`custom_french_repeat`'s keyword-marked copy already indexes (that copy is
+never stemmed but IS lowercased/elided/asciifolded). Bare `standard` would be wrong here: it
+lowercases but does not asciifold, so an accented query term would never hit the repeat index's
+folded postings — confirmed empirically (`_analyze`): `custom_french_exact` on `"Équipements"` emits
+one token, `equipements`, matching the index's own folded surface posting; `custom_french_repeat` on
+the same text emits `equipements` AND the stem `equip` at that position.
+
+**Hypothesis.** As an independent `should` clause, its max contribution to a doc's score is bounded
+by `boost`. Block-max WAND pruning should therefore make a small weight nearly free — but only in a
+shape where pruning can actually engage. Data-fair's own page-1 shape (`track_total_hits: true`)
+forfeits WAND entirely (§2), so the same clause on the production shape should cost close to its
+full, unpruned weight regardless of `boost`.
+
+**Setup.** Same `repeat`-shaped wide index (100k docs, 40 columns) as §15.b — no new index shape.
+`custom_french_exact` was added to the harness's shared repeat analysis settings, which
+**forced a real rebuild**: analysis settings can't be hot-reloaded onto an open index, and the
+harness's index-reuse check was previously doc-count-only — an index built before this change would
+have been silently "reused" without the new analyzer, and every exact-clause query would 400 with an
+analyzer-not-found error. Fixed in the harness itself: its build step now
+also checked for the `custom_french_exact` analyzer alongside the doc-count check, so a
+settings change forces the same automatic rebuild a doc-count change already did — no manual
+`curl -XDELETE` step required. All 4 wide indexes (dual, dual-catchall, repeat, repeat-catchall) were
+rebuilt once as a result of this run (100k × 40 cols each, 85-165s per index).
+
+Five arms per probe, all on the SAME `repeat` index:
+- `dual` — today's shape, ceiling/reference (unchanged from §15.b)
+- `frq` — `repeat` index, query analyzed with plain `custom_french` — the production candidate,
+  floor (no exact clause)
+- `frq+boost^1.0` / `^0.5` / `^0.2` — the `frq` clause plus an independent `should` exact clause at
+  that weight
+
+Each measured under BOTH shapes, to isolate the WAND effect from the boost weight itself:
+- **prod** — `size: 20, track_total_hits: true` (today's page-1 request; §2's WAND-forfeiting shape)
+- **topk** — `size: 20, track_total_hits: false` (pruning can engage)
+
+Run:
+```sh
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout:boost-cost --runs=20 --rows=100000 --profile --no-seed
+npm run benchmark -- experiment --name=text-analyzer:wide-fanout:boost-cost --runs=20 --rows=100000 --cold --no-seed
+```
+
+**Outcome: the hypothesis holds — but only in the shape where pruning can engage, and this corpus
+has an important twist on what "engage" means here.**
+
+`took` p50, 20 runs, warm (cold within 1-5ms of warm on every arm and every shape — not a caching
+artifact, see caveats).
+
+Prod shape (`track_total_hits:true` — today's production shape, WAND forfeited by design, §2):
+
+| probe (hits) | dual | frq | frq+boost^1.0 | frq+boost^0.5 | frq+boost^0.2 |
+|---|---:|---:|---:|---:|---:|
+| logements (99 965) | 22.5 ms | 16.0 ms (−28.9%) | 21.0 ms (−6.7%) | 22.0 ms (−2.2%) | 23.0 ms (+2.2%) |
+| associations (88 077) | 10.0 ms | 6.0 ms (−40.0%) | 10.0 ms (±0%) | 10.0 ms (±0%) | 10.0 ms (±0%) |
+| equipements (99 964) | 21.0 ms | 14.0 ms (−33.3%) | 24.0 ms (+14.3%) | 25.0 ms (+19.0%) | 24.0 ms (+14.3%) |
+
+Top-k shape (`track_total_hits:false` — where WAND pruning can engage):
+
+| probe | dual | frq | frq+boost^1.0 | frq+boost^0.5 | frq+boost^0.2 |
+|---|---:|---:|---:|---:|---:|
+| logements | 280.5 ms | 117.5 ms (−58.1%) | 261.0 ms (−7.0%) | 168.0 ms (−40.1%) | 176.5 ms (−37.1%) |
+| associations | 95.0 ms | 31.0 ms (−67.4%) | 93.0 ms (−2.1%) | 51.0 ms (−46.3%) | 52.0 ms (−45.3%) |
+| equipements | 232.5 ms | 115.0 ms (−50.5%) | 279.0 ms (+20.0%) | 186.5 ms (−19.8%) | 194.0 ms (−16.6%) |
+
+**In the prod shape, boost cost is flat and close to dual at ANY weight.** `boost^0.2` (+2.2%, ±0%,
++14.3%) is barely distinguishable from `boost^1.0` (−6.7%, ±0%, +14.3%) — no weight is "cheap" here.
+That is the predicted signature of a shape that forfeits WAND: the exact clause must be fully scored
+for every candidate regardless of how small its maximum possible contribution is, so adding it at all
+buys back roughly all of dual's cost. Confirmed independently of the harness: re-running the bare
+`frq` query with raw `curl` at `track_total_hits:true` vs `false` on the same index (five runs each,
+`request_cache=false`) gave 13-19ms vs 112-130ms — the harness numbers are not an artifact of the
+Node ES client.
+
+**In the top-k shape, cost drops monotonically as the weight shrinks, toward the `frq` floor.**
+`boost^1.0` sits close to (or, once, above) `dual` (−7.0%, −2.1%, +20.0%) — paying almost dual's full
+second-clause cost — while `boost^0.5` and `boost^0.2` drop sharply (−37..−46%), approaching but not
+reaching `frq`'s floor. This is the WAND signature the hypothesis predicted: at `boost^0.2` a block
+whose exact-clause contribution cannot possibly change the top-20 gets skipped cheaply; at `boost^1.0`
+it usually still could, so it can't be.
+
+**Caveat that must travel with these numbers: on THIS 40-column corpus, the top-k shape's absolute
+cost is 5-12× HIGHER than the prod shape's, for every arm including `dual` and `frq` — the opposite
+of what "WAND pruning available" naively suggests.** This is the flip side of the "match-everything"
+caveat §15.b already flagged for this corpus (spreading it over 40 independent columns pushes match
+rates to 80,000-100,000 of 100,000 docs): when almost every document matches, block-max WAND has
+almost nothing to *skip*, but it still pays the bookkeeping cost of tracking block-max scores and a
+competitive-score threshold across a 40-field, multi-term disjunction — pure overhead with no payoff.
+Confirmed directly with `curl` outside the harness (bare `frq` clause: 13-19ms at
+`track_total_hits:true`, 112-130ms at `false`, same index, five runs each — see above). **The
+boost-weight GRADIENT within the top-k shape (§15.c's actual question) is real and holds regardless of
+this** — a low-weight second clause still gets pruned cheaply relative to a high-weight one, on top of
+whatever the shape's own baseline costs — but the top-k shape's absolute numbers here should not be
+read as "the fast option" on this corpus; on a realistically selective query (§6's cost curve) it very
+likely would be, and this experiment's role is only to isolate the weight-dependent gradient, which it
+does cleanly.
+
+**Ordering (one probe, "logements"): `frq+boost^0.2` reorders vs bare `frq` but doesn't reshuffle
+wholesale — 17/20 ids in common, order differs on the rest.** The three ids `frq` alone surfaces that
+`boost^0.2` drops are replaced by three others the exact clause's small extra score signal promotes —
+a real, modest ranking effect, consistent with §15.b's observation that neither `repeat` nor
+`repeat-frq` alone carries a second scored clause; the boost buys a sliver of that back.
+
+**Sanity check: PASS.** Query `"Équipements"` with `custom_french_exact` on the `repeat` index (probe
+docs found by scanning the same deterministic corpus the index was built from, not hardcoded ids):
+- match probe `rec-0.col10` ("...recense les équipements publics...", plural, the exact folded form)
+  — matched by both the exact clause AND the frq clause.
+- non-match probe `rec-21.col35` ("...taux d'équipement des ménages...", singular only, no plural
+  anywhere in the doc) — matched by the frq clause (stems both to the same root, `equip`) but NOT by
+  the exact clause.
+
+Confirms the exact clause matches the folded surface token specifically and does not blur across
+inflections the way the stemmed `frq` clause does — the intended query-side complement to the repeat
+index's stored postings, verified against real corpus documents rather than synthetic strings.
+
+**Caveats.** Same corpus caveat as §15.b (170 sentences, flatter TF curve, near-total match rate at 40
+independent columns) — here it additionally explains the top-k/prod absolute-latency inversion above.
+`frq+boost^1.0` occasionally lands ABOVE `dual` (equipements-topk: +20.0%) — plausible noise at this
+resolution (single-digit-percent deltas on an integer-millisecond clock) compounded by a
+probe-specific exact-clause match cardinality; treat single-probe outliers as noise, the three-probe
+direction (weight down ⇒ cost down, in the top-k shape only; flat and close to dual in the prod shape)
+as the signal.
+
+Results: `benchmark/results/experiment-2026-08-05T12-40-45-125Z.json` (warm + profile),
+`experiment-2026-08-05T12-42-22-551Z.json` (cold). Same index-reuse convention as §15/§15.b — the four
+wide indexes were rebuilt once for the new analyzer (see Setup); subsequent runs reuse them. Drop with
+`curl -XDELETE $ES/benchmark-text-analyzer-wide-\*`.
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an

@@ -306,6 +306,33 @@ test.describe('search - basic', () => {
     assert.equal(res.data.results[0]._id, 't2')
   })
 
+  test('Search on a scalar field only targets subfields it can carry', async () => {
+    const ax = testUser1
+    await ax.put('/api/v1/datasets/numsearch', {
+      isRest: true,
+      title: 'numsearch',
+      schema: [{ key: 'num', type: 'number' }]
+    })
+    await ax.post('/api/v1/datasets/numsearch/_bulk_lines', [{ num: 5 }, { num: 42 }])
+    await waitForFinalize(ax, 'numsearch')
+
+    // a number column keeps `.text_standard` (a plain string's `.text` never applies to it) so
+    // `_search` still works when the capability is not vetoed
+    const res = await ax.get('/api/v1/datasets/numsearch/lines', { params: { num_search: '5' } })
+    assert.equal(res.data.total, 1)
+
+    // vetoing textStandard removes the only subfield a number can ever carry: the filter must 400
+    // with the missing capability rather than silently targeting an unmapped `.text` and returning 0
+    await doAndWaitForFinalize(ax, 'numsearch', () => ax.patch('/api/v1/datasets/numsearch', {
+      schema: [{ key: 'num', type: 'number', 'x-capabilities': { textStandard: false } }]
+    }))
+    await assert.rejects(ax.get('/api/v1/datasets/numsearch/lines', { params: { num_search: '5' } }), (err: any) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('Texte analysé pour recherche textuelle'))
+      return true
+    })
+  })
+
   test('Search in dataset using all supported query modes', async () => {
     const ax = testUser1
     let dataset = (await ax.put('/api/v1/datasets/qmodes', {

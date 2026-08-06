@@ -52,6 +52,49 @@ test.describe('virtual datasets features', () => {
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
 
+  // default-FALSE capabilities are opt-in per column and each maps to an inner ES field that
+  // simply does not exist on the children that never opted in. A virtual dataset queries every
+  // child index at once, and an aggregation over an unmapped field there returns no buckets
+  // instead of failing — so advertising the capability on the parent when only SOME children
+  // declare it turns heterogeneity into a silently partial answer.
+  test('A default-false capability is advertised only when EVERY child declares it', async () => {
+    const ax = testUser1
+    const textAggCol = { key: 'txt', type: 'string', 'x-capabilities': { textAgg: true } }
+    const plainCol = { key: 'txt', type: 'string' }
+    const child = async (id: string, col: any) => {
+      await ax.put(`/api/v1/datasets/${id}`, { isRest: true, title: id, schema: [col] })
+      await ax.post(`/api/v1/datasets/${id}/_bulk_lines`, [{ txt: 'aubergines et courgettes' }])
+      await waitForFinalize(ax, id)
+    }
+    await child('vcap-agg', textAggCol)
+    await child('vcap-plain', plainCol)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset over mixed textAgg children',
+      virtual: { children: ['vcap-agg', 'vcap-plain'] },
+      schema: [{ key: 'txt' }]
+    })
+    let virtualDataset = await waitForFinalize(ax, res.data.id)
+    const txtField = (d: any) => d.schema.find((f: any) => f.key === 'txt')
+    assert.notEqual(txtField(virtualDataset)['x-capabilities']?.textAgg, true)
+    // and the capability gate refuses the aggregation loudly rather than answering from the one
+    // child that happens to carry `.words`
+    await assert.rejects(ax.get(`/api/v1/datasets/${virtualDataset.id}/words_agg?field=txt`), (err: any) => {
+      assert.equal(err.status, 400)
+      return true
+    })
+
+    // once every child declares it, the parent does too and the aggregation covers both children
+    await ax.patch('/api/v1/datasets/vcap-plain', { schema: [textAggCol] })
+    await waitForFinalize(ax, 'vcap-plain')
+    virtualDataset = await waitForFinalize(ax, virtualDataset.id)
+    assert.equal(txtField(virtualDataset)['x-capabilities'].textAgg, true)
+    const agg = await ax.get(`/api/v1/datasets/${virtualDataset.id}/words_agg?field=txt`)
+    assert.equal(agg.data.total, 2)
+    assert.ok(agg.data.results.find((r: any) => r.word === 'aubergines'))
+  })
+
   test('A virtual dataset has a merge of the labels of its children', async () => {
     const ax = testUser1
     const child1 = await sendDataset('datasets/dataset1.csv', ax)

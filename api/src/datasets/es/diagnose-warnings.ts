@@ -2,7 +2,7 @@
 // Inputs: a dataset object, the esInfos snapshot returned by manage-indices.datasetInfos(),
 // and the relevant elasticsearch config subtree. Outputs: a Warning[].
 
-import { hasManyQSearchFields, isLengthLimitedKeyword, hasCapability } from './operations.ts'
+import { hasManyQSearchFields, currentIndexShape, isLengthLimitedKeyword, hasCapability } from './operations.ts'
 
 export type WarningSeverity = 'info' | 'warning' | 'error'
 
@@ -135,7 +135,9 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   }
 
   const properties = esInfos.index.definition?.mappings?.properties ?? {}
-  if (hasManyQSearchFields(dataset.schema) && !properties._search) {
+  // compared against the LIVE mapping, so it must classify with that mapping's own shape — else a
+  // correctly-narrow legacy index is reported as missing a `_search` it should never have had
+  if (hasManyQSearchFields(dataset.schema, currentIndexShape(dataset)) && !properties._search) {
     warnings.push({
       code: 'MissingSearchOnWide',
       severity: 'warning',

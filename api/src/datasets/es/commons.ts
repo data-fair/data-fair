@@ -19,12 +19,13 @@ import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
   hasCapability,
   requiredCapability,
-  esProperty as esPropertyPure,
   Q_SEARCH_FIELDS_THRESHOLD,
   isBoostEligible,
   hasManyQSearchFields,
   getFilterableFields,
   buildQClauses,
+  textAnalyzers,
+  EXACT_MATCH_BOOST,
   FILTER_CAPABILITIES,
   getColumnFilters,
   columnOperationsHint,
@@ -48,10 +49,8 @@ dayjs.extend(timezone)
 // (every suffix is underscore-prefixed, so none is a suffix-substring of another).
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
-// thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// supplies the runtime analyzer from config so mapping creation behaves unchanged
-export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
-
+// NB: no config-bound `esProperty` wrapper is re-exported here — every call site must resolve the
+// index shape explicitly, a wrapper hiding it would emit new-shape mappings for legacy indexes.
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
@@ -336,7 +335,11 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (q) {
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
-      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords))
+      // only new-shape index settings define the `_exact` query-time analyzer
+      const exactMatch = (dataset as any)._indexShape?.singleTextField
+        ? { analyzer: textAnalyzers(config.elasticsearch.defaultAnalyzer).exact, boost: EXACT_MATCH_BOOST }
+        : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution
@@ -433,9 +436,13 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
+      // only plain/uri-reference strings ever carry `.text`; other analyzed types only ever get
+      // `.text_standard`. Targeting an unmapped subfield would make simple_query_string return
+      // zero results silently instead of the intended 400.
+      const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
       const subfields = []
       if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
-      if (prop['x-capabilities']?.text !== false) subfields.push('text')
+      if (isPlainString && prop['x-capabilities']?.text !== false) subfields.push('text')
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {

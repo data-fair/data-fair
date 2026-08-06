@@ -199,18 +199,36 @@ the per-request `requestTimeout` from `es/abort.js` is the wall-clock backstop f
 ### Wide-dataset `q` catch-all (the `_search` field)
 
 On a dataset with many text-searchable columns, a `q` query expands into a `simple_query_string`
-`fields` array with one entry per analyzed sub-field per column (`.text` and `.text_standard`
-counted separately — ≈ 2 entries per string column). Beyond ~15 string columns (~30 analyzed
-sub-fields) that array becomes expensive for Elasticsearch to parse and execute, and it grows
-linearly with schema width.
+`fields` array with one entry per analyzed sub-field per column. Since the `keyword_repeat`
+indexing rework (`text-search-evaluation.md` §9), a **new-shape** index (stamped
+`_indexShape.singleTextField`, see below) carries a single analyzed field per text column
+(`.text`, index analyzer `custom_french_repeat`, `search_analyzer: custom_french`) instead of
+the legacy pair `.text` + `.text_standard`. Beyond ~15 string columns (~15 analyzed sub-fields
+on a new-shape index; unstamped legacy indexes still double that) that array becomes expensive
+for Elasticsearch to parse and execute, and it grows linearly with schema width.
 
-`hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at **30
-analyzed text inner sub-fields**, boost-eligible columns excluded from the count since they're
-queried per-field in every regime). When true, `indexDefinition` in `manage-indices.js` injects
-one extra internal field into the mapping: `_search` (standard text analyzers). Every text column
+`hasManyQSearchFields(schema, shape)` in `es/operations.ts` detects this condition. Both the count
+and the threshold are **shape-dependent and must stay paired**: **15** analyzed text inner
+sub-fields for a new-shape index (one per analyzed column), **30** for a legacy one (up to two per
+string column) — the same boundary in *string-column* terms, so a schema does not change class
+when the code ships, only when its index is rebuilt. Boost-eligible columns are excluded from the
+count since they're queried per-field in every regime. Every caller resolves the shape from the
+dataset it is describing (`currentIndexShape(dataset)`); the new-shape default is only for callers
+asking "how would a *fresh* index classify this?". Mixing the units is a silent corruption: for a
+scalar-heavy schema in the 15..30 band both sides of `updateDatasetMapping`'s crossing guard would
+read "wide" although the live legacy index has no `_search`, and ES would accept adding `_search` +
+`copy_to` in place without ever back-filling the existing rows.
+When wide, `indexDefinition` in `manage-indices.ts` injects
+one extra internal field into the mapping: `_search`. On a legacy index it is the same dual pair
+every text column carries (`defaultAnalyzer` + a `.text_standard` standard-analyzed sub-field); on
+a new-shape index it is a single analyzed field like every other column (`<defaultAnalyzer>_repeat`
+— derived by naming convention, see `textAnalyzers` in `api/src/datasets/es/operations.ts` — at
+index time, `defaultAnalyzer` as `search_analyzer`). Every text column
 except the boost-eligible ones (annotated `rdfs:label`, `schema.org/description`, or
-`DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets the constant-size
-pair `['_search', '_search.text_standard']` regardless of how many columns the schema has, plus
+`DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets a constant-size list —
+`['_search', '_search.text_standard']` on a legacy index, the single `['_search']` on a new-shape
+one, the query layer emitting the union of both names since an unmapped field is silently ignored
+by `simple_query_string` — regardless of how many columns the schema has, plus
 the small handful of boost-eligible columns listed per-field with their `^3` / `^2` weight — i.e.
 the same per-field boost mechanism narrow datasets use, applied to ~1-3 columns at most. Boost-
 eligible columns are therefore *not* duplicated into `_search` — they're only referenced per-
@@ -221,8 +239,8 @@ already cover `q` matching, so the keyword main is redundant — and skipping it
 constant-size in catch-all mode (`[_search]` plus the few boost-eligible per-field entries).
 The keyword main type is always kept in `searchFields`, the field list used by the raw `qs=`
 query_string path. `updateDatasetMapping` forces a full reindex whenever a dataset crosses the
-threshold or when a column's boost eligibility changes (its `copy_to` would change) — so the
-mapping change is never applied in-place.
+threshold *of its own index's shape* or when a column's boost eligibility changes (its `copy_to`
+would change) — so the mapping change is never applied in-place.
 
 Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
 in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The
@@ -235,14 +253,25 @@ duplicate of each other on the same source). Columns whose only analyzed inner f
 eject columns from the search. The duplicate second `simple_query_string` clause over
 `qStandardFields` is also skipped in this mode (clause A now covers it), while `qStandardFields`
 itself is still populated so `q_mode=complete`'s `startsWith` prefix query keeps working on every
-column. For virtual datasets, `_esCopyToSearch` bubbles up as `true` only when every descendant
+column. That "reduced" decision is itself classified with the dataset's own index shape, so
+deploying the rework never changes the regime of an index nobody rebuilt. For virtual datasets,
+`_esCopyToSearch` bubbles up as `true` only when every descendant
 has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirely and the query
 targets only the requested columns, as before.
 
+`_indexShape` (`{singleTextField, wordAggField}`, absent = legacy) is the internal per-dataset
+stamp behind the new/legacy split above — written whenever a fresh index is built, and consulted on
+every later partial mapping update so a column added to a legacy index stays legacy-shaped.
+`_esCopyToSearch` above is a narrower, older flag of the same kind (whether the `_search` catch-all
+field exists); the two are independent. Full routing rules (search-clause
+union, `words_agg` shape branch, virtual-dataset AND-merge and heterogeneity 400) are in
+`text-search-evaluation.md` §9 and its linked design note, not repeated here.
+
 **Measured** (benchmark harness, `wide-text` preset — 300k rows, 40 text columns). The
 `search-catchall` experiment: a `q` spread over the 80 per-column analyzed fields takes ~384 ms
-(`took` p50; profile query time ~968 ms), while the same `q` over the `[_search,
-_search.text_standard]` pair takes ~5 ms (profile ~61 ms) — **~77× cheaper**, decisively confirming
+(`took` p50; profile query time ~968 ms), while the same `q` over the constant-size catch-all list
+(measured on a legacy index, the `[_search, _search.text_standard]` pair) takes ~5 ms (profile
+~61 ms) — **~77× cheaper**, decisively confirming
 the optimization. The top-k *ranking* differs (merging columns into one field changes term
 statistics) but match recall is comparable. The `min-should-match` experiment separately evaluated
 adding a default `minimum_should_match` to the `q` `simple_query_string` and **rejected** it: it

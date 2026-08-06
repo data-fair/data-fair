@@ -14,7 +14,7 @@
 import type { IncomingMessage } from 'node:http'
 import type { Request } from 'express'
 import { reqSession, type User, type Account } from '@data-fair/lib-express'
-import type { Resource, ResourceType, BypassPermissions, Dataset, RestDataset } from '#types'
+import type { Resource, ResourceType, BypassPermissions, DatasetInternal, RestDataset } from '#types'
 
 export type ReqContext<T> = {
   set: (req: IncomingMessage, value: T) => void
@@ -60,7 +60,7 @@ export const reqResourceType = resourceTypeCtx.get
 // datasets/middlewares.ts re-exports these as a facade. reqRestDataset is for REST line routes whose
 // dataset is guaranteed to be a RestDataset (single cast contained here, per §2). No legacyProp: every
 // reader migrated to the accessor in Phase 7.
-const datasetCtx = defineReqContext<Dataset>('dataset')
+const datasetCtx = defineReqContext<DatasetInternal>('dataset')
 export const setReqDataset = datasetCtx.set
 export const reqDataset = datasetCtx.get
 export const reqDatasetOptional = datasetCtx.getOptional

@@ -130,10 +130,12 @@ router.get('/raw-dataset/:id', async (req, res, next) => {
   }
 })
 
-// Return ES index mapping/settings for a dataset
+// Return ES index mapping/settings for a dataset. Always the PUBLISHED alias (never the draft
+// one), which is what lets a test assert that a draft-mode operation left it untouched.
 router.get('/dataset-es-info/:id', async (req, res, next) => {
   try {
-    const index = `dataset-${config.mongo.url.split('/').pop()}-${req.params.id}`
+    // same alias `datasets/es/commons.ts` builds for a non-draft dataset
+    const index = `${config.indicesPrefix}-${req.params.id}`
     const exists = await es.client.indices.exists({ index })
     if (!exists) return res.status(404).json({ error: 'index not found' })
     const mapping = await es.client.indices.getMapping({ index })

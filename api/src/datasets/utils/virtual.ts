@@ -157,20 +157,21 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
           throw httpError(400, `[noretry] Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
         }
       }
+      // default-TRUE capabilities: any child disabling one disables it on the parent
       for (const key in f['x-capabilities'] || {}) {
-        if (capabilitiesDefaultFalse.includes(key)) {
-          if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false
-          if (f['x-capabilities'][key] === true && !(key in field['x-capabilities'])) field['x-capabilities'][key] = true
-        } else {
-          if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
-        }
+        if (capabilitiesDefaultFalse.includes(key)) continue
+        if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
       }
       for (const key in f['x-labels'] || {}) {
         if (!(key in xLabels)) xLabels[key] = f['x-labels'][key]
       }
     }
-    for (const key in field['x-capabilities']) {
-      if (capabilitiesDefaultFalse.includes(key) && field['x-capabilities'][key] === false) delete field['x-capabilities'][key]
+    // default-FALSE capabilities: true on the parent only when EVERY child declares it true. Each
+    // maps to an inner ES field absent from the children that never opted in, and querying an
+    // unmapped field across a virtual dataset's indices returns nothing rather than failing. The
+    // veto must therefore cover children that OMIT the key, not just those that set it false.
+    for (const key of capabilitiesDefaultFalse) {
+      if (matchingFields.every((f: any) => f['x-capabilities']?.[key] === true)) field['x-capabilities'][key] = true
     }
     if (Object.keys(xLabels).length) {
       field['x-labels'] = xLabels

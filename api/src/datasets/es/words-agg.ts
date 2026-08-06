@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint, buildWordsAggs } from './operations.ts'
+import { columnOperationsHint, buildWordsAggs, resolveWordsAggField } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, abortContext?: EsAbortContext) => {
@@ -12,11 +12,14 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   if (!prop) {
     throw httpError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
-  if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
+  // the refusal must be explicit, not delegated to elasticsearch: `.words` only exists on textAgg
+  // columns and aggregating an unmapped field returns nothing instead of erroring. Hence no
+  // `x-capabilities &&` guard: never declaring the capability is refused like disabling it.
+  if (!prop['x-capabilities']?.textAgg) {
     throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 
-  const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
+  const field = resolveWordsAggField(dataset, query)
   const size = Number(query.size || 20)
   if (size > 200) throw httpError(400, 'Cette aggrégation ne peut pas retourner plus de 200 mots.')
   const esQuery = prepareQuery(dataset, query)

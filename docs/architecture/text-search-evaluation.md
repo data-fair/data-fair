@@ -7,6 +7,17 @@
 > (4) open questions / recommended directions. Companion: `benchmark/INVESTIGATIONS.md`
 > (the executable backlog) and `load-management.md` (the broader load picture).
 
+> **Status (2026-08-06) — shipped, supersedes T3 and T9 below.** The single-field
+> `keyword_repeat` shape landed (design: `2026-08-06-text-indexing-repeat-design.md`):
+> one analyzed `.text` per column (index analyzer `custom_french_repeat`, `search_analyzer:
+> custom_french`), not T3/T13's "drop `.text_standard`" shape — `.text_standard` is now
+> **legacy-only**, still served but only via union routing (`[.text, .text_standard]`) so
+> old indexes keep today's behavior untouched. T9's premise (SAYT / `index_prefixes` buys
+> real ranked-prefix improvement) measured **dead**: prefix matching stays constant-score
+> regardless (`_explain`-verified) at +220..336% store cost — see
+> `benchmark/INVESTIGATIONS.md` §15. `q_mode=complete`'s prefix clause is unchanged, just
+> routed through the union. Release notes appended at the bottom of this file.
+
 ## Contents
 
 1. [Current state — the text-search shape today](#1-current-state)
@@ -738,3 +749,35 @@ production query logs is the right calibration corpus.
   own pass to confirm it benefits (or doesn't) from the same simplifications.
 - Any interaction with virtual datasets, particularly when descendants differ in width /
   catch-all status (`_esCopyToSearch` AND'd across children today).
+
+## 9. Release notes — single-field `keyword_repeat` shape (2026-08-06)
+
+No dedicated release-notes staging location exists in this repo; listed here per the shipped
+design (`2026-08-06-text-indexing-repeat-design.md` §5) for whoever cuts the next changelog.
+
+- **Ranking change.** Today's accidental exact-match boost (two analyzed fields both scoring
+  the same term ⇒ roughly +153% weight) becomes a deliberate clause with a static boost
+  (`EXACT_MATCH_BOOST = 0.5` in `api/src/datasets/es/operations.ts` — a code constant, not
+  config; changing it is a code release, query-side only, no reindex) — and it is now
+  fold-insensitive (`eleve` exact-boosts «élevé»). Applies to new-shape datasets only; legacy
+  datasets keep today's ranking automatically.
+- **Pure-stopword queries stop matching** (e.g. `q=les`) on new-shape datasets — they used to
+  match via `.text_standard`; arguably a fix.
+- **`analysis=standard` on `words_agg` is rejected (400)** on new-shape datasets — the field
+  serving word aggregations follows the column's own analysis; legacy datasets are unaffected.
+- **`words_agg` on a column that never declared the "word statistics" capability now 400s** with
+  the standard capability message, where a legacy index answered with an elasticsearch "fielddata
+  is disabled" error. The refusal had to become explicit: on a new-shape index the field serving
+  the aggregation only exists on opt-in columns, and aggregating an unmapped field returns an
+  empty result instead of failing. Same message for a column that disabled the capability and one
+  that never declared it.
+- **`words_agg` on a virtual dataset whose children mix old and new index shapes now 400s**
+  explicitly instead of silently answering from a subset of children — resolves once every
+  child is reindexed to the same shape.
+- **A virtual dataset advertises an opt-in capability (word statistics, character-group filtering)
+  only when EVERY child column declares it**, where it used to be enough for one child to. Same
+  reason: the capability maps to an inner field the other children do not have, and querying it
+  there returns nothing rather than failing. Enable the capability on the remaining children to
+  get it back on the parent.
+- **`qs=` references to `col.text_standard` go inert on new indexes** (the field is no longer
+  mapped there); no known local ecosystem users at time of writing.

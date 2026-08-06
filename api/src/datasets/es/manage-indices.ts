@@ -3,17 +3,24 @@ import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
-import { buildIndexMappings } from './operations.ts'
+import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, textAnalyzers, type IndexShape } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
 
-export const indexDefinition = async (dataset: any) => {
+/**
+ * Build the ES index definition (settings + mappings) of a dataset.
+ *
+ * `shape` defaults to the dataset's CURRENT index shape, which keeps that index homogeneous: a
+ * column added to a legacy index is emitted legacy-shaped. Only a fresh index passes NEW_INDEX_SHAPE.
+ */
+export const indexDefinition = async (dataset: any, shape: IndexShape = currentIndexShape(dataset)) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
+  const analyzers = textAnalyzers(config.elasticsearch.defaultAnalyzer)
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, analyzers, shape).properties
   return body
 }
 
@@ -21,9 +28,11 @@ export function indexPrefix (dataset: any) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
+// a fresh index always carries the new shape; the caller MUST persist `_indexShape:
+// NEW_INDEX_SHAPE` once the index is in use (switchAlias) or the stamp and the mapping disagree
 export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
-  const body = await indexDefinition(dataset)
+  const body = await indexDefinition(dataset, NEW_INDEX_SHAPE)
   const res = await es.client.indices.create({
     index: tempId,
     body,
@@ -36,6 +45,8 @@ export const initDatasetIndex = async (dataset: any) => {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
+// NB: both definitions below use the default shape, i.e. each dataset's own `_indexShape` — so
+// callers must pass a dataset object that actually carries it.
 export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
   const index = aliasName(dataset)
   const newMapping = (await indexDefinition(dataset)).mappings
@@ -60,7 +71,9 @@ export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
       }
     }
     // a freshly-added column carrying a copy_to (e.g. crossing the "wide" threshold by adding columns)
-    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears
+    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears.
+    // Both sides are classified in the units of the index being patched, so this observes a real
+    // crossing (see hasManyQSearchFields).
     if (newMapping.properties._search && !oldMapping.properties._search) {
       throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
@@ -204,7 +217,9 @@ const getNbShards = (dataset: any) => {
   return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / config.elasticsearch.maxShardSize))
 }
 
-const indexBase = (dataset: any) => {
+// exported so raw-ES test fixtures (e.g. the mixed-shape fleet harness) can derive real index
+// settings without hand-copying the analyzer/filter definitions.
+export const indexBase = (dataset: any) => {
   const nbShards = getNbShards(dataset)
   const indexSettings: any = {
     'mapping.total_fields.limit': 3000,
@@ -257,6 +272,25 @@ const indexBase = (dataset: any) => {
               'french_stemmer',
               'asciifolding'
             ]
+          },
+          // index-time analyzer of the new-shape single `.text` field: every token indexed as BOTH
+          // its original form and its stem at the same position (Lucene keyword_repeat pattern).
+          // Filter order is load-bearing, do not reorder: keyword_repeat must precede the stemmer
+          // (which skips the keyword-marked copy), remove_duplicates must follow it (collapses the
+          // pair when stemming was a no-op), asciifolding runs last as in custom_french.
+          custom_french_repeat: {
+            tokenizer: 'standard',
+            filter: [
+              'french_elision', 'lowercase', 'keyword_repeat',
+              'french_stop', 'french_stemmer', 'remove_duplicates', 'asciifolding'
+            ]
+          },
+          // exact-side of the boost clause: same normalization as the indexed ORIGINAL tokens, no
+          // stemming, no stopword removal. NEVER replace with bare 'standard' — it does not fold,
+          // so accented query terms would miss the folded postings.
+          custom_french_exact: {
+            tokenizer: 'standard',
+            filter: ['french_elision', 'lowercase', 'asciifolding']
           }
         }
       }

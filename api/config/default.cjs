@@ -86,6 +86,9 @@ module.exports = {
     nodes: null,
     options: {},
     ca: null, // the central authority for the ES cluster certificates
+    // two siblings are derived from this by naming convention (`_repeat`, `_exact` — see
+    // `textAnalyzers` in api/src/datasets/es/operations.ts). Overriding it requires defining all
+    // three in `indexBase` (es/manage-indices.ts), else index creation fails on unknown analyzer.
     defaultAnalyzer: 'custom_french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
