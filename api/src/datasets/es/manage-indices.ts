@@ -221,7 +221,9 @@ const getNbShards = (dataset: any) => {
   return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / config.elasticsearch.maxShardSize))
 }
 
-const indexBase = (dataset: any) => {
+// exported so raw-ES test fixtures (e.g. the mixed-shape fleet harness) can derive real index
+// settings without hand-copying the analyzer/filter definitions.
+export const indexBase = (dataset: any) => {
   const nbShards = getNbShards(dataset)
   const indexSettings: any = {
     'mapping.total_fields.limit': 3000,
