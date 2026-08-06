@@ -86,11 +86,28 @@ module.exports = {
     nodes: null,
     options: {},
     ca: null, // the central authority for the ES cluster certificates
+    // ---- the analyzer trio (spec 2026-08-06). These 3 keys are a COUPLED SET: never override one
+    // alone. The definitions they name live in `indexBase` (api/src/datasets/es/manage-indices.ts),
+    // as per-index `settings.analysis.analyzer` entries.
+    //
+    // INVARIANT: `defaultAnalyzer` doubles as the SEARCH analyzer of the single analyzed sub-field
+    // whose INDEX analyzer is `indexTextAnalyzer`. It must therefore emit, for any input, a SUBSET
+    // of the tokens `indexTextAnalyzer` emits for that same input — a query term the index side
+    // never produced simply cannot match. The shipped pair satisfies this by construction
+    // (`custom_french_repeat` indexes each token as both its original form and its
+    // `custom_french` stem). Overriding ES_DEFAULT_ANALYZER on its own — e.g. to a different
+    // language's stemmer — breaks the subset relation and causes SILENT RECALL LOSS on every
+    // new-shape index: no error, just missing hits. Change the pair together, or not at all.
+    // (Not assertable at boot: the analyzers are index-level custom definitions, so proving the
+    // subset relation would require _analyze calls against a live index.)
     defaultAnalyzer: 'custom_french',
     // index-time analyzer of the single analyzed sub-field on new-shape indexes (spec 2026-08-06):
     // keyword_repeat variant indexing original AND stem; queries use defaultAnalyzer via search_analyzer
     indexTextAnalyzer: 'custom_french_repeat',
-    // search-time analyzer of the exact-match boost clause (elision+lowercase+asciifolding, no stem/stop)
+    // search-time analyzer of the exact-match boost clause (elision+lowercase+asciifolding, no
+    // stem/stop). Scoring only, so a mismatch here degrades ranking rather than recall — but it
+    // must still match how `indexTextAnalyzer` normalizes the ORIGINAL (unstemmed) token copy,
+    // or the clause boosts nothing.
     exactMatchAnalyzer: 'custom_french_exact',
     // weight of the exact-match boost clause; 0 disables it entirely (query-side, reindex-free)
     exactMatchBoost: 0.5,

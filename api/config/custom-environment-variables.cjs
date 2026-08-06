@@ -153,7 +153,14 @@ module.exports = {
       __format: 'json'
     },
     ca: 'ES_CA',
+    // these 4 are a coupled set, see the invariant documented in default.cjs
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
+    indexTextAnalyzer: 'ES_INDEX_TEXT_ANALYZER',
+    exactMatchAnalyzer: 'ES_EXACT_MATCH_ANALYZER',
+    exactMatchBoost: {
+      __name: 'ES_EXACT_MATCH_BOOST',
+      __format: 'json'
+    },
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',
       __format: 'json'
