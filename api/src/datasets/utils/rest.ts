@@ -1522,7 +1522,9 @@ export const count = (dataset: RestDataset, filter?: Filter<DatasetLine>) => {
 
 export const applyTTL = async (dataset: RestDataset) => {
   if (!dataset.rest.ttl) return
-  const qs = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
+  // delay.unit is often absent (the UI only sends delay.value and schema defaults are not
+  // injected at validation), and moment interprets an undefined unit as milliseconds
+  const qs = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit || 'days').toISOString()}]`
 
   const summary = initSummary()
   // @ts-ignore

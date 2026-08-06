@@ -36,7 +36,7 @@ import {
   descendantsFilterClause,
   getCountMode,
   parseQMode,
-  parseQRequired,
+  parseQIgnored,
   DEFAULT_Q_MODE
 } from './operations.ts'
 
@@ -335,8 +335,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     }
     if (q) {
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
-      const requiredWords = query.q_required ? parseQRequired(q, query.q_required) : undefined
-      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, requiredWords))
+      const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

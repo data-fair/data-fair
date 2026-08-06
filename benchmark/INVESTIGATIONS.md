@@ -534,7 +534,80 @@ margins at linear probe cost.
 
 ---
 
-## 14. Is the `keyword_repeat` single-field analyzer worth it? (2026-08-05)
+## 14. `q_mode=adapt` filter semantics — AND-of-required vs OR-of-retained (2026-08-01)
+
+The shipped adapt (#528) tightens the match set to a *conjunction* of the rarest words
+("require the rarest, ignore the rest"), which is stronger than what we tell users ("some
+words were ignored") and stronger than the plan's own wording ("excludes from filtering the
+most common query words"). Re-evaluated against the natural reading — filter = **OR of the
+retained words**, i.e. the plain search minus the docs that match *only* ignored words —
+on the reloaded `bench-rna` corpus (3 289 936 docs, ES 8.19.9 + ES 7.17.28, shared
+`_rand`), implementation-faithful shapes, request cache cleared before every measured run
+(§13 methodology), shipped config on this corpus (p = 0.01, cap = 10 000,
+floorSample = 120). Tool: `rna-adapt-or.ts`. Variants:
+
+- **shipped-and** — faithful port of the merged design (filters-agg probe, conjunction
+  `_msearch` of rarest-prefix candidates, strictest above the cap floor).
+- **or-capfloor** — same strictest-first cap-floor rule transplanted to OR-land: ignore
+  the most frequent words, as many as possible while the *retained union* stays ≥ floor.
+  Union counts are needed only when bounds can't decide: union ≥ max(solo) qualifies a
+  candidate outright, sum(solo) < floor disqualifies — probe2 vanishes in most cases.
+- **or-noise2pct / or-noisecap** — fixed noise thresholds (solo count > 2 % of corpus /
+  > cap) instead of the cap-floor rule; retained union may fall below the cap.
+
+Decisions and end-to-end cost (probe1+probe2+main `took`, warm p50; cold runs and ES 8
+agree in ranking — full tables in the script output):
+
+| query | shipped-and | or-capfloor | e2e ES 7 (and → or) | e2e ES 8 (and → or) |
+|---|---|---|---|---|
+| rue baudelaire | unrestricted (~1.44 M) | nothing ignorable (~1.44 M) | 16 → 25 | 11.5 → 15 |
+| association sportive | require **both** (~140 k) | ignore `association` (~328 k) | 54 → 35 | 31 → 18.5 |
+| club de football marseille | require `football` (~44 k) | retain `football` (~44 k) | 32 → 22.5 | 15.5 → 11 |
+| comité des fêtes saint pierre | require `pierre` (~64 k) | retain `pierre` (~64 k) | 73.5 → 32 | 28 → 16 |
+| les amis de la bibliothèque | **unrestricted** (~3 M) | ignore `de,la,les` (~88 k) | 30 → 47 | 14.5 → 19.5 |
+
+Findings (decisions identical across ES versions in every case):
+
+1. **Fidelity: top-20 identical to or-exact in every cell, both designs, both versions.**
+   §12-C's rare-must degradation (14–18/20) came from putting requirements in scoring
+   position (`must`), not from the tightening itself — score-broad-match-strict restores
+   the full page. Page-1 fidelity therefore does NOT discriminate the two designs; the
+   difference is the *enumerable set* (pagination, exports, aggregations).
+2. **When the chosen candidate is a single word the two designs coincide exactly** (3 of
+   5 queries, incl. the no-op). They diverge in both remaining cases, both times in OR's
+   favour: on association-sportive AND silently intersects (140 k — excludes 188 k
+   single-word matches from the enumerable set, contradicting the "ignored" message)
+   where OR ignores the corpus's own noise word and keeps all `sportive` matches; on
+   les-amis AND finds **no qualifying conjunction and gives up** (unrestricted, ~3 M)
+   where OR's richer candidate lattice still shrinks the set 34× (~88 k).
+3. **Cost: OR is cheaper wherever the designs coincide or AND over-tightens** (73.5 → 32
+   on comité ES 7 — the conjunction `_msearch` alone cost 39 ms; the OR bounds shortcut
+   eliminated probe2 in 3 of 5 queries). OR pays more only where it works harder
+   (les-amis 30 → 47 but delivers ~88 k vs nothing; baudelaire 16 → 25 to *conclude*
+   no-op, bounded by one extra `_msearch`). Everything stays well under the or-exact
+   baselines (28–89 ms ES 7).
+4. **The OR filter is never slower than the AND filter in the main query** — association
+   sportive ES 7: 22–25 ms vs 36–38 ms. A short disjunction over mid-frequency postings
+   beats leapfrogging two ~1 M-doc iterators.
+5. **Fixed noise thresholds refuted.** solo > cap (0.3 % of this corpus) declares every
+   word noise on 4/5 queries → no relief at all; 2 %-of-corpus misses the
+   association-sportive relief and can tighten below the cap on sampling noise: les-amis
+   retained `bibliothèque` sampled 101 < floor while the TRUE count is 10 097 ≥ cap —
+   exactly the boundary noise ADAPT_FLOOR_SAFETY exists to absorb. The cap-floor
+   strictest-first rule transplants to OR unchanged and keeps the never-below-cap
+   invariant intact.
+
+**Consequence: reimplement `q_mode=adapt` with OR-of-retained filtering** — same probe1,
+bounds-guided union counts instead of conjunction counts, filter = single non-scoring
+`should` over the retained words, pagination pinned by a `q_ignored` param (the ignored
+words — the complement of today's `q_required`, whose name stops being accurate once
+nothing is conjunctively required). Semantics finally match the user-facing message: the
+result set is the plain OR search minus the docs that only matched ignored words, scores
+and page 1 unchanged.
+
+---
+
+## 15. Is the `keyword_repeat` single-field analyzer worth it? (2026-08-05)
 
 Targets the indexing-rework question behind `dev/spikes/indexing-rework/spike-i-keyword-repeat.ts`:
 today every text column carries TWO analyzed sub-fields — `.text` (custom_french, stemmed) and
@@ -621,12 +694,12 @@ Results: `benchmark/results/experiment-2026-08-05T08-57-28-756Z.json` (warm + pr
 
 ---
 
-## 14.b Does WIDE fanout flip the naive `repeat` shape's sign? (2026-08-05)
+## 15.b Does WIDE fanout flip the naive `repeat` shape's sign? (2026-08-05)
 
-Follow-up to §14, at the scale that matters for the decision it feeds. The repo owner has since
+Follow-up to §15, at the scale that matters for the decision it feeds. The repo owner has since
 picked the SIMPLE shape as the preferred candidate for the indexing rework: one `.text` field per
 column, analyzed with `custom_french_repeat` for BOTH indexing and search — no `search_analyzer`
-override (`repeat-frq`'s fix), no extra boost clause. §14 measured 2 text columns, where that
+override (`repeat-frq`'s fix), no extra boost clause. §15 measured 2 text columns, where that
 "naive" shape was already worse than dual (+17% default q, **+107% phrase**). But production `q`
 queries every text column at once (`buildQClauses`, `api/src/datasets/es/operations.ts`): dual's
 `fields` array is 2N entries (N `.text` + N `.text_standard`) split across TWO bool/should clauses,
@@ -637,7 +710,7 @@ naive's is N entries in ONE clause. At N=2 that collapse is invisible; at a real
 new `wideDocIterator`/`WIDE_COLUMNS=40` export — same SENTENCES, same slot-filling, spread over 40
 independently-generated columns instead of a title+description pair, 1-2 sentences each). 100k
 docs, 1 shard, force-merged to 1 segment, same `waitForStableStore` flush-and-poll fix and
-`request_cache:false`/`track_total_hits:true` production page-1 shape as §14. Four physical
+`request_cache:false`/`track_total_hits:true` production page-1 shape as §15. Four physical
 indexes:
 
 | shape | mapping | serves |
@@ -654,11 +727,11 @@ npm run benchmark -- experiment --name=text-analyzer:wide-fanout --runs=20 --row
 ```
 
 **Verdict: no, the fanout does not flip the sign. The naive shape loses on every measured query
-type, at every fanout regime (bare per-column AND catch-all), by roughly the same margins §14 found
+type, at every fanout regime (bare per-column AND catch-all), by roughly the same margins §15 found
 at 2 columns. Only `repeat-frq` (a `search_analyzer` override) wins.**
 
 `took` p50, 20 runs, warm ≈ cold throughout (identical within 1ms on every arm — corpus is
-memory-resident at 100k docs same as §14's 300k):
+memory-resident at 100k docs same as §15's 300k):
 
 | shape | dual | repeat (naive) | repeat-frq |
 |---|---:|---:|---:|
@@ -678,20 +751,20 @@ means these numbers should not be read as "typical" `q` cost — see search-catc
 the cost curve at realistic selectivity.
 
 **The catch-all row is the decisive evidence against the "field-count fanout is the real cost"
-reading of §14.** Catch-all already collapses the field count to near-nothing (2 fields dual-catchall
+reading of §15.** Catch-all already collapses the field count to near-nothing (2 fields dual-catchall
 vs 1 field repeat-catchall — nothing left for wide fanout to save), and naive `repeat-catchall`
-*still* costs +12.5% over `dual-catchall`, for the same reason §14 found at 2 raw columns: a
+*still* costs +12.5% over `dual-catchall`, for the same reason §15 found at 2 raw columns: a
 `repeat`-mapped field is analyzed with `custom_french_repeat` at search time too, so every query
 position becomes a 2-term SynonymQuery — that doubling costs more than the field-count halving
 saves, whether the field count is 40, 2, or (via catch-all) 1. The wide per-column rows (+10..+29%)
 and the catch-all row (+12.5%) tell the same story at very different absolute field counts: the
 clause-count collapse is real but structurally smaller than the query-side doubling it's paired
 with, at any fanout. `repeat-frq` removes the doubling (query analyzed with plain `custom_french`)
-and wins by the same −33..−44% margin in both regimes — consistent with §14's 2-column −17..−33%,
+and wins by the same −33..−44% margin in both regimes — consistent with §15's 2-column −17..−33%,
 slightly larger here because the per-column regime has more fields to save on.
 
-**Phrase confirms the same split as §14, worse in absolute terms at width:** naive's
-MultiPhraseQuery-over-doubled-positions cost (+86.2%, essentially §14's +107% again) is unaffected
+**Phrase confirms the same split as §15, worse in absolute terms at width:** naive's
+MultiPhraseQuery-over-doubled-positions cost (+86.2%, essentially §15's +107% again) is unaffected
 by clause count — a phrase query was always a single clause on both shapes, at 2 columns or 40 —
 and `repeat-frq` is again the fix (parity). **Prefix is a wash on all three arms**, as at 2 columns:
 `q_mode=complete`'s startsWith clause was already single-clause on both dual (`.text_standard`) and
@@ -699,7 +772,7 @@ repeat (`.text`), so there was no collapse to win there in the first place — t
 resolution noise (`took` is integer-millisecond; e2e p50 in the JSON — 6.2–6.7 ms across all three —
 confirms parity).
 
-**Size (40-col confirmation of §14's number):**
+**Size (40-col confirmation of §15's number):**
 
 | shape | store | analyzed (`_disk_usage`) | inverted | `_search` field |
 |---|---:|---:|---:|---:|
@@ -708,7 +781,7 @@ confirms parity).
 | repeat | 573.1 MB (−9.1%) | 152.7 MB (**−27.4%**) | 148.8 MB | — |
 | repeat-catchall | 748.9 MB (+18.7%) | 152.7 MB (−27.4%) | 148.8 MB | 175.5 MB |
 
-**−27.4%** analyzed-portion vs dual, matching §14's 2-column −26.5% almost exactly — the size win is
+**−27.4%** analyzed-portion vs dual, matching §15's 2-column −26.5% almost exactly — the size win is
 scale-invariant, as expected (it's a per-token property of the analyzer, not a fanout effect).
 
 **Top-20 ordering (item 3): none of the three probes rank identically on any arm vs dual — expected,
@@ -742,24 +815,24 @@ index's own field mapping wins). `.text_standard` simply has no match on the rep
 no cross-contamination. A rolling per-dataset migration from dual to repeat is safe to query across
 during the transition.
 
-**Caveats.** Same corpus caveat as §14 (170 sentences, flatter TF curve than a real corpus) — worse
+**Caveats.** Same corpus caveat as §15 (170 sentences, flatter TF curve than a real corpus) — worse
 here because 40 independent draws per doc pushes match rates to 80-100k/100k, closer to a full scan
 than typical `q` selectivity; treat the default-q absolute numbers as a stress case, not a typical
 one. `took` remains integer-ms; prefix's ±1ms spread is at the resolution floor.
 
 Results: `benchmark/results/experiment-2026-08-05T09-47-58-877Z.json` (warm + profile),
-`experiment-2026-08-05T09-48-39-052Z.json` (cold). Same index-reuse convention as §14; drop with
+`experiment-2026-08-05T09-48-39-052Z.json` (cold). Same index-reuse convention as §15; drop with
 `curl -XDELETE $ES/benchmark-text-analyzer-wide-\*`.
 
 ---
 
-## 14.c Cost of an optional exact-match boost clause on the `frq` shape (2026-08-05)
+## 15.c Cost of an optional exact-match boost clause on the `frq` shape (2026-08-05)
 
-Follow-up to §14.b, now that `frq` (`repeat` index, query analyzed with plain `custom_french` — the
+Follow-up to §15.b, now that `frq` (`repeat` index, query analyzed with plain `custom_french` — the
 search-analyzer fix) is the shape actually picked for the indexing rework: one `.text` field per
 column, indexed with `custom_french_repeat`, searched with `custom_french` (in production this is a
 mapping-level `search_analyzer`; the experiment reaches identical analysis via the query-time
-`analyzer` param, so no new index shape is needed — same `repeat` index as §14/§14.b). Open question:
+`analyzer` param, so no new index shape is needed — same `repeat` index as §15/§15.b). Open question:
 is an OPTIONAL query-side exact-match boost clause worth adding, and at what cost?
 
 **The clause.** A `should` clause on the SAME `col*.text` fields, analyzed with a new
@@ -778,7 +851,7 @@ shape where pruning can actually engage. Data-fair's own page-1 shape (`track_to
 forfeits WAND entirely (§2), so the same clause on the production shape should cost close to its
 full, unpruned weight regardless of `boost`.
 
-**Setup.** Same `repeat`-shaped wide index (100k docs, 40 columns) as §14.b — no new index shape.
+**Setup.** Same `repeat`-shaped wide index (100k docs, 40 columns) as §15.b — no new index shape.
 `custom_french_exact` was added to the SHARED `ANALYSIS_SETTINGS_REPEAT` (`text-analyzer.ts`), which
 **forced a real rebuild**: analysis settings can't be hot-reloaded onto an open index, and the
 harness's index-reuse check was previously doc-count-only — an index built before this change would
@@ -790,7 +863,7 @@ settings change forces the same automatic rebuild a doc-count change already did
 rebuilt once as a result of this run (100k × 40 cols each, 85-165s per index).
 
 Five arms per probe, all on the SAME `repeat` index:
-- `dual` — today's shape, ceiling/reference (unchanged from §14.b)
+- `dual` — today's shape, ceiling/reference (unchanged from §15.b)
 - `frq` — `repeat` index, query analyzed with plain `custom_french` — the production candidate,
   floor (no exact clause)
 - `frq+boost^1.0` / `^0.5` / `^0.2` — the `frq` clause plus an independent `should` exact clause at
@@ -847,13 +920,13 @@ it usually still could, so it can't be.
 **Caveat that must travel with these numbers: on THIS 40-column corpus, the top-k shape's absolute
 cost is 5-12× HIGHER than the prod shape's, for every arm including `dual` and `frq` — the opposite
 of what "WAND pruning available" naively suggests.** This is the flip side of the "match-everything"
-caveat §14.b already flagged for this corpus (spreading it over 40 independent columns pushes match
+caveat §15.b already flagged for this corpus (spreading it over 40 independent columns pushes match
 rates to 80,000-100,000 of 100,000 docs): when almost every document matches, block-max WAND has
 almost nothing to *skip*, but it still pays the bookkeeping cost of tracking block-max scores and a
 competitive-score threshold across a 40-field, multi-term disjunction — pure overhead with no payoff.
 Confirmed directly with `curl` outside the harness (bare `frq` clause: 13-19ms at
 `track_total_hits:true`, 112-130ms at `false`, same index, five runs each — see above). **The
-boost-weight GRADIENT within the top-k shape (§14.c's actual question) is real and holds regardless of
+boost-weight GRADIENT within the top-k shape (§15.c's actual question) is real and holds regardless of
 this** — a low-weight second clause still gets pruned cheaply relative to a high-weight one, on top of
 whatever the shape's own baseline costs — but the top-k shape's absolute numbers here should not be
 read as "the fast option" on this corpus; on a realistically selective query (§6's cost curve) it very
@@ -863,7 +936,7 @@ does cleanly.
 **Ordering (one probe, "logements"): `frq+boost^0.2` reorders vs bare `frq` but doesn't reshuffle
 wholesale — 17/20 ids in common, order differs on the rest.** The three ids `frq` alone surfaces that
 `boost^0.2` drops are replaced by three others the exact clause's small extra score signal promotes —
-a real, modest ranking effect, consistent with §14.b's observation that neither `repeat` nor
+a real, modest ranking effect, consistent with §15.b's observation that neither `repeat` nor
 `repeat-frq` alone carries a second scored clause; the boost buys a sliver of that back.
 
 **Sanity check: PASS.** Query `"Équipements"` with `custom_french_exact` on the `repeat` index (probe
@@ -878,7 +951,7 @@ Confirms the exact clause matches the folded surface token specifically and does
 inflections the way the stemmed `frq` clause does — the intended query-side complement to the repeat
 index's stored postings, verified against real corpus documents rather than synthetic strings.
 
-**Caveats.** Same corpus caveat as §14.b (170 sentences, flatter TF curve, near-total match rate at 40
+**Caveats.** Same corpus caveat as §15.b (170 sentences, flatter TF curve, near-total match rate at 40
 independent columns) — here it additionally explains the top-k/prod absolute-latency inversion above.
 `frq+boost^1.0` occasionally lands ABOVE `dual` (equipements-topk: +20.0%) — plausible noise at this
 resolution (single-digit-percent deltas on an integer-millisecond clock) compounded by a
@@ -887,7 +960,7 @@ direction (weight down ⇒ cost down, in the top-k shape only; flat and close to
 as the signal.
 
 Results: `benchmark/results/experiment-2026-08-05T12-40-45-125Z.json` (warm + profile),
-`experiment-2026-08-05T12-42-22-551Z.json` (cold). Same index-reuse convention as §14/§14.b — the four
+`experiment-2026-08-05T12-42-22-551Z.json` (cold). Same index-reuse convention as §15/§15.b — the four
 wide indexes were rebuilt once for the new analyzer (see Setup); subsequent runs reuse them. Drop with
 `curl -XDELETE $ES/benchmark-text-analyzer-wide-\*`.
 
