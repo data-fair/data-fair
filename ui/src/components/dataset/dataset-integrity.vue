@@ -1,8 +1,27 @@
 <template>
   <div class="pa-4">
     <template v-if="state">
+      <!-- the switch that decides everything below it comes first (disabling clears the verdicts
+           and stops lock renewal — anchors then age out at retention — so it is confirmed, unlike
+           the additive enable which needs no guard) -->
+      <template v-if="adminMode">
+        <v-switch
+          :model-value="state.active"
+          :label="t('enableLabel')"
+          :loading="toggle.loading.value"
+          color="primary"
+          density="compact"
+          hide-details
+          class="mb-4"
+          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
+        />
+      </template>
+
+      <!-- readers without the switch above only reach this while integrity is being turned off
+           under them (the tab itself is hidden to them once it is off) — keep telling them why
+           the panel emptied rather than showing a blank tab -->
       <v-alert
-        v-if="!state.active"
+        v-if="!state.active && !adminMode"
         type="info"
         variant="tonal"
         :text="t('disabledInfo')"
@@ -24,65 +43,37 @@
           density="compact"
           :text="t('okBody')"
         />
+        <!-- neither ok nor breach: either no check has run yet, or one ran and could not
+             conclude ('unknown'). These read very differently to an operator, and the missing
+             anchor case is its own story — see below -->
         <v-alert
-          v-else
+          v-else-if="!state.lastCheck"
           type="warning"
           variant="tonal"
           density="compact"
           :text="t('notCheckedBody')"
         />
-        <!-- verdict 2 (round 3): the trail itself — independent of the data verdict above -->
+        <!-- a check ran but the store holds NO revision for this dataset: there is nothing to
+             compare against, so the guarantee is not effective. The verdict is trustworthy on
+             this point — a check that finds an anchor heals a lost `lastRevision` mirror from
+             the store before returning, so its absence here means the store is genuinely empty
+             (initial anchor write failed at enable time, or the objects are gone/elsewhere) -->
         <v-alert
-          v-if="state.lastCheck?.trail?.status === 'altered'"
-          type="error"
+          v-else-if="missingAnchor"
+          type="warning"
           variant="outlined"
           density="compact"
-          class="mt-1"
-          :title="t('trailAlteredTitle')"
-        >
-          <div class="text-body-2">
-            {{ t('trailAlteredBody') }}
-          </div>
-          <div
-            v-for="(anomaly, idx) of state.lastCheck!.trail!.anomalies ?? []"
-            :key="idx"
-            class="d-flex align-center ga-2 mt-1"
-          >
-            <v-chip
-              size="x-small"
-              label
-              :color="anomaly.confidence === 'confirmed' ? 'error' : 'warning'"
-            >
-              {{ t('anomaly_' + anomaly.kind) }}
-            </v-chip>
-            <code class="text-caption">{{ anomaly.key }}</code>
-            <span
-              v-if="anomaly.detail"
-              class="text-caption text-disabled"
-            >{{ anomaly.detail }}</span>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiCheckDecagram"
-              color="warning"
-              variant="text"
-              size="small"
-              :title="t('ackHelp')"
-              @click="ackDialog = true; ackReason = ''"
-            >
-              {{ t('ackTrail') }}
-            </v-btn>
-          </div>
-        </v-alert>
-        <div
-          v-else-if="state.lastCheck?.trail?.status === 'ok'"
-          class="text-caption mt-1 text-success"
-        >
-          {{ t('trailOkBody') }}
-        </div>
+          :title="t('noAnchorTitle')"
+          :text="t('noAnchorBody')"
+        />
+        <v-alert
+          v-else
+          type="warning"
+          variant="tonal"
+          density="compact"
+          :title="t('inconclusiveTitle')"
+          :text="t('inconclusiveBody')"
+        />
         <v-alert
           v-if="state.lastRenewal?.status === 'failed'"
           type="warning"
@@ -94,19 +85,188 @@
         />
         <div
           v-if="state.lastCheck"
-          class="text-caption mt-1"
+          class="text-body-small text-medium-emphasis mt-1"
         >
-          {{ t('lastCheck') }}: {{ formatDate(state.lastCheck.date) }}
+          {{ t('lastCheck') }} : {{ formatDate(state.lastCheck.date) }}
         </div>
       </template>
 
+      <!-- Per-part verdict. The check covers several parts and records a per-part breach list, so
+           every part gets its own row and chip rather than being named inside the aggregate
+           sentence above and only on failure: the search index and the revision trail are parts
+           like the others, not special cases. Shown only for a definitive verdict — an 'unknown'
+           check carries no part-level information and must not be rendered as all-clear. Each
+           row is followed by its own detail block when there is something to show. -->
+      <div
+        v-if="state.active && verdictParts.length"
+        class="mt-4"
+      >
+        <template
+          v-for="part of verdictParts"
+          :key="part.key"
+        >
+          <div class="d-flex align-center ga-2 mb-2">
+            <span class="text-body-medium">{{ t('part_' + part.key) }}</span>
+            <v-chip
+              size="small"
+              label
+              :color="part.status === 'ok' ? 'success' : (part.status === 'unknown' ? 'warning' : 'error')"
+            >
+              {{ t('partStatus_' + part.status) }}
+            </v-chip>
+          </div>
+
+          <!-- lines: the diverging ids, with a per-line history shortcut and the bulk restore -->
+          <v-alert
+            v-if="part.key === 'lines' && (state.lastCheck?.lines?.diverged ?? 0) > 0"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="`${state.lastCheck!.lines!.diverged} ${t('linesDivergedTitle')}`"
+          >
+            <div class="d-flex flex-wrap align-center ga-2 mt-2">
+              <div
+                v-for="lineId of state.lastCheck!.lines!.sample ?? []"
+                :key="lineId"
+                class="d-flex align-center ga-1"
+              >
+                <v-chip
+                  size="small"
+                  label
+                >
+                  {{ lineId }}
+                </v-chip>
+                <v-btn
+                  :icon="mdiHistory"
+                  variant="text"
+                  size="x-small"
+                  :title="t('viewLineRevisions')"
+                  @click="openLineRevisions(lineId)"
+                />
+              </div>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiBackupRestore"
+                color="warning"
+                variant="text"
+                size="small"
+                @click="linesRestoreDialog = true"
+              >
+                {{ t('linesRestore') }}
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- search index: what diverges between the served index and the verified source -->
+          <v-alert
+            v-if="part.key === 'index' && state.lastCheck?.index?.status === 'diverged'"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="t('indexDivergedTitle', { diverged: state.lastCheck.index.diverged ?? 0 })"
+          >
+            <div
+              v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
+              class="text-body-small"
+            >
+              {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
+            </div>
+            <div
+              v-for="entry of state.lastCheck.index.sample ?? []"
+              :key="entry.kind + entry.key"
+              class="mt-2"
+            >
+              <v-chip
+                size="small"
+                label
+              >
+                {{ t('indexKind.' + entry.kind) }} — {{ entry.key }}
+              </v-chip>
+              <pre
+                v-if="entry.expected || entry.actual"
+                class="text-body-small mt-1"
+                style="white-space: pre-wrap; overflow-x: auto;"
+              >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiDatabaseRefresh"
+                color="warning"
+                variant="text"
+                size="small"
+                @click="indexReindexDialog = true"
+              >
+                {{ t('indexReindex') }}
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- revision trail: which anomalies were seen in the locked history, and the ack action -->
+          <v-alert
+            v-if="part.key === 'trail' && state.lastCheck?.trail?.status === 'altered'"
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-2 mb-3"
+            :title="t('trailAlteredTitle')"
+          >
+            <div class="text-body-medium">
+              {{ t('trailAlteredBody') }}
+            </div>
+            <div
+              v-for="(anomaly, idx) of state.lastCheck!.trail!.anomalies ?? []"
+              :key="idx"
+              class="d-flex align-center ga-2 mt-1"
+            >
+              <v-chip
+                size="x-small"
+                label
+                :color="anomaly.confidence === 'confirmed' ? 'error' : 'warning'"
+              >
+                {{ t('anomaly_' + anomaly.kind) }}
+              </v-chip>
+              <code class="text-body-small">{{ anomaly.key }}</code>
+              <span
+                v-if="anomaly.detail"
+                class="text-body-small text-disabled"
+              >{{ anomaly.detail }}</span>
+            </div>
+            <div
+              v-if="adminMode"
+              class="mt-2"
+            >
+              <v-btn
+                :prepend-icon="mdiCheckDecagram"
+                color="warning"
+                variant="text"
+                size="small"
+                :title="t('ackHelp')"
+                @click="ackDialog = true; ackReason = ''"
+              >
+                {{ t('ackTrail') }}
+              </v-btn>
+            </div>
+          </v-alert>
+        </template>
+      </div>
+
+      <!-- per-line anchoring progress (enrolled REST datasets): backfill state, not a verdict —
+           it is reported even before any check has run -->
       <template v-if="state.active && dataset?.isRest">
-        <v-divider class="my-4" />
-        <div class="text-body-2">
+        <div class="text-body-medium mt-4">
           {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
         </div>
         <template v-if="(state.lines?.pending ?? 0) > 0">
-          <div class="text-caption mt-1">
+          <div class="text-body-small mt-1">
             {{ state.lines!.pending }} {{ t('linesPending') }}
           </div>
           <v-progress-linear
@@ -123,114 +283,22 @@
           class="mt-2"
           :text="t('linesOverGate')"
         />
-        <v-alert
-          v-if="(state.lastCheck?.lines?.diverged ?? 0) > 0"
-          type="error"
-          variant="outlined"
-          density="compact"
-          class="mt-2"
-          :title="`${state.lastCheck!.lines!.diverged} ${t('linesDivergedTitle')}`"
-        >
-          <div class="d-flex flex-wrap align-center ga-2 mt-2">
-            <div
-              v-for="lineId of state.lastCheck!.lines!.sample ?? []"
-              :key="lineId"
-              class="d-flex align-center ga-1"
-            >
-              <v-chip
-                size="small"
-                label
-              >
-                {{ lineId }}
-              </v-chip>
-              <v-btn
-                :icon="mdiHistory"
-                variant="text"
-                size="x-small"
-                :title="t('viewLineRevisions')"
-                @click="openLineRevisions(lineId)"
-              />
-            </div>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiBackupRestore"
-              color="warning"
-              variant="text"
-              size="small"
-              @click="linesRestoreDialog = true"
-            >
-              {{ t('linesRestore') }}
-            </v-btn>
-          </div>
-        </v-alert>
-      </template>
-
-      <template v-if="state.active && state.lastCheck?.index">
-        <v-divider class="my-4" />
-        <div class="text-body-2">
-          {{ t('indexVerdictTitle') }} :
-          <v-chip
-            size="small"
-            label
-            :color="state.lastCheck.index.status === 'ok' ? 'success' : (state.lastCheck.index.status === 'diverged' ? 'error' : 'warning')"
-          >
-            {{ t('indexStatus.' + state.lastCheck.index.status) }}
-          </v-chip>
-        </div>
-        <v-alert
-          v-if="state.lastCheck.index.status === 'diverged'"
-          type="error"
-          variant="outlined"
-          density="compact"
-          class="mt-2"
-          :title="t('indexDivergedTitle', { diverged: state.lastCheck.index.diverged ?? 0 })"
-        >
-          <div
-            v-if="state.lastCheck.index.count && state.lastCheck.index.count.expected !== state.lastCheck.index.count.actual"
-            class="text-caption"
-          >
-            {{ t('indexCountMismatch', { expected: state.lastCheck.index.count.expected, actual: state.lastCheck.index.count.actual }) }}
-          </div>
-          <div
-            v-for="entry of state.lastCheck.index.sample ?? []"
-            :key="entry.kind + entry.key"
-            class="mt-2"
-          >
-            <v-chip
-              size="small"
-              label
-            >
-              {{ t('indexKind.' + entry.kind) }} — {{ entry.key }}
-            </v-chip>
-            <pre
-              v-if="entry.expected || entry.actual"
-              class="text-caption mt-1"
-              style="white-space: pre-wrap; overflow-x: auto;"
-            >{{ entry.expected ? t('indexExpected') + ' ' + entry.expected + '\n' : '' }}{{ entry.actual ? t('indexActual') + ' ' + entry.actual : '' }}</pre>
-          </div>
-          <div
-            v-if="adminMode"
-            class="mt-2"
-          >
-            <v-btn
-              :prepend-icon="mdiDatabaseRefresh"
-              color="warning"
-              variant="text"
-              size="small"
-              @click="indexReindexDialog = true"
-            >
-              {{ t('indexReindex') }}
-            </v-btn>
-          </div>
-        </v-alert>
       </template>
 
       <div class="d-flex align-center ga-2 mt-4">
         <v-spacer />
+        <v-btn
+          v-if="state.active"
+          :prepend-icon="mdiRefresh"
+          :loading="refresh.loading.value"
+          color="primary"
+          variant="text"
+          size="small"
+          :title="t('refreshHelp')"
+          @click="refresh.execute()"
+        >
+          {{ t('refresh') }}
+        </v-btn>
         <v-btn
           v-if="adminMode && state.active"
           :prepend-icon="mdiShieldRefresh"
@@ -243,7 +311,7 @@
           {{ t('checkNow') }}
         </v-btn>
         <v-btn
-          v-if="adminMode && state.active && anyBreach"
+          v-if="adminMode && state.active && (anyBreach || missingAnchor)"
           :prepend-icon="mdiWrench"
           :loading="fix.loading.value"
           color="warning"
@@ -256,25 +324,8 @@
         </v-btn>
       </div>
 
-      <template v-if="adminMode">
-        <v-divider class="my-4" />
-
-        <!-- disabling clears the verdicts and stops lock renewal (anchors then age out at
-             retention): confirm it, unlike the additive enable which needs no guard -->
-        <v-switch
-          :model-value="state.active"
-          :label="t('enableLabel')"
-          :loading="toggle.loading.value"
-          color="primary"
-          density="compact"
-          hide-details
-          @update:model-value="(v) => v ? toggle.execute(true) : disableDialog = true"
-        />
-      </template>
-
       <template v-if="state.active">
-        <v-divider class="my-4" />
-        <h4 class="text-subtitle-1 mb-2">
+        <h4 class="text-title-medium mb-2 mt-6">
           {{ t('historyTitle') }}
         </h4>
         <v-data-table-server
@@ -291,32 +342,31 @@
             {{ formatDate(item.date) }}
           </template>
           <template #item.hash="{ item }">
-            <code class="text-caption">{{ (item.hash.file ?? item.hash.metadata ?? '').slice(0, 12) }}…</code>
+            <code class="text-body-small">{{ (item.hash.file ?? item.hash.metadata ?? '').slice(0, 12) }}…</code>
           </template>
           <template #item.operation="{ item }">
             {{ t('op_' + item.operation) }}
           </template>
+          <!-- write category and identity are two different properties (the category is inside
+               the locked revision, the identity in its short-retention `.who` sibling) but they
+               answer one question — who made this write — so they share a column -->
           <template #item.origin="{ item }">
-            {{ t('origin_' + item.origin) }}
-          </template>
-          <template #item.who="{ item }">
-            <span
+            <div>{{ t('origin_' + item.origin) }}</div>
+            <div
               v-if="item.who"
-              class="text-caption"
-            >{{ formatWho(item.who) }}</span>
-            <span
-              v-else
-              class="text-caption text-disabled"
-            >—</span>
+              class="text-body-small text-medium-emphasis"
+            >
+              {{ formatWho(item.who) }}
+            </div>
           </template>
           <template #item.reason="{ item }">
             <span
               v-if="item.reason"
-              class="text-caption"
+              class="text-body-small"
             >{{ item.reason }}</span>
             <span
               v-else
-              class="text-caption text-disabled"
+              class="text-body-small text-disabled"
             >—</span>
           </template>
           <template #item.actions="{ item }">
@@ -350,7 +400,7 @@
             </template>
             <span
               v-else
-              class="text-caption text-disabled"
+              class="text-body-small text-disabled"
             >{{ t('noPayload') }}</span>
           </template>
         </v-data-table-server>
@@ -375,7 +425,7 @@
         <v-card-text v-if="diffData">
           <p
             v-if="!diffKeys.length"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('noDiff') }}
           </p>
@@ -383,21 +433,21 @@
             v-for="key of diffKeys"
             :key="key"
           >
-            <h4 class="text-subtitle-2 mt-2">
+            <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
             <v-row dense>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffRevision') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.payload.metadata[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.payload.metadata[key]) }}</pre>
               </v-col>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffCurrent') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.current?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(diffData.current?.[key]) }}</pre>
               </v-col>
             </v-row>
           </template>
@@ -608,26 +658,22 @@
               {{ t('op_' + item.operation) }}
             </template>
             <template #item.origin="{ item }">
-              {{ t('origin_' + item.origin) }}
-            </template>
-            <template #item.who="{ item }">
-              <span
+              <div>{{ t('origin_' + item.origin) }}</div>
+              <div
                 v-if="item.who"
-                class="text-caption"
-              >{{ formatWho(item.who) }}</span>
-              <span
-                v-else
-                class="text-caption text-disabled"
-              >—</span>
+                class="text-body-small text-medium-emphasis"
+              >
+                {{ formatWho(item.who) }}
+              </div>
             </template>
             <template #item.reason="{ item }">
               <span
                 v-if="item.reason"
-                class="text-caption"
+                class="text-body-small"
               >{{ item.reason }}</span>
               <span
                 v-else
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >—</span>
             </template>
             <template #item.actions="{ item }">
@@ -642,7 +688,7 @@
               />
               <span
                 v-else
-                class="text-caption text-disabled"
+                class="text-body-small text-disabled"
               >{{ t('noPayload') }}</span>
             </template>
           </v-data-table-server>
@@ -664,13 +710,13 @@
         <v-card-text v-if="lineDiffData">
           <p
             v-if="lineDiffData.line?.deleted"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('lineDeletedRevision') }}
           </p>
           <p
             v-else-if="!lineDiffKeys.length"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ t('noDiff') }}
           </p>
@@ -678,21 +724,21 @@
             v-for="key of lineDiffKeys"
             :key="key"
           >
-            <h4 class="text-subtitle-2 mt-2">
+            <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
             <v-row dense>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffRevision') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.payload?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.payload?.[key]) }}</pre>
               </v-col>
               <v-col cols="6">
-                <div class="text-caption">
+                <div class="text-body-small">
                   {{ t('diffCurrent') }}
                 </div>
-                <pre class="text-caption bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.current?.[key]) }}</pre>
+                <pre class="text-body-small bg-surface-light pa-2 overflow-auto">{{ pretty(lineDiffData.current?.[key]) }}</pre>
               </v-col>
             </v-row>
           </template>
@@ -709,19 +755,30 @@ fr:
   part_metadata: Métadonnées
   part_lines: Lignes
   part_index: Index de recherche
+  part_trail: Historique verrouillé
+  partStatus_ok: vérifié
+  partStatus_diverged: divergent
+  partStatus_altered: altéré
+  partStatus_unknown: en attente
   breachTitle: Intégrité compromise
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
   notCheckedBody: L'intégrité est activée mais aucun contrôle n'a encore été effectué.
+  inconclusiveTitle: Contrôle non concluant
+  inconclusiveBody: Le dernier contrôle n'a pas pu se prononcer, le plus souvent parce qu'une écriture est encore en cours d'historisation. Un nouveau contrôle est lancé automatiquement.
+  noAnchorTitle: Aucune révision dans l'entrepôt
+  noAnchorBody: "L'intégrité est activée mais l'entrepôt ne contient aucune révision pour ce jeu de données : il n'y a rien à quoi comparer l'état courant, la garantie n'est donc pas effective. Soit l'écriture de la révision initiale a échoué à l'activation (entrepôt indisponible ou mal configuré), soit les révisions n'y sont plus. Vérifiez l'entrepôt, puis réconciliez pour y ancrer l'état courant."
   renewalFailedTitle: Renouvellement du verrou en échec
   renewalFailedBody: Le renouvellement de la protection anti-altération échoue. La garantie expirera à la date de rétention de l'ancre si le problème n'est pas résolu.
   lastCheck: Dernier contrôle
-  neverChecked: Aucun contrôle effectué
   checkNow: Contrôler maintenant
+  refresh: Rafraîchir
+  refreshHelp: Relit l'état d'intégrité et l'historique des révisions.
   fix: Réconcilier
   fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
   enableLabel: Activer le contrôle d'intégrité
   checkOk: Contrôle effectué
+  checkPendingRelay: "Le contrôle n'a pas pu conclure : une écriture est encore en cours d'historisation, l'état affiché reste celui du contrôle précédent. Réessayez dans quelques instants."
   fixOk: Réconciliation effectuée
   toggleOk: Configuration enregistrée
   loadError: Impossible de charger l'état d'intégrité.
@@ -730,7 +787,6 @@ fr:
   colOperation: Opération
   colDate: Date
   colOriginator: Auteur
-  colAttribution: Attribution
   colReason: Raison
   colHash: Empreinte
   op_create: Création
@@ -771,11 +827,6 @@ fr:
   linesRestoreOk: Restauration des lignes lancée
   lineRevisionsTitle: "Historique de la ligne {lineId}"
   lineDeletedRevision: Cette révision correspond à la suppression de la ligne.
-  indexVerdictTitle: Index de recherche (données servies)
-  indexStatus:
-    ok: cohérent
-    diverged: divergent
-    unknown: en attente
   indexDivergedTitle: "{diverged} divergence(s) entre l'index servi et la source vérifiée"
   indexCountMismatch: "nombre de lignes : {expected} attendues, {actual} servies"
   indexKind:
@@ -795,7 +846,6 @@ fr:
   disableConfirm: Désactiver
   trailAlteredTitle: Historique de révisions altéré
   trailAlteredBody: "L'historique verrouillé présente des signes d'altération (révisions réécrites ou masquées). Les versions d'origine sont intactes dans l'entrepôt ; investiguez (accès à l'entrepôt compromis ?) avant d'acquitter."
-  trailOkBody: Historique de révisions vérifié, aucune altération détectée.
   anomaly_delete-marker: Révision masquée
   anomaly_version-divergence: Révision réécrite
   anomaly_date-skew: Date incohérente
@@ -811,19 +861,30 @@ en:
   part_metadata: Metadata
   part_lines: Lines
   part_index: Search index
+  part_trail: Locked history
+  partStatus_ok: verified
+  partStatus_diverged: diverged
+  partStatus_altered: altered
+  partStatus_unknown: pending
   breachTitle: Integrity breach
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
   notCheckedBody: Integrity is enabled but no check has been run yet.
+  inconclusiveTitle: Inconclusive check
+  inconclusiveBody: The last check could not reach a verdict, usually because a write is still being historized. Another check runs automatically.
+  noAnchorTitle: No revision in the store
+  noAnchorBody: "Integrity is enabled but the store holds no revision for this dataset: there is nothing to compare the current state against, so the guarantee is not effective. Either the initial revision failed to be written when integrity was enabled (store unavailable or misconfigured), or the revisions are no longer there. Check the store, then reconcile to anchor the current state."
   renewalFailedTitle: Lock renewal failing
   renewalFailedBody: Renewal of the tamper-protection lock is failing. The guarantee will lapse at the anchor's retain-until date unless resolved.
   lastCheck: Last check
-  neverChecked: No check run yet
   checkNow: Check now
+  refresh: Refresh
+  refreshHelp: Re-reads the integrity status and the revision history.
   fix: Reconcile
   fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
   enableLabel: Enable integrity checking
   checkOk: Check completed
+  checkPendingRelay: "The check could not conclude: a write is still being historized, so the status shown is still the previous check's. Try again shortly."
   fixOk: Reconciliation completed
   toggleOk: Configuration saved
   loadError: Could not load the integrity status.
@@ -832,7 +893,6 @@ en:
   colOperation: Operation
   colDate: Date
   colOriginator: Author
-  colAttribution: Attribution
   colReason: Reason
   colHash: Hash
   op_create: Create
@@ -873,11 +933,6 @@ en:
   linesRestoreOk: Line restore started
   lineRevisionsTitle: "History of line {lineId}"
   lineDeletedRevision: This revision corresponds to the line's deletion.
-  indexVerdictTitle: Search index (served data)
-  indexStatus:
-    ok: consistent
-    diverged: diverged
-    unknown: pending
   indexDivergedTitle: "{diverged} divergence(s) between the served index and the verified source"
   indexCountMismatch: "line count: {expected} expected, {actual} served"
   indexKind:
@@ -897,7 +952,6 @@ en:
   disableConfirm: Disable
   trailAlteredTitle: Revision trail altered
   trailAlteredBody: "The locked history shows signs of alteration (rewritten or hidden revisions). The original versions are intact in the store; investigate (compromised store access?) before acknowledging."
-  trailOkBody: Revision trail verified, no alteration detected.
   anomaly_delete-marker: Hidden revision
   anomaly_version-divergence: Rewritten revision
   anomaly_date-skew: Inconsistent date
@@ -910,7 +964,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiShieldRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
+import { mdiShieldRefresh, mdiRefresh, mdiWrench, mdiFileCompare, mdiDownload, mdiBackupRestore, mdiHistory, mdiCheckDecagram, mdiDatabaseRefresh } from '@mdi/js'
 import type { Dataset, WhoHint } from '#api/types'
 
 const { t, locale } = useI18n()
@@ -942,6 +996,30 @@ const formatWho = (who?: WhoHint): string => {
 const state = ref<IntegrityState | null>(null)
 
 const anyBreach = computed(() => state.value?.lastCheck?.status === 'breach')
+// enrolled, a check has run, and yet no anchor is recorded: the store holds no revision for this
+// dataset. Reconciling is exactly the remedy (it anchors the current state), so the action stays
+// offered here even though this is not a breach.
+const missingAnchor = computed(() => !!state.value?.active && !!state.value?.lastCheck && !state.value?.lastRevision)
+
+// The parts the check actually covered, each with its own status — the panel renders one row per
+// entry. `breach` is a list of the parts that diverged, so a part not in it passed. Only a
+// definitive verdict (ok | breach) carries part-level information: after an inconclusive check
+// there is nothing to say per part, and rendering every row as verified would be a lie.
+// `file` exists only on file datasets, `lines` only on REST ones; `index` and `trail` carry their
+// own status (the index can be individually pending when Elasticsearch is unreachable).
+type VerdictPart = { key: string, status: 'ok' | 'diverged' | 'altered' | 'unknown' }
+const verdictParts = computed<VerdictPart[]>(() => {
+  const lastCheck = state.value?.lastCheck
+  if (!lastCheck || (lastCheck.status !== 'ok' && lastCheck.status !== 'breach')) return []
+  const breach: string[] = lastCheck.breach ?? []
+  const parts: VerdictPart[] = []
+  if (!dataset.value?.isRest) parts.push({ key: 'file', status: breach.includes('file') ? 'diverged' : 'ok' })
+  parts.push({ key: 'metadata', status: breach.includes('metadata') ? 'diverged' : 'ok' })
+  if (dataset.value?.isRest) parts.push({ key: 'lines', status: breach.includes('lines') ? 'diverged' : 'ok' })
+  if (lastCheck.index) parts.push({ key: 'index', status: lastCheck.index.status === 'diverged' ? 'diverged' : (lastCheck.index.status === 'ok' ? 'ok' : 'unknown') })
+  if (lastCheck.trail) parts.push({ key: 'trail', status: lastCheck.trail.status === 'altered' ? 'altered' : 'ok' })
+  return parts
+})
 
 const size = 10
 const page = ref(1)
@@ -953,7 +1031,6 @@ const headers = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
-  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: t('colHash'), key: 'hash', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
@@ -977,6 +1054,43 @@ const load = useAsyncAction(async () => {
   }
 })
 load.execute()
+
+// Re-read the state and the CURRENT page of the history, unlike load() which resets pagination:
+// a refresh only ever finds the trail grown (a new anchor), never shrunk.
+const refresh = useAsyncAction(async () => {
+  if (!dataset.value) return
+  state.value = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  if (state.value?.active) await loadRevisions.execute()
+})
+
+// Watchability on the existing journal channel (no new channel, no new permission): a new anchor
+// is always preceded by a pipeline run ending in 'finalize-end' — a file upload, a draft
+// validation, a metadata patch that triggers reindexing. The anchor itself lands slightly LATER
+// (the historize relay is a separate worker task with no journal event of its own), so a single
+// refresh on the event would still read the pre-anchor state: re-read a few times over the next
+// seconds and stop as soon as the trail has actually grown. Anything the panel cannot observe
+// this way (nightly checks, an admin action from another session) is what the refresh button and
+// the periodic checks are for.
+const ws = useWS('/data-fair/api/')
+let settleTimer: ReturnType<typeof setTimeout> | undefined
+const stopSettle = () => {
+  if (settleTimer) {
+    clearTimeout(settleTimer)
+    settleTimer = undefined
+  }
+}
+const refreshUntilAnchored = async (attempt = 0) => {
+  const before = state.value?.lastRevision?.i
+  await refresh.execute()
+  if (state.value?.lastRevision?.i !== before || attempt >= 4) return stopSettle()
+  settleTimer = setTimeout(() => refreshUntilAnchored(attempt + 1), 2000)
+}
+ws?.subscribe(`datasets/${dataset.value?.id}/journal`, (event: any) => {
+  if (event?.type !== 'finalize-end') return
+  stopSettle()
+  refreshUntilAnchored()
+})
+onUnmounted(stopSettle)
 
 // backfill progress (target 3, enrolled REST datasets): while lines are pending anchoring, poll
 // the lightweight summary every ~2s so the progress indicator reflects the relay draining, then
@@ -1002,11 +1116,19 @@ watch(() => state.value?.lines?.pending, (pending) => {
 }, { immediate: true })
 onUnmounted(stopLinesPoll)
 
+// A check that runs while a write is still being historized cannot conclude, and the checker
+// deliberately records NOTHING in that case (it returns a bare `{status:'unknown'}`, no date —
+// the relay will drain and the next check gets a real verdict). Reporting that as a plain
+// "check completed" leaves the panel showing the previous verdict unchanged, which reads as a
+// button that does nothing: name the two outcomes apart instead.
+const { sendUiNotif } = useUiNotif()
 const check = useAsyncAction(async () => {
-  await $fetch(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
+  const res = await $fetch<{ status: string, date?: string }>(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
-}, { success: t('checkOk') })
+  const recorded = res.status !== 'unknown' || !!res.date
+  sendUiNotif({ type: recorded ? 'success' : 'warning', msg: recorded ? t('checkOk') : t('checkPendingRelay') })
+})
 
 // reconcile blesses the current state into the WORM trail: the optional reason is the only
 // free-text audit field a revision carries, so it is offered here rather than API-only
@@ -1125,7 +1247,6 @@ const lineRevisionHeaders = computed(() => [
   { title: t('colOperation'), key: 'operation', sortable: false },
   { title: t('colDate'), key: 'date', sortable: false },
   { title: t('colOriginator'), key: 'origin', sortable: false },
-  { title: t('colAttribution'), key: 'who', sortable: false },
   { title: t('colReason'), key: 'reason', sortable: false },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])

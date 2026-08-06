@@ -239,6 +239,19 @@ is pending), and a dataset permanently stuck mid-pipeline defers anchoring until
 write is atomic with no multi-document transaction, and the relay only ever acts on
 already-committed state (ordering preserved).
 
+**Drafts carry a stamp they never redeem.** A file update never anchors at request time: it opens
+a draft, and the anchor describing the new bytes is written by the worker at `finalize`, once the
+draft is validated (by hand, or by the worker itself when the schema stays compatible). A stamp
+written on a draft lands under the excluded `draft` subtree, which the relay's task filter — a
+*top-level* `_needsHistorizing` — never matches, so the draft itself is never historized. Its only
+job is to carry the **context**: `applyPatch` stamps `draft._needsHistorizing` on a user's draft
+write (gated on the presence of a `who` — only the route layer supplies one, workers never do),
+`mergeDraft` overlays it onto the doc the worker sees, and `finalize` preserves it instead of
+falling back to its anonymous `origin: 'worker'` default. That is what makes the anchor of a file
+update read as a `user` write attributed to the uploader, rather than as an internal one
+attributed to nobody. A genuinely un-attributed pipeline run (remote-file auto-update,
+revalidation) supplies no `who`, keeps the `worker` default, and writes no `.who` sibling.
+
 **The outbox is only for *organic* writes.** The rare superadmin actions — `PUT _integrity`
 (enable) and `POST _integrity/_fix` (reconcile) — **bypass the outbox and anchor inline** in the
 request, calling the same `anchorDataset()` the relay uses (§3.3). The outbox/relay path remains
@@ -918,21 +931,32 @@ The integrity API splits read from write:
   response whose reader cannot `readIntegrity`, so anonymous/unauthorized readers never see
   breach verdicts or anchors even when they can otherwise read the dataset. This also scopes the
   list breach badge to authorized readers.
-- **UI:** the integrity tab is shown when the reader holds `readIntegrity` (or is in admin
-  mode); the enable/disable switch and the check/fix action buttons inside it render only in
-  admin mode. The status alerts and revision-history table are visible to every viewer of the
-  tab. The three actions that change the trail or the protection state are **confirmed in a
+- **UI:** the integrity tab is shown when the reader holds `readIntegrity` **and integrity is
+  active on the dataset**, or whenever the reader is in admin mode; the enable/disable switch and
+  the check/fix action buttons inside it render only in admin mode. Hence the active condition on
+  the reader side: with integrity off, a reader has no status, no history and no action available
+  — the tab would be empty — while a superadmin always needs it, since the switch that turns
+  integrity on lives in it. The status alerts and revision-history table are visible to every
+  viewer of the tab. The three actions that change the trail or the protection state are **confirmed in a
   dialog stating their consequence**: restore (overwrites data), reconcile (blesses the current
   state as legitimate, so pending divergences stop being reported), **disable** (clears the
   verdicts and stops renewal — additive *enable* needs no such guard) and **trail-anomaly ack**
   (round 3 — stops reporting the reviewed anomalies; itself a locked, audited revision).
   Reconcile, both restores, disable and the ack offer the optional free-text `reason`, which is
   the only free-text field a WORM revision carries; both history tables render it, so what an
-  admin can write is also what an auditor can read. The panel shows the trail verdict as a
-  second status row with the anomaly list (kind, key, confidence). Both revision-history tables
-  (dataset-level and per-line) additionally carry an **attribution column** (target 8 / A2, en +
-  fr) showing the `.who` body when present — user id or API-key ref, IP, country flag/code — raw
-  ids as stored, with **no display-name resolution**: looking one up would re-personalize what
+  admin can write is also what an auditor can read. Under the aggregate verdict banner the panel
+  lists **one row per verified part** — data file (file datasets), metadata, lines (REST), search
+  index, locked history — each with its own status chip, and each followed by its detail block
+  when there is one (index divergences + reindex, diverging line ids + restore, trail anomalies
+  (kind, key, confidence) + ack). The parts are only rendered for a definitive verdict: an
+  `unknown` check carries no part-level information, and showing every row as verified would
+  overstate what was established. In both revision-history tables
+  (dataset-level and per-line) the author column carries the **attribution** (target 8 / A2, en +
+  fr) under the write category: the `.who` body when present — user id or API-key ref, IP, country
+  flag/code. Category and identity are separate properties (one inside the locked revision, the
+  other in its short-retention sibling) but they answer one question, so they share a column rather
+  than leaving a mostly-empty second one. Identities are shown as raw ids
+  as stored, with **no display-name resolution**: looking one up would re-personalize what
   minimization deliberately stripped (§8), and the id is already meaningful to the owner admin and
   resolvable through the directory while the user still exists.
 

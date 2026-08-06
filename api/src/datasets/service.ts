@@ -21,7 +21,7 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
-import { getDatasetCacheKey } from './operations.ts'
+import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
@@ -253,23 +253,11 @@ export const getDatasetFresh = async (datasetId: string, publicationSite: string
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const projection: Record<string, number> = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
-  if (useDraft) projection['draft.updatedAt'] = 1
-  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection: datasetFreshnessProjection(useDraft) })
   if (!fresh) return {} // dataset was deleted
 
-  // check top-level updatedAt, finalizedAt and status
-  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt || cached.datasetFull.finalizedAt !== fresh.finalizedAt || cached.datasetFull.status !== fresh.status || cached.datasetFull.errorStatus !== fresh.errorStatus || cached.datasetFull.errorRetry !== fresh.errorRetry) {
+  if (!isCachedDatasetFresh(cached.datasetFull, fresh, useDraft)) {
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
-  }
-
-  // when using draft mode, also check draft.updatedAt to detect draft-only changes
-  if (useDraft) {
-    const cachedDraftUpdatedAt = cached.datasetFull.draft?.updatedAt
-    const freshDraftUpdatedAt = fresh.draft?.updatedAt
-    if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
-      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
-    }
   }
 
   // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)
@@ -525,7 +513,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
 
   // integrity outbox (spec §4): a patch touching covered metadata fields must be anchored.
-  // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored.
+  // Draft-prefixed patches land under the excluded `draft` subtree and are not anchored — they
+  // only carry the attribution forward to the anchor written when the draft is validated (below).
   // Plain-$set of the sub-doc can overwrite a concurrently written stamp between our read and
   // this write — accepted narrow window, both stamps only meant "re-anchor" (fail-loud recovery).
   // A REST dataset mid its extend/index/finalize partial-update pipeline (_partialRestStatus,
@@ -536,14 +525,29 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // indexLines/extend) is about to run next. finalize.ts always stamps explicitly (and clears
   // _partialRestStatus in that same write) once the pipeline settles, so defer to it rather than
   // anchoring every interim covered-key touch along the way.
-  if (dataset.integrity?.active && !dataset.draftReason && !patch._needsHistorizing && !dataset._partialRestStatus) {
-    if (integrityOps.coveredPatchKeys(patch).length) {
-      // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
-      // only means "re-anchor", and the pending context is the more specific one — e.g. the
-      // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
-      // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
-      // generic update/user context before finalize gets to preserve it
-      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'user', ...(who ? { who } : {}) } }
+  if (dataset.integrity?.active && !patch._needsHistorizing && !dataset._partialRestStatus) {
+    // preserve a stamp already pending on the doc rather than overwriting its context: a stamp
+    // only means "re-anchor", and the pending context is the more specific one — e.g. the
+    // pipeline-routed restore rides its 'restore' context through a full REST reindex, whose
+    // index-lines pass re-patches `schema` (covered) and would otherwise downgrade it to this
+    // generic update/user context before finalize gets to preserve it
+    const context = { operation: 'update', origin: 'user', ...(who ? { who } : {}) }
+    if (dataset.draftReason) {
+      // A draft write is never anchored itself (the stamp lands under the excluded `draft`
+      // subtree, which the relay's task filter — a top-level `_needsHistorizing` — never matches).
+      // But the anchor written when the draft is validated describes exactly these bytes, and its
+      // attribution has to come from somewhere: finalize preserves `_needsHistorizing` across the
+      // draft merge, so stamping here is what carries the uploader through to that anchor. Without
+      // it, finalize falls back to its anonymous `origin: 'worker'` context and every file update
+      // on an enrolled dataset reads as an internal write, attributed to nobody.
+      // Gated on `who`: only the route layer passes it (workers never do), so this stamps a user's
+      // draft write and stays out of the way of the pipeline's own interim draft patches.
+      // `patch.draftReason` means THIS write is the one opening the draft (a file upload): a stamp
+      // pending on the published doc belongs to an earlier, unrelated write that the relay will
+      // anchor on its own — never borrow its attribution for these new bytes.
+      if (who) patch._needsHistorizing = (patch.draftReason ? undefined : (dataset as any)._needsHistorizing) ?? { context }
+    } else if (integrityOps.coveredPatchKeys(patch).length) {
+      patch._needsHistorizing = (dataset as any)._needsHistorizing ?? { context }
     }
   }
 

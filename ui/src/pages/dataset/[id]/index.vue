@@ -1135,8 +1135,11 @@ const sections = computedDeepDiff(() => {
   }
   // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.
   // Reads (status + revision history) are visible to the owner's admins; the enable/disable and
-  // reconcile (fix) actions inside the panel remain superadmin-only.
-  if (canReadIntegrity.value) {
+  // reconcile (fix) actions inside the panel remain superadmin-only. Which is why the tab is only
+  // offered to a reader once integrity is actually on: with nothing checked there is no status, no
+  // history and no action they could take — an empty tab. A superadmin always gets it, since the
+  // enable switch it holds is how integrity gets turned on in the first place.
+  if (canReadIntegrity.value && (adminMode.value || d.integrity?.active)) {
     // breach verdicts ride the dataset doc itself (integrity field, stripped by clean() for
     // readers without readIntegrity) — no extra request needed to color the tab
     const integrityBreach = d.integrity?.lastCheck?.status === 'breach'
