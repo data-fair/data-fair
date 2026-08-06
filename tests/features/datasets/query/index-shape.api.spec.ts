@@ -4,6 +4,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, getRawDataset, patchRawDataset, datasetEsMappingProperties, clearDatasetCache } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
+const adminUser = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 // `_indexShape` (design §3) records the mapping shape a dataset's CURRENT index was built with.
 // It is stamped only when a fresh index is built, and every later emission — in particular the
@@ -48,6 +49,9 @@ test.describe('index shape', () => {
     await createDataset('shape-new')
     const raw = await getRawDataset('shape-new')
     assert.deepEqual(raw._indexShape, { singleTextField: true, wordAggField: true })
+    // internal field: stripped from the public representation, surfaced to admins by _diagnose
+    assert.equal((await testUser1.get('/api/v1/datasets/shape-new')).data._indexShape, undefined)
+    assert.deepEqual((await adminUser.get('/api/v1/datasets/shape-new/_diagnose')).data._indexShape, { singleTextField: true, wordAggField: true })
 
     const properties = await addStringColumn('shape-new')
     // single analyzed field: the repeat index analyzer + a distinct search analyzer, no
@@ -67,6 +71,7 @@ test.describe('index shape', () => {
     await patchRawDataset('shape-legacy', { $unset: { _indexShape: '' } })
     await clearDatasetCache()
     assert.equal((await getRawDataset('shape-legacy'))._indexShape, undefined)
+    assert.equal((await adminUser.get('/api/v1/datasets/shape-legacy/_diagnose')).data._indexShape, null)
 
     const properties = await addStringColumn('shape-legacy')
     // the new column must join the index legacy-shaped: dual analyzed fields, `.text` carrying a

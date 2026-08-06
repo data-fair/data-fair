@@ -188,7 +188,9 @@ export const registerMiscRoutes = (router: Router) => {
       await mongo.db.collection<{ _id: string }>('locks').findOne({ _id: `datasets:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}` })
     ]
     const warnings = computeRealtimeWarnings(dataset, esInfos, config.elasticsearch)
-    res.json({ filesInfos, esInfos, locks, warnings })
+    // _indexShape is stripped from all public dataset representations (clean());
+    // surfaced here for admins — null = legacy-shaped index awaiting its organic reindex
+    res.json({ filesInfos, esInfos, locks, warnings, _indexShape: dataset._indexShape ?? null })
   })
 
   // Special admin route to force reindexing a dataset
