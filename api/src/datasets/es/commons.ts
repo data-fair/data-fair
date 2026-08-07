@@ -440,11 +440,21 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       // `.text_standard`. Targeting an unmapped subfield would make simple_query_string return
       // zero results silently instead of the intended 400.
       const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
-      const subfields = []
-      if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
-      if (isPlainString && prop['x-capabilities']?.text !== false) subfields.push('text')
-      if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
-      must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+      const isNumeric = prop.type === 'integer' || prop.type === 'number'
+      const noNumericText = !!(dataset as any)._indexShape?.noNumericText
+      // an explicit textStandard:false opt-out must still 400 rather than be routed to the
+      // lenient fallback — it was deliberately removed from `q`-style matching.
+      if (isNumeric && noNumericText && prop['x-capabilities']?.textStandard !== false) {
+        // rebuilt indexes carry no numeric `.text_standard`: whole-value match on the main field
+        if (prop['x-capabilities']?.index === false) requiredCapability(prop, filterSuffix, 'index')
+        must.push({ simple_query_string: { query: query[queryKey], fields: [prop.key], lenient: true } })
+      } else {
+        const subfields = []
+        if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
+        if (isPlainString && prop['x-capabilities']?.text !== false) subfields.push('text')
+        if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
+        must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+      }
     } else if (filterSuffix === '_exists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
       if (fields.length === 1) filter.push({ exists: { field: fields[0] } })

@@ -330,3 +330,53 @@ test.describe('exact-match routing (new index shape)', () => {
     assert.deepEqual(out.bool.should[1].simple_query_string.fields, ['a.text_standard'])
   })
 })
+
+test.describe('numeric q fallback (noNumericText shape)', () => {
+  const schema = [
+    { key: 'code', type: 'integer' },
+    { key: 'measure', type: 'number' },
+    { key: 'day', type: 'string', format: 'date' },
+    { key: 'name', type: 'string' },
+    { key: 'noidx', type: 'integer', 'x-capabilities': { index: false } },
+    { key: '_i', type: 'integer', 'x-calculated': true }
+  ]
+
+  test('qLenientFields lists indexed, non-calculated numeric columns only', () => {
+    const dataset: any = { id: 'nq1', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const { qLenientFields } = getFilterableFields(dataset, 'foo', undefined)
+    assert.deepEqual(qLenientFields, ['code', 'measure'])
+  })
+
+  test('buildQClauses adds one lenient clause on noNumericText shape, none on legacy', () => {
+    const newDataset: any = { id: 'nq2', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const newClauses = JSON.stringify(buildQClauses(newDataset, '84500', undefined, 'simple'))
+    assert.ok(newClauses.includes('"lenient":true'))
+    assert.ok(newClauses.includes('"fields":["code","measure"]'))
+
+    const legacyDataset: any = { id: 'nq3', schema, extensions: [] }
+    const legacyClauses = JSON.stringify(buildQClauses(legacyDataset, '84500', undefined, 'simple'))
+    assert.ok(!legacyClauses.includes('"lenient":true'))
+  })
+
+  test('q_mode=and filter unions numeric main fields with lenient', () => {
+    const dataset: any = { id: 'nq4', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const clauses: any = buildQClauses(dataset, 'foo 84500', undefined, 'and')
+    const filterClause = JSON.stringify(clauses.bool.filter)
+    assert.ok(filterClause.includes('code'))
+    assert.ok(filterClause.includes('"lenient":true'))
+  })
+
+  test('a numeric column with an explicit textStandard:false opt-out is excluded from qLenientFields', () => {
+    // the controller ruling: explicit API-level capability opt-outs stay honored, so a numeric
+    // column deliberately removed from `q` via x-capabilities.textStandard:false must NOT be
+    // resurrected by the lenient main-field fallback.
+    const optOutSchema = [
+      ...schema,
+      { key: 'excluded', type: 'integer', 'x-capabilities': { textStandard: false } }
+    ]
+    const dataset: any = { id: 'nq5', schema: optOutSchema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const { qLenientFields } = getFilterableFields(dataset, 'foo', undefined)
+    assert.deepEqual(qLenientFields, ['code', 'measure'])
+    assert.ok(!qLenientFields.includes('excluded'))
+  })
+})
