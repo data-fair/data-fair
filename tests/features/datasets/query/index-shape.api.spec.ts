@@ -48,10 +48,10 @@ test.describe('index shape', () => {
   test('a fresh dataset is stamped new-shape and grows new-shaped columns', async () => {
     await createDataset('shape-new')
     const raw = await getRawDataset('shape-new')
-    assert.deepEqual(raw._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual(raw._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
     // internal field: stripped from the public representation, surfaced to admins by _diagnose
     assert.equal((await testUser1.get('/api/v1/datasets/shape-new')).data._indexShape, undefined)
-    assert.deepEqual((await adminUser.get('/api/v1/datasets/shape-new/_diagnose')).data._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual((await adminUser.get('/api/v1/datasets/shape-new/_diagnose')).data._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
 
     const properties = await addStringColumn('shape-new')
     // single analyzed field: the repeat index analyzer + a distinct search analyzer, no
@@ -61,7 +61,7 @@ test.describe('index shape', () => {
     assert.notEqual(properties.str2.fields.text.analyzer, properties.str2.fields.text.search_analyzer)
     assert.equal(properties.str2.fields.text_standard, undefined)
     // the mapping update did not rebuild the index -> the stamp is unchanged
-    assert.deepEqual((await getRawDataset('shape-new'))._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual((await getRawDataset('shape-new'))._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
   })
 
   test('a legacy dataset (no stamp) grows LEGACY-shaped columns and stays unstamped', async () => {

@@ -203,6 +203,9 @@ export const extractError = (err: any): ExtractedError => {
 export interface IndexShape {
   singleTextField?: boolean
   wordAggField?: boolean
+  // numeric (integer/number) columns carry no `.text_standard` inner field; their `q`
+  // matching goes through the main long/double field (lenient clause, see buildQClauses)
+  noNumericText?: boolean
 }
 
 // The analyzer family is derived from `defaultAnalyzer` by naming convention; all three must be
@@ -219,7 +222,7 @@ export const EXACT_MATCH_BOOST = 0.5
 
 // New shape: one analyzed `.text` per column (indexed original + stem via keyword_repeat, searched
 // on the stem), plus `.words` on textAgg columns.
-export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true })
+export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true, noNumericText: true })
 // Legacy shape: dual `.text` + `.text_standard`, what every index carries until its next reindex.
 export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
 
@@ -241,7 +244,8 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   // Non-string columns keep `.text_standard` under both shapes; full-text strings lose it under the
   // new shape, replaced by the single `.text` field emitted below.
   const innerFields: any = {}
-  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField)) {
+  const isNumeric = prop.type === 'integer' || prop.type === 'number'
+  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField) && !(isNumeric && shape.noNumericText)) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
     innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
@@ -249,8 +253,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const index = capabilities.index !== false
   const values = capabilities.values !== false
   if (prop.type === 'object') esProp = { type: 'object', enabled: index }
-  if (prop.type === 'integer') esProp = { type: 'long', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'number') esProp = { type: 'double', fields: innerFields, index, doc_values: values }
+  const numericFields = Object.keys(innerFields).length ? { fields: innerFields } : {}
+  if (prop.type === 'integer') esProp = { type: 'long', ...numericFields, index, doc_values: values }
+  if (prop.type === 'number') esProp = { type: 'double', ...numericFields, index, doc_values: values }
   if (prop.type === 'boolean') esProp = { type: 'boolean', index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
