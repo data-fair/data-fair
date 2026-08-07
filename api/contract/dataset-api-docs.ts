@@ -178,7 +178,7 @@ export default (
 
   Le mode "simple" (alias "or") expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
 
-  Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
+  Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete : le dernier mot est traité comme un préfixe et chaque mot saisi est exigé, les résultats se restreignent donc au fur et à mesure de la frappe. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
 
   Le mode "and" exige que chaque mot de la recherche soit présent (le classement des résultats reste celui de la recherche large).
     `,

@@ -74,11 +74,22 @@ async function experimentCommand (argv: string[]): Promise<void> {
   if (!values['no-seed']) await init()
   const results: ExperimentResult[] = []
   for (const exp of selectExperiments(values.name!)) {
-    const spec = getPreset(exp.preset)
-    if (values.rows) spec.rows = parseInt(values.rows)
-    if (!values['no-seed']) await seedDataset(spec)
-    const index = await resolveIndex(spec.id)
-    const ctx = schemaContext(generateSchema(spec))
+    let index: string
+    let rows: number
+    let ctx = schemaContext([])
+    if (exp.prepare) {
+      // self-built raw-ES index — no preset seeding, no API dependency
+      const prepared = await exp.prepare(values.rows ? parseInt(values.rows) : undefined)
+      index = prepared.index
+      rows = prepared.rows
+    } else {
+      const spec = getPreset(exp.preset)
+      if (values.rows) spec.rows = parseInt(values.rows)
+      if (!values['no-seed']) await seedDataset(spec)
+      index = await resolveIndex(spec.id)
+      ctx = schemaContext(generateSchema(spec))
+      rows = spec.rows
+    }
     const variants = [
       { ...exp.baseline, isBaseline: true },
       ...exp.variants.map(v => ({ ...v, isBaseline: false }))
@@ -101,7 +112,7 @@ async function experimentCommand (argv: string[]): Promise<void> {
       experiment: exp.name,
       description: exp.description,
       preset: exp.preset,
-      rows: spec.rows,
+      rows,
       variants: variantResults
     }
     printExperimentReport(er)

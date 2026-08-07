@@ -8,6 +8,7 @@ import { msmSearchVsSplitExperiments } from './experiments/msm-search-vs-split.t
 import { terminateAfterExperiments } from './experiments/terminate-after.ts'
 import { msmSkewedExperiments } from './experiments/msm-skewed.ts'
 import { countSplitExperiments } from './experiments/count-split.ts'
+import { completeRankingExperiments } from './experiments/complete-ranking.ts'
 
 export interface QueryVariant {
   name: string
@@ -23,6 +24,9 @@ export interface Experiment {
   name: string
   description: string
   preset: string
+  /** Self-built raw-ES index (bypasses the preset seed path — §15 convention).
+   *  Returns the index name and the row count actually used. */
+  prepare?: (rows?: number) => Promise<{ index: string, rows: number }>
   baseline: QueryVariant
   variants: QueryVariant[]
 }
@@ -36,7 +40,8 @@ export const allExperiments: Experiment[] = [
   ...msmSearchVsSplitExperiments,
   ...terminateAfterExperiments,
   ...msmSkewedExperiments,
-  ...countSplitExperiments
+  ...countSplitExperiments,
+  ...completeRankingExperiments
 ]
 
 const byName = new Map(allExperiments.map(e => [e.name, e]))

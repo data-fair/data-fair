@@ -37,7 +37,8 @@ and `BENCHMARK_ES_NODES` environment variables if needed.
 
 Presets: `small` (1k rows), `tall` (2M, for track_total_hits), `wide-text` (300k, ~40
 text columns), `mixed` (500k, all types). Experiments: `track-total-hits:*`,
-`search-catchall:wide-q`, `min-should-match:wide-q`.
+`search-catchall:wide-q`, `min-should-match:wide-q`, `complete-ranking:*` (self-built
+index — runs with `--no-seed`, no API needed), and more — see `src/experiments.ts`.
 
 ## Results
 

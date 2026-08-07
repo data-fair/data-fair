@@ -345,7 +345,9 @@ test.describe('search - basic', () => {
       t2: 'prefixsuite',
       t3: 'configurations Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt configurations ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit configurer anim id est laborum.',
       p1: 'phrase 1 mot1 mot2 mot3 mot4',
-      p2: 'phrase 2 mot1 mot3 mot2 mot4'
+      p2: 'phrase 2 mot1 mot3 mot2 mot4',
+      p3: 'phrase 3 mot1 seul',
+      p4: 'phrase 4 mot1 de mot2'
     }
     let res = await ax.post('/api/v1/datasets/qmodes/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
     dataset = await waitForFinalize(ax, 'qmodes')
@@ -369,13 +371,39 @@ test.describe('search - basic', () => {
       assert.equal(res.data.total, 1)
     }
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 mot2', q_mode: 'simple' } })
-    assert.equal(res.data.total, 2)
-    assert.equal(res.data.results[0]._score, res.data.results[1]._score)
+    assert.equal(res.data.total, 4)
+    // p1 and p2 carry the same words in the same amount of text: same score
+    const simpleScores = Object.fromEntries(res.data.results.map((r: any) => [r._id, r._score]))
+    assert.equal(simpleScores.p1, simpleScores.p2)
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: '"mot1 mot2"', q_mode: 'simple' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'p1')
+    // complete mode narrows a multi-word query: every word is required (p3 has mot1 but not mot2),
+    // where the simple OR above matches all four
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 mot2', q_mode: 'complete' } })
-    assert.equal(res.data.total, 2)
+    assert.equal(res.data.total, 3)
     assert.ok(res.data.results[0]._score > res.data.results[1]._score)
+    // the last word acts as a prefix inside the requirement: "mot1 se" keeps only the doc
+    // with mot1 AND a word starting with "se"
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 se', q_mode: 'complete' } })
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'p3')
+    // a single word never narrows: plain prefix behavior
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1', q_mode: 'complete' } })
+    assert.equal(res.data.total, 4)
+    // a typed stopword is never a requirement: on this new-shape dataset "de" only survives
+    // analysis on scalar .text_standard fields (_updatedAt), whose content cannot contain it —
+    // the language-analyzed alternative reading of the filter drops it instead of matching nothing
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 de mot2', q_mode: 'complete' } })
+    assert.equal(res.data.total, 3)
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 de mot2', q_mode: 'and' } })
+    assert.equal(res.data.total, 3)
+    // a QUOTED phrase containing a stopword is one term unit, not per-word requirements — no
+    // zero-out, no widening. The analyzer leaves a position GAP where "de" was, and that gap
+    // is a wildcard slot: the phrase matches p4 ("mot1 de mot2") AND p2 ("mot1 mot3 mot2",
+    // mot3 fills the hole), but not p1 whose mot2 is directly adjacent to mot1
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: '"mot1 de mot2"', q_mode: 'complete' } })
+    assert.equal(res.data.total, 2)
+    assert.deepEqual(res.data.results.map((r: any) => r._id).sort(), ['p2', 'p4'])
   })
 })

@@ -576,12 +576,12 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     assert.equal(results[0]['_country.name'], 'Japan')
   })
 
-  test('singleSearch should deduplicate results on the output key (ES collapse)', async () => {
+  test('singleSearch deduplicates on the output key, scopes q to value/label columns, alphabetical order', async () => {
     const ax = testSuperadmin
 
     await initMaster(
       ax,
-      [siretProperty, { key: 'denomination', title: 'Denomination', type: 'string' }],
+      [siretProperty, { key: 'denomination', title: 'Denomination', type: 'string' }, { key: 'notes', title: 'Notes', type: 'string' }],
       {
         singleSearchs: [{
           id: 'siret-search',
@@ -592,12 +592,14 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
       }
     )
 
-    // three lines share the same siret, one has a different siret
+    // three lines share the same siret, two have different sirets; the last one mentions
+    // "Acme" only in a column that is neither the output nor the label
     await ax.post('/api/v1/datasets/master/_bulk_lines', [
       { siret: '82898347800011', denomination: 'Acme A' },
       { siret: '82898347800011', denomination: 'Acme B' },
       { siret: '82898347800011', denomination: 'Acme C' },
-      { siret: '99999999900099', denomination: 'Other corp' }
+      { siret: '99999999900099', denomination: 'Other corp' },
+      { siret: '11111111100011', denomination: 'Zeta corp', notes: 'partner of Acme' }
     ])
     await waitForFinalize(ax, 'master')
 
@@ -605,10 +607,18 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     // collapse on `siret` should yield a single hit for the duplicated value, not three
     const acmeHits = res.data.results.filter((r: any) => r.output === '82898347800011')
     assert.equal(acmeHits.length, 1, 'duplicated siret values must be collapsed to a single suggestion')
+    // q only completes the value/label columns: the "partner of Acme" note must not surface Zeta corp
+    assert.deepEqual(res.data.results.map((r: any) => r.output), ['82898347800011'])
 
-    // a broader search must still surface the other distinct siret
+    // an empty search lists every distinct value, ordered alphabetically on the output key
+    // (the leading part of the displayed "output (label)" string)
     const resAll = await ax.get('/api/v1/datasets/master/master-data/single-searchs/siret-search', { params: { q: '' } })
-    const outputs = resAll.data.results.map((r: any) => r.output).sort()
-    assert.deepEqual(outputs, ['82898347800011', '99999999900099'])
+    assert.deepEqual(resAll.data.results.map((r: any) => r.output), ['11111111100011', '82898347800011', '99999999900099'])
+    // the collapsed group displays one of its rows' labels (which one is a tie-break detail)
+    assert.match(resAll.data.results[1].label, /^82898347800011 \(Acme [ABC]\)$/)
+
+    // suggestions stay ordered on the output key within a match set ("corp" matches two labels)
+    const resCorp = await ax.get('/api/v1/datasets/master/master-data/single-searchs/siret-search', { params: { q: 'corp' } })
+    assert.deepEqual(resCorp.data.results.map((r: any) => r.output), ['11111111100011', '99999999900099'])
   })
 })
