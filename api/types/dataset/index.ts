@@ -78,7 +78,7 @@ export type DatasetInternal = Dataset & {
   // shape of the mapping this dataset's current index was built with (set on full reindex and by
   // the REST index-creation paths; AND-merged over descendants for virtual datasets). Absent =
   // legacy shape, per flag.
-  _indexShape?: { singleTextField?: boolean, wordAggField?: boolean }
+  _indexShape?: { singleTextField?: boolean, wordAggField?: boolean, noNumericText?: boolean }
   // true when this dataset's current index was fully (re)built by code that stamps
   // the _bytes CSV-equivalent size on every line (set by the index-lines worker on
   // full reindex only); storage() then reads indexed size as a sum over _bytes

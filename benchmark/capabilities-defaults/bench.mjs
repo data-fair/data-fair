@@ -1,4 +1,6 @@
 #!/usr/bin/env node --experimental-strip-types --disable-warning=ExperimentalWarning
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // A/B bench: store size + bulk-indexing wall time, current production mapping shape ("A")
 // vs this branch's new shape ("B", adds noNumericText), plus a "B2" variant on the
 // code-heavy dataset that also applies the Task 5 sniffer's capability injection
