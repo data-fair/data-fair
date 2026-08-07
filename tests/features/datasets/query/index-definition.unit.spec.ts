@@ -39,6 +39,32 @@ test.describe('buildIndexMappings - catch-all _search field', () => {
     // a boolean column has no text inner field -> not copied
     assert.equal(properties.a_bool.copy_to, undefined)
   })
+
+  test('wide dataset: numeric columns lose copy_to under noNumericText but keep it under legacy', () => {
+    // A wide schema with enough text columns to trigger _search: 32 strings = 32 fields > 15 threshold
+    // When noNumericText is active, numeric columns have no inner fields, so they don't get copy_to.
+    // Task 3 adds per-field lenient q clauses for numerics independent of copy_to regime.
+    const schema = [
+      ...Array.from({ length: 32 }, (_, i) => stringField('f' + i)),
+      { key: 'num1', type: 'number' },
+      { key: 'num2', type: 'number' }
+    ]
+
+    // legacy shape: numerics emit .text_standard, so they get copy_to in wide dataset
+    const legacy: any = { id: 'wide-legacy', schema, extensions: [] }
+    const legacyRes = buildIndexMappings(legacy, schema, ANALYZERS, currentIndexShape(legacy))
+    assert.equal(legacyRes.wide, true)
+    assert.equal(legacyRes.properties.num1.copy_to, '_search')
+    assert.equal(legacyRes.properties.num2.copy_to, '_search')
+
+    // new shape with noNumericText: numerics have no inner fields, so no copy_to
+    const fresh: any = { id: 'wide-new', schema, extensions: [], _indexShape: NEW_INDEX_SHAPE }
+    const freshRes = buildIndexMappings(fresh, schema, ANALYZERS, currentIndexShape(fresh))
+    assert.equal(freshRes.wide, true)
+    assert.equal(freshRes.properties._search.type, 'text')
+    assert.equal(freshRes.properties.num1.copy_to, undefined)
+    assert.equal(freshRes.properties.num2.copy_to, undefined)
+  })
 })
 
 // `indexDefinition(dataset)` (manage-indices) emits with `currentIndexShape(dataset)` by default,
@@ -76,18 +102,22 @@ test.describe('emission shape of a partial mapping update (updateDatasetMapping 
   // wideness is an emission decision like any other, so it follows the index too: a scalar-heavy
   // schema in the 15..30 band must keep the classification its legacy index was built with
   test('a band-shaped schema stays narrow on a legacy index and is wide on a new one', () => {
-    const schema = Array.from({ length: 20 }, (_, i) => ({ key: 'n' + i, type: 'integer' }))
+    // Use dates (not integers) because with the noNumericText flag, numeric columns no longer
+    // emit .text_standard in the new shape, so they don't contribute to the wide-classification
+    // field count. Dates always emit .text_standard for year search, so they count consistently
+    // in both shapes: 20 dates = 20 fields, which is <= 30 (legacy narrow) but > 15 (new wide).
+    const schema = Array.from({ length: 20 }, (_, i) => ({ key: 'd' + i, type: 'string', format: 'date' }))
     const legacy: any = { id: 'band-legacy', schema, extensions: [] }
     const legacyRes = buildIndexMappings(legacy, schema, ANALYZERS, currentIndexShape(legacy))
     assert.equal(legacyRes.wide, false)
     assert.equal(legacyRes.properties._search, undefined)
-    assert.equal(legacyRes.properties.n0.copy_to, undefined)
+    assert.equal(legacyRes.properties.d0.copy_to, undefined)
 
     const fresh: any = { id: 'band-new', schema, extensions: [], _indexShape: NEW_INDEX_SHAPE }
     const freshRes = buildIndexMappings(fresh, schema, ANALYZERS, currentIndexShape(fresh))
     assert.equal(freshRes.wide, true)
     assert.equal(freshRes.properties._search.type, 'text')
-    assert.equal(freshRes.properties.n0.copy_to, '_search')
+    assert.equal(freshRes.properties.d0.copy_to, '_search')
   })
 
   test('currentIndexShape: absent stamp is legacy, stamp is followed', () => {
@@ -116,11 +146,15 @@ test.describe('esProperty shapes', () => {
     assert.equal(p.fields.text_standard.analyzer, 'standard')
     assert.equal(p.fields.keyword_insensitive.normalizer, 'insensitive_normalizer')
   })
-  test('scalars keep .text_standard under both shapes', () => {
-    for (const shape of [undefined, LEGACY_INDEX_SHAPE]) {
-      const p = esProperty({ key: 'n', type: 'number' }, { search: 'S', index: 'I' }, shape)
-      assert.equal(p.fields.text_standard.analyzer, 'standard')
-    }
+  test('numeric scalars in legacy shape keep .text_standard; dates keep it in both shapes', () => {
+    // legacy: numbers emit .text_standard
+    const pLeg = esProperty({ key: 'n', type: 'number' }, { search: 'S', index: 'I' }, LEGACY_INDEX_SHAPE)
+    assert.equal(pLeg.fields.text_standard.analyzer, 'standard')
+    // new shape: numbers lose .text_standard (noNumericText flag); dates keep it for year search
+    const pNumNew = esProperty({ key: 'n', type: 'number' }, { search: 'S', index: 'I' }, NEW_INDEX_SHAPE)
+    assert.equal(pNumNew.fields, undefined)
+    const pDateNew = esProperty({ key: 'd', type: 'string', format: 'date' }, { search: 'S', index: 'I' }, NEW_INDEX_SHAPE)
+    assert.equal(pDateNew.fields.text_standard.analyzer, 'standard')
   })
   test('search disabled: no analyzed field at all under the new shape', () => {
     const p = esProperty({ key: 'a', type: 'string', 'x-capabilities': { text: false, textStandard: false } }, { search: 'S', index: 'I' })
@@ -142,5 +176,37 @@ test.describe('esProperty shapes', () => {
     assert.equal(p.fields.text.analyzer, 'I')
     assert.equal(p.fields.text.search_analyzer, 'S')
     assert.equal(p.fields.text_standard, undefined)
+  })
+})
+
+test.describe('noNumericText shape - numeric columns lose .text_standard', () => {
+  const schema = [
+    { key: 'an_int', type: 'integer' },
+    { key: 'a_num', type: 'number' },
+    { key: 'a_date', type: 'string', format: 'date' },
+    stringField('a_str')
+  ]
+
+  test('new shape: no text_standard on integer/number, kept on date and string', () => {
+    const dataset: any = { id: 'nnt-new', schema, extensions: [] }
+    const { properties } = buildIndexMappings(dataset, schema, ANALYZERS, NEW_INDEX_SHAPE)
+    assert.equal(properties.an_int.fields, undefined)
+    assert.equal(properties.a_num.fields, undefined)
+    assert.equal(properties.a_date.fields.text_standard.analyzer, 'standard')
+    assert.equal(properties.a_str.fields.text.analyzer, INDEX_ANALYZER)
+  })
+
+  test('legacy shape (no _indexShape): numeric text_standard still emitted', () => {
+    const dataset: any = { id: 'nnt-legacy', schema, extensions: [] }
+    const { properties } = buildIndexMappings(dataset, schema, ANALYZERS, currentIndexShape(dataset))
+    assert.equal(properties.an_int.fields.text_standard.analyzer, 'standard')
+    assert.equal(properties.a_num.fields.text_standard.analyzer, 'standard')
+  })
+
+  test('pre-flag new-shape index (singleTextField only): numeric text_standard still emitted', () => {
+    // a dataset rebuilt between the single-text-field rework and this change
+    const dataset: any = { id: 'nnt-mid', schema, extensions: [], _indexShape: { singleTextField: true, wordAggField: true } }
+    const { properties } = buildIndexMappings(dataset, schema, ANALYZERS, currentIndexShape(dataset))
+    assert.equal(properties.an_int.fields.text_standard.analyzer, 'standard')
   })
 })

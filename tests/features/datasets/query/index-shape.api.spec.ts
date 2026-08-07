@@ -20,11 +20,13 @@ test.describe('index shape', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
-  // The initial schema deliberately holds no string column: a scalar's mapping is identical under
-  // both shapes, so the partial mapping update below is accepted by elasticsearch either way and
-  // the ONLY difference between the two datasets is the shape the new string column is emitted
-  // with. A string column in the initial schema would make the legacy-shaped update conflict with
-  // the live new-shape mapping and fall back to a full reindex, hiding what we want to observe.
+  // The initial schema deliberately holds no string column: with noNumericText, a numeric column
+  // differs between shapes (legacy emits .text_standard, new does not), but numbers have no inner
+  // text fields for _search/copy_to routing, so the partial mapping update is accepted by
+  // elasticsearch either way. The ONLY difference surfaced in the mapping between the two datasets
+  // is the shape the new string column is emitted with. A string column in the initial schema
+  // would make the legacy-shaped update conflict with the live new-shape mapping and fall back to
+  // a full reindex, hiding what we want to observe.
   const createDataset = async (id: string) => {
     const ax = testUser1
     await ax.put(`/api/v1/datasets/${id}`, {
@@ -48,10 +50,10 @@ test.describe('index shape', () => {
   test('a fresh dataset is stamped new-shape and grows new-shaped columns', async () => {
     await createDataset('shape-new')
     const raw = await getRawDataset('shape-new')
-    assert.deepEqual(raw._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual(raw._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
     // internal field: stripped from the public representation, surfaced to admins by _diagnose
     assert.equal((await testUser1.get('/api/v1/datasets/shape-new')).data._indexShape, undefined)
-    assert.deepEqual((await adminUser.get('/api/v1/datasets/shape-new/_diagnose')).data._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual((await adminUser.get('/api/v1/datasets/shape-new/_diagnose')).data._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
 
     const properties = await addStringColumn('shape-new')
     // single analyzed field: the repeat index analyzer + a distinct search analyzer, no
@@ -61,7 +63,7 @@ test.describe('index shape', () => {
     assert.notEqual(properties.str2.fields.text.analyzer, properties.str2.fields.text.search_analyzer)
     assert.equal(properties.str2.fields.text_standard, undefined)
     // the mapping update did not rebuild the index -> the stamp is unchanged
-    assert.deepEqual((await getRawDataset('shape-new'))._indexShape, { singleTextField: true, wordAggField: true })
+    assert.deepEqual((await getRawDataset('shape-new'))._indexShape, { singleTextField: true, wordAggField: true, noNumericText: true })
   })
 
   test('a legacy dataset (no stamp) grows LEGACY-shaped columns and stays unstamped', async () => {
@@ -110,15 +112,20 @@ test.describe('index shape', () => {
 
     // simulate the legacy fleet member we cannot create through the API (a fresh index is always
     // built new-shape, and a band-shaped one would be born wide): drop the stamp AND graft the
-    // band-shaped schema onto the stored document. 20 numeric columns + `txt` = 21 counted inner
-    // fields under both shapes (+3 calculated) — over the new threshold of 15, well under the
-    // legacy 30.
-    await patchRawDataset(id, { $unset: { _indexShape: '' }, schema: [txtCol, ...numCols(20)] })
+    // band-shaped schema onto the stored document. Use DATE columns (not numeric) for the filler:
+    // with noNumericText, numeric columns emit no inner field at all under the new shape and would
+    // contribute 0 to the count, collapsing the band to "narrow under both shapes" and making the
+    // assertion below vacuous. Dates always emit `.text_standard` (year search) under both shapes,
+    // so they count consistently — same substitution as index-definition.unit.spec.ts's band test.
+    // 20 date columns + `txt` = 21 counted inner fields under both shapes (+3 calculated) — over
+    // the new threshold of 15, well under the legacy 30.
+    const dateCols = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'date' + i, type: 'string', format: 'date' }))
+    await patchRawDataset(id, { $unset: { _indexShape: '' }, schema: [txtCol, ...dateCols(20)] })
     await clearDatasetCache()
 
     // a compatible schema patch: the partial mapping update path
     await doAndWaitForFinalize(ax, id, () => ax.patch(`/api/v1/datasets/${id}`, {
-      schema: [txtCol, ...numCols(21)]
+      schema: [txtCol, ...dateCols(21)]
     }))
 
     const properties = await datasetEsMappingProperties(id)
