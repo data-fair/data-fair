@@ -398,5 +398,12 @@ test.describe('search - basic', () => {
     assert.equal(res.data.total, 3)
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'mot1 de mot2', q_mode: 'and' } })
     assert.equal(res.data.total, 3)
+    // a QUOTED phrase containing a stopword is one term unit, not per-word requirements — no
+    // zero-out, no widening. The analyzer leaves a position GAP where "de" was, and that gap
+    // is a wildcard slot: the phrase matches p4 ("mot1 de mot2") AND p2 ("mot1 mot3 mot2",
+    // mot3 fills the hole), but not p1 whose mot2 is directly adjacent to mot1
+    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: '"mot1 de mot2"', q_mode: 'complete' } })
+    assert.equal(res.data.total, 2)
+    assert.deepEqual(res.data.results.map((r: any) => r._id).sort(), ['p2', 'p4'])
   })
 })
