@@ -330,3 +330,43 @@ test.describe('exact-match routing (new index shape)', () => {
     assert.deepEqual(out.bool.should[1].simple_query_string.fields, ['a.text_standard'])
   })
 })
+
+test.describe('complete-mode AND filter (multi-word narrowing)', () => {
+  const schema = [{ key: 'a', type: 'string' }]
+
+  test('single-word query gets no filter — the prefix clause is the only requirement', () => {
+    const out: any = buildQClauses({ id: 'cf1', finalizedAt: 'f', schema }, 'fo', undefined, 'complete')
+    assert.ok(out.bool.should)
+    assert.ok(!out.bool.must && !out.bool.filter)
+  })
+
+  test('multi-word query wraps the scored OR in a non-scoring AND filter, last word as prefix', () => {
+    const out: any = buildQClauses({ id: 'cf2', finalizedAt: 'f', schema }, 'fo ba', undefined, 'complete')
+    // scores stay the broad OR: prefix + quoted-phrase + plain clauses, untouched
+    assert.equal(out.bool.must[0].bool.should.length, 3)
+    assert.equal(out.bool.must[0].bool.should[0].simple_query_string.query, 'fo ba*')
+    const filter = out.bool.filter[0].simple_query_string
+    assert.equal(filter.query, 'fo ba*')
+    assert.equal(filter.default_operator, 'and')
+    // filter surface covers both the prefix routing and the plain-clause routing
+    assert.ok(filter.fields.includes('a.text_standard'))
+    assert.ok(filter.fields.includes('a.text'))
+  })
+
+  test('user-typed wildcards: prefix clause is skipped and the filter requires q as-is', () => {
+    const out: any = buildQClauses({ id: 'cf3', finalizedAt: 'f', schema }, 'fo* ba', undefined, 'complete')
+    assert.ok(!JSON.stringify(out.bool.must).includes('fo* ba*'))
+    assert.equal(out.bool.filter[0].simple_query_string.query, 'fo* ba')
+    assert.equal(out.bool.filter[0].simple_query_string.default_operator, 'and')
+  })
+
+  test('a wildcard-capability column keeps its *q* recall through a filter-side alternative', () => {
+    const wSchema = [{ key: 'a', type: 'string' }, { key: 'w', type: 'string', 'x-capabilities': { wildcard: true } }]
+    const out: any = buildQClauses({ id: 'cf4', finalizedAt: 'f', schema: wSchema }, 'fo ba', undefined, 'complete')
+    const alternatives = out.bool.filter[0].bool.should
+    assert.equal(alternatives.length, 2)
+    assert.equal(alternatives[0].simple_query_string.default_operator, 'and')
+    assert.deepEqual(alternatives[1].query_string.fields, ['w.wildcard'])
+    assert.equal(alternatives[1].query_string.query, '*fo ba*')
+  })
+})

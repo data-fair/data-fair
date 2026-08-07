@@ -593,6 +593,10 @@ export const buildQClauses = (
 ): any => {
   const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
   const should: any[] = []
+  // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
+  // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
+  // but scalar/date columns still carry `.text_standard`, hence the union rather than a swap.
+  const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
   if (qMode === 'complete') {
     // "complete" mode, we try to accomodate for most cases and give the most intuitive results
     // to a search query where the user might be using a autocomplete type control
@@ -601,10 +605,6 @@ export const buildQClauses = (
     // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
-      // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
-      // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
-      // but scalar/date columns still carry `.text_standard`, hence the union rather than a swap.
-      const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
       if (prefixFields.length) {
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
@@ -646,7 +646,7 @@ export const buildQClauses = (
   // of the retained (non-ignored) words: the match set is the plain OR minus docs that
   // only matched ignored words — ignored words keep scoring. Requirements must NEVER move
   // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
-  // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
+  // q_mode=and and q_ignored never compose with `complete`, which gets its own filter below.
   if (qMode !== 'complete') {
     const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
     if (qMode === 'and' && matchFields.length) {
@@ -660,6 +660,26 @@ export const buildQClauses = (
           filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: matchFields } })), minimum_should_match: 1 } }]
         }
       }
+    }
+  }
+
+  // same pattern for a multi-word `complete` query, for a different reason: an autocomplete
+  // must NARROW as the user types, but the scored clauses are a broad OR — their match set is
+  // the union of every typed word (measured 152k → 22k matches once filtered on the §16 corpus,
+  // benchmark/INVESTIGATIONS.md). The filter requires every word, the last one as a prefix —
+  // the startsWith clause's own `q*` expression, so filter and scoring read the prefix
+  // identically. A doc reachable only through the opt-in `*q*` wildcard clause is preserved
+  // by the filter-side alternative. Scores are untouched: page-1 ordering is unchanged, only
+  // totals/aggregations/pagination see the narrowed set.
+  if (qMode === 'complete' && /\s/.test(q)) {
+    const userWildcards = q.includes('*') || q.includes('?')
+    const filterFields = [...new Set([...prefixFields, ...qSearchFields])]
+    if (filterFields.length) {
+      const andClause = { simple_query_string: { query: userWildcards ? q : `${q}*`, fields: filterFields, ...sqsOptions, default_operator: 'and' } }
+      const filter = (qWildcardFields.length && !userWildcards)
+        ? [{ bool: { should: [andClause, { query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } }], minimum_should_match: 1 } }]
+        : [andClause]
+      return { bool: { must: [scored], filter } }
     }
   }
   return scored
