@@ -2,7 +2,12 @@
 // A/B bench: store size + bulk-indexing wall time, current production mapping shape ("A")
 // vs this branch's new shape ("B", adds noNumericText), plus a "B2" variant on the
 // code-heavy dataset that also applies the Task 5 sniffer's capability injection
-// (`{ text: false, insensitive: false }`) to code-like string columns.
+// (`{ text: false, insensitive: false }`) to code-like string columns. NOTE on B2's actual
+// mechanism (esProperty, operations.ts): `text: false` does NOT drop analysis entirely — it
+// falls back to a standard-analyzed `.text_standard` inner field (textStandard still
+// defaults true). So B->B2 swaps the French-analyzed `.text` field for a standard-analyzed
+// `.text_standard` field AND drops `.keyword_insensitive` — see RESULTS.md for the measured
+// breakdown of those two sub-effects.
 //
 // Runs entirely against the dev Elasticsearch instance (no data-fair API upload, no dev
 // process restarts): mappings are produced by the REAL branch code
@@ -44,9 +49,12 @@ const SHAPE_A = Object.freeze({ singleTextField: true, wordAggField: true })
 const SHAPE_B = NEW_INDEX_SHAPE
 
 // ---- verbatim copy of indexBase()'s settings.analysis block from
-// api/src/datasets/es/manage-indices.ts (kept in sync by hand; only the analyzer/normalizer
-// definitions are needed standalone here, index.number_of_shards/replicas are set separately
-// per bench run) ----
+// api/src/datasets/es/manage-indices.ts (that function is exported specifically so "raw-ES
+// test fixtures ... can derive real index settings without hand-copying the analyzer/filter
+// definitions" per its own comment at manage-indices.ts:220-222 — this bench predates/doesn't
+// use that export directly to stay independent of #config, but the intent is the same: kept
+// in sync by hand; only the analyzer/normalizer definitions are needed standalone here,
+// index.number_of_shards/replicas are set separately per bench run) ----
 const INDEX_BASE_SETTINGS = {
   analysis: {
     normalizer: {
@@ -137,7 +145,15 @@ const DATASETS = [
     ademeId: 'pljxb0la63vv9iyp5848xioa',
     title: 'Compétences des acteurs par année',
     slug: 'competences-des-acteurs-par-annee',
-    variants: ['A', 'B', 'B2']
+    // 'A-narrow' is a decomposition variant (not a real shape): Shape A's mapping with the
+    // `_search` catch-all field and `copy_to` annotations manually stripped afterwards. This
+    // dataset has 16 analyzed inner fields under shape A (13 string .text + 3 numeric
+    // .text_standard) — one above hasManyQSearchFields' 15-field threshold — so shape A
+    // classifies it `wide` (adds `_search`/copy_to) while shape B (noNumericText drops the 3
+    // numeric .text_standard fields) classifies it narrow. A-narrow isolates "losing the
+    // catch-all" from "losing numeric .text_standard" so the two effects aren't conflated in
+    // the A->B delta. See RESULTS.md's decomposition table.
+    variants: ['A', 'A-narrow', 'B', 'B2']
   },
   {
     key: 'refashion-string',
@@ -240,13 +256,97 @@ async function bulkIndex (indexName, docs, batchSize) {
   return Date.now() - start
 }
 
+// `_cat/indices` store.size LAGS the actual segment write right after forcemerge: a read
+// taken immediately (even after a `_refresh`) can catch a transient small value before the
+// merged segment is fully committed to the reported store size — measured directly: a fresh
+// rebuild read 7.6MB right after forcemerge/refresh, then settled at ~29.8MB ~10s later on
+// the same index with no further writes. Fix: `_flush` (forces an fsync'd commit) then poll
+// `_cat/indices` at 1s intervals until the SAME value is read twice in a row (or 60s
+// timeout), and additionally cross-check against the `_disk_usage` analysis API's
+// `store_size_in_bytes`, which also gives a per-field-category breakdown (stored_fields /
+// doc_values / points / inverted_index / norms) used in RESULTS.md's PAC interpretation.
+const SETTLE_POLL_INTERVAL_MS = 1000
+const SETTLE_POLL_TIMEOUT_MS = 60_000
+
 async function measureIndex (indexName) {
   await esFetch(`/${indexName}/_refresh`, { method: 'POST' })
   await esFetch(`/${indexName}/_forcemerge?max_num_segments=1`, { method: 'POST' })
+  await esFetch(`/${indexName}/_flush`, { method: 'POST' })
   await esFetch(`/${indexName}/_refresh`, { method: 'POST' })
-  const stats = await esFetch(`/_cat/indices/${indexName}?bytes=b&format=json`)
-  const row = stats[0]
-  return { docsCount: Number(row['docs.count']), storeBytes: Number(row['store.size']) }
+
+  let prev = null
+  let settled = null
+  let docsCount = null
+  let pollCount = 0
+  const deadline = Date.now() + SETTLE_POLL_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    const stats = await esFetch(`/_cat/indices/${indexName}?bytes=b&format=json`)
+    const cur = Number(stats[0]['store.size'])
+    docsCount = Number(stats[0]['docs.count'])
+    pollCount++
+    if (prev !== null && cur === prev) { settled = cur; break }
+    prev = cur
+    await new Promise(resolve => setTimeout(resolve, SETTLE_POLL_INTERVAL_MS))
+  }
+  if (settled === null) {
+    console.warn(`  [WARN] ${indexName} store.size did not settle within ${SETTLE_POLL_TIMEOUT_MS}ms (last read ${prev}) — using last read, treat as unreliable`)
+    settled = prev
+  } else if (pollCount > 2) {
+    console.log(`  [poll] ${indexName} settled at ${settled} after ${pollCount} reads (${(pollCount - 1) * SETTLE_POLL_INTERVAL_MS}ms of polling)`)
+  }
+
+  let diskUsageTotal = null
+  let componentBreakdown = null
+  try {
+    const diskUsage = await esFetch(`/${indexName}/_disk_usage?run_expensive_tasks=true`, { method: 'POST' })
+    const entry = diskUsage[indexName]
+    diskUsageTotal = entry?.store_size_in_bytes ?? null
+    if (entry?.all_fields) {
+      componentBreakdown = {
+        invertedIndex: entry.all_fields.inverted_index?.total_in_bytes ?? 0,
+        storedFields: entry.all_fields.stored_fields_in_bytes ?? 0,
+        docValues: entry.all_fields.doc_values_in_bytes ?? 0,
+        points: entry.all_fields.points_in_bytes ?? 0,
+        norms: entry.all_fields.norms_in_bytes ?? 0
+      }
+    }
+  } catch (err) {
+    console.warn(`  [WARN] _disk_usage failed for ${indexName} (non-fatal, store.size above is still recorded): ${err.message}`)
+  }
+
+  // Discovered empirically on this branch's own first "fixed" run: the settle-poll on
+  // `_cat/indices` store.size can plateau at a WRONG value for two consecutive 1s-apart
+  // reads (a mid-merge intermediate state that happens to hold steady for >1s before moving
+  // again) — e.g. one competences-acteurs-code 'A' run settled at 3,506,615 while
+  // `_disk_usage` (which reads the actual committed Lucene segment files, not a
+  // shard-level stat) reported 24,461,193 for the same index. `_disk_usage`'s
+  // `store_size_in_bytes` is therefore treated as the authoritative figure whenever it
+  // succeeds; the settled `_cat/indices` read is kept only as `catStoreBytes` for
+  // transparency, and a loud warning is logged whenever the two disagree by more than 1%.
+  let storeBytes = settled
+  if (diskUsageTotal !== null) {
+    const diffPct = settled ? 100 * Math.abs(diskUsageTotal - settled) / settled : null
+    if (diffPct !== null && diffPct > 1) {
+      console.warn(`  [WARN] ${indexName}: _cat/indices store.size (${settled}) disagrees with _disk_usage (${diskUsageTotal}) by ${diffPct.toFixed(1)}% — using _disk_usage as authoritative`)
+    }
+    storeBytes = diskUsageTotal
+  }
+
+  return { docsCount, storeBytes, catStoreBytes: settled, diskUsageTotal, componentBreakdown }
+}
+
+// Decomposition helper for the 'A-narrow' variant: strip the `_search` catch-all property and
+// every `copy_to` annotation that `buildIndexMappings` adds when a schema classifies `wide`
+// under the given shape (see hasManyQSearchFields / buildIndexMappings in operations.ts).
+// Post-processes an already-built properties object rather than re-deriving mapping logic.
+function stripWideAnnotations (properties) {
+  const stripped = JSON.parse(JSON.stringify(properties))
+  delete stripped._search
+  for (const key of Object.keys(stripped)) {
+    const prop = stripped[key]
+    if (prop && typeof prop === 'object' && 'copy_to' in prop) delete prop.copy_to
+  }
+  return stripped
 }
 
 async function deleteBenchIndices () {
@@ -292,17 +392,31 @@ async function runDataset (ds) {
   const variantSchema = { A: meta.schema, B: meta.schema, B2: schemaB2 }
   const variantShape = { A: SHAPE_A, B: SHAPE_B, B2: SHAPE_B }
 
+  // ordering-bias note (documented in RESULTS.md caveats): variants run in array order, so
+  // 'A' always hits a colder ES (JIT, filesystem cache) than later variants, and earlier
+  // variants' indices are still resident when later ones are created/measured.
   for (const variant of ds.variants) {
     const indexName = `${INDEX_PREFIX}-${ds.key}-${variant.toLowerCase()}`
-    const schema = variantSchema[variant]
-    const shape = variantShape[variant]
-    const { properties } = buildIndexMappings({ extensions: [] }, schema, ANALYZERS, shape)
-    console.log(`  [${variant}] creating ${indexName} (shape=${JSON.stringify(shape)})`)
+    let properties, wide, shapeLabel
+    if (variant === 'A-narrow') {
+      const built = buildIndexMappings({ extensions: [] }, meta.schema, ANALYZERS, SHAPE_A)
+      properties = stripWideAnnotations(built.properties)
+      wide = false // forced narrow by post-processing, not a real shape classification
+      shapeLabel = `${JSON.stringify(SHAPE_A)} +stripped(_search,copy_to) [decomposition variant]`
+    } else {
+      const schema = variantSchema[variant]
+      const shape = variantShape[variant]
+      const built = buildIndexMappings({ extensions: [] }, schema, ANALYZERS, shape)
+      properties = built.properties
+      wide = built.wide
+      shapeLabel = JSON.stringify(shape)
+    }
+    console.log(`  [${variant}] creating ${indexName} (shape=${shapeLabel}, wide=${wide})`)
     await createIndex(indexName, properties)
     const wallMs = await bulkIndex(indexName, docs, BULK_BATCH)
-    const { docsCount, storeBytes } = await measureIndex(indexName)
-    console.log(`  [${variant}] docs=${docsCount} storeBytes=${storeBytes} wallMs=${wallMs}`)
-    results.variants[variant] = { indexName, docsCount, storeBytes, wallMs }
+    const { docsCount, storeBytes, catStoreBytes, diskUsageTotal, componentBreakdown } = await measureIndex(indexName)
+    console.log(`  [${variant}] docs=${docsCount} storeBytes=${storeBytes} (catStoreBytes=${catStoreBytes}, diskUsageTotal=${diskUsageTotal}) wide=${wide} wallMs=${wallMs}`)
+    results.variants[variant] = { indexName, docsCount, storeBytes, catStoreBytes, diskUsageTotal, componentBreakdown, wide, wallMs }
   }
 
   return results
