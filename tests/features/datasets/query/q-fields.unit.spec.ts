@@ -6,7 +6,9 @@ import { Q_SEARCH_FIELDS_THRESHOLD, LEGACY_Q_SEARCH_FIELDS_THRESHOLD, NEW_INDEX_
 // a string column produces a single .text inner field -> counts as 1 (legacy: .text +
 // .text_standard -> 2)
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
-// an integer (or date) column produces only a .text_standard inner field -> counts as 1 under both shapes
+// an integer column produces only a .text_standard inner field under the legacy shape -> counts as
+// 1 there, but 0 under noNumericText (part of the default NEW_INDEX_SHAPE), which drops that inner
+// field entirely for integer/number columns. (A date column still counts 1 under both shapes.)
 const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
 const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
@@ -390,5 +392,41 @@ test.describe('numeric q fallback (noNumericText shape)', () => {
     const { qLenientFields } = getFilterableFields(dataset, 'foo', undefined)
     assert.deepEqual(qLenientFields, ['code', 'measure'])
     assert.ok(!qLenientFields.includes('excluded'))
+  })
+})
+
+// Mixed-fleet virtual datasets: finalize.ts only stamps the virtual parent's own `_indexShape.
+// noNumericText` when EVERY descendant has it (see finalize.ts's bubble-up comment). Over a fleet
+// of {legacy child, rebuilt child} that leaves the parent legacy, but the query layer must still
+// route the lenient numeric fallback for the rebuilt child's rows: without it, a numeric `q` targets
+// `<col>.text_standard`, which is unmapped on the rebuilt child, and its rows silently stop
+// matching. Routing reads `dataset._indexShape?.noNumericText` OR
+// `dataset.descendants?.some(d => d._indexShape?.noNumericText)` — see hasNumericLenientRouting.
+test.describe('numeric q fallback - virtual dataset routing (mixed fleet)', () => {
+  const schema = [
+    { key: 'code', type: 'integer' },
+    { key: 'measure', type: 'number' },
+    { key: 'name', type: 'string' }
+  ]
+
+  test('a descendant flagged noNumericText routes the lenient clause even though the parent _indexShape is unset', () => {
+    const dataset: any = { id: 'vq1', finalizedAt: 'f', schema, descendants: [{ _indexShape: NEW_INDEX_SHAPE }], extensions: [] }
+    const clauses = JSON.stringify(buildQClauses(dataset, '84500', undefined, 'simple'))
+    assert.ok(clauses.includes('"lenient":true'))
+    assert.ok(clauses.includes('"fields":["code","measure"]'))
+  })
+
+  test('all-legacy descendants (none flagged) yield byte-identical clauses to a dataset with no descendants field', () => {
+    const withLegacyDescendants: any = { id: 'vq2', finalizedAt: 'f', schema, descendants: [{ _indexShape: {} }], extensions: [] }
+    const withoutDescendants: any = { id: 'vq3', finalizedAt: 'f', schema, extensions: [] }
+    const out1 = buildQClauses(withLegacyDescendants, '84500', undefined, 'simple')
+    const out2 = buildQClauses(withoutDescendants, '84500', undefined, 'simple')
+    assert.deepEqual(out1, out2)
+  })
+
+  test('plain legacy dataset (no _indexShape, no descendants) is unchanged', () => {
+    const dataset: any = { id: 'vq4', finalizedAt: 'f', schema, extensions: [] }
+    const clauses = JSON.stringify(buildQClauses(dataset, '84500', undefined, 'simple'))
+    assert.ok(!clauses.includes('"lenient":true'))
   })
 })

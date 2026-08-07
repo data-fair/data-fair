@@ -593,6 +593,22 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   maxAge: 1000 * 60 * 60, // 1 hour
 })
 
+// Whether numeric columns' `q` / `col_search` matching should use the lenient main-field fallback
+// (see `qLenientFields`): the dataset's own index carries no numeric `.text_standard`
+// (`_indexShape.noNumericText`), OR — for virtual datasets — any fetched descendant's index
+// doesn't either. This is ROUTING, not a change to finalize.ts's bubble-up (which still only
+// stamps the virtual parent's own `noNumericText` when ALL descendants have it, so mapping-time
+// decisions like the exact-match analyzer stay conservative). Over a mixed fleet {legacy child,
+// rebuilt child} the parent's own flag is false (bubble-up requires unanimity), but a rebuilt
+// child's numeric columns carry no `.text_standard` any more — without this routing their rows
+// would silently stop matching numeric `q`/`col_search` until every sibling rebuilds. On an
+// all-legacy virtual (no descendant flagged) this reduces to exactly `!!dataset._indexShape?.
+// noNumericText`, so clauses stay byte-identical to a dataset with no `descendants` field.
+// Non-virtual (or queried-without-fillDescendants) datasets have no `descendants` array, so the
+// `some` is skipped and behavior is unchanged.
+export const hasNumericLenientRouting = (dataset: any): boolean =>
+  !!dataset._indexShape?.noNumericText || !!dataset.descendants?.some((d: any) => d._indexShape?.noNumericText)
+
 // Builds the `q`-side `should`/`minimum_should_match` bool clause used inside `prepareQuery`.
 // Pure: caller resolves `q` (already trimmed) and supplies `qMode` / `sqsOptions`.
 // `exactMatch` adds the scoring-only exact-match boost clause. It carries a query-time `analyzer:`
@@ -608,7 +624,7 @@ export const buildQClauses = (
   exactMatch?: { analyzer: string, boost: number }
 ): any => {
   const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, reduced } = getFilterableFields(dataset, q, qFields)
-  const noNumericText = !!dataset._indexShape?.noNumericText
+  const noNumericText = hasNumericLenientRouting(dataset)
   const should: any[] = []
   if (qMode === 'complete') {
     // "complete" mode, we try to accomodate for most cases and give the most intuitive results
