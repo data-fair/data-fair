@@ -336,11 +336,15 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (q) {
       const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
       const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
-      // only new-shape index settings define the `_exact` query-time analyzer
-      const exactMatch = (dataset as any)._indexShape?.singleTextField
-        ? { analyzer: textAnalyzers(config.elasticsearch.defaultAnalyzer).exact, boost: EXACT_MATCH_BOOST }
-        : undefined
-      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch))
+      // only new-shape index settings define the `_exact` query-time analyzer — and only
+      // new-shape indexes need the AND filters' language-analyzed alternative reading (their
+      // string columns have no `.text_standard` left, so a typed stopword would otherwise be
+      // required on scalar fields that cannot contain it; legacy indexes match it in prose)
+      const newShape = !!(dataset as any)._indexShape?.singleTextField
+      const analyzers = textAnalyzers(config.elasticsearch.defaultAnalyzer)
+      const exactMatch = newShape ? { analyzer: analyzers.exact, boost: EXACT_MATCH_BOOST } : undefined
+      const filterAnalyzer = newShape ? analyzers.search : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch, filterAnalyzer))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

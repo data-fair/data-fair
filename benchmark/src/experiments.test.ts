@@ -6,7 +6,8 @@ import { generateSchema, schemaContext, type SchemaContext } from './generator.t
 
 test('every variant body builds a valid ES query for its preset', () => {
   for (const exp of allExperiments) {
-    const ctx = schemaContext(generateSchema(getPreset(exp.preset)))
+    // prepare-based experiments build their own index; their bodies ignore the preset ctx
+    const ctx = exp.prepare ? schemaContext([]) : schemaContext(generateSchema(getPreset(exp.preset)))
     for (const v of [exp.baseline, ...exp.variants]) {
       const body = v.body(ctx)
       assert.ok(body.query, `${exp.name}/${v.name} produced no query`)
@@ -55,6 +56,8 @@ function isValidQueryTarget (field: string, ctx: SchemaContext): boolean {
 
 test('experiment queries target valid analyzed-text or pure-keyword fields', () => {
   for (const exp of allExperiments) {
+    // prepare-based experiments target their own self-built mapping, not a preset's
+    if (exp.prepare) continue
     const ctx = schemaContext(generateSchema(getPreset(exp.preset)))
     for (const v of [exp.baseline, ...exp.variants]) {
       for (const field of referencedFields(v.body(ctx).query)) {

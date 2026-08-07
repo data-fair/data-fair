@@ -621,11 +621,35 @@ export const buildQClauses = (
   qMode: string | undefined,
   sqsOptions: any = {},
   ignoredWords?: string[],
-  exactMatch?: { analyzer: string, boost: number }
+  exactMatch?: { analyzer: string, boost: number },
+  filterAnalyzer?: string
 ): any => {
   const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, reduced } = getFilterableFields(dataset, q, qFields)
   const noNumericText = hasNumericLenientRouting(dataset)
+
+  // Readings of an AND requirement. The per-field-analyzed reading alone zeroes out on a
+  // new-shape index whenever the query carries a stopword: the only fields whose analyzer
+  // KEEPS the stopword are scalar `.text_standard` and `keyword_insensitive` fields, whose
+  // content can never contain it (string columns lost their `.text_standard`). So the caller
+  // passes the language search analyzer on new-shape datasets and a SECOND reading of the
+  // same requirement is added, analyzed with it (stopwords dropped, numbers kept): a doc
+  // matches if EITHER reading satisfies every word. The field-analyzed reading stays because
+  // it is the only one matching a pure-keyword column's whole value (e.g. "cat-alpha" —
+  // the language analyzer would tokenize it apart).
+  // Callers may union numeric main fields (qLenientFields) into `fields`; `lenient` then keeps
+  // ES from erroring when a non-numeric word is evaluated against a long/double field.
+  const andReadings = (query: string, fields: string[], lenient = false): any[] => {
+    const lenientOpt = lenient ? { lenient: true } : {}
+    const readings: any[] = [{ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, default_operator: 'and' } }]
+    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
+    return readings
+  }
+  const anyReading = (readings: any[]): any => readings.length === 1 ? readings[0] : { bool: { should: readings, minimum_should_match: 1 } }
   const should: any[] = []
+  // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
+  // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
+  // but scalar/date columns still carry `.text_standard`, hence the union rather than a swap.
+  const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
   if (qMode === 'complete') {
     // "complete" mode, we try to accomodate for most cases and give the most intuitive results
     // to a search query where the user might be using a autocomplete type control
@@ -634,10 +658,6 @@ export const buildQClauses = (
     // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
     // we also perform a contains filter if some wildcard functionnality is activate
     if (!q.includes('*') && !q.includes('?')) {
-      // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
-      // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
-      // but scalar/date columns still carry `.text_standard`, hence the union rather than a swap.
-      const prefixFields = dataset._indexShape?.singleTextField ? [...qExactFields, ...qStandardFields] : qStandardFields
       if (prefixFields.length) {
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
@@ -685,16 +705,17 @@ export const buildQClauses = (
   // of the retained (non-ignored) words: the match set is the plain OR minus docs that
   // only matched ignored words — ignored words keep scoring. Requirements must NEVER move
   // into scoring position (measured 2.5× slower on ES 7, see load-management.md §9).
-  // Not composed with `complete` mode (its prefix/wildcard clauses carry their own semantics).
+  // q_mode=and and q_ignored never compose with `complete`, which gets its own filter below.
   if (qMode !== 'complete') {
     const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
     // numeric main fields are unioned into the filter set (not the scored `should`) so q_mode=and
     // and q_ignored's requirement stage still catches a whole-value numeric match; `lenient: true`
     // keeps ES from erroring when a non-numeric word in the same query is evaluated against them.
-    const filterFields = noNumericText && qLenientFields.length ? [...matchFields, ...qLenientFields] : matchFields
-    const filterLenient = noNumericText && qLenientFields.length ? { lenient: true } : {}
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = withLenient ? [...matchFields, ...qLenientFields] : matchFields
+    const filterLenient = withLenient ? { lenient: true } : {}
     if (qMode === 'and' && filterFields.length) {
-      return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: filterFields, default_operator: 'and', ...filterLenient } }] } }
+      return { bool: { must: [scored], filter: [anyReading(andReadings(q, filterFields, withLenient))] } }
     }
     if (ignoredWords?.length && filterFields.length) {
       const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
@@ -704,6 +725,31 @@ export const buildQClauses = (
           filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: filterFields, ...filterLenient } })), minimum_should_match: 1 } }]
         }
       }
+    }
+  }
+
+  // same pattern for a multi-word `complete` query, for a different reason: an autocomplete
+  // must NARROW as the user types, but the scored clauses are a broad OR — their match set is
+  // the union of every typed word (measured 152k → 22k matches once filtered on the §16 corpus,
+  // benchmark/INVESTIGATIONS.md). The filter requires every word, the last one as a prefix —
+  // the startsWith clause's own `q*` expression, so filter and scoring read the prefix
+  // identically. A doc reachable only through the opt-in `*q*` wildcard clause is preserved
+  // by the filter-side alternative. Scores are untouched: page-1 ordering is unchanged, only
+  // totals/aggregations/pagination see the narrowed set.
+  if (qMode === 'complete' && /\s/.test(q)) {
+    const userWildcards = q.includes('*') || q.includes('?')
+    // numeric mains join the narrowing filter so a doc whose word matched whole-value on a
+    // numeric column (scored via the lenient clause above) isn't dropped by the every-word
+    // requirement. The LAST word, read as a prefix, can never match a numeric field (`lenient`
+    // skips prefix-on-long) — consistent with numerics being excluded from the prefix ladder.
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = [...new Set([...prefixFields, ...qSearchFields, ...(withLenient ? qLenientFields : [])])]
+    if (filterFields.length) {
+      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
+      if (qWildcardFields.length && !userWildcards) {
+        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+      }
+      return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
   }
   return scored
