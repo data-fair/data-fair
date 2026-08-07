@@ -19,9 +19,12 @@ test.describe('hasManyQSearchFields', () => {
     // string columns count 1 (single .text) -> 15 columns == 15 inner fields (not over), 16 == 16 (over)
     assert.equal(hasManyQSearchFields(stringFields(15)), false)
     assert.equal(hasManyQSearchFields(stringFields(16)), true)
-    // integer/date columns also count 1 (.text_standard, new shape has no .text on them) -> 15 == 15 (not over), 16 == 16 (over)
+    // Task 2's noNumericText (part of the default NEW_INDEX_SHAPE) drops `.text_standard` from
+    // integer/number columns entirely — they emit NO analyzed inner field any more, so they never
+    // count toward wideness under the new shape (Task 3 restores their `q` matching separately,
+    // through a lenient main-field fallback that this counter has nothing to do with).
     assert.equal(hasManyQSearchFields(intFields(15)), false)
-    assert.equal(hasManyQSearchFields(intFields(16)), true)
+    assert.equal(hasManyQSearchFields(intFields(16)), false)
   })
   test('a text-disabled string still counts 1 (its single field is .text_standard)', () => {
     // the new-shape emission gives `{text:false}` columns a single `.text_standard` instead of a
@@ -54,15 +57,19 @@ test.describe('hasManyQSearchFields', () => {
       assert.equal(hasManyQSearchFields(stringFields(n + 1), shape), true)
     }
   })
-  test('a scalar-heavy schema in the 15..30 band is narrow legacy and wide new-shape', () => {
-    // 20 numeric columns = 20 inner fields under BOTH shapes: 20 <= 30 (legacy, narrow) but
-    // 20 > 15 (new shape, wide). Classifying such a legacy index with the new threshold flips
-    // its `reduced` regime and lets `_search` be added in place — the C1 regression.
+  test('a scalar-heavy schema in the 15..30 band is narrow legacy and stays narrow new-shape (numerics carry no inner field there); a text-disabled string band still crosses', () => {
+    // 20 numeric columns = 20 inner fields under LEGACY (20 <= 30, narrow) but under the new
+    // shape noNumericText drops `.text_standard` from integer/number columns entirely — they
+    // contribute 0 inner fields, so the band never crosses the new-shape threshold either.
+    // (Superseded expectation: this used to flip to wide/true under NEW_INDEX_SHAPE before Task 2's
+    // noNumericText; Task 3 restores their `q` matching separately via a lenient main-field
+    // fallback that this wideness counter has nothing to do with.)
     const band = intFields(20)
     assert.equal(hasManyQSearchFields(band, LEGACY_INDEX_SHAPE), false)
-    assert.equal(hasManyQSearchFields(band, NEW_INDEX_SHAPE), true)
-    // a `{text:false}` string column is emitted identically under both shapes, so it lands in the
-    // band the same way
+    assert.equal(hasManyQSearchFields(band, NEW_INDEX_SHAPE), false)
+    // a `{text:false}` string column is unaffected by noNumericText (it only applies to
+    // integer/number columns) and is emitted identically under both shapes, so it still lands in
+    // the band the same way as before: narrow legacy, wide new-shape.
     const noLangBand = Array.from({ length: 20 }, (_, i) => ({ key: 'nl' + i, type: 'string', 'x-capabilities': { text: false } }))
     assert.equal(hasManyQSearchFields(noLangBand, LEGACY_INDEX_SHAPE), false)
     assert.equal(hasManyQSearchFields(noLangBand, NEW_INDEX_SHAPE), true)
@@ -76,16 +83,21 @@ const fakeDataset = (over: any = {}) => ({ id: 'fd' + (seq++), finalizedAt: '202
 const wideSchema = (n = 32) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
 
 test.describe('getFilterableFields - wideness follows the dataset index shape', () => {
-  // a band-shaped schema: the `reduced` regime must stay off on a legacy (unstamped) dataset and
-  // turn on only once the dataset carries a new-shape stamp
+  // a band-shaped schema (numeric-heavy): the `reduced` regime stays off under BOTH shapes now.
+  // Under noNumericText (part of the default NEW_INDEX_SHAPE), integer/number columns carry no
+  // analyzed inner field at all, so they never contribute to wideness — this band schema, made
+  // entirely of int columns plus one string, no longer crosses the new-shape threshold either.
+  // (Superseded expectation: before Task 2's noNumericText, the new-shape stamp alone flipped this
+  // band to wide/reduced; Task 3 restores `q` matching for those numeric columns separately, via
+  // a lenient main-field fallback unrelated to this wideness counter.)
   const bandSchema = () => [...intFields(20), { key: 'txt', type: 'string' }]
   test('legacy dataset in the band keeps the narrow regime', () => {
     const ds = fakeDataset({ schema: bandSchema() })
     assert.equal(getFilterableFields(ds, 'x', undefined).reduced, false)
   })
-  test('new-shape dataset in the band gets the reduced regime', () => {
+  test('new-shape dataset in the (now numeric-exempt) band also keeps the narrow regime', () => {
     const ds = fakeDataset({ schema: bandSchema(), _indexShape: NEW_INDEX_SHAPE })
-    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, true)
+    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, false)
   })
 })
 

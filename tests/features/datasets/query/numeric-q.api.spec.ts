@@ -39,4 +39,33 @@ test.describe('q matching on numeric columns without text_standard', () => {
     res = await ax.get('/api/v1/datasets/numeric-q/lines', { params: { code_search: '84500' } })
     assert.equal(res.data.total, 1)
   })
+
+  // Pin, not a red/green cycle: this 400 is the pre-existing requiredCapability behavior
+  // (unchanged by this task) for a column with no analyzed subfield at all. What this test
+  // actually exercises is the controller ruling that the new noNumericText branch in
+  // commons.ts's `_search` handling must NOT intercept this column and route it to the lenient
+  // main-field clause instead — it has to fall through to the existing empty-subfields 400.
+  test('explicit textStandard:false opt-out on a numeric column still 400s on col_search, not lenient-routed', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/numeric-q-optout', {
+      isRest: true,
+      title: 'numeric-q-optout',
+      schema: [
+        { key: 'code', type: 'integer', 'x-capabilities': { textStandard: false } },
+        { key: 'label', type: 'string' }
+      ]
+    })
+    await ax.post('/api/v1/datasets/numeric-q-optout/_bulk_lines', [
+      { code: 84500, label: 'orange' }
+    ])
+    await waitForFinalize(ax, 'numeric-q-optout')
+
+    await assert.rejects(
+      ax.get('/api/v1/datasets/numeric-q-optout/lines', { params: { code_search: '84500' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
 })
