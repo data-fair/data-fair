@@ -48,6 +48,24 @@ export function diffCapabilities (capabilities: Record<string, boolean>): Record
   return diff
 }
 
+/**
+ * The agent only ever supplies values for `getRelevantCapabilities`' list for the column's type
+ * (e.g. numeric columns never see `textStandard` any more since its retirement). A stored explicit
+ * override on a key OUTSIDE that list (a hidden key — set previously, e.g. by a raw schema PATCH, or
+ * left over from before a capability was retired for that type) must not be silently dropped by a
+ * wholesale capability write. Merge those hidden stored keys under the agent-supplied ones so an
+ * explicit agent value for the same key (if any) still wins, then let `diffCapabilities` reduce the
+ * merged object to its diff-only storage form as usual.
+ */
+export function mergeHiddenCapabilities (col: any, agentCapabilities: Record<string, boolean>): Record<string, boolean> {
+  const effectiveType = col?.['x-transform']?.type || col?.type
+  const effectiveFormat = col?.['x-transform']?.format || col?.format
+  const relevant = getRelevantCapabilities(effectiveType, effectiveFormat, col?.['x-refersTo'])
+  const stored: Record<string, boolean> = col?.['x-capabilities'] || {}
+  const hidden = Object.fromEntries(Object.entries(stored).filter(([key]) => !relevant.includes(key)))
+  return { ...hidden, ...agentCapabilities }
+}
+
 type FetchSampleRowsFn = (datasetId: string, size?: number) => Promise<{ total: number, rows: Record<string, any>[] }>
 
 export async function executeReadPropertyConfig (dataset: any, fetchSampleRowsFn: FetchSampleRowsFn) {
@@ -140,7 +158,8 @@ export function executeSetPropertyConfig (
     if (c.resetCapabilities) {
       result.capabilities = null
     } else if (c.capabilities) {
-      result.capabilities = diffCapabilities(c.capabilities)
+      const col = (dataset.schema || []).find((p: any) => p.key === c.key)
+      result.capabilities = diffCapabilities(mergeHiddenCapabilities(col, c.capabilities))
     }
     return result
   })

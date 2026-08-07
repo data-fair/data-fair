@@ -630,6 +630,12 @@ _search catch-all:
   Single analyzed field with the dataset's language analyzer.
 ```
 
+> Note (2026-08-07): the "numeric / date columns keep `.text_standard`" premise below predates the
+> default-capabilities change (`docs/superpowers/specs/2026-08-07-default-capabilities-design.md`),
+> which retired `.text_standard` for `integer`/`number` columns (`noNumericText` index shape,
+> whole-value `q` matching now goes through the main field via a `lenient: true` clause). Dates are
+> unaffected and still keep it. Revisit this section's numeric assumptions if R6 is picked up.
+
 **Why each piece**:
 - Halving the analyzed sub-field count per column shrinks `_search`, the catch-all index
   size, and the leaf-clause count when per-column is still in play.

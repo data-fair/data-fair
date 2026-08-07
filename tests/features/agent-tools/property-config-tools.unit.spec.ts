@@ -205,6 +205,22 @@ test.describe('executeSetPropertyConfig', () => {
     assert.deepEqual(receivedConfigs[0].capabilities, { textAgg: true })
   })
 
+  test('preserves a hidden stored capability (numeric textStandard) not offered any more for the type', () => {
+    // numeric columns no longer offer `textStandard` (Tier 2 retirement), but a column that had it
+    // explicitly disabled before the retirement (or via a raw schema PATCH) must not have that
+    // opt-out silently dropped by a wholesale agent capability write.
+    const dataset = {
+      schema: [{ key: 'col1', type: 'integer', 'x-capabilities': { textStandard: false } }]
+    }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'col1', capabilities: { index: true, values: false } }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.deepEqual(receivedConfigs[0].capabilities, { values: false, textStandard: false })
+  })
+
   test('reports correct counts in summary', () => {
     const dataset = {
       file: { name: 'test.csv' },

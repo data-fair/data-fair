@@ -87,9 +87,7 @@ const editCapabilities = ref<Record<string, unknown> | null>(null)
 
 const relevantCapabilities = computed(() => {
   const type = props.property.type
-  if (type === 'number' || type === 'integer') {
-    return ['index', 'values']
-  } else if (type === 'boolean') {
+  if (type === 'number' || type === 'integer' || type === 'boolean') {
     return ['index', 'values']
   } else if (type === 'string' && (props.property.format === 'date' || props.property.format === 'date-time')) {
     return ['index', 'textStandard', 'values']

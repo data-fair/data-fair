@@ -112,15 +112,20 @@ test.describe('index shape', () => {
 
     // simulate the legacy fleet member we cannot create through the API (a fresh index is always
     // built new-shape, and a band-shaped one would be born wide): drop the stamp AND graft the
-    // band-shaped schema onto the stored document. 20 numeric columns + `txt` = 21 counted inner
-    // fields under both shapes (+3 calculated) — over the new threshold of 15, well under the
-    // legacy 30.
-    await patchRawDataset(id, { $unset: { _indexShape: '' }, schema: [txtCol, ...numCols(20)] })
+    // band-shaped schema onto the stored document. Use DATE columns (not numeric) for the filler:
+    // with noNumericText, numeric columns emit no inner field at all under the new shape and would
+    // contribute 0 to the count, collapsing the band to "narrow under both shapes" and making the
+    // assertion below vacuous. Dates always emit `.text_standard` (year search) under both shapes,
+    // so they count consistently — same substitution as index-definition.unit.spec.ts's band test.
+    // 20 date columns + `txt` = 21 counted inner fields under both shapes (+3 calculated) — over
+    // the new threshold of 15, well under the legacy 30.
+    const dateCols = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'date' + i, type: 'string', format: 'date' }))
+    await patchRawDataset(id, { $unset: { _indexShape: '' }, schema: [txtCol, ...dateCols(20)] })
     await clearDatasetCache()
 
     // a compatible schema patch: the partial mapping update path
     await doAndWaitForFinalize(ax, id, () => ax.patch(`/api/v1/datasets/${id}`, {
-      schema: [txtCol, ...numCols(21)]
+      schema: [txtCol, ...dateCols(21)]
     }))
 
     const properties = await datasetEsMappingProperties(id)
