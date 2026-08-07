@@ -589,9 +589,26 @@ export const buildQClauses = (
   qMode: string | undefined,
   sqsOptions: any = {},
   ignoredWords?: string[],
-  exactMatch?: { analyzer: string, boost: number }
+  exactMatch?: { analyzer: string, boost: number },
+  filterAnalyzer?: string
 ): any => {
   const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
+
+  // Readings of an AND requirement. The per-field-analyzed reading alone zeroes out on a
+  // new-shape index whenever the query carries a stopword: the only fields whose analyzer
+  // KEEPS the stopword are scalar `.text_standard` and `keyword_insensitive` fields, whose
+  // content can never contain it (string columns lost their `.text_standard`). So the caller
+  // passes the language search analyzer on new-shape datasets and a SECOND reading of the
+  // same requirement is added, analyzed with it (stopwords dropped, numbers kept): a doc
+  // matches if EITHER reading satisfies every word. The field-analyzed reading stays because
+  // it is the only one matching a pure-keyword column's whole value (e.g. "cat-alpha" —
+  // the language analyzer would tokenize it apart).
+  const andReadings = (query: string, fields: string[]): any[] => {
+    const readings: any[] = [{ simple_query_string: { query, fields, ...sqsOptions, default_operator: 'and' } }]
+    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
+    return readings
+  }
+  const anyReading = (readings: any[]): any => readings.length === 1 ? readings[0] : { bool: { should: readings, minimum_should_match: 1 } }
   const should: any[] = []
   // on a legacy index the prefix ladder only works on `.text_standard` (legacy `.text` stems
   // the prefix away). A new-shape `.text` indexes the original tokens too, so it works there —
@@ -650,7 +667,7 @@ export const buildQClauses = (
   if (qMode !== 'complete') {
     const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
     if (qMode === 'and' && matchFields.length) {
-      return { bool: { must: [scored], filter: [{ simple_query_string: { query: q, fields: matchFields, default_operator: 'and' } }] } }
+      return { bool: { must: [scored], filter: [anyReading(andReadings(q, matchFields))] } }
     }
     if (ignoredWords?.length && matchFields.length) {
       const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
@@ -675,11 +692,11 @@ export const buildQClauses = (
     const userWildcards = q.includes('*') || q.includes('?')
     const filterFields = [...new Set([...prefixFields, ...qSearchFields])]
     if (filterFields.length) {
-      const andClause = { simple_query_string: { query: userWildcards ? q : `${q}*`, fields: filterFields, ...sqsOptions, default_operator: 'and' } }
-      const filter = (qWildcardFields.length && !userWildcards)
-        ? [{ bool: { should: [andClause, { query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } }], minimum_should_match: 1 } }]
-        : [andClause]
-      return { bool: { must: [scored], filter } }
+      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields)
+      if (qWildcardFields.length && !userWildcards) {
+        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+      }
+      return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
   }
   return scored

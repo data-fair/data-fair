@@ -1109,6 +1109,25 @@ these costs the phrase clause is not a perf concern — it's a semantics questio
   user-typed `*`/`?` skips the prefix clause today, so the filter would fall back to the plain
   `q` with `default_operator: and`.
 
+**Stopword trap in AND-position filters (2026-08-07, found while reviewing this branch's
+trade-offs, fixed).** On a new-shape index, `q="de commune"` under the new complete filter —
+and under the PRE-EXISTING `q_mode=and` — returned **0** (live probe; simple: 77). Mechanism,
+verified per-field: string columns lost their `.text_standard` in the keyword_repeat rework,
+so the only fields whose query-side analyzer KEEPS a stopword are scalar `.text_standard`
+(`2019,07,20`-style content) and `keyword_insensitive` — fields whose content can never
+contain it; `simple_query_string` only drops a term when NO field emits tokens for it, so the
+stopword stayed required where it cannot match. This was a silent #534 regression for
+`q_mode=and`, inherited by the complete filter. Fix (prototyped on bench-small, all corners
+measured): the AND requirement gets a SECOND reading analyzed with the language search
+analyzer (stopwords dropped, numbers kept), OR'd with the field-analyzed reading — a doc
+passes if either reading satisfies every word. The field-analyzed reading must stay: it is
+the only one matching a pure-keyword column's whole value («cat-alpha commune» 6 → 0 under an
+analyzer-override-only design, 6 under dual reading). Corner matrix (bench-small, 300 rows):
+`de commune` 0→77, `école de commune` 0→24, `commune 2019` 13 (unchanged, scalar narrowing
+kept), `cat-alpha commune` 6 (kept), `zzz commune` 0 (kept). Gated on new-shape datasets like
+the exact-match clause — legacy indexes match stopwords in their string `.text_standard`
+prose and stay byte-identical.
+
 **Outcome — implemented on this branch (2026-08-06).** Two of the directions shipped as code:
 (1) multi-word `complete` queries now carry the AND filter described above (`buildQClauses`,
 with the wildcard-clause alternative preserved and user-typed wildcards falling back to the

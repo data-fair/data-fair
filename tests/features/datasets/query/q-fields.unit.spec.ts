@@ -369,4 +369,36 @@ test.describe('complete-mode AND filter (multi-word narrowing)', () => {
     assert.deepEqual(alternatives[1].query_string.fields, ['w.wildcard'])
     assert.equal(alternatives[1].query_string.query, '*fo ba*')
   })
+
+  // On a new-shape dataset the only .text_standard fields left belong to scalar columns, whose
+  // content can never contain a stopword — a per-field-analyzed AND filter then requires the
+  // stopword where it cannot match and zeroes the query. The fix is a SECOND reading of the same
+  // requirement, analyzed with the language analyzer (stopwords dropped, numbers kept): a doc
+  // passes if EITHER reading matches every word. The field-analyzed reading stays because it is
+  // the only one that matches a pure-keyword column's whole value (e.g. "cat-alpha").
+  test('with a filterAnalyzer the complete filter carries a language-analyzed alternative reading', () => {
+    const schema = [{ key: 'a', type: 'string' }, { key: 'i', type: 'integer' }]
+    const out: any = buildQClauses({ id: 'cf5', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo ba', undefined, 'complete', {}, undefined, undefined, 'custom_french')
+    const readings = out.bool.filter[0].bool.should
+    assert.equal(readings.length, 2)
+    assert.equal(readings[0].simple_query_string.query, 'fo ba*')
+    assert.equal(readings[0].simple_query_string.default_operator, 'and')
+    assert.ok(!readings[0].simple_query_string.analyzer)
+    assert.equal(readings[1].simple_query_string.analyzer, 'custom_french')
+    assert.equal(readings[1].simple_query_string.query, 'fo ba*')
+    assert.equal(readings[1].simple_query_string.default_operator, 'and')
+  })
+
+  test('without a filterAnalyzer (legacy dataset) the complete filter keeps a single reading', () => {
+    const out: any = buildQClauses({ id: 'cf6', finalizedAt: 'f', schema }, 'fo ba', undefined, 'complete')
+    assert.ok(out.bool.filter[0].simple_query_string)
+  })
+
+  test('q_mode=and gets the same alternative reading — it shares the scalar-.text_standard trap', () => {
+    const out: any = buildQClauses({ id: 'cf7', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo ba', undefined, 'and', {}, undefined, undefined, 'custom_french')
+    const readings = out.bool.filter[0].bool.should
+    assert.equal(readings.length, 2)
+    assert.equal(readings[1].simple_query_string.analyzer, 'custom_french')
+    assert.equal(readings[1].simple_query_string.query, 'fo ba')
+  })
 })

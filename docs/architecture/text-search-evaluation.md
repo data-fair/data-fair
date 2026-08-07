@@ -445,7 +445,9 @@ the current 4-clause flow becomes the deprecation target once parity is shown.
 > primitive (with `q_fields` restricted to the completed column) for the singleSearch /
 > autocomplete workflow, rather than any rework of the scored line search. Shipped from
 > that review: multi-word `complete` queries now require every word through a non-scoring
-> AND filter (last word as prefix — narrowing-as-you-type), and singleSearch scopes `q` to
+> AND filter (last word as prefix — narrowing-as-you-type; stopword-safe via a dual-reading
+> requirement that also repaired a silent #534 stopword regression in `q_mode=and`), and
+> singleSearch scopes `q` to
 > its output+label columns with alphabetical ordering on the output key — the leading part
 > of the displayed «output (label)» string and the collapse field (count ordering was
 > considered and rejected).
