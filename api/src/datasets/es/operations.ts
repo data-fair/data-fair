@@ -241,8 +241,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const capabilities = prop['x-capabilities'] || {}
   const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
-  // Non-string columns keep `.text_standard` under both shapes; full-text strings lose it under the
-  // new shape, replaced by the single `.text` field emitted below.
+  // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
+  // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
+  // under singleTextField (replaced by the single `.text` field emitted below).
   const innerFields: any = {}
   const isNumeric = prop.type === 'integer' || prop.type === 'number'
   if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField) && !(isNumeric && shape.noNumericText)) {

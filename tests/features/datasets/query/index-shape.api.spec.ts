@@ -20,11 +20,13 @@ test.describe('index shape', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
-  // The initial schema deliberately holds no string column: a scalar's mapping is identical under
-  // both shapes, so the partial mapping update below is accepted by elasticsearch either way and
-  // the ONLY difference between the two datasets is the shape the new string column is emitted
-  // with. A string column in the initial schema would make the legacy-shaped update conflict with
-  // the live new-shape mapping and fall back to a full reindex, hiding what we want to observe.
+  // The initial schema deliberately holds no string column: with noNumericText, a numeric column
+  // differs between shapes (legacy emits .text_standard, new does not), but numbers have no inner
+  // text fields for _search/copy_to routing, so the partial mapping update is accepted by
+  // elasticsearch either way. The ONLY difference surfaced in the mapping between the two datasets
+  // is the shape the new string column is emitted with. A string column in the initial schema
+  // would make the legacy-shaped update conflict with the live new-shape mapping and fall back to
+  // a full reindex, hiding what we want to observe.
   const createDataset = async (id: string) => {
     const ax = testUser1
     await ax.put(`/api/v1/datasets/${id}`, {
