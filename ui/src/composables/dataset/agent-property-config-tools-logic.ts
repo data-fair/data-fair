@@ -12,7 +12,7 @@ export const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties).filt
 
 export function getRelevantCapabilities (type: string, format?: string, xRefersTo?: string): string[] {
   if (type === 'number' || type === 'integer' || type === 'boolean') {
-    return ['index', 'textStandard', 'values']
+    return ['index', 'values']
   }
   if (type === 'string' && (format === 'date' || format === 'date-time')) {
     return ['index', 'textStandard', 'values']

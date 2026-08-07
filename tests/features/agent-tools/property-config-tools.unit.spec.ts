@@ -12,17 +12,25 @@ import {
 test.describe('getRelevantCapabilities', () => {
   test('returns numeric capabilities for number type', () => {
     const caps = getRelevantCapabilities('number')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for integer type', () => {
     const caps = getRelevantCapabilities('integer')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for boolean type', () => {
     const caps = getRelevantCapabilities('boolean')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
+  })
+
+  test('numeric and boolean types no longer offer textStandard', () => {
+    assert.deepEqual(getRelevantCapabilities('integer'), ['index', 'values'])
+    assert.deepEqual(getRelevantCapabilities('number'), ['index', 'values'])
+    assert.deepEqual(getRelevantCapabilities('boolean'), ['index', 'values'])
+    // dates keep textual matching (year search)
+    assert.deepEqual(getRelevantCapabilities('string', 'date'), ['index', 'textStandard', 'values'])
   })
 
   test('returns date capabilities for string with date format', () => {

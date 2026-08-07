@@ -50,7 +50,16 @@ rollout (`0bc454fb4`) and load-management.md §6.
 | `.keyword_insensitive` | `x-capabilities.insensitive !== false` | `insensitive_normalizer` | Diacritic/case-insensitive sort, not search |
 | `.wildcard` | `x-capabilities.wildcard === true` (opt-in) | (wildcard type) | `*q*` contains queries |
 
-Numeric and date columns get a single `.text_standard` inner field so they can be matched textually.
+Date columns get a single `.text_standard` inner field so they can be matched textually.
+
+> **Note (2026-08-07).** Numeric (`integer`/`number`) columns no longer get a `.text_standard`
+> inner field on freshly built indexes (the `noNumericText` shape flag) — `q` now matches
+> them whole-value via the main `long`/`double` field instead. Boolean columns never had a
+> mapped `.text_standard` either (the old per-type capability toggle was a no-op for them).
+> The `textStandard` capability itself stays in the contract (dates and strings still use
+> it) and an explicit `x-capabilities: { textStandard: false }` set via the API on a numeric
+> column is still honored — only the *offered* per-type capability lists (UI schema editor,
+> agent property-config tools) dropped `textStandard` for `number`/`integer`/`boolean`.
 
 **`q` regimes** (`getFilterableFields`). Three coexisting paths chosen by dataset state, no
 explicit `q_fields`:
