@@ -434,6 +434,22 @@ design proposal and defer the empirical leg to the implementation worktree.
 — paired with T13. Replace `q_mode=complete` with an SAYT-backed `multi_match.bool_prefix`;
 the current 4-clause flow becomes the deprecation target once parity is shown.
 
+> **Addendum (2026-08-06)** — measured dead twice over: the SAYT/`index_prefixes` leg in
+> §15 (store cost, no ranking gain), and the query-side leg in `benchmark/INVESTIGATIONS.md`
+> §16 — `bool_prefix` produces the same constant-score prefix as today at the same cost.
+> §16 is the full `complete`-mode review: matching is correct and cheap, but mid-typing
+> ranking degenerates to the `_i`/`_updatedAt` tie-break (row order), oscillating with
+> stem coincidences as the user types, and multi-word queries widen the match set. The
+> levers that actually order suggestions are value-popularity (agg-shaped, cheapest arm
+> measured) and value-level match-quality tiers — both point toward a value-completion
+> primitive (with `q_fields` restricted to the completed column) for the singleSearch /
+> autocomplete workflow, rather than any rework of the scored line search. Shipped from
+> that review: multi-word `complete` queries now require every word through a non-scoring
+> AND filter (last word as prefix — narrowing-as-you-type), and singleSearch scopes `q` to
+> its output+label columns with alphabetical ordering on the output key — the leading part
+> of the displayed «output (label)» string and the collapse field (count ordering was
+> considered and rejected).
+
 ---
 
 ### D. Niche / discussion-only

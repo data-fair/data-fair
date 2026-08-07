@@ -967,6 +967,168 @@ wide indexes were rebuilt once for the new analyzer (see Setup); subsequent runs
 
 ---
 
+## 16. `q_mode=complete` — ranking review & candidate fixes (2026-08-06)
+
+Follow-up to the §15 family: the keyword_repeat work verified (via `_explain`) that
+`complete` mode's prefix matching is constant-score. This investigation reviews the mode
+end to end — what ordering it actually produces, what it costs, and what ranked
+alternatives would cost — on both a real API-seeded dataset and a purpose-built
+referential corpus. Code: `src/complete-check.ts` (live API+ES probe) and
+`src/experiments/complete-ranking.ts` (self-built-index experiment, §15 convention —
+the `Experiment` interface gained an optional `prepare` hook for raw-ES indexes).
+
+**Part A — live verification (`complete-check.ts`, bench-small seeded at 300 rows through
+the dev API, real post-#534 new-shape index).** The raw-ES reproduction of
+`buildQClauses`' complete-mode body matches the `/lines` API exactly (identical totals
+AND identical scores on all four probes) — the findings below are production behavior,
+not a harness approximation.
+
+| probe | complete total | top-12 distinct scores | simple total |
+|---|---:|---:|---:|
+| `comm` (mid-typing) | 144 | **1** (all 2.0) | **0** |
+| `commune` (full word) | 77 | 8 | 77 |
+| `ecol` (mid-typing) | 87 | 10 | 87 |
+| `commune tour` | **142** (widens!) | 10 | 77 |
+
+Three production facts:
+
+1. **Mid-typing ranking is constant.** `_explain` for `comm`: `sum of: 1.0 text2.text:comm*
+   + 1.0 text1.text:comm*` — the sqs prefix clause rewrites to constant-score per field,
+   summed. Every matching row scores identically; the page order is the `_score` tie-break —
+   `_updatedAt desc, _i desc` on REST datasets (most-recently-written rows first), `_i` asc
+   (file row order) otherwise. An autocomplete over a referential returns "the first/latest
+   rows whose text contains a token starting with what you typed", not the best completions.
+2. **Scoring flickers keystroke by keystroke.** `ecol` IS scored (10 distinct) — not because
+   prefix ranking works but because "ecol" happens to be the `light_french` stem of «école»,
+   so the *plain* clause matches. Same for `commune`. But `comm` is no stem → constant. The
+   stems are unpredictable (`_analyze`: «Marie» → `mar`, «marché» → `march`, «Marseille» →
+   `marseil`), so as the user types, the suggestion order oscillates between real scoring and
+   arbitrary row order at stem-coincidence boundaries.
+3. **Multi-word queries widen instead of narrowing.** The prefix clause `commune tour*` is an
+   OR (`simple_query_string` default): 77 hits for `commune` grows to 142 — the opposite of
+   what an autocomplete user expects as they keep typing. Page-1 still looks right (docs
+   matching both words sum both clauses and outrank), but the match set — what
+   aggregations/facets/exports/totals see — is the union.
+
+**Part B — cost & candidate-fix A/B (`complete-ranking` experiments).** Self-built index
+`benchmark-complete-ranking`: 200k docs, 1 shard, force-merged; a referential-flavored
+corpus (establishment `label` = «{type} {commune}», `commune` drawn Zipfian from 78 names
+with deliberate prefix families — mar → Marseille/Martigues/Marché/Mairie/Saint-Martin/
+Sainte-Marie…, comm → Commercy/Communay/commune/commerce —, French-sentence `description`,
+keyword `category`, integer `year`); mapping is the exact new-shape `esProperty` output and
+the analysis settings are transcribed from `indexBase`. Arms: production complete body
+(baseline), its prefix clause alone, production simple-mode body, `multi_match bool_prefix`,
+per-field `prefix` with `rewrite: top_terms_blended_freqs_1024` (ranked-prefix), baseline +
+scoring-only value tiers (`term`^8 / value-`prefix`^4 on `label/commune.keyword_insensitive`),
+and the aggregation alternative (prefix filter + `terms` agg on `label` ordered by `_count`,
+`request_cache: false` since a `size:0` body is shard-request-cacheable and the hits arms
+are not).
+
+`took` p50 ms, 20 runs, warm (`experiment-2026-08-06T15-39-06-000Z.json`):
+
+| arm | `mar` (124 682) | `comm` (108 905) | `marseille` (40 696) | `saint mar` (152 422) |
+|---|---:|---:|---:|---:|
+| complete-today | 4.0 | 3.0 | 3.0 | 7.0 |
+| prefix-only | 4.5 | 2.0 | 2.0 | 5.5 |
+| simple-mode | 0.0 (1 015 hits) | 0.0 (**0 hits**) | 4.0 | 4.0 (49 655) |
+| bool-prefix | 5.0 | 3.0 | 2.0 | 6.0 |
+| ranked-prefix | 9.0 (**+125%**) | 3.0 | 2.0 | 11.0 (**+57%**) |
+| tiered | 5.0 | 3.0 | 4.0 | 7.0 |
+| agg-popularity | **2.0** | **2.0** | **1.0** | **2.0** |
+
+Ranking evidence (top-5 labels + distinct-score count in the top-20, printed by
+`printRankingEvidence`):
+
+- **complete-today**: 1 distinct score on every probe. For `mar` the top-20 is whatever rows
+  the tie-break yields — here «…Sainte-Marie» rows, because «Marie» stems to `mar` and the
+  plain clause adds an identical constant on this uniform corpus. Order conveys nothing.
+- **bool-prefix**: identical constant behavior (1 distinct score) at the same cost —
+  confirms from the query side what §15/T9 found from the index side (`index_prefixes`/SAYT):
+  ES has no cheap ranked-prefix primitive; `bool_prefix`'s prefix leg is constant-score too.
+- **ranked-prefix** (`top_terms_blended_freqs_1024`): the only arm whose *scores* respond to
+  the prefix expansion — but on a short-label corpus it still collapses to 1 distinct score
+  (docs match the same expanded terms with TF=1), ranks by "how many mar\*-terms does the doc
+  contain" («Marché couvert Marseille» first — 2 expansions), and costs up to +125%. Blended
+  IDF also ranks *rare* completions above common ones — backwards for autocomplete. Not the fix.
+- **tiered**: value-startsWith rows do surface («Marché couvert …» for `mar`) at +0..+33%
+  cost, but the additive tier boosts (^8/^4 constants) sit ON TOP of unbounded BM25 clause
+  sums: for `mar` the accidental «Sainte-Marie» stem score (21.5) swamps the ^4 startsWith
+  tier — the "best" tier only wins the tie-break within equal base scores. A real tiered
+  design must let tiers dominate (rescore/dis_max or much larger constants) — same class of
+  interaction §15.c found between a static boost clause and shape-dependent scoring.
+- **agg-popularity**: the *cheapest* arm on every probe (aggs skip top-k scoring entirely;
+  1-2 ms with request cache off) and the only one whose order is intuitively right — most
+  frequent matching values first («Piscine municipale Marseille (4163)» for `mar`;
+  «Gymnase Saint-Martin (199)» for `saint martin`). It also exposes a mode-independent flaw:
+  for `comm` the suggestions are all «… Marseille» — the query matched «commune» in the
+  *description* of popular rows, not the label. Any group-by-output autocomplete (today's
+  singleSearch `collapse` included) must restrict `q` to the fields the user is completing
+  (`q_fields`), or popular-but-irrelevant values dominate.
+
+**Sanity checks (all PASS).** `term`/`prefix` on `.keyword_insensitive` normalizes the query
+input (folded «école primaire marseille» → 4 063); the accent prefix ladder never zeroes on
+the new shape (`ec/ecu/ecul/ecull` → 51 548/1 939/1 939/1 939); complete-today `mar` top-20 =
+1 distinct score; prefix-only `comm` top-20 `_i` values are strictly ascending — the "ranking"
+is literally row order.
+
+**Reading.** `complete` mode is *correct as a matcher* (the union prefix routing works,
+accents included, and page-1 cost is a non-issue at 3-7 ms/200k — consistent with §15.b's
+5 ms at 40×100k) but *vacuous as a ranker* exactly where it is aimed: mid-typing over a
+referential. No query-shape tweak measured here fixes that — the two levers that actually
+order suggestions usefully are (a) popularity of the completed *value* (agg-shaped, cheapest)
+and (b) explicit match-quality tiers on the *value* fields (needs dominance design). Both
+point away from "scored line search" and toward a value-completion primitive for the
+singleSearch/autocomplete use case, with `q_fields` restricted to the completed column(s);
+`q_mode=complete` on `/lines` would remain as the recall-oriented legacy surface. Multi-word
+narrowing (AND-filter with OR scoring, the `q_mode=and` "score broad, match strict" pattern)
+composes with either. §15's R7 (phrase/wildcard clause contribution) remains open, though at
+these costs the phrase clause is not a perf concern — it's a semantics question.
+
+**Follow-up probes (same day).**
+
+- *Is singleSearch really line-ordered, or alphabetical?* Line-ordered, verified live: a real
+  `masterData.singleSearchs` config on bench-small, `q=comm` → suggestions `cat-eta, cat-alpha,
+  cat-beta, cat-kappa, cat-zeta, cat-epsilon`, all at score 2 — not alphabetical; the collapse
+  groups ride the `_score → _updatedAt desc → _i desc` tie-break (`prepareQuery`, commons.ts;
+  the collapse wiring adds no ordering of its own). The alphabetical impression comes from the
+  OTHER autocomplete surface: `/values/{field}` (`es/values.ts`) sorts `_key asc` by default
+  and, with a `q`, cascades `[max_score desc, _count desc, _key asc]` — and since complete-mode
+  scores are constant, that cascade already degrades gracefully to popularity-then-alphabetical.
+  `/values` also scopes `q` to the completed field itself (`prepareQuery(dataset, query,
+  [fieldKey])`), so it dodges the matched-in-description trap natively. In other words the
+  "value-completion primitive" §16 points at already exists for raw values; singleSearch is
+  the outlier (it needs the output+label pair and static filters, which `/values` lacks — and
+  count ordering there implies the agg shape, since `collapse` can only sort groups by the top
+  hit's sort values, never by group size).
+- *AND instead of OR in complete mode* — filter-side (the `q_mode=and` "score broad, match
+  strict" pattern; scoring clauses untouched), filter = `simple_query_string(q*,
+  prefixFields, default_operator: and)`: `saint mar` 152 422 → **21 915** matches, top =
+  Sainte-Marie/Saint-Mar\* rows; `commune tour` 87 120 → **2 152**, top = «Mairie Tours» —
+  the narrowing-as-you-type semantics an autocomplete expects, totals/facets coherent, for
+  ~+2 ms e2e on the 200k corpus. Edge cases for an implementation: single-word q is a no-op;
+  user-typed `*`/`?` skips the prefix clause today, so the filter would fall back to the plain
+  `q` with `default_operator: and`.
+
+**Outcome — implemented on this branch (2026-08-06).** Two of the directions shipped as code:
+(1) multi-word `complete` queries now carry the AND filter described above (`buildQClauses`,
+with the wildcard-clause alternative preserved and user-typed wildcards falling back to the
+plain `q` requirement); (2) singleSearch scopes `q` to the output+label columns
+(`q_fields`) and orders suggestions alphabetically on the OUTPUT key (`sort`, via
+`.keyword_insensitive`) — it leads the displayed «output (label)» string and is the collapse
+field, so group order is well-defined, and it can never introduce a sort 400 on a working
+config (a `values: false` output already breaks the collapse itself, and `parseSort` only
+rejects a column with both sort capabilities disabled). Count ordering was considered and
+rejected by the repo owner; label-sort was rejected because the label column is not
+collapse-constrained (it could legitimately be fully non-sortable and would then 400).
+Covered by q-fields.unit, search-basic.api and master-data-advanced.api specs.
+
+Index kept and reused (drop with `curl -XDELETE $ES/benchmark-complete-ranking`). Results:
+`experiment-2026-08-06T15-39-06-000Z.json` (warm + profile; an earlier
+`…15-37-16-074Z.json` run predates the `request_cache: false` fix on the agg arm — its
+agg-popularity 0 ms rows are cache reads, ignore them).
+
+---
+
 ## Recording results
 
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an
