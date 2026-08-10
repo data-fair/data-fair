@@ -156,7 +156,7 @@ const showCapabilityChip = computed(() => {
   if (props.showCapability) return true
   const account = session.state.account
   if (!account) return false
-  return !(props.dataset.owner.type === account.type && props.dataset.owner.id === account.id)
+  return !(props.dataset.owner.type === account.type && props.dataset.owner.id === account.id && (props.dataset.owner.department || null) === (account.department || null))
 })
 
 const fileInfo = computed(() => {
