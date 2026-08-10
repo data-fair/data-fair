@@ -71,11 +71,12 @@ const fieldsMap = {
   ...filterFields
 }
 
-export const findDatasets = async (db: Db, locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, options: { catalogMode?: boolean } = {}) => {
+export const findDatasets = async (db: Db, locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, options: { catalogMode?: boolean, extraFilters?: any[] } = {}) => {
   const explain: Record<string, number> | false | undefined = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
   const extraFilters: any[] = []
+  if (options.extraFilters) extraFilters.push(...options.extraFilters)
   if (reqQuery.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
   }

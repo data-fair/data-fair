@@ -15,6 +15,7 @@ import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
+import { getAsAccountMemberContext } from '../../misc/utils/as-account-member.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { can, reqResource } from '../../misc/utils/permissions.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
@@ -84,9 +85,18 @@ export const registerMetadataRoutes = (router: Router) => {
     const publicBaseUrl = reqPublicBaseUrl(req)
     const reqQuery = req.query as Record<string, string>
 
-    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
+    // an org admin can browse the list as another member of the org (audit view)
+    let sessionState = reqSession(req)
+    let asMemberFilters: any[] | undefined
+    if (reqQuery.asAccountMember) {
+      const ctx = getAsAccountMemberContext(reqQuery.asAccountMember, sessionState, config.adminRole as string)
+      sessionState = ctx.sessionState
+      asMemberFilters = [ctx.ownerFilter]
+    }
+
+    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, sessionState, { extraFilters: asMemberFilters })
     for (const r of response.results) {
-      datasetUtils.clean(req as DfRequest, r)
+      datasetUtils.clean(req as DfRequest, r, false, sessionState)
     }
     res.json(response)
   })
