@@ -57,7 +57,7 @@ export type ApplicationWriteContext = {
   logCtx: LogContext
 }
 
-export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState) => {
+export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, extraQueryFilters?: any[]) => {
   if (reqQuery.service &&
       !reqQuery.service.startsWith('http://') &&
       !reqQuery.service.startsWith('https://')) {
@@ -65,6 +65,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   }
 
   const extraFilters = []
+  if (extraQueryFilters) extraFilters.push(...extraQueryFilters)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -89,7 +90,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
   const resultsPromise = size > 0 && mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields)).toArray()
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, extraFilters)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response: any = {}

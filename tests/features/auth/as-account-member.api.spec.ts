@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
 const anonymous = axios()
 const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -100,5 +100,29 @@ test.describe('asAccountMember list override', () => {
     const res = await orgAdmin.get(`/api/v1/datasets/${ds.id}`, asMember(member8))
     assert.equal(res.status, 200)
     assert.ok(res.data.userPermissions.includes('setPermissions'))
+  })
+
+  test('org admin lists applications as another member', async () => {
+    const appA = (await orgAdmin.post('/api/v1/applications', { title: 'audit app a', url: mockAppUrl('monapp1') })).data
+    await orgAdmin.put(`/api/v1/applications/${appA.id}/permissions`, [{ type: 'user', id: 'test_user8', classes: ['list', 'read'] }])
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- appB only needs to exist for the facet-count assertion below
+    const appB = (await orgAdmin.post('/api/v1/applications', { title: 'audit app b', url: mockAppUrl('monapp1') })).data
+    // public noise from another account, excluded by the forced org scope
+    const appPub = (await user3.post('/api/v1/applications', { title: 'audit app public', url: mockAppUrl('monapp1') })).data
+    await user3.put(`/api/v1/applications/${appPub.id}/permissions`, [{ operations: ['readDescription', 'list'] }])
+
+    let res = await orgAdmin.get('/api/v1/applications', asMember(member8))
+    assert.equal(res.data.count, 1)
+    assert.equal(res.data.results[0].id, appA.id)
+    assert.ok(res.data.results[0].userPermissions.includes('readDescription'))
+    assert.ok(!res.data.results[0].userPermissions.includes('writeDescription'))
+
+    // facets stay inside the forced org scope (appB + appA, the public external app is not counted)
+    res = await orgAdmin.get('/api/v1/applications', asMember(member1, { facets: 'visibility' }))
+    const totalFacet = res.data.facets.visibility.reduce((sum: number, f: any) => sum + f.count, 0)
+    assert.equal(totalFacet, 2)
+
+    // gate applies on applications too
+    await assert.rejects(orgContrib.get('/api/v1/applications', asMember(member8)), { status: 403 })
   })
 })

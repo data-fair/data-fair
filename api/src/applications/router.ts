@@ -2,6 +2,7 @@ import path from 'path'
 import express, { type RequestHandler } from 'express'
 import moment from 'moment'
 import mongo from '#mongo'
+import config from '#config'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import applicationAPIDocs from '../../contract/application-api-docs.ts'
 import * as ajv from '../misc/utils/ajv.ts'
@@ -23,6 +24,7 @@ import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { getAsAccountMemberContext } from '../misc/utils/as-account-member.ts'
 import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
@@ -46,12 +48,22 @@ router.use((req, res, next) => {
 
 // Get the list of applications
 router.get('', cacheHeaders.listBased, async (req, res) => {
+  const reqQuery = req.query as Record<string, string>
+  // an org admin can browse the list as another member of the org (audit view)
+  let sessionState = reqSession(req)
+  let asMemberFilters: any[] | undefined
+  if (reqQuery.asAccountMember) {
+    const ctx = getAsAccountMemberContext(reqQuery.asAccountMember, sessionState, config.adminRole as string)
+    sessionState = ctx.sessionState
+    asMemberFilters = [ctx.ownerFilter]
+  }
   const response = await service.findApplications(
     req.getLocale(),
     reqPublicationSite(req),
     reqPublicBaseUrl(req),
-    req.query as Record<string, string>,
-    reqSession(req)
+    reqQuery,
+    sessionState,
+    asMemberFilters
   )
   res.json(response)
 })
