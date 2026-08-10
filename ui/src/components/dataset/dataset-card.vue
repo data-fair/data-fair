@@ -106,6 +106,12 @@
           :visibility="dataset.visibility"
           size="small"
         />
+        <capability-chip
+          v-if="showCapabilityChip"
+          resource-type="datasets"
+          :user-permissions="cardUserPermissions"
+          class="ml-2"
+        />
         <span
           v-if="dataset.updatedAt"
           class="ml-2"
@@ -139,8 +145,18 @@ const showAll = useBooleanSearchParam('showAll')
 const props = withDefaults(defineProps<{
   dataset: Dataset
   noLink?: boolean
+  showCapability?: boolean
 }>(), {
-  noLink: false
+  noLink: false,
+  showCapability: false
+})
+
+const cardUserPermissions = computed(() => (props.dataset as Dataset & { userPermissions?: string[] }).userPermissions)
+const showCapabilityChip = computed(() => {
+  if (props.showCapability) return true
+  const account = session.state.account
+  if (!account) return false
+  return !(props.dataset.owner.type === account.type && props.dataset.owner.id === account.id)
 })
 
 const fileInfo = computed(() => {
