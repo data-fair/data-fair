@@ -69,6 +69,11 @@ test.describe('permissions', () => {
     assert.equal(res.data.count, 1)
     res = await testAlone.get('/api/v1/datasets?can=admin')
     assert.equal(res.data.count, 0)
+    // comma lists mixing classes (and classes+operations) must work too
+    res = await testAlone.get('/api/v1/datasets?can=read,admin')
+    assert.equal(res.data.count, 1)
+    res = await testAlone.get('/api/v1/datasets?can=admin,delete')
+    assert.equal(res.data.count, 0)
 
     // Member has individual permission
     res = await testUser8.get('/api/v1/datasets/' + datasetId)

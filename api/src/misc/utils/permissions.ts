@@ -255,7 +255,7 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (permissionsClasses.operationsClasses[resourceType][operation]) {
+    } else if (permissionsClasses.operationsClasses[resourceType][op]) {
       operationFilter.push({ classes: op })
     }
   }
