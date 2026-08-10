@@ -53,6 +53,14 @@ test('superadmin in adminMode passes the gate', () => {
   assert.equal(ctx.sessionState.user?.id, 'u8')
 })
 
+test('rejects an org API-key session even when it carries an admin accountRole', () => {
+  // readApiKey (api-key.ts) mints every org API-key session with accountRole = config.adminRole
+  // regardless of the key's actual scopes, so the plain accountRole check alone would let a
+  // read-scoped API key through. The isApiKey marker must be checked explicitly.
+  const apiKeySession: SessionState & { isApiKey: true } = { ...orgAdminSession, isApiKey: true }
+  assert.throws(() => getAsAccountMemberContext(memberParam, apiKeySession, 'admin'), { status: 403 })
+})
+
 test('rejects malformed descriptors', () => {
   assert.throws(() => getAsAccountMemberContext('not json', orgAdminSession, 'admin'), { status: 400 })
   assert.throws(() => getAsAccountMemberContext(JSON.stringify({ id: 'x', role: 'user' }), orgAdminSession, 'admin'), { status: 400 })

@@ -22,6 +22,13 @@ export type AsAccountMemberContext = {
  */
 export const getAsAccountMemberContext = (rawParam: string, sessionState: SessionState, adminRole: string): AsAccountMemberContext => {
   if (!sessionState.user) throw httpError(401)
+  // API keys mint a session with accountRole = adminRole for every org key regardless of scope
+  // (see readApiKey in api-key.ts), so the adminRole check below cannot distinguish a real org
+  // admin from a read-scoped API key. Reject API-key sessions outright: the feature is reserved
+  // to interactive org admins.
+  if ((sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
+    throw httpError(403, 'le paramètre asAccountMember n\'est pas utilisable avec une clé d\'API')
+  }
   const account = sessionState.account
   if (!account || account.type !== 'organization') {
     throw httpError(403, 'le paramètre asAccountMember requiert un compte organisation actif')

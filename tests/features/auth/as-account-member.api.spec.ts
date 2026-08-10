@@ -65,6 +65,14 @@ test.describe('asAccountMember list override', () => {
     assert.equal(res.data.count, 0)
     res = await orgAdmin.get('/api/v1/datasets', asMember(member5, { can: 'write' }))
     assert.equal(res.data.count, 1)
+
+    // the forced org scope composes as AND with other filter params: an owner param pointing
+    // outside the org cannot widen it...
+    res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { owner: 'user:test_user3' }))
+    assert.equal(res.data.count, 0)
+    // ...neither can shared=true (same count as without the param)
+    res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { shared: 'true' }))
+    assert.equal(res.data.count, 2)
   })
 
   test('asAccountMember is restricted to org admins', async () => {
@@ -73,6 +81,20 @@ test.describe('asAccountMember list override', () => {
     await assert.rejects(anonymous.get('/api/v1/datasets', asMember(member8)), { status: 401 })
     await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asAccountMember: 'not-json' } }), { status: 400 })
     await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asAccountMember: JSON.stringify({ id: 'x', role: 'user' }) } }), { status: 400 })
+  })
+
+  test('an org API key is rejected by the gate even though it carries an admin accountRole', async () => {
+    // every org API key session is minted with accountRole = adminRole regardless of its actual
+    // scopes (readApiKey in api-key.ts), so the gate must reject isApiKey sessions explicitly
+    const res = await orgAdmin.put('/api/v1/settings/organization/test_org1', {
+      apiKeys: [{ title: 'audit key', scopes: ['datasets'] }]
+    })
+    const apiKey = axios({ headers: { 'x-apiKey': res.data.apiKeys[0].clearKey } })
+    await assert.rejects(apiKey.get('/api/v1/datasets', asMember(member8)), (err: any) => {
+      assert.equal(err.status, 403)
+      assert.ok(err.data.includes('n\'est pas utilisable avec une clé d\'API'))
+      return true
+    })
   })
 
   test('department admin is scoped to their department resources', async () => {
