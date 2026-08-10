@@ -25,6 +25,7 @@ import {
   mdiAccountSupervisor,
   mdiMonitorDashboard,
   mdiRobotOutline,
+  mdiShieldAccountOutline,
 } from '@mdi/js'
 
 export interface NavItem {
@@ -97,6 +98,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
         title: t('dep'),
         subtitle: `${account.value.name} / ${org.departmentName || org.department}`
       })
+    }
+    if (account.value?.type === 'organization' && org?.role === $uiConfig.adminRole) {
+      management.push({ to: '/members-access', icon: mdiShieldAccountOutline, title: t('membersAccess') })
     }
     if (canAdminDep.value) {
       management.push({ to: '/settings', icon: mdiCog, title: t('params') })

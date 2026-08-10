@@ -15,10 +15,15 @@
   >
     <template #item="{ item, props: itemProps }: any">
       <v-list-item v-bind="itemProps">
+        <!--
+          item.raw is transiently undefined while Vuetify's virtual-scroll list is
+          re-measuring rows during the 0 -> N items transition (e.g. right after the
+          search results resolve): guard with optional chaining rather than crashing.
+        -->
         <template #subtitle>
-          {{ item.raw.email }}
-          <span v-if="item.raw.role"> - {{ item.raw.role }}</span>
-          <span v-if="item.raw.department"> - {{ item.raw.departmentName || item.raw.department }}</span>
+          {{ item.raw?.email }}
+          <span v-if="item.raw?.role"> - {{ item.raw.role }}</span>
+          <span v-if="item.raw?.department"> - {{ item.raw.departmentName || item.raw.department }}</span>
         </template>
       </v-list-item>
     </template>
@@ -38,6 +43,7 @@ import { $sdUrl } from '~/context'
 const props = defineProps<{
   modelValue: { id: string, name: string, email?: string } | null
   organization: { id: string, name?: string }
+  department?: string
 }>()
 
 type Member = { id: string, name: string, email?: string, role?: string, department?: string, departmentName?: string }
@@ -63,7 +69,9 @@ async function onSearch (search: string) {
   if (search && props.modelValue && search === props.modelValue.name) return
   loading.value = true
   if (search && search.length >= 3) {
-    const res = await fetch(`${$sdUrl}/api/organizations/${props.organization.id}/members?q=${encodeURIComponent(search)}`)
+    let url = `${$sdUrl}/api/organizations/${props.organization.id}/members?q=${encodeURIComponent(search)}`
+    if (props.department) url += `&department=${encodeURIComponent(props.department)}`
+    const res = await fetch(url)
     const data = await res.json()
     members.value = data.results
   } else {
