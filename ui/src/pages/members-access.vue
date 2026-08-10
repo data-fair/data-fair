@@ -46,12 +46,32 @@
         </v-tab>
       </v-tabs>
       <v-alert
-        v-if="catalog.initialized.value && !catalog.displayedItems.value.length"
+        v-if="catalog.initialized.value && !catalog.loading.value && !catalog.displayedItems.value.length"
         type="info"
         variant="text"
         :text="t('noResource')"
       />
       <v-row class="d-flex align-stretch">
+        <!--
+          displayedItems is cleared (see the member/resourceType watcher below) as soon as the
+          audited identity changes, so this loading state only ever covers an empty grid — never
+          the previous member's / previous tab's resources rendered under the new label.
+        -->
+        <template v-if="catalog.loading.value && !catalog.displayedItems.value.length">
+          <v-col
+            v-for="i in 6"
+            :key="`skeleton-${i}`"
+            cols="12"
+            sm="6"
+            md="4"
+          >
+            <v-skeleton-loader
+              class="w-100"
+              height="200"
+              type="article"
+            />
+          </v-col>
+        </template>
         <v-col
           v-for="resource in catalog.displayedItems.value"
           :key="resource.id"
@@ -207,6 +227,13 @@ const catalog = useCatalogList<any>({
   query: auditQuery,
   facetsFields: 'status,visibility,topics,keywords,publicationSites,base-application'
 })
+
+// useCatalogList's reset() doesn't clear displayedItems before re-fetching, so without this,
+// switching the audited member (or the datasets/applications tab) would keep showing the
+// PREVIOUS member's/tab's resources — under the newly selected label — until the new request
+// resolves. On a page whose whole purpose is trustworthy per-member access auditing, that
+// wrong-identity flash is a correctness bug, not just a cosmetic one: clear eagerly instead.
+watch([member, resourceType], () => { catalog.displayedItems.value = [] })
 </script>
 
 <i18n lang="yaml">
