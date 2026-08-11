@@ -51,6 +51,11 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   errorRetry: 1,
   'integrity.lastCheck.date': 1,
   'integrity.lastRevision.date': 1,
+  // same trap as the integrity dates above: the batch pass that rescores a whole organization when
+  // its completeness settings change writes straight to mongo and deliberately leaves `updatedAt`
+  // alone — a settings change did not modify the dataset. Left out of this projection, enabling the
+  // feature would appear to do nothing until every cache entry expired on its own.
+  completeness: 1,
   ...(useDraft ? { 'draft.updatedAt': 1 } : {}),
   _id: 0
 })
@@ -68,6 +73,10 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
+  // `missing` is explicitly sorted, so joining it is a stable identity; comparing the score alone
+  // would miss a reshuffle at equal weights, and comparing presence alone would miss a $unset.
+  if (cachedFull.completeness?.score !== fresh.completeness?.score) return false
+  if (cachedFull.completeness?.missing?.join(',') !== fresh.completeness?.missing?.join(',')) return false
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true

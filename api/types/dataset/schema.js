@@ -658,6 +658,34 @@ const datasetProperties = {
     type: 'string',
     description: 'The URL where the original data can be found'
   },
+  completeness: {
+    type: 'object',
+    readOnly: true,
+    additionalProperties: false,
+    description: 'Readonly field. Metadata completeness of the dataset, scaled on the criteria activated in the owner settings.',
+    properties: {
+      score: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 100,
+        description: 'Completeness percentage, from 0 to 100'
+      },
+      missing: {
+        type: 'array',
+        description: 'The applicable criteria left unfilled, heaviest first',
+        items: { type: 'string' }
+      },
+      lengths: {
+        type: 'object',
+        additionalProperties: false,
+        description: 'The length window applied to each text criterion that counts. Carried by the dataset so an interface can explain a "too short" and warn while editing without reading the owner settings.',
+        properties: {
+          description: { $ref: '#/$defs/completenessLength' },
+          summary: { $ref: '#/$defs/completenessLength' }
+        }
+      }
+    }
+  },
   constraints: {
     type: 'array',
     title: "Contraintes d'unicité",
@@ -1077,6 +1105,16 @@ const dataset = {
     }
   },
   $defs: {
+    completenessLength: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['min'],
+      description: 'Expected length of a text criterion. An absent max means no upper bound.',
+      properties: {
+        min: { type: 'integer', minimum: 0 },
+        max: { type: 'integer', minimum: 0 }
+      }
+    },
     normalizeOptions: {
       type: 'object',
       description: 'Normalize options specific to the original file format',

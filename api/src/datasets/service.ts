@@ -21,6 +21,8 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
+import { computeCompleteness, COMPLETENESS_KEYS } from './utils/compute-completeness.ts'
+import { completenessContext } from './utils/completeness-recompute.ts'
 import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
@@ -375,6 +377,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
+  // Nothing is computed nor stored while the owner has the feature off: the absence of the field is
+  // itself the opt-in signal, so no reader ever has to consult the settings to interpret it.
+  const completenessCtx = await completenessContext(owner)
+  if (completenessCtx.config.active) dataset.completeness = computeCompleteness(dataset, completenessCtx)
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -512,6 +518,19 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // Recompute _modified whenever any of the three source dates is in the patch
   if ('modified' in patch || 'dataUpdatedAt' in patch || 'updatedAt' in patch) {
     patch._modified = computeModified({ ...dataset, ...patch })
+  }
+
+  // Recompute the completeness score only when the patch touches a scored field: otherwise every
+  // rest line write and every status transition of the pipeline would pay a settings read for
+  // nothing. A draft patch is skipped — its keys are prefixed 'draft.' further down (see the
+  // `if (dataset.draftReason)` block) and land in the excluded draft subtree; the score describes
+  // the published dataset and is recomputed by the normal patch that validates the draft.
+  // Nothing is written while the feature is off. No $unset either: clearing stored scores belongs to
+  // the settings transition (see settings/service.ts), and the only way a dataset holds one is that
+  // the feature was on — in which case turning it off already cleared it.
+  if (!dataset.draftReason && COMPLETENESS_KEYS.some(key => key in patch)) {
+    const ctx = await completenessContext(dataset.owner)
+    if (ctx.config.active) patch.completeness = computeCompleteness({ ...dataset, ...patch }, ctx)
   }
 
   Object.assign(dataset, patch)

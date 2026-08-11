@@ -17,6 +17,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
+import { recomputeOwnerCompleteness, clearOwnerCompleteness } from '../datasets/utils/completeness-recompute.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
@@ -188,6 +189,10 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
   }
 
+  if (isMainSettings(settings)) {
+    await updateMetadataCompleteness(owner, oldSettings && isMainSettings(oldSettings) ? oldSettings : null, settings)
+  }
+
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
 }
 
@@ -206,6 +211,30 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
+}
+
+/**
+ * The completeness score of every dataset of the organization is scaled on these settings, and a
+ * settings save patches no dataset — so the batch pass lives here, or the scores of one organization
+ * would end up computed on different denominators and stop being comparable to each other.
+ *
+ * Awaited, like the custom-metadata cleanup above: a settings save is a rare administrative action,
+ * and immediate consistency is the entire reason for recomputing at all.
+ */
+const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Settings | null, settings: Settings) => {
+  const wasActive = !!oldSettings?.metadataCompleteness?.active
+  const isActive = !!settings.metadataCompleteness?.active
+  if (!wasActive && !isActive) return
+  if (wasActive && !isActive) {
+    // one query, and the field simply stops existing — no stale score computed with abandoned weights
+    await clearOwnerCompleteness(owner)
+    return
+  }
+  // `topics` only matters through its emptiness: it is what makes the topics criterion applicable
+  const configChanged = !equal(oldSettings?.metadataCompleteness, settings.metadataCompleteness) ||
+    !equal(oldSettings?.datasetsMetadata, settings.datasetsMetadata) ||
+    !!oldSettings?.topics?.length !== !!settings.topics?.length
+  if (!wasActive || configChanged) await recomputeOwnerCompleteness(owner)
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {
