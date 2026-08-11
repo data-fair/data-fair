@@ -1,6 +1,17 @@
 import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
+/**
+ * The completeness weights are one-digit integers with short labels: several fit on a row, up to 4
+ * on a wide settings section. `context.offeredCriteria` is filled by the settings form and hides
+ * the criteria whose field is not offered in the Metadata tab — they cannot count, so a weight for
+ * them is only confusing. Hidden and not deleted: json-layout leaves the data of a hidden node
+ * alone, so a weight configured once comes back untouched if the field is offered again.
+ */
+const weightCols = { xs: 6, sm: 4, md: 3 }
+/** @type {(criterion: string) => object} */
+const gatedWeightLayout = (criterion) => ({ cols: weightCols, if: `context.offeredCriteria?.${criterion}` })
+
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
   title: 'Settings',
@@ -513,6 +524,58 @@ export default {
                 minLength: 3
               }
             }
+          }
+        }
+      }
+    },
+    metadataCompleteness: {
+      type: 'object',
+      title: 'Qualité des métadonnées',
+      layout: { title: null },
+      properties: {
+        active: {
+          type: 'boolean',
+          default: false,
+          layout: 'switch',
+          title: 'Calculer un score de complétude des métadonnées'
+        },
+        weights: {
+          type: 'object',
+          title: 'Poids des critères',
+          description: 'Un poids à 0 retire le critère du calcul.',
+          layout: { if: 'parent.data.active' },
+          properties: {
+            description: { type: 'integer', minimum: 0, default: 4, title: 'Description', layout: { cols: weightCols } },
+            summary: { type: 'integer', minimum: 0, default: 3, title: 'Résumé', layout: { cols: weightCols } },
+            license: { type: 'integer', minimum: 0, default: 3, title: 'Licence', layout: { cols: weightCols } },
+            keywords: { type: 'integer', minimum: 0, default: 2, title: 'Mots clés', layout: gatedWeightLayout('keywords') },
+            topics: { type: 'integer', minimum: 0, default: 2, title: 'Thématiques', layout: gatedWeightLayout('topics') },
+            creator: { type: 'integer', minimum: 0, default: 2, title: 'Créateur', layout: gatedWeightLayout('creator') },
+            origin: { type: 'integer', minimum: 0, default: 1, title: 'Provenance', layout: { cols: weightCols } },
+            frequency: { type: 'integer', minimum: 0, default: 1, title: 'Fréquence de mise à jour', layout: gatedWeightLayout('frequency') },
+            spatial: { type: 'integer', minimum: 0, default: 1, title: 'Couverture spatiale', layout: gatedWeightLayout('spatial') },
+            temporal: { type: 'integer', minimum: 0, default: 1, title: 'Couverture temporelle', layout: gatedWeightLayout('temporal') },
+            conformsTo: { type: 'integer', minimum: 0, default: 1, title: 'Schéma', layout: gatedWeightLayout('conformsTo') }
+          }
+        },
+        description: {
+          type: 'object',
+          title: 'Longueur attendue de la description',
+          description: 'Une borne à 0 ne limite pas de ce côté.',
+          layout: { if: 'parent.data.active' },
+          properties: {
+            min: { type: 'integer', minimum: 0, default: 200, title: 'Minimum', layout: { cols: 6 } },
+            max: { type: 'integer', minimum: 0, title: 'Maximum', layout: { cols: 6 } }
+          }
+        },
+        summary: {
+          type: 'object',
+          title: 'Longueur attendue du résumé',
+          description: 'Une borne à 0 ne limite pas de ce côté.',
+          layout: { if: 'parent.data.active' },
+          properties: {
+            min: { type: 'integer', minimum: 0, default: 50, title: 'Minimum', layout: { cols: 6 } },
+            max: { type: 'integer', minimum: 0, default: 250, title: 'Maximum', layout: { cols: 6 } }
           }
         }
       }
