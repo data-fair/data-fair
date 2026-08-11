@@ -290,19 +290,9 @@ const formatDate = (dateStr?: string) => {
   return dayjs(dateStr).format('lll')
 }
 
-/**
- * One line per unfilled criterion. The two text criteria say why they do not count — a description
- * held back by its length is not the same problem as a missing one, and only the second is solved by
- * writing anything at all. The window comes from the dataset's own `completeness.lengths`, so the
- * tooltip still reads no settings.
- *
- * Everything falls back to the plain criterion name. Only description and summary carry a window
- * and hold a string — the other criteria are arrays or objects, and measuring their length is not
- * just meaningless but a TypeError thrown inside a computed, i.e. the whole section blanked. And a
- * value that satisfies the window it is listed as missing against is not a contradiction to report:
- * the score describes the published dataset while this reads the draft-merged one, so the text may
- * simply have been fixed in a draft the score does not cover yet.
- */
+// one line per unfilled criterion; the text ones explain a "too short/long" from the dataset's own
+// `completeness.lengths` (no settings read). The `window` guard also keeps `.trim()` off the
+// non-string criteria, and tolerates a value that fits — the draft-merged text may already be fixed.
 const completenessLines = computed(() => {
   const completeness = dataset.value?.completeness
   return (completeness?.missing ?? []).map((key: string) => {

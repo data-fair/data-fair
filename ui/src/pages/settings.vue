@@ -460,8 +460,7 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
-  // same reason: vjsf writes the schema default the moment the Complétude tab is first rendered, so
-  // an account that never configured it would report unsaved changes without a single user edit
+  // same reason: else vjsf writes the schema default on first render, faking unsaved changes
   if (!s.metadataCompleteness) s.metadataCompleteness = { active: false }
 }
 watch(settingsEditFetch.serverData, (s) => {

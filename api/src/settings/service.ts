@@ -180,9 +180,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   }
 
   if (isMainSettings(settings)) {
-    // cross-field rules the JSON schema cannot express — an unsatisfiable length window, or a
-    // configuration where nothing applicable is weighted. Checked here and not only in the settings
-    // form: either one would otherwise be written onto every dataset of the organization.
+    // cross-field rules the schema can't express, re-checked here since the form only guards the browser
     const completenessError = validateMetadataCompleteness(completenessContextOf(settings))
     if (completenessError) throw httpError(400, completenessError)
   }
@@ -224,19 +222,9 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
   }
 }
 
-/**
- * The completeness score of every dataset of the organization is scaled on these settings, and a
- * settings save patches no dataset — so the batch pass lives here, or the scores of one organization
- * would end up computed on different denominators and stop being comparable to each other.
- *
- * Awaited, like the custom-metadata cleanup above: a settings save is a rare administrative action,
- * and immediate consistency is the entire reason for recomputing at all. The pass is therefore
- * bounded by the size of the organization — it streams every one of its datasets, writing back only
- * the ones the new configuration actually moves. Fine at the sizes we serve; an organization large
- * enough for the scan to reach the ingress timeout would get a failed-save toast over settings that
- * were in fact persisted, and a partially rescored collection with nothing scheduled to finish it.
- * Moving it to a background task is the answer if we ever get there, not a smaller batch.
- */
+// A settings save rescores every dataset of the org (it patches none of them) so their scores stay
+// comparable. Awaited for immediate consistency, bounded by the org's dataset count — move it to a
+// background task if an org ever grows large enough for the scan to hit the ingress timeout.
 const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Settings | null, settings: Settings) => {
   const wasActive = !!oldSettings?.metadataCompleteness?.active
   const isActive = !!settings.metadataCompleteness?.active
@@ -246,12 +234,8 @@ const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Setti
     await clearOwnerCompleteness(owner)
     return
   }
-  // Only what can actually move a score, criterion by criterion, rather than the whole settings
-  // objects: renaming a custom metadata field or a topic changes no dataset's score, and this gate
-  // is what stands between such an edit and a full-collection rewrite.
-  // `datasetsMetadata` matters through the `active` flag of the gated criteria only, `topics`
-  // through its emptiness — which makes the topics criterion applicable — and through removals,
-  // which `updateTopics` has just $pulled off the datasets themselves.
+  // gate the full-collection rewrite on what can actually move a score: gated-criteria activation,
+  // and topics becoming (non-)empty or losing a member (updateTopics already $pulled it off the datasets)
   const offeredChanged = completenessGatedByMetadata.some(key =>
     !!(oldSettings?.datasetsMetadata as any)?.[key]?.active !== !!(settings.datasetsMetadata as any)?.[key]?.active)
   const topicsChanged = !!oldSettings?.topics?.length !== !!settings.topics?.length ||

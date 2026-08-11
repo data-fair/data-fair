@@ -51,10 +51,8 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   errorRetry: 1,
   'integrity.lastCheck.date': 1,
   'integrity.lastRevision.date': 1,
-  // same trap as the integrity dates above: the batch pass that rescores a whole organization when
-  // its completeness settings change writes straight to mongo and deliberately leaves `updatedAt`
-  // alone — a settings change did not modify the dataset. Left out of this projection, enabling the
-  // feature would appear to do nothing until every cache entry expired on its own.
+  // the settings-driven batch rescore writes to mongo without touching `updatedAt`, so without this
+  // the freshness check would keep serving stale scores until each cache entry expired on its own
   completeness: 1,
   ...(useDraft ? { 'draft.updatedAt': 1 } : {}),
   _id: 0
@@ -83,10 +81,8 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
-  // `missing` is explicitly sorted, so joining it is a stable identity; comparing the score alone
-  // would miss a reshuffle at equal weights, and comparing presence alone would miss a $unset.
-  // `lengths` too: widening a window can leave every score and every `missing` list untouched and
-  // still change what the metadata form tells editors the expected length is.
+  // score alone misses a reshuffle at equal weights or a $unset; lengths alone can change what the
+  // form shows even when score and missing are untouched
   if (cachedFull.completeness?.score !== fresh.completeness?.score) return false
   if (cachedFull.completeness?.missing?.join(',') !== fresh.completeness?.missing?.join(',')) return false
   if (!sameLengths(cachedFull.completeness?.lengths, fresh.completeness?.lengths)) return false

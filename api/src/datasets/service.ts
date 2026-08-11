@@ -377,8 +377,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
-  // Nothing is computed nor stored while the owner has the feature off: the absence of the field is
-  // itself the opt-in signal, so no reader ever has to consult the settings to interpret it.
+  // nothing stored while the feature is off: the field's absence is itself the opt-in signal
   const completenessCtx = await completenessContext(owner)
   if (completenessCtx.config.active) {
     const completeness = computeCompleteness(dataset, completenessCtx)
@@ -523,21 +522,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch._modified = computeModified({ ...dataset, ...patch })
   }
 
-  // Recompute the completeness score only when the patch touches a scored field: otherwise every
-  // rest line write and every status transition of the pipeline would pay a settings read for
-  // nothing. A draft patch is skipped — its keys are prefixed 'draft.' further down (see the
-  // `if (dataset.draftReason)` block) and land in the excluded draft subtree; the score describes
-  // the published dataset and is recomputed by the normal patch that validates the draft.
-  // `patch.draftReason` is tested too, and not only the dataset's: the write that OPENS a draft (a
-  // file upload on an existing dataset) sets it in the patch while the document does not carry it
-  // yet, so keying on the document alone would compute a score and let the block below file it
-  // under `draft.completeness` — where no settings transition would ever clear it and from where
-  // draft validation would copy it back, unrecomputed, onto the published dataset.
-  // Nothing is written while the feature is off. No $unset either: clearing stored scores belongs to
-  // the settings transition (see settings/service.ts), and the only way a dataset holds one is that
-  // the feature was on — in which case turning it off already cleared it.
-  // Never assigned into `patch` itself: both write routes report `Object.keys(patch)` to the user
-  // as "the properties you modified", and this one is readOnly — no client can send it.
+  // recompute only when a scored field is touched, else every rest line write pays a settings read.
+  // Skip drafts (patch.draftReason too, since a file upload opens one in the patch before the doc
+  // carries it): the score describes the published dataset. Kept out of `patch` — it is readOnly and
+  // both write routes report Object.keys(patch) to the user as the fields they modified.
   let completenessPatch: Completeness | undefined
   if (!dataset.draftReason && !patch.draftReason && COMPLETENESS_KEYS.some(key => key in patch)) {
     const ctx = await completenessContext(dataset.owner)
@@ -597,8 +585,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch = draftPatch
   }
 
-  // the completeness joins the write here rather than in `patch` (see above); it is only ever
-  // computed for a non-draft write, so it never needs the 'draft.' prefix applied just above
+  // joins the write here, not `patch`; only computed for non-draft writes, so it skips the 'draft.' prefixing above
   const writtenPatch = completenessPatch ? { ...patch, completeness: completenessPatch } : patch
 
   const mongoPatch: { $set?: Record<string, any>, $unset?: Record<string, any> } = {}

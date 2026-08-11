@@ -380,21 +380,13 @@ const fieldColor = (field: string): string | undefined => {
   return !equal(current, original) ? 'accent' : undefined
 }
 
-// --- Metadata completeness: expected text lengths ---
-// The window comes from the dataset's own `completeness.lengths`, which the API only fills for the
-// criteria that count. So there is no settings request here, and nothing shows at all while the
-// owner has the score off or gave the criterion a weight of 0.
-
-/** Trimmed, like the criterion it explains: the count has to agree with what the score measured. */
+// Advisory length hint from the dataset's own `completeness.lengths` (no settings read, nothing shown
+// when the score is off). A custom message rather than Vuetify's counter, which only knows a max and
+// reddens past it — and the markdown editor has no counter at all.
 const charCount = (value?: string | null) => (value ?? '').trim().length
 
 const lengthWindow = (key: 'description' | 'summary') => dataset.value?.completeness?.lengths?.[key]
 
-/**
- * The message carries the current length itself, for both fields. Vuetify's counter is only fit for
- * a maximum — it has no notion of a minimum and turns red past its bound, an error state this
- * advisory hint must not take — and the markdown editor has no counter at all.
- */
 const lengthWarning = (key: 'description' | 'summary'): string | undefined => {
   const window = lengthWindow(key)
   if (!window) return undefined
@@ -527,9 +519,8 @@ const relatedDatasetsItems = computed(() =>
 </script>
 
 <style scoped>
-/* the length hint is advisory, never blocking: a warning-coloured message under the field itself,
-   not a validation error and not an alert */
-/* :deep from the wrapping div, not from the field: the markdown editor's root carries no scope id */
+/* advisory warning colour on the hint message; :deep from the wrapping div since the markdown
+   editor's root carries no scope id */
 :deep(.length-warning .v-messages) {
   color: rgb(var(--v-theme-warning));
   opacity: 1;

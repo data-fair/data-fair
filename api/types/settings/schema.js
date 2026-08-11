@@ -1,23 +1,14 @@
 import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
-/**
- * The completeness criteria that only count when the owner offers their field in the Metadata
- * options. Exported because three readers need the exact same list and drifting between them is
- * silent: the scoring module's applicability gate, the weight layouts below that hide an input no
- * configuration could make count, and the settings form that warns when the denominator is empty.
- */
+// completeness criteria that only count when the owner offers their field. Exported: the scoring
+// module, the weight layouts below, and the settings form must share the exact same list.
 export const completenessGatedByMetadata = ['keywords', 'creator', 'frequency', 'spatial', 'temporal', 'conformsTo']
 
-/**
- * The completeness weights are one-digit integers with short labels: several fit on a row, up to 4
- * on a wide settings section. `context.offeredCriteria` is filled by the settings form and hides
- * the criteria whose field is not offered in the Metadata tab — they cannot count, so a weight for
- * them is only confusing. Hidden and not deleted: json-layout leaves the data of a hidden node
- * alone, so a weight configured once comes back untouched if the field is offered again.
- */
+// hide the weight input of a criterion whose field is not offered (context.offeredCriteria is filled
+// by the settings form). Hidden, not deleted — json-layout keeps a hidden node's data.
 const weightCols = { xs: 6, sm: 4, md: 3 }
-// topics is gated too, on the organization having defined any rather than on a metadata option
+// topics is gated on the org having defined any, not on a metadata option
 const gatedWeights = new Set([...completenessGatedByMetadata, 'topics'])
 /** @type {(criterion: string) => object} */
 const weightLayout = (criterion) => gatedWeights.has(criterion)
@@ -551,8 +542,7 @@ export default {
           layout: 'switch',
           title: 'Calculer un score de complétude des métadonnées'
         },
-        // property order is load-bearing: the scoring module derives its criteria list from it, and
-        // uses it to break ties between criteria of equal weight in the `missing` list it returns
+        // property order is load-bearing: the scoring module derives its criteria list and its equal-weight tie-break from it
         weights: {
           type: 'object',
           title: 'Poids des critères',

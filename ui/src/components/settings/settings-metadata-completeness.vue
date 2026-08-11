@@ -10,9 +10,7 @@
       {{ ruleError }}
     </v-alert>
 
-    <!-- v-model like every sibling tab: without it a weight vjsf rejects (negative, non-integer)
-         would leave the tab green and the Save button enabled, and the whole Quality section save
-         — licences and private vocabulary included — would come back as a raw 400 -->
+    <!-- v-form like every sibling tab, so a value vjsf rejects blocks the whole Quality save -->
     <v-form v-model="formValid">
       <vjsf
         v-model="editCompleteness"
@@ -55,9 +53,7 @@ watchDeepDiff(editCompleteness, () => {
 
 const { t, locale } = useI18n()
 
-// The defaults are read straight off the schema vjsf renders below, and the gate list is the one
-// the API scores on — both exported for that. A copy here would let this warning agree with itself
-// while disagreeing with the score the API actually computes.
+// defaults read off the schema, gate list shared with the API, so this warning can't drift from the score
 const weightsProperties = settingsSchema.properties.metadataCompleteness.properties.weights.properties as
   Record<string, { default: number }>
 const DEFAULT_WEIGHTS: Record<string, number> = Object.fromEntries(
@@ -68,7 +64,7 @@ const active = computed(() => !!editCompleteness.value?.active)
 
 const weightOf = (key: string) => (editCompleteness.value?.weights as any)?.[key] ?? DEFAULT_WEIGHTS[key]
 
-/** Which gated criteria have their field offered, the others being unable to count for anything. */
+// which gated criteria have their field offered; the others cannot count
 const offeredCriteria = computed(() => {
   const offered: Record<string, boolean> = {}
   for (const key of completenessGatedByMetadata) offered[key] = !!(props.datasetsMetadata as any)?.[key]?.active
@@ -82,24 +78,16 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   density: 'comfortable',
   xI18n: true,
   locale: locale.value,
-  // read by the `if` expressions of the gated weights: a criterion whose field is not offered is
-  // not rendered at all, rather than shown alongside a warning that it does nothing
+  // read by the gated weights' `if`: an unoffered criterion is not rendered at all
   context: { offeredCriteria: offeredCriteria.value }
 }))
 
-/**
- * The denominator has to have something in it. Only applicable criteria count, so weighting nothing
- * but criteria whose field is not offered is just as empty as weighting nothing at all.
- */
+// only applicable criteria count, so weighting only unoffered ones is as empty as weighting nothing
 const applicableWeight = computed(() => Object.keys(DEFAULT_WEIGHTS)
   .filter(key => offeredCriteria.value[key] !== false)
   .reduce((sum, key) => sum + weightOf(key), 0))
 
-/**
- * The two rules a JSON schema cannot express, so vjsf reddens no field for them. Stated here as a
- * sentence and refused again by the API (`validateMetadataCompleteness`), which is what a save from
- * anywhere else runs into.
- */
+// the two cross-field rules vjsf can't redden a field for; also refused by the API on save
 const ruleError = computed(() => {
   if (!active.value) return undefined
   for (const key of ['description', 'summary'] as const) {
@@ -113,8 +101,7 @@ const ruleError = computed(() => {
   return undefined
 })
 
-/** vjsf's own field-level validity, and the cross-field rules it cannot see. */
-// null while v-form has not validated anything yet, which is not a failure
+// null while v-form has not validated yet, which is not a failure
 const formValid = ref<boolean | null>(true)
 watch([formValid, ruleError], () => {
   valid.value = formValid.value !== false && !ruleError.value

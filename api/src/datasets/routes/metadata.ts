@@ -274,15 +274,9 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const changeOwnerUpdate: any = { $set: patch }
 
-    // The completeness score is scaled on the OWNER's settings — its weights, the metadata fields it
-    // offers, the topics it defined — so it cannot survive a transfer: recomputed here for the new
-    // owner, or removed when that owner has the feature off. This write does not go through
-    // `applyPatch`, and `owner` is not one of its COMPLETENESS_KEYS either, so nothing else would
-    // ever revisit it: the dataset would keep displaying a percentage built on another
-    // organization's denominator, in an organization that may never have enabled the feature.
-    // scored on `reqDatasetFull` and not on `dataset`: `readDataset` merges the draft into the
-    // latter as soon as the caller passes ?draft=true, and the score describes the published
-    // metadata — the same reason applyPatch skips a draft write.
+    // the score is scaled on the owner's settings, so a transfer must recompute it for the new owner
+    // (or drop it when that owner has the feature off). This write skips applyPatch, so it must be
+    // done here. Scored on reqDatasetFull, not `dataset`, which readDataset may have merged a draft into.
     const completenessCtx = await completenessContext(patch.owner)
     const completeness = completenessCtx.config.active
       ? computeCompleteness({ ...reqDatasetFull(req), ...patch }, completenessCtx)
