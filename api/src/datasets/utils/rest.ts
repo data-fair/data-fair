@@ -1062,11 +1062,28 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   const dataset = reqRestDataset(req)
   const linesOwner = reqLinesOwnerOptional(req)
   if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
-  req.body._id = definedId || nanoid()
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
-  const fullLine = { _action: 'createOrUpdate', ...req.body }
+  const _action: string = req.body._action ?? 'createOrUpdate'
+  if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+  // PUT .../lines/:lineId means "replace the line at this id", patch/delete only make sense through POST .../lines
+  if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
+    throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
+  }
+
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
+  if (!definedId && _action !== 'create' && _action !== 'createOrUpdate') {
+    throw httpError(400, 'failed to determine required _id from primary key')
+  }
+  req.body._id = definedId || nanoid()
+
+  let rawBody: Record<string, any> | undefined
+  let uploadedAttachmentPath: string | undefined
+  if (_action !== 'delete') {
+    // patch keeps the existing attachment unless a new one is uploaded (parity with patchLine)
+    ({ rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, _action === 'patch'))
+  }
+
+  const fullLine = { ...req.body, _action }
   formatLine(fullLine, dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
@@ -1076,16 +1093,27 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   }
   await commitLines(dataset, [fullLine._id])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
-
-  const line = getLineFromOperation(operation, rawBody ?? req.body)
-  res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
+  if (_action === 'delete') {
+    eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    res.status(204).send()
+  } else {
+    if (_action === 'patch') {
+      eventsLog.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    } else {
+      eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    }
+    const line = getLineFromOperation(operation, rawBody ?? req.body)
+    res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
+  }
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  if (req.body._action !== undefined && req.body._action !== 'patch') {
+    throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
+  }
   const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)
