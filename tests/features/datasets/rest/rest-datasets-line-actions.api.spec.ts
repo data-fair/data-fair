@@ -4,6 +4,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser2 = await axiosAuth('test_user2@test.com')
 
 test.describe('REST datasets - single line _action', () => {
   test.beforeEach(async () => {
@@ -117,5 +118,40 @@ test.describe('REST datasets - single line _action', () => {
     // the line survived all of the above
     const res = await ax.get('/api/v1/datasets/restaction4/lines/line1')
     assert.equal(res.data.attr1, 'test1')
+  })
+
+  test('_action requires the matching per-action permission', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restaction5', {
+      isRest: true,
+      title: 'restaction5',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/restaction5/lines', { _id: 'line1', attr1: 'test1' })
+    await waitForFinalize(ax, 'restaction5')
+
+    // user2 may only create lines
+    await ax.put('/api/v1/datasets/restaction5/permissions', [
+      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine'] }
+    ])
+
+    let res = await testUser2.post('/api/v1/datasets/restaction5/lines', { _id: 'line2', attr1: 'test2' })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, 'restaction5')
+
+    // but not delete/patch/update lines through _action
+    for (const _action of ['delete', 'patch', 'update']) {
+      await assert.rejects(testUser2.post('/api/v1/datasets/restaction5/lines', { _action, _id: 'line1', attr1: 'x' }), (err: any) => err.status === 403)
+    }
+    res = await testUser2.get('/api/v1/datasets/restaction5/lines/line1')
+    assert.equal(res.data.attr1, 'test1')
+
+    // granting deleteLine unlocks _action delete
+    await ax.put('/api/v1/datasets/restaction5/permissions', [
+      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine', 'deleteLine'] }
+    ])
+    res = await testUser2.post('/api/v1/datasets/restaction5/lines', { _action: 'delete', _id: 'line1' })
+    assert.equal(res.status, 204)
+    await waitForFinalize(ax, 'restaction5')
   })
 })

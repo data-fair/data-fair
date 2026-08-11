@@ -40,7 +40,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
-import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
@@ -48,7 +48,8 @@ import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
-import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional, reqResource, reqResourceType, reqBypassPermissions } from '../../misc/utils/req-context.ts'
+import { can } from '../../misc/utils/permissions.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
@@ -1058,6 +1059,25 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
+// the write routes are gated by their default operation (createLine / updateLine and Own
+// variants). A body _action requesting different semantics through POST must also hold the
+// matching permission — checked here rather than in a middleware because for multipart
+// requests the body is not parsed yet when the permissions middleware runs.
+const alternateActionOperations: Record<string, { operationId: string, ownOperationId: string }> = {
+  update: { operationId: 'updateLine', ownOperationId: 'updateOwnLine' },
+  patch: { operationId: 'patchLine', ownOperationId: 'patchOwnLine' },
+  delete: { operationId: 'deleteLine', ownOperationId: 'deleteOwnLine' }
+}
+const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
+  if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
+  const actionOperation = alternateActionOperations[_action]
+  if (!actionOperation) return // create / createOrUpdate are covered by the route's createLine gate
+  const operationId = reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
+  if (!can(reqResourceType(req), reqResource(req), operationId, reqSession(req), reqBypassPermissions(req))) {
+    throw httpError(403, `Permission manquante pour l'opération "${operationId}".`)
+  }
+}
+
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   const linesOwner = reqLinesOwnerOptional(req)
@@ -1069,6 +1089,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
     throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
   }
+  checkAlternateActionPermission(req, _action)
 
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
   if (!definedId && _action !== 'create' && _action !== 'createOrUpdate') {
