@@ -2,6 +2,14 @@ import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
 /**
+ * The completeness criteria that only count when the owner offers their field in the Metadata
+ * options. Exported because three readers need the exact same list and drifting between them is
+ * silent: the scoring module's applicability gate, the weight layouts below that hide an input no
+ * configuration could make count, and the settings form that warns when the denominator is empty.
+ */
+export const completenessGatedByMetadata = ['keywords', 'creator', 'frequency', 'spatial', 'temporal', 'conformsTo']
+
+/**
  * The completeness weights are one-digit integers with short labels: several fit on a row, up to 4
  * on a wide settings section. `context.offeredCriteria` is filled by the settings form and hides
  * the criteria whose field is not offered in the Metadata tab — they cannot count, so a weight for
@@ -9,8 +17,12 @@ const publicationSites = _publicationSites()
  * alone, so a weight configured once comes back untouched if the field is offered again.
  */
 const weightCols = { xs: 6, sm: 4, md: 3 }
+// topics is gated too, on the organization having defined any rather than on a metadata option
+const gatedWeights = new Set([...completenessGatedByMetadata, 'topics'])
 /** @type {(criterion: string) => object} */
-const gatedWeightLayout = (criterion) => ({ cols: weightCols, if: `context.offeredCriteria?.${criterion}` })
+const weightLayout = (criterion) => gatedWeights.has(criterion)
+  ? { cols: weightCols, if: `context.offeredCriteria?.${criterion}` }
+  : { cols: weightCols }
 
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
@@ -539,29 +551,31 @@ export default {
           layout: 'switch',
           title: 'Calculer un score de complétude des métadonnées'
         },
+        // property order is load-bearing: the scoring module derives its criteria list from it, and
+        // uses it to break ties between criteria of equal weight in the `missing` list it returns
         weights: {
           type: 'object',
           title: 'Poids des critères',
           description: 'Un poids à 0 retire le critère du calcul.',
           layout: { if: 'parent.data.active' },
           properties: {
-            description: { type: 'integer', minimum: 0, default: 4, title: 'Description', layout: { cols: weightCols } },
-            summary: { type: 'integer', minimum: 0, default: 3, title: 'Résumé', layout: { cols: weightCols } },
-            license: { type: 'integer', minimum: 0, default: 3, title: 'Licence', layout: { cols: weightCols } },
-            keywords: { type: 'integer', minimum: 0, default: 2, title: 'Mots clés', layout: gatedWeightLayout('keywords') },
-            topics: { type: 'integer', minimum: 0, default: 2, title: 'Thématiques', layout: gatedWeightLayout('topics') },
-            creator: { type: 'integer', minimum: 0, default: 2, title: 'Créateur', layout: gatedWeightLayout('creator') },
-            origin: { type: 'integer', minimum: 0, default: 1, title: 'Provenance', layout: { cols: weightCols } },
-            frequency: { type: 'integer', minimum: 0, default: 1, title: 'Fréquence de mise à jour', layout: gatedWeightLayout('frequency') },
-            spatial: { type: 'integer', minimum: 0, default: 1, title: 'Couverture spatiale', layout: gatedWeightLayout('spatial') },
-            temporal: { type: 'integer', minimum: 0, default: 1, title: 'Couverture temporelle', layout: gatedWeightLayout('temporal') },
-            conformsTo: { type: 'integer', minimum: 0, default: 1, title: 'Schéma', layout: gatedWeightLayout('conformsTo') }
+            description: { type: 'integer', minimum: 0, default: 4, title: 'Description', layout: weightLayout('description') },
+            summary: { type: 'integer', minimum: 0, default: 3, title: 'Résumé', layout: weightLayout('summary') },
+            license: { type: 'integer', minimum: 0, default: 3, title: 'Licence', layout: weightLayout('license') },
+            keywords: { type: 'integer', minimum: 0, default: 2, title: 'Mots clés', layout: weightLayout('keywords') },
+            topics: { type: 'integer', minimum: 0, default: 2, title: 'Thématiques', layout: weightLayout('topics') },
+            creator: { type: 'integer', minimum: 0, default: 2, title: 'Créateur', layout: weightLayout('creator') },
+            origin: { type: 'integer', minimum: 0, default: 1, title: 'Provenance', layout: weightLayout('origin') },
+            frequency: { type: 'integer', minimum: 0, default: 1, title: 'Fréquence de mise à jour', layout: weightLayout('frequency') },
+            spatial: { type: 'integer', minimum: 0, default: 1, title: 'Couverture spatiale', layout: weightLayout('spatial') },
+            temporal: { type: 'integer', minimum: 0, default: 1, title: 'Couverture temporelle', layout: weightLayout('temporal') },
+            conformsTo: { type: 'integer', minimum: 0, default: 1, title: 'Schéma', layout: weightLayout('conformsTo') }
           }
         },
         description: {
           type: 'object',
           title: 'Longueur attendue de la description',
-          description: 'Une borne à 0 ne limite pas de ce côté.',
+          description: 'Une borne à 0 ne limite pas de ce côté. Un texte absent ou vide ne compte jamais.',
           layout: { if: 'parent.data.active' },
           properties: {
             min: { type: 'integer', minimum: 0, default: 200, title: 'Minimum', layout: { cols: 6 } },
@@ -571,7 +585,7 @@ export default {
         summary: {
           type: 'object',
           title: 'Longueur attendue du résumé',
-          description: 'Une borne à 0 ne limite pas de ce côté.',
+          description: 'Une borne à 0 ne limite pas de ce côté. Un texte absent ou vide ne compte jamais.',
           layout: { if: 'parent.data.active' },
           properties: {
             min: { type: 'integer', minimum: 0, default: 50, title: 'Minimum', layout: { cols: 6 } },

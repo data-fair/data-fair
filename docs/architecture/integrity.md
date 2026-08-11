@@ -639,7 +639,7 @@ fixtures also feed the screenshots of the client-facing presentation
   `_`-prefixed field (internal/calculated: `_id`, `_uniqueRefs`, …) plus a fixed top-level list:
   `status`, `draft`, `integrity`, `count`, `storage`, `esWarning`, `finalizedAt`,
   `dataUpdatedAt`, `dataUpdatedBy`, `updatedAt`, `updatedBy`, `createdBy`, `errorStatus`,
-  `errorRetry`, `loaded`, `descendants`. These are fields that legitimately churn under normal
+  `errorRetry`, `loaded`, `descendants`, `completeness`. These are fields that legitimately churn under normal
   operation (worker-maintained bookkeeping, cache/derived state) without representing a
   meaningful metadata edit — hashing them would produce false breaches on ordinary background
   activity. Nested strips remove the same kind of churn one level down:

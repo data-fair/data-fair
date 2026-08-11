@@ -30,6 +30,8 @@ import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
+import { computeCompleteness } from '../utils/compute-completeness.ts'
+import { completenessContext } from '../utils/completeness-recompute.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
 import { dir } from '../utils/files.ts'
@@ -271,6 +273,23 @@ export const registerMetadataRoutes = (router: Router) => {
     await permissions.initResourcePermissions(patch, preservePermissions)
 
     const changeOwnerUpdate: any = { $set: patch }
+
+    // The completeness score is scaled on the OWNER's settings — its weights, the metadata fields it
+    // offers, the topics it defined — so it cannot survive a transfer: recomputed here for the new
+    // owner, or removed when that owner has the feature off. This write does not go through
+    // `applyPatch`, and `owner` is not one of its COMPLETENESS_KEYS either, so nothing else would
+    // ever revisit it: the dataset would keep displaying a percentage built on another
+    // organization's denominator, in an organization that may never have enabled the feature.
+    // scored on `reqDatasetFull` and not on `dataset`: `readDataset` merges the draft into the
+    // latter as soon as the caller passes ?draft=true, and the score describes the published
+    // metadata — the same reason applyPatch skips a draft write.
+    const completenessCtx = await completenessContext(patch.owner)
+    const completeness = completenessCtx.config.active
+      ? computeCompleteness({ ...reqDatasetFull(req), ...patch }, completenessCtx)
+      : undefined
+    if (completeness) patch.completeness = completeness
+    else if (dataset.completeness) changeOwnerUpdate.$unset = { completeness: 1, 'draft.completeness': 1 }
+
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 

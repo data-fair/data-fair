@@ -84,4 +84,21 @@ test.describe('metadata completeness settings transitions', () => {
     await u1.patch('/api/v1/settings/user/test_user1', { datasetsMetadata: { spatial: { active: true } } })
     assert.equal(await scoreOf('trans-f1'), undefined)
   })
+
+  test('deleting one topic among several recomputes, since it was pulled off the datasets', async () => {
+    const topics = [{ id: 'top-g1', title: 'Transport' }, { id: 'top-g2', title: 'Environnement' }]
+    await u1.patch('/api/v1/settings/user/test_user1', { topics })
+    await makeDataset('trans-g1')
+    await u1.patch('/api/v1/datasets/trans-g1', { topics: [topics[0]] })
+    // topics becomes applicable and is filled: 4 + 2 of 13 => 46
+    await setCompleteness({ active: true })
+    assert.equal((await scoreOf('trans-g1')).score, 46)
+
+    // the topics list stays non-empty, but updateTopics has just $pulled this one off the dataset
+    await u1.patch('/api/v1/settings/user/test_user1', { topics: [topics[1]] })
+
+    const after = await scoreOf('trans-g1')
+    assert.equal(after.score, 31) // 4 of 13
+    assert.ok(after.missing.includes('topics'))
+  })
 })

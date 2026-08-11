@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings } from '#types/settings/index.js'
+import { completenessGatedByMetadata } from '#types/settings/schema.js'
 import { type DepartmentSettings } from '#types/department-settings/index.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
 import config from '#config'
@@ -17,7 +18,8 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
-import { recomputeOwnerCompleteness, clearOwnerCompleteness } from '../datasets/utils/completeness-recompute.ts'
+import { recomputeOwnerCompleteness, clearOwnerCompleteness, completenessContextOf } from '../datasets/utils/completeness-recompute.ts'
+import { validateMetadataCompleteness } from '../datasets/utils/compute-completeness.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
@@ -176,6 +178,15 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
+
+  if (isMainSettings(settings)) {
+    // cross-field rules the JSON schema cannot express — an unsatisfiable length window, or a
+    // configuration where nothing applicable is weighted. Checked here and not only in the settings
+    // form: either one would otherwise be written onto every dataset of the organization.
+    const completenessError = validateMetadataCompleteness(completenessContextOf(settings))
+    if (completenessError) throw httpError(400, completenessError)
+  }
+
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
@@ -219,7 +230,12 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
  * would end up computed on different denominators and stop being comparable to each other.
  *
  * Awaited, like the custom-metadata cleanup above: a settings save is a rare administrative action,
- * and immediate consistency is the entire reason for recomputing at all.
+ * and immediate consistency is the entire reason for recomputing at all. The pass is therefore
+ * bounded by the size of the organization — it streams every one of its datasets, writing back only
+ * the ones the new configuration actually moves. Fine at the sizes we serve; an organization large
+ * enough for the scan to reach the ingress timeout would get a failed-save toast over settings that
+ * were in fact persisted, and a partially rescored collection with nothing scheduled to finish it.
+ * Moving it to a background task is the answer if we ever get there, not a smaller batch.
  */
 const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Settings | null, settings: Settings) => {
   const wasActive = !!oldSettings?.metadataCompleteness?.active
@@ -230,11 +246,19 @@ const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Setti
     await clearOwnerCompleteness(owner)
     return
   }
-  // `topics` only matters through its emptiness: it is what makes the topics criterion applicable
+  // Only what can actually move a score, criterion by criterion, rather than the whole settings
+  // objects: renaming a custom metadata field or a topic changes no dataset's score, and this gate
+  // is what stands between such an edit and a full-collection rewrite.
+  // `datasetsMetadata` matters through the `active` flag of the gated criteria only, `topics`
+  // through its emptiness — which makes the topics criterion applicable — and through removals,
+  // which `updateTopics` has just $pulled off the datasets themselves.
+  const offeredChanged = completenessGatedByMetadata.some(key =>
+    !!(oldSettings?.datasetsMetadata as any)?.[key]?.active !== !!(settings.datasetsMetadata as any)?.[key]?.active)
+  const topicsChanged = !!oldSettings?.topics?.length !== !!settings.topics?.length ||
+    (oldSettings?.topics ?? []).some(old => !settings.topics?.some(topic => topic.id === old.id))
   const configChanged = !equal(oldSettings?.metadataCompleteness, settings.metadataCompleteness) ||
-    !equal(oldSettings?.datasetsMetadata, settings.datasetsMetadata) ||
-    !!oldSettings?.topics?.length !== !!settings.topics?.length
-  if (!wasActive || configChanged) await recomputeOwnerCompleteness(owner)
+    offeredChanged || topicsChanged
+  if (!wasActive || configChanged) await recomputeOwnerCompleteness(owner, completenessContextOf(settings))
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {

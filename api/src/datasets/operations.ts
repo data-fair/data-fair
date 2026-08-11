@@ -60,6 +60,16 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   _id: 0
 })
 
+/** Two `completeness.lengths` sub-documents, compared without pulling a deep-equal dependency in. */
+const sameLengths = (a: Record<string, { min?: number, max?: number }> | undefined, b: typeof a): boolean => {
+  if (!a || !b) return !a === !b
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  for (const key of keys) {
+    if (a[key]?.min !== b[key]?.min || a[key]?.max !== b[key]?.max) return false
+  }
+  return true
+}
+
 /**
  * True when the memoized document still matches the freshly projected one and may be served as is.
  * `fresh` is the result of a find with `datasetFreshnessProjection`.
@@ -75,8 +85,11 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
   // `missing` is explicitly sorted, so joining it is a stable identity; comparing the score alone
   // would miss a reshuffle at equal weights, and comparing presence alone would miss a $unset.
+  // `lengths` too: widening a window can leave every score and every `missing` list untouched and
+  // still change what the metadata form tells editors the expected length is.
   if (cachedFull.completeness?.score !== fresh.completeness?.score) return false
   if (cachedFull.completeness?.missing?.join(',') !== fresh.completeness?.missing?.join(',')) return false
+  if (!sameLengths(cachedFull.completeness?.lengths, fresh.completeness?.lengths)) return false
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true

@@ -1,30 +1,31 @@
 import { type OptionsDesMetadonneesDeJeuxDeDonnees } from '#types/settings/index.js'
+import settingsSchema, { completenessGatedByMetadata } from '#types/settings/schema.js'
+
+export type CompletenessKey = 'description' | 'summary' | 'license' | 'keywords' | 'topics' |
+  'creator' | 'origin' | 'frequency' | 'spatial' | 'temporal' | 'conformsTo'
 
 /**
  * Default points per criterion, used for any weight the owner did not override. Small integers
  * rather than shares of a percentage: the score is scaled on the sum of the APPLICABLE criteria, so
  * disabling one never forces a redistribution over the others.
  *
+ * Read from the settings schema rather than copied here: the schema is what the settings form
+ * prefills its inputs from, so a table of its own would let the score the API computes and the
+ * denominator the form warns about drift apart without a single test failing.
+ *
  * The title is deliberately absent. It is required at creation (`required` in the dataset schema,
  * and createDataset rejects a metadata-only dataset without one), so a presence criterion would be
  * satisfied by every dataset in perpetuity: one point added to both the numerator and the
  * denominator of everything, distinguishing nothing and making a 0% score unreachable.
  */
-export const DEFAULT_WEIGHTS = {
-  description: 4,
-  summary: 3,
-  license: 3,
-  keywords: 2,
-  topics: 2,
-  creator: 2,
-  origin: 1,
-  frequency: 1,
-  spatial: 1,
-  temporal: 1,
-  conformsTo: 1
-} as const
+const weightsProperties = settingsSchema.properties.metadataCompleteness.properties.weights.properties as
+  Record<CompletenessKey, { default: number }>
+export const DEFAULT_WEIGHTS = Object.fromEntries(
+  Object.entries(weightsProperties).map(([key, prop]) => [key, prop.default])
+) as Record<CompletenessKey, number>
 
-export type CompletenessKey = keyof typeof DEFAULT_WEIGHTS
+/** The criteria gated on the owner offering their field — the schema's list, see its comment. */
+const GATED_BY_METADATA = new Set<string>(completenessGatedByMetadata)
 
 /**
  * The dataset keys a patch has to touch for the score to be worth recomputing, and the tie-breaking
@@ -99,6 +100,10 @@ const lengthWindow = (key: LengthKey, config: CompletenessConfig): { min: number
 
 const withinLength = (value: unknown, key: LengthKey, config: CompletenessConfig): boolean => {
   const length = len(value)
+  // Presence first, and independently of the window. Clearing the floor drops the length
+  // requirement, not the criterion: `0 >= 0` would otherwise credit the heaviest criterion of the
+  // table to every dataset of the organization, description absent included.
+  if (length === 0) return false
   const { min, max } = lengthWindow(key, config)
   return length >= min && (max === undefined || length <= max)
 }
@@ -112,9 +117,7 @@ const withinLength = (value: unknown, key: LengthKey, config: CompletenessConfig
 const isApplicable = (key: CompletenessKey, context: CompletenessContext): boolean => {
   if (weightOf(key, context.config) <= 0) return false
   if (key === 'topics') return context.hasTopics
-  if (key === 'keywords' || key === 'creator' || key === 'frequency' || key === 'spatial' || key === 'temporal' || key === 'conformsTo') {
-    return !!context.datasetsMetadata?.[key]?.active
-  }
+  if (GATED_BY_METADATA.has(key)) return !!(context.datasetsMetadata as Record<string, { active?: boolean }>)?.[key]?.active
   return true
 }
 
@@ -134,14 +137,45 @@ const isFilled = (key: CompletenessKey, dataset: CompletenessInput, config: Comp
 }
 
 /**
+ * The denominator a configuration would produce, independently of any dataset. Zero means the score
+ * cannot mean anything: every criterion is either weighted 0 or gated off. Checked at settings save
+ * time so such a configuration is refused rather than written onto a whole organization.
+ */
+export const applicableWeight = (context: CompletenessContext): number => COMPLETENESS_KEYS
+  .filter(key => isApplicable(key, context))
+  .reduce((sum, key) => sum + weightOf(key, context.config), 0)
+
+/**
+ * The two cross-field rules a JSON schema cannot express, returned as a message to display or
+ * undefined when the configuration holds. Both produce a score nobody can act on and both are
+ * reachable from the API alone — the settings form guards the first one only, and only in the
+ * browser — so they are checked again where the settings are written.
+ */
+export const validateMetadataCompleteness = (context: CompletenessContext): string | undefined => {
+  if (!context.config.active) return undefined
+  for (const key of ['description', 'summary'] as LengthKey[]) {
+    const { min, max } = lengthWindow(key, context.config)
+    if (max !== undefined && min > max) {
+      return `La longueur minimale attendue (${min}) dépasse la longueur maximale (${max}) : aucun texte ne peut satisfaire ce critère.`
+    }
+  }
+  if (applicableWeight(context) === 0) {
+    return 'Au moins un critère proposé doit avoir un poids supérieur à 0 pour que le score ait un sens.'
+  }
+  return undefined
+}
+
+/**
  * Metadata completeness of a dataset, from 0 to 100, scaled on the criteria the owner's settings
  * make applicable. `missing` lists the applicable criteria left unfilled, heaviest configured weight
  * first, so the interface can say what to fill without duplicating any of the logic above.
  *
- * A configuration whose applicable weights all sum to zero has no meaningful denominator; the
- * settings form refuses to save one, and this returns 0 rather than dividing by it.
+ * Returns undefined when the applicable weights all sum to zero: nothing was measured, and a 0 %
+ * would read as "you filled nothing" rather than "there is nothing to fill". Callers store no field
+ * at all in that case — the same signal as the feature being off. `validateMetadataCompleteness`
+ * refuses to save such a configuration, so this only catches one stored before that check.
  */
-export const computeCompleteness = (dataset: CompletenessInput, context: CompletenessContext): Completeness => {
+export const computeCompleteness = (dataset: CompletenessInput, context: CompletenessContext): Completeness | undefined => {
   const { config } = context
   let applicable = 0
   let obtained = 0
@@ -155,7 +189,7 @@ export const computeCompleteness = (dataset: CompletenessInput, context: Complet
     if (isFilled(key, dataset, config)) obtained += weight
     else missing.push(key)
   }
-  if (applicable === 0) return { score: 0, missing: [] }
+  if (applicable === 0) return undefined
   missing.sort((a, b) =>
     weightOf(b, config) - weightOf(a, config) || COMPLETENESS_KEYS.indexOf(a) - COMPLETENESS_KEYS.indexOf(b))
   const result: Completeness = { score: Math.round(100 * obtained / applicable), missing }
