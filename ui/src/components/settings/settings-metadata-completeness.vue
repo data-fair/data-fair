@@ -1,16 +1,19 @@
 <template>
   <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
     <v-alert
-      v-if="active && !valid"
+      v-if="ruleError"
       type="warning"
       variant="outlined"
       density="compact"
       class="mb-3"
     >
-      {{ t('allZero') }}
+      {{ ruleError }}
     </v-alert>
 
-    <v-form>
+    <!-- v-model like every sibling tab: without it a weight vjsf rejects (negative, non-integer)
+         would leave the tab green and the Save button enabled, and the whole Quality section save
+         — licences and private vocabulary included — would come back as a raw 400 -->
+    <v-form v-model="formValid">
       <vjsf
         v-model="editCompleteness"
         :schema="settingsSchema.properties.metadataCompleteness"
@@ -22,13 +25,15 @@
 
 <i18n lang="yaml">
 fr:
-  allZero: Au moins un critère doit avoir un poids supérieur à 0 pour que le score ait un sens.
+  allZero: Au moins un critère proposé doit avoir un poids supérieur à 0 pour que le score ait un sens.
+  lengthRangeEmpty: "{title} : la longueur minimale ({min}) dépasse la longueur maximale ({max}), aucun texte ne peut satisfaire ce critère."
 en:
-  allZero: At least one criterion must carry a weight above 0 for the score to mean anything.
+  allZero: At least one offered criterion must carry a weight above 0 for the score to mean anything.
+  lengthRangeEmpty: "{title}: the minimum length ({min}) is above the maximum ({max}), no text can satisfy this criterion."
 </i18n>
 
 <script setup lang="ts">
-import { type Settings, settingsSchema } from '#api/types'
+import { type Settings, settingsSchema, completenessGatedByMetadata } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const metadataCompleteness = defineModel<Settings['metadataCompleteness']>()
@@ -50,21 +55,14 @@ watchDeepDiff(editCompleteness, () => {
 
 const { t, locale } = useI18n()
 
-// Kept in step with api/src/datasets/utils/compute-completeness.ts
-const DEFAULT_WEIGHTS: Record<string, number> = {
-  description: 4,
-  summary: 3,
-  license: 3,
-  keywords: 2,
-  topics: 2,
-  creator: 2,
-  origin: 1,
-  frequency: 1,
-  spatial: 1,
-  temporal: 1,
-  conformsTo: 1
-}
-const GATED_BY_METADATA = ['keywords', 'creator', 'frequency', 'spatial', 'temporal', 'conformsTo'] as const
+// The defaults are read straight off the schema vjsf renders below, and the gate list is the one
+// the API scores on — both exported for that. A copy here would let this warning agree with itself
+// while disagreeing with the score the API actually computes.
+const weightsProperties = settingsSchema.properties.metadataCompleteness.properties.weights.properties as
+  Record<string, { default: number }>
+const DEFAULT_WEIGHTS: Record<string, number> = Object.fromEntries(
+  Object.entries(weightsProperties).map(([key, prop]) => [key, prop.default])
+)
 
 const active = computed(() => !!editCompleteness.value?.active)
 
@@ -73,7 +71,7 @@ const weightOf = (key: string) => (editCompleteness.value?.weights as any)?.[key
 /** Which gated criteria have their field offered, the others being unable to count for anything. */
 const offeredCriteria = computed(() => {
   const offered: Record<string, boolean> = {}
-  for (const key of GATED_BY_METADATA) offered[key] = !!(props.datasetsMetadata as any)?.[key]?.active
+  for (const key of completenessGatedByMetadata) offered[key] = !!(props.datasetsMetadata as any)?.[key]?.active
   offered.topics = !!props.topics?.length
   return offered
 })
@@ -97,7 +95,28 @@ const applicableWeight = computed(() => Object.keys(DEFAULT_WEIGHTS)
   .filter(key => offeredCriteria.value[key] !== false)
   .reduce((sum, key) => sum + weightOf(key), 0))
 
-watch([active, applicableWeight], () => {
-  valid.value = !active.value || applicableWeight.value > 0
+/**
+ * The two rules a JSON schema cannot express, so vjsf reddens no field for them. Stated here as a
+ * sentence and refused again by the API (`validateMetadataCompleteness`), which is what a save from
+ * anywhere else runs into.
+ */
+const ruleError = computed(() => {
+  if (!active.value) return undefined
+  for (const key of ['description', 'summary'] as const) {
+    const { min, max } = editCompleteness.value?.[key] ?? {}
+    if (min && max && min > max) {
+      const title = settingsSchema.properties.metadataCompleteness.properties[key].title
+      return t('lengthRangeEmpty', { title, min, max })
+    }
+  }
+  if (!applicableWeight.value) return t('allZero')
+  return undefined
+})
+
+/** vjsf's own field-level validity, and the cross-field rules it cannot see. */
+// null while v-form has not validated anything yet, which is not a failure
+const formValid = ref<boolean | null>(true)
+watch([formValid, ruleError], () => {
+  valid.value = formValid.value !== false && !ruleError.value
 }, { immediate: true })
 </script>

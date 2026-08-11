@@ -295,16 +295,24 @@ const formatDate = (dateStr?: string) => {
  * held back by its length is not the same problem as a missing one, and only the second is solved by
  * writing anything at all. The window comes from the dataset's own `completeness.lengths`, so the
  * tooltip still reads no settings.
+ *
+ * Everything falls back to the plain criterion name. Only description and summary carry a window
+ * and hold a string — the other criteria are arrays or objects, and measuring their length is not
+ * just meaningless but a TypeError thrown inside a computed, i.e. the whole section blanked. And a
+ * value that satisfies the window it is listed as missing against is not a contradiction to report:
+ * the score describes the published dataset while this reads the draft-merged one, so the text may
+ * simply have been fixed in a draft the score does not cover yet.
  */
 const completenessLines = computed(() => {
   const completeness = dataset.value?.completeness
   return (completeness?.missing ?? []).map((key: string) => {
     const window = completeness?.lengths?.[key as 'description' | 'summary']
-    const count = ((dataset.value as any)?.[key] ?? '').trim().length
+    const value = window ? (dataset.value as any)?.[key] : undefined
+    const count = typeof value === 'string' ? value.trim().length : 0
     if (!window || !count) return t('completenessFields.' + key)
-    return count < window.min
-      ? t(`completenessLength.${key}.short`, { count, min: window.min })
-      : t(`completenessLength.${key}.long`, { count, max: window.max })
+    if (count < window.min) return t(`completenessLength.${key}.short`, { count, min: window.min })
+    if (window.max === undefined || count <= window.max) return t('completenessFields.' + key)
+    return t(`completenessLength.${key}.long`, { count, max: window.max })
   })
 })
 </script>

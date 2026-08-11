@@ -52,7 +52,8 @@ test.describe('dataset detail pages', () => {
       await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
       await expect(informations.getByText(label)).toBeVisible({ timeout: 10000 })
       // the fixture carries almost no metadata, so the score is low but rendered
-      await expect(informations.getByText(/^\d+ %$/)).toBeVisible()
+      // `\s` and not a plain space: the percentage is glued to its number with a &nbsp;
+      await expect(informations.getByText(/^\d+\s%$/)).toBeVisible()
       await expect(informations.getByRole('progressbar')).toBeVisible()
     } finally {
       // the surrounding tests share this dataset and expect no completeness cell
