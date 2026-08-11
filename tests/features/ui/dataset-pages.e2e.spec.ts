@@ -36,6 +36,30 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible()
   })
 
+  test('the completeness bar appears only once the organization enables it', async ({ page, goToWithAuth }) => {
+    const label = /Complétude des métadonnées|Metadata completeness/
+    const informations = page.locator('#informations')
+    const ax = await axiosAuth('test_user1@test.com')
+
+    // off by default: the field is absent from the API, so the cell is not rendered at all
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(informations).toBeVisible({ timeout: 10000 })
+    await expect(informations.getByText(label)).toHaveCount(0)
+
+    try {
+      await ax.patch('/api/v1/settings/user/test_user1', { metadataCompleteness: { active: true } })
+
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+      await expect(informations.getByText(label)).toBeVisible({ timeout: 10000 })
+      // the fixture carries almost no metadata, so the score is low but rendered
+      await expect(informations.getByText(/^\d+ %$/)).toBeVisible()
+      await expect(informations.getByRole('progressbar')).toBeVisible()
+    } finally {
+      // the surrounding tests share this dataset and expect no completeness cell
+      await ax.patch('/api/v1/settings/user/test_user1', { metadataCompleteness: { active: false } })
+    }
+  })
+
   test('dataset /table route loads table view', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })

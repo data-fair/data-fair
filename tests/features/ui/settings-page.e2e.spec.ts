@@ -34,13 +34,33 @@ test.describe('settings page sections', () => {
     await expect(page.locator('#webhooks')).toBeVisible()
   })
 
-  test('quality section has 3 tabs', async ({ page, goToWithAuth }) => {
+  test('quality section has 4 tabs', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
     await page.locator('#quality').scrollIntoViewIfNeeded()
 
     await expect(page.getByRole('tab', { name: /Licences/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Métadonnées/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Vocabulaire privé/i })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Complétude/i })).toBeVisible()
+  })
+
+  test('the completeness tab carries the switch and persists it', async ({ page, goToWithAuth }) => {
+    await goToSettings(page, goToWithAuth)
+    await page.locator('#quality').scrollIntoViewIfNeeded()
+    await page.getByRole('tab', { name: /Complétude/i }).click()
+
+    const quality = page.locator('#quality')
+    // vjsf renders the boolean as a checkbox; getByLabel covers either control
+    const activeSwitch = quality.getByLabel(/score de complétude/i)
+    await expect(activeSwitch).toBeVisible({ timeout: 10000 })
+    await activeSwitch.click()
+    await quality.getByRole('button', { name: /Enregistrer|Save/ }).click()
+
+    // the save round-trip is what proves the new settings block survives validation
+    const ax = await axiosAuth('test_user1@test.com')
+    await expect.poll(async () =>
+      (await ax.get('/api/v1/settings/user/test_user1')).data.metadataCompleteness?.active,
+    { timeout: 10000 }).toBe(true)
   })
 })
 

@@ -27,11 +27,12 @@
           :label="t('summary')"
           :base-color="fieldColor('summary')"
           :color="fieldColor('summary')"
+          :messages="lengthWarning('summary') ?? []"
+          :class="['flex-grow-1', { 'length-warning': !!lengthWarning('summary') }]"
           rows="3"
           variant="outlined"
           density="compact"
-          hide-details
-          class="flex-grow-1"
+          hide-details="auto"
         />
         <df-agent-chat-action
           v-if="can('writeDescription')"
@@ -51,7 +52,7 @@
           :label="t('description')"
           :locale="locale"
           :csp-nonce="$cspNonce"
-          :input-props="{ class: 'flex-grow-1' }"
+          :input-props="descriptionInputProps"
         />
         <df-agent-chat-action
           v-if="can('writeDescription')"
@@ -268,6 +269,8 @@
 fr:
   title: Titre
   summary: Résumé
+  lengthMin: "Longueur recommandée : au moins {min} caractères (actuellement {count})."
+  lengthRange: "Longueur recommandée : de {min} à {max} caractères (actuellement {count})."
   summarizePrompt: Aide-moi à rédiger un résumé pour ce jeu de données
   description: Description
   describePrompt: Aide-moi à rédiger une description pour ce jeu de données
@@ -306,6 +309,8 @@ fr:
 en:
   title: Title
   summary: Summary
+  lengthMin: "Recommended length: at least {min} characters (currently {count})."
+  lengthRange: "Recommended length: {min} to {max} characters (currently {count})."
   summarizePrompt: Help me write a summary for this dataset
   description: Description
   describePrompt: Help me write a description for this dataset
@@ -374,6 +379,41 @@ const fieldColor = (field: string): string | undefined => {
   const original = props.serverData?.[field]
   return !equal(current, original) ? 'accent' : undefined
 }
+
+// --- Metadata completeness: expected text lengths ---
+// The window comes from the dataset's own `completeness.lengths`, which the API only fills for the
+// criteria that count. So there is no settings request here, and nothing shows at all while the
+// owner has the score off or gave the criterion a weight of 0.
+
+/** Trimmed, like the criterion it explains: the count has to agree with what the score measured. */
+const charCount = (value?: string | null) => (value ?? '').trim().length
+
+const lengthWindow = (key: 'description' | 'summary') => dataset.value?.completeness?.lengths?.[key]
+
+/**
+ * The message carries the current length itself, for both fields. Vuetify's counter is only fit for
+ * a maximum — it has no notion of a minimum and turns red past its bound, an error state this
+ * advisory hint must not take — and the markdown editor has no counter at all.
+ */
+const lengthWarning = (key: 'description' | 'summary'): string | undefined => {
+  const window = lengthWindow(key)
+  if (!window) return undefined
+  const count = charCount(dataset.value?.[key])
+  if (count >= window.min && (window.max === undefined || count <= window.max)) return undefined
+  const params = { min: window.min, max: window.max, count }
+  return window.max === undefined ? t('lengthMin', params) : t('lengthRange', params)
+}
+
+const descriptionInputProps = computed(() => {
+  const inputProps: Record<string, string> = { class: 'flex-grow-1' }
+  const warning = lengthWarning('description')
+  if (warning) {
+    inputProps.class += ' length-warning'
+    inputProps.messages = warning
+    inputProps.hideDetails = 'auto'
+  }
+  return inputProps
+})
 
 const isCustomModified = (key: string): boolean => {
   if (!props.serverData) return false
@@ -485,3 +525,13 @@ const relatedDatasetsItems = computed(() =>
   (relatedDatasetsFetch.data.value?.results ?? []).filter((d: any) => d.id !== dataset.value?.id)
 )
 </script>
+
+<style scoped>
+/* the length hint is advisory, never blocking: a warning-coloured message under the field itself,
+   not a validation error and not an alert */
+/* :deep from the wrapping div, not from the field: the markdown editor's root carries no scope id */
+:deep(.length-warning .v-messages) {
+  color: rgb(var(--v-theme-warning));
+  opacity: 1;
+}
+</style>
