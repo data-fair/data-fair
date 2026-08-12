@@ -30,6 +30,12 @@ test.describe('REST datasets - single line _action', () => {
     assert.equal(res.status, 200) // caller-defined _id -> 200, generated id -> 201 (existing behavior)
     await waitForFinalize(ax, 'restaction1')
 
+    // strict create: 201 on a fresh id, 409 on an existing one
+    res = await ax.post('/api/v1/datasets/restaction1/lines', { _action: 'create', _id: 'line2', attr1: 'test1' })
+    assert.equal(res.status, 201)
+    await waitForFinalize(ax, 'restaction1')
+    await assert.rejects(ax.post('/api/v1/datasets/restaction1/lines', { _action: 'create', _id: 'line1', attr1: 'x' }), (err: any) => err.status === 409)
+
     // patch merges with the existing line
     res = await ax.post('/api/v1/datasets/restaction1/lines', { _action: 'patch', _id: 'line1', attr1: 'test2' })
     assert.equal(res.status, 200)

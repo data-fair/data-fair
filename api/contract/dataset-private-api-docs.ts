@@ -541,7 +541,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       ...api.paths['/lines'],
       post: {
         summary: 'Ajouter une ligne',
-        description: "Ajouter une nouvelle ligne au jeu de données. Le corps peut contenir `_action` pour effectuer une opération unitaire équivalente à une ligne de `_bulk_lines` (create, update, createOrUpdate, patch, delete) ; sans `_action` le comportement est createOrUpdate. Pour update, patch et delete l'identifiant de ligne est `_id` ou déduit de la clé primaire, et la permission correspondant à l'action est requise.",
+        description: "Ajouter une nouvelle ligne au jeu de données. Le corps peut contenir `_action` pour effectuer une opération unitaire équivalente à une ligne de `_bulk_lines` (create, update, createOrUpdate, patch, delete) ; sans `_action` le comportement est createOrUpdate. Pour update, patch et delete l'identifiant de ligne est `_id` ou déduit de la clé primaire, et la permission correspondant à l'action est requise, en plus de la permission de création portée par la route.",
         operationId: 'createLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],

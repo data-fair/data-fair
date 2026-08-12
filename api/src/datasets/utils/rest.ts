@@ -1084,6 +1084,9 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
 
   const _action: string = req.body._action ?? 'createOrUpdate'
+  // this duplicates a check inside applyTransactions, but it is load-bearing here: without it an
+  // unknown action would run manageAttachment below, then applyTransactions would throw (not set
+  // operation._error), skipping rollbackUploadedAttachment and orphaning a stored attachment.
   if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
   // PUT .../lines/:lineId means "replace the line at this id", patch/delete only make sense through POST .../lines
   if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
@@ -1132,7 +1135,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
-  if (req.body._action !== undefined && req.body._action !== 'patch') {
+  if (req.body._action != null && req.body._action !== 'patch') {
     throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
   }
   const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
