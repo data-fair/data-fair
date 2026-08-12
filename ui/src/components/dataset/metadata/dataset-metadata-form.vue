@@ -179,7 +179,7 @@
 
         <v-date-input
           v-if="datasetsMetadata?.temporal?.active"
-          :model-value="temporalDateObjects"
+          :model-value="temporalDates"
           :label="datasetsMetadata.temporal.title || t('temporal')"
           :disabled="!can('writeDescription')"
           :base-color="fieldColor('temporal')"
@@ -189,7 +189,6 @@
           class="mb-4"
           clearable
           @update:model-value="setTemporalDates"
-          @click:clear="dataset.temporal = null"
         />
 
         <v-date-input
@@ -392,17 +391,28 @@ const frequencies = computed(() => [...frequencyKeys].reverse().map(k => ({ titl
 
 // --- Temporal coverage (VDateInput multiple="range") ---
 
-const temporalDateObjects = computed(() => {
-  if (!dataset.value?.temporal) return []
-  return [dataset.value.temporal.start, dataset.value.temporal.end]
-    .filter(Boolean)
-    .map((d: string) => dayjs(d).toDate())
+// the picker emits [start] on the first click then [start, end] on the second, so this
+// intermediate state needs its own model, a { start, end } round-trip would close the range
+const temporalToDates = (temporal: any): Date[] => temporal
+  ? [temporal.start, temporal.end].filter(Boolean).map((d: string) => dayjs(d).toDate())
+  : []
+
+const datesToTemporal = (dates: Date[]) => {
+  if (!dates.length) return null
+  const sorted = dates.map(d => dayjs(d).format('YYYY-MM-DD')).sort()
+  return { start: sorted[0], end: sorted[sorted.length - 1] }
+}
+
+const temporalDates = ref<Date[]>(temporalToDates(dataset.value?.temporal))
+
+watch(() => dataset.value?.temporal, (temporal) => {
+  if (equal(datesToTemporal(temporalDates.value), temporal ?? null)) return
+  temporalDates.value = temporalToDates(temporal)
 })
 
 const setTemporalDates = (dates: Date[]) => {
-  if (!dates?.length) { dataset.value.temporal = null; return }
-  const sorted = dates.map(d => dayjs(d).format('YYYY-MM-DD')).sort()
-  dataset.value.temporal = { start: sorted[0], end: sorted[sorted.length - 1] }
+  temporalDates.value = dates ?? []
+  dataset.value.temporal = datesToTemporal(temporalDates.value)
 }
 
 // --- Custom metadata ---
