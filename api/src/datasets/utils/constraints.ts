@@ -1,4 +1,5 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import moment from 'moment-timezone'
 
 export const CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'
 
@@ -26,13 +27,84 @@ export const unicityViolationMessage = (properties: string[], schema?: { key: st
   return `Doublon détecté : ${group} (${labels.join(' + ')}) doit être unique.`
 }
 
+export const START_DATE_CONCEPT = 'https://schema.org/startDate'
+export const END_DATE_CONCEPT = 'https://schema.org/endDate'
+
+/**
+ * Resolve the columns carrying the startDate / endDate concepts for the dateCoherence
+ * constraint. Returns null when either concept is missing from the schema.
+ */
+export const dateCoherenceProps = (schema: any[]): { startProp: any, endProp: any } | null => {
+  const startProp = (schema || []).find(p => p['x-refersTo'] === START_DATE_CONCEPT)
+  const endProp = (schema || []).find(p => p['x-refersTo'] === END_DATE_CONCEPT)
+  if (!startProp || !endProp) return null
+  return { startProp, endProp }
+}
+
+export const dateCoherenceViolationMessage = (startProp: any, endProp: any, startValue: any, endValue: any): string => {
+  const startLabel = startProp.title || startProp.key
+  const endLabel = endProp.title || endProp.key
+  return `Incohérence de dates : la date de fin (${endLabel} : ${endValue}) est antérieure à la date de début (${startLabel} : ${startValue}).`
+}
+
+/**
+ * Row-local dateCoherence check. Returns null when the row is valid, else the user-facing
+ * French message. Rule: violation iff end < start (equality passes). A missing or
+ * unparseable value passes — open-ended periods are legitimate, and format errors are
+ * already reported by schema validation.
+ * Mixed date / date-time pairs use day-boundary expansion in the field's timezone
+ * (same convention as the date_match filter, see docs/architecture/date-management.md).
+ */
+export const dateCoherenceViolation = (startValue: any, endValue: any, startProp: any, endProp: any, defaultTimeZone: string): string | null => {
+  if (startValue === undefined || startValue === null || startValue === '') return null
+  if (endValue === undefined || endValue === null || endValue === '') return null
+  const start = String(startValue)
+  const end = String(endValue)
+  const startIsDate = startProp.format === 'date'
+  const endIsDate = endProp.format === 'date'
+  if (startIsDate && endIsDate) {
+    // normalized calendar dates (YYYY-MM-DD): lexicographic comparison, no timezone involved
+    if (!moment(start, 'YYYY-MM-DD', true).isValid() || !moment(end, 'YYYY-MM-DD', true).isValid()) return null
+    return end < start ? dateCoherenceViolationMessage(startProp, endProp, start, end) : null
+  }
+  // at least one date-time: compare instants, expanding bare dates to day boundaries
+  const startInstant = startIsDate
+    ? moment.tz(start, 'YYYY-MM-DD', true, startProp.timeZone || defaultTimeZone).startOf('day')
+    : moment.parseZone(start, moment.ISO_8601, true)
+  const endInstant = endIsDate
+    ? moment.tz(end, 'YYYY-MM-DD', true, endProp.timeZone || defaultTimeZone).endOf('day')
+    : moment.parseZone(end, moment.ISO_8601, true)
+  if (!startInstant.isValid() || !endInstant.isValid()) return null
+  return endInstant.valueOf() < startInstant.valueOf() ? dateCoherenceViolationMessage(startProp, endProp, start, end) : null
+}
+
 export const checkConstraints = (schema: any[], constraints: any[] | undefined, dataset?: { isVirtual?: boolean, isMetaOnly?: boolean }): void => {
   if (!constraints || !constraints.length) return
   if (dataset?.isVirtual || dataset?.isMetaOnly) {
-    throw httpError(400, "Les contraintes d'unicité ne sont pas prises en charge sur les jeux de données virtuels ou sans données (isMetaOnly).")
+    throw httpError(400, 'Les contraintes ne sont pas prises en charge sur les jeux de données virtuels ou sans données (isMetaOnly).')
   }
   const byKey = new Map((schema || []).map(p => [p.key, p]))
+  let nbDateCoherence = 0
   for (const constraint of constraints) {
+    if (constraint.type === 'dateCoherence') {
+      nbDateCoherence++
+      if (nbDateCoherence > 1) {
+        throw httpError(400, 'Une seule contrainte de cohérence des dates peut être déclarée.')
+      }
+      const props = dateCoherenceProps(schema || [])
+      if (!props) {
+        throw httpError(400, 'La contrainte de cohérence des dates nécessite une colonne portant le concept "Date de début" (https://schema.org/startDate) et une colonne portant le concept "Date de fin" (https://schema.org/endDate).')
+      }
+      for (const prop of [props.startProp, props.endProp]) {
+        if (prop['x-calculated'] || prop['x-extension']) {
+          throw httpError(400, `La colonne "${prop.key}" est calculée ou issue d'un enrichissement et ne peut pas porter la contrainte de cohérence des dates.`)
+        }
+        if (prop.format !== 'date' && prop.format !== 'date-time') {
+          throw httpError(400, `La colonne "${prop.key}" doit être une date ou une date-heure pour porter la contrainte de cohérence des dates.`)
+        }
+      }
+      continue
+    }
     if (constraint.type !== 'unique') continue
     const props: string[] = constraint.properties || []
     if (!props.length) {

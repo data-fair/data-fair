@@ -89,3 +89,44 @@ test.describe('unicityViolationMessage', () => {
     )
   })
 })
+
+test.describe('checkConstraints dateCoherence', () => {
+  const START = 'https://schema.org/startDate'
+  const END = 'https://schema.org/endDate'
+  const okSchema = [
+    { key: 'deb', type: 'string', format: 'date', 'x-refersTo': START },
+    { key: 'fin', type: 'string', format: 'date-time', 'x-refersTo': END }
+  ]
+
+  test('accepts when both concepts are on date columns', () => {
+    assert.doesNotThrow(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }]))
+  })
+
+  test('rejects when a concept column is missing', () => {
+    assert.throws(() => checkConstraints([okSchema[0]], [{ type: 'dateCoherence' }]), /concept/i)
+    assert.throws(() => checkConstraints([], [{ type: 'dateCoherence' }]), /concept/i)
+  })
+
+  test('rejects a calculated or extension concept column', () => {
+    assert.throws(() => checkConstraints(
+      [{ ...okSchema[0], 'x-calculated': true }, okSchema[1]],
+      [{ type: 'dateCoherence' }]), /calcul/i)
+    assert.throws(() => checkConstraints(
+      [okSchema[0], { ...okSchema[1], 'x-extension': 'foo' }],
+      [{ type: 'dateCoherence' }]), /calcul|enrichissement/i)
+  })
+
+  test('rejects a concept column that is not date / date-time formatted', () => {
+    assert.throws(() => checkConstraints(
+      [{ key: 'deb', type: 'string', 'x-refersTo': START }, okSchema[1]],
+      [{ type: 'dateCoherence' }]), /date/i)
+  })
+
+  test('rejects a duplicate dateCoherence constraint', () => {
+    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }, { type: 'dateCoherence' }]), /seule/i)
+  })
+
+  test('rejects on virtual datasets with the generalized message', () => {
+    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }], { isVirtual: true }), /virtuels/i)
+  })
+})
