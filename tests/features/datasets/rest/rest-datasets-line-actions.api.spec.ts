@@ -1,7 +1,9 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize } from '../../../support/workers.ts'
+import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser2 = await axiosAuth('test_user2@test.com')
@@ -184,5 +186,41 @@ test.describe('REST datasets - single line _action', () => {
     assert.equal(res.status, 204)
     await waitForFinalize(ax, dataset.id)
     await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines/ownline1`), (err: any) => err.status === 404)
+  })
+
+  test('multipart _action patch keeps the existing attachment', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restaction6', {
+      isRest: true,
+      title: 'restaction6',
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('_id', 'line1')
+    form.append('attr1', 'test1')
+    let res = await ax.post('/api/v1/datasets/restaction6/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 200)
+    const attachmentPath = res.data.attachmentPath
+    assert.ok(attachmentPath.startsWith('line1/'))
+    await waitForFinalize(ax, 'restaction6')
+
+    // multipart patch without a new attachment must not destroy the stored one
+    const patchForm = new FormData()
+    patchForm.append('_action', 'patch')
+    patchForm.append('_id', 'line1')
+    patchForm.append('attr1', 'test2')
+    res = await ax.post('/api/v1/datasets/restaction6/lines', patchForm, { headers: { 'Content-Length': patchForm.getLengthSync(), ...patchForm.getHeaders() } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.attr1, 'test2')
+    assert.equal(res.data.attachmentPath, attachmentPath)
+    await waitForFinalize(ax, 'restaction6')
+    const attachments = await lsAttachments('restaction6')
+    assert.equal(attachments.length, 1)
+    assert.equal(attachments[0], attachmentPath)
   })
 })
