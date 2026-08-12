@@ -1,7 +1,9 @@
+import type { Settings, DatasetMetadataOptions } from '#types/settings/index.js'
+import type { DepartmentSettings } from '#types/department-settings/index.js'
+import type { AccountKeys, User } from '@data-fair/lib-express'
 import slug from 'slugify'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
-import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
-import { type AccountKeys, type User } from '@data-fair/lib-express'
+import { assertValid as assertValidSettings } from '#types/settings/index.js'
+import { assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 
 export function validateSettings (settings: any): asserts settings is Settings | DepartmentSettings {
   if ((settings as DepartmentSettings).department) {
@@ -54,7 +56,7 @@ export const fillSettings = (owner: AccountKeys, user: User, settings: any): Set
   return settings
 }
 
-export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+export const cleanDatasetsMetadata = (datasetsMetadata: DatasetMetadataOptions) => {
   if (datasetsMetadata.custom) {
     for (const customMedata of datasetsMetadata.custom) {
       if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })

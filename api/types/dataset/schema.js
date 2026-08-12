@@ -683,6 +683,13 @@ const datasetProperties = {
           description: { $ref: '#/$defs/completenessLength' },
           summary: { $ref: '#/$defs/completenessLength' }
         }
+      },
+      customLabels: {
+        type: 'object',
+        description: 'The owner-defined label of each weighted custom metadata criterion. Carried by the dataset so an interface can name them without reading the owner settings.',
+        patternProperties: {
+          '^(.*)$': { type: 'string' }
+        }
       }
     }
   },

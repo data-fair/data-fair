@@ -460,6 +460,8 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
+  // same reason: else vjsf fills the schema default (0) into custom items created before this field
+  for (const custom of dm.custom ?? []) custom.weight ??= 0
   // same reason: else vjsf writes the schema default on first render, faking unsaved changes
   if (!s.metadataCompleteness) s.metadataCompleteness = { active: false }
 }

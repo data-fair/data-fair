@@ -293,13 +293,14 @@ const formatDate = (dateStr?: string) => {
 // one line per unfilled criterion; the text ones explain a "too short/long" from the dataset's own
 // `completeness.lengths` (no settings read). The `window` guard also keeps `.trim()` off the
 // non-string criteria, and tolerates a value that fits — the draft-merged text may already be fixed.
+// Custom criteria carry their owner-defined label on the score itself, so no settings read either.
 const completenessLines = computed(() => {
   const completeness = dataset.value?.completeness
   return (completeness?.missing ?? []).map((key: string) => {
     const window = completeness?.lengths?.[key as 'description' | 'summary']
     const value = window ? (dataset.value as any)?.[key] : undefined
     const count = typeof value === 'string' ? value.trim().length : 0
-    if (!window || !count) return t('completenessFields.' + key)
+    if (!window || !count) return completeness?.customLabels?.[key] ?? t('completenessFields.' + key)
     if (count < window.min) return t(`completenessLength.${key}.short`, { count, min: window.min })
     if (window.max === undefined || count <= window.max) return t('completenessFields.' + key)
     return t(`completenessLength.${key}.long`, { count, max: window.max })

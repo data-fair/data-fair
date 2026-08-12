@@ -1,21 +1,7 @@
 import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
-// completeness criteria that only count when the owner offers their field. Exported: the scoring
-// module, the weight layouts below, and the settings form must share the exact same list.
-export const completenessGatedByMetadata = ['keywords', 'creator', 'frequency', 'spatial', 'temporal', 'conformsTo']
-
-// hide the weight input of a criterion whose field is not offered (context.offeredCriteria is filled
-// by the settings form). Hidden, not deleted — json-layout keeps a hidden node's data.
-const weightCols = { xs: 6, sm: 4, md: 3 }
-// topics is gated on the org having defined any, not on a metadata option
-const gatedWeights = new Set([...completenessGatedByMetadata, 'topics'])
-/** @type {(criterion: string) => object} */
-const weightLayout = (criterion) => gatedWeights.has(criterion)
-  ? { cols: weightCols, if: `context.offeredCriteria?.${criterion}` }
-  : { cols: weightCols }
-
-export default {
+const schema = {
   $id: 'https://github.com/data-fair/data-fair/settings',
   title: 'Settings',
   'x-exports': ['types', 'resolvedSchema', 'validate'],
@@ -345,7 +331,7 @@ export default {
     },
     datasetsMetadata: {
       type: 'object',
-      title: 'Options des métadonnées de jeux de données',
+      title: 'Dataset metadata options',
       layout: {
         title: null
       },
@@ -525,6 +511,14 @@ export default {
                 title: 'Libellé',
                 type: 'string',
                 minLength: 3
+              },
+              weight: {
+                title: 'Poids dans le score de complétude',
+                description: 'Un poids à 0 exclut cette métadonnée du calcul du score.',
+                type: 'integer',
+                minimum: 0,
+                default: 0,
+                layout: { cols: 6 }
               }
             }
           }
@@ -549,17 +543,17 @@ export default {
           description: 'Un poids à 0 retire le critère du calcul.',
           layout: { if: 'parent.data.active' },
           properties: {
-            description: { type: 'integer', minimum: 0, default: 4, title: 'Description', layout: weightLayout('description') },
-            summary: { type: 'integer', minimum: 0, default: 3, title: 'Résumé', layout: weightLayout('summary') },
-            license: { type: 'integer', minimum: 0, default: 3, title: 'Licence', layout: weightLayout('license') },
-            keywords: { type: 'integer', minimum: 0, default: 2, title: 'Mots clés', layout: weightLayout('keywords') },
-            topics: { type: 'integer', minimum: 0, default: 2, title: 'Thématiques', layout: weightLayout('topics') },
-            creator: { type: 'integer', minimum: 0, default: 2, title: 'Créateur', layout: weightLayout('creator') },
-            origin: { type: 'integer', minimum: 0, default: 1, title: 'Provenance', layout: weightLayout('origin') },
-            frequency: { type: 'integer', minimum: 0, default: 1, title: 'Fréquence de mise à jour', layout: weightLayout('frequency') },
-            spatial: { type: 'integer', minimum: 0, default: 1, title: 'Couverture spatiale', layout: weightLayout('spatial') },
-            temporal: { type: 'integer', minimum: 0, default: 1, title: 'Couverture temporelle', layout: weightLayout('temporal') },
-            conformsTo: { type: 'integer', minimum: 0, default: 1, title: 'Schéma', layout: weightLayout('conformsTo') }
+            description: { type: 'integer', minimum: 0, default: 4, title: 'Description' },
+            summary: { type: 'integer', minimum: 0, default: 3, title: 'Résumé' },
+            license: { type: 'integer', minimum: 0, default: 3, title: 'Licence' },
+            keywords: { type: 'integer', minimum: 0, default: 2, title: 'Mots clés' },
+            topics: { type: 'integer', minimum: 0, default: 2, title: 'Thématiques' },
+            creator: { type: 'integer', minimum: 0, default: 2, title: 'Créateur' },
+            origin: { type: 'integer', minimum: 0, default: 1, title: 'Provenance' },
+            frequency: { type: 'integer', minimum: 0, default: 1, title: 'Fréquence de mise à jour' },
+            spatial: { type: 'integer', minimum: 0, default: 1, title: 'Couverture spatiale' },
+            temporal: { type: 'integer', minimum: 0, default: 1, title: 'Couverture temporelle' },
+            conformsTo: { type: 'integer', minimum: 0, default: 1, title: 'Schéma' }
           }
         },
         description: {
@@ -598,3 +592,24 @@ export default {
     }
   }
 }
+
+// A completeness criterion is "gated" when its key also names an activatable metadata option, so it
+// only counts once the owner turns that option on. Derived from the schema's own two blocks —
+// weights ∩ activatable metadata — so the two can never drift; `modified`/`custom` carry no weight
+// and drop out on their own. The scoring module and the settings form both import this.
+export const completenessGatedByMetadata = Object.keys(schema.properties.metadataCompleteness.properties.weights.properties)
+  .filter(key => key in schema.properties.datasetsMetadata.properties)
+
+// hide the weight input of a criterion the owner does not offer (topics gates on defined topics, apart);
+// context.offeredCriteria is filled by the settings form. Hidden, not deleted — json-layout keeps the data.
+const gatedWeights = new Set([...completenessGatedByMetadata, 'topics'])
+const weightCols = { xs: 6, sm: 4, md: 3 }
+const weightProps = /** @type {Record<string, { layout?: object }>} */ (
+  schema.properties.metadataCompleteness.properties.weights.properties)
+for (const key of Object.keys(weightProps)) {
+  weightProps[key].layout = gatedWeights.has(key)
+    ? { cols: weightCols, if: `context.offeredCriteria?.${key}` }
+    : { cols: weightCols }
+}
+
+export default schema

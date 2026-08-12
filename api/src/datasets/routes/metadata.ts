@@ -30,8 +30,7 @@ import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
-import { computeCompleteness } from '../utils/compute-completeness.ts'
-import { completenessContext } from '../utils/completeness-recompute.ts'
+import { computeOwnerCompleteness } from '../utils/completeness-recompute.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
 import { dir } from '../utils/files.ts'
@@ -272,17 +271,14 @@ export const registerMetadataRoutes = (router: Router) => {
     })
     await permissions.initResourcePermissions(patch, preservePermissions)
 
-    const changeOwnerUpdate: any = { $set: patch }
-
     // the score is scaled on the owner's settings, so a transfer must recompute it for the new owner
     // (or drop it when that owner has the feature off). This write skips applyPatch, so it must be
     // done here. Scored on reqDatasetFull, not `dataset`, which readDataset may have merged a draft into.
-    const completenessCtx = await completenessContext(patch.owner)
-    const completeness = completenessCtx.config.active
-      ? computeCompleteness({ ...reqDatasetFull(req), ...patch }, completenessCtx)
-      : undefined
+    const completeness = await computeOwnerCompleteness(patch.owner, { ...reqDatasetFull(req), ...patch })
     if (completeness) patch.completeness = completeness
-    else if (dataset.completeness) changeOwnerUpdate.$unset = { completeness: 1, 'draft.completeness': 1 }
+
+    const changeOwnerUpdate: any = { $set: patch }
+    if (!completeness && dataset.completeness) changeOwnerUpdate.$unset = { completeness: 1, 'draft.completeness': 1 }
 
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })

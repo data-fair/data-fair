@@ -21,8 +21,8 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
-import { computeCompleteness, COMPLETENESS_KEYS, type Completeness } from './utils/compute-completeness.ts'
-import { completenessContext } from './utils/completeness-recompute.ts'
+import { COMPLETENESS_KEYS } from './utils/compute-completeness.ts'
+import { computeOwnerCompleteness } from './utils/completeness-recompute.ts'
 import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
@@ -33,6 +33,7 @@ import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
+import type { Completeness } from './utils/compute-completeness.ts'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
@@ -377,12 +378,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
-  // nothing stored while the feature is off: the field's absence is itself the opt-in signal
-  const completenessCtx = await completenessContext(owner)
-  if (completenessCtx.config.active) {
-    const completeness = computeCompleteness(dataset, completenessCtx)
-    if (completeness) dataset.completeness = completeness
-  }
+  const completeness = await computeOwnerCompleteness(owner, dataset)
+  if (completeness) dataset.completeness = completeness
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -527,9 +524,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // carries it): the score describes the published dataset. Kept out of `patch` — it is readOnly and
   // both write routes report Object.keys(patch) to the user as the fields they modified.
   let completenessPatch: Completeness | undefined
-  if (!dataset.draftReason && !patch.draftReason && COMPLETENESS_KEYS.some(key => key in patch)) {
-    const ctx = await completenessContext(dataset.owner)
-    if (ctx.config.active) completenessPatch = computeCompleteness({ ...dataset, ...patch }, ctx)
+  if (!dataset.draftReason && !patch.draftReason && (COMPLETENESS_KEYS.some(key => key in patch) || 'customMetadata' in patch)) {
+    completenessPatch = await computeOwnerCompleteness(dataset.owner, { ...dataset, ...patch })
   }
 
   Object.assign(dataset, patch)

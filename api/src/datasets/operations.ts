@@ -1,5 +1,7 @@
 // pure functions for the datasets module — no I/O. The unit-test surface.
 
+import equal from 'fast-deep-equal'
+
 // matches the separator used by memoizee's built-in `primitive` normalizer
 const KEY_SEP = '\u0001'
 
@@ -58,16 +60,6 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   _id: 0
 })
 
-/** Two `completeness.lengths` sub-documents, compared without pulling a deep-equal dependency in. */
-const sameLengths = (a: Record<string, { min?: number, max?: number }> | undefined, b: typeof a): boolean => {
-  if (!a || !b) return !a === !b
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
-  for (const key of keys) {
-    if (a[key]?.min !== b[key]?.min || a[key]?.max !== b[key]?.max) return false
-  }
-  return true
-}
-
 /**
  * True when the memoized document still matches the freshly projected one and may be served as is.
  * `fresh` is the result of a find with `datasetFreshnessProjection`.
@@ -81,11 +73,9 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
-  // score alone misses a reshuffle at equal weights or a $unset; lengths alone can change what the
-  // form shows even when score and missing are untouched
-  if (cachedFull.completeness?.score !== fresh.completeness?.score) return false
-  if (cachedFull.completeness?.missing?.join(',') !== fresh.completeness?.missing?.join(',')) return false
-  if (!sameLengths(cachedFull.completeness?.lengths, fresh.completeness?.lengths)) return false
+  // the whole sub-document: score alone misses a reshuffle at equal weights or a $unset, and
+  // lengths / customLabels change what the form shows even when score and missing are untouched
+  if (!equal(cachedFull.completeness, fresh.completeness)) return false
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true

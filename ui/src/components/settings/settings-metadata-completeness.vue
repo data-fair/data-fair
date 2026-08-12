@@ -82,10 +82,13 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   context: { offeredCriteria: offeredCriteria.value }
 }))
 
-// only applicable criteria count, so weighting only unoffered ones is as empty as weighting nothing
-const applicableWeight = computed(() => Object.keys(DEFAULT_WEIGHTS)
-  .filter(key => offeredCriteria.value[key] !== false)
-  .reduce((sum, key) => sum + weightOf(key), 0))
+// only applicable criteria count, so weighting only unoffered ones is as empty as weighting nothing.
+// A custom metadata with a weight is always applicable — it is offered by being defined.
+const applicableWeight = computed(() =>
+  Object.keys(DEFAULT_WEIGHTS)
+    .filter(key => offeredCriteria.value[key] !== false)
+    .reduce((sum, key) => sum + weightOf(key), 0) +
+  (props.datasetsMetadata?.custom ?? []).reduce((sum, custom) => sum + (custom.weight ?? 0), 0))
 
 // the two cross-field rules vjsf can't redden a field for; also refused by the API on save
 const ruleError = computed(() => {

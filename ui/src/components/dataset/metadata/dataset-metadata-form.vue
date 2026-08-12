@@ -383,14 +383,10 @@ const fieldColor = (field: string): string | undefined => {
 // Advisory length hint from the dataset's own `completeness.lengths` (no settings read, nothing shown
 // when the score is off). A custom message rather than Vuetify's counter, which only knows a max and
 // reddens past it — and the markdown editor has no counter at all.
-const charCount = (value?: string | null) => (value ?? '').trim().length
-
-const lengthWindow = (key: 'description' | 'summary') => dataset.value?.completeness?.lengths?.[key]
-
 const lengthWarning = (key: 'description' | 'summary'): string | undefined => {
-  const window = lengthWindow(key)
+  const window = dataset.value?.completeness?.lengths?.[key]
   if (!window) return undefined
-  const count = charCount(dataset.value?.[key])
+  const count = (dataset.value?.[key] ?? '').trim().length
   if (count >= window.min && (window.max === undefined || count <= window.max)) return undefined
   const params = { min: window.min, max: window.max, count }
   return window.max === undefined ? t('lengthMin', params) : t('lengthRange', params)
@@ -415,12 +411,11 @@ const isCustomModified = (key: string): boolean => {
 // --- Frequencies ---
 // https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
 // Order matches the backend enum in api/types/dataset/schema.js, reversed so the most frequent options appear first.
-const frequencyKeys = [
+const frequencies = computed(() => [
   'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
   'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly',
   'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular'
-] as const
-const frequencies = computed(() => [...frequencyKeys].reverse().map(k => ({ title: t(`frequencyItems.${k}`), value: k })))
+].reverse().map(k => ({ title: t(`frequencyItems.${k}`), value: k })))
 
 // --- Temporal coverage (VDateInput multiple="range") ---
 
@@ -447,13 +442,9 @@ const setCustomMetadata = (key: string, value: any) => {
 
 // --- AI summarize ---
 
-const summarizeContext = computed(() => {
-  return 'Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.'
-})
+const summarizeContext = 'Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.'
 
-const describeContext = computed(() => {
-  return 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_description tool to set it. If the user wants changes, adjust accordingly.'
-})
+const describeContext = 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_description tool to set it. If the user wants changes, adjust accordingly.'
 
 // --- Keywords facets (suggestions from other datasets) ---
 

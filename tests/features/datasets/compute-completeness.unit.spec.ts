@@ -205,6 +205,79 @@ test.describe('computeCompleteness', () => {
   })
 })
 
+test.describe('custom metadata criteria', () => {
+  /** One weighted custom field, on top of the 11 unconditional criteria: denominator 13. */
+  const customCfg = (config: CompletenessConfig = {}, custom: any = [{ key: 'contact', title: 'Contact', weight: 2 }]) => ({
+    config,
+    datasetsMetadata: { custom },
+    hasTopics: false
+  })
+
+  const textFilled = { description: 'd'.repeat(200), summary: 's'.repeat(100) }
+
+  test('an unfilled weighted custom field lowers the score and lists its owner label', () => {
+    const result = completenessOf(textFilled, customCfg())
+    // 7 of 13 => 53.84... => 54
+    assert.equal(result.score, 54)
+    assert.deepEqual(result.missing, ['license', 'contact', 'origin'])
+    assert.equal(result.customLabels?.contact, 'Contact')
+  })
+
+  test('a filled custom field credits its weight and keeps its label on the score', () => {
+    const result = completenessOf({ ...fullDataset, customMetadata: { contact: 'Koumoul' } }, customCfg())
+    assert.equal(result.score, 100)
+    assert.deepEqual(result.missing, [])
+    assert.equal(result.customLabels?.contact, 'Contact')
+  })
+
+  test('a custom field with a weight of 0 is left out of the score', () => {
+    const result = completenessOf(
+      { ...textFilled, customMetadata: { contact: 'Koumoul' } },
+      customCfg({}, [{ key: 'contact', title: 'Contact', weight: 0 }])
+    )
+    assert.equal(result.score, 64) // 7 of 11
+    assert.deepEqual(result.missing, ['license', 'origin'])
+    assert.equal(result.customLabels, undefined)
+  })
+
+  test('an empty or blank custom value does not fill the criterion', () => {
+    const result = completenessOf(
+      { ...textFilled, customMetadata: { contact: '   ' } },
+      customCfg()
+    )
+    assert.equal(result.score, 54)
+    assert.ok(result.missing.includes('contact'))
+  })
+
+  test('a custom value whose key is not defined in the settings never counts', () => {
+    const result = completenessOf({ ...fullDataset, customMetadata: { ghost: 'x' } }, bare())
+    assert.equal(result.score, 100)
+    assert.equal(result.customLabels, undefined)
+  })
+
+  test('a custom key colliding with a fixed criterion does not count twice', () => {
+    // slugifying a title like "Description" yields a key a fixed criterion already owns
+    const result = completenessOf(
+      { ...textFilled, customMetadata: { description: 'x' } },
+      customCfg({}, [{ key: 'description', title: 'Description', weight: 4 }])
+    )
+    // the 11 unconditional points, unchanged: no extra denominator, no duplicate line
+    assert.equal(result.score, 64)
+    assert.equal(result.missing.filter(key => key === 'description').length, 0)
+    assert.equal(result.customLabels, undefined)
+  })
+
+  test('a custom weight alone can give the configuration a meaning', () => {
+    const context = {
+      config: { active: true, weights: { description: 0, summary: 0, license: 0, origin: 0 } },
+      datasetsMetadata: { custom: [{ key: 'contact', title: 'Contact', weight: 3 }] },
+      hasTopics: false
+    }
+    assert.equal(validateMetadataCompleteness(context), undefined)
+    assert.equal(completenessOf({ customMetadata: { contact: 'Koumoul' } }, context)?.score, 100)
+  })
+})
+
 test.describe('validateMetadataCompleteness', () => {
   test('an inactive configuration is never rejected, whatever it holds', () => {
     assert.equal(validateMetadataCompleteness(bare({ description: { min: 500, max: 200 } })), undefined)
