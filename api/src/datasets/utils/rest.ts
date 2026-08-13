@@ -30,7 +30,7 @@ import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
-import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage, dateCoherenceProps, dateCoherenceViolation } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
@@ -584,6 +584,9 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   }
 
   // now that operations were completed perform validation and calculate hash for all operations
+  const dateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    ? dateCoherenceProps(dataset.schema ?? [])
+    : null
   const createUpdatePreviousFilters = []
   let v = 0
   for (const operation of operations) {
@@ -610,6 +613,27 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
           operation._warning = message
         } else {
           operation._error = message
+          operation._status = 400
+          continue
+        }
+      }
+    }
+
+    // dateCoherence constraint: row-local check on the merged row — fullBody covers
+    // patch actions whose previous body was merged above
+    if (dateCoherence) {
+      const coherenceError = dateCoherenceViolation(
+        operation.fullBody[dateCoherence.startProp.key],
+        operation.fullBody[dateCoherence.endProp.key],
+        dateCoherence.startProp,
+        dateCoherence.endProp,
+        config.defaultTimeZone
+      )
+      if (coherenceError) {
+        if (dataset.nonBlockingValidation) {
+          operation._warning = operation._warning ? `${operation._warning}\n${coherenceError}` : coherenceError
+        } else {
+          operation._error = coherenceError
           operation._status = 400
           continue
         }
