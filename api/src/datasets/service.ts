@@ -16,7 +16,7 @@ import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.t
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
-import { checkConstraints } from './utils/constraints.ts'
+import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
@@ -460,6 +460,28 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   }
 
   if (isRestDataset(dataset) && 'constraints' in patch) {
+    // a newly-added dateCoherence constraint must never be applied against violating
+    // data (same guarantee as the unique partial index): scan the live rows once,
+    // BEFORE configureConstraintIndexes so a rejection leaves the index set untouched
+    const newDateCoherence = (patch.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    const oldDateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    if (newDateCoherence && !oldDateCoherence) {
+      const props = dateCoherenceProps((patch.schema ?? dataset.schema) ?? [])
+      if (props) {
+        const { startProp, endProp } = props
+        const c = restDatasetsUtils.collection(dataset)
+        let n = 0
+        const cursor = c.find({ _deleted: false, [startProp.key]: { $exists: true }, [endProp.key]: { $exists: true } })
+          .project({ [startProp.key]: 1, [endProp.key]: 1 })
+        for await (const line of cursor) {
+          if (++n % 100 === 0) await new Promise(resolve => setImmediate(resolve))
+          const coherenceError = dateCoherenceViolation(line[startProp.key], line[endProp.key], startProp, endProp, config.defaultTimeZone)
+          if (coherenceError) {
+            throw httpError(400, `La contrainte de cohérence des dates ne peut pas être appliquée : au moins une ligne existante ne la respecte pas. ${coherenceError}`)
+          }
+        }
+      }
+    }
     await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
   }
 

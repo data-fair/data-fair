@@ -65,4 +65,29 @@ test.describe('REST dataset dateCoherence constraint', () => {
     const lines = (await testUser1.get('/api/v1/datasets/rest-coherence-nb/lines')).data
     assert.equal(lines.total, 1) // the line was persisted despite the violation
   })
+
+  test('adding the constraint over violating existing data rejects the PATCH', async () => {
+    // created WITHOUT the constraint
+    const res = await testUser1.post('/api/v1/datasets/rest-coherence-scan', {
+      isRest: true, title: 'rest-coherence-scan', schema: conceptSchema
+    })
+    assert.equal(res.data.status, 'finalized')
+    await testUser1.post('/api/v1/datasets/rest-coherence-scan/lines', { deb: '2024-05-01', fin: '2024-05-02' })
+    await testUser1.post('/api/v1/datasets/rest-coherence-scan/lines', { deb: '2024-05-03', fin: '2024-05-01' })
+    await waitForFinalize(testUser1, 'rest-coherence-scan')
+
+    const patchRes = await testUser1.patch('/api/v1/datasets/rest-coherence-scan',
+      { constraints: [{ type: 'dateCoherence' }] }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 400)
+    assert.match(JSON.stringify(patchRes.data), /Incohérence de dates/)
+
+    // fix the offending line, then the PATCH passes
+    const lines = (await testUser1.get('/api/v1/datasets/rest-coherence-scan/lines')).data.results
+    const bad = lines.find((l: any) => l.deb === '2024-05-03')
+    await testUser1.patch(`/api/v1/datasets/rest-coherence-scan/lines/${bad._id}`, { fin: '2024-05-10' })
+    await waitForFinalize(testUser1, 'rest-coherence-scan')
+    const ok = await testUser1.patch('/api/v1/datasets/rest-coherence-scan',
+      { constraints: [{ type: 'dateCoherence' }] }, { validateStatus: () => true })
+    assert.ok(ok.status < 300, `status ${ok.status}`)
+  })
 })
