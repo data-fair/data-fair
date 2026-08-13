@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axiosAuth, clean } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -62,5 +62,43 @@ test.describe('file dataset dateCoherence constraint', () => {
     const badCsv = 'deb,fin\n2024-05-03,2024-05-01\n'
     const ds2 = await upload('file-coherence-none', badCsv) // no constraint: no check
     await waitForFinalize(testUser1, ds2.id)
+  })
+
+  test('adding the constraint via PATCH re-validates existing data; dropping it recovers', async () => {
+    const csv = 'deb,fin\n2024-05-01,2024-05-02\n2024-05-03,2024-05-01\n'
+    const ds = await upload('file-coherence-patch', csv) // no constraint yet: finalizes
+    await waitForFinalize(testUser1, ds.id)
+
+    const res = await testUser1.patch(`/api/v1/datasets/${ds.id}`, { constraints: [{ type: 'dateCoherence' }] })
+    // the floor must reach the validation phase ('validation-updated'), not the
+    // index gate ('validated') which skips it
+    assert.equal(res.data.status, 'validation-updated')
+    await waitForDatasetError(testUser1, ds.id)
+    const errEvent = await findEvent(ds.id, 'validation-error')
+    assert.ok(errEvent?.hasDiagnosticFile)
+
+    // dropping the constraint recovers via revalidation. The dataset was left in 'error' with
+    // errorStatus 'validation-updated' by the failed validation above, so the recovery patch
+    // retries at 'validation-updated' (see patch.ts's error-retry preamble) — a status that,
+    // on success, process-file.ts finalizes directly (skips the dedicated index/finalize tasks,
+    // see process-file.ts:124) without ever emitting 'finalize-end'. waitForFinalize would hang
+    // forever here; wait for 'validate-end' instead, same pattern already used in
+    // file-validation.api.spec.ts's "patch compatible validation rules" test.
+    const dropRes = await testUser1.patch(`/api/v1/datasets/${ds.id}`, { constraints: null })
+    assert.equal(dropRes.data.status, 'validation-updated')
+    await waitForJournalEvent(ds.id, 'validate-end')
+    const recovered = (await testUser1.get(`/api/v1/datasets/${ds.id}`)).data
+    assert.equal(recovered.status, 'finalized')
+  })
+
+  test('a combined unique + dateCoherence PATCH floors to analyzed (both gates re-run)', async () => {
+    const csv = 'deb,fin\n2024-05-01,2024-05-02\n2024-05-03,2024-05-04\n'
+    const ds = await upload('file-coherence-combo', csv)
+    await waitForFinalize(testUser1, ds.id)
+    const res = await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
+      constraints: [{ type: 'dateCoherence' }, { type: 'unique', properties: ['deb'] }]
+    })
+    assert.equal(res.data.status, 'analyzed')
+    await waitForFinalize(testUser1, ds.id) // data satisfies both: re-finalizes
   })
 })
