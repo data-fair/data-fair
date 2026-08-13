@@ -21,7 +21,7 @@ import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal, Event } from '#types'
-import { isRestDataset } from '#types/dataset/index.ts'
+import { isRestDataset, type Unicite } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import config from '#config'
 import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
@@ -136,7 +136,7 @@ export default async function (dataset: DatasetInternal) {
     // temp index before promoting it. File datasets only (REST enforce via a
     // MongoDB unique index). Real stored columns are guaranteed by config-time
     // checkConstraints.
-    const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
+    const uniqueConstraints = (dataset.constraints ?? []).filter((c): c is Unicite => c.type === 'unique')
     // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
     // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
     // truthy (an empty array) when a constraint is dropped: preparePatch normalizes the
