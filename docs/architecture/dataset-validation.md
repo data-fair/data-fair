@@ -168,16 +168,18 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 | `api/src/datasets/utils/extensions.ts` | `extendBatchSync` (REST hot path) + `ExtensionsStream` with `onLineError` |
 | `api/src/datasets/utils/rest.ts` | `applyTransactions` mandatory-extension pass + bulk-write rejection |
 | `api/src/datasets/router.js` | `GET /:datasetId/validation-diagnostic.csv` endpoint |
-| `api/src/workers/batch-processor/process-file.ts` | Combined file-dataset validation + extension worker |
+| `api/src/workers/batch-processor/process-file.ts` | Combined file-dataset validation + extension worker; `ValidateStream` also runs the `dateCoherence` row check (Phase A) |
 | `api/src/workers/batch-processor/extend-rest.ts` | REST-only extension worker |
-| `api/types/dataset/schema.js` | `mandatory` field on the `remoteService` extension oneOf branch; `constraints` field (`unique` type) |
+| `api/types/dataset/schema.js` | `mandatory` field on the `remoteService` extension oneOf branch; `constraints` field (`oneOf` of `unique` and `dateCoherence` types) |
 | `shared/ajv.js` | `ajv-errors` integration + Proxy-wrapped localizer (preserves user `errorMessage` text); `valueAtPointer` JSON-pointer resolver and value-aware `errorsText` (optional `data` arg appends ` (valeur : …)`) shared by the REST hot path and the diagnostic CSV |
-| `api/src/datasets/utils/constraints.ts` | `checkConstraints` config validation + `CONSTRAINT_INDEX_PREFIX` |
+| `api/src/datasets/utils/constraints.ts` | `checkConstraints` config validation + `CONSTRAINT_INDEX_PREFIX`; `dateCoherenceProps`/`dateCoherenceViolation`/`dateCoherenceViolationMessage` — the concept resolver and comparator shared by all three `dateCoherence` enforcement points |
 | `api/src/datasets/es/unicity-agg.ts` | `findUnicityDuplicates` composite aggregation over the constraint columns |
 | `api/src/datasets/es/operations.ts` | `unicityAggField` — picks the aggregation field (`.wildcard` sub-field when applicable) |
 | `api/src/workers/batch-processor/index-lines.ts` | file-dataset unicity gate before `switchAlias` |
-| `api/src/datasets/utils/rest.ts` | `configureConstraintIndexes` (partial unique index per constraint) + 11000 → 409 mapping |
-| `ui/src/components/dataset/dataset-constraints.vue` | schema-driven `<vjsf>` editor for `dataset.constraints` |
+| `api/src/datasets/utils/rest.ts` | `configureConstraintIndexes` (partial unique index per constraint) + 11000 → 409 mapping; `applyTransactions` also runs the `dateCoherence` row check |
+| `api/src/datasets/utils/patch.ts` | constraint-type-aware status floor (`unique` → index-lines gate, `dateCoherence` → validation phase, both → `'analyzed'`) |
+| `api/src/datasets/service.ts` | `applyPatch` — PATCH-time collection scan when a `dateCoherence` constraint is newly added to a REST dataset |
+| `ui/src/components/dataset/dataset-constraints.vue` | schema-driven `<vjsf>` editor for `dataset.constraints`, including the `dateCoherence` type-selector visibility rule |
 
 ## Out of scope (follow-ups)
 
@@ -188,17 +190,17 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 
 ## Dataset-wide constraints
 
-Beyond per-column schema validation, a dataset can declare constraints that span the whole row. The only constraint type implemented so far is `unique`.
+Beyond per-column schema validation, a dataset can declare constraints that span the whole row. Two constraint types are implemented: `unique` (below) and `dateCoherence` (its own subsection further down).
 
 ### Data model
 
-`dataset.constraints[]`, each entry `{ type: 'unique', properties: string[] }` — the combination of values of `properties` must be unique across every row of the dataset. Defined in `api/types/dataset/schema.js` (`datasetProperties.constraints`); accepted both at creation (`POST /api/v1/datasets`) and via `PATCH /api/v1/datasets/:id` (`patchKeys` in `api/doc/datasets/patch-req/schema.js`). Additive, no DB migration.
+`dataset.constraints[]`, each entry either `{ type: 'unique', properties: string[] }` (the combination of values of `properties` must be unique across every row) or `{ type: 'dateCoherence' }` (no extra fields — the columns are resolved by concept, see below). Defined in `api/types/dataset/schema.js` (`datasetProperties.constraints`, a `oneOf` between the two branches); accepted both at creation (`POST /api/v1/datasets`) and via `PATCH /api/v1/datasets/:id` (`patchKeys` in `api/doc/datasets/patch-req/schema.js`). Additive, no DB migration.
 
 A file dataset created with `constraints` but without a `schema` in the same request is rejected with 400: at creation time an omitted `schema` defaults to `[]`, so every column referenced by a constraint is unknown and `checkConstraints` fails. Either supply `schema` alongside `constraints` in the creation request, or upload the file first and add the constraint via a follow-up `PATCH` once the schema has been inferred.
 
 ### Config-time validation
 
-`checkConstraints(schema, constraints, dataset?)` (`api/src/datasets/utils/constraints.ts`) validates every `unique` constraint against the **extended** schema (concept/calculated columns resolved) and throws `httpError(400, …)` (French messages) on the first violation:
+`checkConstraints(schema, constraints, dataset?)` (`api/src/datasets/utils/constraints.ts`) validates every constraint against the **extended** schema (concept/calculated columns resolved) and throws `httpError(400, …)` (French messages) on the first violation. For `unique` constraints:
 
 - empty `properties`;
 - a referenced column that doesn't exist in the schema;
@@ -208,7 +210,14 @@ A file dataset created with `constraints` but without a `schema` in the same req
 - a `type: 'object'` column;
 - a multi-valued column (`prop.separator` truthy) — an ES composite `terms` source over a multi-valued field emits one bucket per value, producing spurious "duplicates", so the constraint is ill-defined and rejected at config time.
 
-`checkConstraints` also takes the dataset itself and rejects with 400 up front, before looking at any column, when `dataset.isVirtual || dataset.isMetaOnly`: virtual datasets never run the file-dataset index-lines gate below and have no Mongo collection to back a REST-style unique index, so a declared constraint on either would be a guarantee nothing actually enforces. Removing constraints (patching to `null`/`[]`) is always allowed regardless of dataset type, since an empty/absent constraint list never reaches `checkConstraints` (callers gate the call behind a non-empty-constraints check).
+For `dateCoherence` constraints (see the [dedicated subsection](#datecoherence-constraint) below for the runtime rule):
+
+- more than one `dateCoherence` constraint declared on the same dataset;
+- no column carries `https://schema.org/startDate`, or none carries `https://schema.org/endDate` (`dateCoherenceProps`, same file, resolves both, returning `null` when either is missing);
+- either resolved column is `x-calculated` or `x-extension`;
+- either resolved column's `format` is neither `date` nor `date-time`.
+
+`checkConstraints` also takes the dataset itself and rejects with 400 up front, before looking at any column, when `dataset.isVirtual || dataset.isMetaOnly`: virtual datasets never run the file-dataset index-lines gate below and have no Mongo collection to back a REST-style unique index or a REST-style row scan, so a declared constraint of either type would be a guarantee nothing actually enforces. Removing constraints (patching to `null`/`[]`) is always allowed regardless of dataset type, since an empty/absent constraint list never reaches `checkConstraints` (callers gate the call behind a non-empty-constraints check).
 
 The module also exports `CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'`, shared with the REST index-naming and 409-mapping logic below.
 
@@ -233,12 +242,14 @@ Each duplicate group's `raw_value` in the diagnostic CSV goes through `unicityKe
 
 #### Triggering reprocessing on a constraint change
 
-Changing `constraints` on a **file** dataset (adding, removing, or replacing a `unique` constraint) sets `dataset.status` to `reindexerStatus` (`'validated'` for file datasets) in `api/src/datasets/utils/patch.ts`, so the whole file gets rebuilt into a temp index and the gate above re-runs against the current data — this is what makes both directions of the constraint lifecycle actually take effect:
+Changing `constraints` on a **file** dataset (adding, removing, or replacing a `unique` constraint, with no `dateCoherence` constraint in play) sets `dataset.status` to `reindexerStatus` (`'validated'` for file datasets) in `api/src/datasets/utils/patch.ts`, so the whole file gets rebuilt into a temp index and the gate above re-runs against the current data — this is what makes both directions of the constraint lifecycle actually take effect:
 
 - adding a constraint to a **finalized** dataset whose existing data violates it drives the dataset into the same error state described above, with a `unicityErrorCount`-carrying diagnostic;
 - dropping (or loosening) the constraint of a dataset that is currently in that **error** state lets it pick up the retry from `errorStatus` and re-finalize normally, since the gate no longer has anything to reject — this is the "drop the constraint to recover" path referenced in `dev/fixtures.ts`, and it also discards the now-stale diagnostic file from the previous run.
 
 This status assignment is applied as a **floor**, after the rest of the status-trigger chain has already run, rather than as one more branch inside it — so it never wins a first-match-wins tie against another trigger fired by the same `PATCH` (e.g. the structure tab saving a schema `x-transform` or a validation-rule change together with a constraint change in one request). Concretely: if the chain already picked a status that reaches the index-lines gate on its own (`'loaded'`, `'analyzed'`, or `'validated'`), it is left untouched; if the chain picked `'validation-updated'` — which `process-file.ts` finalizes directly without ever visiting index-lines — it is escalated to `'analyzed'` instead, so the combined `PATCH` re-checks both the validation rule and the constraint; and if the chain picked no status at all (a constraints-only `PATCH`), the floor applies `reindexerStatus` directly.
+
+The logic above is the `unique`-only case of a more general, constraint-type-aware floor — see [Status floor for file `PATCH`es (type-aware)](#status-floor-for-file-patches-type-aware) in the `dateCoherence` subsection below for the full table, including what happens when both constraint types are present together.
 
 ### REST-dataset flow — MongoDB partial unique index
 
@@ -253,9 +264,50 @@ REST datasets enforce uniqueness synchronously through a MongoDB index rather th
 
 At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000` (duplicate key) errors: when the failing index name carries the `constraint_unique_` prefix, the offending line gets `_status = 409` and an `_error` built by `unicityViolationMessage` (`api/src/datasets/utils/constraints.ts`) — the failing index name in `errmsg` is mapped back to the dataset constraint so the message can name the violated columns (by schema title when available), e.g. « Doublon détecté : le couple (Poste + SIRET) doit être unique. ». The same helper produces the per-row `message` of the file-dataset validation diagnostic. The `_i`/`_id`-conflict 11000 branches are distinguished by matching on the index name in `errmsg`.
 
+### `dateCoherence` constraint
+
+Unlike `unique`, `dateCoherence` doesn't target columns the user names explicitly: it resolves the two columns itself by **concept**, and compares them on every row.
+
+#### Column resolution
+
+`dateCoherenceProps(schema)` (`api/src/datasets/utils/constraints.ts`) finds the column carrying `x-refersTo: https://schema.org/startDate` and the one carrying `x-refersTo: https://schema.org/endDate` and returns `{ startProp, endProp }`, or `null` when either concept isn't assigned. There is at most one `dateCoherence` constraint per dataset (enforced at config time, above) and it always targets this single resolved pair — there is no per-constraint column list to store, which is why the `dateCoherence` branch of the schema (`api/types/dataset/schema.js`) carries only `{ type: 'dateCoherence' }`.
+
+#### The rule
+
+`dateCoherenceViolation(startValue, endValue, startProp, endProp, defaultTimeZone)` (same file) returns `null` (valid) or a French violation message. The rule is **`end >= start`**, checked per row:
+
+- a missing, `null` or empty value on either side passes — open-ended periods (no end date yet, no known start) are legitimate and are not what this constraint is about;
+- an unparseable value on either side passes — malformed dates are already caught by schema `format: 'date'|'date-time'` validation, so `dateCoherenceViolation` never duplicates that error;
+- when both columns are `format: 'date'`, the two `YYYY-MM-DD` strings are compared lexicographically — no timezone involved;
+- when at least one column is `date-time`, both sides are resolved to instants and compared as epoch millis. A `date` value being compared against a `date-time` value is **expanded to its day boundary** in the column's own timezone (`prop.timeZone ‖ defaultTimeZone`) — the start side to `startOf('day')`, the end side to `endOf('day')` — using the same `field.timeZone ‖ defaultTimeZone` convention as the range-filter day-boundary expansion described in [date-management.md §4](./date-management.md#4-filters--aggregations-are-timezone-aware--escommonsts-esvalues-aggts-esmetric-aggts). This means a `date` end value of `2024-01-15` is treated as "any time up to 23:59:59.999 on the 15th, in that column's zone" when compared against a `date-time` start.
+
+`dateCoherenceViolationMessage(startProp, endProp, startValue, endValue)` builds the French message, e.g. « Incohérence de dates : la date de fin (Date de fin : 2024-01-10) est antérieure à la date de début (Date de début : 2024-01-15). », labeling each column by its schema `title` when set, else its `key`.
+
+#### Enforcement points
+
+All three enforcement points reuse the same `dateCoherenceProps` + `dateCoherenceViolation` pair, resolved once per run/request rather than per row:
+
+- **File datasets** — `ValidateStream` (Phase A of `api/src/workers/batch-processor/process-file.ts`) runs the check alongside AJV schema validation for every row. A violation is written to the diagnostic CSV with `type: 'validation'` (the same `error_type` schema-validation errors use — there is no separate `dateCoherence` diagnostic type) and `field` set to the *end* column's key, so `validationErrorCount` in the `validation-error` journal event already counts these rows without any new field. Because a `dateCoherence` constraint alone (no per-column validation rules) must still trigger Phase A, the phase-entry gate is `schemaHasValidationRules(dataset.schema) || hasDateCoherence` — previously it was schema-rules-only.
+- **REST datasets, per write** — `applyTransactions` (`api/src/datasets/utils/rest.ts`) runs the check on `operation.fullBody` (the fully-merged row, so `patch` actions are checked against their merged result) right before the mandatory-extensions pass. A violation sets `operation._status = 400` and `operation._error` to the message and the row is skipped — unless `dataset.nonBlockingValidation` is set, in which case the message goes to `operation._warning` instead and the row is still written, mirroring how schema-validation warnings are already handled on that flag.
+- **REST datasets, PATCH-time collection scan** — when a `PATCH` newly adds a `dateCoherence` constraint (it wasn't present before), `applyPatch` (`api/src/datasets/service.ts`) scans the live collection (`{ _deleted: false, <start>: { $exists: true }, <end>: { $exists: true } }`, projecting only the two columns, yielding every 100 rows) *before* calling `configureConstraintIndexes`, and rejects the whole `PATCH` with `httpError(400, …)` on the first violating row — the same "never apply a constraint against data that already violates it" guarantee the `unique` MongoDB index gets for free from `createIndex`'s duplicate-key error, reimplemented here because there's no index type that can express `end >= start`.
+
+There is no file-dataset equivalent of the PATCH-time scan: for file datasets, adding a `dateCoherence` constraint goes through the status-floor mechanism below, which re-triggers Phase A of `process-file.ts` against the whole file.
+
+#### Status floor for file `PATCH`es (type-aware)
+
+`api/src/datasets/utils/patch.ts` computes, from the **union of the constraint types present before and after the patch** (so removing a constraint still forces the phase that used to enforce it to re-run), which phase(s) must see the new data:
+
+| Constraint types present (old ∪ new) | Phase that must re-run | Status floor |
+|---|---|---|
+| `unique` only | index-lines unicity gate | as before: `reindexerStatus` (`'validated'`), or `'analyzed'` when the chain already picked `'validation-updated'` |
+| `dateCoherence` only | `process-file.ts` Phase A | `'validation-updated'` (or left alone if the chain already reaches Phase A on its own — `'loaded'`, `'stored'`, `'normalized'`, `'analyzed'`; escalated to `'analyzed'` if the chain picked `'validated'`, since `'validated'` alone doesn't reach Phase A) |
+| both | both phases | `'analyzed'` — the one status that reaches both the unicity gate and Phase A in the same run |
+
+As before, this is applied as a **floor** after the rest of the status-trigger chain has already run, so it never loses a first-match-wins tie against another trigger fired by the same `PATCH`.
+
 ### UI
 
-`ui/src/components/dataset/dataset-constraints.vue` is a schema-driven `<vjsf>` editor for `dataset.constraints`, mounted in its own "Contraintes" tab of the dataset Structure section (`ui/src/pages/dataset/[id]/index.vue`, hidden for virtual/metaOnly datasets) and persisted through the existing `structureEditFetch` patch buffer alongside other structure edits. Constraints render as a compact one-line-per-item list (edition in a menu, no sort/duplicate actions). The list of eligible columns offered to the user mirrors the `checkConstraints` rules (no calculated/extension/geometry/object columns, no columns with `values` disabled).
+`ui/src/components/dataset/dataset-constraints.vue` is a schema-driven `<vjsf>` editor for `dataset.constraints`, mounted in its own "Contraintes" tab of the dataset Structure section (`ui/src/pages/dataset/[id]/index.vue`, hidden for virtual/metaOnly datasets) and persisted through the existing `structureEditFetch` patch buffer alongside other structure edits. Constraints render as a compact one-line-per-item list (edition in a menu, no sort/duplicate actions). The list of eligible columns offered for a `unique` constraint mirrors the `checkConstraints` rules (no calculated/extension/geometry/object columns, no columns with `values` disabled). The `dateCoherence` branch (the contract's `oneOf` type selector) is only offered when the schema currently has both a non-derived `startDate`- and `endDate`-concept column, **or** when `props.modelValue` already carries a `dateCoherence` constraint (so an existing constraint stays editable/removable even if a concept was since reassigned) — otherwise the component flattens the `oneOf` down to the `unique` branch so no type selector is rendered at all.
 
 ### v1 scoping / follow-ups
 
@@ -263,6 +315,9 @@ At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000
 - **Calculated/extension columns are out of scope.** `checkConstraints` rejects them outright rather than attempting to validate derived values.
 - **Multi-valued (`separator`) columns are out of scope.** `checkConstraints` rejects them outright — a composite aggregation over a multi-valued field would emit one bucket per value, so uniqueness would never mean what the user expects.
 - **Defense in depth against dangling constraints.** Even though schema-only patches now re-validate existing constraints (see above), `findUnicityDuplicates` (`api/src/datasets/es/unicity-agg.ts`) also skips (returns no duplicates for) any constraint whose `properties` reference a column missing from the schema, so the file indexer can never crash even if a dangling constraint slips through some other path.
+- **Moving the `startDate`/`endDate` concepts doesn't re-scan REST data.** A schema `PATCH` that reassigns the `https://schema.org/startDate`/`endDate` concept to different columns while a `dateCoherence` constraint already exists re-validates the *config* (the newly-resolved pair still needs to be a non-derived date/date-time column) but does **not** re-run the PATCH-time collection scan — that scan only runs when the constraint itself transitions from absent to present. Existing REST rows that violate the constraint under the new column mapping are only caught going forward, on their next write.
+- **`applyTransactions` callers without an AJV `validate` function still hit the `dateCoherence` check.** The row-local check in `rest.ts` runs unconditionally for every call to `applyTransactions`, including internal callers that pass no `validate` function (integrity restore, the files-manager "init from" flow) — a violating row is rejected or skipped there the same as on a normal user write, with no caller-side handling for that case today.
+- **`dateCoherenceProps` resolves concepts over the unfiltered schema.** It doesn't exclude `x-calculated`/`x-extension` columns the way the UI's `hasDateCoherenceConcepts` pre-filter does (the calculated-or-extension check happens afterwards, in `checkConstraints`). If a derived column carrying a duplicate `startDate`/`endDate` concept happens to be ordered before the "real" column in the schema array, the UI could offer the constraint (its own filtered check finds the real column) while the API resolves the derived one first and rejects it as calculated — a schema-ordering edge case, not something normal editing triggers.
 
 ## ES `ignore_above:200` keyword truncation
 

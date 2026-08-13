@@ -116,6 +116,14 @@ Reading is verbatim, but *querying* needs a reference timezone to be meaningful:
 - **`min`/`max`/`percentiles` metrics** reformat their result with the field timezone (`metric-agg.ts`):
   `date` → `YYYY-MM-DD`, `date-time` → `moment.tz(value, field.timeZone ‖ default).format()`.
 - **`values` (terms) aggregations** on a `date` field trim the ES `key_as_string` back to 10 chars.
+- **The `dateCoherence` constraint comparator** (`dateCoherenceViolation` in
+  `api/src/datasets/utils/constraints.ts` — see
+  [`dataset-validation.md`](./dataset-validation.md#datecoherence-constraint)) applies the same
+  convention when comparing a `date` value against a `date-time` value: the `date` side is expanded to
+  its day boundary (`startOf('day')` for the start column, `endOf('day')` for the end column) in
+  `prop.timeZone ‖ defaultTimeZone` before the two instants are compared. This is not a filter or an
+  aggregation — it's a row-level dataset-wide validation rule — but it reuses the identical day-boundary
+  expansion so a mixed `date`/`date-time` pair behaves the same way here as it does in a range filter.
 
 ### 5. Display — `ui/src/composables/dataset/lines.ts` + `format-date-logic.ts`
 
@@ -220,6 +228,7 @@ from `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 | ES mapping | `api/src/datasets/es/operations.ts` |
 | Read / range filters | `api/src/datasets/es/commons.ts` |
 | Aggregations | `api/src/datasets/es/values-agg.ts`, `api/src/datasets/es/metric-agg.ts` |
+| `dateCoherence` constraint comparator (day-boundary expansion for mixed `date`/`date-time` pairs) | `api/src/datasets/utils/constraints.ts` (`dateCoherenceViolation`) — see [`dataset-validation.md`](./dataset-validation.md#datecoherence-constraint) |
 | UI formatter | `ui/src/composables/dataset/lines.ts` (`formatValue`) |
 | UI date logic (own-tz, offset/zone labels, breakdown — unit-tested) | `ui/src/composables/dataset/format-date-logic.ts` |
 | Table: derive column zone label | `ui/src/components/dataset/table/dataset-table.vue` (`dateTimeColumnZone`) |
