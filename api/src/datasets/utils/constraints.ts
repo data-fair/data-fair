@@ -27,8 +27,8 @@ export const unicityViolationMessage = (properties: string[], schema?: { key: st
   return `Doublon détecté : ${group} (${labels.join(' + ')}) doit être unique.`
 }
 
-export const START_DATE_CONCEPT = 'https://schema.org/startDate'
-export const END_DATE_CONCEPT = 'https://schema.org/endDate'
+const START_DATE_CONCEPT = 'https://schema.org/startDate'
+const END_DATE_CONCEPT = 'https://schema.org/endDate'
 
 /**
  * Resolve the columns carrying the startDate / endDate concepts for the dateCoherence
@@ -41,10 +41,26 @@ export const dateCoherenceProps = (schema: any[]): { startProp: any, endProp: an
   return { startProp, endProp }
 }
 
-export const dateCoherenceViolationMessage = (startProp: any, endProp: any, startValue: any, endValue: any): string => {
+const dateCoherenceViolationMessage = (startProp: any, endProp: any, startValue: any, endValue: any): string => {
   const startLabel = startProp.title || startProp.key
   const endLabel = endProp.title || endProp.key
   return `Incohérence de dates : la date de fin (${endLabel} : ${endValue}) est antérieure à la date de début (${startLabel} : ${startValue}).`
+}
+
+// An ISO 8601 date-time string carries its own offset iff it ends with "Z" or a
+// "±HH:MM"/"±HHMM" suffix. Anchored on the tail only (not on the date part's own
+// hyphens) so a bare "YYYY-MM-DDTHH:mm:ss" never false-positives.
+const OFFSET_SUFFIX = /(?:Z|[+-]\d{2}:?\d{2})$/
+
+/**
+ * Parse a date-time value to a moment instant, per docs/architecture/date-management.md
+ * rule 4: a value carrying an explicit offset (including "Z") keeps that offset; a value
+ * with none is interpreted in `prop.timeZone || defaultTimeZone`, never in UTC.
+ */
+const parseDateTimeInstant = (value: string, prop: any, defaultTimeZone: string) => {
+  return OFFSET_SUFFIX.test(value)
+    ? moment.parseZone(value, moment.ISO_8601, true)
+    : moment.tz(value, moment.ISO_8601, true, prop.timeZone || defaultTimeZone)
 }
 
 /**
@@ -70,10 +86,10 @@ export const dateCoherenceViolation = (startValue: any, endValue: any, startProp
   // at least one date-time: compare instants, expanding bare dates to day boundaries
   const startInstant = startIsDate
     ? moment.tz(start, 'YYYY-MM-DD', true, startProp.timeZone || defaultTimeZone).startOf('day')
-    : moment.parseZone(start, moment.ISO_8601, true)
+    : parseDateTimeInstant(start, startProp, defaultTimeZone)
   const endInstant = endIsDate
     ? moment.tz(end, 'YYYY-MM-DD', true, endProp.timeZone || defaultTimeZone).endOf('day')
-    : moment.parseZone(end, moment.ISO_8601, true)
+    : parseDateTimeInstant(end, endProp, defaultTimeZone)
   if (!startInstant.isValid() || !endInstant.isValid()) return null
   return endInstant.valueOf() < startInstant.valueOf() ? dateCoherenceViolationMessage(startProp, endProp, start, end) : null
 }
@@ -101,6 +117,9 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined, 
         }
         if (prop.format !== 'date' && prop.format !== 'date-time') {
           throw httpError(400, `La colonne "${prop.key}" doit être une date ou une date-heure pour porter la contrainte de cohérence des dates.`)
+        }
+        if (prop.separator) {
+          throw httpError(400, `La colonne "${prop.key}" est multivaluée et ne peut pas porter la contrainte de cohérence des dates.`)
         }
       }
       continue

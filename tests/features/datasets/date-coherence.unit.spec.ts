@@ -78,4 +78,31 @@ test.describe('dateCoherenceViolation', () => {
     assert.equal(dateCoherenceViolation('2024-05-01', '2024-05-01T10:00:00Z', sTz, edt, TZ), null)
     assert.ok(dateCoherenceViolation('2024-05-01', '2024-05-01T09:59:00Z', sTz, edt, TZ))
   })
+
+  test('date-time without offset is interpreted in the field timezone, not UTC', () => {
+    // start 2024-05-01T01:00:00 means 01:00 Paris (CEST, UTC+2) = 2024-04-30T23:00:00Z
+    // end 2024-05-01T00:30:00Z = 2024-05-01T00:30:00Z, which is after the start instant
+    // an offset-less start naively read as UTC (the pre-fix behavior) would be
+    // 2024-05-01T01:00:00Z, AFTER the end instant, and wrongly flagged as a violation
+    assert.equal(dateCoherenceViolation('2024-05-01T01:00:00', '2024-05-01T00:30:00Z', sdt, edt, TZ), null)
+    // and the reverse (end genuinely before start once both are read in the field tz) still violates
+    assert.ok(dateCoherenceViolation('2024-05-01T01:00:00', '2024-04-30T20:00:00Z', sdt, edt, TZ))
+  })
+
+  test('date-time without offset honours a per-field timeZone override', () => {
+    const sHnl = dateTimeProp('deb', START, { timeZone: 'Pacific/Honolulu' }) // UTC-10
+    // 2024-05-01T00:30:00 in Honolulu = 2024-05-01T10:30:00Z, after the Z-tagged end below
+    assert.ok(dateCoherenceViolation('2024-05-01T00:30:00', '2024-05-01T10:00:00Z', sHnl, edt, TZ))
+    // one instant later on the end side and it passes
+    assert.equal(dateCoherenceViolation('2024-05-01T00:30:00', '2024-05-01T10:30:00Z', sHnl, edt, TZ), null)
+  })
+
+  test('date-time with an explicit offset (including "Z") is unaffected by the field timezone', () => {
+    // both values carry "Z" — must be read as UTC regardless of the Honolulu field timeZone
+    const sHnl = dateTimeProp('deb', START, { timeZone: 'Pacific/Honolulu' })
+    assert.equal(dateCoherenceViolation('2024-05-01T10:00:00Z', '2024-05-01T10:00:00Z', sHnl, edt, TZ), null)
+    assert.ok(dateCoherenceViolation('2024-05-01T10:00:00Z', '2024-05-01T09:59:00Z', sHnl, edt, TZ))
+    // a non-Z explicit offset is likewise preserved as-is
+    assert.equal(dateCoherenceViolation('2024-05-01T10:00:00+02:00', '2024-05-01T08:00:00Z', sdt, edt, TZ), null)
+  })
 })

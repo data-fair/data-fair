@@ -122,6 +122,15 @@ test.describe('checkConstraints dateCoherence', () => {
       [{ type: 'dateCoherence' }]), /date/i)
   })
 
+  test('rejects a multi-valued (separator) concept column', () => {
+    assert.throws(() => checkConstraints(
+      [{ ...okSchema[0], separator: ',' }, okSchema[1]],
+      [{ type: 'dateCoherence' }]), /multivalu/i)
+    assert.throws(() => checkConstraints(
+      [okSchema[0], { ...okSchema[1], separator: ',' }],
+      [{ type: 'dateCoherence' }]), /multivalu/i)
+  })
+
   test('rejects a duplicate dateCoherence constraint', () => {
     assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }, { type: 'dateCoherence' }]), /seule/i)
   })

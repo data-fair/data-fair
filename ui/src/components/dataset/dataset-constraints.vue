@@ -1,4 +1,10 @@
 <template>
+  <p
+    v-if="!hasDateCoherenceConcepts"
+    class="text-caption text-medium-emphasis mb-2"
+  >
+    Pour activer la contrainte de cohérence des dates, associez d'abord les concepts "Date de début" et "Date de fin" aux colonnes concernées.
+  </p>
   <vjsf
     v-if="editConstraints"
     v-model="editConstraints"

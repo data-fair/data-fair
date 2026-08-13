@@ -439,30 +439,13 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   const db = mongo.db
 
-  if (patch.extensions && dataset.isRest && dataset.extensions) {
-    // TODO: check extension type (remoteService or exprEval)
-    const removedExtensions = dataset.extensions.filter((e: any) => {
-      if (e.type === 'remoteService') return !patch.extensions.find((pe: any) => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
-      if (e.type === 'exprEval') return !patch.extensions.find((pe: any) => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
-      return false
-    })
-    if (removedExtensions.length) {
-      debugMasterData(`PATCH on dataset removed some extensions ${dataset.id} (${dataset.slug})`, removedExtensions)
-      const unset: Record<string, ''> = {}
-      for (const e of removedExtensions) {
-        if (e.type === 'remoteService') unset[getExtensionKey(e)] = ''
-        if (e.type === 'exprEval') unset[e.property?.key] = ''
-      }
-      await restDatasetsUtils.collection(dataset).updateMany({},
-        { $unset: unset }
-      )
-    }
-  }
-
   if (isRestDataset(dataset) && 'constraints' in patch) {
     // a newly-added dateCoherence constraint must never be applied against violating
     // data (same guarantee as the unique partial index): scan the live rows once,
-    // BEFORE configureConstraintIndexes so a rejection leaves the index set untouched
+    // BEFORE configureConstraintIndexes so a rejection leaves the index set untouched.
+    // This also runs BEFORE the removed-extension $unset below: a combined PATCH that both
+    // removes an extension and adds a violating dateCoherence constraint must reject with
+    // the dataset (and its extension columns) left untouched, not wipe the columns first.
     const newDateCoherence = (patch.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
     const oldDateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
     if (newDateCoherence && !oldDateCoherence) {
@@ -483,6 +466,26 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       }
     }
     await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
+  }
+
+  if (patch.extensions && dataset.isRest && dataset.extensions) {
+    // TODO: check extension type (remoteService or exprEval)
+    const removedExtensions = dataset.extensions.filter((e: any) => {
+      if (e.type === 'remoteService') return !patch.extensions.find((pe: any) => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
+      if (e.type === 'exprEval') return !patch.extensions.find((pe: any) => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
+      return false
+    })
+    if (removedExtensions.length) {
+      debugMasterData(`PATCH on dataset removed some extensions ${dataset.id} (${dataset.slug})`, removedExtensions)
+      const unset: Record<string, ''> = {}
+      for (const e of removedExtensions) {
+        if (e.type === 'remoteService') unset[getExtensionKey(e)] = ''
+        if (e.type === 'exprEval') unset[e.property?.key] = ''
+      }
+      await restDatasetsUtils.collection(dataset).updateMany({},
+        { $unset: unset }
+      )
+    }
   }
 
   if (removedRestProps && removedRestProps.length) {
