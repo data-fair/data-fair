@@ -7,6 +7,7 @@ import { valueAtPointer } from '@data-fair/data-fair-shared/ajv.js'
 import pump from '../../misc/utils/pipe.ts'
 import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
+import { dateCoherenceProps, dateCoherenceViolation } from '../../datasets/utils/constraints.ts'
 import * as datasetsService from '../../datasets/service.ts'
 import * as schemaUtils from '../../datasets/utils/data-schema.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
@@ -34,41 +35,61 @@ class ValidateStream extends Writable {
   nbErrors = 0
   i = 0
   writer: DiagnosticWriter
+  dateCoherence: { startProp: any, endProp: any } | null = null
 
   constructor (options: { dataset: DatasetInternal, writer: DiagnosticWriter }) {
     super({ objectMode: true })
     const schema = jsonSchema((options.dataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
     this.writer = options.writer
+    if ((options.dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')) {
+      this.dateCoherence = dateCoherenceProps(options.dataset.schema ?? [])
+    }
   }
 
   _write (chunk: any, encoding: string, callback: (err?: Error | null) => void) {
     this.i++
     let rawErrors: any[] = []
     const valid = this.validate(chunk, 'fr', errs => { rawErrors = errs ?? [] })
-    if (valid) {
+    let coherenceError: string | null = null
+    if (this.dateCoherence) {
+      coherenceError = dateCoherenceViolation(
+        chunk[this.dateCoherence.startProp.key],
+        chunk[this.dateCoherence.endProp.key],
+        this.dateCoherence.startProp,
+        this.dateCoherence.endProp,
+        config.defaultTimeZone
+      )
+    }
+    if (valid && !coherenceError) {
       callback()
       return
     }
     this.nbErrors++
     if (this.nbErrors <= inlineErrorsLimit) {
-      this.inlineErrors.push(`Ligne ${this.i}: ${this.validate.errors}`)
+      this.inlineErrors.push(`Ligne ${this.i}: ${valid ? coherenceError : this.validate.errors}`)
     }
     const lineNumber = this.i
-    const writerErrors = rawErrors.length
-      ? rawErrors.map(err => {
-        const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
-        // resolve the actual rejected value via the JSON-pointer so nested/array
-        // paths (e.g. /attr3/1) are handled, not just top-level fields.
-        const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
-        const rawValue = resolved === undefined ? '' : String(resolved)
-        return {
-          field,
-          message: err?.message ?? JSON.stringify(err),
-          rawValue
+    const writerErrors: { field: string, message: string, rawValue: string }[] = []
+    if (!valid) {
+      if (rawErrors.length) {
+        for (const err of rawErrors) {
+          const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
+          // resolve the actual rejected value via the JSON-pointer so nested/array
+          // paths (e.g. /attr3/1) are handled, not just top-level fields.
+          const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
+          const rawValue = resolved === undefined ? '' : String(resolved)
+          writerErrors.push({ field, message: err?.message ?? JSON.stringify(err), rawValue })
         }
-      })
-      : [{ field: '', message: this.validate.errors ?? 'invalid row', rawValue: '' }]
+      } else {
+        writerErrors.push({ field: '', message: this.validate.errors ?? 'invalid row', rawValue: '' })
+      }
+    }
+    if (coherenceError) {
+      const endKey = this.dateCoherence!.endProp.key
+      const endValue = chunk[endKey]
+      writerErrors.push({ field: endKey, message: coherenceError, rawValue: endValue === undefined ? '' : String(endValue) })
+    }
     ;(async () => {
       for (const e of writerErrors) {
         await this.writer.addError({
@@ -149,7 +170,9 @@ export default async function (dataset: DatasetInternal) {
 
   // ----- Phase A: schema validation (if any rules) -----
   let validationStream: ValidateStream | null = null
-  if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
+  const hasDateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence') &&
+    !!dateCoherenceProps(dataset.schema ?? [])
+  if (datasetUtils.schemaHasValidationRules(dataset.schema) || hasDateCoherence) {
     debug('phase A: validate')
     const progress = taskProgress(dataset.id, 'validate', 100)
     await progress.inc(0)
