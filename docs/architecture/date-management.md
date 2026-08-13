@@ -124,6 +124,12 @@ Reading is verbatim, but *querying* needs a reference timezone to be meaningful:
   `prop.timeZone ‖ defaultTimeZone` before the two instants are compared. This is not a filter or an
   aggregation — it's a row-level dataset-wide validation rule — but it reuses the identical day-boundary
   expansion so a mixed `date`/`date-time` pair behaves the same way here as it does in a range filter.
+  It also applies rule 4 to bare `date-time` values themselves: `parseDateTimeInstant` detects an
+  explicit offset by suffix (`Z` or `±HH:MM`/`±HHMM`) and, when the value carries none, parses it with
+  `moment.tz(value, …, prop.timeZone ‖ defaultTimeZone)` instead of defaulting to UTC — values that
+  bypassed ingest normalization (a REST write under `nonBlockingValidation`, a legacy row, a column
+  whose format changed after storage) are compared in the field's own zone like every other consumer
+  of this convention.
 
 ### 5. Display — `ui/src/composables/dataset/lines.ts` + `format-date-logic.ts`
 
