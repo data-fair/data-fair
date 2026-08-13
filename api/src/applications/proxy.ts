@@ -150,6 +150,15 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(application)))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
   if (!html) throw new Error(req.__('errors.brokenHTML'))
+
+  // data-fair owns the language of the served document: applications are not expected to
+  // declare one, and any value they do declare is replaced here, so the attribute always
+  // matches the locale actually served. Without it the document has no language at all,
+  // which is a WCAG 3.1.1 / RGAA 8.3 failure — and it stays its own document when embedded
+  // in a portal iframe, so it cannot inherit the language of the embedding page.
+  html.attrs = (html.attrs ?? []).filter((attr: any) => attr.name !== 'lang')
+  html.attrs.push({ name: 'lang', value: req.getLocale() })
+
   const head = html.childNodes.find((c: any) => c.tagName === 'head')
   const body = html.childNodes.find((c: any) => c.tagName === 'body')
   if (!head || !body) throw new Error(req.__('errors.brokenHTML'))

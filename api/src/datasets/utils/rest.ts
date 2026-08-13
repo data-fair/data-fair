@@ -40,7 +40,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
-import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
@@ -48,7 +48,8 @@ import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
-import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional, reqResource, reqResourceType, reqBypassPermissions } from '../../misc/utils/req-context.ts'
+import { can } from '../../misc/utils/permissions.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
@@ -1058,15 +1059,55 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
+// the write routes are gated by their default operation (createLine / updateLine and Own
+// variants). A body _action requesting different semantics through POST must also hold the
+// matching permission — checked here rather than in a middleware because for multipart
+// requests the body is not parsed yet when the permissions middleware runs.
+const alternateActionOperations: Record<string, { operationId: string, ownOperationId: string }> = {
+  update: { operationId: 'updateLine', ownOperationId: 'updateOwnLine' },
+  patch: { operationId: 'patchLine', ownOperationId: 'patchOwnLine' },
+  delete: { operationId: 'deleteLine', ownOperationId: 'deleteOwnLine' }
+}
+const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
+  if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
+  const actionOperation = alternateActionOperations[_action]
+  if (!actionOperation) return // create / createOrUpdate are covered by the route's createLine gate
+  const operationId = reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
+  if (!can(reqResourceType(req), reqResource(req), operationId, reqSession(req), reqBypassPermissions(req))) {
+    throw httpError(403, `Permission manquante pour l'opération "${operationId}".`)
+  }
+}
+
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   const linesOwner = reqLinesOwnerOptional(req)
   if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
-  req.body._id = definedId || nanoid()
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
-  const fullLine = { _action: 'createOrUpdate', ...req.body }
+  const _action: string = req.body._action ?? 'createOrUpdate'
+  // this duplicates a check inside applyTransactions, but it is load-bearing here: without it an
+  // unknown action would run manageAttachment below, then applyTransactions would throw (not set
+  // operation._error), skipping rollbackUploadedAttachment and orphaning a stored attachment.
+  if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+  // PUT .../lines/:lineId means "replace the line at this id", patch/delete only make sense through POST .../lines
+  if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
+    throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
+  }
+  checkAlternateActionPermission(req, _action)
+
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
+  if (!definedId && _action !== 'create' && _action !== 'createOrUpdate') {
+    throw httpError(400, 'failed to determine required _id from primary key')
+  }
+  req.body._id = definedId || nanoid()
+
+  let rawBody: Record<string, any> | undefined
+  let uploadedAttachmentPath: string | undefined
+  if (_action !== 'delete') {
+    // patch keeps the existing attachment unless a new one is uploaded (parity with patchLine)
+    ({ rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, _action === 'patch'))
+  }
+
+  const fullLine = { ...req.body, _action }
   formatLine(fullLine, dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
@@ -1076,16 +1117,27 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   }
   await commitLines(dataset, [fullLine._id])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
-
-  const line = getLineFromOperation(operation, rawBody ?? req.body)
-  res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
+  if (_action === 'delete') {
+    eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    res.status(204).send()
+  } else {
+    if (_action === 'patch') {
+      eventsLog.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    } else {
+      eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    }
+    const line = getLineFromOperation(operation, rawBody ?? req.body)
+    res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
+  }
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  if (req.body._action != null && req.body._action !== 'patch') {
+    throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
+  }
   const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)

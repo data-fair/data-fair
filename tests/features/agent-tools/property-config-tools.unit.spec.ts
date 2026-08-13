@@ -12,17 +12,25 @@ import {
 test.describe('getRelevantCapabilities', () => {
   test('returns numeric capabilities for number type', () => {
     const caps = getRelevantCapabilities('number')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for integer type', () => {
     const caps = getRelevantCapabilities('integer')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
   })
 
   test('returns numeric capabilities for boolean type', () => {
     const caps = getRelevantCapabilities('boolean')
-    assert.deepEqual(caps, ['index', 'textStandard', 'values'])
+    assert.deepEqual(caps, ['index', 'values'])
+  })
+
+  test('numeric and boolean types no longer offer textStandard', () => {
+    assert.deepEqual(getRelevantCapabilities('integer'), ['index', 'values'])
+    assert.deepEqual(getRelevantCapabilities('number'), ['index', 'values'])
+    assert.deepEqual(getRelevantCapabilities('boolean'), ['index', 'values'])
+    // dates keep textual matching (year search)
+    assert.deepEqual(getRelevantCapabilities('string', 'date'), ['index', 'textStandard', 'values'])
   })
 
   test('returns date capabilities for string with date format', () => {
@@ -195,6 +203,22 @@ test.describe('executeSetPropertyConfig', () => {
     )
     // index=true is the default, so should be excluded. textAgg=true differs from default (false).
     assert.deepEqual(receivedConfigs[0].capabilities, { textAgg: true })
+  })
+
+  test('preserves a hidden stored capability (numeric textStandard) not offered any more for the type', () => {
+    // numeric columns no longer offer `textStandard` (Tier 2 retirement), but a column that had it
+    // explicitly disabled before the retirement (or via a raw schema PATCH) must not have that
+    // opt-out silently dropped by a wholesale agent capability write.
+    const dataset = {
+      schema: [{ key: 'col1', type: 'integer', 'x-capabilities': { textStandard: false } }]
+    }
+    let receivedConfigs: any[] = []
+    executeSetPropertyConfig(
+      { configs: [{ key: 'col1', capabilities: { index: true, values: false } }] },
+      dataset,
+      (configs) => { receivedConfigs = configs }
+    )
+    assert.deepEqual(receivedConfigs[0].capabilities, { values: false, textStandard: false })
   })
 
   test('reports correct counts in summary', () => {

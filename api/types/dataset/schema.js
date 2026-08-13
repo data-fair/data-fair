@@ -43,7 +43,11 @@ const fileSchema = {
       separator: { type: ['string', 'null'] },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },
-      timeZone: { type: ['string', 'null'] }
+      timeZone: { type: ['string', 'null'] },
+      codeLike: {
+        type: 'boolean',
+        title: 'Colonne de codes détectée à l\'analyse (pas de recherche linguistique ni de tri insensible par défaut)'
+      }
     }
   }
 }

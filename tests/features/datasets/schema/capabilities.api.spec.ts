@@ -354,4 +354,34 @@ test.describe('Properties capabilities', () => {
     assert.ok(dataset.storage.indexed.size < dataset.storage.size)
     assert.equal(dataset.storage.indexed.parts.length, 1)
   })
+
+  test('Code-like columns get default capabilities at analysis, new fields only', async () => {
+    const ax = testUser1
+    const csv = 'code,libelle\nAB123,une belle étiquette\nCD-456,une autre étiquette\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(csv), 'codes.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: form.getHeaders() })
+    const id = res.data.id
+    await waitForFinalize(ax, id)
+
+    res = await ax.get(`/api/v1/datasets/${id}`)
+    const codeProp = res.data.schema.find((p: any) => p.key === 'code')
+    const labelProp = res.data.schema.find((p: any) => p.key === 'libelle')
+    assert.deepEqual(codeProp['x-capabilities'], { text: false, insensitive: false })
+    assert.equal(labelProp['x-capabilities'], undefined)
+    // the transport flag never reaches the user schema
+    assert.equal(codeProp.codeLike, undefined)
+
+    // user re-enables insensitive; a re-upload must not clobber the edit
+    const patchedSchema = res.data.schema.filter((p: any) => !p['x-calculated']).map((p: any) =>
+      p.key === 'code' ? { ...p, 'x-capabilities': { text: false } } : p)
+    await doAndWaitForFinalize(ax, id, () => ax.patch(`/api/v1/datasets/${id}`, { schema: patchedSchema }))
+
+    const form2 = new FormData()
+    form2.append('file', Buffer.from(csv + 'EF-789,encore une\n'), 'codes.csv')
+    await doAndWaitForFinalize(ax, id, () => ax.post(`/api/v1/datasets/${id}`, form2, { headers: form2.getHeaders() }))
+
+    res = await ax.get(`/api/v1/datasets/${id}`)
+    assert.deepEqual(res.data.schema.find((p: any) => p.key === 'code')['x-capabilities'], { text: false })
+  })
 })

@@ -203,6 +203,9 @@ export const extractError = (err: any): ExtractedError => {
 export interface IndexShape {
   singleTextField?: boolean
   wordAggField?: boolean
+  // numeric (integer/number) columns carry no `.text_standard` inner field; their `q`
+  // matching goes through the main long/double field (lenient clause, see buildQClauses)
+  noNumericText?: boolean
 }
 
 // The analyzer family is derived from `defaultAnalyzer` by naming convention; all three must be
@@ -219,7 +222,7 @@ export const EXACT_MATCH_BOOST = 0.5
 
 // New shape: one analyzed `.text` per column (indexed original + stem via keyword_repeat, searched
 // on the stem), plus `.words` on textAgg columns.
-export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true })
+export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true, noNumericText: true })
 // Legacy shape: dual `.text` + `.text_standard`, what every index carries until its next reindex.
 export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
 
@@ -238,10 +241,12 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const capabilities = prop['x-capabilities'] || {}
   const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
-  // Non-string columns keep `.text_standard` under both shapes; full-text strings lose it under the
-  // new shape, replaced by the single `.text` field emitted below.
+  // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
+  // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
+  // under singleTextField (replaced by the single `.text` field emitted below).
   const innerFields: any = {}
-  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField)) {
+  const isNumeric = prop.type === 'integer' || prop.type === 'number'
+  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField) && !(isNumeric && shape.noNumericText)) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
     innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
@@ -249,8 +254,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const index = capabilities.index !== false
   const values = capabilities.values !== false
   if (prop.type === 'object') esProp = { type: 'object', enabled: index }
-  if (prop.type === 'integer') esProp = { type: 'long', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'number') esProp = { type: 'double', fields: innerFields, index, doc_values: values }
+  const numericFields = Object.keys(innerFields).length ? { fields: innerFields } : {}
+  if (prop.type === 'integer') esProp = { type: 'long', ...numericFields, index, doc_values: values }
+  if (prop.type === 'number') esProp = { type: 'double', ...numericFields, index, doc_values: values }
   if (prop.type === 'boolean') esProp = { type: 'boolean', index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
@@ -473,6 +479,10 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   // left to run on there) — both gated in buildQClauses.
   const qExactFields: string[] = []
   const qWildcardFields: string[] = []
+  // numeric columns: whole-value `q` matching through the main long/double field. Always
+  // computed, but only consumed on noNumericText shapes (buildQClauses) — on older indexes
+  // `.text_standard` covers these columns and a second clause would double-score them.
+  const qLenientFields: string[] = []
   const esFields: string[] = []
 
   // pick the `q` regime (only when no explicit q_fields was requested)
@@ -499,6 +509,12 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     // legacy indexes exist (unmapped `.text_standard` entries are ignored by simple_query_string).
     // Shape-gated consumers branch in buildQClauses instead.
     const esProp = esProperty(f, DUMMY_ANALYZERS, LEGACY_INDEX_SHAPE)
+    // numeric columns: whole-value `q` matching through the main long/double field. Excludes
+    // explicit `x-capabilities: { textStandard: false }` opt-outs — a column deliberately
+    // removed from `q` must stay out of the lenient fallback too.
+    if (isQField && !f['x-calculated'] && (f.type === 'integer' || f.type === 'number') && esProp.index !== false && capabilities.textStandard !== false) {
+      qLenientFields.push(f.key)
+    }
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       // keyword main type: only contributes to `qSearchFields` when the column has no analyzed
       // text inner field (no `.text`, no `.text_standard`) — i.e. a pure-keyword string column
@@ -566,7 +582,7 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     qExactFields.push('_search')
   }
 
-  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qExactFields, qWildcardFields, esFields, copyToSearch, reduced }
+  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, esFields, copyToSearch, reduced }
 }, {
   profileName: 'getFilterableFields',
   primitive: true,
@@ -576,6 +592,22 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
 })
+
+// Whether numeric columns' `q` / `col_search` matching should use the lenient main-field fallback
+// (see `qLenientFields`): the dataset's own index carries no numeric `.text_standard`
+// (`_indexShape.noNumericText`), OR — for virtual datasets — any fetched descendant's index
+// doesn't either. This is ROUTING, not a change to finalize.ts's bubble-up (which still only
+// stamps the virtual parent's own `noNumericText` when ALL descendants have it, so mapping-time
+// decisions like the exact-match analyzer stay conservative). Over a mixed fleet {legacy child,
+// rebuilt child} the parent's own flag is false (bubble-up requires unanimity), but a rebuilt
+// child's numeric columns carry no `.text_standard` any more — without this routing their rows
+// would silently stop matching numeric `q`/`col_search` until every sibling rebuilds. On an
+// all-legacy virtual (no descendant flagged) this reduces to exactly `!!dataset._indexShape?.
+// noNumericText`, so clauses stay byte-identical to a dataset with no `descendants` field.
+// Non-virtual (or queried-without-fillDescendants) datasets have no `descendants` array, so the
+// `some` is skipped and behavior is unchanged.
+export const hasNumericLenientRouting = (dataset: any): boolean =>
+  !!dataset._indexShape?.noNumericText || !!dataset.descendants?.some((d: any) => d._indexShape?.noNumericText)
 
 // Builds the `q`-side `should`/`minimum_should_match` bool clause used inside `prepareQuery`.
 // Pure: caller resolves `q` (already trimmed) and supplies `qMode` / `sqsOptions`.
@@ -592,7 +624,8 @@ export const buildQClauses = (
   exactMatch?: { analyzer: string, boost: number },
   filterAnalyzer?: string
 ): any => {
-  const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
+  const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, reduced } = getFilterableFields(dataset, q, qFields)
+  const noNumericText = hasNumericLenientRouting(dataset)
 
   // Readings of an AND requirement. The per-field-analyzed reading alone zeroes out on a
   // new-shape index whenever the query carries a stopword: the only fields whose analyzer
@@ -603,9 +636,12 @@ export const buildQClauses = (
   // matches if EITHER reading satisfies every word. The field-analyzed reading stays because
   // it is the only one matching a pure-keyword column's whole value (e.g. "cat-alpha" —
   // the language analyzer would tokenize it apart).
-  const andReadings = (query: string, fields: string[]): any[] => {
-    const readings: any[] = [{ simple_query_string: { query, fields, ...sqsOptions, default_operator: 'and' } }]
-    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
+  // Callers may union numeric main fields (qLenientFields) into `fields`; `lenient` then keeps
+  // ES from erroring when a non-numeric word is evaluated against a long/double field.
+  const andReadings = (query: string, fields: string[], lenient = false): any[] => {
+    const lenientOpt = lenient ? { lenient: true } : {}
+    const readings: any[] = [{ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, default_operator: 'and' } }]
+    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
     return readings
   }
   const anyReading = (readings: any[]): any => readings.length === 1 ? readings[0] : { bool: { should: readings, minimum_should_match: 1 } }
@@ -637,6 +673,9 @@ export const buildQClauses = (
     if (qSearchFields.length) {
       should.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
     }
+    if (noNumericText && qLenientFields.length) {
+      should.push({ simple_query_string: { query: q, fields: qLenientFields, lenient: true, ...sqsOptions } })
+    }
   } else {
     // default "simple" mode uses ES simple query string directly
     // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
@@ -647,6 +686,9 @@ export const buildQClauses = (
     // (qStandardFields is still populated but only meant for the complete-mode prefix query)
     if (qStandardFields.length && !reduced) {
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
+    }
+    if (noNumericText && qLenientFields.length) {
+      should.push({ simple_query_string: { query: q, fields: qLenientFields, lenient: true, ...sqsOptions } })
     }
     // scoring-only exact-match boost: same fields, analyzed without stemming so a literal match
     // outranks a merely stem-equal one. Not added in complete mode, whose clauses have their own
@@ -666,15 +708,21 @@ export const buildQClauses = (
   // q_mode=and and q_ignored never compose with `complete`, which gets its own filter below.
   if (qMode !== 'complete') {
     const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
-    if (qMode === 'and' && matchFields.length) {
-      return { bool: { must: [scored], filter: [anyReading(andReadings(q, matchFields))] } }
+    // numeric main fields are unioned into the filter set (not the scored `should`) so q_mode=and
+    // and q_ignored's requirement stage still catches a whole-value numeric match; `lenient: true`
+    // keeps ES from erroring when a non-numeric word in the same query is evaluated against them.
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = withLenient ? [...matchFields, ...qLenientFields] : matchFields
+    const filterLenient = withLenient ? { lenient: true } : {}
+    if (qMode === 'and' && filterFields.length) {
+      return { bool: { must: [scored], filter: [anyReading(andReadings(q, filterFields, withLenient))] } }
     }
-    if (ignoredWords?.length && matchFields.length) {
+    if (ignoredWords?.length && filterFields.length) {
       const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
       return {
         bool: {
           must: [scored],
-          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: matchFields } })), minimum_should_match: 1 } }]
+          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: filterFields, ...filterLenient } })), minimum_should_match: 1 } }]
         }
       }
     }
@@ -690,9 +738,14 @@ export const buildQClauses = (
   // totals/aggregations/pagination see the narrowed set.
   if (qMode === 'complete' && /\s/.test(q)) {
     const userWildcards = q.includes('*') || q.includes('?')
-    const filterFields = [...new Set([...prefixFields, ...qSearchFields])]
+    // numeric mains join the narrowing filter so a doc whose word matched whole-value on a
+    // numeric column (scored via the lenient clause above) isn't dropped by the every-word
+    // requirement. The LAST word, read as a prefix, can never match a numeric field (`lenient`
+    // skips prefix-on-long) — consistent with numerics being excluded from the prefix ladder.
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = [...new Set([...prefixFields, ...qSearchFields, ...(withLenient ? qLenientFields : [])])]
     if (filterFields.length) {
-      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields)
+      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
         readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
       }

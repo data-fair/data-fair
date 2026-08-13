@@ -231,6 +231,12 @@ test.describe('Applications', () => {
     assert.deepEqual(Object.keys(application.configuration.datasets[0]).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
     assert.deepEqual(Object.keys(application.configuration.datasets[1]).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 
+    // The language of the served document is set from the request locale and replaces
+    // whatever the application declares (the mock serves lang="zz"): a document without a
+    // language, or with a wrong one, fails WCAG 3.1.1 / RGAA 8.3-8.4
+    assert.ok(/<html[^>]*\slang="(fr|en)"/.test(res.data), 'the html element carries the served locale')
+    assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
+
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker

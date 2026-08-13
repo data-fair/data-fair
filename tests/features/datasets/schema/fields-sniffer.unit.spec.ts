@@ -43,12 +43,28 @@ test.describe('field sniffer unit tests', () => {
   })
 
   test('Work with keywords and texts', () => {
-    assert.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string' })
+    // 'id1'/'id2' are code-like (letters+digit, no whitespace)
+    assert.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string', codeLike: true })
     assert.deepEqual(sniffer.sniff(['id1', 'a text with whitespaces']), { type: 'string' })
   })
 
   test('Default type is empty (will be removed from schema)', () => {
     assert.deepEqual(sniffer.sniff([]), { type: 'empty' })
+  })
+
+  test('Detect code-like string columns', () => {
+    // letters+digits, no whitespace, every value carries a digit
+    assert.deepEqual(sniffer.sniff(['ABC123', 'DEF-456']), { type: 'string', codeLike: true })
+    assert.deepEqual(sniffer.sniff(['13001', 'X2A']), { type: 'string', codeLike: true })
+    // prose stays plain string
+    assert.deepEqual(sniffer.sniff(['a text with 3 words']), { type: 'string' })
+    // no digit: not code-like (short French labels must never match)
+    assert.deepEqual(sniffer.sniff(['ABC', 'DEF']), { type: 'string' })
+    assert.deepEqual(sniffer.sniff(['Rénovation', 'Chauffage']), { type: 'string' })
+    // mixed: one prose value disqualifies the column
+    assert.deepEqual(sniffer.sniff(['ABC123', 'hello world']), { type: 'string' })
+    // accented/unicode chars are not code chars
+    assert.deepEqual(sniffer.sniff(['créé123']), { type: 'string' })
   })
 
   test('escape key algorithme should normalize column keys', () => {

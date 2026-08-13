@@ -204,7 +204,8 @@ export default async function (_dataset: DatasetInternal) {
     // clause's analyzer reference would 400 on it).
     result._indexShape = {
       singleTextField: descendants.length > 0 && descendants.every(d => d._indexShape?.singleTextField === true),
-      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true)
+      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true),
+      noNumericText: descendants.length > 0 && descendants.every(d => d._indexShape?.noNumericText === true)
     }
     result.count = dataset.count = await esUtils.count(queryableDataset, {})
   }

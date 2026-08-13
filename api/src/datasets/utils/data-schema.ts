@@ -73,10 +73,11 @@ export const mergeFileSchema = (dataset: FileDataset) => {
       // preserve existing fields, cleanSchema will adapt stuff if necessary
       const existingField = dataset.schema.find(f => f.key === field.key && !f['x-extension'])
       if (existingField) return existingField
-      const { dateFormat, dateTimeFormat, ...f } = field
+      const { dateFormat, dateTimeFormat, codeLike, ...f } = field
       // manage default capabilities
       if (field.type === 'string' && field['x-display'] === 'textarea') f['x-capabilities'] = { index: false, values: false, insensitive: false }
       if (field.type === 'string' && field['x-display'] === 'markdown') f['x-capabilities'] = { index: false, values: false, insensitive: false }
+      if (field.type === 'string' && !field['x-display'] && codeLike) f['x-capabilities'] = { text: false, insensitive: false }
       return f
     })
 
