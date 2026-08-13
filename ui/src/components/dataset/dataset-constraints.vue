@@ -64,7 +64,7 @@ const schema = computed(() => {
   const hiddenInSummary = { switch: [{ if: '!summary' }, { comp: 'none' }] }
   columnsSchema.layout = hiddenInSummary
   const offerDateCoherence = hasDateCoherenceConcepts.value ||
-    (editConstraints.value?.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    (props.modelValue ?? []).some(c => c.type === 'dateCoherence')
   if (!offerDateCoherence) {
     // single offered type: flatten so that no type selector is rendered
     // (the "type" const is auto-filled by vjsf)
