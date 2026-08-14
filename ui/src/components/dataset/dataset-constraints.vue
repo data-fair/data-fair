@@ -93,3 +93,15 @@ function apply () {
   emit('update:modelValue', editConstraints.value?.constraints ?? [])
 }
 </script>
+
+<style scoped>
+/* The constraint-type selector belongs to the edit menu only: in the compact list
+   line the itemTitle already names the constraint. It is hidden here rather than
+   through `oneOfLayout` because json-layout never compiles the `if` expressions of
+   a oneOf layout (skeleton-node.js only pushes getDefaultData/getOptions/getProps/
+   transformData), so a `switch` there throws "expression was not compiled" at
+   runtime and blanks the whole editor. Both classes land on the same node element. */
+.vjsf :deep(.vjsf-node-one-of-select.vjsf-summary) {
+  display: none;
+}
+</style>
