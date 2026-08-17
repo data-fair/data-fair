@@ -19,19 +19,27 @@ import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
   hasCapability,
   requiredCapability,
-  esProperty as esPropertyPure,
   Q_SEARCH_FIELDS_THRESHOLD,
   isBoostEligible,
   hasManyQSearchFields,
   getFilterableFields,
   buildQClauses,
+  hasNumericLenientRouting,
+  textAnalyzers,
+  EXACT_MATCH_BOOST,
   FILTER_CAPABILITIES,
   getColumnFilters,
   columnOperationsHint,
   resolveExactKeywordTarget,
   resolveExistsFields,
   resolveRangeOrPrefixField,
-  KEYWORD_IGNORE_ABOVE
+  KEYWORD_IGNORE_ABOVE,
+  virtualFilterClauses,
+  descendantsFilterClause,
+  getCountMode,
+  parseQMode,
+  parseQIgnored,
+  DEFAULT_Q_MODE
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -42,14 +50,26 @@ dayjs.extend(timezone)
 // (every suffix is underscore-prefixed, so none is a suffix-substring of another).
 const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
-// thin wrapper around the pure helper to keep the existing single-arg call sites working —
-// supplies the runtime analyzer from config so mapping creation behaves unchanged
-export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
-
+// NB: no config-bound `esProperty` wrapper is re-exported here — every call site must resolve the
+// index shape explicitly, a wrapper hiding it would emit new-shape mappings for legacy indexes.
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = (dataset: any) => {
-  if (dataset.isVirtual) return dataset.descendants.map((id: string) => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.isVirtual) {
+    // cheap fail-loud check on the shape of dataset.descendants: it is resolved by a single
+    // traversal (datasets/utils/virtual.ts) that always stamps `index`, but the repo's tsc is not
+    // clean so types alone cannot guarantee a stale caller is caught — a wrong shape must fail
+    // loudly here rather than silently produce a bad (or empty) index target.
+    if (!Array.isArray(dataset.descendants)) throw new Error(`[internal] dataset ${dataset.id} is virtual but its descendants were not resolved`)
+    const indices = new Set<string>()
+    for (const descendant of dataset.descendants) {
+      if (!descendant?.index) throw new Error(`[internal] dataset ${dataset.id} has a descendant without a resolved index`)
+      // a descendant can legitimately appear twice (reachable through both a filtered and an
+      // unfiltered path) - dedupe the index target, not the array itself
+      indices.add(descendant.index)
+    }
+    return [...indices].join(',')
+  }
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
@@ -69,7 +89,9 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
     if (key.startsWith('_geo_distance:')) {
       if (!dataset.bbox) throw httpError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
-      result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
+      // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+      // rows from a child without geo mapping sort last instead of failing the query
+      result.push({ _geo_distance: { _geopoint: { lon, lat }, order, ignore_unmapped: true } })
       continue
     }
 
@@ -188,9 +210,14 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   } else if (query.count === 'false') {
     esQuery.track_total_hits = false
   } else if (query.count === 'estimate') {
-    esQuery.track_total_hits = 1000
+    // same cap as the ranked-search default counting mode — exact below, sampled estimate above
+    esQuery.track_total_hits = config.elasticsearch.approxCount.cap
   } else {
-    esQuery.track_total_hits = true
+    // ranked text searches on large datasets cap the exact count (restoring block-max-WAND);
+    // an overflowing total is then estimated from the `_rand` sample slice by the route
+    // (see approx-count.ts). count=exact keeps the exact behaviour (the helper returns null).
+    const countMode = getCountMode(dataset, query, config.elasticsearch.approxCount)
+    esQuery.track_total_hits = countMode ? countMode.cap : true
   }
 
   // Pagination
@@ -232,7 +259,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if ((query.geo_distance ?? query._c_geo_distance)) {
     if (!esQuery.sort.some((s: any) => !!s._geo_distance)) {
       const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
-      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc', ignore_unmapped: true } })
     }
     if (!esQuery._source.includes('_geopoint')) {
       esQuery._source.push('_geopoint')
@@ -274,17 +301,14 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.operator === 'nin') {
-          if (f.values.length === 1) filter.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
-          else filter.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
-        } else {
-          if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-          else filter.push({ terms: { [f.key]: f.values } })
-        }
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children, read from the same
+  // dataset.descendants that drives the multi-index target (see utils/virtual.ts).
+  // null = no descendant carries filters, nothing to add.
+  if (dataset.isVirtual) {
+    const descendantsClause = descendantsFilterClause(dataset.descendants)
+    if (descendantsClause) filter.push(descendantsClause)
   }
 
   // Envorced filter in case of rest datasets with line ownership
@@ -310,7 +334,17 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       else must.push(qs)
     }
     if (q) {
-      must.push(buildQClauses(dataset, q, qFields, query.q_mode, sqsOptions))
+      const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
+      const ignoredWords = query.q_ignored ? parseQIgnored(q, query.q_ignored) : undefined
+      // only new-shape index settings define the `_exact` query-time analyzer — and only
+      // new-shape indexes need the AND filters' language-analyzed alternative reading (their
+      // string columns have no `.text_standard` left, so a typed stopword would otherwise be
+      // required on scalar fields that cannot contain it; legacy indexes match it in prose)
+      const newShape = !!(dataset as any)._indexShape?.singleTextField
+      const analyzers = textAnalyzers(config.elasticsearch.defaultAnalyzer)
+      const exactMatch = newShape ? { analyzer: analyzers.exact, boost: EXACT_MATCH_BOOST } : undefined
+      const filterAnalyzer = newShape ? analyzers.search : undefined
+      must.push(buildQClauses(dataset, q, qFields, qMode, sqsOptions, ignoredWords, exactMatch, filterAnalyzer))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution
@@ -407,11 +441,33 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
-      const subfields = []
-      if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
-      if (prop['x-capabilities']?.text !== false) subfields.push('text')
-      if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
-      must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+      // only plain/uri-reference strings ever carry `.text`; other analyzed types only ever get
+      // `.text_standard`. Targeting an unmapped subfield would make simple_query_string return
+      // zero results silently instead of the intended 400.
+      const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
+      const isNumeric = prop.type === 'integer' || prop.type === 'number'
+      // same predicate as buildQClauses (see hasNumericLenientRouting) so the two `q` entry points
+      // can never drift: on a mixed-fleet virtual dataset a rebuilt descendant already routes here
+      // even though the parent's own `_indexShape.noNumericText` is false (bubble-up requires
+      // every descendant to have it).
+      const noNumericText = hasNumericLenientRouting(dataset as any)
+      // an explicit textStandard:false opt-out must still 400 rather than be routed to the
+      // lenient fallback — it was deliberately removed from `q`-style matching.
+      if (isNumeric && noNumericText && prop['x-capabilities']?.textStandard !== false) {
+        // rebuilt indexes carry no numeric `.text_standard`: whole-value match on the main field.
+        // Deliberate behavior change on rebuild: on a legacy index this same request matched via
+        // `.text_standard` even when `index: false` (200); on a rebuilt (noNumericText) index the
+        // main field is the only route left, so `index: false` now 400s here — ES cannot search a
+        // non-indexed field, and there is no fallback subfield left to catch it silently.
+        if (prop['x-capabilities']?.index === false) requiredCapability(prop, filterSuffix, 'index')
+        must.push({ simple_query_string: { query: query[queryKey], fields: [prop.key], lenient: true } })
+      } else {
+        const subfields = []
+        if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
+        if (isPlainString && prop['x-capabilities']?.text !== false) subfields.push('text')
+        if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
+        must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+      }
     } else if (filterSuffix === '_exists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
       if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
@@ -475,7 +531,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
             type: 'envelope',
             coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
           }
-        }
+        },
+        // ignore_unmapped lets a virtual dataset mix geo and non-geo children:
+        // the non-geo child's index simply matches nothing instead of failing the query
+        ignore_unmapped: true
       }
     })
   }
@@ -501,7 +560,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
                 type: 'point',
                 coordinates: [lon, lat]
               }
-            }
+            },
+            ignore_unmapped: true
           }
         })
       } else {
@@ -513,7 +573,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
         filter.push({
           geo_distance: {
             distance,
-            _geopoint: { lat, lon }
+            _geopoint: { lat, lon },
+            ignore_unmapped: true
           }
         })
       }

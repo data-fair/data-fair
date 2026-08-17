@@ -16,7 +16,6 @@ import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
 import contentDisposition from 'content-disposition'
 import JSONStream from 'JSONStream'
-import type { DatasetInternal } from '#types'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
 import { compatReqCounter, logCompatODSError, prepareEsQuery, prepareResult, applyAliases, sortBuckets, prepareBucketResult } from './operations.ts'
 
@@ -162,7 +161,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
 const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   res.setHeader('X-Accel-Buffering', 'no')
   const esClient = req.app.get('es') as any
-  const dataset = reqDataset(req) as DatasetInternal
+  const dataset = reqDataset(req)
   const query = req.query
 
   if (!config.compatODS) throw httpError(404, 'unknown API')

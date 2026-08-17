@@ -1,4 +1,4 @@
-import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike } from 'maplibre-gl'
+import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike, type AddLayerObject, type ExpressionSpecification } from 'maplibre-gl'
 import { useMapStyle } from './use-map-style'
 import debounce from 'debounce'
 import { formatValue } from '../../../composables/dataset/lines'
@@ -17,14 +17,16 @@ export const useMap = (
   cols: string[],
   navigationPosition: ControlPosition,
   bbox: Ref<LngLatBoundsLike | undefined>,
-  t: (key: string) => string
+  t: (key: string) => string,
+  categoryExpr?: Ref<ExpressionSpecification | undefined>
 ) => {
   const { sendUiNotif } = useUiNotif()
-  const { style, dataLayers } = useMapStyle()
+  const { style, dataLayers } = useMapStyle(categoryExpr)
   const { id, dataset } = useDatasetStore()
   const localeDayjs = useLocaleDayjs()
 
   let _map: Map
+  let styleLoaded = false
   const getMap = () => {
     if (!tileUrl.value || !bbox.value || !mapEl.value) return
     if (_map) return _map
@@ -58,7 +60,7 @@ export const useMap = (
       sendUiNotif({ type: 'error', error: e.error, msg: t('mapError') })
     })
 
-    map.once('load', () => { initCustomSource() })
+    map.once('load', () => { styleLoaded = true; initCustomSource() })
 
     fitBBox({ duration: 0 })
 
@@ -158,7 +160,7 @@ export const useMap = (
       { id: 'results_point', move: moveCallback },
     ]
     interactiveLayers.forEach(({ id, move }) => {
-      if (!dataLayers.some(layer => layer.id === id)) return
+      if (!dataLayers.value.some(layer => layer.id === id)) return
       map.on('mousemove', id, move)
       map.on('mouseleave', id, leaveCallback)
       if (!noInteraction) {
@@ -182,7 +184,7 @@ export const useMap = (
     const map = getMap()
     if (!map) return
     // First clear layers and source to be able to change the tiles url
-    dataLayers.forEach(layer => {
+    dataLayers.value.forEach(layer => {
       if (map.getLayer(layer.id)) map.removeLayer(layer.id)
     })
     if (map.getSource('data-fair')) map.removeSource('data-fair')
@@ -191,12 +193,33 @@ export const useMap = (
     initCustomSource()
   })
 
+  // the category expression usually arrives after the layers were added
+  // (values fetch resolving later than the tile url change) — apply it live
+  const categoryPaint: Array<[string, 'fill-color' | 'line-color' | 'circle-color']> = [
+    ['results_polygon', 'fill-color'],
+    ['results_polygon_outline', 'line-color'],
+    ['results_line', 'line-color'],
+    ['results_point', 'circle-color']
+  ]
+  if (categoryExpr) {
+    watch(categoryExpr, () => {
+      const map = getMap()
+      if (!map || !styleLoaded) return
+      for (const [layerId, prop] of categoryPaint) {
+        if (map.getLayer(layerId)) {
+          const layer = dataLayers.value.find(l => l.id === layerId) as AddLayerObject & { paint: Record<string, unknown> }
+          map.setPaintProperty(layerId, prop, layer.paint[prop])
+        }
+      }
+    })
+  }
+
   watch(selectedItem, () => {
     applySelectedFilter()
   })
   const applySelectedFilter = () => {
     const map = getMap()
-    if (!map?.loaded) return
+    if (!map || !styleLoaded) return
     const itemFilter: LegacyFilterSpecification = ['==', '_id', selectedItem.value]
     map.setFilter('results_selected', itemFilter)
     map.setFilter('results_point_selected', ['all', ['==', '$type', 'Point'], itemFilter])
@@ -205,15 +228,15 @@ export const useMap = (
   const initCustomSource = () => {
     if (!tileUrl.value) return
     const map = getMap()
-    if (!map?.loaded) return
+    if (!map || !styleLoaded) return
     map.addSource('data-fair', { type: 'vector', tiles: [tileUrl.value] })
-    dataLayers.forEach(layer => {
+    dataLayers.value.forEach(layer => {
       map.addLayer(layer, $uiConfig.map.beforeLayer)
     })
     applySelectedFilter()
 
     if (!selectable && selectedItem.value) {
-      dataLayers.forEach(layer => {
+      dataLayers.value.forEach(layer => {
         if (!layer.id.endsWith('_selected')) {
           map.setFilter(layer.id, ['==', '_id', ''])
         }

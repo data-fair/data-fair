@@ -77,14 +77,15 @@ test.describe('keyword ignore_above — per-request hint', () => {
   test('uncertain _starts on a flagged plain column attaches a readable hint', async () => {
     await setup('ia-hint')
     const res = await ax.get('/api/v1/datasets/ia-hint/lines', { params: { plain_starts: 'sh', hint: 'true' } })
-    assert.ok(typeof res.data.hint === 'string' && res.data.hint.includes('plain'))
+    const hints: string[] = res.data.meta?.hints ?? []
+    assert.ok(hints.some((h: string) => h.includes('plain')), JSON.stringify(hints))
   })
   test('no hint on a clean column even with hint=true', async () => {
     await ax.post('/api/v1/datasets/ia-clean', { isRest: true, title: 'ia-clean', schema: [{ key: 'plain', type: 'string' }] })
     await ax.post('/api/v1/datasets/ia-clean/_bulk_lines', [{ plain: 'short' }])
     await waitForFinalize(ax, 'ia-clean')
     const res = await ax.get('/api/v1/datasets/ia-clean/lines', { params: { plain_starts: 'sh', hint: 'true', count: 'false' } })
-    assert.equal(res.data.hint, undefined)
+    assert.equal(res.data.meta, undefined)
   })
 })
 

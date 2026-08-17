@@ -164,11 +164,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
 /**
  * @param {string} p
  */
-export const fsyncFile = async (p: string) => {
-  const fd = await fs.open(p, 'r')
-  await fs.fsync(fd)
-  await fs.close(fd)
-}
+export { fsyncFile } from '../../files-storage/operations.ts'
 
 export const cleanTmp = async () => {
   debugCleanTmp('check tmp dir for old files')

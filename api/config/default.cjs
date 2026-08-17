@@ -32,6 +32,25 @@ module.exports = {
       forcePathStyle: true,
     },
     retention: { days: 365 },
+    // the `.who` attribution sibling's OWN retention (target 8): a kill switch plus a retention
+    // shorter than (and never extended past) the revision's own retention.days above — enforced
+    // at startup by store-factory.ts.
+    attribution: { active: true, retentionDays: 180 },
+    lines: { maxLines: 100000 },
+    // index-consistency verdict (A1): nightly sampled compare of the ES projection vs the
+    // source — windows × windowSize rows per run; sampleCap bounds persisted evidence entries
+    index: { windows: 8, windowSize: 128, sampleCap: 5 },
+    // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
+    // worker lock before answering 409 — it must hold that lock to not race the relay tasks
+    lockWaitMs: 10000,
+    // trail-coherence verdict: tolerated distance between a revision's claimed context.date and
+    // the provider-stamped LastModified (relay retries legitimately delay the object write)
+    trail: { dateSkewHours: 48 },
+    // re-fire a persistent bad-state event (breach / trail-altered / renewal-failed /
+    // scope-incoherent) once per window — bounds alert suppression via pre-written dedup state
+    realertDays: 7,
+    // alert when an enrolled dataset produced no definitive verdict (ok/breach) for this long
+    maxUnknownDays: 7,
   },
   integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,
@@ -67,12 +86,23 @@ module.exports = {
     nodes: null,
     options: {},
     ca: null, // the central authority for the ES cluster certificates
+    // two siblings are derived from this by naming convention (`_repeat`, `_exact` — see
+    // `textAnalyzers` in api/src/datasets/es/operations.ts). Overriding it requires defining all
+    // three in `indexBase` (es/manage-indices.ts), else index creation fails on unknown analyzer.
     defaultAnalyzer: 'custom_french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000,
+    // Approximate counts for ranked text searches on large datasets: cap track_total_hits
+    // and estimate overflowing totals from the `_rand < randBound` sample slice.
+    // minDatasetSize: null disables the feature entirely.
+    approxCount: {
+      minDatasetSize: 100000, // only datasets at least this big use estimates (null = feature off)
+      cap: 10000, // the exactness horizon: totals up to this are exact, estimated beyond
+      sampleTarget: 20000 // probe/count-leg cost budget: ~this many docs scanned whatever the dataset size (measured: probes stay 1-6ms at this size; raising it buys narrower totalMarginPct at linear probe cost)
+    },
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
     acceptYellowStatus: false, // change to "true" to tolerate a single node instance

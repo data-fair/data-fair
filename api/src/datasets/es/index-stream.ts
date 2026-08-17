@@ -2,11 +2,13 @@ import { Transform, type TransformCallback } from 'stream'
 import config from '#config'
 import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.ts'
+import { stripTransientLineFlags } from '../utils/line-flags.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { Dataset } from '#types'
+import { lineBytes, lineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -25,9 +27,8 @@ interface IndexStreamOptions {
 // remove some properties that must not be indexed
 const cleanItem = (item: any) => {
   // these properties are only for internal management of rest dataset
+  stripTransientLineFlags(item)
   delete item._hash
-  delete item._needsIndexing
-  delete item._needsExtending
   delete item._deleted
 }
 
@@ -44,6 +45,7 @@ class IndexStream extends Transform {
   // error reporting and (REST only) re-emitting on the readable side
   items: any[]
   applyCalculations: (item: any) => Promise<string | null>
+  lineBytesSpec: { prefixes: Set<string>, nbCols: number }
   bulkChars: number
   i: number
   nbErroredItems: number
@@ -55,6 +57,7 @@ class IndexStream extends Transform {
     this.options.refresh = this.options.refresh || false
     this.options.reemit = this.options.reemit ?? true
     this.applyCalculations = extensionsUtils.prepareCalculations(options.dataset)
+    this.lineBytesSpec = lineBytesSpec(options.dataset.schema ?? [])
     this.body = []
     this.items = []
     this.bulkChars = 0
@@ -84,6 +87,9 @@ class IndexStream extends Transform {
       params.index._id = item._id || nanoid()
       delete item._id
       warning = await this.applyCalculations(item)
+      // after applyCalculations so extension/calculated fields are present; calculated
+      // fields and _file_raw are excluded by the spec (not CSV-export columns)
+      item._bytes = lineBytes(item, this.lineBytesSpec)
       this.body.push(JSON.stringify(params))
       const itemStr = JSON.stringify(item)
       this.body.push(itemStr)

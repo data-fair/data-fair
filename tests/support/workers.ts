@@ -266,6 +266,24 @@ export const datasetEsAliasName = async (datasetId: string): Promise<string> => 
 }
 
 /**
+ * Get the live ES mapping properties of a dataset's PUBLISHED index (the draft index is never
+ * reachable through this route — which is exactly what makes it useful to assert that a draft
+ * operation did not touch the published index).
+ */
+export const datasetEsMappingProperties = async (datasetId: string): Promise<Record<string, any>> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/dataset-es-info/${datasetId}`)
+  // getMapping is keyed by the concrete index name behind the alias
+  return (Object.values(res.data.mapping)[0] as any).mappings.properties
+}
+
+/**
+ * Directly patch a dataset's mongo document (test-only), e.g. to simulate an out-of-band state.
+ */
+export const patchRawDataset = async (datasetId: string, patch: Record<string, any>): Promise<void> => {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${datasetId}`, patch)
+}
+
+/**
  * List attachment files for a dataset.
  */
 export const lsAttachments = async (datasetId: string): Promise<string[]> => {

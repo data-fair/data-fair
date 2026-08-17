@@ -73,6 +73,14 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     }
   }
   if (attachmentsFile) {
+    // integrity truth-grounding: attachment bytes live outside the anchored snapshot, so an
+    // enrolled dataset must not acquire them — otherwise an 'ok' verdict would silently start
+    // overstating its coverage. Mirrors the enable-time and schema-patch refusals (see
+    // integrity/service.ts and docs/architecture/integrity.md §5); the upload path needs its own
+    // guard because the attachment field is added later by the normalize worker, not by a patch.
+    if (dataset.integrity?.active) {
+      throw httpError(400, 'attachments cannot be added while integrity is active: attachment files are not covered by the integrity guarantee')
+    }
     patch.loaded = patch.loaded || {}
     patch.loaded.attachments = true
   }
@@ -112,6 +120,18 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
+  }
+
+  // `patch.slug` survived the no-op filtering above, so the slug really changed. A slug is part of the
+  // URL a dataset is addressed by on a publication site, hence of the proxy cache key: moving it to
+  // another dataset lets stored entries revalidate against a date that no longer identifies their
+  // content. Bumping finalizedAt past any date previously served under that slug is what makes those
+  // stale validators unusable — see docs/architecture/caching.md "Why a slug change bumps finalizedAt"
+  // for the two false-304 mechanisms, why finalizedAt is the right field, and what stays uncovered.
+  // Only for an already finalized dataset: its presence is a "has been finalized" flag elsewhere.
+  // The next whole second, not `now`: Last-Modified is second-precision and equal reads as unmodified.
+  if (patch.slug && dataset.finalizedAt) {
+    patch.finalizedAt = new Date(Math.floor(Date.parse(patch.updatedAt) / 1000) * 1000 + 1000).toISOString()
   }
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions ?? [])
@@ -207,7 +227,9 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
-      patch.schema = await virtualDatasetsUtils.prepareSchema({ ...dataset, ...patch })
+      const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch({ ...dataset, ...patch })
+      patch.schema = virtualPatch.schema
+      if ('attachmentsAsImage' in virtualPatch) patch.attachmentsAsImage = virtualPatch.attachmentsAsImage
       patch.status = 'indexed'
     }
   } else if (patch.extensions && !dataset.isRest) {

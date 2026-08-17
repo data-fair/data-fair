@@ -29,6 +29,7 @@ Format:
 - For numeric results, round to 2 decimal places when appropriate
 - When the result is tabular or aggregated, include the key values as a compact markdown table (the relevant rows or aggregation groups, typically up to ~20) so the parent assistant can render a table or small chart — add a short summary of the takeaways, but never paste large raw result dumps
 - Any table/map link you write must be datasetUrl + /table?<filterQuery> (or /map), reusing the verbatim filterQuery below — never hand-assemble \`column=value\` filter params, even if your task phrased the filter differently
+- Map links additionally accept &category=<column_key>: the map then colors its features by that column's values and displays a legend. Offer it when the user wants to visually distinguish items on a map by a category-like column (string/boolean, few distinct values — at most ~12 render distinctly, check with get_field_values when unsure). Example: datasetUrl + /map?<filterQuery>&category=type
 - Respond in the same language as the user's question
 
 Response structure:

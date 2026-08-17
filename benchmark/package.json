@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/index.ts",
-    "benchmark-csv": "node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning src/csv-serialize/bench.ts"
+    "benchmark-csv": "node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning src/csv-serialize/bench.ts",
+    "test": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.17.1",
     "@fast-csv/format": "^4.3.5",
     "autocannon": "^8.0.0",
     "csv-stringify": "^6.5.2"

@@ -152,4 +152,40 @@ test.describe('Cache headers', () => {
     assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
     assert.equal(res.data.count, 1)
   })
+
+  // a slug change moves which dataset a slug-addressed URL designates, while proxies and browsers keep
+  // entries keyed on that URL and revalidate them against finalizedAt. Bumping finalizedAt is what makes
+  // the stale validator unusable — see docs/architecture/caching.md
+  test('Changing the slug bumps finalizedAt so a stale validator cannot match', async () => {
+    const ax = testUser1
+    // dsB is finalized first, so its date is older than dsA's: a client holding dsA's Last-Modified
+    // would otherwise get a 304 out of dsB after taking over dsA's slug
+    const dsB = await createDataset(ax)
+    await new Promise(resolve => setTimeout(resolve, 1100))
+    const dsA = await createDataset(ax)
+    assert.ok(new Date(dsB.finalizedAt) < new Date(dsA.finalizedAt), 'dsB must be finalized before dsA')
+
+    const slug = 'reused-' + nanoid().toLowerCase().replace(/[^a-z0-9]/g, '')
+    const patched = (await ax.patch(`/api/v1/datasets/${dsB.id}`, { slug })).data
+    assert.equal(patched.slug, slug)
+    assert.ok(new Date(patched.finalizedAt) > new Date(dsA.finalizedAt), 'the slug change must bump finalizedAt past any previously served date')
+
+    // the date based short-circuit of resourceBased no longer matches the stale validator
+    const res = await ax.get(`/api/v1/datasets/${dsB.id}/lines`, { headers: { 'if-modified-since': new Date(dsA.finalizedAt).toUTCString() } })
+    assert.equal(res.status, 200)
+
+    // a patch that does not touch the slug must not invalidate anything
+    const repatched = (await ax.patch(`/api/v1/datasets/${dsB.id}`, { title: 'another title' })).data
+    assert.equal(repatched.finalizedAt, patched.finalizedAt)
+  })
+
+  test('Changing the slug of a dataset that was never finalized does not give it a finalizedAt', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta only ' + nanoid() })).data
+    assert.ok(!dataset.finalizedAt)
+    const slug = 'meta-' + nanoid().toLowerCase().replace(/[^a-z0-9]/g, '')
+    const patched = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { slug })).data
+    assert.equal(patched.slug, slug)
+    assert.ok(!patched.finalizedAt, 'a never finalized dataset must not acquire a finalizedAt')
+  })
 })

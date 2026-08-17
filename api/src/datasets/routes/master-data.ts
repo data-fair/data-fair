@@ -21,8 +21,24 @@ export const registerMasterDataRoutes = (router: Router) => {
     let select = singleSearch.output.key
     if (singleSearch.label) select += ',' + singleSearch.label.key
     // collapse on the output key so suggestions are deduplicated server-side
-    // (the underlying dataset may have multiple rows sharing the same output value)
-    const params: any = { q: req.query.q, size: req.query.size, q_mode: 'complete', select, collapse: singleSearch.output.key }
+    // (the underlying dataset may have multiple rows sharing the same output value).
+    // q is scoped to the value/label columns (a match in an unrelated column would surface
+    // irrelevant suggestions) and suggestions are ordered alphabetically on the output key —
+    // the leading part of the displayed "output (label)" string, and the collapse field, so
+    // every row of a group shares the sort value. Complete-mode scores are constant on
+    // mid-typing prefixes, so relevance ordering would fall back to arbitrary row order
+    // (benchmark/INVESTIGATIONS.md §16). Sorting the output key is safe whenever the endpoint
+    // works at all: a `values: false` output column already breaks the collapse itself, and
+    // parseSort only rejects a column with BOTH sort capabilities disabled.
+    const params: any = {
+      q: req.query.q,
+      size: req.query.size,
+      q_mode: 'complete',
+      q_fields: select,
+      sort: singleSearch.output.key,
+      select,
+      collapse: singleSearch.output.key
+    }
     const qs = []
 
     if (singleSearch.filters) {

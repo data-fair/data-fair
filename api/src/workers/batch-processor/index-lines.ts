@@ -6,6 +6,7 @@ import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
 import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
+import { NEW_INDEX_SHAPE } from '../../datasets/es/operations.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -54,7 +55,7 @@ export default async function (dataset: DatasetInternal) {
     for (const a of newRestAttachments) {
       let newAttachments
       const filePath = join(dataDir, 'shared-tmp', a.startsWith('drop:') ? a.replace('drop:', '') : a)
-      if (!await filesStorage.pathExists(filePath)) {
+      if (!await filesStorage.fileExists(filePath)) {
         console.warn(`newRestAttachments of dataset ${dataset.id} references missing attachments file`, a)
       } else {
         if (a.startsWith('drop:')) {
@@ -93,10 +94,10 @@ export default async function (dataset: DatasetInternal) {
   const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
-    if (dataset.file && await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
+    if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
       await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
-      if (!dataset.draftReason) await updateStorage(dataset, false, true)
+      if (!dataset.draftReason) await updateStorage(dataset, { checkRemaining: true })
     }
   }
 
@@ -186,7 +187,7 @@ export default async function (dataset: DatasetInternal) {
         // including the temp one built by this run)
         if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
           const srcDiagnostic = validationDiagnosticFilePath(dataset)
-          if (await filesStorage.pathExists(srcDiagnostic)) {
+          if (await filesStorage.fileExists(srcDiagnostic)) {
             await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
           }
           await journals.log('datasets', dataset, {
@@ -217,6 +218,10 @@ export default async function (dataset: DatasetInternal) {
       }
     }
     result.status = 'indexed'
+    // the whole index was just rebuilt through IndexStream, so every doc carries _bytes
+    result._esLineBytes = true
+    // only in this branch: a partial REST update reuses the index, whose stamp must not change
+    result._indexShape = NEW_INDEX_SHAPE
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)
     result.count = indexStream.i

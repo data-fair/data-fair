@@ -28,6 +28,24 @@
         />
       </template>
     </v-text-field>
+    <dataset-map-legend
+      v-if="legend && categoryProperty"
+      :title="categoryProperty.title || categoryProperty['x-originalName'] || categoryProperty.key"
+      :items="legend.items"
+      :active-values="activeValues"
+      :other-color="hasOther ? legend.otherColor : ''"
+      :clickable="!noInteraction"
+      @toggle="toggleValue"
+    />
+    <v-chip
+      v-else-if="categoryWarning"
+      color="warning"
+      variant="tonal"
+      size="small"
+      style="position:absolute;bottom:24px;right:8px;z-index:2;"
+    >
+      {{ t('categoryInvalid', { field: category }) }}
+    </v-chip>
     <div
       ref="mapEl"
       :style="'height:' + height + 'px'"
@@ -42,12 +60,14 @@ fr:
   noGeoData: Aucune donnée géographique valide.
   noData: Aucune donnée à afficher
   mapError: "Erreur pendant le rendu de la carte :"
+  categoryInvalid: La colonne "{field}" ne permet pas de catégoriser la carte
 en:
   search: Search
   searchSubmit: Submit search
   noGeoData: No valid geo data
   noData: No data to display
   mapError: "Error while rendering the map:"
+  categoryInvalid: Column "{field}" cannot be used to categorize the map
 </i18n>
 
 <script setup lang="ts">
@@ -56,20 +76,23 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
+import { useTheme } from 'vuetify'
+import { MAX_CATEGORY_VALUES, isCategoryEligible, categoryPalette, categoryMatchExpression } from './category'
 
 const { t } = useI18n()
-const { search, height, selectable, navigationPosition, noInteraction, sampling, cols } = defineProps({
+const { search, height, selectable, navigationPosition, noInteraction, sampling, cols, category } = defineProps({
   search: { type: Boolean, default: true },
   height: { type: Number, required: true },
   navigationPosition: { type: String as () => ControlPosition, default: 'top-right' },
   noInteraction: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   sampling: { type: String, default: null },
-  cols: { type: Array as () => string[], default: () => [] }
+  cols: { type: Array as () => string[], default: () => [] },
+  category: { type: String, default: '' }
 })
 
 const { id, dataset } = useDatasetStore()
-const { queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: ['_id_eq'] })
+const { filters, addFilter, removeFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: ['_id_eq'] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
 const mapEl = ref<HTMLElement | null>(null)
@@ -86,10 +109,83 @@ const commonParams = computed(() => {
   return params
 })
 
+const theme = useTheme()
+
+const categoryProperty = computed(() => {
+  if (!category || !dataset.value?.schema) return undefined
+  const p = dataset.value.schema.find(p => p.key === category)
+  return p && isCategoryEligible(p) ? p : undefined
+})
+
+// stringified + alphabetical (default sort) for deterministic value -> color assignment,
+// fetched without the current filters so colors do not remap while filtering
+const fetchCategoryValues = useFetch<{ value: string, label: string }[]>(
+  () => categoryProperty.value ? `${$apiPath}/datasets/${id}/values-labels/${categoryProperty.value.key}` : null,
+  {
+    query: computed(() => {
+      const query: Record<string, string> = { size: String(MAX_CATEGORY_VALUES + 1), stringify: 'true' }
+      if (dataset.value?.draftReason) query.draft = 'true'
+      if (dataset.value?.finalizedAt) query.finalizedAt = dataset.value.finalizedAt
+      return query
+    }),
+    // failures degrade to the warning chip below, not an error toast
+    notifError: false
+  }
+)
+
+// only warn once the schema is known and the field is truly unusable, or the values fetch failed
+const categoryWarning = computed(() => !!category && !!dataset.value?.schema &&
+  (!categoryProperty.value || !!fetchCategoryValues.error.value))
+
+const hasOther = computed(() => (fetchCategoryValues.data.value?.length ?? 0) > MAX_CATEGORY_VALUES)
+const legend = computed(() => {
+  // while a new fetch is in flight, hide the previous field's legend
+  if (fetchCategoryValues.loading.value || !fetchCategoryValues.data.value?.length) return undefined
+  const values = fetchCategoryValues.data.value.slice(0, MAX_CATEGORY_VALUES)
+  const colors = theme.current.value.colors
+  const { colors: palette, otherColor } = categoryPalette(colors.primary as string, values.length, {
+    bgColors: [colors.background as string, colors.surface as string],
+    dark: theme.current.value.dark
+  })
+  return { items: values.map((v, i) => ({ ...v, color: palette[i] })), otherColor }
+})
+const categoryExpr = computed(() => {
+  if (!legend.value || !categoryProperty.value) return undefined
+  return categoryMatchExpression(categoryProperty.value.key, legend.value.items, legend.value.otherColor)
+})
+
+const categoryFilter = computed(() => filters.value.find(f =>
+  f.property.key === categoryProperty.value?.key && (f.operator === 'in' || f.operator === 'eq')))
+const activeValues = computed<string[]>(() => {
+  const f = categoryFilter.value
+  if (!f) return []
+  if (f.operator === 'eq') return [f.value]
+  return f.value.startsWith('"') ? JSON.parse(`[${f.value}]`) : f.value.split(',')
+})
+const toggleValue = (value: string) => {
+  const prop = categoryProperty.value
+  if (!prop) return
+  const next = activeValues.value.includes(value)
+    ? activeValues.value.filter(v => v !== value)
+    : [...activeValues.value, value]
+  if (!next.length) {
+    if (categoryFilter.value) removeFilter(categoryFilter.value)
+    return
+  }
+  const escaped = next.some(v => v.includes(',') || v.includes('"'))
+    ? next.map(v => JSON.stringify(v)).join(',')
+    : next.join(',')
+  // addFilter replaces any existing in/eq filter on the field and normalizes single values to eq
+  addFilter({ property: prop, operator: 'in', value: escaped, formattedValue: next.join(', ') })
+}
+
 const tileUrl = computed(() => {
   if (!dataset.value) return undefined
   const params: Record<string, string> = { format: 'pbf', ...commonParams.value }
-  if (dataset.value.schema?.find(p => p.key === '_id')) params.select = '_id'
+  const select: string[] = []
+  if (dataset.value.schema?.find(p => p.key === '_id')) select.push('_id')
+  if (categoryProperty.value) select.push(categoryProperty.value.key)
+  if (select.length) params.select = select.join(',')
   if (sampling) params.sampling = sampling
   let url = withQuery($siteUrl + `/data-fair/api/v1/datasets/${id}/lines`, params)
   url += '&xyz={x},{y},{z}'
@@ -104,7 +200,7 @@ const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPa
   })
 })
 
-useMap(mapEl, tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox), t)
+useMap(mapEl, tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox), t, categoryExpr)
 
 </script>
 

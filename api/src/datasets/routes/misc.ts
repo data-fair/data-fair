@@ -142,7 +142,7 @@ export const registerMiscRoutes = (router: Router) => {
     if (dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
       if (dataset.isVirtual) {
         const childDatasetId = url.split('/')[2]
-        if (!dataset.descendants?.find((c: any) => c === childDatasetId)) return res.status(404).send('Child dataset not found')
+        if (!dataset.descendants?.find((c: any) => c.id === childDatasetId)) return res.status(404).send('Child dataset not found')
         const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, reqPublicationSite(req), reqMainPublicationSite(req), false, false, false, mongo.db, undefined, undefined)
         const documentProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
         const childDocumentProp = childDataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -179,7 +179,7 @@ export const registerMiscRoutes = (router: Router) => {
 
   // Special route with very technical informations to help diagnose bugs, broken indices, etc.
   router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true, noCache: true }), cacheHeaders.noCache, async (req, res) => {
-    const dataset: any = reqDataset(req)
+    const dataset = reqDataset(req)
     reqAdminMode(req)
     const esInfos = await datasetInfos(dataset)
     const filesInfos = await filesStorage.lsrWithStats(datasetUtils.dir(dataset))
@@ -188,7 +188,9 @@ export const registerMiscRoutes = (router: Router) => {
       await mongo.db.collection<{ _id: string }>('locks').findOne({ _id: `datasets:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}` })
     ]
     const warnings = computeRealtimeWarnings(dataset, esInfos, config.elasticsearch)
-    res.json({ filesInfos, esInfos, locks, warnings })
+    // _indexShape is stripped from all public dataset representations (clean());
+    // surfaced here for admins — null = legacy-shaped index awaiting its organic reindex
+    res.json({ filesInfos, esInfos, locks, warnings, _indexShape: dataset._indexShape ?? null })
   })
 
   // Special admin route to force reindexing a dataset

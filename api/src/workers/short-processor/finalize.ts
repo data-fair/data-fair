@@ -2,7 +2,7 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
-import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, currentIndexShape } from '../../datasets/es/operations.ts'
 import { isIgnoredColumnActionable } from '../../datasets/es/diagnose-warnings.ts'
 import * as geoUtils from '../../datasets/utils/geo.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
@@ -37,22 +37,45 @@ export default async function (_dataset: DatasetInternal) {
   // with `draft.` based on its TARGET's draftReason, which routes this correctly: a plain draft
   // finalize persists `draft._needsHistorizing` (never matched by the relay filter → drafts are NOT
   // historized), while a draft validation patches the published doc → top-level flag → anchored.
-  if (dataset.integrity?.active) result._needsHistorizing = { context: { operation: 'update', origin: 'worker' } }
+  // preserve a caller-provided context (the _restore route rides its 'restore' context through the
+  // draft, and a user file upload rides its attributed 'user' context the same way: mergeDraft
+  // overlays draft._needsHistorizing onto the working doc — see the draft branch of applyPatch's
+  // integrity outbox). The generic worker context is the fallback for genuinely un-attributed
+  // pipeline runs (remote-file auto-update, revalidation), NOT for a user-initiated upload
+  if (dataset.integrity?.active) result._needsHistorizing = (dataset as any)._needsHistorizing ?? { context: { operation: 'update', origin: 'worker' } }
 
+  debug('prepare extended schema')
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
-    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
+    // the prepared schema runs extendedSchema itself, then reconciles the calculated fields with
+    // the children schemas (e.g. _attachment_url inherits the image concept from a child with
+    // attachmentsAsImage) — a plain extendedSchema call would discard that reconciliation.
+    // The preparation is pure (fresh field objects): dataset.schema must be reassigned too so
+    // the cardinality/enum stamping below (which walks dataset.schema) lands on the objects
+    // persisted through result.schema
+    const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
+    dataset.schema = queryableDataset.schema = result.schema = virtualPatch.schema
+    if ('attachmentsAsImage' in virtualPatch) {
+      result.attachmentsAsImage = virtualPatch.attachmentsAsImage
+      if (virtualPatch.attachmentsAsImage) dataset.attachmentsAsImage = queryableDataset.attachmentsAsImage = true
+      else {
+        delete dataset.attachmentsAsImage
+        delete queryableDataset.attachmentsAsImage
+      }
+    }
+  } else {
+    // Add the calculated fields to the schema
+    queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   }
-
-  // Add the calculated fields to the schema
-  debug('prepare extended schema')
-  queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
   // record whether the freshly-built index carries the _search catch-all fields.
   // only when an index was actually (re)built: finalize also runs after a partial REST data
   // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
   // virtual datasets have no index of their own — handled below by bubbling up from descendants.
   if (!isVirtualDataset(dataset) && !dataset._partialRestStatus) {
-    result._esCopyToSearch = hasManyQSearchFields(result.schema)
+    // classified in the units of the index being described, so the flag can never disagree with
+    // the `_search` field actually emitted. Every stamping path persists `_indexShape` before
+    // finalize is scheduled, so `dataset` is already stamped here.
+    result._esCopyToSearch = hasManyQSearchFields(result.schema, currentIndexShape(dataset))
   }
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
@@ -168,14 +191,22 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
-    dataset.descendants = descendants.map(d => d.id)
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch', '_indexShape'])
+    dataset.descendants = descendants
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
       result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt
       result.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
     }
     result._esCopyToSearch = descendants.length > 0 && descendants.every(d => d._esCopyToSearch === true)
+    // a virtual dataset queries every descendant index at once, so a shape-gated route is only
+    // safe when ALL carry the flag: one legacy child keeps the parent legacy (the exact-match
+    // clause's analyzer reference would 400 on it).
+    result._indexShape = {
+      singleTextField: descendants.length > 0 && descendants.every(d => d._indexShape?.singleTextField === true),
+      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true),
+      noNumericText: descendants.length > 0 && descendants.every(d => d._indexShape?.noNumericText === true)
+    }
     result.count = dataset.count = await esUtils.count(queryableDataset, {})
   }
 

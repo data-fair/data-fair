@@ -93,6 +93,12 @@ const defaultSniffDateConfig: SniffDateConfig = {
   ]
 }
 
+// A "code" value: ascii letters/digits plus common code punctuation, no whitespace, and at
+// least one digit. The digit requirement keeps short label columns (enums, French words)
+// out — for them stemming/insensitive-sort genuinely matter.
+const codeRegexp = /^[A-Za-z0-9_./-]+$/
+const isCodeValue = (value: string): boolean => codeRegexp.test(value) && /\d/.test(value)
+
 export const sniff = (values: string[], attachmentsPaths: string[] = [], existingField?: any, dateConfig?: SniffDateConfig): any => {
   if (!values.length) return { type: 'empty' }
 
@@ -112,7 +118,12 @@ export const sniff = (values: string[], attachmentsPaths: string[] = [], existin
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
   if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
-  if (checkAll(values, val => val.length <= 200)) return { type: 'string' }
+  if (checkAll(values, val => val.length <= 200)) {
+    // machine codes: analyzed-french matching and insensitive sort are irrelevant
+    // (mergeFileSchema translates this into default x-capabilities on NEW fields only)
+    if (checkAll(values, isCodeValue)) return { type: 'string', codeLike: true }
+    return { type: 'string' }
+  }
   return { type: 'string', 'x-display': 'textarea' }
 }
 

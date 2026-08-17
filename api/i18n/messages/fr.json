@@ -13,20 +13,6 @@
 		"missingPermission": "Vous n'avez pas la permission d'effectuer cette opération.",
 		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
 		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",
-		"queryAdviceIntro": "Conseil pour optimiser vos requêtes",
-		"queryAdviceCount": "passez count=false (ou count=estimate) pour éviter le comptage exact du nombre total de lignes",
-		"queryAdviceDeepPagination": "utilisez la pagination par clé via le paramètre after plutôt qu'une navigation profonde par page ou offset",
-		"queryAdviceAggSize": "réduisez agg_size et/ou le nombre de champs de regroupement",
-		"queryAdviceSize": "demandez moins de résultats par page (réduisez size)",
-		"queryAdviceSelect": "utilisez le paramètre select pour ne récupérer que les colonnes nécessaires",
-		"queryAdviceQFields": "restreignez la recherche plein texte aux colonnes pertinentes avec q_fields=col1,col2 plutôt que de rechercher dans toutes les colonnes",
-		"queryAdviceIgnoredIntro": "Certains paramètres ont été ignorés",
-		"queryAdviceUncertainIntro": "certains filtres peuvent renvoyer des résultats incomplets : les valeurs de plus de %s caractères ne sont pas indexées exactement sur la ou les colonnes suivantes",
-		"queryAdviceConceptUseColumn": "%s → utilisez plutôt %s (le préfixe _c_ est réservé aux filtres par concept, pas aux colonnes)",
-		"queryAdviceConceptUnknown": "%s a été ignoré — le préfixe _c_ concerne les filtres par concept et ne correspond à aucun concept de ce jeu de données",
-		"queryAdviceUnknownParam": "%s n'est pas un paramètre de requête reconnu et a été ignoré",
-		"queryAdviceUncertainFilter": "« %s »",
-		"queryAdviceTruncatedMetricsIntro": "certaines métriques peuvent être calculées sur des données incomplètes : les valeurs de plus de %s caractères ne sont pas prises en compte sur la ou les colonnes suivantes",
 		"exceedAnonymousRateLimiting": "Trop de messages dans un bref interval. Veuillez patienter avant d'essayer de nouveau.",
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
@@ -169,6 +155,22 @@
 			"integrity-breach": {
 				"title": "Atteinte à l'intégrité",
 				"body": "Le jeu de données {{label}} a été modifié hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité sur son fichier de données ou ses métadonnées)."
+			},
+			"integrity-renewal-failed": {
+				"title": "Échec du renouvellement du verrou d'intégrité",
+				"body": "Le verrou de protection du jeu de données {{label}} n'a pas pu être renouvelé. Si le problème persiste, la garantie d'intégrité expirera à l'échéance du verrou actuel."
+			},
+			"integrity-check-stale": {
+				"title": "Vérification d'intégrité en retard",
+				"body": "Le jeu de données {{label}} n'a pas produit de verdict d'intégrité définitif depuis trop longtemps (écritures en attente, pipeline bloqué ou entrepôt indisponible). Son état de protection est actuellement non vérifié."
+			},
+			"integrity-scope-incoherent": {
+				"title": "Incohérence de protection d'intégrité",
+				"body": "L'entrepôt d'intégrité protège encore le jeu de données {{label}} mais la base indique que sa protection est désactivée (ou que le jeu de données a disparu) sans désactivation signée. Cela ressemble à un désarmement hors circuit — à vérifier."
+			},
+			"integrity-trail-altered": {
+				"title": "Historique de révisions altéré",
+				"body": "L'historique de révisions du jeu de données {{label}} présente des signes d'altération (révisions masquées ou réécrites). Les révisions verrouillées d'origine sont intactes ; consultez les anomalies dans le panneau d'intégrité."
 			}
 		},
 		"applications": {

@@ -189,6 +189,7 @@ const { t } = useI18n()
 <style>
 .dataset-table-cell {
   position: relative;
+  z-index: 0;
 }
 .dataset-table-cell.sticky {
   position: sticky;

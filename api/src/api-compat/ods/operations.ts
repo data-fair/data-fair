@@ -3,7 +3,7 @@
 // index.ts keeps routing, the ES search calls, streaming and response sending.
 // import getFilterableFields from the config-free es/operations.ts (NOT the es/index.ts barrel, which
 // loads #config) so this module stays config-free and unit-testable. See code-conventions.md §2.
-import { getFilterableFields, resolveExactKeywordTarget } from '../../datasets/es/operations.ts'
+import { getFilterableFields, resolveExactKeywordTarget, virtualFilterClauses, descendantsFilterClause } from '../../datasets/es/operations.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
 import { parse as parseWhere } from './where.peg.js'
@@ -58,12 +58,18 @@ export const parseFilters = (dataset, query, route) => {
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-        else filter.push({ terms: { [f.key]: f.values } })
-      }
-    }
+    filter.push(...virtualFilterClauses(dataset.virtual.filters))
+  }
+  // Scoped filters inherited from intermediate virtual children, read from the same
+  // dataset.descendants that drives the multi-index target (see utils/virtual.ts).
+  // null = no descendant carries filters, nothing to add. Every route reaching this builder
+  // (api-compat/ods/index.ts) goes through readDataset({ fillDescendants: true }), so descendants
+  // are always resolved; if a future route ever reached here without that middleware,
+  // descendantsFilterClause fails loudly instead of silently leaking rows a child's
+  // `virtual.filters` is meant to hide.
+  if (dataset.isVirtual) {
+    const descendantsClause = descendantsFilterClause(dataset.descendants)
+    if (descendantsClause) filter.push(descendantsClause)
   }
 
   // Envorced filter in case of rest datasets with line ownership

@@ -1,24 +1,40 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
+import { Q_SEARCH_FIELDS_THRESHOLD, LEGACY_Q_SEARCH_FIELDS_THRESHOLD, NEW_INDEX_SHAPE, LEGACY_INDEX_SHAPE, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
 
-// a string column produces both a .text and a .text_standard inner field -> counts as 2
+// counting is per ANALYZED INNER FIELD, and the default shape of these helpers is the new one:
+// a string column produces a single .text inner field -> counts as 1 (legacy: .text +
+// .text_standard -> 2)
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
-// an integer (or date) column produces only a .text_standard inner field -> counts as 1
+// an integer column produces only a .text_standard inner field under the legacy shape -> counts as
+// 1 there, but 0 under noNumericText (part of the default NEW_INDEX_SHAPE), which drops that inner
+// field entirely for integer/number columns. (A date column still counts 1 under both shapes.)
 const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
 const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
 test.describe('hasManyQSearchFields', () => {
-  test('threshold is 30', () => {
-    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 30)
+  test('threshold is 15 new-shape, 30 legacy', () => {
+    assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 15)
+    assert.equal(LEGACY_Q_SEARCH_FIELDS_THRESHOLD, 30)
   })
-  test('counts .text and .text_standard separately', () => {
-    // string columns have both -> 15 columns == 30 inner fields (not over), 16 == 32 (over)
+  test('counts one inner field per analyzed column (new shape)', () => {
+    // string columns count 1 (single .text) -> 15 columns == 15 inner fields (not over), 16 == 16 (over)
     assert.equal(hasManyQSearchFields(stringFields(15)), false)
     assert.equal(hasManyQSearchFields(stringFields(16)), true)
-    // integer/date columns have only .text_standard -> 30 columns == 30 (not over), 31 == 31 (over)
-    assert.equal(hasManyQSearchFields(intFields(30)), false)
-    assert.equal(hasManyQSearchFields(intFields(31)), true)
+    // Task 2's noNumericText (part of the default NEW_INDEX_SHAPE) drops `.text_standard` from
+    // integer/number columns entirely — they emit NO analyzed inner field any more, so they never
+    // count toward wideness under the new shape (Task 3 restores their `q` matching separately,
+    // through a lenient main-field fallback that this counter has nothing to do with).
+    assert.equal(hasManyQSearchFields(intFields(15)), false)
+    assert.equal(hasManyQSearchFields(intFields(16)), false)
+  })
+  test('a text-disabled string still counts 1 (its single field is .text_standard)', () => {
+    // the new-shape emission gives `{text:false}` columns a single `.text_standard` instead of a
+    // single `.text` — the counting reads whichever one the emission produced, so the wide/narrow
+    // boundary is identical for that combo.
+    const noLang = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'nl' + i, type: 'string', 'x-capabilities': { text: false } }))
+    assert.equal(hasManyQSearchFields(noLang(15)), false)
+    assert.equal(hasManyQSearchFields(noLang(16)), true)
   })
   test('ignores fields with no text inner field, and _id', () => {
     assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)
@@ -35,6 +51,31 @@ test.describe('hasManyQSearchFields', () => {
     assert.equal(hasManyQSearchFields(undefined), false)
     assert.equal(hasManyQSearchFields(null), false)
   })
+  // the count and the threshold are one pair per shape: the SAME schema must keep the SAME
+  // classification a legacy index has always had, and only be reclassified once rebuilt.
+  test('the string-column boundary is identical under both shapes', () => {
+    for (const [shape, n] of [[LEGACY_INDEX_SHAPE, 15], [NEW_INDEX_SHAPE, 15]] as const) {
+      assert.equal(hasManyQSearchFields(stringFields(n), shape), false)
+      assert.equal(hasManyQSearchFields(stringFields(n + 1), shape), true)
+    }
+  })
+  test('a scalar-heavy schema in the 15..30 band is narrow legacy and stays narrow new-shape (numerics carry no inner field there); a text-disabled string band still crosses', () => {
+    // 20 numeric columns = 20 inner fields under LEGACY (20 <= 30, narrow) but under the new
+    // shape noNumericText drops `.text_standard` from integer/number columns entirely — they
+    // contribute 0 inner fields, so the band never crosses the new-shape threshold either.
+    // (Superseded expectation: this used to flip to wide/true under NEW_INDEX_SHAPE before Task 2's
+    // noNumericText; Task 3 restores their `q` matching separately via a lenient main-field
+    // fallback that this wideness counter has nothing to do with.)
+    const band = intFields(20)
+    assert.equal(hasManyQSearchFields(band, LEGACY_INDEX_SHAPE), false)
+    assert.equal(hasManyQSearchFields(band, NEW_INDEX_SHAPE), false)
+    // a `{text:false}` string column is unaffected by noNumericText (it only applies to
+    // integer/number columns) and is emitted identically under both shapes, so it still lands in
+    // the band the same way as before: narrow legacy, wide new-shape.
+    const noLangBand = Array.from({ length: 20 }, (_, i) => ({ key: 'nl' + i, type: 'string', 'x-capabilities': { text: false } }))
+    assert.equal(hasManyQSearchFields(noLangBand, LEGACY_INDEX_SHAPE), false)
+    assert.equal(hasManyQSearchFields(noLangBand, NEW_INDEX_SHAPE), true)
+  })
 })
 
 // getFilterableFields is memoized on `${id}:${finalizedAt}:${!!hasQ}:${qFields}` — give each
@@ -42,6 +83,25 @@ test.describe('hasManyQSearchFields', () => {
 let seq = 0
 const fakeDataset = (over: any = {}) => ({ id: 'fd' + (seq++), finalizedAt: '2026-01-01', schema: [], ...over })
 const wideSchema = (n = 32) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
+
+test.describe('getFilterableFields - wideness follows the dataset index shape', () => {
+  // a band-shaped schema (numeric-heavy): the `reduced` regime stays off under BOTH shapes now.
+  // Under noNumericText (part of the default NEW_INDEX_SHAPE), integer/number columns carry no
+  // analyzed inner field at all, so they never contribute to wideness — this band schema, made
+  // entirely of int columns plus one string, no longer crosses the new-shape threshold either.
+  // (Superseded expectation: before Task 2's noNumericText, the new-shape stamp alone flipped this
+  // band to wide/reduced; Task 3 restores `q` matching for those numeric columns separately, via
+  // a lenient main-field fallback unrelated to this wideness counter.)
+  const bandSchema = () => [...intFields(20), { key: 'txt', type: 'string' }]
+  test('legacy dataset in the band keeps the narrow regime', () => {
+    const ds = fakeDataset({ schema: bandSchema() })
+    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, false)
+  })
+  test('new-shape dataset in the (now numeric-exempt) band also keeps the narrow regime', () => {
+    const ds = fakeDataset({ schema: bandSchema(), _indexShape: NEW_INDEX_SHAPE })
+    assert.equal(getFilterableFields(ds, 'x', undefined).reduced, false)
+  })
+})
 
 test.describe('getFilterableFields - regimes', () => {
   test('full legacy: narrow dataset lists every per-field variant', () => {
@@ -55,7 +115,7 @@ test.describe('getFilterableFields - regimes', () => {
     assert.deepEqual(qStandardFields, ['a.text_standard', 'b.text_standard'])
   })
 
-  test('pure-keyword column (text + textStandard disabled) keeps the keyword main type in qSearchFields', () => {
+  test('pure-keyword column (text + textStandard disabled) is searched through its insensitive twin', () => {
     const ds = fakeDataset({
       schema: [
         { key: 'a', type: 'string' },
@@ -63,9 +123,60 @@ test.describe('getFilterableFields - regimes', () => {
       ]
     })
     const { qSearchFields, qStandardFields } = getFilterableFields(ds, 'x', undefined)
-    // `tag` has no analyzed inner field, so its keyword main type is the only way to search it
-    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag'])
+    // `tag` has no analyzed inner field, so the keyword view is the only way to search it. We use
+    // `.keyword_insensitive` rather than the main type so that `q` ignores case and diacritics.
+    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag.keyword_insensitive'])
     assert.deepEqual(qStandardFields, ['a.text_standard'])
+  })
+
+  test('pure-keyword column without the insensitive capability falls back to the keyword main type', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'tag', type: 'string', 'x-capabilities': { text: false, textStandard: false, insensitive: false } }
+      ]
+    })
+    const { qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(qSearchFields, ['tag'])
+  })
+
+  test('wildcard column keeps its .wildcard target even without analyzed inner fields', () => {
+    // `.wildcard` is mapped from the wildcard capability alone, independently of text analysis,
+    // so the query fanout must expose it for text-disabled columns too (typically codes).
+    const ds = fakeDataset({
+      schema: [
+        { key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false, wildcard: true } }
+      ]
+    })
+    const { wildcardFields, qWildcardFields, qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(wildcardFields, ['code.wildcard'])
+    assert.deepEqual(qWildcardFields, ['code.wildcard'])
+    assert.deepEqual(qSearchFields, ['code.keyword_insensitive'])
+  })
+
+  test('wildcard fanout still requires the column to be a q field', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false, wildcard: true } },
+        { key: 'other', type: 'string', 'x-capabilities': { wildcard: true } }
+      ]
+    })
+    const { wildcardFields, qWildcardFields } = getFilterableFields(ds, 'x', ['other'])
+    // wildcardFields is the full filterable set, qWildcardFields is restricted to q_fields
+    assert.deepEqual(wildcardFields, ['code.wildcard', 'other.wildcard'])
+    assert.deepEqual(qWildcardFields, ['other.wildcard'])
+  })
+
+  test('non-string pure-keyword columns are unaffected (no insensitive inner field exists)', () => {
+    // .keyword_insensitive is only generated for string columns; a date/integer column with
+    // textStandard disabled has no keyword view at all and stays out of `q`.
+    const ds = fakeDataset({
+      schema: [
+        { key: 'n', type: 'integer', 'x-capabilities': { textStandard: false } },
+        { key: 'd', type: 'string', format: 'date', 'x-capabilities': { textStandard: false } }
+      ]
+    })
+    const { qSearchFields } = getFilterableFields(ds, 'x', undefined)
+    assert.deepEqual(qSearchFields, [])
   })
 
   test('catch-all: _esCopyToSearch dataset collapses qSearchFields to just _search (analyzed views and keyword mains both gone)', () => {
@@ -179,5 +290,215 @@ test.describe('buildQClauses - catch-all clauses', () => {
     const fieldsLists = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
     assert.ok(fieldsLists.some((f: string[]) => f.includes('a.text')))
     assert.ok(!JSON.stringify(fieldsLists).includes('_search'))
+  })
+})
+
+test.describe('exact-match routing (new index shape)', () => {
+  test('qExactFields lists .text entries with boosts, plus _search in catch-all', () => {
+    const ds = {
+      id: 'x1',
+      finalizedAt: 'f',
+      schema: [
+        { key: 'a', type: 'string' },
+        { key: 'label_col', type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' },
+        { key: 'n', type: 'number' }
+      ]
+    }
+    const ff = getFilterableFields(ds, 'foo', undefined)
+    assert.deepEqual(ff.qExactFields, ['a.text', 'label_col.text^3'])
+    const wide = { id: 'x2', finalizedAt: 'f', _esCopyToSearch: true, schema: ds.schema }
+    assert.ok(getFilterableFields(wide, 'foo', undefined).qExactFields.includes('_search'))
+  })
+  test('exact-boost clause emitted only when exactMatch is passed', () => {
+    const ds = { id: 'x3', finalizedAt: 'f', schema: [{ key: 'a', type: 'string' }] }
+    const plain: any = buildQClauses(ds, 'foo', undefined, 'simple')
+    assert.ok(!JSON.stringify(plain).includes('custom_french_exact'))
+    const boosted: any = buildQClauses(ds, 'foo', undefined, 'simple', {}, undefined, { analyzer: 'custom_french_exact', boost: 0.5 })
+    const clause = boosted.bool.should.find((c: any) => c.simple_query_string?.analyzer === 'custom_french_exact')
+    assert.ok(clause)
+    assert.equal(clause.simple_query_string.boost, 0.5)
+    assert.deepEqual(clause.simple_query_string.fields, ['a.text'])
+  })
+  test('complete-mode prefix targets .text on new shape, .text_standard on legacy', () => {
+    // `i` is a scalar: it keeps a MAPPED `.text_standard` under BOTH shapes (esProperty only drops
+    // `.text_standard` on full-text strings), so the new-shape prefix list must still carry it or
+    // autocomplete over integer/number/date columns silently dies on stamped datasets.
+    const schema = [{ key: 'a', type: 'string' }, { key: 'i', type: 'integer' }]
+    const legacy: any = buildQClauses({ id: 'x4', finalizedAt: 'f', schema }, 'fo', undefined, 'complete')
+    assert.deepEqual(legacy.bool.should[0].simple_query_string.fields, ['a.text_standard', 'i.text_standard'])
+    const fresh: any = buildQClauses({ id: 'x5', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo', undefined, 'complete')
+    const freshPrefix = fresh.bool.should[0].simple_query_string
+    // union: `a.text` (the new-shape string field) + the legacy names. `a.text_standard` is
+    // unmapped on a new-shape index and silently ignored by simple_query_string; `i.text_standard`
+    // is real and keeps the scalar column in the prefix ladder.
+    assert.deepEqual(freshPrefix.fields, ['a.text', 'a.text_standard', 'i.text_standard'])
+    assert.ok(freshPrefix.fields.includes('i.text_standard'))
+    assert.ok(freshPrefix.query.endsWith('*'))
+  })
+  test('legacy datasets emit byte-identical clauses to today', () => {
+    const ds = { id: 'x6', finalizedAt: 'f', schema: [{ key: 'a', type: 'string' }] }
+    // no _indexShape, no exactMatch: default-mode shape is exactly clause A + clause B
+    const out: any = buildQClauses(ds, 'foo', undefined, 'simple')
+    assert.equal(out.bool.should.length, 2)
+    assert.deepEqual(out.bool.should[0].simple_query_string.fields, ['a.text', 'a.text_standard'])
+    assert.deepEqual(out.bool.should[1].simple_query_string.fields, ['a.text_standard'])
+  })
+})
+
+test.describe('numeric q fallback (noNumericText shape)', () => {
+  const schema = [
+    { key: 'code', type: 'integer' },
+    { key: 'measure', type: 'number' },
+    { key: 'day', type: 'string', format: 'date' },
+    { key: 'name', type: 'string' },
+    { key: 'noidx', type: 'integer', 'x-capabilities': { index: false } },
+    { key: '_i', type: 'integer', 'x-calculated': true }
+  ]
+
+  test('qLenientFields lists indexed, non-calculated numeric columns only', () => {
+    const dataset: any = { id: 'nq1', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const { qLenientFields } = getFilterableFields(dataset, 'foo', undefined)
+    assert.deepEqual(qLenientFields, ['code', 'measure'])
+  })
+
+  test('buildQClauses adds one lenient clause on noNumericText shape, none on legacy', () => {
+    const newDataset: any = { id: 'nq2', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const newClauses = JSON.stringify(buildQClauses(newDataset, '84500', undefined, 'simple'))
+    assert.ok(newClauses.includes('"lenient":true'))
+    assert.ok(newClauses.includes('"fields":["code","measure"]'))
+
+    const legacyDataset: any = { id: 'nq3', schema, extensions: [] }
+    const legacyClauses = JSON.stringify(buildQClauses(legacyDataset, '84500', undefined, 'simple'))
+    assert.ok(!legacyClauses.includes('"lenient":true'))
+  })
+
+  test('q_mode=and filter unions numeric main fields with lenient', () => {
+    const dataset: any = { id: 'nq4', schema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const clauses: any = buildQClauses(dataset, 'foo 84500', undefined, 'and')
+    const filterClause = JSON.stringify(clauses.bool.filter)
+    assert.ok(filterClause.includes('code'))
+    assert.ok(filterClause.includes('"lenient":true'))
+  })
+
+  test('a numeric column with an explicit textStandard:false opt-out is excluded from qLenientFields', () => {
+    // the controller ruling: explicit API-level capability opt-outs stay honored, so a numeric
+    // column deliberately removed from `q` via x-capabilities.textStandard:false must NOT be
+    // resurrected by the lenient main-field fallback.
+    const optOutSchema = [
+      ...schema,
+      { key: 'excluded', type: 'integer', 'x-capabilities': { textStandard: false } }
+    ]
+    const dataset: any = { id: 'nq5', schema: optOutSchema, _indexShape: { singleTextField: true, wordAggField: true, noNumericText: true }, extensions: [] }
+    const { qLenientFields } = getFilterableFields(dataset, 'foo', undefined)
+    assert.deepEqual(qLenientFields, ['code', 'measure'])
+    assert.ok(!qLenientFields.includes('excluded'))
+  })
+})
+
+// Mixed-fleet virtual datasets: finalize.ts only stamps the virtual parent's own `_indexShape.
+// noNumericText` when EVERY descendant has it (see finalize.ts's bubble-up comment). Over a fleet
+// of {legacy child, rebuilt child} that leaves the parent legacy, but the query layer must still
+// route the lenient numeric fallback for the rebuilt child's rows: without it, a numeric `q` targets
+// `<col>.text_standard`, which is unmapped on the rebuilt child, and its rows silently stop
+// matching. Routing reads `dataset._indexShape?.noNumericText` OR
+// `dataset.descendants?.some(d => d._indexShape?.noNumericText)` — see hasNumericLenientRouting.
+test.describe('numeric q fallback - virtual dataset routing (mixed fleet)', () => {
+  const schema = [
+    { key: 'code', type: 'integer' },
+    { key: 'measure', type: 'number' },
+    { key: 'name', type: 'string' }
+  ]
+
+  test('a descendant flagged noNumericText routes the lenient clause even though the parent _indexShape is unset', () => {
+    const dataset: any = { id: 'vq1', finalizedAt: 'f', schema, descendants: [{ _indexShape: NEW_INDEX_SHAPE }], extensions: [] }
+    const clauses = JSON.stringify(buildQClauses(dataset, '84500', undefined, 'simple'))
+    assert.ok(clauses.includes('"lenient":true'))
+    assert.ok(clauses.includes('"fields":["code","measure"]'))
+  })
+
+  test('all-legacy descendants (none flagged) yield byte-identical clauses to a dataset with no descendants field', () => {
+    const withLegacyDescendants: any = { id: 'vq2', finalizedAt: 'f', schema, descendants: [{ _indexShape: {} }], extensions: [] }
+    const withoutDescendants: any = { id: 'vq3', finalizedAt: 'f', schema, extensions: [] }
+    const out1 = buildQClauses(withLegacyDescendants, '84500', undefined, 'simple')
+    const out2 = buildQClauses(withoutDescendants, '84500', undefined, 'simple')
+    assert.deepEqual(out1, out2)
+  })
+
+  test('plain legacy dataset (no _indexShape, no descendants) is unchanged', () => {
+    const dataset: any = { id: 'vq4', finalizedAt: 'f', schema, extensions: [] }
+    const clauses = JSON.stringify(buildQClauses(dataset, '84500', undefined, 'simple'))
+    assert.ok(!clauses.includes('"lenient":true'))
+  })
+})
+
+test.describe('complete-mode AND filter (multi-word narrowing)', () => {
+  const schema = [{ key: 'a', type: 'string' }]
+
+  test('single-word query gets no filter — the prefix clause is the only requirement', () => {
+    const out: any = buildQClauses({ id: 'cf1', finalizedAt: 'f', schema }, 'fo', undefined, 'complete')
+    assert.ok(out.bool.should)
+    assert.ok(!out.bool.must && !out.bool.filter)
+  })
+
+  test('multi-word query wraps the scored OR in a non-scoring AND filter, last word as prefix', () => {
+    const out: any = buildQClauses({ id: 'cf2', finalizedAt: 'f', schema }, 'fo ba', undefined, 'complete')
+    // scores stay the broad OR: prefix + quoted-phrase + plain clauses, untouched
+    assert.equal(out.bool.must[0].bool.should.length, 3)
+    assert.equal(out.bool.must[0].bool.should[0].simple_query_string.query, 'fo ba*')
+    const filter = out.bool.filter[0].simple_query_string
+    assert.equal(filter.query, 'fo ba*')
+    assert.equal(filter.default_operator, 'and')
+    // filter surface covers both the prefix routing and the plain-clause routing
+    assert.ok(filter.fields.includes('a.text_standard'))
+    assert.ok(filter.fields.includes('a.text'))
+  })
+
+  test('user-typed wildcards: prefix clause is skipped and the filter requires q as-is', () => {
+    const out: any = buildQClauses({ id: 'cf3', finalizedAt: 'f', schema }, 'fo* ba', undefined, 'complete')
+    assert.ok(!JSON.stringify(out.bool.must).includes('fo* ba*'))
+    assert.equal(out.bool.filter[0].simple_query_string.query, 'fo* ba')
+    assert.equal(out.bool.filter[0].simple_query_string.default_operator, 'and')
+  })
+
+  test('a wildcard-capability column keeps its *q* recall through a filter-side alternative', () => {
+    const wSchema = [{ key: 'a', type: 'string' }, { key: 'w', type: 'string', 'x-capabilities': { wildcard: true } }]
+    const out: any = buildQClauses({ id: 'cf4', finalizedAt: 'f', schema: wSchema }, 'fo ba', undefined, 'complete')
+    const alternatives = out.bool.filter[0].bool.should
+    assert.equal(alternatives.length, 2)
+    assert.equal(alternatives[0].simple_query_string.default_operator, 'and')
+    assert.deepEqual(alternatives[1].query_string.fields, ['w.wildcard'])
+    assert.equal(alternatives[1].query_string.query, '*fo ba*')
+  })
+
+  // On a new-shape dataset the only .text_standard fields left belong to scalar columns, whose
+  // content can never contain a stopword — a per-field-analyzed AND filter then requires the
+  // stopword where it cannot match and zeroes the query. The fix is a SECOND reading of the same
+  // requirement, analyzed with the language analyzer (stopwords dropped, numbers kept): a doc
+  // passes if EITHER reading matches every word. The field-analyzed reading stays because it is
+  // the only one that matches a pure-keyword column's whole value (e.g. "cat-alpha").
+  test('with a filterAnalyzer the complete filter carries a language-analyzed alternative reading', () => {
+    const schema = [{ key: 'a', type: 'string' }, { key: 'i', type: 'integer' }]
+    const out: any = buildQClauses({ id: 'cf5', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo ba', undefined, 'complete', {}, undefined, undefined, 'custom_french')
+    const readings = out.bool.filter[0].bool.should
+    assert.equal(readings.length, 2)
+    assert.equal(readings[0].simple_query_string.query, 'fo ba*')
+    assert.equal(readings[0].simple_query_string.default_operator, 'and')
+    assert.ok(!readings[0].simple_query_string.analyzer)
+    assert.equal(readings[1].simple_query_string.analyzer, 'custom_french')
+    assert.equal(readings[1].simple_query_string.query, 'fo ba*')
+    assert.equal(readings[1].simple_query_string.default_operator, 'and')
+  })
+
+  test('without a filterAnalyzer (legacy dataset) the complete filter keeps a single reading', () => {
+    const out: any = buildQClauses({ id: 'cf6', finalizedAt: 'f', schema }, 'fo ba', undefined, 'complete')
+    assert.ok(out.bool.filter[0].simple_query_string)
+  })
+
+  test('q_mode=and gets the same alternative reading — it shares the scalar-.text_standard trap', () => {
+    const out: any = buildQClauses({ id: 'cf7', finalizedAt: 'f', _indexShape: { singleTextField: true }, schema }, 'fo ba', undefined, 'and', {}, undefined, undefined, 'custom_french')
+    const readings = out.bool.filter[0].bool.should
+    assert.equal(readings.length, 2)
+    assert.equal(readings[1].simple_query_string.analyzer, 'custom_french')
+    assert.equal(readings[1].simple_query_string.query, 'fo ba')
   })
 })

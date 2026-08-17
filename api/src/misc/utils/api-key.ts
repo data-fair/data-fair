@@ -9,7 +9,7 @@ import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
-import { reqResourceOptional, setReqBypassPermissions } from './req-context.ts'
+import { reqResourceOptional, setReqBypassPermissions, setReqApiKeyRef } from './req-context.ts'
 import dayjs from 'dayjs'
 
 // this lookup runs on every request presenting an api key (M2M harvesters pay it per call);
@@ -53,6 +53,11 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
     if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
       throw httpError(403, 'Cette clé d\'API est expirée.')
     }
+    // every branch below (scopeless single-user, adminMode+asAccount, plain user/org key) resolves
+    // through this settings-backed apiKey — record its opaque id for integrity `.who` attribution
+    // (T7, design §5.1). The resource-scoped `_readApiKey` pseudo-user above never reaches this
+    // point (it returns early), so it is correctly excluded.
+    if (req) setReqApiKeyRef(req, apiKey.id as string)
     const sessionState: SessionState & { isApiKey: true } = {
       lang: 'fr',
       isApiKey: true

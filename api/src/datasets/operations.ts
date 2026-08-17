@@ -31,3 +31,44 @@ export const getDatasetCacheKey = (args: ArrayLike<any>): string => {
     !!args[5] // acceptInitialDraft
   ].join(KEY_SEP)
 }
+
+/**
+ * The cheap "did this dataset change?" probe behind `getDatasetFresh`: rather than re-reading the
+ * whole document, project a handful of fields and compare them against the memoized copy.
+ *
+ * Integrity verdicts and anchors have to be part of it. The checker writes `integrity.lastCheck`
+ * and the relay writes `integrity.lastRevision` WITHOUT touching `updatedAt` — deliberately, since
+ * that field is the dataset's user-facing modification date and a nightly check must not move it.
+ * Left out of the projection they are invisible here, so a reader keeps being served the previous
+ * verdict for the whole 30s cache window: a manual "check now" then appears to do nothing at all,
+ * even across a page reload, until the entry expires on its own.
+ */
+export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, number> => ({
+  updatedAt: 1,
+  finalizedAt: 1,
+  status: 1,
+  errorStatus: 1,
+  errorRetry: 1,
+  'integrity.lastCheck.date': 1,
+  'integrity.lastRevision.date': 1,
+  ...(useDraft ? { 'draft.updatedAt': 1 } : {}),
+  _id: 0
+})
+
+/**
+ * True when the memoized document still matches the freshly projected one and may be served as is.
+ * `fresh` is the result of a find with `datasetFreshnessProjection`.
+ */
+export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined, fresh: Record<string, any>, useDraft?: boolean): boolean => {
+  if (!cachedFull) return false
+  if (cachedFull.updatedAt !== fresh.updatedAt) return false
+  if (cachedFull.finalizedAt !== fresh.finalizedAt) return false
+  if (cachedFull.status !== fresh.status) return false
+  if (cachedFull.errorStatus !== fresh.errorStatus) return false
+  if (cachedFull.errorRetry !== fresh.errorRetry) return false
+  if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
+  if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
+  // draft-only changes are invisible to every field above
+  if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
+  return true
+}

@@ -28,7 +28,10 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find((bs: any) => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
-  if (dataset.isVirtual) (dataset as Dataset & { descendants?: any }).descendants = await virtualDatasetsUtils.descendants(dataset as VirtualDataset)
+  if (dataset.isVirtual) {
+    const virtualDataset = dataset as VirtualDataset
+    virtualDataset.descendants = await virtualDatasetsUtils.descendants(virtualDataset)
+  }
   const schema = dataset.schema ?? []
   const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !schema.find(p => p.key === s))

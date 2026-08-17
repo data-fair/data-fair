@@ -14,7 +14,7 @@
 import type { IncomingMessage } from 'node:http'
 import type { Request } from 'express'
 import { reqSession, type User, type Account } from '@data-fair/lib-express'
-import type { Resource, ResourceType, BypassPermissions, Dataset, RestDataset } from '#types'
+import type { Resource, ResourceType, BypassPermissions, DatasetInternal, RestDataset } from '#types'
 
 export type ReqContext<T> = {
   set: (req: IncomingMessage, value: T) => void
@@ -60,7 +60,7 @@ export const reqResourceType = resourceTypeCtx.get
 // datasets/middlewares.ts re-exports these as a facade. reqRestDataset is for REST line routes whose
 // dataset is guaranteed to be a RestDataset (single cast contained here, per §2). No legacyProp: every
 // reader migrated to the accessor in Phase 7.
-const datasetCtx = defineReqContext<Dataset>('dataset')
+const datasetCtx = defineReqContext<DatasetInternal>('dataset')
 export const setReqDataset = datasetCtx.set
 export const reqDataset = datasetCtx.get
 export const reqDatasetOptional = datasetCtx.getOptional
@@ -81,6 +81,15 @@ export const reqDraftOptional = draftCtx.getOptional
 const bypassPermissionsCtx = defineReqContext<BypassPermissions>('bypassPermissions')
 export const setReqBypassPermissions = bypassPermissionsCtx.set
 export const reqBypassPermissions = bypassPermissionsCtx.getOptional
+
+// the opaque id of the API key that authenticated this request, set by the api-key middleware
+// (misc/utils/api-key.ts) on every settings-key branch — NOT on the resource-scoped `_readApiKey`
+// read-only pseudo-user branch. Consumed by integrity/who.ts to fill `.who.apiKey.id` (T7, design
+// §5.1) — deliberately never threaded into `RevisionContext` (the locked revision JSON stays
+// identity-free, see integrity/who.ts).
+const apiKeyRefCtx = defineReqContext<string>('apiKeyRef')
+export const setReqApiKeyRef = apiKeyRefCtx.set
+export const reqApiKeyRef = apiKeyRefCtx.getOptional
 
 const publicOperationCtx = defineReqContext<boolean>('publicOperation')
 export const setReqPublicOperation = publicOperationCtx.set

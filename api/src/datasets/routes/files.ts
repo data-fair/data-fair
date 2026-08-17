@@ -1,6 +1,6 @@
 // File-download and metadata-attachment routes for a dataset (extracted from router.js, phase 6d)
 import type { Router } from 'express'
-import type { Dataset, RestDataset } from '#types'
+import type { Dataset, RestDataset, QueryableDescendant } from '#types'
 import { text as stream2text } from 'node:stream/consumers'
 import path from 'path'
 import moment from 'moment'
@@ -40,8 +40,8 @@ export const registerFilesRoutes = (router: Router) => {
     const attachmentPath = req.params.attachmentPath as string[]
     if (dataset.isVirtual) {
       const childDatasetId = attachmentPath[0]
-      const descendants = (dataset as Dataset & { descendants?: string[] }).descendants
-      if (!descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
+      const descendants = (dataset as Dataset & { descendants?: QueryableDescendant[] }).descendants
+      if (!descendants?.find(c => c.id === childDatasetId)) return res.status(404).send('Child dataset not found')
       const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, reqPublicationSite(req), reqMainPublicationSite(req), false, false, false, mongo.db, undefined, undefined)
       const documentProp = (dataset.schema ?? []).find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
       const childDocumentProp = childDataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -179,7 +179,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     if (!dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-    if (await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
+    if (await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
       await downloadFileFromStorage(datasetUtils.fullFilePath(dataset), req, res)
     } else {
       await downloadFileFromStorage(datasetUtils.filePath(dataset), req, res)
@@ -191,7 +191,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/validation-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     const filePath = validationDiagnosticFilePath(dataset)
-    if (!await filesStorage.pathExists(filePath)) {
+    if (!await filesStorage.fileExists(filePath)) {
       return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-validation-diagnostic.csv`))
@@ -205,7 +205,7 @@ export const registerFilesRoutes = (router: Router) => {
   router.get('/:datasetId/cancelled-draft-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
     const filePath = cancelledDraftDiagnosticFilePath(dataset)
-    if (!await filesStorage.pathExists(filePath)) {
+    if (!await filesStorage.fileExists(filePath)) {
       return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-cancelled-draft-diagnostic.csv`))

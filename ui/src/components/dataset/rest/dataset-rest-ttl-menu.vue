@@ -130,6 +130,7 @@ watch(() => props.ttl, () => {
 
 function change () {
   editTtl.value.delay.value = editTtl.value.delay.value || 0
+  editTtl.value.delay.unit = editTtl.value.delay.unit || 'days'
   const result = { ...editTtl.value }
   if (props.revisions) delete result.prop
   emit('change', result)

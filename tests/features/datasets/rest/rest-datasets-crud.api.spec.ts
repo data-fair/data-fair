@@ -437,7 +437,10 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(storageSize > 350)
     res = await ax.get('/api/v1/datasets/rest7')
     assert.equal(res.data.storage.size, storageSize)
-    assert.equal(res.data.storage.indexed.size, storageSize)
+    // REST datasets enter the "lines" storage regime at creation (see docs/architecture/storage-accounting.md):
+    // indexed.size is the CSV-equivalent sum of per-line _bytes, not the raw mongodb collection size anymore;
+    // the exact formula is covered by tests/features/datasets/storage-line-bytes.api.spec.ts
+    assert.ok(res.data.storage.indexed.size > 0)
     assert.equal(res.data.storage.collection.size, storageSize)
   })
 

@@ -260,6 +260,31 @@ test.describe('values aggs', () => {
     assert.ok(res.data.results.find((r: any) => r.word === 'adresse'))
   })
 
+  // a dataset created now is indexed with the new shape (`_indexShape.wordAggField`), so its
+  // textAgg columns carry the aggregation-optimized `.words` subfield and words_agg is routed
+  // there — which also retires the `analysis=standard` parameter on those datasets (design §3/§4)
+  test('words_agg of a fresh dataset is served from the .words field', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    await doAndWaitForFinalize(ax, dataset.id, () =>
+      ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'adr', type: 'string', 'x-capabilities': { textAgg: true } }] }))
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/words_agg?field=adr`)
+    assert.equal(res.data.total, 2)
+    assert.ok(res.data.results.length > 0)
+    assert.ok(res.data.results.find((r: any) => r.word === 'adresse'))
+    // the buckets come from `.words`, whose analyzer is the stemming one -> the `analysis`
+    // parameter has no target anymore and is explicitly refused (never silently ignored)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/words_agg?field=adr&analysis=standard`), (err: any) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('analysis=standard'))
+      return true
+    })
+    // the index shape is internal metadata, never exposed on the API
+    const datasetRes = await ax.get(`/api/v1/datasets/${dataset.id}`)
+    assert.equal(datasetRes.data._indexShape, undefined)
+  })
+
   test('performs calculations on a field', async () => {
     const ax = testUser1
     await ax.put('/api/v1/datasets/metric-agg', {

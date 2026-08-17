@@ -283,6 +283,33 @@ test.describe('REST datasets - History', () => {
     assert.equal(res.data.total, 1)
   })
 
+  // the UI configures TTL without delay.unit and the patch validator does not inject the
+  // schema default, so the stored config must still be interpreted as days (not milliseconds)
+  test('Apply a TTL configured without an explicit delay unit', async () => {
+    const ax = testUser4
+    await ax.post('/api/v1/datasets/restttlnounit', {
+      isRest: true,
+      title: 'restttlnounit',
+      rest: {
+        ttl: {
+          active: true,
+          prop: 'attr2',
+          delay: {
+            value: 1
+          }
+        }
+      },
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time' }]
+    })
+    await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(3, 'days').toISOString() })
+    await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
+    await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
+    await waitForFinalize(ax, 'restttlnounit')
+    await waitForFinalize(ax, 'restttlnounit')
+    const res = await ax.get('/api/v1/datasets/restttlnounit/lines')
+    assert.equal(res.data.total, 1)
+  })
+
   test('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
     const ax = await testUser4
     let res = await ax.post('/api/v1/datasets/resthistidem', {

@@ -541,23 +541,32 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       ...api.paths['/lines'],
       post: {
         summary: 'Ajouter une ligne',
-        description: 'Ajouter une nouvelle ligne au jeu de données.',
+        description: "Ajouter une nouvelle ligne au jeu de données. Le corps peut contenir `_action` pour effectuer une opération unitaire équivalente à une ligne de `_bulk_lines` (create, update, createOrUpdate, patch, delete) ; sans `_action` le comportement est createOrUpdate. Pour update, patch et delete l'identifiant de ligne est `_id` ou déduit de la clé primaire, et la permission correspondant à l'action est requise, en plus de la permission de création portée par la route.",
         operationId: 'createLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {
-          description: "Le contenu d'une ligne de données.",
+          description: "Le contenu d'une ligne de données, avec `_action` optionnelle.",
           required: true,
           content: {
-            'application/json': { schema: writeLineSchema }
+            'application/json': { schema: bulkLineSchema }
           }
         },
         responses: {
+          200: {
+            description: 'La ligne de données modifiée (identifiant défini ou déduit de la clé primaire).',
+            content: {
+              'application/json': { schema: readLineSchema }
+            }
+          },
           201: {
             description: 'La ligne de données ajoutée.',
             content: {
               'application/json': { schema: readLineSchema }
             }
+          },
+          204: {
+            description: 'La ligne de données a été supprimée (`_action: delete`).'
           },
           ...errorResponses,
           413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')

@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint, buildWordsAggs } from './operations.ts'
+import { columnOperationsHint, buildWordsAggs, resolveWordsAggField } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, abortContext?: EsAbortContext) => {
@@ -12,11 +12,14 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   if (!prop) {
     throw httpError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
-  if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
+  // the refusal must be explicit, not delegated to elasticsearch: `.words` only exists on textAgg
+  // columns and aggregating an unmapped field returns nothing instead of erroring. Hence no
+  // `x-capabilities &&` guard: never declaring the capability is refused like disabling it.
+  if (!prop['x-capabilities']?.textAgg) {
     throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 
-  const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
+  const field = resolveWordsAggField(dataset, query)
   const size = Number(query.size || 20)
   if (size > 200) throw httpError(400, 'Cette aggrégation ne peut pas retourner plus de 200 mots.')
   const esQuery = prepareQuery(dataset, query)
@@ -55,11 +58,19 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 async function unstem (client: Client, dataset: any, field: string, key: any, abortContext?: EsAbortContext) {
+  // this raw query is built directly against aliasName(dataset), bypassing prepareQuery — so on its
+  // own it applies neither the top-level `virtual.filters` nor the descendants-scoped filters, and
+  // could return highlighted fragments sourced from rows a virtual dataset (or an intermediate
+  // virtual child) hides. Reuse prepareQuery's scoping (called with an empty query: only the
+  // invariant filters, no user-supplied q/qs/etc) as an extra filter alongside the term clause.
+  // For a non-virtual, unfiltered dataset this resolves to an empty/no-op bool clause, so behavior
+  // there is unchanged.
+  const scopeQuery = prepareQuery(dataset, {}).query
   const res: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: {
       size: 20,
-      query: { term: { [field]: key } },
+      query: { bool: { filter: [{ term: { [field]: key } }, scopeQuery] } },
       _source: { excludes: '*' },
       highlight: {
         fields: { [field]: {} },

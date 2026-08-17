@@ -258,7 +258,7 @@ export const readStreams = async (dataset: Dataset, raw = false, full = false, i
   if (dataset.isRest) return restDatasetsUtils.readStreams(dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
-  if (!await filesStorage.pathExists(p)) {
+  if (!await filesStorage.fileExists(p)) {
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily

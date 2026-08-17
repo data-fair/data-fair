@@ -4,12 +4,29 @@ import { httpError, type Account } from '@data-fair/lib-express'
 import type { InitFrom } from '#doc/datasets/post-req/index.js'
 export * from './.type/index.js'
 
-// mirrors HistorizeContextHint in api/src/integrity/operations.ts — declared inline because this
-// package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
-type HistorizeContextHint = {
-  operation: 'create' | 'update' | 'enable' | 'fixIntegrity'
-  origin: 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+// canonical declaration (api/src/integrity/operations.ts re-exports it) — declared here because
+// this package must not import from src (a src import drags API code into the UI's vue-tsc type graph)
+// 'disable' (and 'delete' at dataset level) are the TERMINAL trail revisions (round 3 §S2);
+// 'ackTrail' records a reviewed trail-anomaly acknowledgement carrying its fingerprints
+export type RevisionOperation = 'create' | 'update' | 'delete' | 'enable' | 'fixIntegrity' | 'restore' | 'disable' | 'ackTrail'
+// actor CATEGORY, never an identity: user ids are personal data and must not enter the
+// undeletable WORM store — identity-level attribution lives in the events/journal system
+export type RevisionOrigin = 'user' | 'superadmin' | 'worker' | 'propagation' | 'upgrade'
+// per-revision attribution (the `.who` sibling, target 8): actor identity, unlike RevisionOrigin
+// above, but bounded — it never rides the revision JSON itself, only the short-retention sibling.
+// No name/email (minimization): a bare id, an opaque API-key ref, the client IP, and coarse geo
+// from trusted reverse-proxy headers.
+export type WhoHint = {
+  user?: { id: string }
+  apiKey?: { id: string }
+  ip?: string
+  geo?: { country?: string, asn?: number, asnOrg?: string }
+}
+export type HistorizeContextHint = {
+  operation: RevisionOperation
+  origin: RevisionOrigin
   reason?: string
+  who?: WhoHint
 }
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
@@ -22,7 +39,20 @@ export function assertRestDataset (dataset: Dataset): asserts dataset is RestDat
   if (!dataset.isRest) throw httpError(400, 'dataset is not "rest"')
 }
 
-export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: string[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>
+// mirrors VirtualFilter / QueryableDescendant in api/src/datasets/es/operations.ts — declared inline
+// because this package must not import from src (a src import drags API code into the UI's vue-tsc
+// type graph). One arrival of a non-virtual descendant of a virtual dataset, resolved by the single
+// traversal in datasets/utils/virtual.ts and assigned to `dataset.descendants`; consumed by
+// aliasName / prepareQuery (es/commons.ts) and parseFilters (api-compat/ods/operations.ts).
+type DescendantsVirtualFilter = { key: string, operator?: 'in' | 'nin', values?: string[] }
+export type QueryableDescendant = {
+  id: string
+  index: string
+  filters?: DescendantsVirtualFilter[]
+  [key: string]: any
+}
+
+export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: QueryableDescendant[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>
 export const isVirtualDataset = (dataset: Dataset): dataset is VirtualDataset => {
   return !!dataset.isVirtual
 }
@@ -36,8 +66,7 @@ export type DatasetExt = Dataset & { visibility: 'public' | 'private' | 'protect
 
 export type DatasetInternal = Dataset & {
   loaded?: { attachments?: boolean, dataset?: Partial<FileDataset['originalFile']> } | null,
-  descendants?: string[]
-  descendantsFull?: DatasetInternal[]
+  descendants?: QueryableDescendant[]
   initFrom?: (InitFrom & { role: string, department?: string }) | null
   _partialRestStatus?: 'updated' | 'extended' | 'indexed'
   validateDraft?: boolean
@@ -46,8 +75,19 @@ export type DatasetInternal = Dataset & {
   // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
+  // shape of the mapping this dataset's current index was built with (set on full reindex and by
+  // the REST index-creation paths; AND-merged over descendants for virtual datasets). Absent =
+  // legacy shape, per flag.
+  _indexShape?: { singleTextField?: boolean, wordAggField?: boolean, noNumericText?: boolean }
+  // true when this dataset's current index was fully (re)built by code that stamps
+  // the _bytes CSV-equivalent size on every line (set by the index-lines worker on
+  // full reindex only); storage() then reads indexed size as a sum over _bytes
+  _esLineBytes?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
   _needsHistorizing?: { context?: HistorizeContextHint }
+  // work-queue hint for the per-line integrity relay (target 3): set BEFORE line stamps are
+  // written (hint-first ordering) so a crash between the two leaves a harmless empty hint
+  _needsHistorizingLines?: boolean
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
 }
@@ -56,6 +96,9 @@ export type DatasetLine = {
   _id: string,
   _i?: number,
   _updatedAt?: Date,
+  _deleted?: boolean,
+  _hash?: string | null,
+  _needsHistorizing?: { context?: HistorizeContextHint },
   [key: string]: unknown
 }
 

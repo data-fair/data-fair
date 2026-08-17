@@ -81,8 +81,8 @@ export function formatResult (data: any, params: Params): { text: string, struct
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)
   }
-  if (data.hint) {
-    lines.push('', `> Hint: ${data.hint}`)
+  if (data.meta?.hints?.length) {
+    lines.push('', ...data.meta.hints.map((hint: string) => `> Hint: ${hint}`))
   }
 
   return {

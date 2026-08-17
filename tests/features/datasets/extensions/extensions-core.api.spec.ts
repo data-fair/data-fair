@@ -290,10 +290,12 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.find((file: any) => file.key === 'original'))
     assert.ok(res.data.find((file: any) => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
+    // indexed.size is now the CSV-equivalent sum of per-line _bytes, not the full-file byte size;
+    // the exact formula is covered by tests/features/datasets/storage-line-bytes.api.spec.ts
+    assert.ok(dataset.storage.indexed.size > 0)
     assert.equal(dataset.storage.size, res.data.find((file: any) => file.key === 'full').size + res.data.find((file: any) => file.key === 'original').size)
     assert.equal(dataset.storage.indexed.parts.length, 1)
-    assert.equal(dataset.storage.indexed.parts[0], 'full-file')
+    assert.equal(dataset.storage.indexed.parts[0], 'lines')
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.trim(), `label,siret,_etablissements.location.lat,_etablissements.location.lon,_etablissements.bodacc.capital,_etablissements.TEFET,_etablissements.NOMEN_LONG
@@ -560,6 +562,29 @@ other,unknown address
     assert.equal(dataset.schema.length, 11)
   })
 
+  test('Preserve user metadata (x-group) on enriched columns when schema is saved', async () => {
+    const ax = testUser1
+    // Initial dataset with addresses, extended with the geocoder remote service
+    let dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
+    await setupCoordsMock(10)
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(ax, dataset.id)
+    const extensionKey = dataset.extensions[0].propertyPrefix
+    const latKey = extensionKey + '.lat'
+    assert.ok(dataset.schema.find((field: any) => field.key === latKey))
+
+    // define a group on an enriched column and save the schema (innocuous change)
+    dataset.schema.find((field: any) => field.key === latKey)['x-group'] = 'coordinates'
+    dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }).then(r => r.data)
+    const latProp = dataset.schema.find((field: any) => field.key === latKey)
+    assert.equal(latProp['x-group'], 'coordinates', 'x-group must be preserved on enriched columns')
+  })
+
   test('Extend geojson dataset', async () => {
     const ax = testUser1
     // Initial dataset with addresses
@@ -601,7 +626,9 @@ other,unknown address
     assert.equal(res.status, 200)
     assert.ok(res.data.find((file: any) => file.key === 'original'))
     assert.ok(res.data.find((file: any) => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
+    // indexed.size is now the CSV-equivalent sum of per-line _bytes, not the full-file byte size;
+    // the exact formula is covered by tests/features/datasets/storage-line-bytes.api.spec.ts
+    assert.ok(dataset.storage.indexed.size > 0)
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -201,6 +201,47 @@ test.describe('datasets in draft mode - lifecycle', () => {
     // the localized "cause" param must be interpolated into the notification body
     assert.ok(notifications[2].body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${notifications[2].body.fr}"`)
     assert.ok(notifications[2].body.en.includes('manual validation'), `en body should mention the cause, got "${notifications[2].body.en}"`)
+  })
+
+  // a compatible schema patch is applied to the index through a partial mapping update instead of
+  // a full reindex. In draft mode that update must target the DRAFT index: the published index
+  // still serves the previous file and must not receive columns that only exist in the draft.
+  test('a schema patch in draft mode never touches the published index mapping', async () => {
+    const ax = testUser1
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
+    dataset = await waitForFinalize(ax, dataset.id)
+
+    const publishedProperties = await datasetEsMappingProperties(dataset.id)
+    assert.ok(publishedProperties.loc)
+    assert.equal(publishedProperties.employees, undefined)
+
+    // a new file whose schema has columns the published one does not have
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset2.csv')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })).data
+    assert.equal(dataset.draftReason.key, 'file-updated')
+    await waitForFinalize(ax, dataset.id)
+
+    // patch the DRAFT schema with a concept change: compatible enough to be applied as a mapping
+    // update rather than a reindex
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
+    const adrProp = dataset.schema.find((p: any) => p.key === 'adr')
+    adrProp['x-refersTo'] = 'http://www.w3.org/2000/01/rdf-schema#label'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema }, { params: { draft: true } })
+    await waitForFinalize(ax, dataset.id)
+
+    // the published index kept exactly its own columns: no draft-only column leaked into it
+    const publishedAfter = await datasetEsMappingProperties(dataset.id)
+    assert.equal(publishedAfter.employees, undefined)
+    assert.equal(publishedAfter.somedate, undefined)
+    assert.ok(publishedAfter.loc)
+    // and both states still serve their own data
+    assert.equal((await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.total, 2)
+    assert.equal((await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data.total, 6)
   })
 
   test('create a draft when updating the data file and cancel it', async () => {

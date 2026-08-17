@@ -11,6 +11,7 @@ import * as visibilityUtils from './visibility.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
+import { whoFromReq } from '../../integrity/who.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
@@ -381,7 +382,9 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
       const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)
-        stampHistorize(permissionsUpdate, { operation: 'update', origin: 'user' })
+        // ACL changes are among the highest-forensic-value writes (design §2.2): attach who
+        const who = whoFromReq(req)
+        stampHistorize(permissionsUpdate, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
       }
       await resources.updateOne({ id: resource.id }, permissionsUpdate)
 

@@ -92,9 +92,9 @@ test.describe('streamed /lines read path', () => {
     assert.ok(body.includes('"has,comma ""0"""'), 'csv escaping of commas/quotes is intact')
   })
 
-  test('hint: a hint=true large request carries a hint', async () => {
+  test('hints: a hint=true large request carries meta.hints entries', async () => {
     const res = await testUser1.get(`${base}?format=json&size=2500&sort=_id&hint=true`)
-    assert.ok(res.data.hint, 'a hint=true large request should carry a hint')
+    assert.ok(Array.isArray(res.data.meta?.hints) && res.data.meta.hints.length > 0, 'a hint=true large request should carry meta.hints')
   })
 
   test('collapse: totalCollapse is present in the envelope', async () => {

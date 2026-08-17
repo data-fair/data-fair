@@ -295,3 +295,49 @@ Glacier storage classes; shortening and deleting are correctly refused.
 Option B (lock renewal by extension, integrity.md §3.4) is validated as the
 primary renewal model on the target provider; Option A (re-anchoring)
 remains a documented fallback for providers without prolongation.
+
+## Block 7 — case D: explicit shorter retain-until vs. bucket default (pre-prod-enable gate)
+
+**Status: not yet run — this is a checklist item to execute before enabling `.who` attribution
+in production on Scaleway**, not a merge gate (the attribution design doc §6.3 already runs the
+equivalent semantics in CI against MinIO, which does honor an explicit shorter retain-until — see
+`tests/features/integrity/attribution.api.spec.ts`). The `.who` sibling (docs/architecture/integrity.md
+§3.1/§3.4, design doc `2026-07-22-integrity-attribution-design.md`) needs its own, *shorter*,
+per-object `ObjectLockRetainUntilDate` (`config.integrity.attribution.retentionDays`, default 180)
+on a bucket whose `DefaultRetention` is the longer revision window (`config.integrity.retention.days`,
+default 365) — standard S3 semantics say an explicit per-object date overrides the bucket default in
+both directions at object creation, but this has not been spiked against Scaleway specifically, only
+inferred from the AWS S3 API spec and confirmed empirically on MinIO.
+
+```bash
+PROFILE=scw-staging
+BUCKET=staging-integrity-lock-spike
+# reuse block 1's bucket/config (1-day COMPLIANCE default) or recreate it if block 6 already ran
+echo "integrity spike case D — explicit shorter retain-until than bucket default" > /tmp/spike-d.txt
+# the bucket default in block 1 is 1 day; request an EXPLICIT retain-until only a few minutes out —
+# i.e. deliberately SHORTER than what the bucket default would have set
+RETAIN_D=$(date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ)
+echo "explicit (shorter) retain-until: $RETAIN_D"
+aws s3api put-object --profile $PROFILE --bucket $BUCKET --key case-d --body /tmp/spike-d.txt \
+    --object-lock-mode COMPLIANCE --object-lock-retain-until-date $RETAIN_D
+aws s3api get-object-retention --profile $PROFILE --bucket $BUCKET --key case-d
+
+# same case on Glacier storage class
+echo "integrity spike case D-glacier" > /tmp/spike-d-glacier.txt
+aws s3api put-object --profile $PROFILE --bucket $BUCKET --key case-d-glacier --body /tmp/spike-d-glacier.txt \
+    --storage-class GLACIER --object-lock-mode COMPLIANCE --object-lock-retain-until-date $RETAIN_D
+aws s3api head-object --profile $PROFILE --bucket $BUCKET --key case-d-glacier \
+    --query '{StorageClass:StorageClass,Mode:ObjectLockMode,RetainUntil:ObjectLockRetainUntilDate}'
+```
+
+Expected: both `get-object-retention`/`head-object` read-backs show `RetainUntilDate` equal to
+`$RETAIN_D` (~10 minutes out), **not** the bucket's 1-day default — proving the explicit,
+per-object, *shorter* date is honored rather than clamped up to the default. **If Scaleway instead
+clamps the retain-until up to the bucket default (or refuses the PUT), case D FAILs** and the
+fallback noted in the design doc §6.3 applies: deploy the integrity bucket **without** a
+bucket-level default retention (data-fair already sets an explicit `ObjectLockRetainUntilDate` on
+every PUT, for both revisions and `.who` siblings, so the bucket default is a convenience, not a
+dependency). Low risk either way — case D only gates *whether* the bucket may keep a default
+retention rule alongside the `.who` sibling's shorter explicit one, not whether `.who` can be
+locked at all. Clean up `case-d`/`case-d-glacier` in the same block-6 pass (after the 10-minute
+lock and the 1-day default have both lapsed).

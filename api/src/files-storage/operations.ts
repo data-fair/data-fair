@@ -1,4 +1,13 @@
 import type { ApiConfig } from '../../config/type/index.ts'
+import fs from 'fs-extra'
+
+// durably flush a file that was just written; here (config-free module) rather than in
+// datasets/utils/files.ts so the fs backend can be imported without loading #config
+export const fsyncFile = async (p: string) => {
+  const fd = await fs.open(p, 'r')
+  await fs.fsync(fd)
+  await fs.close(fd)
+}
 
 /**
  * Prepare the S3 config for logging. The debug logs of a production API are routinely
