@@ -35,7 +35,7 @@
     role="status"
     aria-live="polite"
     aria-atomic="true"
-    class="text-title-medium mb-4"
+    class="text-title-large mb-4"
   >
     {{ t('matchingCount', catalog.totalCount.value) }}
   </div>
