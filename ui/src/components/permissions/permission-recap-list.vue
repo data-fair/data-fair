@@ -28,9 +28,17 @@
     </v-col>
   </v-row>
 
-  <p class="text-body-2 mb-4">
+  <!-- live region: the count is the answer to the question the scope asks, and it changes
+       on every scope change — same pattern as portals' catalog-layout.vue. No heading tag:
+       this is not a section title. -->
+  <div
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    class="text-title-medium mb-4"
+  >
     {{ t('matchingCount', catalog.totalCount.value) }}
-  </p>
+  </div>
 
   <v-row class="d-flex align-stretch">
     <v-col
