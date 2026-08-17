@@ -115,6 +115,18 @@ test('a department admin cannot use the scope parameters', async () => {
   )
 })
 
+test('facet counts follow the scope', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  await createDataset(ax, 'recap facet public', [{ classes: ['list', 'read'] }])
+  await createDataset(ax, 'recap facet private', [])
+
+  const res = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'public', scopeActions: 'list', facets: 'visibility', size: 1000 }
+  })
+  const facetTotal = res.data.facets.visibility.reduce((sum: number, f: any) => sum + f.count, 0)
+  assert.equal(facetTotal, res.data.count, 'facet counts must describe the same set as the list')
+})
+
 test('a client-supplied owner cannot widen the perimeter', async () => {
   const ax = await axiosAuth(adminEmail, org)
   await createDataset(ax, 'recap owner lock', [{ classes: ['list', 'read'] }])

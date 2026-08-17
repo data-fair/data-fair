@@ -301,6 +301,10 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
       $or: permissions.filter(sessionState, resourceType as ResourceType)
     }
   })
+  // basePipeline does not go through query(), so the scope has to be applied here too,
+  // otherwise facet counts would describe a different set than the displayed list
+  const scope = scopeFilters(reqQuery, sessionState, resourceType)
+  if (scope.length) pipeline.push({ $match: { $and: scope } })
   if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
     const accountFilter: any = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
     if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
