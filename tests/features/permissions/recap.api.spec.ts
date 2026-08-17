@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, anonymousAx, mockAppUrl, clean } from '../../support/axios.ts'
 
 test.afterAll(clean)
 
@@ -135,4 +135,59 @@ test('a client-supplied owner cannot widen the perimeter', async () => {
     params: { scopeType: 'public', scopeActions: 'list', owner: 'organization:test_org2', size: 1000 }
   })
   assert.equal(res.data.count, 0, 'the forced owner clause is AND-ed, it can only narrow')
+})
+
+test('the recap matches what an anonymous visitor really sees', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  await createDataset(ax, 'truth public', [{ classes: ['list', 'read'] }])
+  await createDataset(ax, 'truth protected', [
+    { type: 'organization', id: org, roles: ['contrib'], classes: ['list', 'read'] }
+  ])
+  await createDataset(ax, 'truth private', [])
+
+  const recap = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'public', scopeActions: 'list', size: 1000 }
+  })
+  const real = await anonymousAx.get('/api/v1/datasets', {
+    params: { owner: `organization:${org}`, size: 1000 }
+  })
+
+  const recapIds = recap.data.results.map((d: any) => d.id).sort()
+  const realIds = real.data.results.map((d: any) => d.id).sort()
+  assert.deepEqual(recapIds, realIds, 'the recap must report exactly what an anonymous visitor can list')
+})
+
+test('the recap matches what a real contributor of the organization sees', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  await createDataset(ax, 'truth contrib visible', [
+    { type: 'organization', id: org, roles: ['contrib'], classes: ['list', 'read'] }
+  ])
+  await createDataset(ax, 'truth contrib hidden', [])
+
+  const recap = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'organization', scopeId: org, scopeRoles: 'contrib', scopeActions: 'list', size: 1000 }
+  })
+  const contribAx = await axiosAuth(contribEmail, org)
+  const real = await contribAx.get('/api/v1/datasets', {
+    params: { owner: `organization:${org}`, size: 1000 }
+  })
+
+  const recapIds = recap.data.results.map((d: any) => d.id).sort()
+  const realIds = real.data.results.map((d: any) => d.id).sort()
+  assert.deepEqual(recapIds, realIds, 'the recap must report exactly what a real contributor can list')
+})
+
+test('the scope applies to applications the same way', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  // creation body copied from tests/features/applications/publication-sites.api.spec.ts:35
+  const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+  await ax.put(`/api/v1/applications/${app.id}/permissions`, [{ classes: ['list', 'read'] }])
+  const hidden = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp2') })).data
+
+  const res = await ax.get('/api/v1/applications', {
+    params: { scopeType: 'public', scopeActions: 'list', size: 1000 }
+  })
+  const ids = res.data.results.map((a: any) => a.id)
+  assert.ok(ids.includes(app.id))
+  assert.ok(!ids.includes(hidden.id))
 })
