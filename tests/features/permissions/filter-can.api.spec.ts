@@ -15,7 +15,7 @@ test('the can parameter accepts several comma-separated permission classes', asy
   //
   // The requester must NOT be an admin of the owner either: filterCan grants admins the
   // whole owner clause whatever the requested operations. test_user5 is contrib of
-  // test_org1 and holds no implicit right (cf. ticket #777).
+  // test_org1 and holds no implicit right.
   const adminAx = await axiosAuth('test_user1@test.com', 'test_org1')
   const dataset = (await adminAx.post('/api/v1/datasets', { isMetaOnly: true, title: 'can filter dataset' })).data
   await adminAx.put(`/api/v1/datasets/${dataset.id}/permissions`, [

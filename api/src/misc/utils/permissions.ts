@@ -369,7 +369,7 @@ export const scopeFilter = function (scope: PermissionScope, resourceType: Resou
       // implicit rights of the owner organization's admins: they can do everything.
       // Only admins get this — contribOperationsClasses does not contain 'list', so
       // filterCan grants the owner clause to admins only, and permissions.list() gives
-      // contributors nothing implicit either (cf. ticket #777).
+      // contributors nothing implicit either.
       if (matchesAnyRole) {
         const ownerClause: any = { 'owner.type': 'organization', 'owner.id': scope.id }
         if (scope.department && scope.department !== '*' && scope.department !== '-') {

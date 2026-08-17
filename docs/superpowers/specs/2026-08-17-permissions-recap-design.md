@@ -3,7 +3,6 @@
 - **Date:** 2026-08-17
 - **Status:** approved (design); implementation plan to follow
 - **Branch / worktree:** `feat-permissions-recap`
-- **Related tickets:** koumoul/plateforme#1071 (last unchecked item), #1083, #1632, #777
 
 ## 1. Context & motivation
 
@@ -18,17 +17,13 @@ Concretely an admin cannot answer, today, without opening resources one by one:
 - which resources can a member of partner organization X see?
 - which resources did we open to contributors of department Y?
 
-Ticket #1071 ("Gestion des partenaires") closed with exactly this item still unchecked:
+The partner-management work left exactly this item open: being able to see, from the
+organization's partners tab, which datasets those partners hold rights on.
 
-> Il pourrait être intéressant sur l'onglet "partenaires" dans la gestion de
-> l'organisation de voir les jeux de données auxquels sur lesquels ils ont des droits.
-
-Ticket #1083 ("revoir édition des permissions", still open) states the same need from the
-other end — *"On veut aussi probablement pouvoir requêter efficacement et faire des
-facettes sur ces infos"* — and proposes denormalizing a "permission profile" on each
-permission entry to make it queryable. This design does **not** depend on that
-denormalization: it queries the existing `permissions[]` structure directly. If #1083
-later lands, the recap keeps working unchanged.
+A parallel wish exists from the other end — being able to query and facet efficiently on
+permission data, which would mean denormalizing a "permission profile" onto each permission
+entry. This design does **not** depend on that denormalization: it queries the existing
+`permissions[]` structure directly, and would keep working unchanged if the profile lands.
 
 An earlier idea of letting an org admin impersonate an account was abandoned as too
 dangerous. This screen delivers the useful half of that idea — *seeing* what a scope can
@@ -52,7 +47,7 @@ A verification worth recording, because it removes an approximation we feared:
 (`shared/permissions/operations.ts`), so it does not contain `'list'`. Therefore in
 `filterCan` the "whole owner organization" clause is only added for the **admin** role,
 and in `permissions.list()` a contributor gains nothing implicit either (its `contrib`
-operation ids do not resolve to operation classes). This matches ticket #777, which
+operation ids do not resolve to operation classes). This matches the earlier change that
 removed implicit rights for plain org members in favour of explicit permissions.
 
 The effective model is therefore exactly:
@@ -226,10 +221,10 @@ Verified in `../portals`: there is **no permissions model** in the Data Fair sen
 comment about ownership transfer. Pages, reuses and groups carry no `permissions` array;
 confidentiality is handled at portal level (the portal config's `authentication` field).
 
-Ticket #1632 sketches a different shape for page permissions — a single visibility level
-("everyone / logged-in members / members, contribs and admins of the owner / …") plus
-contributor rights — not an arbitrary array of classes and operations. (The ticket is
-acknowledged as partly out of date, but the *shape* of the model is the point here.)
+The shape being considered for page permissions there is different — a single visibility
+level ("everyone / logged-in members / members, contribs and admins of the owner / …") plus
+contributor rights — not an arbitrary array of classes and operations. That direction is not
+settled, but the *shape* of the model is the point here.
 
 Therefore:
 

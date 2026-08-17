@@ -22,8 +22,8 @@ The evidence that no third case exists: `contribOperationsClasses` is `['post']`
 `datasets` and `applications` (`shared/permissions/operations.ts`), so it does not contain
 `'list'`. Consequently `filterCan` adds its "whole owner organization" clause for the
 `admin` role only, and `permissions.list()` grants a contributor nothing implicit either —
-its `contrib` operation ids do not resolve to operation classes. This matches ticket #777,
-which removed implicit rights for plain organization members in favour of explicit
+its `contrib` operation ids do not resolve to operation classes. This matches the earlier
+change that removed implicit rights for plain organization members in favour of explicit
 permissions.
 
 Two consequences that are correct behaviour, not bugs:
@@ -137,9 +137,9 @@ Datasets and applications share the same evaluator, parameterised by `resourceTy
 
 Portal pages do **not**: `portals` has no permissions model in the Data Fair sense — no
 `permissions` array on pages, reuses or groups, confidentiality being handled at portal
-level through the portal config's `authentication` field. Ticket #1632 sketches a different
-shape for page permissions (a single visibility level plus contributor rights), so the
-clause generator does not transpose.
+level through the portal config's `authentication` field. The shape being considered for
+page permissions there is different (a single visibility level plus contributor rights), so
+the clause generator does not transpose.
 
 What does transpose is the **scope**, because it describes an *account*, not a resource.
 That is why the five parameters above are flat and readable rather than an opaque blob: a
