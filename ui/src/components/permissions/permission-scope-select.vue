@@ -2,12 +2,15 @@
   <v-row dense>
     <v-col
       cols="12"
-      md="4"
+      md="3"
     >
       <v-select
         :model-value="scopeType"
         :items="scopeTypeItems"
         :label="t('scope')"
+        :placeholder="t('noScope')"
+        persistent-placeholder
+        clearable
         hide-details="auto"
         @update:model-value="setScopeType"
       />
@@ -16,7 +19,7 @@
     <template v-if="scopeType === 'organization'">
       <v-col
         cols="12"
-        md="4"
+        md="3"
       >
         <v-select
           v-model="orgSelectType"
@@ -28,7 +31,7 @@
         <v-col
           v-if="ownerDetails?.departments?.length"
           cols="12"
-          md="4"
+          md="3"
         >
           <v-select
             :model-value="modelValue?.department ?? null"
@@ -41,7 +44,7 @@
         <v-col
           v-if="ownerDetails?.roles?.length"
           cols="12"
-          md="4"
+          md="3"
         >
           <v-select
             :model-value="modelValue?.roles ?? []"
@@ -56,7 +59,7 @@
       <v-col
         v-else
         cols="12"
-        md="4"
+        md="3"
       >
         <v-select
           :model-value="modelValue?.id ?? null"
@@ -73,7 +76,7 @@
     <template v-if="scopeType === 'user'">
       <v-col
         cols="12"
-        md="4"
+        md="3"
       >
         <v-select
           v-model="userSelectType"
@@ -84,7 +87,7 @@
       <v-col
         v-if="userSelectType === 'member'"
         cols="12"
-        md="4"
+        md="3"
       >
         <member-select
           :model-value="member"
@@ -95,7 +98,7 @@
       <v-col
         v-if="userSelectType === 'email'"
         cols="12"
-        md="4"
+        md="3"
       >
         <v-text-field
           :model-value="modelValue?.email ?? ''"
@@ -111,7 +114,7 @@
 <i18n lang="yaml">
 fr:
   scope: Portée
-  allResources: Aucune simulation (toutes les ressources)
+  noScope: Toutes les ressources
   public: Public
   organization: Organisation
   user: Utilisateur
@@ -127,7 +130,7 @@ fr:
   email: Email
 en:
   scope: Scope
-  allResources: No simulation (all resources)
+  noScope: All resources
   public: Public
   organization: Organization
   user: User
@@ -167,9 +170,9 @@ const ownerDetails = ref<OwnerDetails | null>(null)
 
 const scopeType = computed(() => modelValue.value?.type ?? null)
 
+// no "no simulation" entry: clearing the select is what expresses "list everything"
 const scopeTypeItems = computed(() => {
-  const items: { value: PermissionScope['type'] | null, title: string }[] = [
-    { value: null, title: t('allResources') },
+  const items: { value: PermissionScope['type'], title: string }[] = [
     { value: 'public', title: t('public') },
     { value: 'user', title: t('user') }
   ]

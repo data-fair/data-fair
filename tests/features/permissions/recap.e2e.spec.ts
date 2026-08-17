@@ -27,8 +27,9 @@ test.describe('permissions recap page', () => {
     await expect(page.getByRole('tab', { name: 'Applications' })).toBeVisible()
 
     // with no scope the page lists everything the account owns
-    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('.v-container .v-card')).toHaveCount(3)
+    // (scoped to .v-window-item: df-section-tabs wraps the whole section in its own v-card)
+    await expect(page.locator('.v-window-item .v-card').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.v-window-item .v-card')).toHaveCount(3)
 
     // narrowing to the public scope keeps only the publicly listable dataset
     // (clicking the .v-select wrapper, not the label: the selection text intercepts
@@ -37,7 +38,7 @@ test.describe('permissions recap page', () => {
     await expect(scopeSelect).toBeVisible({ timeout: 10000 })
     await scopeSelect.click()
     await page.getByRole('option', { name: 'Public', exact: true }).click()
-    await expect(page.locator('.v-container .v-card')).toHaveCount(1)
+    await expect(page.locator('.v-window-item .v-card')).toHaveCount(1)
     await expect(page.getByText('Recap Public')).toBeVisible()
 
     // the scope is reflected in the url, so the view is shareable

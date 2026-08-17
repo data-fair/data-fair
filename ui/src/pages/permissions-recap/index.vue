@@ -7,44 +7,43 @@
       class="mb-4"
     />
 
-    <v-tabs
+    <df-section-tabs
+      id="permissions-recap"
       v-model="tab"
-      class="mb-4"
+      :title="t('title')"
+      :subtitle="t('subtitle')"
+      :tabs="tabs"
+      :svg="securitySvg"
     >
-      <v-tab value="datasets">
-        {{ t('datasets') }}
-      </v-tab>
-      <v-tab value="applications">
-        {{ t('applications') }}
-      </v-tab>
-    </v-tabs>
-
-    <v-tabs-window v-model="tab">
-      <v-tabs-window-item value="datasets">
-        <permission-recap-list
-          v-model:actions="datasetsActions"
-          resource-type="datasets"
-          :scope="scope"
-        />
-      </v-tabs-window-item>
-      <v-tabs-window-item value="applications">
-        <permission-recap-list
-          v-model:actions="applicationsActions"
-          resource-type="applications"
-          :scope="scope"
-        />
-      </v-tabs-window-item>
-    </v-tabs-window>
+      <template #windows>
+        <v-tabs-window-item value="datasets">
+          <permission-recap-list
+            v-model:actions="datasetsActions"
+            resource-type="datasets"
+            :scope="scope"
+          />
+        </v-tabs-window-item>
+        <v-tabs-window-item value="applications">
+          <permission-recap-list
+            v-model:actions="applicationsActions"
+            resource-type="applications"
+            :scope="scope"
+          />
+        </v-tabs-window-item>
+      </template>
+    </df-section-tabs>
   </v-container>
 </template>
 
 <i18n lang="yaml">
 fr:
   title: Récapitulatif des permissions
+  subtitle: Choisissez une portée pour voir ce qu'elle peut atteindre, et pour quelles actions.
   datasets: Jeux de données
   applications: Applications
 en:
   title: Permissions recap
+  subtitle: Pick a scope to see what it can reach, and for which actions.
   datasets: Datasets
   applications: Applications
 </i18n>
@@ -54,11 +53,18 @@ import PermissionScopeSelect from '~/components/permissions/permission-scope-sel
 import PermissionRecapList from '~/components/permissions/permission-recap-list.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { parseScopeParams, scopeToParams, type PermissionScope } from '@data-fair/data-fair-shared/permissions/scope.ts'
+import { mdiDatabase, mdiImageMultiple } from '@mdi/js'
+import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 
 const { t } = useI18n()
 const { account } = useSession()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('title') }] })
+
+const tabs = computed(() => [
+  { key: 'datasets', title: t('datasets'), icon: mdiDatabase },
+  { key: 'applications', title: t('applications'), icon: mdiImageMultiple }
+])
 
 const tab = useStringSearchParam('tab', 'datasets')
 const datasetsActions = useStringsArraySearchParam('datasetsActions')

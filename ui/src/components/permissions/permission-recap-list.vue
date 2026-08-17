@@ -29,7 +29,7 @@
   </v-row>
 
   <p class="text-body-2 mb-4">
-    {{ t('matchingCount', { count: catalog.totalCount.value }) }}
+    {{ t('matchingCount', catalog.totalCount.value) }}
   </p>
 
   <v-row class="d-flex align-stretch">
@@ -63,7 +63,7 @@ fr:
   actions: Actions
   detailedActions: Actions détaillées
   expertMode: Mode expert
-  matchingCount: "{count} ressources correspondantes"
+  matchingCount: "aucune ressource correspondante | 1 ressource correspondante | {count} ressources correspondantes"
   classNames:
     list: Lister
     read: Lecture
@@ -76,7 +76,7 @@ en:
   actions: Actions
   detailedActions: Detailed actions
   expertMode: Expert mode
-  matchingCount: "{count} matching resources"
+  matchingCount: "no matching resource | 1 matching resource | {count} matching resources"
   classNames:
     list: List
     read: Read
