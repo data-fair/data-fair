@@ -18,11 +18,12 @@ geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock serve
 const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/sirene-api.json'), 'utf8'))
 sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
-// lang is deliberately wrong here: the proxy owns the language of the served document
-// and must replace whatever the application declares (see applications/proxy.ts)
+// lang and title are deliberately wrong here: the proxy owns the language and the title of
+// the served document and must replace whatever the application declares (see applications/proxy.ts)
 const html = `
   <html lang="zz">
     <head>
+      <title>Base app model name</title>
       <meta name="application-name" content="test">
       <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
     </head>

@@ -199,6 +199,7 @@ test.describe('Applications', () => {
 
     let res = await ax.post('/api/v1/applications', {
       url: mockAppUrl('monapp1'),
+      title: 'Répartition des équipements sportifs',
       configuration: {
         datasets: [
           { id: dataset.id, href: datasetRefInit.href },
@@ -236,6 +237,11 @@ test.describe('Applications', () => {
     // language, or with a wrong one, fails WCAG 3.1.1 / RGAA 8.3-8.4
     assert.ok(/<html[^>]*\slang="(fr|en)"/.test(res.data), 'the html element carries the served locale')
     assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
+
+    // Same for the title: the one declared by the application names its model in the catalog,
+    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6)
+    assert.ok(res.data.includes('<title>Répartition des équipements sportifs</title>'), 'the document is titled after the application')
+    assert.ok(!res.data.includes('Base app model name'), 'the title declared by the application is replaced')
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))

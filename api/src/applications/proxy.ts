@@ -178,6 +178,19 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
     else head.childNodes.push(node)
   }
 
+  // data-fair owns the title of the served document, for the same reason it owns lang: the
+  // <title> an application declares is the name of its model in the catalog — that document
+  // is fetched directly from the base application URL when importing it, never through this
+  // proxy — not the name of the visualization being served. Leaving it in place titles every
+  // page after its model ("Charts" for a chart of sports facilities), which fails WCAG 2.4.2 /
+  // RGAA 8.6 as soon as the application is opened on its own instead of embedded in a portal.
+  const titleNode = head.childNodes.find((c: any) => c.tagName === 'title')
+  if (titleNode) {
+    titleNode.childNodes = [{ nodeName: '#text', value: application.title, parentNode: titleNode }]
+  } else {
+    pushHeadNode({ nodeName: 'title', tagName: 'title', attrs: [] }, application.title)
+  }
+
   // Data-fair generates a manifest per app
   const manifestUrl = new URL(application.exposedUrl).pathname + '/manifest.json'
   const manifest = head.childNodes.find((c: any) => c.attrs && c.attrs.find((a: any) => a.name === 'rel' && a.value === 'manifest'))
