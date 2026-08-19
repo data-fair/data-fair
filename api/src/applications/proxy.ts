@@ -184,12 +184,11 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   // proxy — not the name of the visualization being served. Leaving it in place titles every
   // page after its model ("Charts" for a chart of sports facilities), which fails WCAG 2.4.2 /
   // RGAA 8.6 as soon as the application is opened on its own instead of embedded in a portal.
-  const titleNode = head.childNodes.find((c: any) => c.tagName === 'title')
-  if (titleNode) {
-    titleNode.childNodes = [{ nodeName: '#text', value: application.title, parentNode: titleNode }]
-  } else {
-    pushHeadNode({ nodeName: 'title', tagName: 'title', attrs: [] }, application.title)
-  }
+  // Every declared title is dropped, not just the first: some applications declare several,
+  // one per language (base-applications/service.ts picks between them at import time), and
+  // leaving the extras would keep the model name in the document behind the browser's pick.
+  head.childNodes = head.childNodes.filter((c: any) => c.tagName !== 'title')
+  pushHeadNode({ nodeName: 'title', tagName: 'title', attrs: [] }, application.title)
 
   // Data-fair generates a manifest per app
   const manifestUrl = new URL(application.exposedUrl).pathname + '/manifest.json'
