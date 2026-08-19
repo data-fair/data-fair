@@ -239,9 +239,11 @@ test.describe('Applications', () => {
     assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
 
     // Same for the title: the one declared by the application names its model in the catalog,
-    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6)
+    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6).
+    // It keeps naming the model in the base app metadata, which is why only the element is checked.
     assert.ok(res.data.includes('<title>Répartition des équipements sportifs</title>'), 'the document is titled after the application')
-    assert.ok(!res.data.includes('Base app model name'), 'the title declared by the application is replaced')
+    assert.ok(!res.data.includes('<title>Base app model name</title>'), 'the title declared by the application is replaced')
+    assert.equal(application.baseApp.meta.title, 'Base app model name', 'the base app metadata still names the model')
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
