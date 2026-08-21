@@ -16,7 +16,6 @@ import filesStorage from '#files-storage'
 import { validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as extensionsUtils from '../../datasets/utils/extensions.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
@@ -26,11 +25,8 @@ import type { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 // extensions, accumulating every row error into a single DiagnosticWriter. Throws
 // [validation-error] at the end if any error was collected.
 
-const inlineErrorsLimit = 3
-
 class ValidateStream extends Writable {
   validate: CustomAjvValidate
-  inlineErrors: string[] = []
   nbErrors = 0
   i = 0
   writer: DiagnosticWriter
@@ -51,9 +47,6 @@ class ValidateStream extends Writable {
       return
     }
     this.nbErrors++
-    if (this.nbErrors <= inlineErrorsLimit) {
-      this.inlineErrors.push(`Ligne ${this.i}: ${this.validate.errors}`)
-    }
     const lineNumber = this.i
     const writerErrors = rawErrors.length
       ? rawErrors.map(err => {
@@ -82,13 +75,11 @@ class ValidateStream extends Writable {
     })().then(() => callback(), callback)
   }
 
+  // no error sample here on purpose: the exhaustive list is in the diagnostic CSV
+  // downloadable from the journal event
   errorsSummary () {
     if (!this.nbErrors) return null
-    const leftOut = this.nbErrors - inlineErrorsLimit
-    let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n`
-    msg += this.inlineErrors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n')
-    if (leftOut > 0) msg += `\n${leftOut} autres erreurs...`
-    return msg
+    return `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation (${this.nbErrors} ligne${this.nbErrors > 1 ? 's' : ''}).`
   }
 }
 
@@ -197,11 +188,11 @@ export default async function (dataset: DatasetInternal) {
   if (writer.errorCount > 0) {
     const summaryParts: string[] = []
     if (nbValidationErrors > 0) {
-      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne(s) en erreur de validation`
+      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne${nbValidationErrors > 1 ? 's' : ''} en erreur de validation`
       summaryParts.push(validationSummary)
     }
     if (blockingExtensionErrors > 0) {
-      summaryParts.push(`${blockingExtensionErrors} ligne(s) en échec d'enrichissement obligatoire`)
+      summaryParts.push(`${blockingExtensionErrors} ligne${blockingExtensionErrors > 1 ? 's' : ''} en échec d'enrichissement obligatoire`)
     }
     const summary = summaryParts.join('\n')
 

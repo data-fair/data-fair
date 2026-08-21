@@ -172,7 +172,7 @@ export default async function (dataset: DatasetInternal) {
       }
       if (unicityErrorCount > 0) {
         const fileResult = await writer.finalize()
-        const summary = `${unicityErrorCount} ligne(s) en double sur une contrainte d'unicité`
+        const summary = `${unicityErrorCount} ligne${unicityErrorCount > 1 ? 's' : ''} en double sur une contrainte d'unicité`
         const diagnosticEventData = {
           hasDiagnosticFile: true,
           diagnosticErrorCount: fileResult.count,
