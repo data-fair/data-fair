@@ -21,33 +21,52 @@
       :key="`${i}-${j}`"
       :prepend-icon="mdiIcons[getEventType(event).icon]"
       :base-color="getEventType(event).color || 'default'"
+      :lines="isLongMessage(event) ? 'three' : undefined"
     >
       <v-list-item-title>
         <span
           v-if="event.type === 'error'"
-          class="text-error"
+          class="text-error journal-message"
+          :class="{ 'journal-message-expanded': expanded[eventKey(event)] }"
         >
           {{ event.data || eventLabel(event) }}
         </span>
-        <span v-else>
+        <span
+          v-else
+          class="journal-message"
+        >
           {{ eventLabel(event) }}
           {{ event.type === 'draft-validated' ? `(${event.data})` : '' }}
         </span>
       </v-list-item-title>
       <v-list-item-subtitle v-if="event.type === 'validation-error' && event.data">
         <p
-          class="text-error"
-          style="white-space: pre-line"
+          class="text-error journal-message"
+          :class="{ 'journal-message-expanded': expanded[eventKey(event)] }"
         >
           {{ event.data }}
         </p>
       </v-list-item-subtitle>
       <v-list-item-subtitle v-else-if="event.data && !['draft-validated', 'error'].includes(event.type)">
-        <p v-safe-html="event.data" />
+        <p
+          v-safe-html="event.data"
+          class="journal-message"
+          :class="{ 'journal-message-expanded': expanded[eventKey(event)] }"
+        />
       </v-list-item-subtitle>
+      <v-btn
+        v-if="isLongMessage(event)"
+        variant="text"
+        size="small"
+        :color="getEventType(event).color || undefined"
+        :append-icon="expanded[eventKey(event)] ? mdiChevronUp : mdiChevronDown"
+        @click="expanded[eventKey(event)] = !expanded[eventKey(event)]"
+      >
+        {{ expanded[eventKey(event)] ? t('collapseMessage') : t('expandMessage') }}
+      </v-btn>
       <template #append>
         <div class="d-flex flex-column align-end">
-          <span class="text-body-small default">
+          <span class="text-body-small default text-no-wrap">
             {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
           </span>
           <v-btn
@@ -55,6 +74,7 @@
             variant="text"
             size="small"
             color="error"
+            :prepend-icon="mdiFileDownload"
             :href="diagnosticDownloadHref(event)"
             target="_blank"
           >
@@ -82,17 +102,21 @@ fr:
   draft: Brouillon
   downloadDiagnostic: Télécharger le diagnostic
   showMore: Voir plus
+  expandMessage: Voir le message complet
+  collapseMessage: Réduire le message
 en:
   draft: Draft
   downloadDiagnostic: Download diagnostic
   showMore: Show more
+  expandMessage: Show full message
+  collapseMessage: Collapse message
 </i18n>
 
 <script setup lang="ts">
 import { inject } from 'vue'
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
-import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
+import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiChevronDown, mdiChevronUp, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
 import { datasetStoreKey, type DatasetStore, type TaskProgress } from '~/composables/dataset/dataset-store'
 const eventsList = eventsJson as Record<string, Record<string, { icon: string, text: Record<string, string>, color?: string }>>
 
@@ -127,6 +151,16 @@ const draftEventTypes = eventsList[`${type}-draft`]
 const filteredEvents = computed(() => journal.filter(event => !!eventTypes[event.type] && (!after || event.date >= after)))
 
 const visibleCount = ref(10)
+
+// long messages (a breaking-changes list, an ES error dump, the list of empty columns...)
+// are clamped to 2 lines with a toggle to reveal the whole thing in a scrollable block.
+// Event labels come from a fixed enum (128 chars max), only event.data is unbounded.
+const expanded = ref<Record<string, boolean>>({})
+const eventKey = (event: Event) => `${event.date}-${event.type}`
+const isLongMessage = (event: Event) => {
+  if (!event.data || event.type === 'draft-validated') return false
+  return event.data.length > 140 || event.data.includes('\n')
+}
 
 const groupedEvents = computed(() => {
   const groups = []
@@ -174,3 +208,27 @@ const mdiIcons: Record<string, string> = {
 }
 
 </script>
+
+<style scoped>
+/* override vuetify's single-line ellipsis: journal messages may be long and must stay readable */
+.journal-message {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-line;
+}
+.journal-message-expanded {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: 300px;
+  overflow-y: auto;
+}
+:deep(.v-list-item-title),
+:deep(.v-list-item-subtitle) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+</style>
