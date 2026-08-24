@@ -330,6 +330,12 @@ test.describe('virtual datasets features', () => {
     assert.ok(res.data.results[0]._thumbnail)
     res = await ax.get(res.data.results[0]._thumbnail)
     assert.equal(res.status, 200)
+
+    // same rewrite (raw child path -> rerouted through the virtual dataset) must apply to hits returned
+    // by values_agg, the documented way to read attachmentsAsImage through an aggregation
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/values_agg?field=attr1&size=1&select=_attachment_url`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.aggs[0].results[0]._attachment_url, `${config.publicUrl}/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
   })
 
   test('a virtual dataset of a virtual dataset of a dataset with attachments re-expose those attachments', async () => {
