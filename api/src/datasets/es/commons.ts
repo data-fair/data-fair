@@ -595,6 +595,11 @@ export const getQueryBBOX = (query: Record<string, any>, _dataset?: any) => {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number) as [number, number, number])
   }
   if (bbox) {
+    // reject broken coordinates (a client sending its uninitialized bounds as Number.MAX_VALUE, a NaN,
+    // an aberrant xyz reference, etc) rather than letting elasticsearch fail on them
+    if (bbox.length !== 4 || bbox.some(coord => !Number.isFinite(coord)) || Math.abs(bbox[1]) > 90 || Math.abs(bbox[3]) > 90) {
+      throw httpError(400, 'invalid bounding box, expected "left,bottom,right,top" with latitudes between -90 and 90')
+    }
     bbox[0] = geo.fixLon(bbox[0])
     bbox[2] = geo.fixLon(bbox[2])
   }
