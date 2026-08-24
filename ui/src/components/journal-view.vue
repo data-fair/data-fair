@@ -17,8 +17,8 @@
       {{ t('draft') }}
     </v-list-subheader>
     <v-list-item
-      v-for="(event,j) in group.events"
-      :key="`${i}-${j}`"
+      v-for="event in group.events"
+      :key="`${event.date}-${event.type}`"
       :prepend-icon="mdiIcons[getEventType(event).icon]"
       :base-color="getEventType(event).color || 'default'"
     >
