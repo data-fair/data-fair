@@ -164,9 +164,9 @@ bidule,123,test3`, 'dataset1.csv')
     const journal = (await ax.get(`/api/v1/datasets/${dataset2.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('/multipattern/1 doit correspondre au format'))
 
-    // the diagnostic CSV must carry the actual rejected value, resolved through
+    // the summary carries no error sample, the diagnostic CSV is the exhaustive source
+    // and must carry the actual rejected value, resolved through
     // the nested JSON-pointer (/multipattern/1), not an empty cell
     assert.ok(errorEvent.hasDiagnosticFile)
     const diagnostic = (await ax.get(`/api/v1/datasets/${dataset2.id}/validation-diagnostic.csv`)).data
