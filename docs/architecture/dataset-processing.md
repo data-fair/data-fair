@@ -139,15 +139,24 @@ loader (`GET /datasets/{id}/task-progress`, shown in the right-hand navigation, 
 and the journal view).
 
 - State lives in a single `taskProgress` field on the dataset's `journals` document
-  (`{ task, progress, error? }`) — one per dataset, shared between draft and published
+  (`{ task, progress, step?, error? }`) — one per dataset, shared between draft and published
   processing. Every update is also pushed on the `datasets/{id}/task-progress` websocket
   channel (`api/src/datasets/utils/task-progress.ts`).
 - `progress` is `-1` (indeterminate) right after a task starts, then a 0-100 percentage,
-  throttled to at most one write per 250ms.
+  throttled to at most one write per 250ms. The terminal `100` is exempt from that throttle:
+  the last `inc()` of a stream almost always lands inside the window, and no instance created
+  inside a worker calls `end()` to rewrite it afterwards. `inc()` also rounds with an epsilon,
+  because both stream callers feed it fractional increments (`100/count` per REST line,
+  `chunk/size` per file byte range) whose sum drifts just below 100 half the time.
+- `step` names a sub-phase that has no measurable progress and puts the bar back to `-1`
+  (indeterminate) while keeping the task named. It covers the tail of `index`, which the read
+  progress does not describe at all: `refresh` (the ES index refresh, in `index-stream.ts`),
+  `checkConstraints` (the unicity gate) and `switchAlias`. The UI renders the translated step
+  in place of the percentage (`steps.*` in `dataset-task-progress.vue`).
 - On success a non-final task leaves `{ task, progress: 100 }`, immediately superseded when the
   next task starts. `finalize` — or any task flagged `finalTask`, such as the validate step of
   a draft cancelled by the worker itself — clears the field entirely.
-- **On failure the field is intentionally kept**, as `{ task, progress, error: true }`: while
+- **On failure the field is intentionally kept**, as `{ task, progress, step?, error: true }`: while
   the dataset sits in `error` status the UI shows which task failed (red bar) and how far it
   got. It is overwritten as soon as reprocessing starts (constraint dropped, new file
   uploaded, retry...).
