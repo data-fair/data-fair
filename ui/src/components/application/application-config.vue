@@ -176,6 +176,8 @@ const configureContext = computed(() => {
   const lines = [
     'Use the subagent tool appConfig_form to help the user configure the current application.',
     'Start the session by asking the user what they want to achieve.',
+    'The draft is only saved while the form is valid: always leave the form in a valid, complete state, or nothing is persisted. The form tools report the remaining errors.',
+    'Never validate the draft yourself — the user reviews the live preview and clicks Validate.',
   ]
   if (baseApp?.title) lines.push(`The application model is "${baseApp.title}".`)
   if (baseApp?.description) lines.push(`Application model description: ${baseApp.description}`)
