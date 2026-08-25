@@ -89,9 +89,14 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
+  // the callback only runs while the stream is being consumed, well after indexStream is assigned
+  const progress = taskProgress(dataset.id, eventsPrefix, 100, (progress) => {
+    debugHeap('progress ' + progress, indexStream)
+  })
+
   // only the REST path consumes the re-emitted lines (markIndexedStream); for file
   // datasets the sink is a no-op, so skip the per-line copy on the readable side
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), progress })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
@@ -103,9 +108,6 @@ export default async function (dataset: DatasetInternal) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(dataset.id, eventsPrefix, 100, (progress) => {
-    debugHeap('progress ' + progress, indexStream)
-  })
   await progress.inc(0)
   debugHeap('before-stream')
   if (isRestDataset(dataset)) {
@@ -149,6 +151,7 @@ export default async function (dataset: DatasetInternal) {
       const writer = new DiagnosticWriter(dataset)
       let unicityErrorCount = 0
       if (uniqueConstraints.length) {
+        await progress.step('checkConstraints')
         await esClient.client.indices.refresh({ index: indexName })
         for (const constraint of uniqueConstraints) {
           const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
@@ -223,6 +226,7 @@ export default async function (dataset: DatasetInternal) {
     // only in this branch: a partial REST update reuses the index, whose stamp must not change
     result._indexShape = NEW_INDEX_SHAPE
     debug('Switch alias to point to new datasets index')
+    await progress.step('switchAlias')
     await switchAlias(dataset, indexName)
     result.count = indexStream.i
   }

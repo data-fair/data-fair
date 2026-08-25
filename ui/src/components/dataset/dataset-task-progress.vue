@@ -8,16 +8,16 @@
         :model-value="taskProgress.progress === -1 ? undefined : taskProgress.progress"
         :indeterminate="taskProgress.progress === -1 && !taskProgress.error"
         :color="taskProgress.error ? 'error' : 'primary'"
-        :title="compact && taskProgress.progress !== -1 ? `${taskProgress.progress}%` : undefined"
+        :title="compact ? stepOrPercent : undefined"
         class="flex-grow-1"
         rounded
         height="6"
       />
       <span
-        v-if="!compact && taskProgress.progress !== -1"
-        class="text-caption text-medium-emphasis ml-2"
+        v-if="!compact && stepOrPercent"
+        class="text-caption text-medium-emphasis ml-2 flex-shrink-0"
       >
-        {{ taskProgress.progress }}%
+        {{ stepOrPercent }}
       </span>
     </div>
   </v-list-item>
@@ -36,6 +36,10 @@ fr:
     finalize: Finalisation
     normalize: Conversion
     download: Téléchargement
+  steps:
+    refresh: rafraîchissement de l'index
+    checkConstraints: vérification des contraintes
+    switchAlias: bascule d'alias
 en:
   activity: Activity
   tasks:
@@ -48,15 +52,26 @@ en:
     finalize: Finalization
     normalize: Conversion
     download: Download
+  steps:
+    refresh: index refresh
+    checkConstraints: constraints check
+    switchAlias: alias switch
 </i18n>
 
 <script setup lang="ts">
 import { type TaskProgress } from '~/composables/dataset/dataset-store'
 
-defineProps<{
+const props = defineProps<{
   taskProgress?: TaskProgress
   compact?: boolean
 }>()
 
 const { t } = useI18n()
+
+// a named step replaces the percentage: the bar is indeterminate during these phases
+const stepOrPercent = computed(() => {
+  if (props.taskProgress?.step) return t('steps.' + props.taskProgress.step)
+  if (props.taskProgress && props.taskProgress.progress !== -1) return `${props.taskProgress.progress}%`
+  return null
+})
 </script>

@@ -22,6 +22,9 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
+  // optional task progress reporter, used to name the index refresh happening after the
+  // whole stream was consumed (the only part of the work not covered by the read progress)
+  progress?: { step: (step: string) => Promise<void> }
 }
 
 // remove some properties that must not be indexed
@@ -116,22 +119,29 @@ class IndexStream extends Transform {
     this.transformPromise(item, encoding).then(() => cb(), cb)
   }
 
+  async finalPromise () {
+    await this.sendBulk()
+    if (this.options.refresh) return
+    // the read progress is at 100% here but the refresh alone can take minutes on a large
+    // index: hand the bar back to an indeterminate state naming this step
+    await this.options.progress?.step('refresh')
+    try {
+      await es.client.indices.refresh({ index: this.options.indexName })
+    } catch {
+      // refresh can take some time on large datasets, try one more time
+      await new Promise(resolve => setTimeout(resolve, 30000))
+      try {
+        await es.client.indices.refresh({ index: this.options.indexName })
+      } catch (err) {
+        internalError('es-refresh-index', err)
+        throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
+      }
+    }
+  }
+
   _final (cb: (error?: Error | null) => void) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
-    this.sendBulk()
-      .then(() => {
-        if (this.options.refresh) return
-        return es.client.indices.refresh({ index: this.options.indexName }).catch(() => {
-          // refresh can take some time on large datasets, try one more time
-          return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
-            return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
-              internalError('es-refresh-index', err)
-              throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
-            })
-          })
-        })
-      })
-      .then(() => cb(), cb)
+    this.finalPromise().then(() => cb(), cb)
   }
 
   async sendBulk () {
