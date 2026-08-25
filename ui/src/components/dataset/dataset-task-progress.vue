@@ -5,7 +5,7 @@
     </v-list-item-title>
     <div class="d-flex align-center mt-1">
       <v-progress-linear
-        :model-value="taskProgress.progress === -1 ? undefined : taskProgress.progress"
+        :model-value="taskProgress.progress === -1 ? (taskProgress.error ? 100 : undefined) : taskProgress.progress"
         :indeterminate="taskProgress.progress === -1 && !taskProgress.error"
         :color="taskProgress.error ? 'error' : 'primary'"
         :title="compact ? stepOrPercent : undefined"
@@ -37,6 +37,7 @@ fr:
     normalize: Conversion
     download: Téléchargement
   steps:
+    indexing: '{n} lignes indexées'
     refresh: rafraîchissement de l'index
     checkConstraints: vérification des contraintes
     switchAlias: bascule d'alias
@@ -53,6 +54,7 @@ en:
     normalize: Conversion
     download: Download
   steps:
+    indexing: '{n} rows indexed'
     refresh: index refresh
     checkConstraints: constraints check
     switchAlias: alias switch
@@ -70,7 +72,7 @@ const { t } = useI18n()
 
 // a named step replaces the percentage: the bar is indeterminate during these phases
 const stepOrPercent = computed(() => {
-  if (props.taskProgress?.step) return t('steps.' + props.taskProgress.step)
+  if (props.taskProgress?.step) return t('steps.' + props.taskProgress.step, { n: (props.taskProgress.count ?? 0).toLocaleString() })
   if (props.taskProgress && props.taskProgress.progress !== -1) return `${props.taskProgress.progress}%`
   return null
 })

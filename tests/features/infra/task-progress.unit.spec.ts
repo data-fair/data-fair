@@ -92,6 +92,22 @@ test.describe('task progress', () => {
     assert.deepEqual(published().at(-1), { task: 'index', progress: -1, step: 'refresh' })
   })
 
+  test('step() carries a running count and throttles repeats of the same step', async () => {
+    // the index task has no honest percentage to show (the total line count is unknown while
+    // it runs) so it publishes the number of documents ES acknowledged instead; the counter
+    // fires once per bulk, which on a large dataset is far more often than the bar needs
+    const { taskProgress, published } = await setup()
+    const progress = taskProgress('test-count', 'index')
+    for (let i = 1; i <= 500; i++) await progress.step('indexing', i * 10)
+    const indexing = published().filter(p => p.step === 'indexing')
+    assert.equal(indexing.length, 1, `500 back-to-back calls must collapse to one, got ${indexing.length}`)
+    assert.deepEqual(indexing[0], { task: 'index', progress: -1, step: 'indexing', count: 10 })
+
+    // a different step is never throttled: phase changes must always be visible
+    await progress.step('refresh')
+    assert.deepEqual(published().at(-1), { task: 'index', progress: -1, step: 'refresh' })
+  })
+
   test('a failed task keeps the step so the UI shows which phase broke', async () => {
     const { taskProgress, published } = await setup()
     const progress = taskProgress('test-step-error', 'index', 100)

@@ -89,14 +89,26 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
-  // the callback only runs while the stream is being consumed, well after indexStream is assigned
-  const progress = taskProgress(dataset.id, eventsPrefix, 100, (progress) => {
-    debugHeap('progress ' + progress, indexStream)
-  })
+  const progress = taskProgress(dataset.id, eventsPrefix)
+
+  // This task reports documents indexed, not a percentage. A percentage needs a total, and the
+  // line count is unknown while indexing runs: `dataset.count` is written by this very task and
+  // `analyze` only samples the file. The source-bytes ratio that used to stand in for it is not
+  // a measure of the work — the reader runs far ahead of the indexer whenever the source fits in
+  // the pipeline buffers (measured on a 737KB / 6k lines csv: all 12 read chunks land, and the
+  // bar reached 100%, before the first of the 13 bulks was acknowledged), so the bar showed a
+  // completed task while the whole of the real indexing was still ahead.
+  const indexProgress = {
+    step: (step: string, count?: number) => progress.step(step, count),
+    acknowledged: async (nbAcknowledged: number) => {
+      debugHeap('indexed ' + nbAcknowledged, indexStream)
+      await progress.step('indexing', nbAcknowledged)
+    }
+  }
 
   // only the REST path consumes the re-emitted lines (markIndexedStream); for file
   // datasets the sink is a no-op, so skip the per-line copy on the readable side
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), progress })
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), progress: indexProgress })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
@@ -108,15 +120,15 @@ export default async function (dataset: DatasetInternal) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  await progress.inc(0)
+  await progress.step('indexing', 0)
   debugHeap('before-stream')
   if (isRestDataset(dataset)) {
-    readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {}, progress)
+    readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {})
     writeStream = restDatasetsUtils.markIndexedStream(dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.some(e => e.active)
     if (!extended) await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
-    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft, progress)
+    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

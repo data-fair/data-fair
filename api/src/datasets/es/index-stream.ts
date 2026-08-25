@@ -22,9 +22,14 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
-  // optional task progress reporter, used to name the index refresh happening after the
-  // whole stream was consumed (the only part of the work not covered by the read progress)
-  progress?: { step: (step: string) => Promise<void> }
+  // optional task progress reporter. acknowledged() is called with the running number of
+  // documents ES has accepted, the only faithful unit of work here: the reader consumes the
+  // whole source long before the first bulk lands whenever it fits in the pipeline buffers.
+  // step() names the phases that follow the stream and have no measurable progress.
+  progress?: {
+    step: (step: string, count?: number) => Promise<void>
+    acknowledged: (nbAcknowledged: number) => Promise<void>
+  }
 }
 
 // remove some properties that must not be indexed
@@ -51,6 +56,8 @@ class IndexStream extends Transform {
   lineBytesSpec: { prefixes: Set<string>, nbCols: number }
   bulkChars: number
   i: number
+  // documents ES has accepted, the numerator of the task progress bar
+  nbAcknowledged: number
   nbErroredItems: number
   erroredItems: any[]
 
@@ -65,6 +72,7 @@ class IndexStream extends Transform {
     this.items = []
     this.bulkChars = 0
     this.i = 0
+    this.nbAcknowledged = 0
     this.nbErroredItems = 0
     this.erroredItems = []
   }
@@ -121,9 +129,12 @@ class IndexStream extends Transform {
 
   async finalPromise () {
     await this.sendBulk()
+    // the last sendBulk can be a no-op (an exactly-full previous batch), so publish the final
+    // count unconditionally rather than leaving the bar short of the real total
+    await this.options.progress?.acknowledged(this.nbAcknowledged)
     if (this.options.refresh) return
-    // the read progress is at 100% here but the refresh alone can take minutes on a large
-    // index: hand the bar back to an indeterminate state naming this step
+    // every document is indexed at this point, but the refresh alone can take minutes on a
+    // large index: hand the bar back to an indeterminate state naming this step
     await this.options.progress?.step('refresh')
     try {
       await es.client.indices.refresh({ index: this.options.indexName })
@@ -182,6 +193,7 @@ class IndexStream extends Transform {
           }
         }
       }
+      this.nbAcknowledged += this.items.length
       this.body = []
       this.items = []
       this.bulkChars = 0
@@ -189,6 +201,9 @@ class IndexStream extends Transform {
       internalError('es-bulk-index', err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
+    // outside the try: ES acknowledged this batch, and a failure to publish the progress
+    // must not be reported as an indexing failure
+    await this.options.progress?.acknowledged(this.nbAcknowledged)
   }
 
   errorsSummary () {

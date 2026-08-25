@@ -1,9 +1,10 @@
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import mongo from '#mongo'
 
-const updateProgress = async (datasetId: string, task: string, progress: number, step?: string) => {
-  const taskProgress: { task: string, progress: number, step?: string } = { task, progress }
+const updateProgress = async (datasetId: string, task: string, progress: number, step?: string, count?: number) => {
+  const taskProgress: { task: string, progress: number, step?: string, count?: number } = { task, progress }
   if (step) taskProgress.step = step
+  if (count !== undefined) taskProgress.count = count
   await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
   await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
 }
@@ -27,15 +28,17 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
     async start () {
       await updateProgress(datasetId, task, -1)
     },
-    // switch back to an indeterminate bar labelled with a named sub-step: the work that
-    // happens once the data stream is fully consumed (index refresh, alias switch, ...) has
-    // no measurable progress, and leaving the bar frozen at its last percentage makes the
-    // task look stuck for what can be minutes on a large dataset
-    async step (step: string) {
+    // switch to an indeterminate bar labelled with a named sub-step, optionally carrying a
+    // running count of units done. Used for the phases with no honest percentage to show:
+    // the tail of a task (index refresh, alias switch) and the indexing itself, whose total
+    // is unknown while it runs. Repeated calls for the same step are throttled like inc().
+    async step (step: string, count?: number) {
+      const time = new Date().getTime()
+      if (step === currentStep && (time - lastTime) < 250) return
       currentStep = step
       lastProgress = -1
-      lastTime = new Date().getTime()
-      await updateProgress(datasetId, task, -1, step)
+      lastTime = time
+      await updateProgress(datasetId, task, -1, step, count)
     },
     async inc (inc = 1) {
       if (nbSteps === undefined) throw new Error('incrementing progress requires setting nbSteps')

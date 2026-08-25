@@ -139,20 +139,29 @@ loader (`GET /datasets/{id}/task-progress`, shown in the right-hand navigation, 
 and the journal view).
 
 - State lives in a single `taskProgress` field on the dataset's `journals` document
-  (`{ task, progress, step?, error? }`) — one per dataset, shared between draft and published
-  processing. Every update is also pushed on the `datasets/{id}/task-progress` websocket
-  channel (`api/src/datasets/utils/task-progress.ts`).
+  (`{ task, progress, step?, count?, error? }`) — one per dataset, shared between draft and
+  published processing. Every update is also pushed on the `datasets/{id}/task-progress`
+  websocket channel (`api/src/datasets/utils/task-progress.ts`).
 - `progress` is `-1` (indeterminate) right after a task starts, then a 0-100 percentage,
   throttled to at most one write per 250ms. The terminal `100` is exempt from that throttle:
   the last `inc()` of a stream almost always lands inside the window, and no instance created
   inside a worker calls `end()` to rewrite it afterwards. `inc()` also rounds with an epsilon,
   because both stream callers feed it fractional increments (`100/count` per REST line,
   `chunk/size` per file byte range) whose sum drifts just below 100 half the time.
-- `step` names a sub-phase that has no measurable progress and puts the bar back to `-1`
-  (indeterminate) while keeping the task named. It covers the tail of `index`, which the read
-  progress does not describe at all: `refresh` (the ES index refresh, in `index-stream.ts`),
-  `checkConstraints` (the unicity gate) and `switchAlias`. The UI renders the translated step
-  in place of the percentage (`steps.*` in `dataset-task-progress.vue`).
+- `step` names a sub-phase that has no honest percentage to show and puts the bar back to `-1`
+  (indeterminate) while keeping the task named; `count` optionally carries a running number of
+  units done. Repeated calls for the same step are throttled like `inc()`, a step change never
+  is. The UI renders the translated step in place of the percentage (`steps.*` in
+  `dataset-task-progress.vue`, `{n}` interpolating `count`).
+- **`index` reports counts, not a percentage**, through the whole task: `indexing` (documents ES
+  has acknowledged), then `refresh` (the ES index refresh, in `index-stream.ts`),
+  `checkConstraints` (the unicity gate) and `switchAlias`. A percentage would need a total, and
+  the line count is unknown while the task runs — `dataset.count` is written by this very task
+  and `analyze` only samples the file. The source-bytes ratio that used to stand in for it does
+  not measure the work: the reader runs far ahead of the indexer whenever the source fits in the
+  pipeline buffers (measured on a 737KB / 6k lines csv, all 12 read chunks land before the first
+  of 13 bulks is acknowledged), so the bar sat at 100% for the whole of the real indexing.
+  Documents acknowledged by ES is the one faithful unit, and it needs no denominator.
 - On success a non-final task leaves `{ task, progress: 100 }`, immediately superseded when the
   next task starts. `finalize` — or any task flagged `finalTask`, such as the validate step of
   a draft cancelled by the worker itself — clears the field entirely.
