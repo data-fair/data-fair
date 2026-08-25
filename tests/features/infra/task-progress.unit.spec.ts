@@ -116,4 +116,35 @@ test.describe('task progress', () => {
     assert.equal(published().at(-1)?.step, 'checkConstraints')
     assert.equal(published().at(-1)?.error, true)
   })
+
+  test('step() with a percent publishes a determinate bar carrying the count', async () => {
+    // the index task knows its total in two cases (REST collection count, re-index of
+    // unchanged data): it then publishes a real percentage alongside the acknowledged count
+    const { taskProgress, published } = await setup()
+    const progress = taskProgress('test-step-percent', 'index')
+    await progress.step('indexing', 500, 12.7)
+    assert.deepEqual(published().at(-1), { task: 'index', progress: 12, step: 'indexing', count: 500 })
+  })
+
+  test('a step percent never goes backwards and a step change resets the bar', async () => {
+    const { taskProgress, published } = await setup()
+    const progress = taskProgress('test-step-monotone', 'index')
+    await progress.step('indexing', 1000, 50)
+    assert.equal(published().at(-1)?.progress, 50)
+    // past the throttle window, a lower percent must not make the bar recede
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await progress.step('indexing', 2000, 30)
+    assert.deepEqual(published().at(-1), { task: 'index', progress: 50, step: 'indexing', count: 2000 })
+    // a step change is never throttled and hands the bar back to indeterminate
+    await progress.step('refresh')
+    assert.deepEqual(published().at(-1), { task: 'index', progress: -1, step: 'refresh' })
+  })
+
+  test('a failed task keeps the percent and count of the step that broke', async () => {
+    const { taskProgress, published } = await setup()
+    const progress = taskProgress('test-step-percent-error', 'index')
+    await progress.step('indexing', 1000, 64)
+    await progress.end(true)
+    assert.deepEqual(published().at(-1), { task: 'index', progress: 64, error: true, step: 'indexing', count: 1000 })
+  })
 })

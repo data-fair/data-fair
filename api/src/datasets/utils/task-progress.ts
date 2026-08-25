@@ -21,24 +21,35 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
   let doneSteps = 0
   let lastProgress = -1
   let lastTime = new Date().getTime() - 1000
-  // name of the current sub-step, only set for the phases that are not covered by inc()
+  // name and count of the current sub-step, only set for the phases that are not covered by inc()
   let currentStep: string | undefined
+  let currentCount: number | undefined
 
   return {
     async start () {
       await updateProgress(datasetId, task, -1)
     },
-    // switch to an indeterminate bar labelled with a named sub-step, optionally carrying a
-    // running count of units done. Used for the phases with no honest percentage to show:
-    // the tail of a task (index refresh, alias switch) and the indexing itself, whose total
-    // is unknown while it runs. Repeated calls for the same step are throttled like inc().
-    async step (step: string, count?: number) {
+    // switch the bar to a named sub-step, optionally carrying a running count of units done
+    // and a percentage. Without a percent the bar is indeterminate: the phases with no honest
+    // percentage to show (index refresh, alias switch, and the indexing itself when its total
+    // line count is unknown). With a percent the bar is determinate: the indexing when the
+    // total IS known (REST collection count, re-index of unchanged data). Repeated calls for
+    // the same step are throttled like inc(); a step change is never throttled.
+    async step (step: string, count?: number, percent?: number) {
       const time = new Date().getTime()
       if (step === currentStep && (time - lastTime) < 250) return
+      let progress = -1
+      if (percent !== undefined) {
+        // same epsilon as inc(): the percent is a quotient and can land just under an integer
+        progress = Math.min(Math.floor(percent + 1e-9), 100)
+        // the total can be a live count (REST partial updates): never show a receding bar
+        if (step === currentStep && progress < lastProgress) progress = lastProgress
+      }
       currentStep = step
-      lastProgress = -1
+      currentCount = count
+      lastProgress = progress
       lastTime = time
-      await updateProgress(datasetId, task, -1, step, count)
+      await updateProgress(datasetId, task, progress, step, count)
     },
     async inc (inc = 1) {
       if (nbSteps === undefined) throw new Error('incrementing progress requires setting nbSteps')
@@ -67,8 +78,9 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
     },
     async end (error = false, finalTask = false) {
       if (error) {
-        // keep the step so the UI shows which phase of the task actually failed
-        const taskProgress = { task, progress: lastProgress, error, ...(currentStep ? { step: currentStep } : {}) }
+        // keep the step (and its count) so the UI shows which phase of the task actually
+        // failed and how far it got
+        const taskProgress = { task, progress: lastProgress, error, ...(currentStep ? { step: currentStep } : {}), ...(currentCount !== undefined ? { count: currentCount } : {}) }
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
       } else if (task === 'finalize' || finalTask) {

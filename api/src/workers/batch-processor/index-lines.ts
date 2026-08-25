@@ -48,6 +48,11 @@ export default async function (dataset: DatasetInternal) {
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
+  const progress = taskProgress(dataset.id, eventsPrefix)
+  // the outer worker already published an unnamed indeterminate bar for this task; name the
+  // phase that prepares the index (attachments sync, index creation) before the stream starts
+  await progress.step('start')
+
   const attachmentsProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
   const newRestAttachments = dataset._newRestAttachments
@@ -89,20 +94,27 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
-  const progress = taskProgress(dataset.id, eventsPrefix)
-
-  // This task reports documents indexed, not a percentage. A percentage needs a total, and the
-  // line count is unknown while indexing runs: `dataset.count` is written by this very task and
-  // `analyze` only samples the file. The source-bytes ratio that used to stand in for it is not
-  // a measure of the work — the reader runs far ahead of the indexer whenever the source fits in
-  // the pipeline buffers (measured on a 737KB / 6k lines csv: all 12 read chunks land, and the
-  // bar reached 100%, before the first of the 13 bulks was acknowledged), so the bar showed a
-  // completed task while the whole of the real indexing was still ahead.
+  // The bar is driven by the documents ES acknowledged, the only faithful measure of the work:
+  // the source-bytes ratio that used to drive it is not one — the reader runs far ahead of the
+  // indexer whenever the source fits in the pipeline buffers (measured on a 737KB / 6k lines
+  // csv: all 12 read chunks land, and the bar reached 100%, before the first of the 13 bulks
+  // was acknowledged). A percentage also needs a total, knowable without an extra read pass in
+  // two cases only: a REST dataset counts its mongo collection, and a re-index of unchanged
+  // data (config change on an already finalized dataset) reuses the count written by the
+  // previous run — `dataUpdatedAt` only moves when a new file or attachment is loaded. A first
+  // indexing of a file has no honest total (extrapolating one from the source ratio inherits
+  // the buffering bias above) and keeps an indeterminate bar carrying the acknowledged count.
+  let totalLines: number | undefined
+  if (isRestDataset(dataset)) {
+    totalLines = await restDatasetsUtils.count(dataset, partialUpdate ? { _needsIndexing: true } : {})
+  } else if (!dataset.draftReason && dataset.count !== undefined && dataset.dataUpdatedAt && dataset.finalizedAt && dataset.dataUpdatedAt <= dataset.finalizedAt) {
+    totalLines = dataset.count
+  }
   const indexProgress = {
     step: (step: string, count?: number) => progress.step(step, count),
     acknowledged: async (nbAcknowledged: number) => {
       debugHeap('indexed ' + nbAcknowledged, indexStream)
-      await progress.step('indexing', nbAcknowledged)
+      await progress.step('indexing', nbAcknowledged, totalLines ? (nbAcknowledged / totalLines) * 100 : undefined)
     }
   }
 
@@ -120,7 +132,7 @@ export default async function (dataset: DatasetInternal) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  await progress.step('indexing', 0)
+  await progress.step('indexing', 0, totalLines ? 0 : undefined)
   debugHeap('before-stream')
   if (isRestDataset(dataset)) {
     readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {})

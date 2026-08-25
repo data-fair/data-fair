@@ -37,6 +37,7 @@ fr:
     normalize: Conversion
     download: Téléchargement
   steps:
+    start: démarrage de l'indexation
     indexing: '{n} lignes indexées'
     refresh: rafraîchissement de l'index
     checkConstraints: vérification des contraintes
@@ -54,6 +55,7 @@ en:
     normalize: Conversion
     download: Download
   steps:
+    start: indexing startup
     indexing: '{n} rows indexed'
     refresh: index refresh
     checkConstraints: constraints check
@@ -70,10 +72,13 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-// a named step replaces the percentage: the bar is indeterminate during these phases
+// the label next to the bar: the percentage when the bar is determinate, the named step when
+// one is set, both when indexing knows its total ("64% · 12 345 lignes indexées")
 const stepOrPercent = computed(() => {
-  if (props.taskProgress?.step) return t('steps.' + props.taskProgress.step, { n: (props.taskProgress.count ?? 0).toLocaleString() })
-  if (props.taskProgress && props.taskProgress.progress !== -1) return `${props.taskProgress.progress}%`
-  return null
+  if (!props.taskProgress) return null
+  const parts: string[] = []
+  if (props.taskProgress.progress !== -1) parts.push(`${props.taskProgress.progress}%`)
+  if (props.taskProgress.step) parts.push(t('steps.' + props.taskProgress.step, { n: (props.taskProgress.count ?? 0).toLocaleString() }))
+  return parts.join(' · ') || null
 })
 </script>
