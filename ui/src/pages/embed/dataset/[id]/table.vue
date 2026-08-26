@@ -13,6 +13,8 @@
       v-model:selected-item="selectedItem"
       :height="windowHeight"
       :no-interaction="!interaction"
+      :search-only="searchOnly"
+      :pagination="pagination"
       :selectable="selectable"
     />
   </v-container>
@@ -38,6 +40,10 @@ const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
 const interaction = useBooleanSearchParam('interaction', true)
+// reduced toolbar (results count + search only), applied when interaction is disabled
+const searchOnly = useBooleanSearchParam('searchOnly', false)
+// pages instead of infinite scroll, more reliable in an iframe of constrained height
+const pagination = useBooleanSearchParam('pagination', false)
 const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_id_eq')
 </script>
