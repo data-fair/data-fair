@@ -37,11 +37,11 @@ fr:
     normalize: Conversion
     download: Téléchargement
   steps:
-    start: démarrage de l'indexation
+    start: Démarrage de l'indexation
     indexing: '{n} lignes indexées'
-    refresh: rafraîchissement de l'index
-    checkConstraints: vérification des contraintes
-    switchAlias: bascule d'alias
+    refresh: Rafraîchissement de l'index
+    checkConstraints: Vérification des contraintes
+    switchAlias: Bascule de l'alias
 en:
   activity: Activity
   tasks:
@@ -55,11 +55,11 @@ en:
     normalize: Conversion
     download: Download
   steps:
-    start: indexing startup
+    start: Indexing startup
     indexing: '{n} rows indexed'
-    refresh: index refresh
-    checkConstraints: constraints check
-    switchAlias: alias switch
+    refresh: Index refresh
+    checkConstraints: Constraints check
+    switchAlias: Alias switch
 </i18n>
 
 <script setup lang="ts">
