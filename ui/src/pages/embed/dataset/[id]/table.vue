@@ -41,7 +41,8 @@ const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
 // which interactive elements are active, cf parseInteractions: absent/"1" for all, "0" for none,
 // "count,search" for a subset, "-filters" for all but a subset
-const interaction = useStringSearchParam('interaction')
+// default "1" so that an absent param stays distinguishable from a legacy empty "?interaction="
+const interaction = useStringSearchParam('interaction', '1')
 const interactions = computed(() => parseInteractions(interaction.value))
 // pages instead of infinite scroll, more reliable in an iframe of constrained height
 const pagination = useBooleanSearchParam('pagination', false)

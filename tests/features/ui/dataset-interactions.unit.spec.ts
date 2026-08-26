@@ -4,7 +4,7 @@ import { allInteractions, parseInteractions } from '../../../ui/src/composables/
 
 test.describe('parseInteractions', () => {
   test('activates everything when the param is absent or truthy', () => {
-    for (const param of [undefined, null, '', '1', 'true']) {
+    for (const param of [undefined, null, '1', 'true']) {
       assert.deepEqual(parseInteractions(param), [...allInteractions], `param=${param}`)
     }
   })
@@ -12,6 +12,9 @@ test.describe('parseInteractions', () => {
   test('activates nothing on the legacy falsy values', () => {
     assert.deepEqual(parseInteractions('0'), [])
     assert.deepEqual(parseInteractions('false'), [])
+    // the param used to be a boolean one, a legacy "?interaction=" meant no interaction at all.
+    // the callers pass "1" for an absent param, so "" only ever comes from such a legacy embed
+    assert.deepEqual(parseInteractions(''), [])
   })
 
   test('keeps only the listed elements, in the reference order', () => {

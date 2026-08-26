@@ -48,7 +48,8 @@ const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
-const interaction = useStringSearchParam('interaction')
+// default "1" so that an absent param stays distinguishable from a legacy empty "?interaction="
+const interaction = useStringSearchParam('interaction', '1')
 const interactions = computed(() => parseInteractions(interaction.value))
 
 const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)

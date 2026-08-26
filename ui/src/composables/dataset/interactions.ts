@@ -10,8 +10,8 @@ export type Interaction = typeof allInteractions[number]
 
 /**
  * Parse the "interaction" param of an embedded view:
- *   - absent, "1" or "true" -> everything (previous default)
- *   - "0" or "false" -> nothing (previous behavior)
+ *   - "1" or "true" -> everything (previous default, callers pass "1" when the param is absent)
+ *   - "0", "false" or "" -> nothing (previous behavior)
  *   - "search,count" -> only these elements
  *   - "-filters" -> everything but these elements
  * Positive and negative tokens can be mixed, negative ones are applied last. A token that is not
@@ -19,8 +19,10 @@ export type Interaction = typeof allInteractions[number]
  * stays harmless here.
  */
 export const parseInteractions = (param: string | undefined | null): Interaction[] => {
-  if (!param || param === '1' || param === 'true') return [...allInteractions]
-  if (param === '0' || param === 'false') return []
+  if (param === undefined || param === null || param === '1' || param === 'true') return [...allInteractions]
+  // "" is a legacy "?interaction=" written against the previous boolean param: back then anything
+  // but "1"/"true" meant no interaction at all, keep it that way
+  if (param === '' || param === '0' || param === 'false') return []
   const tokens = param.split(',').map(token => token.trim()).filter(Boolean)
   const excluded = new Set(tokens.filter(token => token.startsWith('-')).map(token => token.slice(1)))
   const included = tokens.filter(token => !token.startsWith('-'))

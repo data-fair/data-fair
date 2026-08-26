@@ -38,6 +38,7 @@ const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
-const interaction = useStringSearchParam('interaction')
+// default "1" so that an absent param stays distinguishable from a legacy empty "?interaction="
+const interaction = useStringSearchParam('interaction', '1')
 const interactions = computed(() => parseInteractions(interaction.value))
 </script>
