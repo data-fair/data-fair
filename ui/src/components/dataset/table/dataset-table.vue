@@ -1,11 +1,12 @@
 <template>
   <v-toolbar
-    v-if="!noInteraction"
+    v-if="showToolbar"
     color="surface"
     density="compact"
     flat
   >
     <dataset-nb-results
+      v-if="can('count')"
       :limit="0"
       :total="total"
       :margin-pct="meta?.totalMarginPct"
@@ -13,8 +14,12 @@
       class="ml-2"
       style="min-width:80px;max-width:80px;"
     />
-    <search-field v-model="q" />
+    <search-field
+      v-if="can('search')"
+      v-model="q"
+    />
     <dataset-filters
+      v-if="can('filters')"
       v-model="filters"
       class="flex-grow-1"
     />
@@ -38,7 +43,7 @@
 
     <!-- Agent helpers -->
     <df-agent-chat-action
-      v-if="edit"
+      v-if="edit && can('agent')"
       action-id="help-edit-data"
       :visible-prompt="t('helpEditDataPrompt')"
       :hidden-context="dataEntryContext"
@@ -46,6 +51,7 @@
       :title="t('helpEditDataPrompt')"
     />
     <df-agent-chat-action
+      v-if="can('agent')"
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
       :hidden-context="filterHelpContext"
@@ -53,6 +59,7 @@
       :title="t('helpFilterPrompt')"
     />
     <df-agent-chat-action
+      v-if="can('agent')"
       action-id="check-data-quality"
       :visible-prompt="t('checkDataQualityPrompt')"
       :hidden-context="dataQualityContext"
@@ -60,25 +67,29 @@
       :title="t('checkDataQualityPrompt')"
     />
     <v-btn-group
+      v-if="(can('display') && display.mdAndUp.value) || can('cols') || (can('download') && baseFetchUrl && total !== undefined) || (can('fullscreen') && fullscreenTo)"
       class="mx-2"
       density="compact"
       variant="outlined"
       divided
     >
       <dataset-table-select-display
-        v-if="display.mdAndUp.value"
+        v-if="can('display') && display.mdAndUp.value"
         v-model="displayMode"
         :edit="edit"
       />
-      <dataset-select-cols v-model="cols" />
+      <dataset-select-cols
+        v-if="can('cols')"
+        v-model="cols"
+      />
       <dataset-download-results-menu
-        v-if="baseFetchUrl && total !== undefined"
+        v-if="can('download') && baseFetchUrl && total !== undefined"
         :base-url="baseFetchUrl"
         :selected-cols="cols"
         :total="total"
       />
       <v-btn
-        v-if="fullscreenTo"
+        v-if="fullscreenTo && can('fullscreen')"
         :title="t('fullscreen')"
         :icon="mdiOpenInNew"
         :to="fullscreenTo"
@@ -87,26 +98,10 @@
       />
     </v-btn-group>
   </v-toolbar>
-  <v-toolbar
-    v-else-if="searchOnly"
-    color="surface"
-    density="compact"
-    flat
-  >
-    <dataset-nb-results
-      :limit="0"
-      :total="total"
-      :margin-pct="meta?.totalMarginPct"
-      :ignored-words="meta?.ignoredWords"
-      class="ml-2"
-      style="min-width:80px;max-width:80px;"
-    />
-    <search-field v-model="q" />
-  </v-toolbar>
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
-      :height="pagination ? undefined : height - ((noInteraction && !searchOnly) ? 0 : 48)"
+      :height="pagination ? undefined : height - (showToolbar ? 48 : 0)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
@@ -131,9 +126,9 @@
               }"
               :style="{
                 'min-width': (header.property || header.synthetic) ? (colsWidths[i] ?? minColWidth) + 'px' : '',
-                cursor: header.property && !noInteraction ? 'pointer' : 'default',
+                cursor: header.property && can('header') ? 'pointer' : 'default',
               }"
-              @mouseenter="hoveredHeader = noInteraction ? undefined : header"
+              @mouseenter="hoveredHeader = can('header') ? header : undefined"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
@@ -167,7 +162,7 @@
               </div>
             </th>
             <dataset-table-header-menu
-              v-if="header.property && !noInteraction"
+              v-if="header.property && can('header')"
               :activator="`#header-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
@@ -216,9 +211,9 @@
                 :filter="header.property && findEqFilter(filters, header.property, item)"
                 :filters="filters"
                 :header="header"
-                :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+                :hovered="can('cells') && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
                 :line-height="lineHeight"
-                :no-interaction="noInteraction"
+                :no-interaction="!can('cells')"
                 :result="item"
                 :selectable="selectable"
                 :selected="selectedItem === item._id"
@@ -226,7 +221,7 @@
                 @hoverstop="hoverStop"
                 @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
-                @filter="f => !noInteraction && addFilter(f)"
+                @filter="f => can('cells') && addFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
                 @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -249,9 +244,9 @@
             :filter="header.property && findEqFilter(filters, header.property, item)"
             :filters="filters"
             :header="header"
-            :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+            :hovered="can('cells') && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
             :line-height="lineHeight"
-            :no-interaction="noInteraction"
+            :no-interaction="!can('cells')"
             :result="item"
             :selectable="selectable"
             :selected="selectedItem === item._id"
@@ -259,7 +254,7 @@
             @hoverstop="hoverStop"
             @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
-            @filter="f => !noInteraction && addFilter(f)"
+            @filter="f => can('cells') && addFilter(f)"
             @edit="showEditDialog = item"
             @delete="showDeleteDialog = item"
             @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -272,7 +267,7 @@
     <!-- card mode -->
     <div
       v-if="displayMode === 'list' && headers"
-      :style="`height: ${height - ((noInteraction && !searchOnly) ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
+      :style="`height: ${height - (showToolbar ? 48 : 0)}px; overflow-y: scroll;overflow-x: hidden;`"
       class="dataset-table-list-wrapper"
     >
       <div style="height:2px;width:100%;">
@@ -303,11 +298,11 @@
             :filters="filters"
             :headers="headersWithProperty"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
-            :no-interaction="noInteraction"
+            :no-interaction="!can('cells')"
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
-            @filter="f => addFilter(f)"
+            @filter="f => can('cells') && addFilter(f)"
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
@@ -478,6 +473,7 @@ import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
+import { allInteractions, hasToolbar, type Interaction } from '../../../composables/dataset/interactions'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 
@@ -485,9 +481,12 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
+const { height, noInteraction, interactions, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
   height: { type: Number, default: 800 },
+  // legacy all-or-nothing switch, kept for the callers that do not need per-element control
   noInteraction: { type: Boolean, default: false },
+  // explicit list of active interactive elements, takes precedence over noInteraction/searchOnly
+  interactions: { type: Array as () => Interaction[], default: undefined },
   edit: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   pagination: { type: Boolean, default: false },
@@ -496,6 +495,14 @@ const { height, noInteraction, edit, selectable, pagination, searchOnly, synthet
   headerKeys: { type: Boolean, default: false },
   fullscreenTo: { type: Object as () => RouteLocationRaw, default: undefined },
 })
+
+const activeInteractions = computed<Interaction[]>(() => {
+  if (interactions) return interactions
+  if (!noInteraction) return [...allInteractions]
+  return searchOnly ? ['count', 'search'] : []
+})
+const can = (interaction: Interaction) => activeInteractions.value.includes(interaction)
+const showToolbar = computed(() => hasToolbar(activeInteractions.value))
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })
@@ -514,7 +521,7 @@ const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const pageSize = computed(() => {
   if (pagination) {
     // In pagination mode, fit exactly in visible area to avoid scrollbar
-    const toolbarHeight = (noInteraction && !searchOnly) ? 0 : 48
+    const toolbarHeight = showToolbar.value ? 48 : 0
     const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
     const availableHeight = height - toolbarHeight - theadHeight
     return Math.max(5, Math.floor(availableHeight / lineHeight.value))
@@ -618,7 +625,7 @@ const nextPage = async () => {
   }
   paginationPage.value++
 }
-const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
+const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
 const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
@@ -687,12 +694,12 @@ const onScrollItem = async (index: number) => {
 const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
 const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
-  if (noInteraction) return
+  if (!can('cells')) return
   _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {
-  if (noInteraction) return
+  if (!can('cells')) return
   if (_hoverTimeout) {
     clearTimeout(_hoverTimeout)
     _hoverTimeout = undefined

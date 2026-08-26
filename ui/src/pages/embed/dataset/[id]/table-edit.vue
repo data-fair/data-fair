@@ -10,7 +10,7 @@
       v-model:q="q"
       v-model:sort="sort"
       :height="windowHeight"
-      :no-interaction="!interaction"
+      :interactions="interactions"
       :edit="true"
     />
   </v-container>
@@ -23,6 +23,7 @@
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
+import { parseInteractions } from '~/composables/dataset/interactions'
 
 const { height: windowHeight } = useWindowSize()
 
@@ -37,5 +38,6 @@ const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
-const interaction = useBooleanSearchParam('interaction', true)
+const interaction = useStringSearchParam('interaction')
+const interactions = computed(() => parseInteractions(interaction.value))
 </script>
