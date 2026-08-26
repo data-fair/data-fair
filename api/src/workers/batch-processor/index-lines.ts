@@ -49,8 +49,7 @@ export default async function (dataset: DatasetInternal) {
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
   const progress = taskProgress(dataset.id, eventsPrefix)
-  // the outer worker already published an unnamed indeterminate bar for this task; name the
-  // phase that prepares the index (attachments sync, index creation) before the stream starts
+  // name the phase preparing the index (attachments sync, index creation)
   await progress.step('start')
 
   const attachmentsProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -94,27 +93,17 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
-  // The bar is driven by the documents ES acknowledged, the only faithful measure of the work:
-  // the reader runs far ahead of the indexer whenever the source fits in the pipeline buffers,
-  // so the source-bytes ratio that used to drive it is not one (measured — see
-  // docs/architecture/dataset-processing.md). A percentage also needs a total, exact without
-  // an extra read pass in two cases only: a REST dataset counts its mongo collection, and a
-  // re-index of unchanged data (config change on an already finalized dataset) reuses the
-  // count written by the previous run — `dataUpdatedAt` only moves when a new file or
-  // attachment is loaded.
+  // the bar is driven by the documents ES acknowledged, not the source-bytes ratio (the reader
+  // runs far ahead of the indexer, see docs/architecture/dataset-processing.md). An exact total
+  // is only known here for a REST dataset and for a re-index of unchanged data.
   let totalLines: number | undefined
   if (isRestDataset(dataset)) {
     totalLines = await restDatasetsUtils.count(dataset, partialUpdate ? { _needsIndexing: true } : {})
   } else if (!dataset.draftReason && dataset.count !== undefined && dataset.dataUpdatedAt && dataset.finalizedAt && dataset.dataUpdatedAt <= dataset.finalizedAt) {
     totalLines = dataset.count
   }
-  // A first indexing of a file has no exact total, but the reader position gives a good
-  // estimate: lines parsed so far / fraction of source bytes consumed. Both are measured at
-  // the reader, so the pipeline buffering that made the source ratio dishonest as a direct
-  // percentage only makes the estimated total slightly low (bounded by the objectMode
-  // buffers), and it converges to the exact count once the source is fully read — which
-  // happens early precisely in the buffered case. Only skipped when the draft limit truncates
-  // the parse (the reader then consumes bytes the parser never turns into lines).
+  // a first file indexing has no exact total: estimate it at the reader position (lines parsed
+  // so far / fraction of source bytes consumed), unless the draft limit truncates the parse
   const estimateTotal = totalLines === undefined && !isRestDataset(dataset) && (!dataset.draftReason || dataset.validateDraft)
   let sourceBytesRatio = 0
   const indexProgress = {

@@ -22,9 +22,8 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
-  // optional task progress reporter: acknowledged() is called with the running number of
-  // documents ES has accepted (the unit driving the bar, cf index-lines.ts), step() names
-  // the phases that follow the stream and have no measurable progress.
+  // optional task progress reporter: acknowledged() receives the running count of documents
+  // ES accepted, step() names the phases that follow the stream
   progress?: {
     step: (step: string, count?: number) => Promise<void>
     acknowledged: (nbAcknowledged: number) => Promise<void>
@@ -128,12 +127,10 @@ class IndexStream extends Transform {
 
   async finalPromise () {
     await this.sendBulk()
-    // the last sendBulk can be a no-op (an exactly-full previous batch), so publish the final
-    // count unconditionally rather than leaving the bar short of the real total
+    // the last sendBulk can be a no-op (exactly-full previous batch): always publish the final count
     await this.options.progress?.acknowledged(this.nbAcknowledged)
     if (this.options.refresh) return
-    // every document is indexed at this point, but the refresh alone can take minutes on a
-    // large index: hand the bar back to an indeterminate state naming this step
+    // the refresh alone can take minutes on a large index
     await this.options.progress?.step('refresh')
     try {
       await es.client.indices.refresh({ index: this.options.indexName })
@@ -200,8 +197,7 @@ class IndexStream extends Transform {
       internalError('es-bulk-index', err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
-    // outside the try: ES acknowledged this batch, and a failure to publish the progress
-    // must not be reported as an indexing failure
+    // outside the try: a progress publication failure is not an indexing failure
     await this.options.progress?.acknowledged(this.nbAcknowledged)
   }
 

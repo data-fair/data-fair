@@ -72,8 +72,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-// the label next to the bar: the percentage when the bar is determinate, the named step when
-// one is set, both when indexing knows its total ("64% · 12 345 lignes indexées")
+// label next to the bar: percentage when determinate, named step when set, both when applicable
 const stepOrPercent = computed(() => {
   if (!props.taskProgress) return null
   const parts: string[] = []

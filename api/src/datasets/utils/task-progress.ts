@@ -29,12 +29,8 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
     async start () {
       await updateProgress(datasetId, task, -1)
     },
-    // switch the bar to a named sub-step, optionally carrying a running count of units done
-    // and a percentage. Without a percent the bar is indeterminate: the phases with no honest
-    // percentage to show (index refresh, alias switch, and the indexing itself when its total
-    // line count is unknown). With a percent the bar is determinate: the indexing when the
-    // total IS known (REST collection count, re-index of unchanged data). Repeated calls for
-    // the same step are throttled like inc(); a step change is never throttled.
+    // switch the bar to a named sub-step, optionally with a running count and a percentage
+    // (indeterminate without one). Same-step repeats are throttled, a step change never is.
     async step (step: string, count?: number, percent?: number) {
       const time = new Date().getTime()
       if (step === currentStep && (time - lastTime) < 250) return
@@ -54,20 +50,16 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
     async inc (inc = 1) {
       if (nbSteps === undefined) throw new Error('incrementing progress requires setting nbSteps')
       doneSteps += inc
-      // the epsilon absorbs the float drift accumulated by summing fractional incs (both
-      // stream callers divide: 100/count per REST line, chunk/size per file byte range).
-      // The final sum lands on 99.999999999998 about as often as on 100.000000000002, and
-      // a bare floor() would turn a fully consumed stream into a permanent 99%.
+      // the epsilon absorbs the float drift of summing fractional incs, which lands just
+      // below 100 half the time — a bare floor() would leave a consumed stream at 99%
       const progress = Math.min(Math.floor((doneSteps / nbSteps) * 100 + 1e-9), 100)
       const time = new Date().getTime()
       if (progressCallback && progress > lastProgress) {
         progressCallback(progress)
       }
-      // send message on websocket at least every 250ms or on every percent change, except
-      // for the terminal 100% which must never be throttled away: the last inc of a stream
-      // almost always lands less than 250ms after the previous one, and none of the progress
-      // instances created inside the workers calls end() (only the outer one in workers/index.ts
-      // does, once the whole task is over), so there is nothing to write the 100 afterwards.
+      // send message on websocket at least every 250ms, except the terminal 100% which must
+      // never be throttled away: the last tick of a stream lands inside the window and no
+      // worker-created instance calls end() to rewrite it afterwards
       if (progress !== 100 && (time - lastTime) < 250) return
       // send message on websocket at least every 30s or on every percent change
       if (progress > lastProgress || (time - lastTime) > 30000) {
@@ -78,8 +70,7 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
     },
     async end (error = false, finalTask = false) {
       if (error) {
-        // keep the step (and its count) so the UI shows which phase of the task actually
-        // failed and how far it got
+        // keep the step and count so the UI shows which phase failed and how far it got
         const taskProgress = { task, progress: lastProgress, error, ...(currentStep ? { step: currentStep } : {}), ...(currentCount !== undefined ? { count: currentCount } : {}) }
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })

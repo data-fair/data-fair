@@ -2,26 +2,16 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 
-// task-progress.ts imports `#mongo`, which loads (and validates) `#config`. The unit harness
-// doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir and load the
-// modules by dynamic import afterwards — same pattern as lines-pipeline.unit.spec.ts.
+// point node-config at the real api/config dir before the dynamic imports below load #config
+// (same pattern as lines-pipeline.unit.spec.ts)
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
-// The progress bar of a dataset task is fed by inc() with FRACTIONAL increments: rest.ts sends
-// 100/count per line, data-streams.ts sends (chunk.length / size) * 100 per byte range. Two
-// independent defects used to leave a fully consumed stream displaying 99% forever:
-//  - the 250ms websocket throttle swallowed the very last tick (the one that reaches 100 lands
-//    microseconds after the previous one), and nothing rewrites the 100 afterwards because none
-//    of the progress instances created inside the workers ever calls end() — only the outer one
-//    in workers/index.ts does, once the whole task is already over
-//  - summing fractional incs drifts: the total lands on 99.999999999998 about as often as on
-//    100.000000000002, and a bare floor() turns the former into a permanent 99
-// These tests pin both, by recording what task-progress publishes on the websocket channel —
-// which is exactly what the UI progress bar renders.
+// these tests pin the two defects that used to leave a consumed stream at 99% forever (the
+// throttled terminal tick and the float drift of fractional incs) by recording what is
+// published on the websocket channel — exactly what the UI progress bar renders
 
-// task-progress writes to mongo and to the ws-messages queue; both are faked here. wsEmitter
-// keeps its collection in a module-level variable and init() is idempotent, hence the mutable
-// sink that each test resets rather than a fresh init per test.
+// wsEmitter's init() is idempotent with a module-level collection, hence one mutable sink
+// reset by setup() rather than a fresh init per test
 let sink: any[] = []
 const fakeDb = {
   listCollections: () => ({ toArray: async () => [{ name: 'ws-messages' }] }),
@@ -45,8 +35,7 @@ test.describe('task progress', () => {
   test('reaches 100 even when the last tick lands inside the 250ms throttle window', async () => {
     const { taskProgress, published } = await setup()
     const progress = taskProgress('test-throttle', 'index', 100)
-    // 1000 incs back to back: everything after the first publication falls inside the 250ms
-    // throttle window, so 100 is the only other value allowed through
+    // back-to-back incs all land inside the throttle window: 100 is the only other value allowed through
     for (let i = 0; i < 1000; i++) await progress.inc(100 / 1000)
     assert.equal(published().at(-1)?.progress, 100, `expected a final 100%, got ${JSON.stringify(published().at(-1))}`)
   })
@@ -93,9 +82,7 @@ test.describe('task progress', () => {
   })
 
   test('step() carries a running count and throttles repeats of the same step', async () => {
-    // without a percent the bar is indeterminate and only carries the number of documents ES
-    // acknowledged; the counter fires once per bulk, which on a large dataset is far more
-    // often than the bar needs
+    // the counter fires once per bulk, far more often than the bar needs
     const { taskProgress, published } = await setup()
     const progress = taskProgress('test-count', 'index')
     for (let i = 1; i <= 500; i++) await progress.step('indexing', i * 10)
@@ -118,8 +105,6 @@ test.describe('task progress', () => {
   })
 
   test('step() with a percent publishes a determinate bar carrying the count', async () => {
-    // the index task knows its total in two cases (REST collection count, re-index of
-    // unchanged data): it then publishes a real percentage alongside the acknowledged count
     const { taskProgress, published } = await setup()
     const progress = taskProgress('test-step-percent', 'index')
     await progress.step('indexing', 500, 12.7)
