@@ -9,8 +9,8 @@
       :text="value.formatted"
       :base-color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
-      :append-icon="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value ? mdiFilterVariant : undefined"
-      @click="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value &&emit('filter', value)"
+      :append-icon="!noInteraction && !noFilter && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value ? mdiFilterVariant : undefined"
+      @click="!noInteraction && !noFilter && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value &&emit('filter', value)"
       @mouseenter="emit('hoverstart', markRaw(value))"
       @mouseleave="emit('hoverstop')"
     />
@@ -30,7 +30,8 @@ const { values: extendedValues } = defineProps({
   lineHeight: { type: Number, default: 40 },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
   dense: { type: Boolean, default: false },
-  noInteraction: { type: Boolean, default: false }
+  noInteraction: { type: Boolean, default: false },
+  noFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{

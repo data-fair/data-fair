@@ -63,6 +63,7 @@
               :dense="true"
               :hovered="hovered"
               :filter="findEqFilter(filters, header.property, result)"
+              :no-filter="noFilter"
               @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw + '', formattedValue: v.formatted})"
               @hoverstart="v => emit('hoverstart', result, v)"
               @hoverstop="emit('hoverstop')"
@@ -139,6 +140,7 @@ const { headers } = defineProps({
   headers: { type: Array as () => TableHeaderWithProperty[], required: true },
   truncate: { type: Number, default: 50 },
   noInteraction: { type: Boolean, default: false },
+  noFilter: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null }
 })
 
