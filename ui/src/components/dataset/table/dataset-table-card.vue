@@ -142,7 +142,6 @@ const { headers, noSort, noFilter, noCols } = defineProps({
   filterHeight: { type: Number, required: true },
   headers: { type: Array as () => TableHeaderWithProperty[], required: true },
   truncate: { type: Number, default: 50 },
-  noInteraction: { type: Boolean, default: false },
   noFilter: { type: Boolean, default: false },
   noSort: { type: Boolean, default: false },
   noCols: { type: Boolean, default: false },

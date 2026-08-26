@@ -303,7 +303,6 @@
             :filters="filters"
             :headers="headersWithProperty"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
-            :no-interaction="!can('cells')"
             :no-filter="!can('filters')"
             :no-sort="!can('sort')"
             :no-cols="!can('cols')"
