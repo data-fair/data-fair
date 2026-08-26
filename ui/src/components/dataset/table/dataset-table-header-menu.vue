@@ -64,7 +64,7 @@
         </template>
 
         <!-- sorting -->
-        <template v-if="header.sortable">
+        <template v-if="header.sortable && !noSort">
           <v-list-item
             :active="sort === 1"
             :title="t('sortAsc')"
@@ -95,7 +95,7 @@
         </template>
 
         <!-- filters -->
-        <template v-if="showFilters">
+        <template v-if="showFilters && !noFilter">
           <v-list-item
             :active="!!newFilter"
             :title="t('addFilter')"
@@ -620,7 +620,7 @@
 
         <!-- hide column -->
         <v-list-item
-          v-if="!fixed"
+          v-if="!fixed && !noCols"
           :title="t('hide')"
           class="pl-2"
           @click="$emit('hide');showMenu=false"
@@ -635,7 +635,7 @@
 
         <!-- fix column to the left -->
         <v-list-item
-          v-if="!noFix"
+          v-if="!noFix && !noCols"
           :class="{'v-item--active v-list-item--active': fixed}"
           :title="t('fixLeft')"
           class="pl-2"
@@ -711,7 +711,7 @@ import { type DatasetFilter } from '~/composables/dataset/filters'
 import { formatValue } from '~/composables/dataset/lines'
 import useHeaderFilters from './use-header-filters'
 
-const { header, localEnum, filters, closeOnFilter } = defineProps({
+const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols } = defineProps({
   header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
@@ -720,6 +720,12 @@ const { header, localEnum, filters, closeOnFilter } = defineProps({
   noFix: { type: Boolean, default: false },
   localEnum: { type: Array, required: false, default: null },
   closeOnFilter: { type: Boolean, default: false },
+  // each section of the menu can be hidden separately, following the interactive elements
+  // activated on the table. Without the active-filter chips for instance, the user could not see
+  // nor remove what the "add a filter" section adds.
+  noFilter: { type: Boolean, default: false },
+  noSort: { type: Boolean, default: false },
+  noCols: { type: Boolean, default: false },
   // for date-time columns: the timezone their values are displayed in (e.g. "Europe/Paris (UTC+1)")
   timeZoneLabel: { type: String as () => string | undefined, default: undefined }
 })

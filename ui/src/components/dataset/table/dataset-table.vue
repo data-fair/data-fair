@@ -126,9 +126,9 @@
               }"
               :style="{
                 'min-width': (header.property || header.synthetic) ? (colsWidths[i] ?? minColWidth) + 'px' : '',
-                cursor: header.property && can('header') ? 'pointer' : 'default',
+                cursor: header.property && showHeaderMenu ? 'pointer' : 'default',
               }"
-              @mouseenter="hoveredHeader = can('header') ? header : undefined"
+              @mouseenter="hoveredHeader = showHeaderMenu ? header : undefined"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
@@ -162,10 +162,13 @@
               </div>
             </th>
             <dataset-table-header-menu
-              v-if="header.property && can('header')"
+              v-if="header.property && showHeaderMenu"
               :activator="`#header-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
+              :no-filter="!can('filters')"
+              :no-sort="!can('sort')"
+              :no-cols="!can('cols')"
               :fixed="fixed === header.key"
               :header="header as TableHeaderWithProperty"
               :no-fix="selectable || edit"
@@ -302,6 +305,8 @@
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
             :no-interaction="!can('cells')"
             :no-filter="!can('filters')"
+            :no-sort="!can('sort')"
+            :no-cols="!can('cols')"
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
@@ -476,7 +481,7 @@ import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
-import { allInteractions, hasToolbar, type Interaction } from '../../../composables/dataset/interactions'
+import { allInteractions, hasToolbar, hasHeaderMenu, type Interaction } from '../../../composables/dataset/interactions'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 
@@ -506,6 +511,7 @@ const activeInteractions = computed<Interaction[]>(() => {
 })
 const can = (interaction: Interaction) => activeInteractions.value.includes(interaction)
 const showToolbar = computed(() => hasToolbar(activeInteractions.value))
+const showHeaderMenu = computed(() => hasHeaderMenu(activeInteractions.value))
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })

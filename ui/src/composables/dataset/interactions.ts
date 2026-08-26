@@ -1,11 +1,14 @@
 // interactive elements of the dataset table, each one can be activated separately through the
 // "interaction" URL param of the embedded views
-export const allInteractions = ['count', 'search', 'filters', 'header', 'cells', 'cols', 'display', 'download', 'agent', 'fullscreen'] as const
+export const allInteractions = ['count', 'search', 'filters', 'sort', 'cells', 'cols', 'display', 'download', 'agent', 'fullscreen'] as const
 
 export type Interaction = typeof allInteractions[number]
 
 // elements living in the toolbar, it is rendered only if at least one of them is active
 const toolbarInteractions: Interaction[] = ['count', 'search', 'filters', 'cols', 'display', 'download', 'agent', 'fullscreen']
+
+// elements living in the column header menu, it is rendered only if at least one of them is active
+const headerMenuInteractions: Interaction[] = ['sort', 'filters', 'cols']
 
 /**
  * Parse the "interaction" param of an embedded view:
@@ -28,3 +31,5 @@ export const parseInteractions = (param: string | undefined | null): Interaction
 }
 
 export const hasToolbar = (interactions: Interaction[]) => toolbarInteractions.some(interaction => interactions.includes(interaction))
+
+export const hasHeaderMenu = (interactions: Interaction[]) => headerMenuInteractions.some(interaction => interactions.includes(interaction))

@@ -49,7 +49,7 @@
             v-if="result.values[header.key]"
             :class="`dataset-table-card-value-${result._id}-${header.cssKey ?? header.key}`"
             style="position: relative;"
-            :style="noInteraction ? '' : 'cursor:pointer'"
+            :style="showHeaderMenu ? 'cursor:pointer' : ''"
             @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
             @mouseleave="emit('hoverstop')"
           >
@@ -90,10 +90,13 @@
             />
           </div>
           <dataset-table-header-menu
-            v-if="!noInteraction"
+            v-if="showHeaderMenu"
             :activator="`.dataset-table-card-value-${result._id}-${header.cssKey ?? header.key}`"
             :header="header"
             :filters="filters"
+            :no-filter="noFilter"
+            :no-sort="noSort"
+            :no-cols="noCols"
             :filter-height="filterHeight"
             :sort="header.key === sort?.key ? sort.direction : undefined"
             no-fix
@@ -133,7 +136,7 @@ import { type TableHeaderWithProperty, type TableSort } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
-const { headers } = defineProps({
+const { headers, noSort, noFilter, noCols } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
@@ -141,6 +144,8 @@ const { headers } = defineProps({
   truncate: { type: Number, default: 50 },
   noInteraction: { type: Boolean, default: false },
   noFilter: { type: Boolean, default: false },
+  noSort: { type: Boolean, default: false },
+  noCols: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null }
 })
 
@@ -154,6 +159,9 @@ const emit = defineEmits<{
   showMapPreview: [],
   showDetailDialog: [header: TableHeaderWithProperty]
 }>()
+
+// the header menu is only worth opening if at least one of its sections is active
+const showHeaderMenu = computed(() => !noSort || !noFilter || !noCols)
 
 const { t } = useI18n()
 const { labelField } = useDatasetStore()
