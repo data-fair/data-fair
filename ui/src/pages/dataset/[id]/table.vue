@@ -11,6 +11,7 @@
       v-model:sort="sort"
       v-model:fixed="fixed"
       :height="contentHeight"
+      :interactions="interactions"
     />
   </v-container>
 </template>
@@ -30,6 +31,7 @@ import { useLayout } from 'vuetify'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { parseInteractions } from '~/composables/dataset/interactions'
 
 const { t } = useI18n()
 const { height: windowHeight } = useWindowSize()
@@ -46,6 +48,8 @@ const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
+const interaction = useStringSearchParam('interaction')
+const interactions = computed(() => parseInteractions(interaction.value))
 
 const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
 

@@ -43,7 +43,7 @@
 
     <!-- Agent helpers -->
     <df-agent-chat-action
-      v-if="edit && can('agent')"
+      v-if="edit && showAgentActions"
       action-id="help-edit-data"
       :visible-prompt="t('helpEditDataPrompt')"
       :hidden-context="dataEntryContext"
@@ -51,7 +51,7 @@
       :title="t('helpEditDataPrompt')"
     />
     <df-agent-chat-action
-      v-if="can('agent')"
+      v-if="showAgentActions"
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
       :hidden-context="filterHelpContext"
@@ -59,7 +59,7 @@
       :title="t('helpFilterPrompt')"
     />
     <df-agent-chat-action
-      v-if="can('agent')"
+      v-if="showAgentActions"
       action-id="check-data-quality"
       :visible-prompt="t('checkDataQualityPrompt')"
       :hidden-context="dataQualityContext"
@@ -67,7 +67,7 @@
       :title="t('checkDataQualityPrompt')"
     />
     <v-btn-group
-      v-if="(can('display') && display.mdAndUp.value) || can('cols') || (can('download') && baseFetchUrl && total !== undefined) || (can('fullscreen') && fullscreenTo)"
+      v-if="showBtnGroup"
       class="mx-2"
       density="compact"
       variant="outlined"
@@ -126,9 +126,9 @@
               }"
               :style="{
                 'min-width': (header.property || header.synthetic) ? (colsWidths[i] ?? minColWidth) + 'px' : '',
-                cursor: header.property && showHeaderMenu ? 'pointer' : 'default',
+                cursor: header.property && showHeaderMenu(header) ? 'pointer' : 'default',
               }"
-              @mouseenter="hoveredHeader = showHeaderMenu ? header : undefined"
+              @mouseenter="hoveredHeader = showHeaderMenu(header) ? header : undefined"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
@@ -162,7 +162,7 @@
               </div>
             </th>
             <dataset-table-header-menu
-              v-if="header.property && showHeaderMenu"
+              v-if="header.property && showHeaderMenu(header)"
               :activator="`#header-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
@@ -480,7 +480,8 @@ import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
-import { allInteractions, hasToolbar, hasHeaderMenu, type Interaction } from '../../../composables/dataset/interactions'
+import { allInteractions, type Interaction } from '../../../composables/dataset/interactions'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 
@@ -509,8 +510,14 @@ const activeInteractions = computed<Interaction[]>(() => {
   return searchOnly ? ['count', 'search'] : []
 })
 const can = (interaction: Interaction) => activeInteractions.value.includes(interaction)
-const showToolbar = computed(() => hasToolbar(activeInteractions.value))
-const showHeaderMenu = computed(() => hasHeaderMenu(activeInteractions.value))
+const showAgentChat = useShowAgentChat()
+// an active element is not enough for the toolbar to be worth its 48px: an embed has no fullscreen
+// target and no agent chat, so those two would otherwise reserve an empty bar
+const showAgentActions = computed(() => can('agent') && showAgentChat.value)
+const showBtnGroup = computed(() => (can('display') && display.mdAndUp.value) || can('cols') || can('download') || (can('fullscreen') && !!fullscreenTo))
+const showToolbar = computed(() => can('count') || can('search') || can('filters') || pagination || showAgentActions.value || showBtnGroup.value)
+// same per column: sorting only shows up on a sortable column
+const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('cols')
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })

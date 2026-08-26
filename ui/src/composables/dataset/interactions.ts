@@ -4,11 +4,9 @@ export const allInteractions = ['count', 'search', 'filters', 'sort', 'cells', '
 
 export type Interaction = typeof allInteractions[number]
 
-// elements living in the toolbar, it is rendered only if at least one of them is active
-const toolbarInteractions: Interaction[] = ['count', 'search', 'filters', 'cols', 'display', 'download', 'agent', 'fullscreen']
-
-// elements living in the column header menu, it is rendered only if at least one of them is active
-const headerMenuInteractions: Interaction[] = ['sort', 'filters', 'cols']
+// the toolbar and the column header menu are rendered only when one of their own elements is
+// active AND actually has something to show, so the decision lives in the table component: an
+// active element is not enough (an embed has no fullscreen target and no agent chat).
 
 /**
  * Parse the "interaction" param of an embedded view:
@@ -29,7 +27,3 @@ export const parseInteractions = (param: string | undefined | null): Interaction
   const base = included.length ? allInteractions.filter(interaction => included.includes(interaction)) : [...allInteractions]
   return base.filter(interaction => !excluded.has(interaction))
 }
-
-export const hasToolbar = (interactions: Interaction[]) => toolbarInteractions.some(interaction => interactions.includes(interaction))
-
-export const hasHeaderMenu = (interactions: Interaction[]) => headerMenuInteractions.some(interaction => interactions.includes(interaction))
