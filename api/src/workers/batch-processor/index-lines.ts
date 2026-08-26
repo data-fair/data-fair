@@ -95,13 +95,13 @@ export default async function (dataset: DatasetInternal) {
   }
 
   // The bar is driven by the documents ES acknowledged, the only faithful measure of the work:
-  // the source-bytes ratio that used to drive it is not one — the reader runs far ahead of the
-  // indexer whenever the source fits in the pipeline buffers (measured on a 737KB / 6k lines
-  // csv: all 12 read chunks land, and the bar reached 100%, before the first of the 13 bulks
-  // was acknowledged). A percentage also needs a total, exact without an extra read pass in
-  // two cases only: a REST dataset counts its mongo collection, and a re-index of unchanged
-  // data (config change on an already finalized dataset) reuses the count written by the
-  // previous run — `dataUpdatedAt` only moves when a new file or attachment is loaded.
+  // the reader runs far ahead of the indexer whenever the source fits in the pipeline buffers,
+  // so the source-bytes ratio that used to drive it is not one (measured — see
+  // docs/architecture/dataset-processing.md). A percentage also needs a total, exact without
+  // an extra read pass in two cases only: a REST dataset counts its mongo collection, and a
+  // re-index of unchanged data (config change on an already finalized dataset) reuses the
+  // count written by the previous run — `dataUpdatedAt` only moves when a new file or
+  // attachment is loaded.
   let totalLines: number | undefined
   if (isRestDataset(dataset)) {
     totalLines = await restDatasetsUtils.count(dataset, partialUpdate ? { _needsIndexing: true } : {})

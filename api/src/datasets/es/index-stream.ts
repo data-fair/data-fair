@@ -22,10 +22,9 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
-  // optional task progress reporter. acknowledged() is called with the running number of
-  // documents ES has accepted, the only faithful unit of work here: the reader consumes the
-  // whole source long before the first bulk lands whenever it fits in the pipeline buffers.
-  // step() names the phases that follow the stream and have no measurable progress.
+  // optional task progress reporter: acknowledged() is called with the running number of
+  // documents ES has accepted (the unit driving the bar, cf index-lines.ts), step() names
+  // the phases that follow the stream and have no measurable progress.
   progress?: {
     step: (step: string, count?: number) => Promise<void>
     acknowledged: (nbAcknowledged: number) => Promise<void>
