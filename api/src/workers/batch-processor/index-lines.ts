@@ -98,23 +98,38 @@ export default async function (dataset: DatasetInternal) {
   // the source-bytes ratio that used to drive it is not one — the reader runs far ahead of the
   // indexer whenever the source fits in the pipeline buffers (measured on a 737KB / 6k lines
   // csv: all 12 read chunks land, and the bar reached 100%, before the first of the 13 bulks
-  // was acknowledged). A percentage also needs a total, knowable without an extra read pass in
+  // was acknowledged). A percentage also needs a total, exact without an extra read pass in
   // two cases only: a REST dataset counts its mongo collection, and a re-index of unchanged
   // data (config change on an already finalized dataset) reuses the count written by the
-  // previous run — `dataUpdatedAt` only moves when a new file or attachment is loaded. A first
-  // indexing of a file has no honest total (extrapolating one from the source ratio inherits
-  // the buffering bias above) and keeps an indeterminate bar carrying the acknowledged count.
+  // previous run — `dataUpdatedAt` only moves when a new file or attachment is loaded.
   let totalLines: number | undefined
   if (isRestDataset(dataset)) {
     totalLines = await restDatasetsUtils.count(dataset, partialUpdate ? { _needsIndexing: true } : {})
   } else if (!dataset.draftReason && dataset.count !== undefined && dataset.dataUpdatedAt && dataset.finalizedAt && dataset.dataUpdatedAt <= dataset.finalizedAt) {
     totalLines = dataset.count
   }
+  // A first indexing of a file has no exact total, but the reader position gives a good
+  // estimate: lines parsed so far / fraction of source bytes consumed. Both are measured at
+  // the reader, so the pipeline buffering that made the source ratio dishonest as a direct
+  // percentage only makes the estimated total slightly low (bounded by the objectMode
+  // buffers), and it converges to the exact count once the source is fully read — which
+  // happens early precisely in the buffered case. Only skipped when the draft limit truncates
+  // the parse (the reader then consumes bytes the parser never turns into lines).
+  const estimateTotal = totalLines === undefined && !isRestDataset(dataset) && (!dataset.draftReason || dataset.validateDraft)
+  let sourceBytesRatio = 0
   const indexProgress = {
     step: (step: string, count?: number) => progress.step(step, count),
     acknowledged: async (nbAcknowledged: number) => {
       debugHeap('indexed ' + nbAcknowledged, indexStream)
-      await progress.step('indexing', nbAcknowledged, totalLines ? (nbAcknowledged / totalLines) * 100 : undefined)
+      let percent: number | undefined
+      if (totalLines) {
+        percent = (nbAcknowledged / totalLines) * 100
+      } else if (estimateTotal && sourceBytesRatio > 0 && indexStream.i > 0) {
+        const estimatedTotal = Math.max(indexStream.i / Math.min(sourceBytesRatio, 1), nbAcknowledged, 1)
+        // capped at 99: the estimate is not a claim, only the exact totals may show 100
+        percent = Math.min((nbAcknowledged / estimatedTotal) * 100, 99)
+      }
+      await progress.step('indexing', nbAcknowledged, percent)
     }
   }
 
@@ -132,7 +147,7 @@ export default async function (dataset: DatasetInternal) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  await progress.step('indexing', 0, totalLines ? 0 : undefined)
+  await progress.step('indexing', 0, (totalLines !== undefined || estimateTotal) ? 0 : undefined)
   debugHeap('before-stream')
   if (isRestDataset(dataset)) {
     readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {})
@@ -140,7 +155,7 @@ export default async function (dataset: DatasetInternal) {
   } else {
     const extended = dataset.extensions && dataset.extensions.some(e => e.active)
     if (!extended) await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
-    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft)
+    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft, estimateTotal ? { inc: (i) => { sourceBytesRatio += i / 100 } } : undefined)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

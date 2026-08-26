@@ -93,9 +93,9 @@ test.describe('task progress', () => {
   })
 
   test('step() carries a running count and throttles repeats of the same step', async () => {
-    // the index task has no honest percentage to show (the total line count is unknown while
-    // it runs) so it publishes the number of documents ES acknowledged instead; the counter
-    // fires once per bulk, which on a large dataset is far more often than the bar needs
+    // without a percent the bar is indeterminate and only carries the number of documents ES
+    // acknowledged; the counter fires once per bulk, which on a large dataset is far more
+    // often than the bar needs
     const { taskProgress, published } = await setup()
     const progress = taskProgress('test-count', 'index')
     for (let i = 1; i <= 500; i++) await progress.step('indexing', i * 10)

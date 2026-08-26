@@ -162,14 +162,17 @@ and the journal view).
   the reader runs far ahead of the indexer whenever the source fits in the pipeline buffers
   (measured on a 737KB / 6k lines csv, all 12 read chunks land before the first of 13 bulks is
   acknowledged), so the bar sat at 100% for the whole of the real indexing.
-- `indexing` shows a real percentage whenever the total is knowable without an extra read pass:
-  a REST dataset counts its mongo collection (`_needsIndexing` filter on partial updates), and
-  a re-index of unchanged data (config change on an already finalized dataset) reuses the
-  count written by the previous run — trusted because `dataUpdatedAt` only moves when a new
-  file or attachment is loaded. A **first** indexing of a file has no honest total
-  (`dataset.count` is written by this very task, `analyze` only samples the file, and
-  extrapolating a total from the source ratio inherits the buffering bias above): it keeps an
-  indeterminate bar carrying the acknowledged count.
+- `indexing` shows a real percentage whenever the total is exactly knowable without an extra
+  read pass: a REST dataset counts its mongo collection (`_needsIndexing` filter on partial
+  updates), and a re-index of unchanged data (config change on an already finalized dataset)
+  reuses the count written by the previous run — trusted because `dataUpdatedAt` only moves
+  when a new file or attachment is loaded. A **first** indexing of a file has no exact total
+  (`dataset.count` is written by this very task, `analyze` only samples the file) but still
+  shows an approximate percentage: the total is estimated at the reader position — lines
+  parsed so far divided by the fraction of source bytes consumed, both measured at the reader
+  so the buffering bias above only makes the estimate slightly low, and it converges to the
+  exact count once the source is fully read. The estimated percentage is capped at 99 (the
+  estimate is not a claim) and skipped only when the draft limit truncates the parse.
 - On success a non-final task leaves `{ task, progress: 100 }`, immediately superseded when the
   next task starts. `finalize` — or any task flagged `finalTask`, such as the validate step of
   a draft cancelled by the worker itself — clears the field entirely.

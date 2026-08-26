@@ -11,8 +11,9 @@ const testUser1 = await axiosAuth('test_user1@test.com')
 // is exactly what the UI progress bar renders). The task reports the documents acknowledged
 // by ES, and a real percentage whenever the total is honestly knowable before the stream runs:
 // REST datasets count their mongo collection, a re-index of unchanged data reuses the count
-// written by the previous run. A first indexing of a file has no honest total (the reader
-// outruns ES by the whole pipeline buffering) and stays on an indeterminate bar.
+// written by the previous run. A first indexing of a file has no exact total but still shows
+// an approximate percentage, from a total estimated at the reader position (lines parsed so
+// far / fraction of source bytes consumed), capped at 99 because the estimate is not a claim.
 
 const log = { info: async () => {}, error: console.error, debug: () => {} }
 const ws = new WsClient({ url: wsUrl, log: log as any })
@@ -51,20 +52,30 @@ const uploadCsv = async (csv: string) => {
 test.describe('index task progress', () => {
   test.beforeEach(async () => { await clean() })
 
-  test('a first file indexing reports acknowledged documents on an indeterminate bar with named steps', async () => {
-    const csv = 'a,b\n' + Array.from({ length: 300 }, (_, i) => `v${i},${i}`).join('\n') + '\n'
+  test('a first file indexing reports an estimated percentage with named steps', async () => {
+    // large enough that the indexing spans several bulks and outlasts the 250ms publication
+    // throttle (so intermediate estimated percentages are observable), while staying under
+    // the 160KB defaultLimits.datasetStorage of the dev config
+    const csv = 'a,b\n' + Array.from({ length: 12000 }, (_, i) => `v${i},${i}`).join('\n') + '\n'
     const ds = await uploadCsv(csv)
     // subscribing right after the POST: the index task runs several tasks later, the
     // subscription (a websocket roundtrip) always beats it
     await ws.subscribe(`datasets/${ds.id}/task-progress`)
-    const messages = await collectUntilCleared(`datasets/${ds.id}/task-progress`)
+    const messages = await collectUntilCleared(`datasets/${ds.id}/task-progress`, 60000)
 
     const index = messages.filter(m => m.task === 'index')
     const indexing = index.filter(m => m.step === 'indexing')
     assert.ok(indexing.length >= 1, `expected indexing messages, got ${JSON.stringify(messages)}`)
     for (const m of indexing) {
-      assert.equal(m.progress, -1, `no honest percentage exists for a first file indexing, got ${JSON.stringify(m)}`)
       assert.equal(typeof m.count, 'number')
+    }
+    // the estimated total has no exact source, but it must still produce a moving determinate
+    // bar; it is capped at 99 (the estimate is not a claim) and never recedes
+    const percents = indexing.map(m => m.progress).filter(p => p !== -1)
+    assert.ok(percents.some(p => p > 0), `expected estimated percentages, got ${JSON.stringify(indexing)}`)
+    for (let i = 0; i < percents.length; i++) {
+      assert.ok(percents[i] >= 0 && percents[i] <= 99, `estimated percent out of range: ${JSON.stringify(percents)}`)
+      if (i > 0 && percents[i - 1] !== 0) assert.ok(percents[i] >= percents[i - 1], `receding bar: ${JSON.stringify(percents)}`)
     }
     const steps = index.map(m => m.step)
     for (const step of ['start', 'refresh', 'switchAlias']) {
