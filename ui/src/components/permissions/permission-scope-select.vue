@@ -85,6 +85,14 @@
         hide-details="auto"
         @update:model-value="patch({ email: $event || undefined })"
       />
+      <div
+        v-if="emailResolution"
+        class="text-caption mt-1"
+        role="status"
+        aria-live="polite"
+      >
+        {{ emailResolution }}
+      </div>
     </v-col>
   </v-row>
 </template>
@@ -105,6 +113,8 @@ fr:
   rolesLabel: Rôles (tous si aucun coché)
   partner: Partenaire
   email: Adresse email
+  resolvedEmail: "Cet email correspond à {name} ({role}) : les droits de ce membre sont inclus."
+  unknownEmail: Aucun compte de l'organisation ne correspond à cet email. Les droits affichés sont ceux d'un utilisateur connecté.
 en:
   scopeLabel: Show the permissions of
   noScope: All resources
@@ -120,6 +130,8 @@ en:
   rolesLabel: Roles (all if none is selected)
   partner: Partner
   email: Email address
+  resolvedEmail: "This email belongs to {name} ({role}): this member's rights are included."
+  unknownEmail: No account of the organization matches this email. The rights shown are those of a logged in user.
 </i18n>
 
 <script setup lang="ts">
@@ -151,6 +163,8 @@ const ownerDetails = ref<OwnerDetails | null>(null)
 // survives an empty sub-selection that no scope can express
 const scenario = ref<PermissionScenario | null>(scenarioFromScope(modelValue.value, props.owner.id))
 watch(modelValue, (value) => {
+  // a resolved email carries an id as well: it is still the email scenario
+  if (scenario.value === 'email' && value?.type === 'user' && value.email) return
   const derived = scenarioFromScope(value, props.owner.id)
   if (derived) scenario.value = derived
   else if (!value) scenario.value = null
@@ -201,6 +215,32 @@ const setMember = (value: Member | null) => {
       }
     : { type: 'user' }
 }
+
+// a permission targeting an email applies whatever account its holder is switched on, so
+// resolving a member only ever adds what their group grants — it never removes anything
+const emailResolution = ref('')
+watch(() => modelValue.value?.email, async (email) => {
+  emailResolution.value = ''
+  if (scenario.value !== 'email' || !email || !email.includes('@')) return
+  if (props.owner.type !== 'organization') return
+  const res = await fetch(`${$sdUrl}/api/organizations/${props.owner.id}/members?q=${encodeURIComponent(email)}`)
+  const data = await res.json()
+  const member = (data.results as Member[]).find(m => m.email === email)
+  if (!member) {
+    emailResolution.value = t('unknownEmail')
+    // drop a membership left over from a previously resolved email
+    if (modelValue.value?.id) modelValue.value = { type: 'user', email }
+    return
+  }
+  emailResolution.value = t('resolvedEmail', { name: member.name, role: member.role ?? '' })
+  modelValue.value = {
+    type: 'user',
+    id: member.id,
+    email,
+    roles: member.role ? [member.role] : undefined,
+    department: member.department || undefined
+  }
+})
 
 // --- owner details from simple-directory, same source as the permissions editor ---
 
