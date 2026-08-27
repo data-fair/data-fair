@@ -50,7 +50,7 @@ whereas a scope must be able to express "contrib *or* user" and "any role". That
 encoded in a session object without lying.
 
 Both functions share `operationFilterClauses(resourceType, operation)` — the class-or-
-operation-id clause builder — so they cannot drift apart. Three deliberate differences:
+operation-id clause builder — so they cannot drift apart. Four deliberate differences:
 
 1. **The public case works with no session at all.** In `filterCan` the public clauses sit
    inside `if (sessionState.user)`, and `visibility.ts`'s `publicFilter` is hard-wired to
@@ -80,6 +80,22 @@ invisible again when one value happened to be both a class and an operation id �
 both, which is why `can=list,read` worked. `can=read,readAdvanced` was the discriminating
 case: every token a class name, empty filter, Mongo 500. Covered by
 `tests/features/permissions/filter-can.api.spec.ts`.
+
+## 2 bis. Why, not only what
+
+The list says *which* resources a scope reaches; the user also needs to know *why*, and
+what level is granted on each.
+
+`shared/permissions/effective-access.ts` is the pure, config-free evaluator that answers
+this question. It mirrors `matchPermission` (`api/src/misc/utils/permissions.ts`), applied
+to a hypothetical visitor instead of a session, returning the `AccessSource[]` that matched
+(public, connected, user, email, organization, ownerAdmin, personalAccount) and their
+permission classes/operations rather than a boolean.
+
+It is computed in the browser from the `permissions` array returned with each listed
+resource. `tests/features/permissions/recap.api.spec.ts` pins that the list endpoints
+return `permissions` and `owner` even when `select` is specified, so that a future change
+in projection or serialization is caught immediately by a named test.
 
 ## 3. Security
 
@@ -124,7 +140,6 @@ to see the level granted on each resource, which the provenance block under each
 shows. A consequence to know: a resource granted `read` but not `list` is not listed, so
 the screen answers "what this scope sees" rather than "everything it could reach".
 
-
 ### Department semantics
 
 `matchPermission` does not filter by department at all when the simulated account has no
@@ -144,11 +159,16 @@ department clause", so a hand-written URL cannot surprise anyone.
 
 Datasets and applications share the same evaluator, parameterised by `resourceType`.
 
-Portal pages do **not**: `portals` has no permissions model in the Data Fair sense — no
-`permissions` array on pages, reuses or groups, confidentiality being handled at portal
-level through the portal config's `authentication` field. The shape being considered for
-page permissions there is different (a single visibility level plus contributor rights), so
-the clause generator does not transpose.
+The six scenarios of the selector (`PermissionScenario`: `group`, `member`, `partner`,
+`email`, `connected`, `anonymous`) and the scenario mapping (`scenarioFromScope`,
+`scopeFromScenario` in `shared/permissions/scope.ts`) are pure UI mappings over the five
+URL parameters, so the URL contract is unchanged.
+
+Portal pages do **not** share the evaluator: `portals` has no permissions model in the
+Data Fair sense — no `permissions` array on pages, reuses or groups, confidentiality being
+handled at portal level through the portal config's `authentication` field. The shape being
+considered for page permissions there is different (a single visibility level plus
+contributor rights), so the clause generator does not transpose.
 
 What does transpose is the **scope**, because it describes an *account*, not a resource.
 That is why the five parameters above are flat and readable rather than an opaque blob: a
@@ -160,14 +180,15 @@ own evaluator. Additive: new tab, new actions, no change to the existing ones.
 
 `tests/features/permissions/`:
 
-- `scope.unit.spec.ts` — the URL contract round-trip.
+- `scope.unit.spec.ts` — the URL contract round-trip and scenario ↔ scope mapping.
+- `effective-access.unit.spec.ts` — the effective-access evaluator's truth table and source provenance.
 - `filter-can.api.spec.ts` — the multi-value `can=` regression.
 - `recap.api.spec.ts` — matching semantics, AND across actions, the three security locks,
-  facet coherence, and **the two truthfulness tests**: for a given scope, the set the recap
-  returns must equal the set a *real session* of that scope obtains. That is the property
-  that matters — a recap that misinforms an admin about who can reach their data is worse
-  than no recap at all.
-- `recap.e2e.spec.ts` — the browser walkthrough.
+  facet coherence, the permissions array projection pin, and **the truthfulness tests**:
+  for a given scope (anonymous, member, contributor), the set the recap returns must equal
+  the set a *real session* of that scope obtains. That is the property that matters — a
+  recap that misinforms an admin about who can reach their data is worse than no recap at all.
+- `recap.e2e.spec.ts` — the browser walkthrough (anonymous visitor and member via group).
 
 The exact shape of the produced Mongo clauses is deliberately **not** tested: such a test
 breaks on every refactor without ever catching a real permission bug.

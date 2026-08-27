@@ -49,4 +49,27 @@ test.describe('permissions recap page', () => {
     await expect(page).toHaveURL(/scopeType=public/)
     await expect(page).toHaveURL(/tab=applications/)
   })
+
+  test('a member scenario shows what their group grants, and why', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/permissions-recap', 'test_user1', { org: 'test_org1' })
+
+    const scopeSelect = page.locator('.v-select').filter({ hasText: 'Je veux voir les permissions pour' })
+    await expect(scopeSelect).toBeVisible({ timeout: 10000 })
+    await scopeSelect.click()
+    await page.getByRole('option', { name: 'Un groupe d\'utilisateurs dans l\'organisation', exact: true }).click()
+
+    // no role selected: the group contains the admins, so everything the org owns shows up
+    // with the implicit rights spelled out
+    await expect(page.locator('.v-window-item .v-card')).toHaveCount(3)
+    await expect(page.getByText('Administrateur de l\'organisation propriétaire').first()).toBeVisible()
+
+    // narrowing to the contributor role keeps only what that group is granted
+    const rolesSelect = page.locator('.v-select').filter({ hasText: 'Rôles' })
+    await rolesSelect.click()
+    await page.getByRole('option', { name: 'contrib', exact: true }).click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByText('Recap Contrib')).toBeVisible()
+    await expect(page.getByText('Via le groupe contrib')).toBeVisible()
+    await expect(page).toHaveURL(/scopeRoles=contrib/)
+  })
 })
