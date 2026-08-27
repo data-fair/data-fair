@@ -37,7 +37,7 @@ Two consequences that are correct behaviour, not bugs:
 `api/src/misc/utils/permissions.ts` exposes:
 
 ```ts
-scopeFilter(scope: PermissionScope, resourceType: ResourceType, operations: string[]): any[]
+scopeFilter(scope: PermissionScope, resourceType: ResourceType, operations: string[], account: { type: string, id: string }): any[]
 ```
 
 It returns clauses meant to be spread into a query's `$and`, matching the resources the
@@ -60,6 +60,12 @@ operation-id clause builder — so they cannot drift apart. Three deliberate dif
    containing the admin role matches every permission of the organization whatever its
    `roles`, mirroring `matchPermission`.
 3. **No `adminMode` branch.** A scope is never a super admin.
+4. **A `user` scope may carry a membership.** `scopeRoles` and `scopeDepartment` on a user
+   scope describe that user's role and department *in the audited organization* — the one
+   `find.ts` forces the `owner` clause to. Without them the recap would answer the "a
+   member of the organization" question with nominative permissions only, ignoring
+   everything their group grants. Both branches share `organizationClauses`, so a member
+   and their group cannot be evaluated differently.
 
 An unknown action raises a 400 rather than producing an empty `$or`, which Mongo rejects
 with `$or argument must be a non-empty array`.

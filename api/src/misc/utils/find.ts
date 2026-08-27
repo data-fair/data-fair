@@ -153,7 +153,7 @@ export const scopeFilters = (reqQuery: Record<string, string>, sessionState: Ses
   }
 
   const operations = reqQuery.scopeActions?.split(',').filter(Boolean)
-  const clauses = permissions.scopeFilter(scope, resourceType as ResourceType, operations?.length ? operations : ['list'])
+  const clauses = permissions.scopeFilter(scope, resourceType as ResourceType, operations?.length ? operations : ['list'], account)
 
   // force the perimeter to the current account; AND-ed, so a client-supplied `owner`
   // parameter can only narrow it further

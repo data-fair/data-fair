@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert'
-import { axiosAuth, anonymousAx, mockAppUrl, clean } from '../../support/axios.ts'
+import { axiosAuth, anonymousAx, mockAppUrl, clean, config } from '../../support/axios.ts'
 
 test.afterAll(clean)
 
@@ -13,6 +13,12 @@ const adminEmail = 'test_user1@test.com'
 const contribEmail = 'test_user5@test.com'
 const depAdminEmail = 'test_user4@test.com'
 const org = 'test_org1'
+
+// this file cumulatively creates more test_org1 datasets across its scenarios than the
+// dev default nbDatasets quota allows; lift it so scope coverage isn't capped by quota
+test.beforeAll(async () => {
+  await anonymousAx.post(`/api/v1/limits/organization/${org}`, { nb_datasets: { limit: -1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+})
 
 const createDataset = async (ax: any, title: string, permissions: any[]) => {
   const dataset = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title })).data
@@ -175,6 +181,57 @@ test('the recap matches what a real contributor of the organization sees', async
   const recapIds = recap.data.results.map((d: any) => d.id).sort()
   const realIds = real.data.results.map((d: any) => d.id).sort()
   assert.deepEqual(recapIds, realIds, 'the recap must report exactly what a real contributor can list')
+})
+
+test('a member scope reports what their role in the organization grants', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  const forContribs = await createDataset(ax, 'recap member via role', [
+    { type: 'organization', id: org, roles: ['contrib'], classes: ['list', 'read'] }
+  ])
+  const forNobody = await createDataset(ax, 'recap member hidden', [])
+
+  const res = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'user', scopeId: 'test_user5', scopeRoles: 'contrib', scopeActions: 'list', size: 1000 }
+  })
+  const ids = res.data.results.map((d: any) => d.id)
+  assert.ok(ids.includes(forContribs.id), 'a member reaches what their group is granted')
+  assert.ok(!ids.includes(forNobody.id))
+})
+
+test('the recap matches what a real member of the organization sees', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  await createDataset(ax, 'truth member via group', [
+    { type: 'organization', id: org, roles: ['contrib'], classes: ['list', 'read'] }
+  ])
+  await createDataset(ax, 'truth member by name', [
+    { type: 'user', id: 'test_user5', name: 'test_user5', classes: ['list', 'read'] }
+  ])
+  await createDataset(ax, 'truth member hidden', [])
+
+  const recap = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'user', scopeId: 'test_user5', scopeEmail: contribEmail, scopeRoles: 'contrib', scopeActions: 'list', size: 1000 }
+  })
+  const memberAx = await axiosAuth(contribEmail, org)
+  const real = await memberAx.get('/api/v1/datasets', {
+    params: { owner: `organization:${org}`, size: 1000 }
+  })
+
+  const recapIds = recap.data.results.map((d: any) => d.id).sort()
+  const realIds = real.data.results.map((d: any) => d.id).sort()
+  assert.deepEqual(recapIds, realIds, 'the recap must report exactly what that member can list')
+})
+
+test('a user scope with no membership stays a plain user scope', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  const forContribs = await createDataset(ax, 'recap no membership', [
+    { type: 'organization', id: org, roles: ['contrib'], classes: ['list', 'read'] }
+  ])
+
+  const res = await ax.get('/api/v1/datasets', {
+    params: { scopeType: 'user', scopeEmail: 'outsider@example.com', scopeActions: 'list', size: 1000 }
+  })
+  const ids = res.data.results.map((d: any) => d.id)
+  assert.ok(!ids.includes(forContribs.id), 'an email with no membership gets nothing from the group')
 })
 
 test('the scope applies to applications the same way', async () => {

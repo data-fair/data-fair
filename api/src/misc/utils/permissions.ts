@@ -321,6 +321,36 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
 }
 
 /**
+ * Mongo clauses matching the resources an organization membership reaches: the implicit
+ * rights of an admin over everything the organization owns, plus the explicit permissions
+ * targeting that organization for a compatible role and department.
+ * `roles` null means "any role", which is also what an admin matches (see matchPermission).
+ */
+const organizationClauses = (orgId: string, roles: string[] | null, department: string | undefined, operationFilter: any[]): any[] => {
+  const or: any[] = []
+  const matchesAnyRole = !roles || roles.some(role => role === config.adminRole)
+  const realDepartment = department && department !== '*' && department !== '-' ? department : null
+
+  if (matchesAnyRole) {
+    const ownerClause: any = { 'owner.type': 'organization', 'owner.id': orgId }
+    if (realDepartment) ownerClause['owner.department'] = realDepartment
+    or.push(ownerClause)
+  }
+
+  const elemMatch: any[] = [{ type: 'organization', id: orgId }, { $or: operationFilter }]
+  if (roles && !matchesAnyRole) {
+    elemMatch.push({ $or: [{ roles: { $in: roles } }, { roles: { $size: 0 } }, { roles: { $exists: false } }] })
+  }
+  // "any department" adds no clause: a member with no department is not department-filtered
+  // at all by matchPermission
+  if (realDepartment) {
+    elemMatch.push({ $or: [{ department: realDepartment }, { department: '*' }, { department: { $exists: false } }, { department: null }] })
+  }
+  or.push({ permissions: { $elemMatch: { $and: elemMatch } } })
+  return or
+}
+
+/**
  * Mongo clauses matching the resources a hypothetical scope can perform ALL the given
  * operations on. Meant to be spread into a query's $and, on top of (never instead of)
  * the real session filter.
@@ -330,10 +360,13 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
  *    inside `if (sessionState.user)`, and visibility.publicFilter is hard-wired to `list`);
  *  - a scope may carry SEVERAL roles, or none meaning "any role" — a session carries one;
  *  - there is no adminMode branch: a scope is never a super admin.
+ *  - roles and department on a `user` scope describe that user's membership in the
+ *    audited organization, so scenario "a member of the organization" reports what their
+ *    group grants — the account is passed in because the scope alone cannot name it.
  *
  * See docs/architecture/permissions-recap.md.
  */
-export const scopeFilter = function (scope: PermissionScope, resourceType: ResourceType, operations: string[]): any[] {
+export const scopeFilter = function (scope: PermissionScope, resourceType: ResourceType, operations: string[], account: { type: string, id: string }): any[] {
   const and: any[] = []
   for (const operation of operations) {
     const operationFilter = operationFilterClauses(resourceType, operation)
@@ -355,42 +388,17 @@ export const scopeFilter = function (scope: PermissionScope, resourceType: Resou
       if (scope.email) {
         or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', email: scope.email } } })
       }
+      // roles and department on a user scope describe that user's membership in the audited
+      // organization: without them the recap would ignore everything their group grants
+      if (account.type === 'organization' && scope.id !== '*' && (scope.roles?.length || scope.department)) {
+        or.push(...organizationClauses(account.id, scope.roles?.length ? scope.roles : null, scope.department, operationFilter))
+      }
     }
 
     if (scope.type === 'organization' && scope.id) {
       // an organization member is also an authenticated user
       or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
-
-      // a permission with no roles applies to everyone, and an admin matches any
-      // permission of their organization whatever its roles (see matchPermission)
-      const roles = scope.roles?.length ? scope.roles : null
-      const matchesAnyRole = !roles || roles.some(role => role === config.adminRole)
-
-      // implicit rights of the owner organization's admins: they can do everything.
-      // Only admins get this — contribOperationsClasses does not contain 'list', so
-      // filterCan grants the owner clause to admins only, and permissions.list() gives
-      // contributors nothing implicit either.
-      if (matchesAnyRole) {
-        const ownerClause: any = { 'owner.type': 'organization', 'owner.id': scope.id }
-        if (scope.department && scope.department !== '*' && scope.department !== '-') {
-          ownerClause['owner.department'] = scope.department
-        }
-        or.push(ownerClause)
-      }
-
-      const elemMatch: any[] = [
-        { type: 'organization', id: scope.id },
-        { $or: operationFilter }
-      ]
-      if (roles && !matchesAnyRole) {
-        elemMatch.push({ $or: [{ roles: { $in: roles } }, { roles: { $size: 0 } }, { roles: { $exists: false } }] })
-      }
-      // "any department" (absent, '*' or '-') adds no clause: a member with no department
-      // is not department-filtered at all by matchPermission
-      if (scope.department && scope.department !== '*' && scope.department !== '-') {
-        elemMatch.push({ $or: [{ department: scope.department }, { department: '*' }, { department: { $exists: false } }, { department: null }] })
-      }
-      or.push({ permissions: { $elemMatch: { $and: elemMatch } } })
+      or.push(...organizationClauses(scope.id, scope.roles?.length ? scope.roles : null, scope.department, operationFilter))
     }
 
     and.push({ $or: or })
