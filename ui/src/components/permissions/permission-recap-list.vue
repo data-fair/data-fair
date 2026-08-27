@@ -27,6 +27,11 @@
         v-else
         :application="(item as any)"
       />
+      <permission-access-chips
+        v-if="scope && account"
+        :sources="sourcesOf(item)"
+        :account-id="account.id"
+      />
     </v-col>
   </v-row>
 
@@ -47,6 +52,8 @@ en:
 <script setup lang="ts">
 import DatasetCard from '~/components/dataset/dataset-card.vue'
 import ApplicationCard from '~/components/application/application-card.vue'
+import PermissionAccessChips from './permission-access-chips.vue'
+import { effectiveAccess, type AccessResource } from '@data-fair/data-fair-shared/permissions/effective-access.ts'
 import { scopeToParams, type PermissionScope } from '@data-fair/data-fair-shared/permissions/scope.ts'
 
 const props = defineProps<{
@@ -55,6 +62,16 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+
+// $uiConfig and $sdUrl are auto-imported from ~/context (ui/vite.config.ts), do not import them
+const { account } = useSession()
+
+// the list says which resources, this says why: same permission entries, evaluated by the
+// mirror of matchPermission that shared/permissions/effective-access.ts holds
+const sourcesOf = (item: any) => {
+  if (!props.scope || !account.value) return []
+  return effectiveAccess(props.scope, item as AccessResource, account.value, $uiConfig.adminRole)
+}
 
 const query = computed(() => ({
   // copied verbatim from ui/src/pages/datasets/index.vue:262 and
@@ -66,7 +83,7 @@ const query = computed(() => ({
   ...scopeToParams(props.scope)
 }))
 
-const catalog = useCatalogList<{ id: string }>({
+const catalog = useCatalogList<{ id: string, owner: any, permissions?: any[] }>({
   fetchUrl: computed(() => `${$apiPath}/${props.resourceType}`),
   query,
   facetsFields: '',
