@@ -34,10 +34,10 @@ test.describe('permissions recap page', () => {
     // narrowing to the public scope keeps only the publicly listable dataset
     // (clicking the .v-select wrapper, not the label: the selection text intercepts
     // pointer events on the label — same pattern as tests/features/ui/datasets-list.e2e.spec.ts:69)
-    const scopeSelect = page.locator('.v-select').filter({ hasText: 'Portée' })
+    const scopeSelect = page.locator('.v-select').filter({ hasText: 'Je veux voir les permissions pour' })
     await expect(scopeSelect).toBeVisible({ timeout: 10000 })
     await scopeSelect.click()
-    await page.getByRole('option', { name: 'Public', exact: true }).click()
+    await page.getByRole('option', { name: 'Un visiteur anonyme', exact: true }).click()
     await expect(page.locator('.v-window-item .v-card')).toHaveCount(1)
     await expect(page.getByText('Recap Public')).toBeVisible()
 
