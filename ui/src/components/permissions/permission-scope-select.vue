@@ -223,7 +223,7 @@ watch(() => modelValue.value?.email, async (email) => {
   emailResolution.value = ''
   if (scenario.value !== 'email' || !email || !email.includes('@')) return
   if (props.owner.type !== 'organization') return
-  const res = await fetch(`${$sdUrl}/api/organizations/${props.owner.id}/members?q=${encodeURIComponent(email)}`)
+  const res = await fetch(`${$sdUrl}/api/organizations/${props.owner.id}/members?email=${encodeURIComponent(email)}`)
   const data = await res.json()
   const member = (data.results as Member[]).find(m => m.email === email)
   if (!member) {
