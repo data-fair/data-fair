@@ -117,10 +117,13 @@ mental translation between the editor and the recap:
 | `scopeDepartment` | department id · absent | absent = any department |
 | `scopeRoles` | comma-separated | absent = any role |
 
-Per-tab, *not* part of the common scope: the page URL carries `datasetsActions` and
-`applicationsActions`, which reach the API as `scopeActions` (the API handles one resource
-type per request). With a scope selected and no action chosen, the action defaults to
-`list`.
+`scopeActions` stays an API parameter — one resource type per request, defaulting to
+`list` — and is what a portals iframe will use to ask a different question. The screen
+itself no longer sends it: an administrator does not want to filter by "write", they want
+to see the level granted on each resource, which the provenance block under each card now
+shows. A consequence to know: a resource granted `read` but not `list` is not listed, so
+the screen answers "what this scope sees" rather than "everything it could reach".
+
 
 ### Department semantics
 

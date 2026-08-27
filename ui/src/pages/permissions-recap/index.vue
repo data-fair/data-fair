@@ -18,14 +18,12 @@
       <template #windows>
         <v-tabs-window-item value="datasets">
           <permission-recap-list
-            v-model:actions="datasetsActions"
             resource-type="datasets"
             :scope="scope"
           />
         </v-tabs-window-item>
         <v-tabs-window-item value="applications">
           <permission-recap-list
-            v-model:actions="applicationsActions"
             resource-type="applications"
             :scope="scope"
           />
@@ -38,12 +36,12 @@
 <i18n lang="yaml">
 fr:
   title: Récapitulatif des permissions
-  subtitle: Choisissez une portée pour voir ce qu'elle peut atteindre, et pour quelles actions.
+  subtitle: Choisissez une situation pour voir ce qu'elle permet d'atteindre, et pourquoi.
   datasets: Jeux de données
   applications: Applications
 en:
   title: Permissions recap
-  subtitle: Pick a scope to see what it can reach, and for which actions.
+  subtitle: Pick a situation to see what it reaches, and why.
   datasets: Datasets
   applications: Applications
 </i18n>
@@ -67,8 +65,6 @@ const tabs = computed(() => [
 ])
 
 const tab = useStringSearchParam('tab', 'datasets')
-const datasetsActions = useStringsArraySearchParam('datasetsActions')
-const applicationsActions = useStringsArraySearchParam('applicationsActions')
 
 // the five common scope parameters live in the URL individually, so the whole page state
 // is shareable and can later be forwarded to an embedded portals iframe as-is
