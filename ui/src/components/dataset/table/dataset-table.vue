@@ -79,7 +79,7 @@
         :edit="edit"
       />
       <dataset-select-cols
-        v-if="can('cols')"
+        v-if="can('select-cols')"
         v-model="cols"
       />
       <dataset-download-results-menu
@@ -168,10 +168,10 @@
               :filters="filters"
               :no-filter="!can('filters')"
               :no-sort="!can('sort')"
-              :no-cols="!can('cols')"
+              :no-cols="!can('select-cols')"
               :fixed="fixed === header.key"
               :header="header as TableHeaderWithProperty"
-              :no-fix="selectable || edit"
+              :no-fix="!canFixCols"
               :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
@@ -305,7 +305,7 @@
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
             :no-filter="!can('filters')"
             :no-sort="!can('sort')"
-            :no-cols="!can('cols')"
+            :no-cols="!can('select-cols')"
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
@@ -514,10 +514,13 @@ const showAgentChat = useShowAgentChat()
 // an active element is not enough for the toolbar to be worth its 48px: an embed has no fullscreen
 // target and no agent chat, so those two would otherwise reserve an empty bar
 const showAgentActions = computed(() => can('agent') && showAgentChat.value)
-const showBtnGroup = computed(() => (can('display') && display.mdAndUp.value) || can('cols') || can('download') || (can('fullscreen') && !!fullscreenTo))
+// fixing a column to the left is impossible when the first column is already sticky for the
+// row actions or the selection checkboxes
+const canFixCols = computed(() => can('fix-cols') && !selectable && !edit)
+const showBtnGroup = computed(() => (can('display') && display.mdAndUp.value) || can('select-cols') || can('download') || (can('fullscreen') && !!fullscreenTo))
 const showToolbar = computed(() => can('count') || can('search') || can('filters') || pagination || showAgentActions.value || showBtnGroup.value)
 // same per column: sorting only shows up on a sortable column
-const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('cols')
+const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('select-cols') || canFixCols.value
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })

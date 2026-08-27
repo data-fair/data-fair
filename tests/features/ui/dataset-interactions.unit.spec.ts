@@ -19,7 +19,14 @@ test.describe('parseInteractions', () => {
 
   test('keeps only the listed elements, in the reference order', () => {
     assert.deepEqual(parseInteractions('search,count'), ['count', 'search'])
-    assert.deepEqual(parseInteractions('cols'), ['cols'])
+    assert.deepEqual(parseInteractions('select-cols'), ['select-cols'])
+  })
+
+  test('keeps the column selection and the fixed column independent', () => {
+    assert.deepEqual(parseInteractions('select-cols'), ['select-cols'])
+    assert.deepEqual(parseInteractions('fix-cols'), ['fix-cols'])
+    assert.deepEqual(parseInteractions('-fix-cols'), allInteractions.filter(i => i !== 'fix-cols'))
+    assert.deepEqual(parseInteractions('-select-cols'), allInteractions.filter(i => i !== 'select-cols'))
   })
 
   test('removes the negated elements from the full list', () => {

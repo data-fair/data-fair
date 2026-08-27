@@ -635,7 +635,7 @@
 
         <!-- fix column to the left -->
         <v-list-item
-          v-if="!noFix && !noCols"
+          v-if="!noFix"
           :class="{'v-item--active v-list-item--active': fixed}"
           :title="t('fixLeft')"
           class="pl-2"
@@ -717,6 +717,7 @@ const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols } = 
   filterHeight: { type: Number, required: true },
   fixed: { type: Boolean, default: false },
   activator: { type: String, required: true },
+  // fixing a column and choosing the visible columns are two separate interactive elements
   noFix: { type: Boolean, default: false },
   localEnum: { type: Array, required: false, default: null },
   closeOnFilter: { type: Boolean, default: false },

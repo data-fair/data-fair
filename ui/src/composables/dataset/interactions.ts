@@ -1,6 +1,6 @@
 // interactive elements of the dataset table, each one can be activated separately through the
 // "interaction" URL param of the embedded views
-export const allInteractions = ['count', 'search', 'filters', 'sort', 'cells', 'cols', 'display', 'download', 'agent', 'fullscreen'] as const
+export const allInteractions = ['count', 'search', 'filters', 'sort', 'cells', 'select-cols', 'fix-cols', 'display', 'download', 'agent', 'fullscreen'] as const
 
 export type Interaction = typeof allInteractions[number]
 
