@@ -47,3 +47,36 @@ export const scopeToParams = (scope: PermissionScope | null): Record<string, str
   if (scope.roles?.length) params.scopeRoles = scope.roles.join(',')
   return params
 }
+
+/**
+ * The six situations an administrator has in mind, in the order of the selector.
+ * A scenario is UI intent: it is derived from the scope, never stored in the URL.
+ */
+export type PermissionScenario = 'group' | 'member' | 'partner' | 'email' | 'connected' | 'anonymous'
+
+/**
+ * Returns null when the scope carries no scenario yet — an empty user scope is both
+ * 'member' and 'email' waiting for input, an organization scope with no id is a partner
+ * not chosen yet. Callers keep their current scenario in that case.
+ */
+export const scenarioFromScope = (scope: PermissionScope | null, ownerId: string): PermissionScenario | null => {
+  if (!scope) return null
+  if (scope.type === 'public') return 'anonymous'
+  if (scope.type === 'user') {
+    if (scope.id === '*') return 'connected'
+    if (scope.id) return 'member'
+    if (scope.email) return 'email'
+    return null
+  }
+  if (!scope.id) return null
+  return scope.id === ownerId ? 'group' : 'partner'
+}
+
+/** The scope a scenario starts from, before its contextual control is filled in. */
+export const scopeFromScenario = (scenario: PermissionScenario, ownerId: string): PermissionScope => {
+  if (scenario === 'anonymous') return { type: 'public' }
+  if (scenario === 'connected') return { type: 'user', id: '*' }
+  if (scenario === 'member' || scenario === 'email') return { type: 'user' }
+  if (scenario === 'group') return { type: 'organization', id: ownerId }
+  return { type: 'organization' }
+}
