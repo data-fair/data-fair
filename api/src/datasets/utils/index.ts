@@ -194,7 +194,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
       dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
     }
   }
-  delete dataset.permissions
+  if (!query.scopeType && !select.includes('permissions')) delete dataset.permissions
   delete dataset._id
   delete dataset._modified
   delete dataset._uniqueRefs

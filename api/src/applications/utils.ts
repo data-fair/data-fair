@@ -31,7 +31,7 @@ export const clean = (application: Application, publicUrl: string, publicationSi
     if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl, publicationSite && publicationSite.applicationUrlTemplate)
   }
 
-  delete application.permissions
+  if (!query.scopeType && !select.includes('permissions')) delete application.permissions
   delete application._id
   delete application.configuration
   delete application.configurationDraft

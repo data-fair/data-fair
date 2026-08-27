@@ -248,3 +248,22 @@ test('the scope applies to applications the same way', async () => {
   assert.ok(ids.includes(app.id))
   assert.ok(!ids.includes(hidden.id))
 })
+
+test('a listed resource carries its permissions array, whatever the select', async () => {
+  const ax = await axiosAuth(adminEmail, org)
+  const dataset = await createDataset(ax, 'recap provenance source', [{ classes: ['list', 'read'] }])
+
+  const res = await ax.get('/api/v1/datasets', {
+    params: { select: 'title,owner', scopeType: 'public', size: 1000 }
+  })
+  const found = res.data.results.find((d: any) => d.id === dataset.id)
+  assert.ok(found, 'the dataset must be listed')
+  // the recap computes provenance client-side from this array — see
+  // docs/architecture/permissions-recap.md
+  assert.ok(Array.isArray(found.permissions), 'the permissions array must survive the projection')
+  assert.ok(
+    found.permissions.some((p: any) => p.classes?.includes('read')),
+    'the entry granting the access must be readable, classes included'
+  )
+  assert.ok(found.owner, 'the owner is needed to detect implicit admin rights')
+})
