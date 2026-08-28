@@ -229,7 +229,7 @@ fr:
   detailedMode: Édition détaillée des permissions
   actions: Actions
   permissionsUpdated: Les permissions ont été mises à jour
-  noDep: aucun département
+  noDep: Aucun département
   readDepPermissionsDoc: Consultez la documentation sur les départements pour comprend les permissions des différents membres du département.
   classNames:
     list: Lister

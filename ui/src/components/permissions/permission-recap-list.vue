@@ -51,9 +51,9 @@
 
 <i18n lang="yaml">
 fr:
-  matchingCount: "aucune ressource correspondante | 1 ressource correspondante | {count} ressources correspondantes"
+  matchingCount: "Aucune ressource correspondante | 1 ressource correspondante | {count} ressources correspondantes"
 en:
-  matchingCount: "no matching resource | 1 matching resource | {count} matching resources"
+  matchingCount: "No matching resource | 1 matching resource | {count} matching resources"
 </i18n>
 
 <script setup lang="ts">

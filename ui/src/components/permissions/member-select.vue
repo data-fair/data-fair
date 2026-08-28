@@ -15,26 +15,39 @@
     @update:model-value="$emit('update:modelValue', $event)"
     @update:search="onSearch"
   >
-    <template #selection="{ item }">
-      <div class="d-flex align-center">
+    <template #selection="{ item, internalItem }: any">
+      <div
+        v-if="getRaw(item, internalItem)?.id"
+        class="d-flex align-center"
+      >
         <v-avatar
-          v-if="item.raw.id"
           :size="24"
-          :image="`${$sdUrl}/api/avatars/user/${item.raw.id}/avatar.png`"
+          :image="`${$sdUrl}/api/avatars/user/${getRaw(item, internalItem).id}/avatar.png`"
           class="mr-2"
         />
-        <span>{{ item.raw.name }}</span>
+        <span>{{ getRaw(item, internalItem).name || getRaw(item, internalItem).id }}</span>
       </div>
     </template>
-    <template #item="{ item, props: itemProps }: any">
+    <template #item="{ item, internalItem, props: itemProps }: any">
       <v-list-item
         v-bind="itemProps"
-        :prepend-avatar="`${$sdUrl}/api/avatars/user/${item.raw.id}/avatar.png`"
+        :title="getRaw(item, internalItem).name || getRaw(item, internalItem).id"
       >
-        <template #subtitle>
-          {{ item.raw.email }}
-          <span v-if="item.raw.role"> - {{ item.raw.role }}</span>
-          <span v-if="item.raw.department"> - {{ item.raw.departmentName || item.raw.department }}</span>
+        <template #prepend>
+          <v-avatar
+            v-if="getRaw(item, internalItem).id"
+            :size="32"
+            :image="`${$sdUrl}/api/avatars/user/${getRaw(item, internalItem).id}/avatar.png`"
+            class="mr-3"
+          />
+        </template>
+        <template
+          v-if="getRaw(item, internalItem)"
+          #subtitle
+        >
+          {{ getRaw(item, internalItem).email }}
+          <span v-if="getRaw(item, internalItem).role"> - {{ roleLabel(getRaw(item, internalItem).role) }}</span>
+          <span v-if="getRaw(item, internalItem).department"> - {{ getRaw(item, internalItem).departmentName || getRaw(item, internalItem).department }}</span>
         </template>
       </v-list-item>
     </template>
@@ -45,9 +58,17 @@
 fr:
   member: Membre de {org}
   noMemberFound: Aucun membre trouvé
+  roles:
+    admin: Administrateur
+    contrib: Contributeur
+    user: Utilisateur
 en:
   member: Member of {org}
   noMemberFound: No member found
+  roles:
+    admin: Administrator
+    contrib: Contributor
+    user: User
 </i18n>
 
 <script setup lang="ts">
@@ -56,6 +77,7 @@ import { $sdUrl } from '~/context'
 const props = defineProps<{
   modelValue: { id: string, name: string, email?: string } | null
   organization: { id: string, name?: string }
+  rolesLabels?: Record<string, string>
 }>()
 
 type Member = { id: string, name: string, email?: string, role?: string, department?: string, departmentName?: string }
@@ -64,7 +86,18 @@ defineEmits<{
   'update:modelValue': [value: Member | null]
 }>()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+const roleLabel = (role?: string) => {
+  if (!role) return ''
+  if (props.rolesLabels?.[role]) return props.rolesLabels[role]
+  if (te('roles.' + role)) return t('roles.' + role)
+  return role
+}
+
+const getRaw = (item: any, internalItem?: any): Member => {
+  return (internalItem?.raw ?? item?.raw ?? item ?? {}) as Member
+}
 
 const members = ref<Member[]>([])
 const loading = ref(false)

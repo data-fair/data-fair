@@ -38,29 +38,43 @@
               :items="departmentItems"
               :label="t('department')"
             >
-              <template #selection="{ item }">
-                <div class="d-flex align-center">
+              <template #selection="{ item, internalItem }: any">
+                <div
+                  v-if="getRaw(item, internalItem)"
+                  class="d-flex align-center"
+                >
                   <v-avatar
-                    v-if="item.raw.avatarUrl"
+                    v-if="getRaw(item, internalItem).avatarUrl"
                     :size="24"
-                    :image="item.raw.avatarUrl"
+                    :image="getRaw(item, internalItem).avatarUrl"
                     class="mr-2"
                   />
-                  <span>{{ item.title }}</span>
+                  <span>{{ getRaw(item, internalItem).title }}</span>
                 </div>
               </template>
-              <template #item="{ item, props: itemProps }">
+              <template #item="{ item, internalItem, props: itemProps }: any">
                 <v-list-item
                   v-bind="itemProps"
-                  :prepend-avatar="item.raw.avatarUrl"
-                />
+                  :title="getRaw(item, internalItem).title"
+                >
+                  <template
+                    v-if="getRaw(item, internalItem).avatarUrl"
+                    #prepend
+                  >
+                    <v-avatar
+                      :size="32"
+                      :image="getRaw(item, internalItem).avatarUrl"
+                      class="mr-3"
+                    />
+                  </template>
+                </v-list-item>
               </template>
             </v-select>
 
             <v-select
               v-if="owner.roles && owner.roles.length"
               v-model="permission.roles"
-              :items="owner.roles"
+              :items="roleItems"
               :label="t('rolesLabel')"
               multiple
             />
@@ -74,23 +88,38 @@
               item-value="id"
               return-object
               :label="t('partner')"
+              :no-data-text="t('noPartnerFound')"
             >
-              <template #selection="{ item }">
-                <div class="d-flex align-center">
+              <template #selection="{ item, internalItem }: any">
+                <div
+                  v-if="getRaw(item, internalItem)"
+                  class="d-flex align-center"
+                >
                   <v-avatar
-                    v-if="item.raw.avatarUrl"
+                    v-if="getRaw(item, internalItem).avatarUrl"
                     :size="24"
-                    :image="item.raw.avatarUrl"
+                    :image="getRaw(item, internalItem).avatarUrl"
                     class="mr-2"
                   />
-                  <span>{{ item.title }}</span>
+                  <span>{{ getRaw(item, internalItem).name || getRaw(item, internalItem).title }}</span>
                 </div>
               </template>
-              <template #item="{ item, props: itemProps }">
+              <template #item="{ item, internalItem, props: itemProps }: any">
                 <v-list-item
                   v-bind="itemProps"
-                  :prepend-avatar="item.raw.avatarUrl"
-                />
+                  :title="getRaw(item, internalItem).name || getRaw(item, internalItem).title"
+                >
+                  <template
+                    v-if="getRaw(item, internalItem).avatarUrl"
+                    #prepend
+                  >
+                    <v-avatar
+                      :size="32"
+                      :image="getRaw(item, internalItem).avatarUrl"
+                      class="mr-3"
+                    />
+                  </template>
+                </v-list-item>
               </template>
             </v-select>
           </template>
@@ -105,6 +134,7 @@
             v-if="userSelectType === 'member'"
             :model-value="member"
             :organization="owner"
+            :roles-labels="owner.rolesLabels"
             @update:model-value="member = $event"
           />
           <v-text-field
@@ -182,6 +212,7 @@ fr:
   email: Email
   amongPartners: Parmi les organisations partenaires
   partner: Partenaire
+  noPartnerFound: Aucun partenaire trouvé
   ownerOrg: Organisation propriétaire
   classNames:
     list: Lister
@@ -191,6 +222,10 @@ fr:
     write: Écriture
     admin: Administration
     use: Utiliser le service
+  roles:
+    admin: Administrateur
+    contrib: Contributeur
+    user: Utilisateur
 en:
   editPermission: Edit permissions
   public: Public
@@ -212,6 +247,7 @@ en:
   email: Email
   amongPartners: Among partner organizations
   partner: Partner
+  noPartnerFound: No partner found
   ownerOrg: Owner organization
   classNames:
     list: List
@@ -221,6 +257,10 @@ en:
     write: Write
     admin: Administration
     use: Use the service
+  roles:
+    admin: Administrator
+    contrib: Contributor
+    user: User
 </i18n>
 
 <script setup lang="ts">
@@ -243,7 +283,7 @@ type EditablePermission = {
 const props = defineProps<{
   modelValue?: Permission
   permissionClasses: Record<string, { id: string, title: string }[]>
-  owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id: string, name: string }[] }
+  owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], rolesLabels?: Record<string, string>, partners?: { id: string, name: string }[] }
 }>()
 
 const emit = defineEmits<{
@@ -251,6 +291,10 @@ const emit = defineEmits<{
 }>()
 
 const { t, te } = useI18n()
+
+const getRaw = (item: any, internalItem?: any): any => {
+  return internalItem?.raw ?? item?.raw ?? item ?? {}
+}
 
 const showDialog = ref(false)
 const permission = ref<EditablePermission | null>(null)
@@ -315,9 +359,24 @@ const departmentItems = computed(() => {
 
 // --- Computed: partner items ---
 const partnerItems = computed(() => {
-  return (props.owner.partners ?? []).map((p: any) => ({
+  return (props.owner.partners ?? []).filter((p: any) => !!p.id).map((p: any) => ({
     ...p,
+    title: p.name || p.id,
     avatarUrl: `${$sdUrl}/api/avatars/organization/${p.id}/avatar.png`
+  }))
+})
+
+// --- Computed: role items ---
+const roleLabel = (role: string) => {
+  if (props.owner.rolesLabels?.[role]) return props.owner.rolesLabels[role]
+  if (te('roles.' + role)) return t('roles.' + role)
+  return role
+}
+
+const roleItems = computed(() => {
+  return (props.owner.roles ?? []).map((role: string) => ({
+    value: role,
+    title: roleLabel(role)
   }))
 })
 

@@ -1,27 +1,39 @@
 <template>
   <div
     v-if="levels.length || sources.length"
-    class="d-flex flex-wrap ga-1"
+    class="d-flex flex-column ga-2"
   >
-    <v-chip
-      v-for="level in levels"
-      :key="level"
-      size="small"
-      density="compact"
-      color="primary"
-      variant="tonal"
+    <!-- Ligne 1 : Les permissions -->
+    <div
+      v-if="levels.length"
+      class="d-flex flex-wrap align-center ga-2"
     >
-      {{ level }}
-    </v-chip>
-    <v-chip
-      v-for="(source, i) in sources"
-      :key="'source-' + i"
-      size="small"
-      density="compact"
-      variant="outlined"
+      <v-chip
+        v-for="level in levels"
+        :key="level"
+        size="default"
+        color="primary"
+        variant="tonal"
+        class="font-weight-medium"
+      >
+        {{ level }}
+      </v-chip>
+    </div>
+
+    <!-- Ligne 2 : D'où ça provient -->
+    <div
+      v-if="sources.length"
+      class="d-flex flex-wrap align-center ga-2"
     >
-      {{ sourceLabel(source) }}
-    </v-chip>
+      <v-chip
+        v-for="(source, i) in sources"
+        :key="'source-' + i"
+        size="default"
+        variant="outlined"
+      >
+        {{ sourceLabel(source) }}
+      </v-chip>
+    </div>
   </div>
 </template>
 
@@ -48,6 +60,10 @@ fr:
     organization: Via l'organisation partenaire {name}
   allRoles: tous les rôles
   allDepartments: tous les départements
+  roles:
+    admin: Administrateur
+    contrib: Contributeur
+    user: Utilisateur
 en:
   allRights: All rights
   specificOperations: Specific operations
@@ -70,6 +86,10 @@ en:
     organization: Through the partner organization {name}
   allRoles: all roles
   allDepartments: all departments
+  roles:
+    admin: Administrator
+    contrib: Contributor
+    user: User
 </i18n>
 
 <script setup lang="ts">
@@ -79,9 +99,16 @@ const props = defineProps<{
   sources: AccessSource[]
   /** the audited account, to tell "my own group" from "a partner organization" */
   accountId: string
+  rolesLabels?: Record<string, string>
 }>()
 
 const { t, te } = useI18n()
+
+const roleLabel = (role: string) => {
+  if (props.rolesLabels?.[role]) return props.rolesLabels[role]
+  if (te('roles.' + role)) return t('roles.' + role)
+  return role
+}
 
 const levels = computed(() => {
   const classes = accessClasses(props.sources)
@@ -99,7 +126,7 @@ const sourceLabel = (source: AccessSource) => {
   if (source.organizationId !== props.accountId) {
     return t('sources.organization', { name: source.organizationName ?? source.organizationId })
   }
-  const roles = source.roles?.length ? source.roles.join(', ') : t('allRoles')
+  const roles = source.roles?.length ? source.roles.map(r => roleLabel(r)).join(', ') : t('allRoles')
   const department = source.department ? ` · ${source.department}` : ` · ${t('allDepartments')}`
   return t('sources.group', { details: roles + department })
 }

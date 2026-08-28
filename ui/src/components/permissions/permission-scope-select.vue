@@ -29,22 +29,36 @@
           hide-details="auto"
           @update:model-value="patch({ department: $event ?? undefined })"
         >
-          <template #selection="{ item }">
-            <div class="d-flex align-center">
+          <template #selection="{ item, internalItem }: any">
+            <div
+              v-if="getRaw(item, internalItem)"
+              class="d-flex align-center"
+            >
               <v-avatar
-                v-if="item.raw.avatarUrl"
+                v-if="getRaw(item, internalItem).avatarUrl"
                 :size="24"
-                :image="item.raw.avatarUrl"
+                :image="getRaw(item, internalItem).avatarUrl"
                 class="mr-2"
               />
-              <span>{{ item.title }}</span>
+              <span>{{ getRaw(item, internalItem).title }}</span>
             </div>
           </template>
-          <template #item="{ item, props: itemProps }">
+          <template #item="{ item, internalItem, props: itemProps }: any">
             <v-list-item
               v-bind="itemProps"
-              :prepend-avatar="item.raw.avatarUrl"
-            />
+              :title="getRaw(item, internalItem).title"
+            >
+              <template
+                v-if="getRaw(item, internalItem).avatarUrl"
+                #prepend
+              >
+                <v-avatar
+                  :size="32"
+                  :image="getRaw(item, internalItem).avatarUrl"
+                  class="mr-3"
+                />
+              </template>
+            </v-list-item>
           </template>
         </v-select>
       </v-col>
@@ -55,7 +69,7 @@
       >
         <v-select
           :model-value="modelValue?.roles ?? []"
-          :items="ownerDetails.roles"
+          :items="roleItems"
           :label="t('rolesLabel')"
           multiple
           hide-details="auto"
@@ -72,6 +86,7 @@
       <member-select
         :model-value="member"
         :organization="owner"
+        :roles-labels="ownerDetails?.rolesLabels"
         @update:model-value="setMember"
       />
     </v-col>
@@ -85,25 +100,40 @@
         :model-value="modelValue?.id ?? null"
         :items="partnerItems"
         :label="t('partner')"
+        :no-data-text="t('noPartnerFound')"
         hide-details="auto"
         @update:model-value="patch({ id: $event ?? undefined })"
       >
-        <template #selection="{ item }">
-          <div class="d-flex align-center">
+        <template #selection="{ item, internalItem }: any">
+          <div
+            v-if="getRaw(item, internalItem)"
+            class="d-flex align-center"
+          >
             <v-avatar
-              v-if="item.raw.avatarUrl"
+              v-if="getRaw(item, internalItem).avatarUrl"
               :size="24"
-              :image="item.raw.avatarUrl"
+              :image="getRaw(item, internalItem).avatarUrl"
               class="mr-2"
             />
-            <span>{{ item.title }}</span>
+            <span>{{ getRaw(item, internalItem).title }}</span>
           </div>
         </template>
-        <template #item="{ item, props: itemProps }">
+        <template #item="{ item, internalItem, props: itemProps }: any">
           <v-list-item
             v-bind="itemProps"
-            :prepend-avatar="item.raw.avatarUrl"
-          />
+            :title="getRaw(item, internalItem).title"
+          >
+            <template
+              v-if="getRaw(item, internalItem).avatarUrl"
+              #prepend
+            >
+              <v-avatar
+                :size="32"
+                :image="getRaw(item, internalItem).avatarUrl"
+                class="mr-3"
+              />
+            </template>
+          </v-list-item>
         </template>
       </v-select>
     </v-col>
@@ -146,9 +176,14 @@ fr:
   allDeps: Tous les départements
   rolesLabel: Rôles (tous si aucun coché)
   partner: Partenaire
+  noPartnerFound: Aucun partenaire trouvé
   email: Adresse email
   resolvedEmail: "Cet email correspond à {name} ({role}) : les droits de ce membre sont inclus."
   unknownEmail: Aucun compte de l'organisation ne correspond à cet email. Les droits affichés sont ceux d'un utilisateur connecté.
+  roles:
+    admin: Administrateur
+    contrib: Contributeur
+    user: Utilisateur
 en:
   scopeLabel: Show the permissions of
   noScope: All resources
@@ -163,9 +198,14 @@ en:
   allDeps: All departments
   rolesLabel: Roles (all if none is selected)
   partner: Partner
+  noPartnerFound: No partner found
   email: Email address
   resolvedEmail: "This email belongs to {name} ({role}): this member's rights are included."
   unknownEmail: No account of the organization matches this email. The rights shown are those of a logged in user.
+  roles:
+    admin: Administrator
+    contrib: Contributor
+    user: User
 </i18n>
 
 <script setup lang="ts">
@@ -183,15 +223,33 @@ const props = defineProps<{
 
 const modelValue = defineModel<PermissionScope | null>({ default: null })
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+const getRaw = (item: any, internalItem?: any): any => {
+  return internalItem?.raw ?? item?.raw ?? item ?? {}
+}
 
 type Member = { id: string, name: string, email?: string, role?: string, department?: string }
 type OwnerDetails = {
   departments?: { id: string, name: string }[]
   roles?: string[]
+  rolesLabels?: Record<string, string>
   partners?: { id: string, name: string }[]
 }
 const ownerDetails = ref<OwnerDetails | null>(null)
+
+const roleLabel = (role: string) => {
+  if (ownerDetails.value?.rolesLabels?.[role]) return ownerDetails.value.rolesLabels[role]
+  if (te('roles.' + role)) return t('roles.' + role)
+  return role
+}
+
+const roleItems = computed(() => {
+  return (ownerDetails.value?.roles ?? []).map(role => ({
+    value: role,
+    title: roleLabel(role)
+  }))
+})
 
 // the scenario is UI intent: it is derived from the scope, not stored in the url, and it
 // survives an empty sub-selection that no scope can express
@@ -206,9 +264,16 @@ watch(modelValue, (value) => {
 
 // the group / member / partner scenarios only mean something for an organization account
 const scenarioItems = computed(() => {
-  const scenarios: PermissionScenario[] = props.owner.type === 'organization'
-    ? ['group', 'member', 'partner', 'email', 'connected', 'anonymous']
-    : ['email', 'connected', 'anonymous']
+  const scenarios: PermissionScenario[] = []
+  if (props.owner.type === 'organization') {
+    scenarios.push('group', 'member')
+    if (ownerDetails.value?.partners?.some(p => !!p.id) || (modelValue.value?.type === 'organization' && modelValue.value.id !== props.owner.id)) {
+      scenarios.push('partner')
+    }
+    scenarios.push('email', 'connected', 'anonymous')
+  } else {
+    scenarios.push('email', 'connected', 'anonymous')
+  }
   return scenarios.map(value => ({ value, title: t('scenarios.' + value) }))
 })
 
@@ -238,9 +303,9 @@ const departmentItems = computed(() => [
   }))
 ])
 
-const partnerItems = computed(() => (ownerDetails.value?.partners ?? []).map(p => ({
+const partnerItems = computed(() => (ownerDetails.value?.partners ?? []).filter(p => !!p.id).map(p => ({
   value: p.id,
-  title: p.name,
+  title: p.name || p.id,
   avatarUrl: `${$sdUrl}/api/avatars/organization/${p.id}/avatar.png`
 })))
 
@@ -292,12 +357,17 @@ watch(() => modelValue.value?.email, async (email) => {
 
 // --- owner details from simple-directory, same source as the permissions editor ---
 
-onMounted(async () => {
+async function fetchOwnerDetails () {
+  if (!props.owner?.type || !props.owner?.id) return
   const res = await fetch(`${$sdUrl}/api/${props.owner.type}s/${props.owner.id}`)
   const data = await res.json()
   if (data.departments) {
     data.departments.sort((d1: { name: string }, d2: { name: string }) => d1.name.localeCompare(d2.name))
   }
   ownerDetails.value = data
-})
+}
+
+watch(() => `${props.owner?.type}:${props.owner?.id}`, () => {
+  fetchOwnerDetails()
+}, { immediate: true })
 </script>
