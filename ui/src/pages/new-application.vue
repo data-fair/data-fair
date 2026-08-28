@@ -104,6 +104,7 @@
               no-filter
               hide-details
               clearable
+              :no-data-text="t('noAppFound')"
               @update:model-value="onCopyAppSelected"
             >
               <template #item="{ props: itemProps, item }">
@@ -513,6 +514,7 @@ fr:
   searchApp: Choisissez une application
   search: Rechercher
   restrictedAccess: Application à accès restreint
+  noAppFound: Aucune application trouvée
 en:
   apps: Applications
   breadcrumb: Create an application
@@ -534,9 +536,10 @@ en:
   type_copy: Application copy
   type_desc_copy: Copy a complete configuration from an existing application.
   type_baseApp: New configuration
-  type_desc_baseApp: Create a blank configuration from an application model.
+  type_desc_baseApp: Create an empty configuration from an application model.
   appType: "Application of type {category}"
   searchApp: Choose an application
   search: Search
-  restrictedAccess: Application with restricted access
+  restrictedAccess: Restricted access application
+  noAppFound: No application found
 </i18n>

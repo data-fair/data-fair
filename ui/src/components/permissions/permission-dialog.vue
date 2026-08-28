@@ -37,7 +37,25 @@
               v-model="permission.department"
               :items="departmentItems"
               :label="t('department')"
-            />
+            >
+              <template #selection="{ item }">
+                <div class="d-flex align-center">
+                  <v-avatar
+                    v-if="item.raw.avatarUrl"
+                    :size="24"
+                    :image="item.raw.avatarUrl"
+                    class="mr-2"
+                  />
+                  <span>{{ item.title }}</span>
+                </div>
+              </template>
+              <template #item="{ item, props: itemProps }">
+                <v-list-item
+                  v-bind="itemProps"
+                  :prepend-avatar="item.raw.avatarUrl"
+                />
+              </template>
+            </v-select>
 
             <v-select
               v-if="owner.roles && owner.roles.length"
@@ -51,12 +69,30 @@
           <template v-if="orgSelectType === 'partner'">
             <v-select
               v-model="partner"
-              :items="owner.partners"
+              :items="partnerItems"
               item-title="name"
               item-value="id"
               return-object
               :label="t('partner')"
-            />
+            >
+              <template #selection="{ item }">
+                <div class="d-flex align-center">
+                  <v-avatar
+                    v-if="item.raw.avatarUrl"
+                    :size="24"
+                    :image="item.raw.avatarUrl"
+                    class="mr-2"
+                  />
+                  <span>{{ item.title }}</span>
+                </div>
+              </template>
+              <template #item="{ item, props: itemProps }">
+                <v-list-item
+                  v-bind="itemProps"
+                  :prepend-avatar="item.raw.avatarUrl"
+                />
+              </template>
+            </v-select>
           </template>
         </template>
 
@@ -267,10 +303,22 @@ const permissionTypes = computed(() => {
 const departmentItems = computed(() => {
   if (!props.owner.departments?.length) return []
   return [
-    { value: null, title: t('allDeps') },
-    ...props.owner.departments.map((d: any) => ({ value: d.id, title: `${d.name} (${d.id})` })),
-    { value: '-', title: t('noDep') }
+    { value: null, title: t('allDeps'), avatarUrl: `${$sdUrl}/api/avatars/${props.owner.type}/${props.owner.id}/avatar.png` },
+    ...props.owner.departments.map((d: any) => ({
+      value: d.id,
+      title: `${d.name} (${d.id})`,
+      avatarUrl: `${$sdUrl}/api/avatars/organization/${props.owner.id}/${d.id}/avatar.png`
+    })),
+    { value: '-', title: t('noDep'), avatarUrl: `${$sdUrl}/api/avatars/${props.owner.type}/${props.owner.id}/avatar.png` }
   ]
+})
+
+// --- Computed: partner items ---
+const partnerItems = computed(() => {
+  return (props.owner.partners ?? []).map((p: any) => ({
+    ...p,
+    avatarUrl: `${$sdUrl}/api/avatars/organization/${p.id}/avatar.png`
+  }))
 })
 
 // --- Computed: user select types ---

@@ -19,6 +19,7 @@
     :chips="multiple"
     :closable-chips="multiple"
     :clear-on-select="multiple"
+    :no-data-text="t('noDatasetFound')"
     @update:model-value="dataset => {value = dataset}"
   >
     <template
@@ -48,11 +49,13 @@ fr:
   masterData: Données de référence
   ownerDatasets: Vos jeux de données
   search: Rechercher
+  noDatasetFound: Aucun jeu de données trouvé
 en:
   selectDataset: Chose a dataset
   masterData: Master data
   ownerDatasets: Your datasets
   search: Search
+  noDatasetFound: No dataset found
 </i18n>
 
 <script setup lang="ts">

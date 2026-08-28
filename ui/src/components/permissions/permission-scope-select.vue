@@ -28,7 +28,25 @@
           :label="t('department')"
           hide-details="auto"
           @update:model-value="patch({ department: $event ?? undefined })"
-        />
+        >
+          <template #selection="{ item }">
+            <div class="d-flex align-center">
+              <v-avatar
+                v-if="item.raw.avatarUrl"
+                :size="24"
+                :image="item.raw.avatarUrl"
+                class="mr-2"
+              />
+              <span>{{ item.title }}</span>
+            </div>
+          </template>
+          <template #item="{ item, props: itemProps }">
+            <v-list-item
+              v-bind="itemProps"
+              :prepend-avatar="item.raw.avatarUrl"
+            />
+          </template>
+        </v-select>
       </v-col>
       <v-col
         v-if="ownerDetails?.roles?.length"
@@ -65,13 +83,29 @@
     >
       <v-select
         :model-value="modelValue?.id ?? null"
-        :items="ownerDetails?.partners ?? []"
-        item-title="name"
-        item-value="id"
+        :items="partnerItems"
         :label="t('partner')"
         hide-details="auto"
         @update:model-value="patch({ id: $event ?? undefined })"
-      />
+      >
+        <template #selection="{ item }">
+          <div class="d-flex align-center">
+            <v-avatar
+              v-if="item.raw.avatarUrl"
+              :size="24"
+              :image="item.raw.avatarUrl"
+              class="mr-2"
+            />
+            <span>{{ item.title }}</span>
+          </div>
+        </template>
+        <template #item="{ item, props: itemProps }">
+          <v-list-item
+            v-bind="itemProps"
+            :prepend-avatar="item.raw.avatarUrl"
+          />
+        </template>
+      </v-select>
     </v-col>
 
     <v-col
@@ -192,9 +226,23 @@ const patch = (patch: Partial<PermissionScope>) => {
 // member without a department at all, so it would be indistinguishable from "all
 // departments" — see docs/architecture/permissions-recap.md.
 const departmentItems = computed(() => [
-  { value: null, title: t('allDeps') },
-  ...(ownerDetails.value?.departments ?? []).map(d => ({ value: d.id, title: `${d.name} (${d.id})` }))
+  {
+    value: null,
+    title: t('allDeps'),
+    avatarUrl: `${$sdUrl}/api/avatars/${props.owner.type}/${props.owner.id}/avatar.png`
+  },
+  ...(ownerDetails.value?.departments ?? []).map(d => ({
+    value: d.id,
+    title: `${d.name} (${d.id})`,
+    avatarUrl: `${$sdUrl}/api/avatars/organization/${props.owner.id}/${d.id}/avatar.png`
+  }))
 ])
+
+const partnerItems = computed(() => (ownerDetails.value?.partners ?? []).map(p => ({
+  value: p.id,
+  title: p.name,
+  avatarUrl: `${$sdUrl}/api/avatars/organization/${p.id}/avatar.png`
+})))
 
 // a member's role and department travel with the scope: they are what their group grants
 const selectedMember = ref<Member | null>(null)

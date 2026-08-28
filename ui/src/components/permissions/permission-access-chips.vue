@@ -1,9 +1,13 @@
 <template>
-  <div class="d-flex flex-wrap ga-1 mt-1">
+  <div
+    v-if="levels.length || sources.length"
+    class="d-flex flex-wrap ga-1"
+  >
     <v-chip
       v-for="level in levels"
       :key="level"
       size="small"
+      density="compact"
       color="primary"
       variant="tonal"
     >
@@ -13,6 +17,7 @@
       v-for="(source, i) in sources"
       :key="'source-' + i"
       size="small"
+      density="compact"
       variant="outlined"
     >
       {{ sourceLabel(source) }}

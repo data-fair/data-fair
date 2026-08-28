@@ -22,16 +22,23 @@
       <dataset-card
         v-if="resourceType === 'datasets'"
         :dataset="(item as any)"
-      />
+      >
+        <permission-access-chips
+          v-if="scope && account"
+          :sources="sourcesOf(item)"
+          :account-id="account.id"
+        />
+      </dataset-card>
       <application-card
         v-else
         :application="(item as any)"
-      />
-      <permission-access-chips
-        v-if="scope && account"
-        :sources="sourcesOf(item)"
-        :account-id="account.id"
-      />
+      >
+        <permission-access-chips
+          v-if="scope && account"
+          :sources="sourcesOf(item)"
+          :account-id="account.id"
+        />
+      </application-card>
     </v-col>
   </v-row>
 

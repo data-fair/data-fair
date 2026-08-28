@@ -87,6 +87,12 @@
           {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
         </v-list-item>
       </v-list>
+      <div
+        v-if="$slots.default"
+        class="px-4 pb-2"
+      >
+        <slot />
+      </div>
     </v-card-text>
 
     <!--

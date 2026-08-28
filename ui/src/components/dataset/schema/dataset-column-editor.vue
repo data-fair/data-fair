@@ -138,6 +138,7 @@
         density="comfortable"
         clearable
         hide-details
+        :no-data-text="t('noConceptFound')"
         @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
       >
         <template #item="{ internalItem, props: itemProps }">
@@ -233,6 +234,7 @@ fr:
   deleteColumnTitle: Supprimer la colonne
   deleteColumnText: Souhaitez-vous supprimer cette colonne ? Attention, la donnée sera effacée et définitivement perdue !
   privateVocabulary: Vocabulaire privé
+  noConceptFound: Aucun concept trouvé
 en:
   noColumnSelected: Click on a column title to display its detailed information.
   sourceKey: Source key
@@ -258,6 +260,7 @@ en:
   deleteColumnTitle: Delete the column
   deleteColumnText: Do you want to delete this column? Warning, data will be permanently erased!
   privateVocabulary: Private vocabulary
+  noConceptFound: No concept found
 </i18n>
 
 <script setup lang="ts">
