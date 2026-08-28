@@ -1,23 +1,27 @@
+import type { Settings, DatasetMetadataOptions } from '#types/settings/index.js'
+import type { DepartmentSettings } from '#types/department-settings/index.js'
+import type { AccountKeys, SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { LogContext } from '../misc/utils/req-context.ts'
+import type { SettingsParams } from './operations.ts'
 import crypto from 'crypto'
 import nanoid from '../misc/utils/nanoid.ts'
 import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings } from '#types/settings/index.js'
-import { type DepartmentSettings } from '#types/department-settings/index.js'
+import { completenessGatedByMetadata } from '#types/settings/schema.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
 import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
-import { type AccountKeys, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
-import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
+import { recomputeOwnerCompleteness, clearOwnerCompleteness, completenessContextOf } from '../datasets/utils/completeness-recompute.ts'
+import { validateMetadataCompleteness, isMetadataOffered } from '../datasets/utils/compute-completeness.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -41,6 +45,8 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   const user = ctx.sessionState.user
   fillSettings(owner, user, settings)
   validateSettings(settings)
+  // department settings carry none of the org-wide blocks below (vocabulary, topics, metadata)
+  const isMain = isMainSettings(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
   const existingApiKeys = existingSettings?.apiKeys ?? []
@@ -155,43 +161,54 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     }
   }
 
-  if (isMainSettings(settings) && settings.privateVocabulary) {
-    for (const concept of settings.privateVocabulary) {
-      if (!concept.id) concept.id = slug.default(concept.title, { lower: true, strict: true })
-      if (!concept.identifiers || !concept.identifiers.length) concept.identifiers = [concept.id]
+  if (isMain) {
+    if (settings.privateVocabulary) {
+      for (const concept of settings.privateVocabulary) {
+        if (!concept.id) concept.id = slug.default(concept.title, { lower: true, strict: true })
+        if (!concept.identifiers || !concept.identifiers.length) concept.identifiers = [concept.id]
+      }
     }
+
+    if (settings.topics) {
+      const seenIds = new Map<string, string>()
+      for (const topic of settings.topics) {
+        if (!topic.id) topic.id = nanoid()
+        const existing = seenIds.get(topic.id)
+        if (existing) throw httpError(400, `Les thématiques "${existing}" et "${topic.title}" ont le même identifiant`)
+        seenIds.set(topic.id, topic.title)
+      }
+    }
+
+    if (settings.datasetsMetadata) cleanDatasetsMetadata(settings.datasetsMetadata)
+
+    // cross-field rules the schema can't express, re-checked here since the form only guards the browser
+    const completenessError = validateMetadataCompleteness(completenessContextOf(settings))
+    if (completenessError) throw httpError(400, completenessError)
   }
 
-  if (isMainSettings(settings) && settings.topics) {
-    const seenIds = new Map<string, string>()
-    for (const topic of settings.topics) {
-      if (!topic.id) topic.id = nanoid()
-      const existing = seenIds.get(topic.id)
-      if (existing) throw httpError(400, `Les thématiques "${existing}" et "${topic.title}" ont le même identifiant`)
-      seenIds.set(topic.id, topic.title)
-    }
-  }
-
-  if (isMainSettings(settings) && settings.datasetsMetadata) {
-    cleanDatasetsMetadata(settings.datasetsMetadata)
-  }
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
   clearApiKeysCache()
 
-  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
-    await topicsUtils.updateTopics(owner, oldSettings.topics || [], settings.topics)
-  }
+  if (isMain) {
+    const oldMainSettings = oldSettings && isMainSettings(oldSettings) ? oldSettings : null
 
-  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata) {
-    await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
+    if (oldMainSettings && settings.topics) {
+      await topicsUtils.updateTopics(owner, oldMainSettings.topics || [], settings.topics)
+    }
+
+    if (oldMainSettings && settings.datasetsMetadata) {
+      await updateDatasetsMetadata(owner, oldMainSettings.datasetsMetadata || {}, settings.datasetsMetadata)
+    }
+
+    await updateMetadataCompleteness(owner, oldMainSettings, settings)
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
 }
 
-const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: DatasetMetadataOptions, newDatasetsMetadata: DatasetMetadataOptions) => {
   if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
     // clean up the metadata off datasets when its definition was removed from the settings
@@ -206,6 +223,31 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
+}
+
+// A settings save rescores every dataset of the org (it patches none of them) so their scores stay
+// comparable. Awaited for immediate consistency, bounded by the org's dataset count — move it to a
+// background task if an org ever grows large enough for the scan to hit the ingress timeout.
+const updateMetadataCompleteness = async (owner: AccountKeys, oldSettings: Settings | null, settings: Settings) => {
+  const wasActive = !!oldSettings?.metadataCompleteness?.active
+  const isActive = !!settings.metadataCompleteness?.active
+  if (!wasActive && !isActive) return
+  if (wasActive && !isActive) {
+    // one query, and the field simply stops existing — no stale score computed with abandoned weights
+    await clearOwnerCompleteness(owner)
+    return
+  }
+  // gate the full-collection rewrite on what can actually move a score: gated-criteria activation,
+  // topics becoming (non-)empty or losing a member (updateTopics already $pulled it off the datasets),
+  // and custom metadata being added, removed or re-weighted
+  const offeredChanged = completenessGatedByMetadata.some(key =>
+    isMetadataOffered(oldSettings?.datasetsMetadata, key) !== isMetadataOffered(settings.datasetsMetadata, key))
+  const topicsChanged = !!oldSettings?.topics?.length !== !!settings.topics?.length ||
+    (oldSettings?.topics ?? []).some(old => !settings.topics?.some(topic => topic.id === old.id))
+  const customChanged = !equal(oldSettings?.datasetsMetadata?.custom ?? [], settings.datasetsMetadata?.custom ?? [])
+  const configChanged = !equal(oldSettings?.metadataCompleteness, settings.metadataCompleteness) ||
+    offeredChanged || topicsChanged || customChanged
+  if (!wasActive || configChanged) await recomputeOwnerCompleteness(owner, completenessContextOf(settings))
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {

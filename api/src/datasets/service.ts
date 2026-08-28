@@ -21,6 +21,8 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
+import { COMPLETENESS_KEYS } from './utils/compute-completeness.ts'
+import { computeOwnerCompleteness } from './utils/completeness-recompute.ts'
 import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
@@ -31,6 +33,7 @@ import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
+import type { Completeness } from './utils/compute-completeness.ts'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
@@ -375,6 +378,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
+  const completeness = await computeOwnerCompleteness(owner, dataset)
+  if (completeness) dataset.completeness = completeness
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -514,7 +519,17 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch._modified = computeModified({ ...dataset, ...patch })
   }
 
+  // recompute only when a scored field is touched, else every rest line write pays a settings read.
+  // Skip drafts (patch.draftReason too, since a file upload opens one in the patch before the doc
+  // carries it): the score describes the published dataset. Kept out of `patch` — it is readOnly and
+  // both write routes report Object.keys(patch) to the user as the fields they modified.
+  let completenessPatch: Completeness | undefined
+  if (!dataset.draftReason && !patch.draftReason && (COMPLETENESS_KEYS.some(key => key in patch) || 'customMetadata' in patch)) {
+    completenessPatch = await computeOwnerCompleteness(dataset.owner, { ...dataset, ...patch })
+  }
+
   Object.assign(dataset, patch)
+  if (completenessPatch) dataset.completeness = completenessPatch
 
   // if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
 
@@ -566,14 +581,17 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch = draftPatch
   }
 
+  // joins the write here, not `patch`; only computed for non-draft writes, so it skips the 'draft.' prefixing above
+  const writtenPatch = completenessPatch ? { ...patch, completeness: completenessPatch } : patch
+
   const mongoPatch: { $set?: Record<string, any>, $unset?: Record<string, any> } = {}
-  for (const key of Object.keys(patch)) {
-    if (patch[key] === null) {
+  for (const key of Object.keys(writtenPatch)) {
+    if (writtenPatch[key] === null) {
       mongoPatch.$unset = mongoPatch.$unset || {}
       mongoPatch.$unset[key] = true
     } else {
       mongoPatch.$set = mongoPatch.$set || {}
-      mongoPatch.$set[key] = patch[key]
+      mongoPatch.$set[key] = writtenPatch[key]
     }
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)

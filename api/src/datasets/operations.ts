@@ -1,5 +1,7 @@
 // pure functions for the datasets module — no I/O. The unit-test surface.
 
+import equal from 'fast-deep-equal'
+
 // matches the separator used by memoizee's built-in `primitive` normalizer
 const KEY_SEP = '\u0001'
 
@@ -51,6 +53,9 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   errorRetry: 1,
   'integrity.lastCheck.date': 1,
   'integrity.lastRevision.date': 1,
+  // the settings-driven batch rescore writes to mongo without touching `updatedAt`, so without this
+  // the freshness check would keep serving stale scores until each cache entry expired on its own
+  completeness: 1,
   ...(useDraft ? { 'draft.updatedAt': 1 } : {}),
   _id: 0
 })
@@ -68,6 +73,9 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
+  // the whole sub-document: score alone misses a reshuffle at equal weights or a $unset, and
+  // lengths / customLabels change what the form shows even when score and missing are untouched
+  if (!equal(cachedFull.completeness, fresh.completeness)) return false
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true

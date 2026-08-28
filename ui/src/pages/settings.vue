@@ -90,7 +90,7 @@
         </template>
       </df-section-tabs>
 
-      <!-- Quality section (3 tabs, save/cancel + leave guard) -->
+      <!-- Quality section (4 tabs, save/cancel + leave guard) -->
       <df-section-tabs
         v-if="sections.quality"
         id="quality"
@@ -126,6 +126,15 @@
             <settings-datasets-metadata
               v-model="settings.datasetsMetadata"
               v-model:valid="datasetsMetadataValid"
+            />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="metadataCompleteness">
+            <settings-metadata-completeness
+              v-model="settings.metadataCompleteness"
+              v-model:valid="metadataCompletenessValid"
+              :datasets-metadata="settings.datasetsMetadata"
+              :topics="settings.topics"
             />
           </v-tabs-window-item>
 
@@ -326,6 +335,7 @@ fr:
         licenses: Licences
         privateVocabulary: Vocabulaire privé
         datasetsMetadata: Métadonnées
+        metadataCompleteness: Complétude
     apiKeys:
       title: "Clés d'API"
       subtitle: "Les clés d'API permettent d'accéder à l'API Data Fair de manière sécurisée. Configuration technique destinée aux utilisateurs avancés."
@@ -372,6 +382,7 @@ en:
         licenses: Licenses
         privateVocabulary: Private vocabulary
         datasetsMetadata: Metadata
+        metadataCompleteness: Completeness
     apiKeys:
       title: API keys
       subtitle: API keys provide secure access to the Data Fair API. Technical configuration intended for advanced users.
@@ -391,7 +402,7 @@ en:
 
 <script setup lang="ts">
 import type { Settings } from '#api/types'
-import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet } from '@mdi/js'
+import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet, mdiGaugeLow } from '@mdi/js'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
@@ -449,6 +460,10 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
+  // same reason: else vjsf fills the schema default (0) into custom items created before this field
+  for (const custom of dm.custom ?? []) custom.weight ??= 0
+  // same reason: else vjsf writes the schema default on first render, faking unsaved changes
+  if (!s.metadataCompleteness) s.metadataCompleteness = { active: false }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {
@@ -460,7 +475,7 @@ watch(settingsEditFetch.serverData, (s) => {
 // Sub-edits for sections with save/cancel
 const topicsEdit = settingsEditFetch.createSubEdit(['topics'], { success: t('saved') })
 const qualityEdit = settingsEditFetch.createSubEdit(
-  ['licenses', 'datasetsMetadata', 'privateVocabulary'],
+  ['datasetsMetadata', 'metadataCompleteness', 'licenses', 'privateVocabulary'],
   { success: t('saved') }
 )
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
@@ -495,9 +510,10 @@ const qualityTab = ref('datasetsMetadata')
 const topicsValid = ref(true)
 const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
+const metadataCompletenessValid = ref(true)
 const privateVocabularyValid = ref(true)
 const portalsValid = ref(true)
-const qualityValid = computed(() => licensesValid.value && datasetsMetadataValid.value && privateVocabularyValid.value)
+const qualityValid = computed(() => licensesValid.value && datasetsMetadataValid.value && metadataCompletenessValid.value && privateVocabularyValid.value)
 
 // Tab color helper: red if invalid, accent if valid with diff, undefined otherwise
 function tabColor (hasDiff: boolean, valid: boolean): string | undefined {
@@ -515,6 +531,7 @@ const sections = computed(() => {
       title: t('sections.quality.title'),
       tabs: [
         { key: 'datasetsMetadata', title: t('sections.quality.tabs.datasetsMetadata'), icon: mdiFileDocumentEdit, color: tabColor(qualityEdit.keyHasDiff('datasetsMetadata').value, datasetsMetadataValid.value) },
+        { key: 'metadataCompleteness', title: t('sections.quality.tabs.metadataCompleteness'), icon: mdiGaugeLow, color: tabColor(qualityEdit.keyHasDiff('metadataCompleteness').value, metadataCompletenessValid.value) },
         { key: 'licenses', title: t('sections.quality.tabs.licenses'), icon: mdiCertificate, color: tabColor(qualityEdit.keyHasDiff('licenses').value, licensesValid.value) },
         { key: 'privateVocabulary', title: t('sections.quality.tabs.privateVocabulary'), icon: mdiBookAlphabet, color: tabColor(qualityEdit.keyHasDiff('privateVocabulary').value, privateVocabularyValid.value) }
       ]
