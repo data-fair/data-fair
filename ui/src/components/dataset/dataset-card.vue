@@ -19,8 +19,9 @@
       </template>
     </v-card-item>
     <v-divider />
-    <v-card-text class="pa-0 flex-grow-1">
+    <v-card-text class="pa-0 flex-grow-1 d-flex flex-column">
       <v-list
+        v-if="!$slots.default"
         density="compact"
         style="background-color: inherit;"
       >
@@ -87,6 +88,12 @@
           {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
         </v-list-item>
       </v-list>
+      <div
+        v-else
+        class="pa-4 flex-grow-1 d-flex flex-column justify-center"
+      >
+        <slot />
+      </div>
     </v-card-text>
 
     <!--

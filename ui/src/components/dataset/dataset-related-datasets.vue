@@ -20,6 +20,7 @@
         max-width="600"
         chips
         closable-chips
+        :no-data-text="t('noDatasetFound')"
         @update:model-value="datasets => {value = datasets.map(d => ({ id: d.id, title: d.title }))}"
       />
     </v-col>
@@ -44,9 +45,11 @@
 fr:
   selectDataset: Choisissez un jeu de données
   search: Rechercher
+  noDatasetFound: Aucun jeu de données trouvé
 en:
   selectDataset: Chose a dataset
   search: Search
+  noDatasetFound: No dataset found
 </i18n>
 
 <script setup lang="ts">

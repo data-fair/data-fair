@@ -25,6 +25,13 @@
       class="flex-grow-1"
     />
 
+    <v-card-text
+      v-if="$slots.default"
+      class="px-4 py-2"
+    >
+      <slot />
+    </v-card-text>
+
     <!--
       min-height: auto => remove default v-card-actions min-height
     -->

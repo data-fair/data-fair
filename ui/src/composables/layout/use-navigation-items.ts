@@ -25,6 +25,7 @@ import {
   mdiAccountSupervisor,
   mdiMonitorDashboard,
   mdiRobotOutline,
+  mdiShieldAccount,
 } from '@mdi/js'
 
 export interface NavItem {
@@ -123,6 +124,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     }
     if (canContrib.value) {
       monitor.push({ to: '/storage', icon: mdiHarddisk, title: t('storage') })
+    }
+    if (canAdmin.value) {
+      monitor.push({ to: '/permissions-recap', icon: mdiShieldAccount, title: t('permissionsRecap') })
     }
     if ($uiConfig.metricsIntegration) {
       monitor.push({ to: '/metrics', icon: mdiChartBar, title: t('metrics'), subtitle: t('metricsSub') })

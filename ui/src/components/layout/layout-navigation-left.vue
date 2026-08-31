@@ -136,6 +136,7 @@ fr:
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
   agentsActivity: Suivi des agents
+  permissionsRecap: Permissions (bêta)
   subscription: Abonnement
   assistance: Assistance
   services: Services distants
@@ -173,6 +174,7 @@ en:
   metricsSub: Downloads, API
   events: Traceability (beta)
   agentsActivity: Agents activity
+  permissionsRecap: Permissions (beta)
   subscription: Subscription
   assistance: Support
   services: Remote services

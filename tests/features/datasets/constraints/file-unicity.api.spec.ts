@@ -234,7 +234,12 @@ test.describe('file dataset unique constraint', () => {
     assert.ok((cancelEvent.unicityErrorCount ?? 0) > 0, `expected unicityErrorCount > 0, got ${JSON.stringify(cancelEvent)}`)
 
     // the dataset reverted to the healthy published version: no draft, no error state, data intact
-    const reverted = (await testUser1.get(`/api/v1/datasets/${ds.id}`, { params: { draft: true } })).data
+    let reverted: any
+    for (let i = 0; i < 60; i++) {
+      reverted = (await testUser1.get(`/api/v1/datasets/${ds.id}`, { params: { draft: true } })).data
+      if (reverted.status === 'finalized' && !reverted.draftReason) break
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
     assert.equal(reverted.status, 'finalized')
     assert.equal(reverted.draftReason, undefined)
     const lines = await testUser1.get(`/api/v1/datasets/${ds.id}/lines`)

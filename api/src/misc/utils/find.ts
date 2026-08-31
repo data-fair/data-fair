@@ -6,6 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import * as permissions from './permissions.ts'
 import * as visibility from './visibility.ts'
+import { parseScopeParams } from '@data-fair/data-fair-shared/permissions/scope.ts'
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
@@ -82,6 +83,8 @@ export const query = (reqQuery: Record<string, string>, locale: string, sessionS
       query.$and.push({ $or: permissions.filterCan(sessionState, resourceType as ResourceType, reqQuery.can) })
     }
 
+    query.$and.push(...scopeFilters(reqQuery, sessionState, resourceType))
+
     const visibilityFilters = visibility.filters(reqQuery)
     if (visibilityFilters?.length) {
       query.$and.push({ $or: visibility.filters(reqQuery) })
@@ -125,6 +128,38 @@ export const ownerFilters = (reqQuery: Record<string, string>): any => {
   if (or.length) and.push({ $or: or })
   if (nor.length) and.push({ $nor: nor })
   return and
+}
+
+/**
+ * Clauses restricting a list query to what a hypothetical scope can reach.
+ * Returns [] when no scope is requested. Throws when the caller may not simulate.
+ *
+ * The returned clauses are meant to be AND-ed with the caller's own permission filter,
+ * never to replace it: the result is therefore always a subset of what the caller can
+ * already see. See docs/architecture/permissions-recap.md.
+ */
+export const scopeFilters = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string): any[] => {
+  const scope = parseScopeParams(reqQuery)
+  if (!scope) return []
+
+  const account = sessionState.account
+  if (!account) throw httpError(401)
+  if (!sessionState.user?.adminMode) {
+    // department admins are excluded: the recap is an organization-wide screen
+    if (account.department) throw httpError(403, 'Simulating permissions requires being admin of the whole account')
+    if (account.type === 'organization' && sessionState.accountRole !== config.adminRole) {
+      throw httpError(403, 'Simulating permissions requires being admin of the whole account')
+    }
+  }
+
+  const operations = reqQuery.scopeActions?.split(',').filter(Boolean)
+  const clauses = permissions.scopeFilter(scope, resourceType as ResourceType, operations?.length ? operations : ['list'], account)
+
+  // force the perimeter to the current account; AND-ed, so a client-supplied `owner`
+  // parameter can only narrow it further
+  clauses.push({ 'owner.type': account.type, 'owner.id': account.id })
+
+  return clauses
 }
 
 /**
@@ -266,6 +301,10 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
       $or: permissions.filter(sessionState, resourceType as ResourceType)
     }
   })
+  // basePipeline does not go through query(), so the scope has to be applied here too,
+  // otherwise facet counts would describe a different set than the displayed list
+  const scope = scopeFilters(reqQuery, sessionState, resourceType)
+  if (scope.length) pipeline.push({ $match: { $and: scope } })
   if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
     const accountFilter: any = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
     if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
