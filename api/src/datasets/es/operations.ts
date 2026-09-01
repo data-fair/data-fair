@@ -1283,3 +1283,77 @@ export const valuesIncludePattern = (q: string, mode: 'prefix' | 'contains'): st
   if (mode === 'contains') return `.*${pattern}.*`
   return pattern.endsWith('.*') ? pattern : `${pattern}.*`
 }
+
+// The narrowing filters, in the order they win. A value the caller named explicitly (`_in`/`_eq`)
+// is never narrowed away by a looser predicate, and `q` — the least specific instruction — comes
+// last. A terms agg accepts a single `include`, hence a precedence rather than a conjunction.
+const EXACT_VALUE_SUFFIXES = ['_in', '_eq'] as const
+const PREDICATE_SUFFIXES = { _starts: 'prefix', _contains: 'contains', _search: 'contains' } as const
+
+// `a,b` — or `"a,b",c` when a value holds a comma. Mirrors the parsing in commons.ts's filter
+// loop, minus its throwing: a malformed value is rejected there, on the row-filtering path.
+const parseFilterValues = (raw: string): string[] => {
+  if (!raw) return []
+  try {
+    if (raw.startsWith('"')) return JSON.parse(`[${raw}]`)
+  } catch { return [] }
+  return raw.split(',').filter(Boolean)
+}
+
+// A column is addressable by key (`tags_in`) or, for dashboards applying a filter across
+// datasets, by the concept it carries (`_c_topic_in`) — the same two forms commons.ts resolves.
+const sameColumnParam = (prop: any, query: Record<string, any>, suffix: string): string | undefined => {
+  const byKey = query[`${prop.key}${suffix}`]
+  if (byKey) return byKey
+  const conceptId = prop['x-concept']?.primary ? prop['x-concept'].id : undefined
+  return conceptId ? query[`_c_${conceptId}${suffix}`] : undefined
+}
+
+/**
+ * The values an `_in`/`_eq` filter on THIS column names explicitly, or `undefined` when none does.
+ * Shared with the `x-labelsRestricted` shortcut, which answers without going to Elasticsearch at
+ * all and must narrow the same way.
+ */
+export const sameColumnExactValues = (prop: any, query: Record<string, any>): string[] | undefined => {
+  for (const suffix of EXACT_VALUE_SUFFIXES) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (!raw) continue
+    const values = parseFilterValues(raw)
+    if (values.length) return values
+  }
+  return undefined
+}
+
+/**
+ * The `include` narrowing the listed values of a multi-valued column, or `undefined` to leave the
+ * buckets alone.
+ *
+ * A filter on ANOTHER column selects rows and must not touch the value list — `city_eq=Paris`
+ * still lists every tag the Paris rows carry. A filter on the column being listed is a statement
+ * about the values themselves, so it narrows them; negative filters need nothing, having already
+ * removed every row holding the value.
+ */
+export const valuesIncludeClause = (
+  prop: any,
+  query: Record<string, any>,
+  qMode: string
+): string | string[] | undefined => {
+  // single-valued columns need no narrowing: document and value are 1:1, and a literal pattern
+  // would only lose the analyzed (stemmed) matches the query legitimately made
+  if (!prop?.separator) return undefined
+
+  const exactValues = sameColumnExactValues(prop, query)
+  if (exactValues) return exactValues
+
+  for (const [suffix, mode] of Object.entries(PREDICATE_SUFFIXES)) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (raw) return valuesIncludePattern(raw, mode)
+  }
+
+  const q = (query.q ?? query._c_q)?.trim()
+  if (!q) return undefined
+  // complete mode reads `q` as a prefix, unless the column opted into the wildcard capability —
+  // its doc-level clause then also matches `*q*`, and the narrowing must not undo that
+  const prefix = qMode === 'complete' && !prop['x-capabilities']?.wildcard
+  return valuesIncludePattern(q, prefix ? 'prefix' : 'contains')
+}

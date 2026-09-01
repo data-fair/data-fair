@@ -119,6 +119,58 @@ test.describe('values on multi-valued columns', () => {
     }
   })
 
+  test('a filter on the listed column narrows the values it lists', async () => {
+    const ax = testUser1
+    await createDataset(ax)
+
+    // the reported case: values-labels asked with an _in filter must answer with the labels of
+    // the values named, not with everything else the matching rows happen to carry
+    let res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?tags_in=cinema')
+    assert.deepEqual(res.data.map((v: any) => v.value), ['cinema'])
+    res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?tags_in=cinema,sport')
+    assert.deepEqual(res.data.map((v: any) => v.value), ['cinema', 'sport'])
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?tags_eq=cinema')
+    assert.deepEqual(res.data, ['cinema'])
+
+    // the predicate filters narrow the same way
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?tags_starts=cin')
+    assert.deepEqual(res.data, ['cinema', 'cinema d auteur', 'cinéma'])
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?tags_search=auteur')
+    assert.deepEqual(res.data, ['cinema d auteur'])
+
+    // a filter on ANOTHER column selects rows; the value list must stay whole
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?label_eq=a')
+    assert.deepEqual(res.data, ['cinéma', 'théâtre'])
+
+    // a value the caller named is not narrowed away by a looser predicate: row b carries both
+    // "cinema" and "musique" and survives `_starts=mus`, so both named values are listed even
+    // though only one of them starts with "mus"
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?tags_in=cinema,musique&tags_starts=mus')
+    assert.deepEqual(res.data, ['cinema', 'musique'])
+
+    // the filters still select rows as they always did — `_starts=spo` drops every row holding
+    // "cinema", so no include can bring it back
+    res = await ax.get('/api/v1/datasets/multival1/values/tags?tags_in=cinema,sport&tags_starts=spo')
+    assert.deepEqual(res.data, ['sport'])
+  })
+
+  test('the labels-restricted shortcut narrows identically', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+
+    // this path answers from the schema without touching the index, so it needs its own narrowing
+    const schema = dataset.schema.filter((f: any) => !f['x-calculated'])
+    const tags = schema.find((f: any) => f.key === 'tags')
+    tags['x-labels'] = { cinema: 'Cinéma', sport: 'Sport', danse: 'Danse' }
+    tags['x-labelsRestricted'] = true
+    await ax.patch('/api/v1/datasets/multival1', { schema })
+
+    let res = await ax.get('/api/v1/datasets/multival1/values-labels/tags')
+    assert.deepEqual(res.data.map((v: any) => v.value), ['cinema', 'sport', 'danse'])
+    res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?tags_in=cinema,danse')
+    assert.deepEqual(res.data, [{ value: 'cinema', label: 'Cinéma' }, { value: 'danse', label: 'Danse' }])
+  })
+
   test('values_agg keeps faceting over matching rows', async () => {
     const ax = testUser1
     await createDataset(ax)
