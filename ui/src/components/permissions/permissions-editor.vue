@@ -544,15 +544,15 @@ async function fetchOwnerDetails () {
 
 // --- Permission CRUD for detailed mode ---
 
-function addPermission (p: Permission) {
+function addPermission (permissions: Permission[]) {
   if (!props.modelValue) return
-  save([...props.modelValue, p])
+  save([...props.modelValue, ...permissions])
 }
 
-function editPermission (index: number, p: Permission) {
+function editPermission (index: number, permissions: Permission[]) {
   if (!props.modelValue) return
   const next = [...props.modelValue]
-  next[index] = p
+  next.splice(index, 1, ...permissions)
   save(next)
 }
 
