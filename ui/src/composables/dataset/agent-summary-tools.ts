@@ -6,19 +6,17 @@ import { serializeDatasetInfo } from './agent-tools'
 const messages: Record<string, Record<string, string>> = {
   fr: {
     readDatasetInfo: 'Lire les informations du jeu de données',
-    setDatasetSummary: 'Définir le résumé du jeu de données',
     summarizerSubAgent: 'Résumer un jeu de données',
     summarizerSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis produire un résumé concis.'
   },
   en: {
     readDatasetInfo: 'Read dataset info',
-    setDatasetSummary: 'Set dataset summary',
     summarizerSubAgent: 'Summarize a dataset',
     summarizerSubAgentDesc: 'Read the dataset metadata and schema, then produce a concise summary.'
   }
 }
 
-export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: Ref<any>, setSummary: (summary: string) => void) {
+export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: Ref<any>) {
   const t = createAgentTranslator(messages, locale)
 
   useAgentTool({
@@ -48,30 +46,6 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
     }
   })
 
-  useAgentTool({
-    name: 'set_dataset_summary',
-    description: 'Set the summary field of the dataset currently being edited.',
-    annotations: { title: t('setDatasetSummary') },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        summary: { type: 'string' as const, description: 'The summary text to set' }
-      },
-      required: ['summary'] as const
-    },
-    execute: async (params) => {
-      if (params.summary.length > 300) {
-        return `Error: summary is ${params.summary.length} characters long, it must be 300 characters or less. Please shorten it and try again.`
-      }
-      const genericStarts = ['this dataset is', 'ce jeu de données est']
-      if (genericStarts.some(s => params.summary.toLowerCase().startsWith(s))) {
-        return 'Error: the summary must not start with a generic phrase like "This dataset is..." or "Ce jeu de données est...". Please rephrase with a more direct and specific opening.'
-      }
-      setSummary(params.summary)
-      return 'Summary updated successfully.'
-    }
-  })
-
   const summarizerPrompts: Record<string, string> = {
     fr: `Tu es un expert en résumé de jeux de données pour Data Fair, une plateforme de publication de données ouvertes. Les résumés sont affichés dans les catalogues pour aider les utilisateurs à comprendre rapidement le contenu d'un jeu de données.
 
@@ -86,7 +60,8 @@ Format :
 - Ton accessible — le public va des analystes de données au grand public
 - Rédige dans la même langue que le titre et la description du jeu de données
 - Ne commence JAMAIS par "Ce jeu de données est..." ou une formulation générique similaire. Commence directement par le sujet concret.
-- Utilise les données d'exemple retournées par read_dataset_info pour mieux comprendre le contenu réel.
+- Utilise les données d'exemple retournées par read_dataset_info pour comprendre le contenu réel, mais **ne recopie aucune valeur**.
+- **Décris la nature du jeu, pas son contenu du jour.** Le résumé survit aux mises à jour : pas de nombre de lignes, pas de valeurs d'énumération, pas de liste de modalités, pas de bornes chiffrées, pas de date de dernière mise à jour. Le millésime ou la période de référence font partie du sujet et restent, eux, légitimes.
 
 Exemple de bon résumé :
 "Recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
@@ -103,7 +78,8 @@ Format:
 - Use an accessible tone — the audience ranges from data analysts to general public users
 - Write in the same language as the dataset title and description
 - NEVER start with "This dataset is..." or similar generic phrasing. Start directly with the concrete subject.
-- Use the sample data returned by read_dataset_info to better understand the actual content.
+- Use the sample data returned by read_dataset_info to understand the real content, but **never quote a value from it**.
+- **Describe what the dataset is, not what it currently holds.** The summary must survive the next update: no row count, no enum values, no list of modalities, no numeric bounds, no last-update date. A vintage or a reference period is part of the subject and stays.
 
 Example of a good summary (French):
 "Recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`
@@ -114,8 +90,8 @@ Example of a good summary (French):
     title: t('summarizerSubAgent'),
     description: t('summarizerSubAgentDesc'),
     model: 'summarizer',
-    // Producer: the summarize-dataset action consumes its returned summary and applies it via
-    // set_dataset_summary. Keep it delegated even when the host enables the flatten toggle.
+    // Producer: the lead agent consumes its returned summary and applies it via
+    // set_dataset_metadata. Keep it delegated even when the host enables the flatten toggle.
     delegateOnly: true,
     prompt: summarizerPrompts[locale.value] ?? summarizerPrompts.en,
     tools: ['read_dataset_info']
