@@ -1034,12 +1034,26 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   // Unguarded, unlike the write above: a bulk already holding `_partialRestStatus` needs the
   // validator moved just as much (its pipeline pass is subject to the same status gating).
   // Only for an already finalized dataset — the field's presence doubles as a "has been finalized"
-  // flag (datasets/service.ts). The NEXT WHOLE SECOND, not `now`: Last-Modified is second-precision
-  // and an equal value reads as unmodified (same reasoning as the slug bump in utils/patch.ts).
-  // `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a covered change: no integrity stamp.
+  // flag (datasets/service.ts). `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a covered
+  // change: no integrity stamp, no false breach.
+  //
+  // NEVER write a future value here, unlike the slug bump in utils/patch.ts which rounds UP to the
+  // next whole second. That bump can afford to: a slug patch does not wake the finalize task. This
+  // one does — the write just above sets `_partialRestStatus: 'indexed'` precisely to wake it — and
+  // finalize $sets `finalizedAt` to plain `now` (short-processor/finalize.ts). A value rounded into
+  // the future would therefore be REWOUND moments later, and the UI table sends the value it holds
+  // back as `?finalizedAt=` on every /lines query (ui composables/dataset/lines.ts): a client that
+  // read the future value then queries against the rewound resource trips the hard 400 in
+  // cacheHeaders.resourceBased ("value higher in the query than in the resource").
+  // So: the current second TRUNCATED (always <= now, so finalize can only ever move it forward),
+  // applied with $max so it is monotonic against any concurrent writer. Values are always
+  // toISOString() strings, which compare lexicographically == chronologically.
+  // Accepted residual: an edit landing in the same second as the current finalizedAt does not move
+  // the validator. That is a <=1s coincidence which the next edit or any finalize resolves —
+  // against the bug being fixed here (invisible until a manual reindex, forever) it is a good trade.
   if (dataset.finalizedAt) {
     await mongo.datasets.updateOne({ id: dataset.id },
-      { $set: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000 + 1000).toISOString() } })
+      { $max: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000).toISOString() } })
   }
 }
 

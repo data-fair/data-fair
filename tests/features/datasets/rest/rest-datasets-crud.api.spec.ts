@@ -34,12 +34,20 @@ test.describe('REST datasets - CRUD', () => {
     await patchRawDataset(datasetId, { status: 'error' })
     await clearDatasetCache()
 
+    // the bump is the current second TRUNCATED (never a future value — see commitLines): wait out
+    // the second `before` was stamped in, or there is legitimately nothing to advance to
+    const nextSecond = Math.floor(Date.parse(before) / 1000) * 1000 + 1000
+    if (Date.now() < nextSecond) await new Promise(resolve => setTimeout(resolve, nextSecond - Date.now()))
+
     await ax.put(`/api/v1/datasets/${datasetId}/lines/line0`, { attr1: 'b' })
     const after = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
     assert.ok(
       new Date(after).getTime() > new Date(before).getTime(),
       `finalizedAt should have moved past ${before}, got ${after}`
     )
+    // and never into the future, which finalize would rewind and turn into a 400 on the UI's
+    // `?finalizedAt=` queries
+    assert.ok(new Date(after).getTime() <= Date.now(), `finalizedAt must not be in the future, got ${after}`)
   })
 
   test('Create empty REST datasets', async () => {

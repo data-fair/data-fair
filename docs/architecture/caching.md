@@ -227,8 +227,14 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
   (`status: 'error'`, mid-reindex) while still accepting line writes (`readWritableDataset` allows
   `finalized`/`indexed`/`error`): the edit stayed invisible until someone reindexed by hand.
   Bumping in `commitLines` is exact — that call *is* the moment the data behind `/lines` changed.
-  Like the slug bump it targets the **next whole second** (`Last-Modified` is second-precision, so
-  a same-second value still reads as unmodified) and only applies to an already-finalized dataset.
+  Unlike the slug bump it rounds **down** to the current second and is applied with `$max`, never
+  rounding up into the future: `commitLines` wakes the finalize task (it sets
+  `_partialRestStatus: 'indexed'` immediately before), finalize `$set`s `finalizedAt` to plain
+  `now`, and a future value would be rewound — after which a client still holding it sends it back
+  as `?finalizedAt=` and earns the hard 400 above. The slug bump can round up safely because a slug
+  patch does not wake finalize. Trade-off of rounding down: an edit landing in the same second as
+  the current `finalizedAt` does not move the validator, which the next edit or any finalize
+  resolves. Only applies to an already-finalized dataset.
 - **Cache busting**: the `x-fg87fa6658fpbuia83hb8` header/cookie (or `x-cache-bypass` in the test
   harness) makes the proxy bypass its cache; `DELETE /api/v1/test-env/dataset-cache` and
   `…/publication-sites-cache` clear the memoize caches; restarting the proxy empties the
