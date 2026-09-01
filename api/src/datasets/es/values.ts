@@ -1,6 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
+import { valuesIncludePattern, parseQMode, DEFAULT_Q_MODE } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import { type Client } from '@elastic/elasticsearch'
 
@@ -24,6 +25,21 @@ export default async (client: Client, dataset: any, fieldKey: string, query: Rec
         }
       }
     }
+  }
+
+  // `q` here is scoped to this single column (see the qFields above): it is meant to narrow the
+  // list of VALUES, not to select rows. On a multi-valued column those differ — the terms agg
+  // emits every value of each matching row — so the buckets are narrowed back to the values that
+  // match. Left alone on single-valued columns, where document and value are 1:1 and a literal
+  // pattern would only lose the analyzed (stemmed) matches.
+  const q = (query.q ?? query._c_q)?.trim()
+  if (q && field.separator) {
+    // complete mode reads `q` as a prefix, unless the column opted into the wildcard capability —
+    // its doc-level clause then also matches `*q*`, and the narrowing must not undo that
+    const qMode = parseQMode(query.q_mode, DEFAULT_Q_MODE)
+    const prefix = qMode === 'complete' && !field['x-capabilities']?.wildcard
+    const include = valuesIncludePattern(q, prefix ? 'prefix' : 'contains')
+    if (include) esQuery.aggs.values.terms.include = include
   }
 
   if (query.q) {

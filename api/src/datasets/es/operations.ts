@@ -1206,3 +1206,80 @@ export const chooseStrictestCandidate = <T extends { sampledCount: number }> (
 ): T => {
   return candidates.find(candidate => candidate.sampledCount >= floorSample) ?? candidates[candidates.length - 1]
 }
+
+// ---- value-level narrowing for multi-valued (separator) columns ----
+
+// A `terms` aggregation is document-scoped: it emits every value a matching document holds in the
+// field. On a single-valued column document and value are 1:1 so this is invisible, but on a
+// multi-valued (`separator`) column the sibling values of a matching row ride along — a `q` meant
+// to narrow an autocomplete list cannot narrow it, and since `size` truncates AFTER that, the real
+// matches can be pushed out of the page entirely.
+//
+// The narrowing is done with the aggregation's `include`, the only value-level filter ES offers
+// that stays on the term dictionary (a runtime field would work too, but it runs a script per
+// matching document and loses global ordinals). `include` matches the RAW keyword bytes: no
+// analyzer, so case and diacritics folding — what `insensitive_normalizer` does at index time —
+// has to be carried by the pattern itself, each letter expanded into a class of its variants.
+
+const luceneRegexpSpecials = '.?+*|{}[]()"\\#@&<>~'
+
+// base letter -> every Latin code point that folds to it (both cases). Built once from the same
+// decomposition `asciifolding` applies, so the pattern accepts exactly what the index normalizes
+// together.
+const foldingVariants = (() => {
+  const variants = new Map<string, string[]>()
+  for (let codePoint = 0x41; codePoint <= 0x24f; codePoint++) {
+    const char = String.fromCodePoint(codePoint)
+    const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    if (base.length !== 1 || !/[a-z]/.test(base)) continue
+    const entry = variants.get(base)
+    if (entry) entry.push(char)
+    else variants.set(base, [char])
+  }
+  return variants
+})()
+
+// `q` is read literally here, so a query using simple_query_string operators (OR, negation,
+// phrases, fuzziness) has no faithful literal reading — narrowing on it would empty the list.
+// `*` and `?` are absent on purpose: those are translated, not declined.
+const nonLiteralQ = /[|"()~]|(^|\s)[+-]/
+
+/**
+ * Ceiling on the user wildcards translated into the pattern. `.*` segments are what makes
+ * determinization expensive — `.*a.*b.*c.*…` is the textbook subset-construction blow-up, roughly
+ * doubling the state count per segment — and the length cap alone does not bound them (200
+ * characters of `a*b*c*…` is 100 of them). Three keeps the automaton trivial while covering every
+ * realistic query; past it the values are simply left un-narrowed.
+ */
+const MAX_PATTERN_WILDCARDS = 3
+
+const foldedChar = (char: string) => {
+  const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  const variants = foldingVariants.get(base)
+  if (variants) return `[${variants.join('')}]`
+  if (char === '*') return '.*'
+  if (char === '?') return '.'
+  return luceneRegexpSpecials.includes(char) ? `\\${char}` : char
+}
+
+/**
+ * The `include` regexp narrowing a multi-valued column's values to those matching `q`, or
+ * `undefined` when `q` has no literal reading and the values must be left alone.
+ *
+ * A `prefix` query keeps the values starting with it, a `contains` one the values holding it
+ * anywhere. The query is always read as a SINGLE contiguous string, never split into per-word
+ * alternatives: lucene's `&` intersection would express "every word, in any order" and is the
+ * more forgiving semantics, but intersecting N `.*word.*` automata is exponential in N and
+ * determinization runs uninterruptibly inside ES — a crafted multi-word `q` exhausted a node's
+ * whole heap in testing. The pattern this builds is a plain concatenation, linear in the query
+ * length, and that length is capped: a pattern longer than the longest indexable keyword cannot
+ * match any value anyway.
+ */
+export const valuesIncludePattern = (q: string, mode: 'prefix' | 'contains'): string | undefined => {
+  const trimmed = q.trim()
+  if (!trimmed || trimmed.length > KEYWORD_IGNORE_ABOVE || nonLiteralQ.test(trimmed)) return undefined
+  if ((trimmed.match(/\*/g)?.length ?? 0) > MAX_PATTERN_WILDCARDS) return undefined
+  const pattern = [...trimmed].map(foldedChar).join('')
+  if (mode === 'contains') return `.*${pattern}.*`
+  return pattern.endsWith('.*') ? pattern : `${pattern}.*`
+}
