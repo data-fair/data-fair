@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -16,6 +16,30 @@ test.describe('REST datasets - CRUD', () => {
 
   test.afterEach(async ({}, testInfo) => {
     if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('a line edit moves finalizedAt even on a dataset the finalize task cannot select', async () => {
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'finalizedAt bump', schema: [{ key: 'attr1', type: 'string' }] })
+    const datasetId = res.data.id
+    await ax.post(`/api/v1/datasets/${datasetId}/lines`, { _id: 'line0', attr1: 'a' })
+    await waitForFinalize(ax, datasetId)
+    const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(before)
+
+    // GET /lines revalidates against finalizedAt (cacheHeaders.resourceBased) and only the finalize
+    // task writes that field — a REST dataset in 'error' matches neither finalize filter, so an
+    // edit used to stay invisible behind a 304 until someone reindexed by hand. Line writes are
+    // still accepted at this status (readWritableDataset), which is what made the trap reachable.
+    await patchRawDataset(datasetId, { status: 'error' })
+    await clearDatasetCache()
+
+    await ax.put(`/api/v1/datasets/${datasetId}/lines/line0`, { attr1: 'b' })
+    const after = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(
+      new Date(after).getTime() > new Date(before).getTime(),
+      `finalizedAt should have moved past ${before}, got ${after}`
+    )
   })
 
   test('Create empty REST datasets', async () => {

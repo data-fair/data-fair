@@ -404,7 +404,11 @@ const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: stri
   return await checkDataset(fresh as unknown as DatasetInternal)
 }
 
-export type RestoreResult = { status: 'restoring' } | Check
+// `restored` lists the covered metadata keys this restore actually changed — EMPTY means the
+// revision matched the live state and nothing was rewritten. Without it a no-op restore is
+// indistinguishable from a real one, and the panel reports success either way. It is absent on
+// the 'restoring' branches, where work is by definition pending.
+export type RestoreResult = { status: 'restoring' } | (Check & { restored: string[] })
 
 export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> =>
   await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale, who))
@@ -467,7 +471,11 @@ const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: nu
     await anchorDataset(dataset, restoreContext, { force: true })
     await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
     const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
-    return await checkDataset(freshAfter as unknown as DatasetInternal)
+    // note for REST datasets: this list can only ever hold covered METADATA keys. A dataset
+    // revision's payload is coveredMetadata() — line content is not in it (it lives in the
+    // per-line revisions), so a dataset restore never rolls data back, and on an untouched
+    // REST dataset it legitimately reports []
+    return { ...await checkDataset(freshAfter as unknown as DatasetInternal), restored: [...Object.keys($set), ...Object.keys($unset)] }
   }
 
   // file restore: the raw metadata write stays (the re-ingest reprocesses everything downstream

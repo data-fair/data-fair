@@ -219,6 +219,16 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
   the `getDatasetFresh` validation path and the `?updatedAt=`/`?finalizedAt=` bypass.
 - **Slug changes** bump `finalizedAt` (`datasets/utils/patch.ts`, right after `updatedAt` is stamped) —
   see below.
+- **Single-line REST writes** bump `finalizedAt` too, in `commitLines` (`datasets/utils/rest.ts`).
+  `commitLines` indexes the edit into the live alias synchronously, but `finalizedAt` — the
+  validator every data endpoint revalidates against — is otherwise written *only* by the finalize
+  task. That leaves a window in which `/lines` 304s a response that predates the edit, and the
+  window is unbounded whenever the dataset is in a status the finalize task does not select
+  (`status: 'error'`, mid-reindex) while still accepting line writes (`readWritableDataset` allows
+  `finalized`/`indexed`/`error`): the edit stayed invisible until someone reindexed by hand.
+  Bumping in `commitLines` is exact — that call *is* the moment the data behind `/lines` changed.
+  Like the slug bump it targets the **next whole second** (`Last-Modified` is second-precision, so
+  a same-second value still reads as unmodified) and only applies to an already-finalized dataset.
 - **Cache busting**: the `x-fg87fa6658fpbuia83hb8` header/cookie (or `x-cache-bypass` in the test
   harness) makes the proxy bypass its cache; `DELETE /api/v1/test-env/dataset-cache` and
   `…/publication-sites-cache` clear the memoize caches; restarting the proxy empties the
