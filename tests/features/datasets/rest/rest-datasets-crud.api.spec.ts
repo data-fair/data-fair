@@ -27,10 +27,11 @@ test.describe('REST datasets - CRUD', () => {
     const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
     assert.ok(before)
 
-    // GET /lines revalidates against finalizedAt (cacheHeaders.resourceBased) and only the finalize
-    // task writes that field — a REST dataset in 'error' matches neither finalize filter, so an
-    // edit used to stay invisible behind a 304 until someone reindexed by hand. Line writes are
-    // still accepted at this status (readWritableDataset), which is what made the trap reachable.
+    // GET /lines revalidates against finalizedAt and only the finalize task writes it. On the
+    // healthy path that is fine (finalize runs within seconds, and the writer escapes via
+    // ?indexedAt=) — but 'error' accepts line writes (readWritableDataset) while matching NO
+    // finalize filter, so finalizedAt never moved again and the edit stayed behind a 304 until
+    // someone reindexed by hand. commitLines covers exactly this case.
     await patchRawDataset(datasetId, { status: 'error' })
     await clearDatasetCache()
 

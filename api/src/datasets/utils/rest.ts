@@ -1025,33 +1025,32 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
     }
   })
 
-  // The lines the caller just edited are live in the alias, but `/lines` revalidates against
-  // `finalizedAt` (cacheHeaders.resourceBased) and only `finalize` writes that field — so until the
-  // finalize task runs, a cached response still 304s and the edit looks like it never happened.
-  // Normally that is a few seconds; it is FOREVER when the dataset is not in a status the finalize
-  // task selects (`status: 'error'`, mid-reindex), where the only way out was a manual reindex.
-  // Bumping here is exact: this is the moment the data behind `/lines` changed.
-  // Unguarded, unlike the write above: a bulk already holding `_partialRestStatus` needs the
-  // validator moved just as much (its pipeline pass is subject to the same status gating).
-  // Only for an already finalized dataset — the field's presence doubles as a "has been finalized"
-  // flag (datasets/service.ts). `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a covered
-  // change: no integrity stamp, no false breach.
+  // `/lines` revalidates against `finalizedAt` (cacheHeaders.resourceBased) and only `finalize`
+  // writes that field, so a freshly edited line is briefly behind a 304. That window is DELIBERATE
+  // and already covered on both sides: the write above sets `_partialRestStatus: 'indexed'`, which
+  // is exactly what the finalize task selects on (workers/tasks.ts) — it bumps `finalizedAt` within
+  // seconds — and a client that just wrote asks for its own data by a different cache key
+  // (`?indexedAt=`, set from this response in ui table/use-dataset-edition.ts, sent by
+  // composables/dataset/lines.ts instead of `?finalizedAt=`). Do NOT bump on that healthy path:
+  // it would only duplicate the pipeline's own bump and churn the public validator for nothing.
   //
-  // NEVER write a future value here, unlike the slug bump in utils/patch.ts which rounds UP to the
-  // next whole second. That bump can afford to: a slug patch does not wake the finalize task. This
-  // one does — the write just above sets `_partialRestStatus: 'indexed'` precisely to wake it — and
-  // finalize $sets `finalizedAt` to plain `now` (short-processor/finalize.ts). A value rounded into
-  // the future would therefore be REWOUND moments later, and the UI table sends the value it holds
-  // back as `?finalizedAt=` on every /lines query (ui composables/dataset/lines.ts): a client that
-  // read the future value then queries against the rewound resource trips the hard 400 in
-  // cacheHeaders.resourceBased ("value higher in the query than in the resource").
-  // So: the current second TRUNCATED (always <= now, so finalize can only ever move it forward),
-  // applied with $max so it is monotonic against any concurrent writer. Values are always
-  // toISOString() strings, which compare lexicographically == chronologically.
-  // Accepted residual: an edit landing in the same second as the current finalizedAt does not move
-  // the validator. That is a <=1s coincidence which the next edit or any finalize resolves —
-  // against the bug being fixed here (invisible until a manual reindex, forever) it is a good trade.
-  if (dataset.finalizedAt) {
+  // The uncovered case is a dataset that accepts line writes but that the finalize task cannot
+  // select at all. readWritableDataset admits 'finalized' | 'indexed' | 'error'; finalize selects
+  // `{status:'indexed'}` and `{isRest, status:'finalized', _partialRestStatus:'indexed'}` — so
+  // 'error' is the hole, and there `finalizedAt` NEVER moves again: the edit stays invisible behind
+  // a 304 until someone reindexes by hand, and a reloaded page has no `?indexedAt=` to escape with.
+  //
+  // Written as the current second TRUNCATED, via $max. Never a future value, unlike the slug bump
+  // in utils/patch.ts which rounds UP to the next whole second: that one can afford to (a slug patch
+  // does not wake finalize), whereas a value rounded past `now` here would be rewound by a later
+  // finalize's plain-`now` $set — and a client still holding the future value sends it back as
+  // `?finalizedAt=`, tripping the hard 400 in cacheHeaders.resourceBased. $max keeps it monotonic
+  // against concurrent writers; values are always toISOString() strings, which compare
+  // lexicographically == chronologically. `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a
+  // covered change: no integrity stamp, no false breach. Only for an already finalized dataset —
+  // the field's presence doubles as a "has been finalized" flag (datasets/service.ts).
+  const finalizeWillRun = dataset.status === 'finalized' || dataset.status === 'indexed'
+  if (dataset.finalizedAt && !finalizeWillRun) {
     await mongo.datasets.updateOne({ id: dataset.id },
       { $max: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000).toISOString() } })
   }
