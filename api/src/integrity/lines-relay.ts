@@ -11,6 +11,10 @@ import * as ops from './operations.ts'
 import type { HistorizeContextHint, RevisionContext } from './operations.ts'
 
 const BATCH = 100
+// A run tolerates isolated per-line failures so one poison line cannot hold up the other
+// 19999, but bails out once a whole batch's worth has failed: past that it is the store that is
+// down, not a line that is bad, and continuing only grows the skip list and wastes the run.
+const MAX_LINE_FAILURES = BATCH
 
 // Write one line's locked revision from its CURRENT Mongo state. Shared by the async relay and
 // the synchronous _fix path. The revision index is the line's own _i (unique, monotonic,
@@ -94,18 +98,37 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
   // exclude them from every further scan of this run — including the straggler re-check, or the
   // re-set hint would re-trigger this task in a hot loop over the same refusal
   const refused: string[] = []
+  // lines whose anchoring THREW (store transient: a throttled PUT, a stalled socket). Unlike
+  // `refused` these keep their stamp on purpose and are retried by a later run — they are only
+  // skipped for the rest of THIS run so the scan moves on to the lines that can still be
+  // anchored instead of re-drawing the same failures. `firstError` is rethrown at the end.
+  const failed: string[] = []
+  let firstError: any
   while (true) {
-    const lines = await c.find({ _needsHistorizing: { $exists: true }, _id: { $nin: refused } }).limit(BATCH).toArray()
+    const skip = failed.length ? refused.concat(failed) : refused
+    const lines = await c.find({ _needsHistorizing: { $exists: true }, _id: { $nin: skip } }).limit(BATCH).toArray()
     if (!lines.length) break
     const retainUntil = new Date(Date.now() + retentionDays * 24 * 3600 * 1000)
     // computed once per batch, like `retainUntil` above (target 8): every `.who` sibling this
     // batch writes shares the same attribution window
     const attributionRetainUntil = ops.computeAttributionRetainUntil(config.integrity.attribution?.retentionDays)
     // all the batch's S3 PUTs first (concurrent), then ONE Mongo round-trip for the bookkeeping:
-    // a crash after some PUTs re-runs the whole batch, and same-key re-PUTs are idempotent
-    const anchored = await Promise.all(lines.map(async (line) => ({ line, ok: await anchorLine(dataset, line, store, retainUntil, undefined, attributionRetainUntil) })))
+    // a crash after some PUTs re-runs the whole batch, and same-key re-PUTs are idempotent.
+    // Each anchor settles on its own rather than through a rejecting Promise.all: one line's
+    // failure would otherwise discard up to 99 completed, already-paid-for S3 writes, which the
+    // next run then re-does — on a 20000-line enrolment backfill that is how a single transient
+    // parks the whole backfill in 'error' with the retry budget spent.
+    const anchored = await Promise.all(lines.map(async (line) => {
+      try {
+        return { line, ok: await anchorLine(dataset, line, store, retainUntil, undefined, attributionRetainUntil), threw: false }
+      } catch (err) {
+        firstError ??= err
+        return { line, ok: false, threw: true }
+      }
+    }))
     const bookkeeping: AnyBulkWriteOperation<DatasetLine>[] = []
-    for (const { line, ok } of anchored) {
+    for (const { line, ok, threw } of anchored) {
+      if (threw) { failed.push(line._id); continue }
       if (!ok) { refused.push(line._id); continue }
       // clear conditionally on _i: a legit write interleaved since our read changed _i and
       // re-stamped — that fresh stamp must survive to get its own revision
@@ -119,7 +142,15 @@ export const historizeLines = async (dataset: RestDataset): Promise<void> => {
         bookkeeping.push({ deleteOne: { filter: { _id: line._id, _deleted: true, _needsIndexing: { $exists: false }, _needsHistorizing: { $exists: false } } } })
       }
     }
+    // committed before the failure check below: whatever this batch anchored stays anchored
     if (bookkeeping.length) await c.bulkWrite(bookkeeping, { ordered: true })
+    if (failed.length >= MAX_LINE_FAILURES) break
+  }
+  if (firstError) {
+    // the hint stays set (we never reach clearHint), so the task re-runs and picks the failed
+    // lines back up. Rethrow so the failure is journalled rather than silently swallowed —
+    // the progress made above is already committed and is not lost by this throw.
+    throw new Error(`failed to anchor ${failed.length} line(s) of dataset ${dataset.id}, the first with: ${firstError.message}`, { cause: firstError })
   }
   await clearHint()
   // hint-first ordering protects against a crash, not against concurrency: an API write can set

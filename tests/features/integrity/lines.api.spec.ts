@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test'
 import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import {
-  ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys
+  ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix
 } from '../../support/integrity.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 import * as lops from '../../../api/src/integrity/lines-operations.ts'
@@ -200,6 +200,42 @@ test('enable is refused above the lines gate', async () => {
 // ---------------------------------------------------------------------------------------------
 // truth-grounding refusals: a guarantee is never claimed over content the snapshot cannot cover
 // ---------------------------------------------------------------------------------------------
+
+test('a line whose anchoring throws does not discard the rest of its batch', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }, { attr1: 'd' }])
+  await waitForFinalize(ax, dataset.id)
+  // enroll raw (not through the API enable, whose backfill would drain before the poison lands)
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+
+  const setLine = async (lineId: string, $set: Record<string, any>) =>
+    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: lineId }, update: { $set } })
+
+  // poison line2: anchorLine builds its lineMeta with `new Date(line._updatedAt).toISOString()`,
+  // which throws RangeError on an unparseable value — a per-line failure raised BEFORE any S3
+  // write, and distinct from the §S4 out-of-range-_i refusal (which returns false instead)
+  await setLine('line2', { _updatedAt: 'not-a-date' })
+  for (let i = 0; i < 4; i++) await setLine(`line${i}`, { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } })
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+
+  // the three healthy lines of the batch must still land: a rejecting Promise.all over the batch
+  // would throw away their completed S3 writes and leave all four stamped for the next run
+  const pending = async () => (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`,
+    { params: { filter: JSON.stringify({ _needsHistorizing: { $exists: true } }) } })).data.count
+  const deadline = Date.now() + 20000
+  while (await pending() > 1 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 250))
+  expect(await pending()).toBe(1)
+  expect((await rawLine(ax, dataset.id, 'line2'))._needsHistorizing).toBeTruthy()
+
+  // and the failure is surfaced rather than swallowed: the run rethrows, so the hint stays set
+  // for a later retry and the dataset lands in error
+  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw._needsHistorizingLines).toBe(true)
+  const anchoredLines = new Set((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
+    .map(k => lops.parseLineRevisionKey(k)?.lineId).filter(Boolean))
+  expect([...anchoredLines].sort()).toEqual(['line0', 'line1', 'line3'])
+})
 
 test('enable is refused on a rest dataset with line ownership', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
