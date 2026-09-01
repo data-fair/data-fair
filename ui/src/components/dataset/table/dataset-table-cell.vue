@@ -97,6 +97,7 @@
       :filter="filter"
       :hovered="hovered"
       :no-interaction="noInteraction"
+      :no-filter="noFilter"
       :property="header.property"
       :values="result.values[header.key] as ExtendedResultValue[]"
       @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw, formattedValue: v.formatted})"
@@ -108,6 +109,7 @@
       v-else-if="header.property && result.values[header.key]"
       :filter-loading="filterLoading"
       :filtered="!!filter"
+      :no-filter="noFilter"
       :hovered="hovered === result.values[header.key]"
       :property="header.property"
       :value="result.values[header.key] as ExtendedResultValue"
@@ -163,6 +165,7 @@ const props = defineProps({
   filter: { type: Object as () => DatasetFilter, default: null },
   dense: { type: Boolean, default: false },
   noInteraction: { type: Boolean, default: false },
+  noFilter: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
   selectable: { type: Boolean, default: false },
   selected: { type: Boolean, default: false }
