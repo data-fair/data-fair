@@ -630,7 +630,13 @@ export const registerReadRoutes = (router: Router) => {
     const field: any = (dataset.schema ?? []).find(p => p.key === req.params.fieldKey)
     if (!field) throw httpError(400, `field "${req.params.fieldKey}" is unknown`)
     if (field['x-labels'] && field['x-labelsRestricted']) {
-      result = Object.entries(field['x-labels']).map(([value, label]) => ({ value, label }))
+      // this shortcut answers from the schema without querying the index at all, so it has to
+      // apply the same value-level narrowing itself — otherwise the very same request answers
+      // differently depending on a column setting the caller has no reason to know about
+      const exactValues = esUtils.sameColumnExactValues(field, req.query)
+      result = Object.entries(field['x-labels'])
+        .filter(([value]) => !exactValues || exactValues.includes(value))
+        .map(([value, label]) => ({ value, label }))
     } else {
       req.query.size = req.query.size ?? '1000'
       const esAbortContext = esUtils.createEsRequestOptions(req, res)
