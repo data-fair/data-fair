@@ -87,8 +87,12 @@ export const enableIntegrity = async (dataset: DatasetInternal, who?: WhoHint): 
 const enableIntegrityUnlocked = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> => {
   if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
   const isRest = isRestDataset(dataset)
-  if (!isRest && (!isFileDataset(dataset) || !dataset.originalFile?.md5)) {
-    throw httpError(400, 'integrity can only be enabled on a finalized file dataset or an editable (rest) dataset')
+  // deliberately NOT gated on originalFile.md5: that descriptor is only persisted for files
+  // uploaded since it was introduced, so datasets predating it were refused for a reason unrelated
+  // to the guarantee. The anchor hashes the storage bytes with sha256 (see hash.ts) and nothing
+  // reads originalFile.md5 — a restore fills it in-flight from the payload bytes either way.
+  if (!isRest && !isFileDataset(dataset)) {
+    throw httpError(400, 'integrity can only be enabled on a file dataset or an editable (rest) dataset')
   }
   // Truth-grounding refusals (§5 explicit limits): never enroll a dataset whose stated guarantee
   // would be partial. Attachment bytes are outside the snapshot — neither detected nor restorable —

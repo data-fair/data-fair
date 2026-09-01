@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
-import { sendDataset, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, getRawDataset, patchRawDataset, collectNotifications } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, waitForLinesDrained, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -37,11 +37,28 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
   expect(status.lastRevision.hash.metadata).toBeTruthy()
 })
 
-test('enable is rejected on a dataset that is neither a finalized file dataset nor rest', async () => {
+test('enable is rejected on a dataset that is neither a file dataset nor rest', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  // a virtual dataset is neither a file dataset (no originalFile.md5) nor rest (target 3 opened enable up to rest)
+  // a virtual dataset carries no `file` and is not rest (target 3 opened enable up to rest)
   const ds = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual-int' })).data
   await expect(admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })).rejects.toMatchObject({ status: 400 })
+})
+
+test('enable accepts a legacy file dataset whose originalFile carries no md5', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  // datasets uploaded before originalFile.md5 started being persisted have no such descriptor;
+  // the guarantee never depends on it (the anchor is sha256 of the storage bytes), so enrolling
+  // them must work — reproduce the legacy shape by dropping the field out-of-band
+  await patchRawDataset(dataset.id, { $unset: { 'originalFile.md5': '' } })
+  expect((await getRawDataset(dataset.id)).originalFile.md5).toBeUndefined()
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(status.active).toBe(true)
+  const { createHash } = await import('node:crypto')
+  const fixtureSha256 = createHash('sha256').update(fs.readFileSync('./tests/resources/datasets/dataset1.csv')).digest('hex')
+  expect(status.lastRevision.hash.file).toBe(fixtureSha256)
 })
 
 test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
