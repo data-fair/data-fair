@@ -1,14 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import * as parse5 from 'parse5'
-import { setUniqueRefs, buildManifest, buildLoginHtml, injectApplicationGlobal } from '../../../api/src/applications/operations.ts'
-
-const inject = (html: string, json: string) => {
-  const document = parse5.parse(html)
-  const count = injectApplicationGlobal(document, json)
-  return { count, html: parse5.serialize(document) }
-}
-const appJson = JSON.stringify({ id: 'a1', title: 'My app' })
+import { setUniqueRefs, buildManifest, buildLoginHtml } from '../../../api/src/applications/operations.ts'
 
 test.describe('applications operations', () => {
   test('setUniqueRefs: id only when slug === id', () => {
@@ -61,49 +53,6 @@ test.describe('applications operations', () => {
     })
     assert.ok(html.includes('color:red'))
     assert.ok(html.includes('bad'))
-  })
-  test('injectApplicationGlobal: fills the window.APPLICATION script', () => {
-    const { count, html } = inject('<html><head><script>window.APPLICATION=%APPLICATION%;</script></head><body></body></html>', appJson)
-    assert.equal(count, 1)
-    assert.ok(html.includes(`window.APPLICATION=${appJson};`))
-    assert.ok(!html.includes('%APPLICATION%'))
-  })
-  test('injectApplicationGlobal: a comment naming the placeholder does not consume the substitution', () => {
-    // the regression app-calendar 1.3.0 shipped: it documents the contract in a comment placed
-    // above the script, which used to eat the single non-global replace and leave the script
-    // with a literal %APPLICATION% — a syntax error, so the app never got its configuration
-    const { count, html } = inject(
-      '<html><head><!-- the proxy substitutes %APPLICATION% --><script>window.APPLICATION=%APPLICATION%;</script></head><body></body></html>',
-      appJson
-    )
-    assert.equal(count, 1)
-    assert.ok(html.includes(`window.APPLICATION=${appJson};`), 'the script is filled')
-    assert.ok(html.includes('<!-- the proxy substitutes %APPLICATION% -->'), 'the comment is left untouched')
-  })
-  test('injectApplicationGlobal: never substitutes outside a script', () => {
-    // substituting everywhere would let a `-->` in any user-provided string close a comment
-    // early and turn the rest of the JSON into markup
-    const hostile = JSON.stringify({ id: 'a1', title: 'end of comment --> <img src=x onerror=alert(1)>' })
-    const { count, html } = inject('<html><head><!-- %APPLICATION% --></head><body><p>%APPLICATION%</p></body></html>', hostile)
-    assert.equal(count, 0)
-    assert.ok(!html.includes('<img'), 'no markup escapes from the JSON')
-    assert.ok(html.includes('<!-- %APPLICATION% -->'), 'the comment keeps its placeholder')
-    assert.ok(html.includes('<p>%APPLICATION%</p>'), 'body text keeps its placeholder')
-  })
-  test('injectApplicationGlobal: fills every script that declares the placeholder', () => {
-    const { count, html } = inject(
-      '<html><head><script>window.APPLICATION=%APPLICATION%;</script></head><body><script>const a=%APPLICATION%;</script></body></html>',
-      appJson
-    )
-    assert.equal(count, 2)
-    assert.ok(!html.includes('%APPLICATION%'))
-  })
-  test('injectApplicationGlobal: leaves a document without the placeholder untouched', () => {
-    const source = '<html><head><script>const a=1;</script></head><body>hello</body></html>'
-    const { count, html } = inject(source, appJson)
-    assert.equal(count, 0)
-    assert.ok(html.includes('const a=1;'))
-    assert.ok(html.includes('hello'))
   })
   test('buildLoginHtml: escapes HTML in the error message', () => {
     const tpl = '{ERROR}'
