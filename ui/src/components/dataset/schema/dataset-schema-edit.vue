@@ -29,8 +29,20 @@
     <df-agent-chat-action
       action-id="help-annotate-schema"
       :visible-prompt="t('helpAnnotateSchema')"
-      :hidden-context="'Use the schema_annotator subagent to suggest titles and descriptions for the dataset columns.'"
+      :hidden-context="'Use the schema_annotator subagent to set titles, descriptions, concepts and groups on the dataset columns. Coded values belong to the column_labeler subagent, not to a description.'"
       :title="t('helpAnnotateSchema')"
+    />
+    <df-agent-chat-action
+      action-id="help-label-values"
+      :visible-prompt="t('helpLabelValues')"
+      :hidden-context="'Use the column_labeler subagent to give readable labels to the coded values of this dataset (1 becomes Homme, COM becomes Commune). It reads the real values first and only labels what it has seen.'"
+      :title="t('helpLabelValues')"
+    />
+    <df-agent-chat-action
+      action-id="help-reorder-columns"
+      :visible-prompt="t('helpReorderColumns')"
+      :hidden-context="'The user wants the columns in a more logical order. Read the schema, propose a grouping (identification, then descriptive attributes, then location, then measures, enriched columns next to the ones they enrich), present it, and once approved apply it with the reorder_columns tool.'"
+      :title="t('helpReorderColumns')"
     />
     <df-agent-chat-action
       action-id="help-configure-properties"
@@ -106,6 +118,8 @@ fr:
   projection: Projection cartographique
   sortProperties: Vous pouvez changer l'ordre des colonnes par glisser-déposer.
   helpAnnotateSchema: Aide-moi à annoter le schéma
+  helpLabelValues: Libeller les valeurs codées
+  helpReorderColumns: Réordonner les colonnes
   helpConfigureProperties: Optimiser les types et capacités
 en:
   column: column | columns
@@ -115,6 +129,8 @@ en:
   projection: Map projection
   sortProperties: You can sort the columns by drag and drop.
   helpAnnotateSchema: Help annotate schema
+  helpLabelValues: Label coded values
+  helpReorderColumns: Reorder the columns
   helpConfigureProperties: Optimize types and capabilities
 </i18n>
 
