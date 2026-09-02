@@ -10,7 +10,7 @@ import CacheableLookup from 'cacheable-lookup'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as serviceWorkers from '../misc/utils/service-workers.ts'
 import { refreshConfigDatasetsRefs } from './utils.ts'
-import { buildManifest, buildLoginHtml } from './operations.ts'
+import { buildManifest, buildLoginHtml, injectApplicationGlobal } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
 import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache } from './proxy-service.ts'
 import Debug from 'debug'
@@ -147,7 +147,8 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
-  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(application)))
+  const document = parse5.parse(rawHtml)
+  injectApplicationGlobal(document, JSON.stringify(application))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
   if (!html) throw new Error(req.__('errors.brokenHTML'))
 

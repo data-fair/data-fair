@@ -1,4 +1,5 @@
 import type { Application } from '#types'
+import type { DefaultTreeAdapterMap } from 'parse5'
 import escapeHtml from 'escape-html'
 
 type ApplicationWithExposedUrl = Application & { exposedUrl: string }
@@ -46,4 +47,47 @@ export const buildLoginHtml = (loginHtml: string, opts: { siteUrl: string, appli
     .replace('{ERROR}', opts.error ? `<p style="color:red">${escapeHtml(opts.error)}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl.href)
     .replace('{LOGO}', logoUrl.href)
+}
+
+// The placeholder base applications declare as `window.APPLICATION=%APPLICATION%;`, which the
+// proxy fills with the application being served.
+const applicationPlaceholder = '%APPLICATION%'
+
+/**
+ * Substitutes the application JSON into the `window.APPLICATION` script of a parsed base
+ * application document, and returns the number of substitutions made.
+ *
+ * The walk deliberately targets text inside `script` elements instead of running on the raw
+ * HTML string, because neither string form is correct:
+ *
+ * - a non-global `replace` substitutes the *first* occurrence anywhere in the document, so an
+ *   application that names the placeholder before that script — `app-calendar` 1.3.0 mentions
+ *   it in a comment above the script — consumes the only substitution and leaves the real
+ *   script with a literal `%APPLICATION%`. That is a syntax error, `window.APPLICATION` stays
+ *   undefined, and the application never receives its configuration;
+ * - making that regex global would be worse: the JSON would then also land inside comments and
+ *   text, where a `-->` in any user-provided string (an application title, a dataset label)
+ *   closes the comment early and turns the rest of the JSON into markup.
+ *
+ * Substituting on script text only keeps the injection in the single context the contract
+ * defines, and leaves every other mention of the placeholder alone.
+ */
+export const injectApplicationGlobal = (node: DefaultTreeAdapterMap['node'], applicationJson: string): number => {
+  let substituted = 0
+  if ('tagName' in node && node.tagName === 'script') {
+    // script is a raw text element: its content is text children only, never nested markup
+    for (const child of node.childNodes) {
+      // parse5 types the children as Element | TextNode; only a text node carries a value,
+      // and `nodeName` cannot narrow the union because Element declares it as a plain string
+      if (!('value' in child)) continue
+      if (!child.value.includes(applicationPlaceholder)) continue
+      child.value = child.value.replaceAll(applicationPlaceholder, applicationJson)
+      substituted++
+    }
+    return substituted
+  }
+  if ('childNodes' in node) {
+    for (const child of node.childNodes) substituted += injectApplicationGlobal(child, applicationJson)
+  }
+  return substituted
 }
