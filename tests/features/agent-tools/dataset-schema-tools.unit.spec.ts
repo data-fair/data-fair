@@ -16,7 +16,7 @@ const vocabulary = [
   { id: 'startDate', title: 'Date de début', identifiers: ['http://schema.org/startDate'], type: 'string', format: 'date-time', tag: 'Temps' }
 ]
 
-const makeSchema = () => [
+const makeSchema = (): Record<string, any>[] => [
   { key: 'codgeo', type: 'string' },
   { key: 'libgeo', type: 'string', title: 'Nom Commune' },
   { key: 'sexe', type: 'integer', enum: [1, 2] },

@@ -8,7 +8,7 @@
 // The reorder is strictly a permutation: the tool can move columns, never add, drop or
 // rename one. Anything else would let the agent delete a column through a reorder call.
 
-import { isEditableColumn } from './agent-schema-annotation-tools-logic'
+import { isEditableColumn } from './agent-schema-annotation-tools-logic.js'
 
 export interface ReorderResult {
   schema?: any[]
