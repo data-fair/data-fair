@@ -150,7 +150,9 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   // anchored on the assignment the contract defines, so that an application merely naming the
   // placeholder elsewhere does not consume the substitution (app-calendar 1.3.0 names it in a
   // comment above the script). Function replacement: the JSON is data, not a $-pattern.
-  const applicationJson = JSON.stringify(application)
+  // < and > are escaped so no title or label can close the script (`</script>`) or the comment
+  // an application may have wrapped the assignment in (`-->`); the escapes re-parse identically.
+  const applicationJson = JSON.stringify(application).replace(/</g, '\\u003C').replace(/>/g, '\\u003E')
   const document = parse5.parse(rawHtml.replace(/window\.APPLICATION\s*=\s*%APPLICATION%/g, () => `window.APPLICATION=${applicationJson}`))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
   if (!html) throw new Error(req.__('errors.brokenHTML'))
