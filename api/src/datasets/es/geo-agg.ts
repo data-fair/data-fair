@@ -56,6 +56,9 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
 const prepareGeoAggResponse = async (esResponse: any, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any) => {
   const response: any = { total: esResponse.hits.total.value }
   const resultCtx = prepareResultContext(dataset, query)
+  // these hits come straight from ES (like searchStream's), not from the buffered search(), so their
+  // _attachment_url is still raw and must be rewritten by prepareResultItem
+  resultCtx.rewriteAttachmentUrl = true
   response.aggs = []
   // agg_size × size can legally reach 100000 prepared top hits: yield every 500 like the /lines pipeline
   let prepared = 0

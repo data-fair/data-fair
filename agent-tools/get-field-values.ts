@@ -26,7 +26,9 @@ export const schema = {
       fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
       values: {
         type: 'array' as const,
-        items: { type: 'string' as const },
+        // Multi-type: the /values route returns raw values (numbers for integer columns);
+        // a string-only schema made MCP output validation reject the whole result.
+        items: { type: ['string', 'number', 'boolean'] as const },
         description: 'Array of distinct values for the specified column'
       }
     },

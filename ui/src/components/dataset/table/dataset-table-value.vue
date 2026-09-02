@@ -77,7 +77,7 @@
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-if="!filtered && extendedValue.filterable"
+        v-if="!noFilter && !filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
         :loading="filterLoading"
         :density="dense ? 'comfortable' : 'default'"
@@ -120,7 +120,8 @@ const { value: extendedValue, property } = defineProps({
   filtered: { type: Boolean, required: true },
   hovered: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
-  filterLoading: { type: Boolean, default: false }
+  filterLoading: { type: Boolean, default: false },
+  noFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{

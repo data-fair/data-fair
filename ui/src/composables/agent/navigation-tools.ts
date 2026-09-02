@@ -147,7 +147,10 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         return {
           content: [{
             type: 'text' as const,
-            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}`
+            // The tool set exposed to the LLM is frozen when the turn starts: tools
+            // registered by the destination page are discovered by the chat but only
+            // become callable later. Say so, or the model concludes it is stuck.
+            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: page-specific agent tools register after navigation; if a tool of the destination page is not callable yet, finish your reply and it will be available on the next turn.`
           }]
         }
       } catch (error: any) {

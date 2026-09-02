@@ -18,11 +18,14 @@ geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock serve
 const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/sirene-api.json'), 'utf8'))
 sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
-// lang is deliberately wrong here: the proxy owns the language of the served document
-// and must replace whatever the application declares (see applications/proxy.ts)
+// lang and title are deliberately wrong here: the proxy owns the language and the title of
+// the served document and must replace whatever the application declares (see applications/proxy.ts).
+// Two titles, as some applications declare one per language, so the test covers dropping them all.
 const html = `
   <html lang="zz">
     <head>
+      <title>Base app model name</title>
+      <title lang="fr">Nom du modèle</title>
       <meta name="application-name" content="test">
       <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
     </head>
@@ -36,6 +39,9 @@ const html = `
     </script>
   </html>
 `
+
+// monapp3 declares no title at all, so the proxy has to insert one rather than replace it
+const htmlNoTitle = html.split('\n').filter(line => !line.includes('<title')).join('\n')
 
 const monapp1ConfigSchema = {
   type: 'object',
@@ -160,7 +166,7 @@ const staticRoutes: Record<string, () => RouteResult> = {
   '/monapp2/config-schema.json': () => ({ status: 200, body: {} }),
 
   // App test3
-  '/monapp3/index.html': () => ({ status: 200, body: html, contentType: 'text/html' }),
+  '/monapp3/index.html': () => ({ status: 200, body: htmlNoTitle, contentType: 'text/html' }),
   '/monapp3/config-schema.json': () => ({ status: 200, body: monapp3ConfigSchema }),
 }
 

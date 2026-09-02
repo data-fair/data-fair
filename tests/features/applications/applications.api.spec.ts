@@ -199,6 +199,7 @@ test.describe('Applications', () => {
 
     let res = await ax.post('/api/v1/applications', {
       url: mockAppUrl('monapp1'),
+      title: 'Répartition des équipements sportifs',
       configuration: {
         datasets: [
           { id: dataset.id, href: datasetRefInit.href },
@@ -237,6 +238,16 @@ test.describe('Applications', () => {
     assert.ok(/<html[^>]*\slang="(fr|en)"/.test(res.data), 'the html element carries the served locale')
     assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
 
+    // Same for the title: the ones declared by the application name its model in the catalog,
+    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6).
+    // The mock declares two of them (one per language) and none must survive.
+    assert.ok(res.data.includes('<title>Répartition des équipements sportifs</title>'), 'the document is titled after the application')
+    assert.equal((res.data.match(/<title[ >]/g) || []).length, 1, 'the document declares a single title')
+    assert.ok(!res.data.includes('<title>Base app model name</title>'), 'the title declared by the application is replaced')
+    assert.ok(!res.data.includes('<title lang="fr">'), 'the other language variant is dropped too')
+    // The model keeps naming itself in the base app metadata, which the proxy does not touch
+    assert.equal(application.baseApp.meta.title, 'Nom du modèle', 'the base app metadata still names the model')
+
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker
@@ -248,6 +259,15 @@ test.describe('Applications', () => {
     await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
     assert.equal(res.data.includes('<div>application embed</div>'), false)
+  })
+
+  test('Title a proxied application that declares no title', async () => {
+    const ax = testUser1
+    // monapp3 serves an index.html without any title element
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp3'), title: 'Consommation énergétique' })
+    res = await ax.get(`/app/${res.data.id}`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('<title>Consommation énergétique</title>'), 'the title element is inserted')
   })
 
   test('Read base app info of an application', async () => {

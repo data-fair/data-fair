@@ -184,7 +184,8 @@ class IndexStream extends Transform {
   errorsSummary () {
     if (!this.nbErroredItems) return null
     const leftOutErrors = this.nbErroredItems - 3
-    let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% des lignes sont en erreur.\n<br>`
+    // plain newlines only: the journal UI renders messages with `white-space: pre-line`
+    let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% des lignes sont en erreur.\n`
     msg += this.erroredItems.map((item: any) => {
       let itemMsg = ' - '
       if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
@@ -192,8 +193,8 @@ class IndexStream extends Transform {
       else if (item.error.caused_by) itemMsg += item.error.caused_by.reason
       else itemMsg += item.error.reason
       return truncateMiddle(itemMsg, 80, 60, '...')
-    }).join('\n<br>')
-    if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
+    }).join('\n')
+    if (leftOutErrors > 0) msg += `\n${leftOutErrors} autres erreurs...`
     // blocking if more than 50% lines are broken in a way
     if (this.nbErroredItems > this.i / 2) throw new Error('[noretry] ' + msg)
     return msg

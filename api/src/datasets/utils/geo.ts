@@ -63,12 +63,7 @@ export const geoFieldsKey = (schema: SchemaProperty[]): string => {
   return key
 }
 
-export const fixLon = (val: number): number => {
-  while (val < -180) val += 360
-  while (val > 180) val -= 360
-  return val
-}
-
+export { fixLon } from './geo-lon.ts'
 export const latlon2fields = (dataset: Dataset, doc: Record<string, any>): Record<string, string> => {
   const schema = dataset.schema ?? []
   let lat: any, lon: any
