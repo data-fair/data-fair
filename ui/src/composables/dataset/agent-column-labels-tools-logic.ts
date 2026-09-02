@@ -6,7 +6,7 @@
 // and separating it is what lets the annotation prompt say "coded values belong in the
 // labels, never in the description".
 
-import { isEditableColumn } from './agent-schema-annotation-tools-logic'
+import { isEditableColumn } from './agent-schema-annotation-tools-logic.js'
 
 export interface ColumnLabels {
   key: string
