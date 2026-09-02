@@ -246,6 +246,25 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
+  test('Department admin can transfer a dataset to another department but not to the organization root', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep2 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep2.setOrg('test_org1', 'dep2')
+
+    let dataset = (await testUser4Dep1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    assert.equal(dataset.owner.department, 'dep1')
+
+    // test_user4 is admin of dep1 and dep2 but not of the organization root
+    await assert.rejects(
+      testUser4Dep1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }),
+      (err: any) => err.status === 403
+    )
+    await testUser4Dep1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
+    dataset = (await testUser4Dep2.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.deepEqual(dataset.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
+  })
+
   test('Change application ownership to an organization that is not the active account', async () => {
     // from the personal account to an organization where the user is admin
     let application = (await testUser1.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
