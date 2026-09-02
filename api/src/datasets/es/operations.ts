@@ -332,6 +332,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
 
 export const acceptedMetricAggsByType: Record<string, string[]> = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  // booleans are doc-valued as 0/1, and ES registers them for all these metric aggs:
+  // sum = count of true values, avg = proportion of true (cf Sum/Avg/Min/Max/Stats/PercentilesAggregatorFactory)
+  boolean: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
   string: ['min', 'max', 'cardinality', 'value_count'],
   other: ['value_count']
 }
@@ -343,13 +346,16 @@ for (const metrics of Object.values(acceptedMetricAggsByType)) {
 }
 export const defaultMetricAggsByType: Record<string, string[]> = {
   number: ['min', 'max'],
+  boolean: [],
   string: ['cardinality'],
   other: []
 }
 
-export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+export const getMetricType = (field: any): 'number' | 'string' | 'boolean' | 'other' => {
   if (field.type === 'integer' || field.type === 'number') {
     return 'number'
+  } else if (field.type === 'boolean') {
+    return 'boolean'
   } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
     return 'number'
   } else if (field.type === 'string') {
