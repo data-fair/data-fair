@@ -36,8 +36,26 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
   const context: RevisionContext = {
     operation: hint?.operation ?? (deleted ? 'delete' : 'update'),
     origin: hint?.origin ?? 'worker',
-    date: new Date().toISOString(),
+    // the stamp's own date when it has one: re-anchoring the same stamp then reproduces a
+    // byte-identical body, so a retry's same-key re-PUT is genuinely idempotent instead of
+    // planting a `version-divergence` the trail check reports at 'confirmed'. Pre-existing
+    // stamps carry no date — fall back to now, as before.
+    date: hint?.date ?? new Date().toISOString(),
     ...(hint?.reason ? { reason: hint.reason } : {})
+  }
+  // The enrolment backfill stamps EVERY line, so an untouched line is re-anchored at the key it
+  // already owns (the key is derived from content: `{_i}-{sha256}`, and neither moved). The body
+  // would differ — a fresh enable context — and two differing bodies at one key is exactly the
+  // shadowing signature: a disable/re-enable cycle used to report the whole trail as altered,
+  // one confirmed anomaly per line plus one per `.who` sibling. Nothing to add here: the existing
+  // revision already attests this content at this line version, and the enable itself is recorded
+  // in the dataset-level revision. Gated to the backfill — an organic write always mints a fresh
+  // `_i`, so its key cannot collide and it must not pay for this probe.
+  if (hint?.operation === 'enable') {
+    const existingKey = deleted
+      ? lops.lineRevisionKey(dataset.owner, dataset.id, line._id, line._i!, lops.DELETED_MARKER)
+      : lops.lineRevisionKey(dataset.owner, dataset.id, line._id, line._i!, lops.lineSha256(line, lops.extensionOwnedKeys(dataset.extensions)))
+    if (await store.objectExists(existingKey)) return true
   }
   // who-FIRST (target 8, README invariant #4, same rationale as anchorDataset): a crash between
   // this write and the revision write below is recovered by retry-forward (the caller leaves the

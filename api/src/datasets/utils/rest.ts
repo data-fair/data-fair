@@ -477,13 +477,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
     if (historizeLines) {
-      operation.fullBody._needsHistorizing = {
-        context: historizeContext ?? {
-          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
-          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
-          ...(who ? { who } : {})
-        }
+      const context = historizeContext ?? {
+        operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+        origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+        ...(who ? { who } : {})
       }
+      // stamp the date HERE, not in the relay: a retried anchor must reproduce a byte-identical
+      // body or its same-key re-PUT reads as a rewrite to the trail check (see HistorizeContextHint)
+      operation.fullBody._needsHistorizing = { context: { ...context, date: context.date ?? updatedAt.toISOString() } }
     }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines

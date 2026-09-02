@@ -126,7 +126,9 @@ const enableIntegrityUnlocked = async (dataset: DatasetInternal, who?: WhoHint):
   // anchor synchronously: enable is a rare superadmin action, and the response then reflects
   // the anchored state. On failure (S3 down) active stays true with no anchor — the check
   // reports 'unknown' and a later _fix retries (fail-loud, no compensating rollback).
-  const context: HistorizeContextHint = { operation: 'enable', origin: 'superadmin', ...(who ? { who } : {}) }
+  // date on the stamp, like every other line stamp (see HistorizeContextHint): it is what makes a
+  // replay of this stamp reproduce a byte-identical body instead of a same-key rewrite
+  const context: HistorizeContextHint = { operation: 'enable', origin: 'superadmin', date: enableDate, ...(who ? { who } : {}) }
   await anchorDataset(dataset, context)
   if (isRest) {
     // async backfill: stamp every line (hint-first) and let the relay drain; GET _integrity

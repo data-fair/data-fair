@@ -237,6 +237,60 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
   expect([...anchoredLines].sort()).toEqual(['line0', 'line1', 'line3'])
 })
 
+test('disable then re-enable leaves the trail coherent (no same-key rewrite)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, dataset.id)
+  const afterFirst = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).sort()
+
+  // the backfill re-stamps EVERY line, and an untouched line's key is derived from content
+  // (`{_i}-{sha256}`) — so it would be re-PUT at the key it already owns, with a fresh 'enable'
+  // context in the body. Two differing bodies at one key is the shadowing signature, and the
+  // whole trail used to come back 'altered' with one confirmed anomaly per line AND per .who
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')
+  // the re-enable added no line objects: the existing anchors already attest this exact content
+  expect((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).sort()).toEqual(afterFirst)
+})
+
+test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
+  await waitForFinalize(ax, dataset.id)
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, dataset.id)
+
+  // an ORGANIC write, so the stamp under test is a plain 'update' one and the enable-backfill
+  // skip cannot be what saves us — this exercises the determinism of the body itself
+  await ax.put(`/api/v1/datasets/${dataset.id}/lines/line0`, { attr1: 'z', attr2: 9 })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const line = await rawLine(ax, dataset.id, 'line0')
+  const key = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
+    .find(k => lops.parseLineRevisionKey(k)?.i === line._i)!
+  expect(key).toBeTruthy()
+  const { context } = await integrityTestStore.getRevision(key) as any
+  expect(context.date).toBeTruthy()
+
+  // replay that exact stamp, as a relay run would after writing its objects but dying before
+  // clearing the flag. context.date rides the stamp now, so the body is reproduced identically
+  // and the same-key re-PUT is a true no-op rather than a 'version-divergence' at confirmed.
+  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+    filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context } } }
+  })
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(ax, dataset.id)
+
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')
+})
+
 test('enable is refused on a rest dataset with line ownership', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const res = await ax.post('/api/v1/datasets', {

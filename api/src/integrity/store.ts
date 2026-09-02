@@ -208,6 +208,19 @@ export class IntegrityStore {
     return res.ObjectLockRetainUntilDate
   }
 
+  // Does this exact key already hold a (current) version? Used by the relay to avoid re-PUTting
+  // an anchor that already exists — a same-key write with a differing body is what the trail
+  // check reports as a rewrite, so re-anchoring unchanged content must be skipped, not repeated.
+  async objectExists (key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      return true
+    } catch (err: any) {
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) return false
+      throw err
+    }
+  }
+
   // Level-2 file payload: a sibling `{revisionKey}.file` object under the same compliance
   // lock, streamed via multipart upload (files can be many GB).
   async writePayload (key: string, body: Readable, retainUntil: Date): Promise<void> {
