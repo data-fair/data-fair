@@ -9,7 +9,6 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
-import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
@@ -214,14 +213,8 @@ export const registerMetadataRoutes = (router: Router) => {
     const sessionState = reqSessionAuthenticated(req)
 
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
-    if (!sessionState.user.adminMode) {
-      if (req.body.type === 'user' && req.body.id !== sessionState.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-      if (req.body.type === 'organization') {
-        const userOrg = sessionState.user.organizations.find(o => o.id === req.body.id)
-        if (!userOrg) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-        if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-      }
-    }
+    // (checked against all the user's memberships, the new owner is rarely the active account)
+    if (!permissions.canDoForOwner(req.body, 'datasets', 'post', sessionState, true)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
 
     if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
       const remaining = await limits.remaining(req.body)
