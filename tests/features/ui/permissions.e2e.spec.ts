@@ -176,8 +176,10 @@ test.describe('permissions editor', () => {
       // Enter email
       await page.locator('.v-dialog').getByLabel(/Email/).fill('external@test.com')
 
-      // Select read class in actions
-      const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Actions/ })
+      // Select read class in actions ('Actions détaillées' also matches /Actions/, exclude it)
+      const actionsSelect = page.locator('.v-dialog .v-select')
+        .filter({ hasText: /Actions/ })
+        .filter({ hasNotText: /Actions détaillées/ })
       await actionsSelect.click()
       await page.getByRole('option', { name: /^Lecture$/ }).click()
       await page.keyboard.press('Escape')
@@ -233,9 +235,8 @@ test.describe('permissions editor', () => {
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       // Default scope is the owner organization with no role checked.
-      // Expert mode reveals the detailed-actions select; its group subheaders
-      // must render their label, never "[object Object]".
-      await page.locator('.v-dialog').getByLabel(/Mode expert/i).click()
+      // The detailed-actions select is always visible (no expert switch);
+      // its group subheaders must render their label, never "[object Object]".
       const detailedSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Actions détaillées/ })
       await detailedSelect.click()
       const listbox = page.getByRole('listbox')
