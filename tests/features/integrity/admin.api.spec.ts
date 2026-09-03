@@ -209,6 +209,29 @@ test('internal historize fields are stripped from API responses', async () => {
   expect(body._needsHistorizing).toBeUndefined()
 })
 
+test('a breached dataset shows up in the superadmin errors view, labelled as an integrity issue', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // absent before: a healthy dataset is not an operator concern
+  const before = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
+  expect(before.results.some((r: any) => r.id === dataset.id)).toBe(false)
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  // the raw `{ status: 'error' }` this view used to query could never see it: a breached dataset
+  // keeps its real status, which is the whole point of not disturbing the pipeline
+  const after = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
+  const row = after.results.find((r: any) => r.id === dataset.id)
+  expect(row).toBeTruthy()
+  expect(row.status).toBe('finalized')
+  // and it says WHY it is listed — the last journal event describes an unrelated successful run
+  expect(row.integrityIssue).toBe('breach')
+  expect(row.integrityCheckedAt).toBeTruthy()
+})
+
 test('breached dataset appears under the status=error listing without changing its status', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)

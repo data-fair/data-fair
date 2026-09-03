@@ -73,20 +73,48 @@ export async function listDatasetsWithEsWarnings (size = 1000, skip = 0) {
 
 export async function findDatasetsErrors (reqQuery: Record<string, any>) {
   const datasets = mongo.db.collection('datasets')
-  const query = { status: 'error' }
+  // A compromised dataset deliberately keeps its real status ('finalized' — see
+  // datasets/service.ts), so a raw status match cannot see one: this is the same OR the
+  // user-facing error listing applies, so the operator view and the owner view agree on what
+  // counts as broken.
+  const query = {
+    $or: [
+      { status: 'error' },
+      { 'integrity.lastCheck.status': 'breach' },
+      { 'integrity.lastCheck.trail.status': 'altered' }
+    ]
+  }
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const aggregatePromise = datasets.aggregate([
     { $match: query },
-    { $project: { _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1 } },
+    { $project: { _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, status: 1, integrity: 1 } },
     { $sort: { updatedAt: -1 } },
     { $skip: skip },
     { $limit: size },
     { $lookup: { from: 'journals', localField: 'id', foreignField: 'id', as: 'journal' } },
-    { $unwind: '$journal' },
-    { $match: { 'journal.type': 'dataset' } },
-    { $addFields: { event: { $arrayElemAt: ['$journal.events', -1] } } },
-    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
+    // preserve: an integrity-flagged dataset must not drop out of the operator view just because
+    // it has no journal document, and its last journal event is not what put it here anyway
+    { $unwind: { path: '$journal', preserveNullAndEmptyArrays: true } },
+    { $match: { $or: [{ 'journal.type': 'dataset' }, { journal: null }] } },
+    {
+      $addFields: {
+        event: { $arrayElemAt: [{ $ifNull: ['$journal.events', []] }, -1] },
+        // what actually flagged it, when it was not the pipeline status — the last journal event
+        // would otherwise describe an unrelated (successful) run
+        integrityIssue: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$integrity.lastCheck.status', 'breach'] }, then: 'breach' },
+              { case: { $eq: ['$integrity.lastCheck.trail.status', 'altered'] }, then: 'trail-altered' }
+            ],
+            default: null
+          }
+        },
+        integrityCheckedAt: '$integrity.lastCheck.date'
+      }
+    },
+    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, status: 1, event: 1, integrityIssue: 1, integrityCheckedAt: 1 } }
   ]).toArray()
 
   const [count, results] = await Promise.all([datasets.countDocuments(query), aggregatePromise])
