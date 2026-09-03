@@ -369,6 +369,26 @@ test('a referencing revision extends the owning payload at write time; renewal o
 // checker: breach detection + fix, on top of a synchronously-enabled dataset
 // ---------------------------------------------------------------------------------------------
 
+test('an integrity alert stays private even on a public dataset', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  // a permission entry with no type/id is the anonymous (public) one — sendResourceEvent would
+  // normally derive visibility 'public' from it
+  await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  const notif = await collectNotifications()
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  const events = await notif.waitForCount(1)
+  const breach = events.find((e: any) => e.topic?.key?.includes('integrity-breach')) as any
+  expect(breach).toBeTruthy()
+  // an integrity alert describes the PROTECTION state, not the content: "this dataset was
+  // tampered with" must not be broadcast to everyone subscribed to a public dataset
+  expect(breach.visibility).toBe('private')
+})
+
 test('check is ok after enable, breach after out-of-band tamper, ok again after _fix re-anchors', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)

@@ -18,7 +18,10 @@ export const maybeAlert = async (dataset: DatasetInternal, eventKey: string, isB
   }
   const realertDays = config.integrity?.realertDays ?? 7
   if (!ops.shouldNotify(true, alerts[dedupKey], realertDays, Date.now())) return false
-  await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', eventKey)
+  // forcePrivate: these say the dataset's protection is in a bad state, not what it contains.
+  // The default visibility follows the dataset, so on a public one "was tampered with" would be
+  // broadcast to anyone subscribed — an integrity failure is for the people who can act on it.
+  await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', eventKey, { forcePrivate: true })
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { [`integrity.alerts.${dedupKey}`]: new Date().toISOString() } })
   return true
 }
