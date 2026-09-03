@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -16,6 +16,39 @@ test.describe('REST datasets - CRUD', () => {
 
   test.afterEach(async ({}, testInfo) => {
     if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('a line edit moves finalizedAt even on a dataset the finalize task cannot select', async () => {
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'finalizedAt bump', schema: [{ key: 'attr1', type: 'string' }] })
+    const datasetId = res.data.id
+    await ax.post(`/api/v1/datasets/${datasetId}/lines`, { _id: 'line0', attr1: 'a' })
+    await waitForFinalize(ax, datasetId)
+    const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(before)
+
+    // GET /lines revalidates against finalizedAt and only the finalize task writes it. On the
+    // healthy path that is fine (finalize runs within seconds, and the writer escapes via
+    // ?indexedAt=) — but 'error' accepts line writes (readWritableDataset) while matching NO
+    // finalize filter, so finalizedAt never moved again and the edit stayed behind a 304 until
+    // someone reindexed by hand. commitLines covers exactly this case.
+    await patchRawDataset(datasetId, { status: 'error' })
+    await clearDatasetCache()
+
+    // the bump is the current second TRUNCATED (never a future value — see commitLines): wait out
+    // the second `before` was stamped in, or there is legitimately nothing to advance to
+    const nextSecond = Math.floor(Date.parse(before) / 1000) * 1000 + 1000
+    if (Date.now() < nextSecond) await new Promise(resolve => setTimeout(resolve, nextSecond - Date.now()))
+
+    await ax.put(`/api/v1/datasets/${datasetId}/lines/line0`, { attr1: 'b' })
+    const after = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(
+      new Date(after).getTime() > new Date(before).getTime(),
+      `finalizedAt should have moved past ${before}, got ${after}`
+    )
+    // and never into the future, which finalize would rewind and turn into a 400 on the UI's
+    // `?finalizedAt=` queries
+    assert.ok(new Date(after).getTime() <= Date.now(), `finalizedAt must not be in the future, got ${after}`)
   })
 
   test('Create empty REST datasets', async () => {

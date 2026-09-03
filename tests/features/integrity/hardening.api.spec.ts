@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
-import { ensureIntegrityBucket, integrityTestStore, waitForFlagCleared, waitForLinesDrained } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, integrityTestStore, waitForFlagCleared, waitForLinesDrained, integrityEndpoint } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -17,6 +17,66 @@ const ownerIntegritySize = async (owner: { type: string, id: string }): Promise<
   }
   return size
 }
+
+// Store-failure injection. The store is a process-wide singleton built once from config, so these
+// repoint `integrity.s3.endpoint` at a dead port and reset it. ALWAYS restore in a finally: a
+// leaked bad endpoint would fail every later test in the file.
+const withUnreachableStore = async (ax: any, fn: () => Promise<void>) => {
+  const setEndpoint = async (value: string) => {
+    await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.s3.endpoint', value })
+    await ax.post(`${apiUrl}/api/v1/test-env/reset-integrity-store`)
+  }
+  await setEndpoint('http://127.0.0.1:9')
+  try {
+    await fn()
+  } finally {
+    await setEndpoint(integrityEndpoint)
+  }
+}
+
+const datasetLock = async (ax: any, datasetId: string) =>
+  (await ax.get(`/api/v1/datasets/${datasetId}/_diagnose`)).data.locks?.[0]
+
+test('enable against an unreachable store fails loudly, leaves no anchor, and RELEASES the lock', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+
+  await withUnreachableStore(admin, async () => {
+    // documented behaviour of enableIntegrityUnlocked: the Mongo flip lands first and the anchor
+    // write is synchronous, so a store outage leaves active:true with no revision — fail-loud,
+    // no compensating rollback, a later _fix retries.
+    await expect(admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })).rejects.toBeTruthy()
+  })
+
+  const raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  expect(raw.integrity?.active).toBe(true)
+  expect(raw.integrity?.lastRevision).toBeFalsy()
+
+  // THE point of this test: a failed admin action must not leave the per-dataset lock behind.
+  // queryNextResourceTask matches only datasets with no `locks` row, so a leaked one excludes the
+  // dataset from EVERY worker task — errorRetry included — with no way back but a manual unlock.
+  expect(await datasetLock(admin, dataset.id)).toBeFalsy()
+
+  // and the state is honestly reported rather than silently 'ok': no anchor to compare against
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('unknown')
+})
+
+test('a check against an unreachable store reports unknown and releases the lock', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForFlagCleared(dataset.id)
+
+  await withUnreachableStore(admin, async () => {
+    // a store outage proves nothing about the data: it must never read as a breach
+    await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+      .then((res: any) => expect(res.data.status).not.toBe('breach'))
+      .catch((err: any) => expect(err.status).toBeGreaterThanOrEqual(500))
+  })
+
+  expect(await datasetLock(admin, dataset.id)).toBeFalsy()
+})
 
 test('admin actions answer 409 while the per-dataset worker lock is held', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)

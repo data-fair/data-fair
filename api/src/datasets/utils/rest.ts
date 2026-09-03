@@ -477,13 +477,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
     if (historizeLines) {
-      operation.fullBody._needsHistorizing = {
-        context: historizeContext ?? {
-          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
-          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
-          ...(who ? { who } : {})
-        }
+      const context = historizeContext ?? {
+        operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+        origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+        ...(who ? { who } : {})
       }
+      // stamp the date HERE, not in the relay: a retried anchor must reproduce a byte-identical
+      // body or its same-key re-PUT reads as a rewrite to the trail check (see HistorizeContextHint)
+      operation.fullBody._needsHistorizing = { context: { ...context, date: context.date ?? updatedAt.toISOString() } }
     }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
@@ -1024,6 +1025,36 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
       count: await count(dataset)
     }
   })
+
+  // `/lines` revalidates against `finalizedAt` (cacheHeaders.resourceBased) and only `finalize`
+  // writes that field, so a freshly edited line is briefly behind a 304. That window is DELIBERATE
+  // and already covered on both sides: the write above sets `_partialRestStatus: 'indexed'`, which
+  // is exactly what the finalize task selects on (workers/tasks.ts) — it bumps `finalizedAt` within
+  // seconds — and a client that just wrote asks for its own data by a different cache key
+  // (`?indexedAt=`, set from this response in ui table/use-dataset-edition.ts, sent by
+  // composables/dataset/lines.ts instead of `?finalizedAt=`). Do NOT bump on that healthy path:
+  // it would only duplicate the pipeline's own bump and churn the public validator for nothing.
+  //
+  // The uncovered case is a dataset that accepts line writes but that the finalize task cannot
+  // select at all. readWritableDataset admits 'finalized' | 'indexed' | 'error'; finalize selects
+  // `{status:'indexed'}` and `{isRest, status:'finalized', _partialRestStatus:'indexed'}` — so
+  // 'error' is the hole, and there `finalizedAt` NEVER moves again: the edit stays invisible behind
+  // a 304 until someone reindexes by hand, and a reloaded page has no `?indexedAt=` to escape with.
+  //
+  // Written as the current second TRUNCATED, via $max. Never a future value, unlike the slug bump
+  // in utils/patch.ts which rounds UP to the next whole second: that one can afford to (a slug patch
+  // does not wake finalize), whereas a value rounded past `now` here would be rewound by a later
+  // finalize's plain-`now` $set — and a client still holding the future value sends it back as
+  // `?finalizedAt=`, tripping the hard 400 in cacheHeaders.resourceBased. $max keeps it monotonic
+  // against concurrent writers; values are always toISOString() strings, which compare
+  // lexicographically == chronologically. `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a
+  // covered change: no integrity stamp, no false breach. Only for an already finalized dataset —
+  // the field's presence doubles as a "has been finalized" flag (datasets/service.ts).
+  const finalizeWillRun = dataset.status === 'finalized' || dataset.status === 'indexed'
+  if (dataset.finalizedAt && !finalizeWillRun) {
+    await mongo.datasets.updateOne({ id: dataset.id },
+      { $max: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000).toISOString() } })
+  }
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {

@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
-import { sendDataset, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, getRawDataset, patchRawDataset, collectNotifications } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, waitForLinesDrained, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -37,11 +37,28 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
   expect(status.lastRevision.hash.metadata).toBeTruthy()
 })
 
-test('enable is rejected on a dataset that is neither a finalized file dataset nor rest', async () => {
+test('enable is rejected on a dataset that is neither a file dataset nor rest', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  // a virtual dataset is neither a file dataset (no originalFile.md5) nor rest (target 3 opened enable up to rest)
+  // a virtual dataset carries no `file` and is not rest (target 3 opened enable up to rest)
   const ds = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual-int' })).data
   await expect(admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })).rejects.toMatchObject({ status: 400 })
+})
+
+test('enable accepts a legacy file dataset whose originalFile carries no md5', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  // datasets uploaded before originalFile.md5 started being persisted have no such descriptor;
+  // the guarantee never depends on it (the anchor is sha256 of the storage bytes), so enrolling
+  // them must work — reproduce the legacy shape by dropping the field out-of-band
+  await patchRawDataset(dataset.id, { $unset: { 'originalFile.md5': '' } })
+  expect((await getRawDataset(dataset.id)).originalFile.md5).toBeUndefined()
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(status.active).toBe(true)
+  const { createHash } = await import('node:crypto')
+  const fixtureSha256 = createHash('sha256').update(fs.readFileSync('./tests/resources/datasets/dataset1.csv')).digest('hex')
+  expect(status.lastRevision.hash.file).toBe(fixtureSha256)
 })
 
 test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
@@ -190,6 +207,29 @@ test('internal historize fields are stripped from API responses', async () => {
   await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   const body = (await admin.get(`/api/v1/datasets/${dataset.id}`)).data
   expect(body._needsHistorizing).toBeUndefined()
+})
+
+test('a breached dataset shows up in the superadmin errors view, labelled as an integrity issue', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // absent before: a healthy dataset is not an operator concern
+  const before = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
+  expect(before.results.some((r: any) => r.id === dataset.id)).toBe(false)
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  // the raw `{ status: 'error' }` this view used to query could never see it: a breached dataset
+  // keeps its real status, which is the whole point of not disturbing the pipeline
+  const after = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
+  const row = after.results.find((r: any) => r.id === dataset.id)
+  expect(row).toBeTruthy()
+  expect(row.status).toBe('finalized')
+  // and it says WHY it is listed — the last journal event describes an unrelated successful run
+  expect(row.integrityIssue).toBe('breach')
+  expect(row.integrityCheckedAt).toBeTruthy()
 })
 
 test('breached dataset appears under the status=error listing without changing its status', async () => {
@@ -409,6 +449,9 @@ test('restore heals a tampered metadata field synchronously and appends a restor
 
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo tamper' })).data
   expect(res.status).toBe('ok') // synchronous: responds with the fresh verdict
+  // `restored` names the covered keys actually rewritten, so the caller can tell a real restore
+  // from a no-op instead of reporting success either way
+  expect(res.restored).toEqual(['description'])
 
   const raw = await getRawDataset(dataset.id)
   expect(raw.description ?? '').not.toBe('tampered-oob')
@@ -424,6 +467,46 @@ test('restore heals a tampered metadata field synchronously and appends a restor
   expect(keys.length).toBe(2)
   expect((await listIntegrityKeys(prefix)).filter(k => k.endsWith('.file')).length).toBe(1)
   expect(latest.payload?.file?.i).toBe(0)
+})
+
+test('a restore with nothing to restore reports it instead of claiming success', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // nothing diverges: restoring the revision that describes the live state rewrites nothing.
+  // It still anchors (a restore always leaves its own auditable revision), so the verdict alone
+  // cannot tell the caller anything happened — `restored` is what distinguishes the two.
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).data
+  expect(res.status).toBe('ok')
+  expect(res.restored).toEqual([])
+})
+
+test('a dataset revision restore on a REST dataset covers metadata only, never line content', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ds = (await admin.post('/api/v1/datasets', {
+    isRest: true, title: 'rest restore scope', schema: [{ key: 'attr1', type: 'string' }]
+  })).data
+  await admin.post(`/api/v1/datasets/${ds.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'original' }])
+  await waitForFinalize(admin, ds.id)
+  await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
+  await waitForLinesDrained(admin, ds.id)
+
+  // tamper BOTH a covered metadata field and a line, out of band
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
+  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
+    { filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-line' } } })
+
+  const res = (await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_restore`, { i: 0 })).data
+  // a dataset revision's payload is coveredMetadata() — line content lives in the per-line
+  // revisions, so this action can only ever restore metadata. The tester who expected their data
+  // to roll back reindexed afterwards and correctly saw the PREVIOUS content still in place.
+  expect(res.restored).toEqual(['description'])
+  const raw = await getRawDataset(ds.id)
+  expect(raw.description ?? '').not.toBe('tampered-oob')
+  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
+    { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  expect(line.attr1).toBe('tampered-line') // untouched: lines/_restore is the action for data
 })
 
 test('file download of a referencing revision streams the owning payload bytes', async () => {
