@@ -4,7 +4,8 @@ import { getRawDataset } from './workers.ts'
 import { apiUrl } from './axios.ts'
 import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 
-const endpoint = `http://localhost:${process.env.S3_PORT}`
+export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
+const endpoint = integrityEndpoint
 const bucket = 'data-fair-integrity'
 const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
 

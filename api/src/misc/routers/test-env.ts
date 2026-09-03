@@ -506,6 +506,18 @@ router.post('/set-env', (req, res, next) => {
 })
 
 // Set a config value (for testing)
+// Drop the memoized integrity store so a set-config change to `integrity.s3` is picked up on the
+// next use (the client is built once per process). Test-only.
+router.post('/reset-integrity-store', async (req, res, next) => {
+  try {
+    const { resetIntegrityStore } = await import('../../integrity/store-factory.ts')
+    resetIntegrityStore()
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.post('/set-config', (req, res, next) => {
   try {
     const { path, value } = req.body

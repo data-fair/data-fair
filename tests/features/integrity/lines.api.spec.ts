@@ -6,7 +6,7 @@ import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix
 } from '../../support/integrity.ts'
-import { waitForFinalize } from '../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError } from '../../support/workers.ts'
 import * as lops from '../../../api/src/integrity/lines-operations.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
@@ -182,6 +182,60 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   expect(keys.filter(k => k.endsWith('.who'))).toHaveLength(2)
   const rev = await integrityTestStore.getRevision(revisionKeys[0])
   expect((rev as any).context.operation).toBe('enable')
+})
+
+// BATCH in lines-relay.ts is 100: every other lines test uses a handful of lines, so the relay's
+// pagination loop, its straggler re-check and the skip-list filtering only ever run once. These
+// two cross that boundary — the tester's 20000-line dataset lived entirely past it.
+test('the relay drains a dataset spanning several batches', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
+  const dataset = await restDataset(ax, lines)
+  await waitForFinalize(ax, dataset.id)
+
+  await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForLinesDrained(ax, dataset.id, 60000)
+
+  const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.lines).toMatchObject({ anchored: 250, pending: 0 })
+  const anchored = new Set((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
+    .map(k => lops.parseLineRevisionKey(k)?.lineId).filter(Boolean))
+  expect(anchored.size).toBe(250)
+  // and the whole set verifies as one coherent trail, not just per-line
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  expect(check.trail?.status).toBe('ok')
+})
+
+test('a run bails out once a batch worth of lines fails, keeping what it anchored', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
+  const dataset = await restDataset(ax, lines)
+  await waitForFinalize(ax, dataset.id)
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+
+  // poison every other line: each batch then mixes healthy and failing ones, so the run both
+  // banks real progress AND accumulates failures. An unparseable _updatedAt throws in anchorLine
+  // before any S3 write. 125 poisoned is well past MAX_LINE_FAILURES (= BATCH = 100), so the run
+  // must give up partway rather than grind through all 250 — past a batch worth of failures it is
+  // the store that is down, not a line that is bad.
+  for (let i = 0; i < 250; i++) {
+    const $set: Record<string, any> = { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } }
+    if (i % 2 === 0) $set._updatedAt = 'not-a-date'
+    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: `line${i}` }, update: { $set } })
+  }
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+
+  // the run rethrows, so the dataset lands in error — but the healthy lines it reached before
+  // bailing stay anchored with their stamps cleared, never discarded wholesale
+  await waitForDatasetError(ax, dataset.id, { timeout: 60000 })
+  const anchored = [...new Set((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
+    .map(k => lops.parseLineRevisionKey(k)?.lineId).filter(Boolean))] as string[]
+  expect(anchored.length).toBeGreaterThan(0)
+  expect(anchored.length).toBeLessThan(125) // it bailed; it did not anchor every healthy line
+  // and only healthy lines are in the store — a poisoned one never reached it
+  for (const id of anchored) expect(Number(id.replace('line', '')) % 2).toBe(1)
 })
 
 test('enable is refused above the lines gate', async () => {

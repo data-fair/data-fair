@@ -426,6 +426,9 @@ test('restore heals a tampered metadata field synchronously and appends a restor
 
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo tamper' })).data
   expect(res.status).toBe('ok') // synchronous: responds with the fresh verdict
+  // `restored` names the covered keys actually rewritten, so the caller can tell a real restore
+  // from a no-op instead of reporting success either way
+  expect(res.restored).toEqual(['description'])
 
   const raw = await getRawDataset(dataset.id)
   expect(raw.description ?? '').not.toBe('tampered-oob')
@@ -441,6 +444,46 @@ test('restore heals a tampered metadata field synchronously and appends a restor
   expect(keys.length).toBe(2)
   expect((await listIntegrityKeys(prefix)).filter(k => k.endsWith('.file')).length).toBe(1)
   expect(latest.payload?.file?.i).toBe(0)
+})
+
+test('a restore with nothing to restore reports it instead of claiming success', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+
+  // nothing diverges: restoring the revision that describes the live state rewrites nothing.
+  // It still anchors (a restore always leaves its own auditable revision), so the verdict alone
+  // cannot tell the caller anything happened — `restored` is what distinguishes the two.
+  const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).data
+  expect(res.status).toBe('ok')
+  expect(res.restored).toEqual([])
+})
+
+test('a dataset revision restore on a REST dataset covers metadata only, never line content', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ds = (await admin.post('/api/v1/datasets', {
+    isRest: true, title: 'rest restore scope', schema: [{ key: 'attr1', type: 'string' }]
+  })).data
+  await admin.post(`/api/v1/datasets/${ds.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'original' }])
+  await waitForFinalize(admin, ds.id)
+  await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
+  await waitForLinesDrained(admin, ds.id)
+
+  // tamper BOTH a covered metadata field and a line, out of band
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
+  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
+    { filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-line' } } })
+
+  const res = (await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_restore`, { i: 0 })).data
+  // a dataset revision's payload is coveredMetadata() — line content lives in the per-line
+  // revisions, so this action can only ever restore metadata. The tester who expected their data
+  // to roll back reindexed afterwards and correctly saw the PREVIOUS content still in place.
+  expect(res.restored).toEqual(['description'])
+  const raw = await getRawDataset(ds.id)
+  expect(raw.description ?? '').not.toBe('tampered-oob')
+  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
+    { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  expect(line.attr1).toBe('tampered-line') // untouched: lines/_restore is the action for data
 })
 
 test('file download of a referencing revision streams the owning payload bytes', async () => {
