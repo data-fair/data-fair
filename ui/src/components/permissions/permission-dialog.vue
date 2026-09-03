@@ -276,65 +276,41 @@ const fullOpsById = computed<Record<string, { id: string, title: string, class: 
   return map
 })
 
-// --- Computed: operations for the detailed v-select ---
-// Visual-only union: applicable operations + orphan operations (stored but not
-// applicable). Entries already granted by a selected class render checked and
-// disabled (like the department picker greys out individual departments when
-// "all" is checked) without being duplicated into the stored operations array.
-type DetailedItem = { type: 'subheader', title: string } | { id: string, title: string, props?: { disabled: boolean } }
-const detailedItems = computed<DetailedItem[]>(() => {
-  const result: DetailedItem[] = []
-  const selectedClasses = new Set(permission.value?.classes ?? [])
-  const applicableIds = new Set<string>()
-  for (const ops of Object.values(restrictedPermissionClasses.value)) {
-    for (const o of ops) applicableIds.add(o.id)
+// --- Class -> operations to offer in the detailed select ---
+// The applicable operations, plus any stored operation that no longer applies to
+// this resource shape (e.g. writeData on a dataset converted from file to REST),
+// filed under its natural class so it keeps a label and stays removable. Every
+// consumer below reads classes from here, so "which class holds an operation" is
+// resolved once. Note this is not `classItems`: a class that only exists because
+// an orphan landed in it must be displayed, never offered as a grantable class.
+const opsByClass = computed<Record<string, { id: string, title: string }[]>>(() => {
+  const byClass: Record<string, { id: string, title: string }[]> = {}
+  for (const [c, ops] of Object.entries(restrictedPermissionClasses.value)) {
+    if (te('classNames.' + c)) byClass[c] = [...ops]
   }
-  const orphans = (permission.value?.operations ?? []).filter((id) => !applicableIds.has(id))
-  const orphansByClass: Record<string, string[]> = {}
-  for (const id of orphans) {
-    const c = fullOpsById.value[id]?.class ?? '_unknown'
-    ;(orphansByClass[c] ||= []).push(id)
+  const applicable = new Set(Object.values(byClass).flat().map(o => o.id))
+  for (const id of permission.value?.operations ?? []) {
+    if (applicable.has(id)) continue
+    const op = fullOpsById.value[id] ?? { id, title: id, class: '_other' }
+    ;(byClass[op.class] ||= []).push({ id: op.id, title: op.title })
   }
-  const shown = new Set<string>()
-  for (const c of Object.keys(restrictedPermissionClasses.value)) {
-    if (!te('classNames.' + c)) continue
-    shown.add(c)
-    result.push({ type: 'subheader', title: t('classNames.' + c) })
-    const disabled = selectedClasses.has(c)
-    for (const o of restrictedPermissionClasses.value[c]) {
-      result.push({ id: o.id, title: o.title, props: { disabled } })
-    }
-    for (const oid of orphansByClass[c] ?? []) {
-      result.push({ id: oid, title: fullOpsById.value[oid]?.title ?? oid, props: { disabled } })
-    }
-  }
-  // orphan groups whose class has no visible section (filtered-out class,
-  // public scope, pseudo-class or fully unknown id): extra section so the
-  // entry stays labelled and removable — unchecking it makes it disappear.
-  for (const [c, ids] of Object.entries(orphansByClass)) {
-    if (shown.has(c)) continue
-    result.push({ type: 'subheader', title: te('classNames.' + c) ? t('classNames.' + c) : t('otherActions') })
-    const disabled = selectedClasses.has(c)
-    for (const oid of ids) {
-      result.push({ id: oid, title: fullOpsById.value[oid]?.title ?? oid, props: { disabled } })
-    }
-  }
-  return result
+  return byClass
 })
 
-// Operations implied by the selected classes (applicable entries + orphans of
-// the same natural class). Shown checked but kept out of the stored array.
-const coveredOpIds = computed<Set<string>>(() => {
-  const covered = new Set<string>()
+// Operations granted by a selected class: rendered checked and disabled, the way
+// the department picker greys out single departments when "all" is checked, and
+// never written into the stored array.
+const coveredOpIds = computed<Set<string>>(() =>
+  new Set((permission.value?.classes ?? []).flatMap(c => (opsByClass.value[c] ?? []).map(o => o.id)))
+)
+
+type DetailedItem = { type: 'subheader', title: string } | { id: string, title: string, props?: { disabled: boolean } }
+const detailedItems = computed<DetailedItem[]>(() => {
   const selectedClasses = new Set(permission.value?.classes ?? [])
-  for (const c of selectedClasses) {
-    for (const o of restrictedPermissionClasses.value[c] ?? []) covered.add(o.id)
-  }
-  for (const id of permission.value?.operations ?? []) {
-    const natural = fullOpsById.value[id]?.class
-    if (natural && selectedClasses.has(natural)) covered.add(id)
-  }
-  return covered
+  return Object.entries(opsByClass.value).flatMap(([c, ops]) => [
+    { type: 'subheader' as const, title: te('classNames.' + c) ? t('classNames.' + c) : t('otherActions') },
+    ...ops.map(o => ({ id: o.id, title: o.title, props: { disabled: selectedClasses.has(c) } }))
+  ])
 })
 
 // v-model of the detailed select: the stored operations, nothing else — the
@@ -517,15 +493,8 @@ function init () {
 // one permission per selected department / partner
 function submit () {
   const p = permission.value!
-  // drop operations already granted by the selected classes (same natural
-  // class): avoids storing a right twice, once as class and once as operation
-  if (p.operations?.length && p.classes?.length) {
-    const selectedClasses = new Set(p.classes)
-    p.operations = p.operations.filter((id) => {
-      const natural = fullOpsById.value[id]?.class
-      return !(natural && selectedClasses.has(natural))
-    })
-  }
+  // never store a right twice, once as a class and once as one of its operations
+  if (p.operations?.length) p.operations = p.operations.filter(id => !coveredOpIds.value.has(id))
   const clone = () => JSON.parse(JSON.stringify(p)) as EditablePermission
   let permissions: EditablePermission[]
   if (p.type === 'organization' && orgSelectType.value === 'partner') {
