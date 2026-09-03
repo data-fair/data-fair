@@ -139,15 +139,44 @@ loader (`GET /datasets/{id}/task-progress`, shown in the right-hand navigation, 
 and the journal view).
 
 - State lives in a single `taskProgress` field on the dataset's `journals` document
-  (`{ task, progress, error? }`) — one per dataset, shared between draft and published
-  processing. Every update is also pushed on the `datasets/{id}/task-progress` websocket
-  channel (`api/src/datasets/utils/task-progress.ts`).
+  (`{ task, progress, step?, count?, error? }`) — one per dataset, shared between draft and
+  published processing. Every update is also pushed on the `datasets/{id}/task-progress`
+  websocket channel (`api/src/datasets/utils/task-progress.ts`).
 - `progress` is `-1` (indeterminate) right after a task starts, then a 0-100 percentage,
-  throttled to at most one write per 250ms.
+  throttled to at most one write per 250ms. The terminal `100` is exempt from that throttle:
+  the last `inc()` of a stream almost always lands inside the window, and no instance created
+  inside a worker calls `end()` to rewrite it afterwards. `inc()` also rounds with an epsilon,
+  because both stream callers feed it fractional increments (`100/count` per REST line,
+  `chunk/size` per file byte range) whose sum drifts just below 100 half the time.
+- `step` names a sub-phase while keeping the task named; `count` optionally carries a running
+  number of units done, and an optional percent makes the bar determinate (without one it goes
+  back to `-1`, indeterminate). A step percent is clamped monotone: the total can be a live
+  count and the bar must never recede. Repeated calls for the same step are throttled like
+  `inc()`, a step change never is. The UI label shows the percentage when determinate and the
+  translated step when one is set, both when applicable — "64% · 12 345 lignes indexées"
+  (`steps.*` in `dataset-task-progress.vue`, `{n}` interpolating `count`).
+- **`index` is driven by the documents ES acknowledged**, the one faithful measure of the work,
+  through the steps `start` (attachments sync, index creation), `indexing`, then `refresh` (the
+  ES index refresh, in `index-stream.ts`), `checkConstraints` (the unicity gate) and
+  `switchAlias`. The source-bytes ratio that used to drive the bar does not measure the work:
+  the reader runs far ahead of the indexer whenever the source fits in the pipeline buffers
+  (measured on a 737KB / 6k lines csv, all 12 read chunks land before the first of 13 bulks is
+  acknowledged), so the bar sat at 100% for the whole of the real indexing.
+- `indexing` shows a real percentage whenever the total is exactly knowable without an extra
+  read pass: a REST dataset counts its mongo collection (`_needsIndexing` filter on partial
+  updates), and a re-index of unchanged data (config change on an already finalized dataset)
+  reuses the count written by the previous run — trusted because `dataUpdatedAt` only moves
+  when a new file or attachment is loaded. A **first** indexing of a file has no exact total
+  (`dataset.count` is written by this very task, `analyze` only samples the file) but still
+  shows an approximate percentage: the total is estimated at the reader position — lines
+  parsed so far divided by the fraction of source bytes consumed, both measured at the reader
+  so the buffering bias above only makes the estimate slightly low, and it converges to the
+  exact count once the source is fully read. The estimated percentage is capped at 99 (the
+  estimate is not a claim) and skipped only when the draft limit truncates the parse.
 - On success a non-final task leaves `{ task, progress: 100 }`, immediately superseded when the
   next task starts. `finalize` — or any task flagged `finalTask`, such as the validate step of
   a draft cancelled by the worker itself — clears the field entirely.
-- **On failure the field is intentionally kept**, as `{ task, progress, error: true }`: while
+- **On failure the field is intentionally kept**, as `{ task, progress, step?, count?, error: true }`: while
   the dataset sits in `error` status the UI shows which task failed (red bar) and how far it
   got. It is overwritten as soon as reprocessing starts (constraint dropped, new file
   uploaded, retry...).

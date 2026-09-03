@@ -48,6 +48,10 @@ export default async function (dataset: DatasetInternal) {
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
+  const progress = taskProgress(dataset.id, eventsPrefix)
+  // name the phase preparing the index (attachments sync, index creation)
+  await progress.step('start')
+
   const attachmentsProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
   const newRestAttachments = dataset._newRestAttachments
@@ -89,9 +93,38 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
+  // the bar is driven by the documents ES acknowledged, not the source-bytes ratio (the reader
+  // runs far ahead of the indexer, see docs/architecture/dataset-processing.md). An exact total
+  // is only known here for a REST dataset and for a re-index of unchanged data.
+  let totalLines: number | undefined
+  if (isRestDataset(dataset)) {
+    totalLines = await restDatasetsUtils.count(dataset, partialUpdate ? { _needsIndexing: true } : {})
+  } else if (!dataset.draftReason && dataset.count !== undefined && dataset.dataUpdatedAt && dataset.finalizedAt && dataset.dataUpdatedAt <= dataset.finalizedAt) {
+    totalLines = dataset.count
+  }
+  // a first file indexing has no exact total: estimate it at the reader position (lines parsed
+  // so far / fraction of source bytes consumed), unless the draft limit truncates the parse
+  const estimateTotal = totalLines === undefined && !isRestDataset(dataset) && (!dataset.draftReason || dataset.validateDraft)
+  let sourceBytesRatio = 0
+  const indexProgress = {
+    step: (step: string, count?: number) => progress.step(step, count),
+    acknowledged: async (nbAcknowledged: number) => {
+      debugHeap('indexed ' + nbAcknowledged, indexStream)
+      let percent: number | undefined
+      if (totalLines) {
+        percent = (nbAcknowledged / totalLines) * 100
+      } else if (estimateTotal && sourceBytesRatio > 0 && indexStream.i > 0) {
+        const estimatedTotal = Math.max(indexStream.i / Math.min(sourceBytesRatio, 1), nbAcknowledged, 1)
+        // capped at 99: the estimate is not a claim, only the exact totals may show 100
+        percent = Math.min((nbAcknowledged / estimatedTotal) * 100, 99)
+      }
+      await progress.step('indexing', nbAcknowledged, percent)
+    }
+  }
+
   // only the REST path consumes the re-emitted lines (markIndexedStream); for file
   // datasets the sink is a no-op, so skip the per-line copy on the readable side
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), progress: indexProgress })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
@@ -103,18 +136,15 @@ export default async function (dataset: DatasetInternal) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(dataset.id, eventsPrefix, 100, (progress) => {
-    debugHeap('progress ' + progress, indexStream)
-  })
-  await progress.inc(0)
+  await progress.step('indexing', 0, (totalLines !== undefined || estimateTotal) ? 0 : undefined)
   debugHeap('before-stream')
   if (isRestDataset(dataset)) {
-    readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {}, progress)
+    readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {})
     writeStream = restDatasetsUtils.markIndexedStream(dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.some(e => e.active)
     if (!extended) await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
-    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft, progress)
+    readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft, estimateTotal ? { inc: (i) => { sourceBytesRatio += i / 100 } } : undefined)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)
@@ -149,6 +179,7 @@ export default async function (dataset: DatasetInternal) {
       const writer = new DiagnosticWriter(dataset)
       let unicityErrorCount = 0
       if (uniqueConstraints.length) {
+        await progress.step('checkConstraints')
         await esClient.client.indices.refresh({ index: indexName })
         for (const constraint of uniqueConstraints) {
           const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
@@ -223,6 +254,7 @@ export default async function (dataset: DatasetInternal) {
     // only in this branch: a partial REST update reuses the index, whose stamp must not change
     result._indexShape = NEW_INDEX_SHAPE
     debug('Switch alias to point to new datasets index')
+    await progress.step('switchAlias')
     await switchAlias(dataset, indexName)
     result.count = indexStream.i
   }

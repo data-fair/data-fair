@@ -22,6 +22,12 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
+  // optional task progress reporter: acknowledged() receives the running count of documents
+  // ES accepted, step() names the phases that follow the stream
+  progress?: {
+    step: (step: string, count?: number) => Promise<void>
+    acknowledged: (nbAcknowledged: number) => Promise<void>
+  }
 }
 
 // remove some properties that must not be indexed
@@ -48,6 +54,8 @@ class IndexStream extends Transform {
   lineBytesSpec: { prefixes: Set<string>, nbCols: number }
   bulkChars: number
   i: number
+  // documents ES has accepted, the numerator of the task progress bar
+  nbAcknowledged: number
   nbErroredItems: number
   erroredItems: any[]
 
@@ -62,6 +70,7 @@ class IndexStream extends Transform {
     this.items = []
     this.bulkChars = 0
     this.i = 0
+    this.nbAcknowledged = 0
     this.nbErroredItems = 0
     this.erroredItems = []
   }
@@ -116,22 +125,30 @@ class IndexStream extends Transform {
     this.transformPromise(item, encoding).then(() => cb(), cb)
   }
 
+  async finalPromise () {
+    await this.sendBulk()
+    // the last sendBulk can be a no-op (exactly-full previous batch): always publish the final count
+    await this.options.progress?.acknowledged(this.nbAcknowledged)
+    if (this.options.refresh) return
+    // the refresh alone can take minutes on a large index
+    await this.options.progress?.step('refresh')
+    try {
+      await es.client.indices.refresh({ index: this.options.indexName })
+    } catch {
+      // refresh can take some time on large datasets, try one more time
+      await new Promise(resolve => setTimeout(resolve, 30000))
+      try {
+        await es.client.indices.refresh({ index: this.options.indexName })
+      } catch (err) {
+        internalError('es-refresh-index', err)
+        throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
+      }
+    }
+  }
+
   _final (cb: (error?: Error | null) => void) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
-    this.sendBulk()
-      .then(() => {
-        if (this.options.refresh) return
-        return es.client.indices.refresh({ index: this.options.indexName }).catch(() => {
-          // refresh can take some time on large datasets, try one more time
-          return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
-            return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
-              internalError('es-refresh-index', err)
-              throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
-            })
-          })
-        })
-      })
-      .then(() => cb(), cb)
+    this.finalPromise().then(() => cb(), cb)
   }
 
   async sendBulk () {
@@ -172,6 +189,7 @@ class IndexStream extends Transform {
           }
         }
       }
+      this.nbAcknowledged += this.items.length
       this.body = []
       this.items = []
       this.bulkChars = 0
@@ -179,6 +197,8 @@ class IndexStream extends Transform {
       internalError('es-bulk-index', err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
+    // outside the try: a progress publication failure is not an indexing failure
+    await this.options.progress?.acknowledged(this.nbAcknowledged)
   }
 
   errorsSummary () {

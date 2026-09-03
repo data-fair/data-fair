@@ -4,7 +4,7 @@ import { isRestDataset } from '#shared/types-utils'
 import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
 export type ExtendedDataset = Dataset & { userPermissions: string[] }
-export type TaskProgress = { task: string, progress: number, error?: string }
+export type TaskProgress = { task: string, progress: number, step?: string, count?: number, error?: string }
 
 export type DatasetStore = ReturnType<typeof createDatasetStore>
 export const datasetStoreKey = Symbol('dataset-store')
