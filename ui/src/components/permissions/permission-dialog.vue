@@ -108,7 +108,7 @@
             >
               <template #prepend="{ isSelected }">
                 <v-checkbox-btn
-                  :model-value="isSelected || coveredOpIds.has(item.id)"
+                  :model-value="isSelected || ('id' in item && coveredOpIds.has(item.id))"
                   :ripple="false"
                   tabindex="-1"
                   aria-hidden="true"
