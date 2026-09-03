@@ -6,6 +6,7 @@ import config from '#config'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import * as ops from './operations.ts'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import * as notifications from '../misc/utils/notifications.ts'
 
 // `dedupKey` defaults to the event key; pass a distinct one when two sources share an event
@@ -18,6 +19,15 @@ export const maybeAlert = async (dataset: DatasetInternal, eventKey: string, isB
   }
   const realertDays = config.integrity?.realertDays ?? 7
   if (!ops.shouldNotify(true, alerts[dedupKey], realertDays, Date.now())) return false
+  // Operator channel, independent of any subscription. The notification below only reaches
+  // someone who subscribed to THIS dataset's topic (by slug), so on its own the guarantee is
+  // only as strong as the odds that somebody did — and nobody can subscribe to a dataset
+  // enrolled after they last looked. internalError increments df_internal_error{errorCode},
+  // the counter deployments already alert on, and logs a line with the same code.
+  // FIRST, deliberately: the operator signal must not be contingent on the events service being
+  // reachable. Same cadence as the notification (entry, then once per realertDays) because it
+  // sits past the dedup gate above.
+  internalError(eventKey, new Error(`${eventKey} on dataset ${dataset.id} (${dataset.slug ?? 'no slug'}), owner ${dataset.owner?.type}/${dataset.owner?.id}`))
   // forcePrivate: these say the dataset's protection is in a bad state, not what it contains.
   // The default visibility follows the dataset, so on a public one "was tampered with" would be
   // broadcast to anyone subscribed — an integrity failure is for the people who can act on it.
