@@ -99,11 +99,23 @@
           persistent-hint
           multiple
         >
-          <!-- collapsed view: only explicitly granted operations, class-implied
-            ones (checked + disabled in the dropdown) are conveyed by the
-            classes select above -->
-          <template #selection="{ item }">
-            <span v-if="'id' in item && !coveredOpIds.has(item.id)">{{ item.title }}</span>
+          <!-- class-implied operations render checked and disabled without being
+            stored, so the field's value stays exactly what is granted on its own -->
+          <template #item="{ props: itemProps, item }">
+            <v-list-item
+              v-bind="itemProps"
+              role="option"
+            >
+              <template #prepend="{ isSelected }">
+                <v-checkbox-btn
+                  :model-value="isSelected || coveredOpIds.has(item.id)"
+                  :ripple="false"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  @click.prevent
+                />
+              </template>
+            </v-list-item>
           </template>
         </v-select>
       </v-card-text>
@@ -140,7 +152,7 @@ fr:
   scope: Portée
   detailedActions: Actions détaillées
   detailedHint: Les actions cochées et grisées sont déjà accordées par les classes ci-dessus.
-  actions: Actions
+  actions: Classes d'actions
   department: Départements
   allDeps: Tous les départements
   noDep: Aucun département (organisation principale seulement)
@@ -171,7 +183,7 @@ en:
   scope: Scope
   detailedActions: Detailed actions
   detailedHint: Checked and greyed-out actions are already granted by the classes above.
-  actions: Actions
+  actions: Action classes
   department: Departments
   allDeps: All departments
   noDep: No department (main organization only)
@@ -325,16 +337,12 @@ const coveredOpIds = computed<Set<string>>(() => {
   return covered
 })
 
-// v-model of the detailed select: stored operations + class-implied operations
-// for display, stripped back down to explicitly granted operations on write.
+// v-model of the detailed select: the stored operations, nothing else — the
+// class-implied ones are ticked by the #item slot, never added to the value.
 const detailedModel = computed({
-  get (): string[] {
-    if (!permission.value) return []
-    return [...new Set([...(permission.value.operations ?? []), ...coveredOpIds.value])]
-  },
+  get: (): string[] => permission.value?.operations ?? [],
   set (v: string[]) {
-    if (!permission.value) return
-    permission.value.operations = v.filter((id) => !coveredOpIds.value.has(id))
+    if (permission.value) permission.value.operations = v
   }
 })
 

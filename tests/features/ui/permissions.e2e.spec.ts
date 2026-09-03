@@ -176,10 +176,8 @@ test.describe('permissions editor', () => {
       // Enter email
       await page.locator('.v-dialog').getByLabel(/Email/).fill('external@test.com')
 
-      // Select read class in actions ('Actions détaillées' also matches /Actions/, exclude it)
-      const actionsSelect = page.locator('.v-dialog .v-select')
-        .filter({ hasText: /Actions/ })
-        .filter({ hasNotText: /Actions détaillées/ })
+      // Select read class in actions
+      const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Classes d'actions/ })
       await actionsSelect.click()
       await page.getByRole('option', { name: /^Lecture$/ }).click()
       await page.keyboard.press('Escape')
