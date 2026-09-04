@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, patchRawDataset, clearDatasetCache } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const adminUser = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -58,5 +58,28 @@ test.describe('admin/elasticsearch/diagnose', () => {
     assert.equal(typeof body.datasetsWithEsWarnings.count, 'number')
 
     assert.ok(Array.isArray(body.errors))
+  })
+
+  test('lists the REST datasets whose index predates the _bytes mapping, until they are reindexed', async () => {
+    await testUser1.put('/api/v1/datasets/esdiag-legacy', {
+      isRest: true,
+      title: 'esdiag-legacy',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })
+    await testUser1.post('/api/v1/datasets/esdiag-legacy/_bulk_lines', [{ attr1: 'a' }])
+    await waitForFinalize(testUser1, 'esdiag-legacy')
+    // a file dataset never carries the marker before its first full reindex, it is not concerned
+    await sendDataset('datasets/dataset1.csv', testUser1)
+
+    const listed = async () => (await adminUser.get('/api/v1/admin/elasticsearch/diagnose')).data.restDatasetsWithoutLineBytes.results.map((d: any) => d.id)
+    assert.deepEqual(await listed(), [])
+
+    await patchRawDataset('esdiag-legacy', { $unset: { _esLineBytes: 1 } })
+    await clearDatasetCache()
+    assert.deepEqual(await listed(), ['esdiag-legacy'])
+
+    await adminUser.post('/api/v1/datasets/esdiag-legacy/_reindex')
+    await waitForFinalize(testUser1, 'esdiag-legacy')
+    assert.deepEqual(await listed(), [])
   })
 })

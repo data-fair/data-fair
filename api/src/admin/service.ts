@@ -71,6 +71,24 @@ export async function listDatasetsWithEsWarnings (size = 1000, skip = 0) {
   return { count, results }
 }
 
+// REST datasets whose current index was built before `_bytes` was mapped (no `_esLineBytes`
+// marker): single-line writes into it are refused (see docs/architecture/storage-accounting.md)
+// until an operator reindexes it. File datasets rebuild a fresh index on every processing and
+// virtual datasets have none, so only REST datasets can be stuck on a legacy index.
+export async function listRestDatasetsWithoutLineBytes (size = 1000, skip = 0) {
+  const datasets = mongo.db.collection('datasets')
+  const query = { isRest: true, _esLineBytes: { $ne: true } }
+  const resultsPromise = datasets
+    .find(query)
+    .sort({ updatedAt: -1 })
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, owner: 1, status: 1, count: 1, updatedAt: 1, dataUpdatedAt: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
+  return { count, results }
+}
+
 export async function findDatasetsErrors (reqQuery: Record<string, any>) {
   const datasets = mongo.db.collection('datasets')
   // A compromised dataset deliberately keeps its real status ('finalized' — see

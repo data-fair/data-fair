@@ -22,6 +22,10 @@ interface IndexStreamOptions {
   // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
   // re-emit avoids a full per-line object copy.
   reemit?: boolean
+  // stamp the CSV-equivalent `_bytes` size on inserted lines. Only an index built by code that
+  // maps the field accepts it (strict mapping): a fresh index always does, an existing one does
+  // iff the dataset carries `_esLineBytes` (see docs/architecture/storage-accounting.md)
+  stampBytes: boolean
 }
 
 // remove some properties that must not be indexed
@@ -48,8 +52,13 @@ class IndexStream extends Transform {
   lineBytesSpec: { prefixes: Set<string>, nbCols: number }
   bulkChars: number
   i: number
+  // warnings from applyCalculations AND items rejected by the bulk response (errorsSummary)
   nbErroredItems: number
   erroredItems: any[]
+  // items rejected by the bulk response only (e.g. strict_dynamic_mapping_exception): these lines
+  // are NOT in the index, unlike the ones that merely carry a calculation warning
+  nbRejectedItems: number
+  firstRejectionReason: string | null
 
   constructor (options: IndexStreamOptions) {
     super({ objectMode: true })
@@ -64,6 +73,8 @@ class IndexStream extends Transform {
     this.i = 0
     this.nbErroredItems = 0
     this.erroredItems = []
+    this.nbRejectedItems = 0
+    this.firstRejectionReason = null
   }
 
   async transformPromise (item: any, encoding?: BufferEncoding) {
@@ -89,7 +100,7 @@ class IndexStream extends Transform {
       warning = await this.applyCalculations(item)
       // after applyCalculations so extension/calculated fields are present; calculated
       // fields and _file_raw are excluded by the spec (not CSV-export columns)
-      item._bytes = lineBytes(item, this.lineBytesSpec)
+      if (this.options.stampBytes) item._bytes = lineBytes(item, this.lineBytesSpec)
       this.body.push(JSON.stringify(params))
       const itemStr = JSON.stringify(item)
       this.body.push(itemStr)
@@ -147,13 +158,7 @@ class IndexStream extends Transform {
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
       const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
-      if (this.options.reemit) {
-        for (let i = 0; i < res.items.length; i++) {
-          const item = res.items[i]
-          const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
-          this.push({ _id, ...this.items[i] })
-        }
-      }
+      const rejected = new Set<number>()
       if (res.errors) {
         for (let i = 0; i < res.items.length; i++) {
           const item = {
@@ -167,9 +172,22 @@ class IndexStream extends Transform {
           if (item.error.type === 'cluster_block_exception') {
             throw new Error(item.error.type ? `${item.error.type} - ${item.error.reason}` : item.error)
           } else {
+            rejected.add(i)
             this.nbErroredItems += 1
+            this.nbRejectedItems += 1
+            this.firstRejectionReason = this.firstRejectionReason ?? item.error.caused_by?.reason ?? item.error.reason ?? item.error.type
             if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
           }
+        }
+      }
+      if (this.options.reemit) {
+        for (let i = 0; i < res.items.length; i++) {
+          // a rejected line is not in the index: do not re-emit it, so that markIndexedStream
+          // leaves its _needsIndexing flag and a later pass retries it instead of losing it
+          if (rejected.has(i)) continue
+          const item = res.items[i]
+          const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
+          this.push({ _id, ...this.items[i] })
         }
       }
       this.body = []

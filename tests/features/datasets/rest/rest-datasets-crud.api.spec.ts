@@ -433,6 +433,11 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
     const resPost = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' })
     assert.equal(resPost.data._warning, 'ne doit pas contenir de propriétés additionnelles (attr3)')
+    // the extra property is dropped (the strict index would reject the whole line), the line is indexed
+    assert.equal(resPost.data.attr3, undefined)
+    const resLines = await ax.get('/api/v1/datasets/rest4/lines')
+    assert.equal(resLines.data.total, 1)
+    assert.equal(resLines.data.results[0].attr1, 'test')
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },

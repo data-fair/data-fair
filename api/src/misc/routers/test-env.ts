@@ -346,6 +346,38 @@ router.post('/es-divert-alias/:datasetId', async (req, res, next) => {
   }
 })
 
+// Rebuild a dataset's index WITHOUT one of its mapped fields and point the alias at it: models
+// an index created by an older release, before that field was added to buildIndexMappings
+// (strict mapping -> a bulk item carrying the field is rejected). The orphan copy is cleaned by
+// nothing: test-env only.
+router.post('/es-strip-mapping-field/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const field: string = req.body.field
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    const current = Object.keys(await es.client.indices.getAlias({ name: alias }))[0]
+    const definition = (await es.client.indices.get({ index: current }))[current]
+    const settings = { ...definition.settings }
+    settings.index = { ...settings.index }
+    for (const key of ['uuid', 'provided_name', 'creation_date', 'version']) delete settings.index[key]
+    const mappings = definition.mappings ?? {}
+    delete mappings.properties?.[field]
+    const stripped = `${current}-stripped-${Date.now()}`
+    await es.client.indices.create({ index: stripped, body: { settings, mappings } })
+    await es.client.reindex({
+      body: { source: { index: current }, dest: { index: stripped }, script: { source: 'ctx._source.remove(params.field)', params: { field } } },
+      refresh: true,
+      wait_for_completion: true
+    })
+    await es.client.indices.updateAliases({ body: { actions: [{ remove: { alias, index: current } }, { add: { alias, index: stripped } }] } })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.
