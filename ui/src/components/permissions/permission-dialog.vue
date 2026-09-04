@@ -89,21 +89,35 @@
           multiple
         />
 
-        <v-switch
-          v-model="expertMode"
-          color="primary"
-          :label="t('expertMode')"
-        />
-
         <v-select
-          v-if="expertMode"
-          v-model="permission.operations"
-          :items="operations"
+          v-model="detailedModel"
+          :items="detailedItems"
           item-title="title"
           item-value="id"
           :label="t('detailedActions')"
+          :hint="t('detailedHint')"
+          persistent-hint
           multiple
-        />
+        >
+          <!-- class-implied operations render checked and disabled without being
+            stored, so the field's value stays exactly what is granted on its own -->
+          <template #item="{ props: itemProps, item }">
+            <v-list-item
+              v-bind="itemProps"
+              role="option"
+            >
+              <template #prepend="{ isSelected }">
+                <v-checkbox-btn
+                  :model-value="isSelected || ('id' in item && coveredOpIds.has(item.id))"
+                  :ripple="false"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  @click.prevent
+                />
+              </template>
+            </v-list-item>
+          </template>
+        </v-select>
       </v-card-text>
 
       <v-card-actions>
@@ -137,8 +151,8 @@ fr:
   cancel: Annuler
   scope: Portée
   detailedActions: Actions détaillées
-  expertMode: Mode expert
-  actions: Actions
+  detailedHint: Les actions cochées et grisées sont déjà accordées par les classes ci-dessus.
+  actions: Classes d'actions
   department: Départements
   allDeps: Tous les départements
   noDep: Aucun département (organisation principale seulement)
@@ -149,6 +163,7 @@ fr:
   amongPartners: Parmi les organisations partenaires
   partner: Partenaires
   ownerOrg: Organisation propriétaire
+  otherActions: Autres actions
   classNames:
     list: Lister
     read: Lecture
@@ -167,8 +182,8 @@ en:
   cancel: Cancel
   scope: Scope
   detailedActions: Detailed actions
-  expertMode: Expert mode
-  actions: Actions
+  detailedHint: Checked and greyed-out actions are already granted by the classes above.
+  actions: Action classes
   department: Departments
   allDeps: All departments
   noDep: No department (main organization only)
@@ -179,6 +194,7 @@ en:
   amongPartners: Among partner organizations
   partner: Partners
   ownerOrg: Owner organization
+  otherActions: Other actions
   classNames:
     list: List
     read: Read
@@ -192,6 +208,7 @@ en:
 <script setup lang="ts">
 import MemberSelect from './member-select.vue'
 import type { Permission } from '#api/types'
+import { operations as allOperations } from '@data-fair/data-fair-shared/permissions/operations.ts'
 
 // Mutable working copy — allows null for fields being cleared in the UI before save
 type EditablePermission = {
@@ -209,6 +226,7 @@ type EditablePermission = {
 const props = defineProps<{
   modelValue?: Permission
   permissionClasses: Record<string, { id: string, title: string }[]>
+  resourceType: 'datasets' | 'applications'
   owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id: string, name: string }[] }
 }>()
 
@@ -216,11 +234,10 @@ const emit = defineEmits<{
   'update:modelValue': [value: Permission[]]
 }>()
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 
 const showDialog = ref(false)
 const permission = ref<EditablePermission | null>(null)
-const expertMode = ref(false)
 // multi-selects producing one permission per selected department / partner
 const departments = ref<(string | null)[]>([null])
 const partners = ref<{ id: string, name: string }[]>([])
@@ -245,15 +262,64 @@ const classItems = computed(() => {
     .map(c => ({ class: c, title: t('classNames.' + c) }))
 })
 
-// --- Computed: operations for expert mode v-select ---
-const operations = computed(() => {
-  const result: ({ type: 'subheader', title: string } | { id: string, title: string })[] = []
-  for (const c of Object.keys(restrictedPermissionClasses.value)) {
-    if (!te('classNames.' + c)) continue
-    result.push({ type: 'subheader', title: t('classNames.' + c) })
-    result.push(...restrictedPermissionClasses.value[c])
+// --- Full operation lookup (all descriptors, any applicability) ---
+// Resolves the proper label + natural class of stored operations that are not
+// part of the applicable choices (e.g. writeData kept on a dataset converted
+// from file to REST) so they render with a label instead of a raw id.
+const fullOpsById = computed<Record<string, { id: string, title: string, class: string }>>(() => {
+  const map: Record<string, { id: string, title: string, class: string }> = {}
+  for (const op of allOperations) {
+    if (op.resourceType !== props.resourceType) continue
+    if (map[op.id]) continue
+    map[op.id] = { id: op.id, title: op.title ? (op.title[locale.value as 'fr' | 'en'] ?? op.id) : op.id, class: op.class }
   }
-  return result
+  return map
+})
+
+// --- Class -> operations to offer in the detailed select ---
+// The applicable operations, plus any stored operation that no longer applies to
+// this resource shape (e.g. writeData on a dataset converted from file to REST),
+// filed under its natural class so it keeps a label and stays removable. Every
+// consumer below reads classes from here, so "which class holds an operation" is
+// resolved once. Note this is not `classItems`: a class that only exists because
+// an orphan landed in it must be displayed, never offered as a grantable class.
+const opsByClass = computed<Record<string, { id: string, title: string }[]>>(() => {
+  const byClass: Record<string, { id: string, title: string }[]> = {}
+  for (const [c, ops] of Object.entries(restrictedPermissionClasses.value)) {
+    if (te('classNames.' + c)) byClass[c] = [...ops]
+  }
+  const applicable = new Set(Object.values(byClass).flat().map(o => o.id))
+  for (const id of permission.value?.operations ?? []) {
+    if (applicable.has(id)) continue
+    const op = fullOpsById.value[id] ?? { id, title: id, class: '_other' }
+    ;(byClass[op.class] ||= []).push({ id: op.id, title: op.title })
+  }
+  return byClass
+})
+
+// Operations granted by a selected class: rendered checked and disabled, the way
+// the department picker greys out single departments when "all" is checked, and
+// never written into the stored array.
+const coveredOpIds = computed<Set<string>>(() =>
+  new Set((permission.value?.classes ?? []).flatMap(c => (opsByClass.value[c] ?? []).map(o => o.id)))
+)
+
+type DetailedItem = { type: 'subheader', title: string } | { id: string, title: string, props?: { disabled: boolean } }
+const detailedItems = computed<DetailedItem[]>(() => {
+  const selectedClasses = new Set(permission.value?.classes ?? [])
+  return Object.entries(opsByClass.value).flatMap(([c, ops]) => [
+    { type: 'subheader' as const, title: te('classNames.' + c) ? t('classNames.' + c) : t('otherActions') },
+    ...ops.map(o => ({ id: o.id, title: o.title, props: { disabled: selectedClasses.has(c) } }))
+  ])
+})
+
+// v-model of the detailed select: the stored operations, nothing else — the
+// class-implied ones are ticked by the #item slot, never added to the value.
+const detailedModel = computed({
+  get: (): string[] => permission.value?.operations ?? [],
+  set (v: string[]) {
+    if (permission.value) permission.value.operations = v
+  }
 })
 
 // --- Computed: permission types ---
@@ -404,7 +470,6 @@ function init () {
   }
   if (props.modelValue) {
     permission.value = JSON.parse(JSON.stringify(props.modelValue))
-    if (permission.value!.operations && permission.value!.operations.length) expertMode.value = true
     permission.value!.type = permission.value!.type || null
     permission.value!.id = permission.value!.id || null
     permission.value!.department = permission.value!.department || null
@@ -428,6 +493,8 @@ function init () {
 // one permission per selected department / partner
 function submit () {
   const p = permission.value!
+  // never store a right twice, once as a class and once as one of its operations
+  if (p.operations?.length) p.operations = p.operations.filter(id => !coveredOpIds.value.has(id))
   const clone = () => JSON.parse(JSON.stringify(p)) as EditablePermission
   let permissions: EditablePermission[]
   if (p.type === 'organization' && orgSelectType.value === 'partner') {

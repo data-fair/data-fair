@@ -86,6 +86,7 @@
     <permission-dialog
       v-if="!disabled"
       :permission-classes="permissionClasses"
+      :resource-type="resourceType"
       :owner="ownerDetails"
       @update:model-value="addPermission"
     >
@@ -166,6 +167,7 @@
               v-if="!disabled"
               :model-value="item"
               :permission-classes="permissionClasses"
+              :resource-type="resourceType"
               :owner="ownerDetails"
               @update:model-value="p => editPermission(index, p)"
             >
