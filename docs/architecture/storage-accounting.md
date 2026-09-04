@@ -50,9 +50,23 @@ lineBytes({ name: 'abc', nb: 12, _ext_geo: { lat: 1.5, lon: 48 }, _i: 4, _update
 the plain-insert branch — not the `updateMode` `doc`-patch branch, not the delete branch) computes
 `item._bytes = lineBytes(item, this.lineBytesSpec)` **after** `applyCalculations(item)`, so
 extension/calculated fields already present at insert time are reflected. This path is exercised
-both by the batch reindex worker and by `commitLines` (`api/src/datasets/utils/rest.ts` ≈ line
-996, the real-time single-line REST write-then-read-after-write path) — any line that is
-(re-)written to Elasticsearch gets a fresh `_bytes`.
+both by the batch reindex worker and by `commitLines` (`api/src/datasets/utils/rest.ts`, the
+real-time single-line REST write-then-read-after-write path).
+
+**Only into an index that maps it** (`stampBytes` option of `IndexStream`, mandatory so every
+caller decides). Index mappings are `dynamic: strict`: a document carrying `_bytes` is rejected
+whole by an index built before the field existed. A full reindex always targets a fresh index and
+stamps; a partial REST sync (worker `_needsIndexing` pass, `commitLines`) targets the existing
+index and stamps **iff the dataset is marked `_esLineBytes`** — exactly the datasets whose current
+index was built by stamping code (see below), and the only ones whose sum is read anyway. This
+gating is what 6.18.0 lacked: it stamped unconditionally, every single-line write into a
+pre-6.18.0 REST index was rejected, and the bulk stream then swallowed the rejection (HTTP 200,
+line marked as indexed in mongo, stale or missing in `/lines`; the lines lost that way are only
+recovered by a full reindex of the dataset, which is the manual remedy chosen over an upgrade
+script — the Elasticsearch admin page lists the REST datasets still on such an index, section
+`restDatasetsWithoutLineBytes` of `/api/v1/admin/elasticsearch/diagnose`, with a reindex button). `IndexStream` no longer re-emits a rejected line — its `_needsIndexing` flag survives and
+`commitLines` answers 500 + journal error instead of 200 (see
+`tests/features/datasets/rest/rest-datasets-legacy-index.api.spec.ts`).
 
 `_bytes` is mapped in `buildIndexMappings` (`operations.ts` ≈ line 542) as
 `{ type: 'integer', index: false }` — aggregatable via doc_values, never searched.
@@ -106,7 +120,7 @@ Summing `_bytes` is only trustworthy once **every** doc in the index carries it 
 guaranteed right after a full index rebuild done by code that stamps it. So the CSV-equivalent
 metric is adopted per-dataset, not globally:
 
-- `api/src/workers/batch-processor/index-lines.ts` sets `result._esLineBytes = true` (≈ line 221)
+- `api/src/workers/batch-processor/index-lines.ts` sets `result._esLineBytes = true`
   **only** in the full-reindex branch — i.e. when `partialUpdate` (`dataset._partialRestStatus ===
   'updated' | 'extended'`, ≈ line 48) is false, right after the whole index has been rebuilt
   through `IndexStream` and the alias switched. The REST partial-update branch (existing index,
@@ -135,9 +149,9 @@ metric is adopted per-dataset, not globally:
   delay, not a correctness bug.
 - **Rolling-deploy caveat, marker-set-at-creation windows**: some paths set `_esLineBytes` directly
   instead of waiting for a stamping full reindex, because the index is trivially fully stamped at
-  the moment the marker is set (e.g. `api/src/datasets/routes/write.ts` ≈ line 99 sets it on REST
-  dataset creation, right after the API pod builds the index empty — vacuously true with zero
-  docs). During a rollout this marker can outlive its invariant: a REST dataset created by a new
+  the moment the marker is set (e.g. `api/src/datasets/routes/write.ts` sets it on REST dataset
+  creation, and `deleteAllLines` in `api/src/datasets/utils/rest.ts` on its fresh index, right after
+  the API pod builds the index empty — vacuously true with zero docs). During a rollout this marker can outlive its invariant: a REST dataset created by a new
   API pod gets `_esLineBytes = true` on its empty index, but the *first* batch of lines is then
   indexed by an old worker replica (`api/src/workers/batch-processor/index-lines.ts`) that doesn't
   stamp `_bytes`; symmetrically, a draft fully rebuilt by an old worker and then validated
@@ -149,6 +163,10 @@ metric is adopted per-dataset, not globally:
   forever to guard an ephemeral deploy window. The exposure is bounded to datasets whose index
   was (re)built during the deploy itself, and any full reindex of an affected dataset converges
   and repairs it, since a full reindex re-stamps every doc through the same `IndexStream` path.
+  Since the stamp is gated on the marker, the same window has a second, louder face: an index
+  rebuilt by an old worker under a marker that says it's stamped does not *map* `_bytes`, so
+  single-line writes into it are rejected (500 + journal error, line kept flagged) until that
+  full reindex.
 - Virtual datasets never take this path (`storage()` guards `!isVirtualDataset(dataset)`): they
   have no index of their own lines, so their `indexed` size stays the existing
   proportional-to-descendants `master-data` computation.
