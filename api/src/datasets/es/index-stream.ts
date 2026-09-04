@@ -8,7 +8,7 @@ import debugLib from 'debug'
 import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { Dataset } from '#types'
-import { lineBytes, lineBytesSpec } from './operations.ts'
+import { lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -49,7 +49,7 @@ class IndexStream extends Transform {
   // error reporting and (REST only) re-emitting on the readable side
   items: any[]
   applyCalculations: (item: any) => Promise<string | null>
-  lineBytesSpec: { prefixes: Set<string>, nbCols: number }
+  lineBytesSpec: LineBytesSpec
   bulkChars: number
   i: number
   // warnings from applyCalculations AND items rejected by the bulk response (errorsSummary)
@@ -66,7 +66,7 @@ class IndexStream extends Transform {
     this.options.refresh = this.options.refresh || false
     this.options.reemit = this.options.reemit ?? true
     this.applyCalculations = extensionsUtils.prepareCalculations(options.dataset)
-    this.lineBytesSpec = lineBytesSpec(options.dataset.schema ?? [])
+    this.lineBytesSpec = lineBytesSpec(options.dataset)
     this.body = []
     this.items = []
     this.bulkChars = 0

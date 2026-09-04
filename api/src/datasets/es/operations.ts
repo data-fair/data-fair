@@ -1,5 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
+import { getCsvSerializer } from '../utils/csv-jit.ts'
+import { getFlattenNoCache } from '../utils/flatten.ts'
 import capabilities from '../../../contract/capabilities.js'
 
 export interface ExtractedError {
@@ -810,34 +812,26 @@ export const buildIndexMappings = (
 }
 
 // CSV-equivalent size accounting for the indexed_bytes metric.
-// Counted columns are exactly the ones the CSV export emits (outputs.ts): schema
-// properties without x-calculated. Extension columns are nested objects in the
-// indexed item, so counting walks the top-level key segment of each property.
-export const lineBytesSpec = (schema: any[]): { prefixes: Set<string>, nbCols: number } => {
-  const counted = (schema ?? []).filter(p => !p['x-calculated'])
-  return {
-    prefixes: new Set(counted.map(p => p.key.split('.')[0])),
-    nbCols: counted.length
-  }
+// `_bytes` is defined as the byte length of the row the default CSV export (`/lines?format=csv`,
+// no select, ',' delimiter — compileForRequest in outputs.ts) emits for the line, header and BOM
+// excluded. It is computed with the export's own serializer + flatten so the two cannot drift:
+// strings quoted (embedded quotes doubled), booleans as 1/0, separator arrays joined, extension
+// sub-objects flattened, calculated columns excluded. Compiled without the memo caches: the stamp
+// runs on the schema being indexed, which may differ from the one cached under the same
+// (id, finalizedAt) key by a previous read or reindex.
+export interface LineBytesSpec { row: (line: Record<string, any>) => string, flatten: (line: Record<string, any>) => Record<string, any> }
+
+export const lineBytesSpec = (dataset: { id: string, finalizedAt?: string, schema?: any[] }): LineBytesSpec => {
+  const schema = dataset.schema ?? []
+  const selectKeys = schema.filter(p => !p['x-calculated']).map(p => p.key)
+  const { row } = getCsvSerializer({ dataset: { ...dataset, schema }, selectKeys, header: false, bom: false, cache: false })
+  return { row, flatten: getFlattenNoCache({ ...dataset, schema }) }
 }
 
-const valueBytes = (value: any): number => {
-  if (value === null || value === undefined) return 0
-  if (typeof value === 'string') return Buffer.byteLength(value)
-  if (typeof value === 'object') {
-    let sum = 0
-    for (const v of Object.values(value)) sum += valueBytes(v)
-    return sum
-  }
-  return Buffer.byteLength(String(value))
-}
-
-// per line: value bytes + 1 byte per counted column (separator / newline),
-// mirroring the size of a CSV export of the same data
-export const lineBytes = (item: Record<string, any>, spec: { prefixes: Set<string>, nbCols: number }): number => {
-  let sum = spec.nbCols
-  for (const prefix of spec.prefixes) sum += valueBytes(item[prefix])
-  return sum
+// the flatten helper mutates its input (moves nested extension values to flat keys, joins separator
+// arrays), so it runs on a shallow copy and the indexed line is left untouched
+export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): number => {
+  return Buffer.byteLength(spec.row(spec.flatten({ ...item })))
 }
 
 /**

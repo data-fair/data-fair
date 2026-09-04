@@ -22,28 +22,41 @@ Both live on `Dataset.storage` (`{ size, indexed: { size, parts }, attachments, 
 
 ## The CSV-equivalent formula
 
-Counted columns are **exactly the columns a CSV export would emit** — the same rule as
-`compileForRequest` in `api/src/datasets/utils/outputs.ts:34`: every schema property without
-`x-calculated` (so `_i`, `_updatedAt`, `_geopoint`, `_rand`, `_file_raw`, and friends are
-excluded; extension output columns are included, since they aren't calculated).
+`_bytes` is **defined as the byte length of the row the default CSV export emits for the line** —
+`/lines?format=csv` with no `select`, `,` delimiter, `\n` newline — header row and BOM excluded.
+So for a whole dataset, `indexed_bytes` = size of the full CSV download minus its 3-byte BOM and
+its header line (`tests/features/datasets/storage-line-bytes.api.spec.ts` asserts exactly that
+against a real export).
 
-`api/src/datasets/es/operations.ts`:
+Rather than re-implementing the serializer's rules, the stamp **runs the export's own code**
+(`api/src/datasets/es/operations.ts`):
 
-- `lineBytesSpec(schema)` — a pure, per-dataset precomputation: `nbCols` (count of counted
-  columns) and `prefixes` (their top-level key segment — extension columns are nested objects
-  like `_ext_geo.lat`/`_ext_geo.lon`, so counting walks by the `_ext_geo` prefix, reading the
-  whole sub-object once).
-- `lineBytes(item, spec)` — per line: `spec.nbCols` (1 byte per counted column, standing in for
-  the CSV separator/newline) **+** the UTF-8 byte length of each counted value
-  (`Buffer.byteLength`, objects summed recursively). Missing/null values contribute 0 bytes but
-  still keep their separator byte.
+- `lineBytesSpec(dataset)` — once per `IndexStream`: compiles the export's row serializer
+  (`getCsvSerializer` from `csv-jit.ts`, same column selection as `compileForRequest` in
+  `outputs.ts`: every schema property without `x-calculated`, so `_i`, `_updatedAt`, `_geopoint`,
+  `_rand`, `_attachment_url`, `_ext_x.error` and friends are excluded; extension output columns are
+  included) with `header: false, bom: false`, plus the export's flatten helper (`getFlattenNoCache`,
+  which moves nested extension values such as `_ext_geo.lat` to flat keys and joins `separator`
+  arrays). Both are compiled **without their memo caches**: those are keyed on
+  `(id, finalizedAt)`, and at index time the schema being indexed can differ from the one a
+  previous read or reindex cached under the same key.
+- `lineBytes(item, spec)` — per line: `Buffer.byteLength(spec.row(spec.flatten({ ...item })))`.
+  The shallow copy matters: flatten mutates its input, and the item goes on to Elasticsearch as-is.
+
+The consequences of "same serializer" are exactly the CSV conventions: strings are always quoted
+(`+2` bytes) with embedded `"` doubled, booleans are `1`/`0`, numbers are `String(v)`, null or
+missing values are empty cells, multi-valued columns are joined with their separator then quoted,
+object values are `JSON.stringify`ed then quoted if needed, `\0` characters are stripped, and each
+line ends with one newline.
 
 ```
-lineBytes({ name: 'abc', nb: 12, _ext_geo: { lat: 1.5, lon: 48 }, _i: 4, _updatedAt: '…' })
-  = 'abc'(3) + '12'(2) + '1.5'(3) + '48'(2) + 4 separators = 14
+schema: name (string), nb (integer), flag (boolean), tags (string, separator ';'),
+        _ext_geo.lat / _ext_geo.lon (number), _i / _updatedAt / _ext_geo.error (x-calculated)
+lineBytes({ name: 'a"b', nb: 12, flag: true, tags: ['x', 'y'], _ext_geo: { lat: 1.5, lon: 48, error: 'boom' }, _i: 4 })
+  = byteLength('"a""b",12,1,"x;y",1.5,48\n') = 25
 ```
 
-(worked examples, including multi-byte UTF-8 and the calculated-column exclusion, in
+(worked examples, including multi-byte UTF-8 and the no-mutation guarantee, in
 `tests/features/datasets/es/line-bytes.unit.spec.ts`).
 
 **Where it's stamped.** `api/src/datasets/es/index-stream.ts` (`IndexStream.transformPromise`,

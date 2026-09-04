@@ -1,46 +1,63 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { lineBytes, lineBytesSpec } from '../../../../api/src/datasets/es/operations.ts'
+import { getCsvSerializer } from '../../../../api/src/datasets/utils/csv-jit.ts'
+import { getFlattenNoCache } from '../../../../api/src/datasets/utils/flatten.ts'
+
+// `_bytes` is defined as the byte length of the row the default CSV export (`/lines?format=csv`,
+// no select, ',' delimiter) would emit for the line — header and BOM excluded.
 
 const schema = [
-  { key: 'name' },
-  { key: 'nb' },
-  { key: '_i', 'x-calculated': true },
-  { key: '_updatedAt', 'x-calculated': true },
-  { key: '_ext_geo.lat', 'x-extension': 'geo/coords' },
-  { key: '_ext_geo.lon', 'x-extension': 'geo/coords' }
+  { key: 'name', type: 'string' },
+  { key: 'nb', type: 'integer' },
+  { key: 'flag', type: 'boolean' },
+  { key: 'tags', type: 'string', separator: ';' },
+  { key: '_i', type: 'integer', 'x-calculated': true },
+  { key: '_updatedAt', type: 'string', 'x-calculated': true },
+  { key: '_ext_geo.lat', type: 'number', 'x-extension': 'geo/coords' },
+  { key: '_ext_geo.lon', type: 'number', 'x-extension': 'geo/coords' },
+  { key: '_ext_geo.error', type: 'string', 'x-extension': 'geo/coords', 'x-calculated': true }
 ]
+const dataset = { id: 'ds1', finalizedAt: '2026-01-01T00:00:00Z', schema }
 
 test.describe('lineBytes', () => {
-  test('counts non-calculated schema columns', () => {
-    const spec = lineBytesSpec(schema)
-    // counted props: name, nb, _ext_geo.lat, _ext_geo.lon -> nbCols = 4
-    assert.equal(spec.nbCols, 4)
-    // top-level prefixes: name, nb, _ext_geo
-    assert.deepEqual([...spec.prefixes].sort(), ['_ext_geo', 'name', 'nb'])
+  test('equals the byte length of the default CSV export row', () => {
+    const spec = lineBytesSpec(dataset)
+    // string quoted, boolean as 1/0, separator array joined then quoted, nested extension flattened,
+    // calculated columns (_i, _updatedAt, _ext_geo.error) excluded
+    const item = { name: 'a"b', nb: 12, flag: true, tags: ['x', 'y'], _ext_geo: { lat: 1.5, lon: 48, error: 'boom' }, _i: 4, _updatedAt: '2026-01-01' }
+    // "a""b",12,1,"x;y",1.5,48\n
+    assert.equal(lineBytes(item, spec), 25)
+
+    // same figure as what the /lines csv serializer produces for the flattened line
+    const selectKeys = schema.filter(p => !p['x-calculated']).map(p => p.key)
+    const { row } = getCsvSerializer({ dataset, selectKeys, header: false, bom: false })
+    const flatten = getFlattenNoCache(dataset)
+    assert.equal(lineBytes(item, spec), Buffer.byteLength(row(flatten({ ...item }))))
   })
 
-  test('sums stringified value bytes plus one byte per column', () => {
-    const spec = lineBytesSpec(schema)
-    const item = { name: 'abc', nb: 12, _ext_geo: { lat: 1.5, lon: 48 }, _i: 4, _updatedAt: '2026-01-01' }
-    // 'abc'(3) + '12'(2) + '1.5'(3) + '48'(2) + 4 separators = 14
-    assert.equal(lineBytes(item, spec), 14)
+  test('does not mutate the indexed line', () => {
+    const spec = lineBytesSpec(dataset)
+    const item = { name: 'abc', tags: ['x', 'y'], _ext_geo: { lat: 1.5, lon: 48 } }
+    lineBytes(item, spec)
+    assert.deepEqual(item, { name: 'abc', tags: ['x', 'y'], _ext_geo: { lat: 1.5, lon: 48 } })
   })
 
   test('multi-byte UTF-8 strings are measured in bytes', () => {
-    const spec = lineBytesSpec([{ key: 'name' }])
-    // 'é' is 2 bytes in UTF-8 -> 2 + 1 separator = 3
-    assert.equal(lineBytes({ name: 'é' }, spec), 3)
+    const spec = lineBytesSpec({ id: 'ds2', schema: [{ key: 'name', type: 'string' }] })
+    // "é"\n -> 2 quotes + 2 bytes + newline
+    assert.equal(lineBytes({ name: 'é' }, spec), 5)
   })
 
-  test('missing and null values count zero bytes but keep their separator', () => {
-    const spec = lineBytesSpec([{ key: 'a' }, { key: 'b' }, { key: 'c' }])
+  test('missing and null values emit empty cells but keep their delimiters and newline', () => {
+    const spec = lineBytesSpec({ id: 'ds3', schema: [{ key: 'a', type: 'string' }, { key: 'b', type: 'integer' }, { key: 'c', type: 'boolean' }] })
+    // ,,\n
     assert.equal(lineBytes({ a: null, b: undefined }, spec), 3)
   })
 
-  test('booleans stringified, internal non-schema keys ignored', () => {
-    const spec = lineBytesSpec([{ key: 'flag' }])
-    // 'true'(4) + 1 = 5 ; _file_raw and _geopoint must not count
-    assert.equal(lineBytes({ flag: true, _file_raw: 'aaaaaaaaaa', _geopoint: '1,2' }, spec), 5)
+  test('internal non-schema keys are ignored', () => {
+    const spec = lineBytesSpec({ id: 'ds4', schema: [{ key: 'flag', type: 'boolean' }] })
+    // 1\n
+    assert.equal(lineBytes({ flag: true, _file_raw: 'aaaaaaaaaa', _geopoint: '1,2' }, spec), 2)
   })
 })

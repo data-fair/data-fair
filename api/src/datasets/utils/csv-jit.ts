@@ -169,12 +169,15 @@ export interface GetCsvSerializerArgs {
   header?: boolean
   /** record separator (defaults to '\n') */
   newline?: string
+  /** memoize the compiled serializer on (dataset id, finalizedAt, options) — defaults to true; pass
+   *  false when the schema may differ from the one cached under the same key (e.g. at index time) */
+  cache?: boolean
 }
 
 export const getCsvSerializer = (args: GetCsvSerializerArgs): CompiledCsv => {
   const {
     dataset, selectKeys, useTitle = false,
-    delimiter = ',', bom = true, header = true, newline = '\n'
+    delimiter = ',', bom = true, header = true, newline = '\n', cache = true
   } = args
 
   const propByKey = new Map<string, any>()
@@ -193,6 +196,8 @@ export const getCsvSerializer = (args: GetCsvSerializerArgs): CompiledCsv => {
     }
     return { key, header: h || key, type }
   })
+
+  if (!cache) return compileCsv(columns, { bom, header, delimiter, newline })
 
   const cacheKey = [
     dataset.id,
