@@ -96,7 +96,7 @@
     "out-of-character": "^1.2.2",
     "parse5": "^7.2.1",
     "path-to-regexp": "^8.2.0",
-    "piscina": "^5.0.0-alpha.1",
+    "piscina": "^5.2.0",
     "pretty-bytes": "^5.6.0",
     "proj4": "^2.15.0",
     "prom-client": "^15.1.3",
