@@ -583,6 +583,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       {
         in: 'query',
+        name: 'maxCardinality',
+        description: 'Restreindre aux colonnes dont le nombre de valeurs distinctes (cardinalité) est inférieur ou égal à la valeur fournie.\n\n' +
+          'Sans filtre sur les données, la cardinalité considérée est celle du jeu de données complet (calculée lors de la finalisation).\n\n' +
+          'Si la requête contient au moins un filtre sur les données (filtres sur colonnes de la forme `ma_colonne_eq`, `ma_colonne_in`, recherche `q` ou `qs`, filtre `bbox`), la cardinalité est recalculée dans le contexte de ces filtres : une colonne dont la cardinalité globale dépasse la limite peut apparaître si elle descend sous la limite une fois les lignes filtrées.\n\n' +
+          '*Non applicable sur `/safe-schema`, qui n\'expose pas la cardinalité.*',
+        required: false,
+        schema: {
+          title: 'Cardinalité maximale',
+          type: 'integer',
+          minimum: 0
+        }
+      },
+      {
+        in: 'query',
         name: 'calculated',
         description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
           'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +

@@ -48,7 +48,17 @@ dayjs.extend(timezone)
 // derived from the single source of truth — keep no second hardcoded list.
 // order differs from the old array but is collision-free for endsWith detection
 // (every suffix is underscore-prefixed, so none is a suffix-substring of another).
-const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
+export const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
+
+// true when the query carries at least one data-level restriction (column filter suffix, text
+// search or geo filter) — the schema read route uses it to decide that a `maxCardinality` filter
+// must be evaluated against the cardinality within the context of these filters, instead of the
+// stored whole-dataset `x-cardinality`
+export const hasDataFilters = (query: Record<string, any>) => {
+  const otherFilterKeys = ['q', 'qs', 'bbox', 'xyz', 'geo_distance', '_c_q', '_c_bbox', '_c_geo_distance']
+  return Object.keys(query).some(key => filterSuffixes.some(suffix => key.endsWith(suffix))) ||
+    otherFilterKeys.some(key => key in query)
+}
 
 // NB: no config-bound `esProperty` wrapper is re-exported here — every call site must resolve the
 // index shape explicitly, a wrapper hiding it would emit new-shape mappings for legacy indexes.

@@ -31,6 +31,8 @@ import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
+import { filterByContextualCardinality, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
+import { manageESError } from './_es-error.ts'
 import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 
@@ -39,9 +41,25 @@ const debugLimits = debugModule('limits')
 const debugBreakingChanges = debugModule('breaking-changes')
 
 // retrieve only the schema.. Mostly useful for easy select fields
-const sendSchema = (req: Request, res: Response, schema: any) => {
-  schema = filterSchema(schema, req.query as Record<string, string>)
-  if (req.query.mimeType === 'application/tableschema+json') {
+const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
+  const reqQuery = req.query as Record<string, string>
+  if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+    // contextual cardinality: the schema filters are applied first (without maxCardinality) to
+    // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
+    // within the context of the data filters, instead of the stored whole-dataset cardinality
+    const maxCardinality = Number(reqQuery.maxCardinality)
+    const schemaQuery: Record<string, string> = { ...reqQuery }
+    delete schemaQuery.maxCardinality
+    schema = filterSchema(schema, schemaQuery)
+    try {
+      schema = await filterByContextualCardinality(reqDataset(req), schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else {
+    schema = filterSchema(schema, reqQuery)
+  }
+  if (reqQuery.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', contentDisposition(reqDataset(req).slug + '-tableschema.json'))
     schema = tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
@@ -101,17 +119,19 @@ export const registerMetadataRoutes = (router: Router) => {
     res.status(200).send(clean(req as DfRequest, dataset))
   })
 
-  router.get('/:datasetId/schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-    sendSchema(req, res, clone(reqDataset(req).schema))
+  // fillDescendants is required by prepareQuery when the contextual maxCardinality filter
+  // runs on a virtual dataset (data filters are then resolved against the descendants)
+  router.get('/:datasetId/schema', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, async (req, res) => {
+    await sendSchema(req, res, clone(reqDataset(req).schema), true)
   })
   // alternate read schema route that does not return clues about the data (cardinality and enums)
-  router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+  router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, async (req, res) => {
     const schema = clone(reqDataset(req).schema ?? [])
     for (const p of schema) {
       delete p['x-cardinality']
       delete p.enum
     }
-    sendSchema(req, res, schema)
+    await sendSchema(req, res, schema)
   })
 
   // Update a dataset's metadata
