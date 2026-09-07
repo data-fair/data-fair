@@ -35,7 +35,6 @@ export default defineConfig({
       'dayjs/plugin/customParseFormat.js',
       'dayjs/plugin/timezone.js',
       'dayjs/plugin/utc.js',
-      'diff',
       'md5'
     ]
   },
