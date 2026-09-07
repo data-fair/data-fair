@@ -184,7 +184,7 @@ const emit = defineEmits<{
   select: []
 }>()
 
-const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
+const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: () => [] })
 
 const { t } = useI18n()
 </script>

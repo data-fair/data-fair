@@ -1,7 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import streamJsonParser from 'stream-json/Parser.js'
-import streamJsonPick from 'stream-json/filters/Pick.js'
-import streamValues from 'stream-json/streamers/StreamValues.js'
+import { parser as streamJsonParser } from 'stream-json/parser.js'
+import { pick as streamJsonPick } from 'stream-json/filters/pick.js'
+import { streamValues } from 'stream-json/streamers/stream-values.js'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.ts'
@@ -17,13 +17,13 @@ export default async function (dataset: FileDataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
-  const crsParser = streamJsonParser.parser()
+  const crsParser = streamJsonParser.asStream()
   crsParser.on('error', () => {
     // ignore invalid json errors at this stage, it will be handled later
   })
   const crsPipeline = crsParser
-    .pipe(streamJsonPick.pick({ filter: 'crs' }))
-    .pipe(streamValues.streamValues())
+    .pipe(streamJsonPick.asStream({ filter: 'crs' }))
+    .pipe(streamValues.asStream())
   let crs: any
   crsPipeline.on('data', (data) => {
     crs = data.value

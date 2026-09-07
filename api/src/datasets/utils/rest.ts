@@ -118,6 +118,7 @@ const padI = (i: number, padSize = padISize) => {
 }
 
 export const uploadAttachment = multer({
+  defParamCharset: 'utf8',
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
@@ -170,6 +171,7 @@ const tmpSharedStorage = {
 }
 
 export const uploadBulk = multer({
+  defParamCharset: 'utf8',
   storage: tmpSharedStorage
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 

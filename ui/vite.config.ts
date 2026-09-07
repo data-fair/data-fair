@@ -39,13 +39,6 @@ export default defineConfig({
       'md5'
     ]
   },
-  build: {
-    rolldownOptions: {
-      output: {
-        minChunkSize: 2000
-      }
-    }
-  },
   resolve: {
     alias: {
       '~': path.resolve(__dirname, 'src/'),

@@ -8,7 +8,8 @@ import cleanCoords from '@turf/clean-coords'
 import unkink from '@turf/unkink-polygon'
 import geojsonvt from 'geojson-vt'
 import vtpbf from 'vt-pbf'
-import { exec } from 'child-process-promise'
+import { exec as execCb } from 'node:child_process'
+import { promisify } from 'node:util'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
 import { wktToGeoJSON } from '@terraformer/wkt'
@@ -19,6 +20,8 @@ import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 import _config from 'config'
 import type { Dataset, SchemaProperty } from '#types'
+
+const exec = promisify(execCb)
 
 const config = _config as any
 const debug = debugLib('geo')

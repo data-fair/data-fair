@@ -50,7 +50,7 @@
 import { useCurrentElement, useElementSize } from '@vueuse/core'
 import { type DatasetFilter } from '~/composables/dataset/filters'
 
-const filters = defineModel<DatasetFilter[]>({ default: [] })
+const filters = defineModel<DatasetFilter[]>({ default: () => [] })
 const { width: maxWidth } = useElementSize(useCurrentElement())
 
 const { t } = useI18n()

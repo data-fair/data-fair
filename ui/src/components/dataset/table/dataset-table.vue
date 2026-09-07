@@ -523,7 +523,7 @@ const showToolbar = computed(() => can('count') || can('search') || can('filters
 const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('select-cols') || canFixCols.value
 
 const displayMode = defineModel<string>('display', { default: 'table' })
-const cols = defineModel<string[]>('cols', { default: [] })
+const cols = defineModel<string[]>('cols', { default: () => [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
