@@ -164,6 +164,7 @@ fr:
   partner: Partenaires
   ownerOrg: Organisation propriétaire
   otherActions: Autres actions
+  alwaysAllowedIfList: Toujours autorisé si la permission de lister est activée
   classNames:
     list: Lister
     read: Lecture
@@ -195,6 +196,7 @@ en:
   partner: Partners
   ownerOrg: Owner organization
   otherActions: Other actions
+  alwaysAllowedIfList: Always allowed if list permission is active
   classNames:
     list: List
     read: Read
@@ -257,9 +259,20 @@ const restrictedPermissionClasses = computed(() => {
 
 // --- Computed: class items for the classes v-select ---
 const classItems = computed(() => {
+  const isListSelected = !!permission.value?.classes?.includes('list')
   return Object.keys(restrictedPermissionClasses.value)
     .filter(c => te('classNames.' + c))
-    .map(c => ({ class: c, title: t('classNames.' + c) }))
+    .map(c => {
+      const isReadImplied = c === 'read' && isListSelected
+      return {
+        class: c,
+        title: t('classNames.' + c),
+        props: {
+          disabled: isReadImplied,
+          subtitle: isReadImplied ? t('alwaysAllowedIfList') : undefined
+        }
+      }
+    })
 })
 
 // --- Full operation lookup (all descriptors, any applicability) ---

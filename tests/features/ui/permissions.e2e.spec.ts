@@ -176,10 +176,14 @@ test.describe('permissions editor', () => {
       // Enter email
       await page.locator('.v-dialog').getByLabel(/Email/).fill('external@test.com')
 
-      // Select read class in actions
+      // When Lister is checked, Lecture is checked and disabled with its explanatory subtitle
       const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Classes d'actions/ })
       await actionsSelect.click()
-      await page.getByRole('option', { name: /^Lecture$/ }).click()
+      await expect(page.getByRole('option', { name: /Lecture/ })).toBeDisabled()
+      await expect(page.getByRole('option', { name: /Lecture/ })).toContainText(/Toujours autorisé si la permission de lister est activée/)
+      // Uncheck Lister so Lecture becomes enabled and remains the sole selected class
+      await page.getByRole('option', { name: /^Lister$/ }).click()
+      await expect(page.getByRole('option', { name: /^Lecture$/ })).toBeEnabled()
       await page.keyboard.press('Escape')
 
       // Validate
