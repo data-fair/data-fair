@@ -42,6 +42,9 @@ Rather than re-implementing the serializer's rules, the stamp **runs the export'
   previous read or reindex cached under the same key.
 - `lineBytes(item, spec)` — per line: `Buffer.byteLength(spec.row(spec.flatten({ ...item })))`.
   The shallow copy matters: flatten mutates its input, and the item goes on to Elasticsearch as-is.
+  When the schema has no nested key and no separator column, flatten would be the identity
+  (`isFlattenIdentity` in `flatten.ts`, derived from the same statement generator as the compiled
+  flatten), so `spec.flatten` is `null` and the line is serialized directly, copy skipped.
 
 The consequences of "same serializer" are exactly the CSV conventions: strings are always quoted
 (`+2` bytes) with embedded `"` doubled, booleans are `1`/`0`, numbers are `String(v)`, null or

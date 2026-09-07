@@ -36,6 +36,12 @@ test.describe('lineBytes', () => {
     assert.equal(lineBytes(item, spec), Buffer.byteLength(row(flatten({ ...item }))))
   })
 
+  test('skips the flatten (and the copy it needs) when no column is nested or multi-valued', () => {
+    assert.equal(lineBytesSpec({ id: 'ds5', schema: [{ key: 'name', type: 'string' }, { key: 'nb', type: 'integer' }] }).flatten, null)
+    assert.notEqual(lineBytesSpec({ id: 'ds6', schema: [{ key: 'tags', type: 'string', separator: ';' }] }).flatten, null)
+    assert.notEqual(lineBytesSpec({ id: 'ds7', schema: [{ key: '_ext_geo.lat', type: 'number' }] }).flatten, null)
+  })
+
   test('does not mutate the indexed line', () => {
     const spec = lineBytesSpec(dataset)
     const item = { name: 'abc', tags: ['x', 'y'], _ext_geo: { lat: 1.5, lon: 48 } }

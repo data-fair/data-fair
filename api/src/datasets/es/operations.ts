@@ -1,7 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import { getCsvSerializer } from '../utils/csv-jit.ts'
-import { getFlattenNoCache } from '../utils/flatten.ts'
+import { getFlattenNoCache, isFlattenIdentity } from '../utils/flatten.ts'
 import capabilities from '../../../contract/capabilities.js'
 
 export interface ExtractedError {
@@ -819,19 +819,22 @@ export const buildIndexMappings = (
 // sub-objects flattened, calculated columns excluded. Compiled without the memo caches: the stamp
 // runs on the schema being indexed, which may differ from the one cached under the same
 // (id, finalizedAt) key by a previous read or reindex.
-export interface LineBytesSpec { row: (line: Record<string, any>) => string, flatten: (line: Record<string, any>) => Record<string, any> }
+// flatten is null when the schema has no nested extension key and no separator column: the export's flatten
+// would be the identity, so the line is serialized as-is without the defensive copy it would otherwise need
+export interface LineBytesSpec { row: (line: Record<string, any>) => string, flatten: ((line: Record<string, any>) => Record<string, any>) | null }
 
 export const lineBytesSpec = (dataset: { id: string, finalizedAt?: string, schema?: any[] }): LineBytesSpec => {
   const schema = dataset.schema ?? []
   const selectKeys = schema.filter(p => !p['x-calculated']).map(p => p.key)
   const { row } = getCsvSerializer({ dataset: { ...dataset, schema }, selectKeys, header: false, bom: false, cache: false })
-  return { row, flatten: getFlattenNoCache({ ...dataset, schema }) }
+  const fullDataset = { ...dataset, schema }
+  return { row, flatten: isFlattenIdentity(fullDataset) ? null : getFlattenNoCache(fullDataset) }
 }
 
 // the flatten helper mutates its input (moves nested extension values to flat keys, joins separator
 // arrays), so it runs on a shallow copy and the indexed line is left untouched
 export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): number => {
-  return Buffer.byteLength(spec.row(spec.flatten({ ...item })))
+  return Buffer.byteLength(spec.row(spec.flatten ? spec.flatten({ ...item }) : item))
 }
 
 /**
