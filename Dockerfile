@@ -29,7 +29,8 @@ WORKDIR /tmp
 RUN git clone https://github.com/data-fair/prepair.git
 WORKDIR /tmp/prepair
 RUN git checkout fix-build-filesystem
-RUN cmake -D CMAKE_BUILD_TYPE=Release .
+# prepair's CMakeLists declares a minimum older than what cmake 4 still accepts
+RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_POLICY_VERSION_MINIMUM=3.5 .
 RUN make
 RUN mv prepair /usr/bin/prepair
 
@@ -152,7 +153,7 @@ RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /us
 WORKDIR /app/api
 
 # configure node webapp environment
-ENV DEBUG db,upgrade*
+ENV DEBUG="db,upgrade*"
 
 # TODO: activate this line on next major release
 #USER node
