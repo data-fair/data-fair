@@ -177,7 +177,7 @@ const showProjection = computed(() => {
   ))
 })
 
-const projectionsFetch = useFetch<{ title: string, code: string }[]>(() => showProjection.value ? `${$apiPath}/projections` : null)
+const projectionsFetch = useFetch<{ title?: string, code?: string }[]>(() => showProjection.value ? `${$apiPath}/projections` : null)
 
 const searchQuery = ref('')
 const activeColumnKey = ref<string | null>(null)

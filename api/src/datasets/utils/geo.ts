@@ -6,9 +6,10 @@ import turfBbox from '@turf/bbox'
 import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import unkink from '@turf/unkink-polygon'
-import geojsonvt from 'geojson-vt'
+import GeoJSONVT from 'geojson-vt'
 import vtpbf from 'vt-pbf'
-import { exec } from 'child-process-promise'
+import { exec as execCb } from 'node:child_process'
+import { promisify } from 'node:util'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
 import { wktToGeoJSON } from '@terraformer/wkt'
@@ -19,6 +20,8 @@ import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 import _config from 'config'
 import type { Dataset, SchemaProperty } from '#types'
+
+const exec = promisify(execCb)
 
 const config = _config as any
 const debug = debugLib('geo')
@@ -199,7 +202,7 @@ export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>
   fields._geoshape = feature.geometry
   if (capabilities?.vtPrepare) {
     fields._vt_prepared = []
-    const vt = geojsonvt(
+    const vt = new GeoJSONVT(
       { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: feature.geometry }] },
       { indexMaxZoom: config.tiles.vtPrepareMaxZoom, tolerance: config.tiles.geojsonvtTolerance, maxZoom: config.tiles.vtPrepareMaxZoom, indexMaxPoints: 0 }
     )

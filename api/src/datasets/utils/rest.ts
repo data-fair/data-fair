@@ -13,7 +13,6 @@ import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
 import moment from 'moment'
 import crc from 'crc'
-import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
 import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
@@ -117,7 +116,14 @@ const padI = (i: number, padSize = padISize) => {
   return new Array((padSize - str.length) + 1).join('0') + str
 }
 
+const md5File = async (filePath: string) => {
+  const hash = crypto.createHash('md5')
+  for await (const chunk of fs.createReadStream(filePath)) hash.update(chunk)
+  return hash.digest('hex')
+}
+
 export const uploadAttachment = multer({
+  defParamCharset: 'utf8',
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
@@ -170,6 +176,7 @@ const tmpSharedStorage = {
 }
 
 export const uploadBulk = multer({
+  defParamCharset: 'utf8',
   storage: tmpSharedStorage
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 

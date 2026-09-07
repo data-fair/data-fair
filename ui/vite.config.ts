@@ -35,16 +35,8 @@ export default defineConfig({
       'dayjs/plugin/customParseFormat.js',
       'dayjs/plugin/timezone.js',
       'dayjs/plugin/utc.js',
-      'diff',
       'md5'
     ]
-  },
-  build: {
-    rolldownOptions: {
-      output: {
-        minChunkSize: 2000
-      }
-    }
   },
   resolve: {
     alias: {

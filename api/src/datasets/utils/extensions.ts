@@ -4,7 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.ts'
 import { Transform, Writable } from 'stream'
-import stringify from 'json-stable-stringify'
+import stringify from 'fast-json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
 import axios from '../../misc/utils/axios.ts'
@@ -22,7 +22,7 @@ import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.ts'
-import intoStream from 'into-stream'
+import { Readable } from 'node:stream'
 import { getFlatten } from './flatten.ts'
 import type { Dataset, DatasetLine } from '#types'
 import type { AnyBulkWriteOperation, Document, Filter, WithId } from 'mongodb'
@@ -174,7 +174,7 @@ export const extend = async (
   const progress = updateMode !== 'lineIds' ? taskProgress(dataset.id, 'extend', 100) : undefined
   await progress?.inc(0)
   if (simulationLine) {
-    inputStreams = [intoStream.object([simulationLine])]
+    inputStreams = [Readable.from([simulationLine])]
   } else if (isRestDataset(dataset)) {
     let filter = {}
     if (updateMode === 'updatedLines') filter = { _needsExtending: true }
@@ -361,7 +361,7 @@ class ExtensionsStream extends Transform {
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
         // stringify cannot return undefined here (the input is always an array)
-        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []])!)
+        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
         const extensionCacheKey = extension.remoteService + '/' + extension.action
         // first get previous results from cache, in bulk: one $in query on the
         // {extensionKey, input} index and one lastUsed bump, instead of one
