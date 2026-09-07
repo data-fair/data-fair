@@ -1,6 +1,6 @@
 import { RdfXmlParser } from 'rdfxml-streaming-parser'
 import { JsonLdSerializer } from 'jsonld-streaming-serializer'
-import { Writable, Transform } from 'stream'
+import { Readable, Writable, Transform } from 'stream'
 import pump from '../pipe.ts'
 
 /**
@@ -9,7 +9,6 @@ import pump from '../pipe.ts'
  * @returns
  */
 export const fromXML = async (dcat: string, baseIRI: string) => {
-  const intoStream = (await import('into-stream')).default
   const myParser = new RdfXmlParser({ validateUri: false, baseIRI })
   const mySerializer = new JsonLdSerializer({ space: '  ' })
   let lastChunk = ''
@@ -24,7 +23,7 @@ export const fromXML = async (dcat: string, baseIRI: string) => {
     console.log('last chunk', lastChunk)
   })
   let json = ''
-  await pump(intoStream(dcat), logger, myParser, mySerializer, new Writable({
+  await pump(Readable.from([dcat], { objectMode: false }), logger, myParser, mySerializer, new Writable({
     write (chunk, encoding, callback) {
       json += chunk.toString()
       callback()
