@@ -6,7 +6,7 @@ import turfBbox from '@turf/bbox'
 import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import unkink from '@turf/unkink-polygon'
-import geojsonvt from 'geojson-vt'
+import GeoJSONVT from 'geojson-vt'
 import vtpbf from 'vt-pbf'
 import { exec as execCb } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -202,7 +202,7 @@ export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>
   fields._geoshape = feature.geometry
   if (capabilities?.vtPrepare) {
     fields._vt_prepared = []
-    const vt = geojsonvt(
+    const vt = new GeoJSONVT(
       { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: feature.geometry }] },
       { indexMaxZoom: config.tiles.vtPrepareMaxZoom, tolerance: config.tiles.geojsonvtTolerance, maxZoom: config.tiles.vtPrepareMaxZoom, indexMaxPoints: 0 }
     )
