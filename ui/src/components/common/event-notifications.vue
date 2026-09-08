@@ -6,7 +6,10 @@
 import settingsSchema from '../../../../api/types/settings/schema.js'
 
 const props = defineProps<{
-  resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string } }
+  // `integrity` rides along on a dataset: the integrity topics only exist for an enrolled one.
+  // It is stripped from the API response for anyone without readIntegrity, so a user who cannot
+  // see the verdict cannot subscribe to it either — the gate falls out of the projection.
+  resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string }, integrity?: { active?: boolean } }
   resourceType: 'dataset' | 'application'
 }>()
 
@@ -19,6 +22,9 @@ const iframeUrl = computed(() => {
       if (item.const === 'dataset-dataset-created') return false
       if (item.const === 'dataset-finalize-end') return false
       if (item.const === 'application-application-created') return false
+      // only on a dataset that is actually enrolled: offering "integrity breached" on a dataset
+      // with no integrity would be a subscription that can never fire
+      if (item.const.startsWith('dataset-integrity-')) return !!props.resource.integrity?.active
       return true
     })
   const keysParam = webhooks.map((w: any) => `data-fair:${w.const}:${props.resource.slug}`).join(',')

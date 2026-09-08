@@ -1,18 +1,23 @@
 ## Conformité et audit
 
-### Données personnelles : un entrepôt sans identités, par construction
+### Données personnelles : deux durées de vie séparées
 
-L'entrepôt de révisions est indestructible avant échéance — il ne doit donc contenir **aucune donnée personnelle** dont l'effacement pourrait être exigé. C'est garanti par construction, pas par nettoyage :
+L'entrepôt de révisions est indestructible avant échéance : ce qui y vit aussi longtemps que la ressource ne doit donc contenir **aucune donnée personnelle** dont l'effacement pourrait être exigé. Plutôt que de renoncer à l'imputation individuelle, le dispositif sépare deux durées de vie, par construction et non par nettoyage :
+
+- la **révision scellée**, dont le verrou peut glisser indéfiniment tant que la ressource est vivante, ne porte **aucune identité** ;
+- l'**attribution**, qui porte l'identité, est un objet distinct doté de sa propre rétention, courte et jamais prolongée (section suivante).
+
+Sur la partie à durée indéfinie, l'absence d'identité est structurelle :
 
 - le contexte d'une révision enregistre la **catégorie** d'auteur (utilisateur, superadministrateur, traitement interne, propagation, migration), jamais un identifiant individuel ;
 - les champs d'attribution individuelle des métadonnées sont exclus du périmètre scellé ;
-- l'**imputation individuelle au-delà de la fenêtre d'attribution ci-dessous** vit dans le journal d'activité de la plateforme, qui reste modifiable et est anonymisé lors de la suppression d'un compte utilisateur — le rapprochement par date entre l'historique de révisions et le journal redonne le « qui » tant que le journal le détient.
+- passée la fenêtre d'attribution, l'imputation individuelle ne vit plus que dans le journal d'activité de la plateforme, qui reste modifiable et est anonymisé lors de la suppression d'un compte utilisateur — le rapprochement par date entre l'historique de révisions et le journal redonne le « qui » tant que le journal le détient.
 
-Une demande d'effacement portant sur un utilisateur n'entre donc jamais en conflit avec l'entrepôt indestructible lui-même : il n'y a rien à y effacer.
+Une demande d'effacement portant sur un utilisateur n'entre donc jamais en conflit avec la partie indestructible de l'entrepôt : passée la fenêtre d'attribution, il n'y a plus rien à y effacer.
 
 ### Attribution bornée : une identité individuelle, mais à durée fixe et courte
 
-Quand elle est capturée (écriture authentifiée par une session utilisateur ou une clé d'API), l'identité de l'auteur — identifiant, adresse IP, pays — n'est **pas absente** du dispositif : elle est conservée à part, dans un objet verrouillé **distinct** de la révision, avec sa **propre** fenêtre de rétention, volontairement plus courte que celle de l'historique (180 jours par défaut, contre un an pour l'historique) :
+L'autre moitié du dispositif. Quand elle est capturée (écriture authentifiée par une session utilisateur ou une clé d'API), l'identité de l'auteur — identifiant, adresse IP, pays — n'est **pas absente** : elle est conservée à part, dans un objet verrouillé **distinct** de la révision, avec sa **propre** fenêtre de rétention, volontairement plus courte que celle de l'historique (180 jours par défaut, contre un an pour l'historique) :
 
 - **base légale** : la journalisation à des fins de sécurité et d'intégrité — exactement le périmètre visé par la doctrine CNIL en la matière (délibération 2021-122 : six mois à un an), avec 180 jours en milieu de fourchette ;
 - **effacement** : différé d'au plus 180 jours après l'écriture, et **activement exécuté** par le même mécanisme de purge que celui de l'historique général — jamais prolongé, quelle que soit la durée de vie du jeu de données lui-même ;

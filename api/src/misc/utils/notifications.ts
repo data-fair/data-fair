@@ -19,6 +19,10 @@ type SendResourceEventOptions = {
   localizedParams?: Record<Locale, Record<string, string>>
   sender?: AccountKeys
   extra?: Record<string, unknown>
+  /** Force 'private' regardless of the resource's own visibility. For events that say something
+   * about the resource's security state rather than about its content: on a public dataset the
+   * default would make "this dataset was tampered with" readable by anyone. */
+  forcePrivate?: boolean
 }
 
 export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | string, key: string, options: SendResourceEventOptions = {}) => {
@@ -47,7 +51,7 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
     title,
     body,
     urlParams: { id: resource.id, slug: resource.slug ?? '' },
-    visibility: permissions.isPublic(resourceType, resource) ? 'public' : 'private',
+    visibility: (!options.forcePrivate && permissions.isPublic(resourceType, resource)) ? 'public' : 'private',
     resource: { type: singularResourceType, id: resource.id, title: resource.title },
     extra: options.extra
   }
