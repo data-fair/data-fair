@@ -194,7 +194,7 @@ test('the relay drains a dataset spanning several batches', async () => {
   await waitForFinalize(ax, dataset.id)
 
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id, 60000)
+  await waitForLinesDrained(dataset.id, 60000)
 
   const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(state.lines).toMatchObject({ anchored: 250, pending: 0 })
@@ -212,8 +212,8 @@ test('a run bails out once a batch worth of lines fails, keeping what it anchore
   const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
   const dataset = await restDataset(ax, lines)
   await waitForFinalize(ax, dataset.id)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   // poison every other line: each batch then mixes healthy and failing ones, so the run both
   // banks real progress AND accumulates failures. An unparseable _updatedAt throws in anchorLine
@@ -223,9 +223,9 @@ test('a run bails out once a batch worth of lines fails, keeping what it anchore
   for (let i = 0; i < 250; i++) {
     const $set: Record<string, any> = { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } }
     if (i % 2 === 0) $set._updatedAt = 'not-a-date'
-    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: `line${i}` }, update: { $set } })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: `line${i}` }, update: { $set } })
   }
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
 
   // the run rethrows, so the dataset lands in error — but the healthy lines it reached before
   // bailing stay anchored with their stamps cleared, never discarded wholesale
@@ -260,22 +260,22 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
   const dataset = await restDataset(ax, [{ attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }, { attr1: 'd' }])
   await waitForFinalize(ax, dataset.id)
   // enroll raw (not through the API enable, whose backfill would drain before the poison lands)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   const setLine = async (lineId: string, $set: Record<string, any>) =>
-    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: lineId }, update: { $set } })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: lineId }, update: { $set } })
 
   // poison line2: anchorLine builds its lineMeta with `new Date(line._updatedAt).toISOString()`,
   // which throws RangeError on an unparseable value — a per-line failure raised BEFORE any S3
   // write, and distinct from the §S4 out-of-range-_i refusal (which returns false instead)
   await setLine('line2', { _updatedAt: 'not-a-date' })
   for (let i = 0; i < 4; i++) await setLine(`line${i}`, { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } })
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
 
   // the three healthy lines of the batch must still land: a rejecting Promise.all over the batch
   // would throw away their completed S3 writes and leave all four stamped for the next run
-  const pending = async () => (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`,
+  const pending = async () => (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`,
     { params: { filter: JSON.stringify({ _needsHistorizing: { $exists: true } }) } })).data.count
   const deadline = Date.now() + 20000
   while (await pending() > 1 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 250))
@@ -284,7 +284,7 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
 
   // and the failure is surfaced rather than swallowed: the run rethrows, so the hint stays set
   // for a later retry and the dataset lands in error
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw._needsHistorizingLines).toBe(true)
   const anchoredLines = new Set((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
     .map(k => lops.parseLineRevisionKey(k)?.lineId).filter(Boolean))
@@ -296,7 +296,7 @@ test('disable then re-enable leaves the trail coherent (no same-key rewrite)', a
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   const afterFirst = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).sort()
 
   // the backfill re-stamps EVERY line, and an untouched line's key is derived from content
@@ -305,7 +305,7 @@ test('disable then re-enable leaves the trail coherent (no same-key rewrite)', a
   // whole trail used to come back 'altered' with one confirmed anomaly per line AND per .who
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')
@@ -318,12 +318,12 @@ test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)'
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   // an ORGANIC write, so the stamp under test is a plain 'update' one and the enable-backfill
   // skip cannot be what saves us — this exercises the determinism of the body itself
   await ax.put(`/api/v1/datasets/${dataset.id}/lines/line0`, { attr1: 'z', attr2: 9 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const line = await rawLine(ax, dataset.id, 'line0')
   const key = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
@@ -335,11 +335,11 @@ test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)'
   // replay that exact stamp, as a relay run would after writing its objects but dying before
   // clearing the flag. context.date rides the stamp now, so the body is reproduced identically
   // and the same-key re-PUT is a true no-op rather than a 'version-divergence' at confirmed.
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context } } }
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(dataset.id)
 
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')

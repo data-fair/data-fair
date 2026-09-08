@@ -218,7 +218,7 @@ test('a breached dataset shows up in the superadmin errors view, labelled as an 
   const before = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
   expect(before.results.some((r: any) => r.id === dataset.id)).toBe(false)
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   // the raw `{ status: 'error' }` this view used to query could never see it: a breached dataset
@@ -490,11 +490,11 @@ test('a dataset revision restore on a REST dataset covers metadata only, never l
   await admin.post(`/api/v1/datasets/${ds.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'original' }])
   await waitForFinalize(admin, ds.id)
   await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
-  await waitForLinesDrained(admin, ds.id)
+  await waitForLinesDrained(ds.id)
 
   // tamper BOTH a covered metadata field and a line, out of band
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
-  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
     { filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-line' } } })
 
   const res = (await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_restore`, { i: 0 })).data
@@ -504,7 +504,7 @@ test('a dataset revision restore on a REST dataset covers metadata only, never l
   expect(res.restored).toEqual(['description'])
   const raw = await getRawDataset(ds.id)
   expect(raw.description ?? '').not.toBe('tampered-oob')
-  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
+  const line = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
     { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
   expect(line.attr1).toBe('tampered-line') // untouched: lines/_restore is the action for data
 })

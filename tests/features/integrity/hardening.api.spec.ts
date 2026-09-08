@@ -23,8 +23,8 @@ const ownerIntegritySize = async (owner: { type: string, id: string }): Promise<
 // leaked bad endpoint would fail every later test in the file.
 const withUnreachableStore = async (ax: any, fn: () => Promise<void>) => {
   const setEndpoint = async (value: string) => {
-    await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.s3.endpoint', value })
-    await ax.post(`${apiUrl}/api/v1/test-env/reset-integrity-store`)
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.s3.endpoint', value })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/reset-integrity-store`)
   }
   await setEndpoint('http://127.0.0.1:9')
   try {
@@ -48,7 +48,7 @@ test('enable against an unreachable store fails loudly, leaves no anchor, and RE
     await expect(admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })).rejects.toBeTruthy()
   })
 
-  const raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity?.active).toBe(true)
   expect(raw.integrity?.lastRevision).toBeFalsy()
 

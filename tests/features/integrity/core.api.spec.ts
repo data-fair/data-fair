@@ -378,7 +378,7 @@ test('an integrity alert stays private even on a public dataset', async () => {
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const notif = await collectNotifications()
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   const events = await notif.waitForCount(1)
