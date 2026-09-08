@@ -2,7 +2,7 @@
 // Target 3: per-line locked revisions for editable (REST) datasets — store layout, write-path
 // stamping, relay, enable/gate, check, restore/fix.
 import { test, expect } from '@playwright/test'
-import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axios, axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix
 } from '../../support/integrity.ts'
@@ -42,21 +42,21 @@ const restDataset = async (ax: any, lines: Array<Record<string, any>>) => {
 }
 
 const rawLine = async (ax: any, datasetId: string, lineId: string) =>
-  (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`, { params: { filter: JSON.stringify({ _id: lineId }) } })).data
+  (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`, { params: { filter: JSON.stringify({ _id: lineId }) } })).data
 
 test('line writes stamp _needsHistorizing and the dataset hint when integrity is active', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   // enroll raw (API enable for REST lands in a later task)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   // patch-dataset does not bump updatedAt, so drop the read-cache to force a fresh mongo read
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   const postRes = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'b', attr2: 2 })
   expect(postRes.data._needsHistorizing).toBeUndefined()
   const line = await rawLine(ax, dataset.id, 'line0')
   expect(line._needsHistorizing?.context?.origin).toBe('superadmin')
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw._needsHistorizingLines).toBe(true)
 })
 
@@ -71,8 +71,8 @@ test('line writes do NOT stamp when integrity is inactive', async () => {
 test('deleteAllLines and drop bulk are refused while integrity is active', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await expect(ax.delete(`/api/v1/datasets/${dataset.id}/lines`)).rejects.toMatchObject({ status: 400 })
   await expect(ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?drop=true`, [{ _id: 'x', attr1: 'c' }]))
     .rejects.toMatchObject({ status: 400 })
@@ -87,8 +87,8 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
   })
   const dataset = res.data
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
   const revisions = (await ax.get(`/api/v1/datasets/${dataset.id}/lines/h1/revisions`)).data
   for (const rev of revisions.results) expect(rev._needsHistorizing).toBeUndefined()
@@ -100,8 +100,8 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
   })
   const dataset2 = res2.data
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset2.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset2.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await ax.post(`/api/v1/datasets/${dataset2.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
   // enabling history triggers configureHistory's initial fill from the stamped live lines
   await ax.patch(`/api/v1/datasets/${dataset2.id}`, { rest: { history: true } })
@@ -111,18 +111,18 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
 
 const enableAndDrain = async (ax: any, datasetId: string) => {
   await ax.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, datasetId)
+  await waitForLinesDrained(datasetId)
 }
 
 test('the lines relay ships a revision per stamped line and clears the flags', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'hello', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   // the write is a logged-in-admin request (T4): the anchor also gets a `.who` attribution sibling
   const revisionKeys = keys.filter(k => !k.endsWith('.who'))
@@ -138,24 +138,24 @@ test('the lines relay ships a revision per stamped line and clears the flags', a
 test('a deleted line ships a tombstone revision and the doc is purged after both flags clear', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'x', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   await ax.delete(`/api/v1/datasets/${dataset.id}/lines/l1`)
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   expect(keys.some(k => k.endsWith('-deleted'))).toBe(true)
   // once indexing AND historization both committed, the tombstone doc is purged
   const start = Date.now()
   while (Date.now() - start < 15000) {
-    const count = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
+    const count = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
     if (count === 0) break
     await new Promise(resolve => setTimeout(resolve, 200))
   }
-  const count = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
+  const count = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'l1' }) } })).data.count
   expect(count).toBe(0)
 })
 
@@ -169,12 +169,12 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   // response, even while the backfill is still in flight
   const midBackfill = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
   expect(midBackfill._needsHistorizingLines).toBeUndefined()
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const integrity = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(integrity.active).toBe(true)
   expect(integrity.lines).toMatchObject({ anchored: 2, pending: 0 })
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   // the enabling admin's session attributes the backfill (T4): each anchor also gets a `.who`
   const revisionKeys = keys.filter(k => !k.endsWith('.who'))
@@ -194,7 +194,7 @@ test('the relay drains a dataset spanning several batches', async () => {
   await waitForFinalize(ax, dataset.id)
 
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id, 60000)
+  await waitForLinesDrained(dataset.id, 60000)
 
   const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(state.lines).toMatchObject({ anchored: 250, pending: 0 })
@@ -212,8 +212,8 @@ test('a run bails out once a batch worth of lines fails, keeping what it anchore
   const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
   const dataset = await restDataset(ax, lines)
   await waitForFinalize(ax, dataset.id)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   // poison every other line: each batch then mixes healthy and failing ones, so the run both
   // banks real progress AND accumulates failures. An unparseable _updatedAt throws in anchorLine
@@ -223,9 +223,9 @@ test('a run bails out once a batch worth of lines fails, keeping what it anchore
   for (let i = 0; i < 250; i++) {
     const $set: Record<string, any> = { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } }
     if (i % 2 === 0) $set._updatedAt = 'not-a-date'
-    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: `line${i}` }, update: { $set } })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: `line${i}` }, update: { $set } })
   }
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
 
   // the run rethrows, so the dataset lands in error — but the healthy lines it reached before
   // bailing stay anchored with their stamps cleared, never discarded wholesale
@@ -242,12 +242,12 @@ test('enable is refused above the lines gate', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
-  await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 0 })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 0 })
   try {
     await expect(ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }))
       .rejects.toMatchObject({ status: 409 })
   } finally {
-    await ax.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 100000 })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 100000 })
   }
 })
 
@@ -260,22 +260,22 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
   const dataset = await restDataset(ax, [{ attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }, { attr1: 'd' }])
   await waitForFinalize(ax, dataset.id)
   // enroll raw (not through the API enable, whose backfill would drain before the poison lands)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   const setLine = async (lineId: string, $set: Record<string, any>) =>
-    await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: lineId }, update: { $set } })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { _id: lineId }, update: { $set } })
 
   // poison line2: anchorLine builds its lineMeta with `new Date(line._updatedAt).toISOString()`,
   // which throws RangeError on an unparseable value — a per-line failure raised BEFORE any S3
   // write, and distinct from the §S4 out-of-range-_i refusal (which returns false instead)
   await setLine('line2', { _updatedAt: 'not-a-date' })
   for (let i = 0; i < 4; i++) await setLine(`line${i}`, { _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } })
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
 
   // the three healthy lines of the batch must still land: a rejecting Promise.all over the batch
   // would throw away their completed S3 writes and leave all four stamped for the next run
-  const pending = async () => (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`,
+  const pending = async () => (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${dataset.id}`,
     { params: { filter: JSON.stringify({ _needsHistorizing: { $exists: true } }) } })).data.count
   const deadline = Date.now() + 20000
   while (await pending() > 1 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 250))
@@ -284,7 +284,7 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
 
   // and the failure is surfaced rather than swallowed: the run rethrows, so the hint stays set
   // for a later retry and the dataset lands in error
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw._needsHistorizingLines).toBe(true)
   const anchoredLines = new Set((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
     .map(k => lops.parseLineRevisionKey(k)?.lineId).filter(Boolean))
@@ -296,7 +296,7 @@ test('disable then re-enable leaves the trail coherent (no same-key rewrite)', a
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   const afterFirst = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).sort()
 
   // the backfill re-stamps EVERY line, and an untouched line's key is derived from content
@@ -305,7 +305,7 @@ test('disable then re-enable leaves the trail coherent (no same-key rewrite)', a
   // whole trail used to come back 'altered' with one confirmed anomaly per line AND per .who
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')
@@ -318,12 +318,12 @@ test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)'
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   // an ORGANIC write, so the stamp under test is a plain 'update' one and the enable-backfill
   // skip cannot be what saves us — this exercises the determinism of the body itself
   await ax.put(`/api/v1/datasets/${dataset.id}/lines/line0`, { attr1: 'z', attr2: 9 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const line = await rawLine(ax, dataset.id, 'line0')
   const key = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`))
@@ -335,11 +335,11 @@ test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)'
   // replay that exact stamp, as a relay run would after writing its objects but dying before
   // clearing the flag. context.date rides the stamp now, so the body is reproduced identically
   // and the same-key re-PUT is a true no-op rather than a 'version-divergence' at confirmed.
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context } } }
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(dataset.id)
 
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.trail?.status, JSON.stringify(check.trail?.anomalies ?? []).slice(0, 300)).not.toBe('altered')
@@ -413,15 +413,15 @@ test('check reports the three line tamper shapes and heals via the transaction p
   expect(check.status).toBe('ok')
 
   // 1. out-of-band content edit (no _hash/_i touch — the silent-edit blind spot the fold had)
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
   })
   // 2. out-of-band insert
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'ghost' }, update: { $set: { attr1: 'ghost', _i: 1, _updatedAt: new Date().toISOString() } }, upsert: true
   })
   // 3. out-of-band delete
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
 
   check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
@@ -436,13 +436,13 @@ test('lines restore heals all three tamper shapes and returns a fresh ok verdict
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
 
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'ghost' }, update: { $set: { attr1: 'ghost', _i: 1, _updatedAt: new Date().toISOString() } }, upsert: true
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-delete-one/${dataset.id}`, { filter: { _id: 'line1' } })
 
   const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/lines/_restore`, { reason: 'test remediation' })).data
   expect(verdict.status).toBe('ok')
@@ -472,7 +472,7 @@ test('_fix blesses the current tampered state as the new anchored truth', async 
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
 
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'legitimate-oob-edit' } }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -500,7 +500,7 @@ test('_fix deterministically blesses content whose sha256 sorts adversely agains
   // `latestLineAnchors`'s equal-`i` tie-break (`parsed.i > current.i`, strict) keeps the
   // lexically-first — here the STALE, pre-tamper — anchor as "latest": the bless is silently
   // lost and a follow-up check still reports a breach against the tampered live content.
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-x' } }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -527,7 +527,7 @@ test('per-line revision history lists newest-first and serves the payload diff',
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'v2', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const history = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions`)).data
   expect(history.count).toBe(2)
@@ -545,7 +545,7 @@ test('per-line revision history lists newest-first and serves the payload diff',
 // ---------------------------------------------------------------------------------------------
 
 const linesAnchorKeys = async (ax: any, datasetId: string) => {
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/`)).map(r => r.key)
   // anchors only: `.who` attribution siblings (T4) are never renewed and are not anchors
   return keys.filter(k => !k.endsWith('.who'))
@@ -563,7 +563,7 @@ test('a due lines horizon renews every live line anchor on a passing check', asy
 
   // make the lines horizon look due (retention is 1 day in test config, renewal interval 1/12 →
   // anything under ~22h remaining is due)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
   })
 
@@ -592,10 +592,10 @@ test('a fresh lines horizon is not renewed, and a breach skips lines renewal ent
   expect(state.linesRenewal.renewed).toBeUndefined() // untouched enable-time baseline
 
   // due + tampered: renewal must not slide a lock over state we just failed to verify
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered' } }
   })
   const breach = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -613,7 +613,7 @@ test('a due lines renewal advances line revision locks but never their `.who` si
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
 
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const linesPrefixValue = lops.linesPrefix(raw.owner, dataset.id)
   const allKeys = (await integrityTestStore.listRevisions(linesPrefixValue)).map(r => r.key)
   const revisionKey = allKeys.find(k => !k.endsWith('.who'))!
@@ -624,7 +624,7 @@ test('a due lines renewal advances line revision locks but never their `.who` si
   const revBefore = await integrityTestStore.getRetention(revisionKey)
   const whoBefore = await integrityTestStore.getRetention(whoKey)
 
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -650,8 +650,8 @@ test('a due lines renewal advances line revision locks but never their `.who` si
 test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line revision protected', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const owner = raw.owner
   const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
   const sha = 'deadbeef'
@@ -665,7 +665,7 @@ test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line 
   await new Promise(resolve => setTimeout(resolve, 3500)) // let both locks genuinely lapse
 
   const linesPrefixValue = lops.linesPrefix(owner, dataset.id)
-  const result = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  const result = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
     { prefix: linesPrefixValue, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })).data
   expect(result.errors).toBe(0)
   const remaining = await listIntegrityKeys(linesPrefixValue)
@@ -683,12 +683,12 @@ test('a check on a dataset with undrained line stamps reports unknown, never a f
 
   // simulate a dataset stuck with an undrained lines hint (e.g. status 'error') without any real
   // pending line — the guard must fail safe rather than report 'ok' against a possibly-stale view
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
   try {
     const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
     expect(check.status).toBe('unknown')
   } finally {
-    await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { _needsHistorizingLines: '' } })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { _needsHistorizingLines: '' } })
   }
 })
 
@@ -708,7 +708,7 @@ test('a legitimate schema patch removing a property re-anchors the rewritten lin
   // covered-content rewrite that must be stamped (hint first) or every line reads 'edited'
   await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'attr1', type: 'string' }] })
   await waitForFinalize(ax, dataset.id)
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   await waitForFlagCleared(dataset.id)
 
   const line = await rawLine(ax, dataset.id, 'line0')
@@ -748,7 +748,7 @@ test('exprEval extension outputs stay outside the covered line body', async () =
   // so stamping would only churn pointless re-anchors on every recompute
   expect(line._needsHistorizing).toBeUndefined()
   await waitForFlagCleared(dataset.id)
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   expect((await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
 
   // the locked payload never carries the derived column
@@ -765,9 +765,9 @@ test('disable clears per-line stamp residue', async () => {
   await waitForFinalize(ax, dataset.id)
   // enroll raw and stamp a line WITHOUT setting the dataset hint: the relay never drains it,
   // so the residue is deterministic
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await ax.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { _needsHistorizing: { context: { operation: 'update', origin: 'user' } } } }
   })
 
@@ -782,7 +782,7 @@ test('disable clears per-line stamp residue', async () => {
 // ---------------------------------------------------------------------------------------------
 
 const linesPrefixFor = async (ax: any, datasetId: string, lineId: string) => {
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
   return `data-fair/${raw.owner.type}-${raw.owner.id}/${datasetId}/lines/${lineId}/`
 }
 
@@ -792,7 +792,7 @@ test('line create/update/delete by a logged-in user attach a `.who` sibling carr
   await enableAndDrain(ax, dataset.id)
 
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'hello', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   const prefix = await linesPrefixFor(ax, dataset.id, 'l1')
   let keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
   const whoKey = keys.find(k => k.endsWith('.who'))
@@ -802,12 +802,12 @@ test('line create/update/delete by a logged-in user attach a `.who` sibling carr
   expect(who.date).toBeTruthy()
 
   await ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'updated' })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
   expect(keys.filter(k => k.endsWith('.who')).length).toBe(2)
 
   await ax.delete(`/api/v1/datasets/${dataset.id}/lines/l1`)
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
   const deletedWhoKey = keys.find(k => k.endsWith('-deleted.who'))
   expect(deletedWhoKey).toBeTruthy()
@@ -831,7 +831,7 @@ test('a line write authenticated with an organization API key attaches `.who` wi
   const axApiKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
 
   await axApiKey.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'lkey', attr1: 'x', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const prefix = await linesPrefixFor(ax, dataset.id, 'lkey')
   const keys = (await integrityTestStore.listRevisions(prefix)).map(r => r.key)
@@ -850,7 +850,7 @@ test('`_fix` bless of a tampered line attaches the fixing superadmin\'s `.who` t
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
 
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { attr1: 'legitimate-oob-edit' } }
   })
   const verdict = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'attribution test' })).data
@@ -872,7 +872,7 @@ test('enable-backfill anchors every existing line with the enabling admin\'s `.w
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
 
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   const whoKeys = keys.filter(k => k.endsWith('.who'))
   expect(whoKeys.length).toBe(2) // one per backfilled line
@@ -893,12 +893,12 @@ test('a relay batch with mixed who/no-who lines writes `.who` only for the attri
   // raw worker-origin stamp on the pre-existing line: no who, hint-first like the relay expects.
   // The content must actually change too, or the recomputed sha256 (hence the revision key)
   // matches the still-live backfill anchor exactly and no new key is written at all.
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' },
     update: { $set: { attr1: 'worker-rewrite', _needsHistorizing: { context: { operation: 'update', origin: 'worker' } } } }
   })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const attributedPrefix = await linesPrefixFor(ax, dataset.id, 'attributed')
   const attributedKeys = (await integrityTestStore.listRevisions(attributedPrefix)).map(r => r.key)
@@ -919,7 +919,7 @@ test('a line write drives the relay to write the `.who` sibling with its OWN ret
 
   const before = Date.now()
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'lret', attr1: 'x', attr2: 1 })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   const after = Date.now()
 
   const prefix = await linesPrefixFor(ax, dataset.id, 'lret')

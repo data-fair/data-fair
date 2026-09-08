@@ -81,7 +81,7 @@ test('revisions endpoint lists revisions newest-first and is readable by the own
 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }) // revision 0 (joint anchor)
   // a _fix on the unchanged file dedupes, so tamper then _fix to get a 2nd revision
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`) // revision 1
 
   // raw store has 4 keys (2 revisions × JSON + .file); the revisions endpoint filters payloads out
@@ -145,7 +145,7 @@ test('disabling integrity clears the breach state and error-filter listing', asy
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
@@ -200,11 +200,11 @@ test('internal historize fields are stripped from API responses', async () => {
   // set only _needsHistorizing (no integrity.active) — the relay now matches the $exists filter
   // and will clear it on its own poll, so assert the response stripping right away rather than
   // depending on a raw-doc read racing the worker's poll interval
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } }
   })
   // patch-dataset does not bump updatedAt, so drop the read-cache to force a fresh mongo read
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   const body = (await admin.get(`/api/v1/datasets/${dataset.id}`)).data
   expect(body._needsHistorizing).toBeUndefined()
 })
@@ -218,7 +218,7 @@ test('a breached dataset shows up in the superadmin errors view, labelled as an 
   const before = (await admin.get('/api/v1/admin/datasets-errors', { params: { size: 1000 } })).data
   expect(before.results.some((r: any) => r.id === dataset.id)).toBe(false)
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   // the raw `{ status: 'error' }` this view used to query could never see it: a breached dataset
@@ -242,7 +242,7 @@ test('breached dataset appears under the status=error listing without changing i
   expect(list.results.find((d: any) => d.id === dataset.id)).toBeUndefined()
 
   // tamper + check → breach
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
 
@@ -265,7 +265,7 @@ test('an out-of-band covered-field write breaches metadata while file stays ok',
 
   const notif = await collectNotifications()
   // test-env patch-dataset is a RAW mongo write with no outbox stamp — the exact tamper we detect
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered out-of-band' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered out-of-band' })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
@@ -285,7 +285,7 @@ test('an out-of-band write to an EXCLUDED field neither breaches nor creates a r
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   // status / count / errorStatus are denylisted operational fields: raw writes are expected there
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'error', errorStatus: 'oops', count: 999 })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'error', errorStatus: 'oops', count: 999 })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -425,7 +425,7 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
 
   // tamper out-of-band, then save settings with the SAME topics: the propagation must NOT
   // stamp/re-anchor (that would legitimize the tamper before it was ever detected)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered before unrelated settings save' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered before unrelated settings save' })
   const settingsTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
   await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsTopics })
   await new Promise(resolve => setTimeout(resolve, 2000)) // settle: give a wrongly-stamped relay time to run
@@ -443,7 +443,7 @@ test('restore heals a tampered metadata field synchronously and appends a restor
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   // out-of-band tamper (no outbox stamp)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
 
@@ -490,11 +490,11 @@ test('a dataset revision restore on a REST dataset covers metadata only, never l
   await admin.post(`/api/v1/datasets/${ds.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'original' }])
   await waitForFinalize(admin, ds.id)
   await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
-  await waitForLinesDrained(admin, ds.id)
+  await waitForLinesDrained(ds.id)
 
   // tamper BOTH a covered metadata field and a line, out of band
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
-  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { description: 'tampered-oob' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${ds.id}`,
     { filter: { _id: 'line0' }, update: { $set: { attr1: 'tampered-line' } } })
 
   const res = (await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_restore`, { i: 0 })).data
@@ -504,7 +504,7 @@ test('a dataset revision restore on a REST dataset covers metadata only, never l
   expect(res.restored).toEqual(['description'])
   const raw = await getRawDataset(ds.id)
   expect(raw.description ?? '').not.toBe('tampered-oob')
-  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
+  const line = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${ds.id}`,
     { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
   expect(line.attr1).toBe('tampered-line') // untouched: lines/_restore is the action for data
 })
@@ -536,7 +536,7 @@ test('restore re-ingests a tampered file through the pipeline and anchors with r
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const originalMd5 = dataset.originalFile.md5
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo file tamper' })).data
@@ -572,7 +572,7 @@ test('restore re-ingests a tampered non-basic-format (xlsx) file through the pip
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const originalMd5 = dataset.originalFile.md5
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo file tamper' })).data
@@ -610,8 +610,8 @@ test('restore heals a tampered doc whose `file` field was unset out-of-band (sta
 
   // out-of-band tamper: unset the covered `file` field (the metadata restore itself would heal
   // this key) AND corrupt the stored bytes, so the file branch must actually re-ingest.
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { file: '' } })
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { $unset: { file: '' } })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
 
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo unset-file tamper' })).data
   expect(res.status).toBe('restoring') // NOT a 400 — the pipeline must be fed the post-restore doc
@@ -663,12 +663,12 @@ test('restore of a tampered REST schema goes through the patch pipeline and rein
   await admin.post(`/api/v1/datasets/${ds.id}/lines`, { _id: 'l1', attr1: 'v1' })
   await waitForFinalize(admin, ds.id)
   await admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })
-  await waitForLinesDrained(admin, ds.id)
+  await waitForLinesDrained(ds.id)
 
   // out-of-band tamper: a stray property appended to the schema (raw write, no stamp)
   const raw0 = await getRawDataset(ds.id)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { schema: [...raw0.schema, { key: 'evil', type: 'string' }] })
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { schema: [...raw0.schema, { key: 'evil', type: 'string' }] })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   expect((await admin.post(`/api/v1/datasets/${ds.id}/_integrity/_check`)).data.breach).toContain('metadata')
 
   // the restored schema drops 'evil' relative to the hot doc — a schema-narrowing patch, so the
@@ -681,7 +681,7 @@ test('restore of a tampered REST schema goes through the patch pipeline and rein
   expect(raw.schema.find((p: any) => p.key === 'evil')).toBeUndefined()
 
   await waitForFlagCleared(ds.id)
-  await waitForLinesDrained(admin, ds.id)
+  await waitForLinesDrained(ds.id)
   // the trail carries a restore-context revision (finalize preserves the pre-set context; an
   // interleaved relay pass may add a worker-context anchor after it, so 'some', not 'latest')
   const revisions = (await admin.get(`/api/v1/datasets/${ds.id}/_integrity/revisions`)).data
@@ -697,11 +697,11 @@ test('restore on an unsettled dataset is refused (409) and writes no metadata', 
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
   // freeze the dataset in a non-settled status: not a safe target for restore-triggered work
   // (an unknown status value keeps the workers away, unlike 'analyzed' which they would settle)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'frozen-by-test' })
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'frozen-by-test' })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
 
   await expect(admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0 })).rejects.toMatchObject({ status: 409 })
   // refused atomically: the tampered description was not silently half-healed
@@ -709,8 +709,8 @@ test('restore on an unsettled dataset is refused (409) and writes no metadata', 
 
   // settle the dataset again: the same restore now heals synchronously (no worker trigger for a
   // description-only divergence)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'finalized' })
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { status: 'finalized' })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   const res = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_restore`, { i: 0, reason: 'undo tamper' })).data
   expect(res.status).toBe('ok')
   expect((await getRawDataset(dataset.id)).description ?? '').not.toBe('tampered-oob')
@@ -724,9 +724,9 @@ test('restore heals a combined file+metadata tamper in one action', async () => 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const originalMd5 = dataset.originalFile.md5
 
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered-oob' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'a,b\n1,tampered' })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   const breach = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(breach.breach).toEqual(expect.arrayContaining(['file', 'metadata']))
 

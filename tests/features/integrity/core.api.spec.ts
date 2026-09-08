@@ -4,7 +4,7 @@
 // admin-facing routes, which live in admin.api.spec.ts.
 import { test, expect } from '@playwright/test'
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectVersionsCommand } from '@aws-sdk/client-s3'
-import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, doAndWaitForFinalize, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, integrityTestClient, integrityTestStore,
@@ -215,7 +215,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   const prefix = revisionsPrefix(dataset)
 
   // simulate "integrity enabled" by flagging the doc directly (initial anchor)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     integrity: { active: true },
     _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } }
   })
@@ -232,7 +232,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   expect(raw.integrity.lastRevision.hash.file).toBe(fixtureSha256)
 
   // flag again without a change → relay must dedupe (clears flag, writes no new revision)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForFlagCleared(dataset.id)
   expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(1)
 })
@@ -243,7 +243,7 @@ test('flagging a REST dataset (no file) anchors metadata only: metadata hash pre
   const prefix = revisionsPrefix(ds)
   // integrity.active: true is required to pass the relay's enrollment guard (historize() drops
   // the flag silently on un-enrolled datasets)
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, {
     integrity: { active: true },
     _needsHistorizing: { context: { operation: 'enable', origin: 'superadmin' } }
   })
@@ -261,7 +261,7 @@ test('a file replacement writes a new (second) revision', async () => {
   const prefix = revisionsPrefix(dataset)
 
   // establish the initial anchor (revision 0) for dataset1.csv
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     integrity: { active: true },
     _needsHistorizing: {}
   })
@@ -354,7 +354,7 @@ test('a referencing revision extends the owning payload at write time; renewal o
   // payload (rev 0's .file), since rev 1 has no .file object of its own
   const revBefore = await integrityTestStore.getRetention(`${prefix}000000001`)
   const payloadBefore = await integrityTestStore.getRetention(ownPayloadKey)
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
   const state = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
@@ -378,7 +378,7 @@ test('an integrity alert stays private even on a public dataset', async () => {
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const notif = await collectNotifications()
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
 
   const events = await notif.waitForCount(1)
@@ -402,7 +402,7 @@ test('check is ok after enable, breach after out-of-band tamper, ok again after 
 
   // tamper the stored file out-of-band, then check → breach + event
   const notif = await collectNotifications()
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
   expect(check.breach).toContain('file')
@@ -425,8 +425,8 @@ test('a check during a pending legitimate update never reports a breach', async 
   // simulate a legitimate update whose relay has not run yet: new bytes + the flag, atomically.
   // The _needsHistorizing flag makes any check landing in this window read 'unknown' regardless of
   // the (legitimately) diverged file/index state — never a false breach.
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'id,label\n1,alpha\n2,beta' })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'id,label\n1,alpha\n2,beta' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
 
   // the check may hit the pending window ('unknown') or run after the relay re-anchored ('ok') — never 'breach'
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -452,7 +452,7 @@ test('out-of-band deletion of the stored file is reported as a breach', async ()
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { delete: true })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { delete: true })
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
   expect(check.breach).toContain('file')
@@ -464,7 +464,7 @@ test('breach notification fires once per transition, not on every re-check', asy
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const notif = await collectNotifications()
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
 
   // first check after tamper → breach + exactly one notification
   let check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -497,7 +497,7 @@ test('a due anchor is renewed on check: retain-until advances and lastRenewal is
 
   // force the persisted anchor to look old (due): retain-until ~1h out (< 22h)
   const soon = new Date(Date.now() + 3600 * 1000).toISOString()
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -526,8 +526,8 @@ test('a breached check does not renew the lock', async () => {
   const { dataset } = await enabledDataset(admin)
 
   // due + tampered
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
@@ -546,7 +546,7 @@ test('a failed lock extension is recorded as lastRenewal.failed and does not fai
   // forbidden shortening → the provider rejects it → the checker records a failure
   await integrityTestStore.extendRetention(latestKey, new Date(Date.now() + 10 * 24 * 3600 * 1000))
   // make the persisted mirror look due
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString() })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok') // a renewal failure does not fail the integrity check
@@ -573,7 +573,7 @@ test('lock renewal extends the payload object too', async () => {
   // force the persisted anchor to look old (due): retain-until ~1h out (< 22h) — same trick as
   // 'a due anchor is renewed on check'
   const soon = new Date(Date.now() + 3600 * 1000).toISOString()
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -602,7 +602,7 @@ test('renewal advances the anchor lock but never touches the `.who` sibling\'s r
   expect(whoBefore).toBeTruthy()
 
   const soon = new Date(Date.now() + 3600 * 1000).toISOString()
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastRevision.retainUntil': soon })
 
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -621,7 +621,7 @@ test('renewal advances the anchor lock but never touches the `.who` sibling\'s r
 // ---------------------------------------------------------------------------------------------
 
 const runPurge = async (admin: any, prefix: string, opts: Record<string, any> = {}) =>
-  (await admin.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
     { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true, ...opts })).data
 
 test('purge deletes a revision whose lock has lapsed and keeps one still locked', async () => {

@@ -1,7 +1,6 @@
 import { S3Client, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { IntegrityStore } from '../../api/src/integrity/store.ts'
 import { getRawDataset } from './workers.ts'
-import { apiUrl } from './axios.ts'
 import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 
 export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
@@ -45,10 +44,10 @@ export const revisionsPrefix = (dataset: any): string =>
 
 // The per-line relay is driven by the dataset-level _needsHistorizingLines hint; wait for the
 // hint to clear (all stamped lines shipped) before asserting on line anchors or running a check.
-export const waitForLinesDrained = async (ax: any, datasetId: string, timeout = 15000) => {
+export const waitForLinesDrained = async (datasetId: string, timeout = 15000) => {
   const start = Date.now()
   while (Date.now() - start < timeout) {
-    const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+    const raw = await getRawDataset(datasetId)
     if (!raw._needsHistorizingLines) return
     await new Promise(resolve => setTimeout(resolve, 200))
   }
