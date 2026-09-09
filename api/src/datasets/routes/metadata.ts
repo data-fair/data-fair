@@ -21,6 +21,9 @@ import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
+import * as webhooks from '../../misc/utils/webhooks.ts'
+import i18n from 'i18n'
+import { type Locale } from '../../../i18n/utils.ts'
 import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
@@ -30,7 +33,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
-import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
+import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
 import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 
@@ -166,6 +169,9 @@ export const registerMetadataRoutes = (router: Router) => {
         }
       }
 
+      // applyPatch does Object.assign(dataset, patch), so the pre-patch schema has to be kept aside
+      // to diff it below
+      const previousSchema = dataset.schema
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
       if (!isEmpty) {
@@ -176,9 +182,32 @@ export const registerMetadataRoutes = (router: Router) => {
             throw httpError(400, req.__('errors.dupSlug'))
           })
 
-        if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
+        // applyPatch may overwrite patch.status to 'indexed' when ES accepts the new mapping
+        // in place (REST column added), so check the schema diff directly.
+        const schemaChanged = !!patch.schema && !schemasFullyCompatible(patch.schema, previousSchema, true)
+        const reprocessingTriggered = patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated'
+        if (schemaChanged || reprocessingTriggered) {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
           await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
+        }
+
+        // REST and virtual datasets skip the draft-validation flow that emits breaking-change
+        // in service.ts; emit it inline here on backward-incompatible PATCHes.
+        if ((dataset.isRest || dataset.isVirtual) && patch.schema) {
+          const breakingChanges = getSchemaBreakingChanges(previousSchema, patch.schema, false, false)
+          if (breakingChanges.length) {
+            const localizedParams = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
+              let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: dataset.title })
+              for (const breakingChange of breakingChanges) {
+                msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+              }
+              a[locale] = { breakingChanges: msg }
+              return a
+            }, {})
+            const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
+            webhooks.trigger('datasets', dataset, { type: 'breaking-change', body: localizedParams } as any, null)
+            await notifications.sendResourceEvent('datasets', dataset, sessionState, 'breaking-change', { i18nKey, localizedParams: localizedParams as Record<Locale, Record<string, string>> })
+          }
         }
 
         eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -290,8 +319,8 @@ export const registerMetadataRoutes = (router: Router) => {
       resource: { type: 'dataset', title: dataset.title, id: dataset.id },
       sender: { ...dataset.owner, role: 'admin' }
     }
-    eventsQueue.pushEvent(event, sessionState)
-    eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+    await notifications.send(event, sessionState)
+    await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
     await syncRemoteService(patchedDataset)
 
@@ -313,7 +342,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
     eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
     const sessionState = await session.req(req)
-    eventsQueue.pushEvent({
+    await notifications.send({
       title: 'Jeu de données supprimé',
       body: `${dataset.title} (${dataset.slug})`,
       topic: {

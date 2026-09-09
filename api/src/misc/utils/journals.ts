@@ -27,9 +27,11 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
 
     webhooks.trigger(resourceType, resource, event, null)
 
+    // generic `error` journal events fan out to `<resource>-error` here.
+    // `validation-error` is NOT handled here: callers that want a notification
+    // emit it explicitly via sendResourceEvent('validation-error', ...), which
+    // fans out to the `<resource>-error` umbrella with proper i18n params.
     if (event.type === 'error') {
-      // other notifs/events are sent explicitly not through journals.log for greater control
-      // except for error for simplicity
       await sendResourceEvent(resourceType, resource, 'data-fair-worker', 'error', { params: { detail: event.data ?? '' } })
     }
   } catch (err) {

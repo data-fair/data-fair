@@ -4,6 +4,7 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -60,7 +61,8 @@ test.describe('file datasets with validation rules', () => {
   })
 
   test('create an invalid dataset with initial validation rules', async () => {
-    // Create a valid dataset
+    // subscribe before upload so journals.log fan-out lands in the buffer
+    const notifs = await collectNotifs()
     const form = new FormData()
     form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
@@ -71,6 +73,14 @@ test.describe('file datasets with validation rules', () => {
     const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
     assert.ok(errorEvent.data.includes('ont une erreur de validation'))
+
+    // umbrella `dataset-error` fans out from the specific `dataset-validation-error`
+    // emission (notifications.ts §13) with a shared _id for events-service dedup.
+    const captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-' })
+    const specific = expectNotif(captured, `data-fair:dataset-validation-error:${dataset.id}`)
+    const umbrella = expectNotif(captured, `data-fair:dataset-error:${dataset.id}`)
+    assert.equal(umbrella._id, specific._id, 'umbrella push should share _id with the specific validation-error push')
+    assert.ok(JSON.stringify(umbrella.body).includes('ligne(s) en erreur'), `notif body should carry the validation detail, got: ${JSON.stringify(umbrella.body)}`)
 
     // apply a transformation to fix the issue
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: schemaWithFix })).data

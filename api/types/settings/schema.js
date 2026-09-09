@@ -91,28 +91,32 @@ export default {
               type: 'string',
               oneOf: [{
                 const: 'dataset-dataset-created',
-                title: 'Un nouveau jeu de données a été créé'
+                title: 'A new dataset has been created',
+                'x-i18n-title': { fr: 'Un nouveau jeu de données a été créé' }
               }, {
                 const: 'dataset-draft-data-updated',
-                title: 'Le fichier d\'un jeu de données a été mis à jour en mode brouillon'
+                title: 'Dataset data has been updated in draft mode',
+                'x-i18n-title': { fr: 'Les données d\'un jeu de données ont été mises à jour en mode brouillon' }
               }, {
                 const: 'dataset-data-updated',
-                title: 'Le fichier d\'un jeu de données a été mis à jour'
+                title: 'Dataset data has been updated',
+                'x-i18n-title': { fr: 'Les données d\'un jeu de données ont été mises à jour' }
               }, {
                 const: 'dataset-structure-updated',
-                title: 'La structure d\'un jeu de données a été mise à jour'
+                title: 'A dataset schema has been updated',
+                'x-i18n-title': { fr: 'La structure d\'un jeu de données a été mise à jour' }
               }, {
                 const: 'dataset-error',
-                title: 'Un jeu de données a rencontré une erreur'
+                title: 'A dataset has encountered an error',
+                'x-i18n-title': { fr: 'Un jeu de données a rencontré une erreur' }
               }, {
                 const: 'dataset-breaking-change',
-                title: 'Un jeu de données rencontre une rupture de compatibilité'
+                title: 'A dataset has a breaking change',
+                'x-i18n-title': { fr: 'Un jeu de données rencontre une rupture de compatibilité' }
               }, {
                 const: 'dataset-finalize-end',
-                title: 'Un jeu de données a été finalisé'
-              }, {
-                const: 'dataset-publication',
-                title: 'Un jeu de données a été publié sur un catalogue'
+                title: 'A dataset has been finalized',
+                'x-i18n-title': { fr: 'Un jeu de données a été finalisé' }
               }, {
                 const: 'dataset-integrity-breach',
                 title: 'L\'intégrité d\'un jeu de données est rompue'
@@ -121,13 +125,12 @@ export default {
                 title: 'L\'historique de révisions d\'un jeu de données est altéré'
               }, {
                 const: 'application-application-created',
-                title: 'Une nouvelle visualisation a été créée'
+                title: 'A new visualization has been created',
+                'x-i18n-title': { fr: 'Une nouvelle visualisation a été créée' }
               }, {
                 const: 'application-error',
-                title: 'Une visualisation a rencontré une erreur'
-              }, {
-                const: 'application-publication',
-                title: 'Une visualisation a été publiée sur un catalogue'
+                title: 'A visualization has encountered an error',
+                'x-i18n-title': { fr: 'Une visualisation a rencontré une erreur' }
               }]
             }
           },

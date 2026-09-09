@@ -210,7 +210,11 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
 
       if (files) {
         await journals.log('datasets', dataset, { type: 'data-updated' } as Event)
-        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
+        // No propagation to virtual parents here: file uploads create a draft on the child,
+        // so the data isn't visible to virtual parents yet. Propagation runs from service.ts
+        // validateDraft once the draft has been merged into the main collection.
+        const i18nKey = `data-updated-${dataset.isRest ? 'rest' : 'file'}`
+        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey })
       }
       await syncRemoteService(dataset)
     }
@@ -243,7 +247,7 @@ export const registerWriteRoutes = (router: Router) => {
     const patch = { status: 'validated', validateDraft: true }
     await applyPatch(dataset, patch, undefined, undefined, whoFromReq(req))
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' } as Event)
-    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
+    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
     eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
     return res.send(dataset)
@@ -272,7 +276,7 @@ export const registerWriteRoutes = (router: Router) => {
     await journals.log('datasets', dataset, { type: 'draft-cancelled' } as Event, false)
 
     eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
-    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-cancelled')
+    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'cancelled')
 
     await updateStorage(datasetFull)
 
