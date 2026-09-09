@@ -1,11 +1,12 @@
 <template>
   <v-chip-group
-    :class="dense ? 'py-0' : ''"
+    class="py-0"
     style="max-width:500px;"
   >
     <v-chip
       v-for="(value, i) in extendedValues"
       :key="i"
+      class="my-0"
       :text="value.formatted"
       :base-color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
