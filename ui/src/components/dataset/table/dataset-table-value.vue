@@ -18,11 +18,15 @@
     >{{ extendedValue.formatted }}</a>
   </template>
 
-  <div v-else>
-    <!-- color pin is an extra decoration displayed alongside the value -->
-    <div
-      v-if="property['x-refersTo'] === 'https://schema.org/color' && extendedValue.raw"
+  <div
+    v-else
+    :class="{ 'item-value-with-pin': colorPin }"
+  >
+    <!-- color pin is an extra decoration prepended to the value -->
+    <span
+      v-if="colorPin"
       class="item-value-color-pin"
+      :class="{ 'item-value-color-pin-dense': dense }"
       :style="`background-color:${extendedValue.raw}`"
     />
 
@@ -129,6 +133,8 @@ const emit = defineEmits<{
   showDetailDialog: []
 }>()
 
+const colorPin = computed(() => property['x-refersTo'] === 'https://schema.org/color' && !!extendedValue.raw)
+
 const { t } = useI18n()
 const localeDayjs = useLocaleDayjs()
 const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -148,15 +154,24 @@ const dateTimeTitle = computed(() => {
 </script>
 
 <style>
+.item-value-with-pin {
+  display: flex;
+  align-items: center;
+}
 .item-value-color-pin {
-  width: 24px;
-  height: 24px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  display: inline-block;
-  position: absolute;
-  top: 8px;
-  left: 2px;
-  border: 2px solid #ccc;
+  margin-right: 6px;
+  /* ring contrasted with the theme surface, so pale swatches stay visible in light and dark */
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.38);
+  box-sizing: border-box;
+}
+.item-value-color-pin-dense {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
 }
 .item-value-date-time {
   text-decoration: underline dotted;
