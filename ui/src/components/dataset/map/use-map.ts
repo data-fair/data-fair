@@ -2,6 +2,7 @@ import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoun
 import { useMapStyle } from './use-map-style'
 import debounce from 'debounce'
 import { formatValue } from '../../../composables/dataset/lines'
+import { buildPopupHtml } from './popup-content'
 
 // @ts-ignore
 maplibregl.config.CSP_NONCE = $cspNonce
@@ -123,15 +124,16 @@ export const useMap = (
         const item = (await $fetch(`datasets/${id}/lines`, { params })).results[0]
         if (!item) return
 
-        const htmlList = dataset.value.schema
+        // both the column titles and the cell values are user-authored, and setHTML does not
+        // sanitize — buildPopupHtml escapes them (see popup-content.ts)
+        const html = buildPopupHtml(dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
           .filter(field => !cols.length || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
-          .map(field => {
-            return `<li style="list-style-type: none;"><strong>${field.title || field['x-originalName'] || field.key}:</strong> ${formatValue(item[field.key], field, null, localeDayjs)}</li>`
-          })
-          .join('\n')
-        const html = `<ul style="padding-left: 0;">${htmlList}</ul>`
+          .map(field => ({
+            label: field.title || field['x-originalName'] || field.key,
+            value: formatValue(item[field.key], field, null, localeDayjs)
+          })))
 
         // Populate the popup and set its coordinates
         // based on the feature found.
