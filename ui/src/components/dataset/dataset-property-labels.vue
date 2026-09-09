@@ -31,11 +31,32 @@
         <df-tutorial-alert
           id="labels"
           class="mb-2"
-          :text="t('tutorialLabels')"
+          :text="t(readonly ? 'readonlyLabels' : 'tutorialLabels')"
           persistent
         />
 
-        <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+        <template v-if="readonly">
+          <v-data-table
+            :headers="readonlyHeaders"
+            :items="readonlyItems"
+            :items-per-page="-1"
+            density="compact"
+            class="border rounded"
+            hide-default-footer
+          >
+            <template #item.value="{ item }">
+              <code>{{ item.value }}</code>
+            </template>
+            <template #no-data>
+              {{ t('noLabels') }}
+            </template>
+          </v-data-table>
+        </template>
+
+        <v-defaults-provider
+          v-else
+          :defaults="{ global: { hideDetails: 'auto' } }"
+        >
           <v-form>
             <vjsf
               v-if="editLabels"
@@ -55,11 +76,15 @@
 fr:
   labels: Libellés des valeurs
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les applications.
+  readonlyLabels: Consultation seule : les libellés de ce champ ne sont pas modifiables ici.
+  noLabels: Aucun libellé défini
   value: Valeur
   label: Libellé
 en:
   labels: Labels for values
   tutorialLabels: Enter some labels associated to values present in the data to improve the display in applications.
+  readonlyLabels: Read-only view: the labels of this field cannot be modified here.
+  noLabels: No label defined
   value: Value
   label: Label
 </i18n>
@@ -79,6 +104,18 @@ const props = defineProps<{
 
 const dialog = ref(false)
 const editLabels = ref<Array<{ value: string, label: string }> | null>(null)
+
+const readonly = computed(() => !props.editable)
+
+const readonlyItems = computed(() => {
+  const labels = (props.property['x-labels'] || {}) as Record<string, string>
+  return Object.keys(labels).map(key => ({ value: key, label: labels[key] ?? '' }))
+})
+
+const readonlyHeaders = computed(() => [
+  { key: 'value', title: t('value'), sortable: false },
+  { key: 'label', title: t('label'), sortable: false }
+])
 
 const schema = computed(() => {
   const value: Record<string, unknown> = { type: 'string', title: t('value'), layout: { cols: { sm: 6 } } }

@@ -55,11 +55,11 @@
     >
       <!-- Action buttons row -->
       <div
-        v-if="editable && dataset && !dataset.isVirtual && columnEditable"
+        v-if="editable && dataset && columnEditable"
         class="d-flex justify-end ga-1 mb-2"
       >
         <confirm-menu
-          v-if="editable && dataset && dataset.isRest && !column['x-extension'] && !column['x-calculated']"
+          v-if="editable && dataset && dataset.isRest && !dataset.isVirtual && !column['x-extension'] && !column['x-calculated']"
           :title="t('deleteColumnTitle')"
           :text="t('deleteColumnText')"
           :tooltip="t('deleteColumnTitle')"
@@ -68,6 +68,7 @@
           @confirm="onRemoveColumn"
         />
         <dataset-property-capabilities
+          v-if="!dataset.isVirtual"
           :property="column"
           :editable="editable && dataset && !dataset.isVirtual"
         />
@@ -77,7 +78,7 @@
           :editable="editable"
         />
         <dataset-property-validation
-          v-if="!column['x-calculated'] && !column['x-extension']"
+          v-if="!dataset.isVirtual && !column['x-calculated'] && !column['x-extension']"
           :property="column"
           :editable="editable && dataset && !dataset.isVirtual"
         />
