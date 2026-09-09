@@ -815,15 +815,20 @@ fixtures also feed the screenshots of the client-facing presentation
     than by the patch itself. This applies to file datasets as much as REST ones.
   - **Lines-owner attribution.** A line snapshot is `cleanedLineBody()` — the user-visible body
     only — so the `_`-prefixed `_owner`/`_ownerName` columns an application-key write stamps are
-    excluded from both the hash and the payload. Worse than undetected: both `lines/_restore` and
-    `_fix`'s bless rewrite a line via `createOrUpdate` through the transaction pipeline (§3.2)
-    **without** a `linesOwner`, so the repair itself would **drop** whatever `_owner`/`_ownerName`
-    the line held — a remediation causing collateral data loss. Refused (both at enable, and when a
-    patch would set `rest.lineOwnership` while active).
+    excluded from both the hash and the payload: a reassigned owner is neither caught by the verdict
+    nor put back by the repair, and an `ok` verdict would coexist with tampered attribution. The
+    repair no longer **destroys** it on a live line: `applyTransactions` restores the stored
+    `_owner`/`_ownerName` from the previous document whenever a rewrite carries no `linesOwner`, so
+    both `lines/_restore` and `_fix`'s bless (`createOrUpdate` through the transaction pipeline,
+    §3.2) now carry the attribution over. One path still loses it, the one with no previous
+    document to read from: an out-of-band **deleted** line is rewritten from its revision payload,
+    the restoration pass skips deleted lines, and the line therefore comes back unowned. Refused
+    (both at enable, and when a patch would set `rest.lineOwnership` while active).
 
-  Covering either properly (attachment content hash + locked copy in the line's revision; `_owner` inside
-  the covered projection with a linesOwner-preserving rewrite) is a possible later addition — the
-  refusals are what keep the *stated* guarantee true until then.
+  Covering either properly (attachment content hash + locked copy in the line's revision; `_owner`
+  inside the covered projection, so the revision payload carries the attribution and a restore can
+  put back the owner a tamper changed) is a possible later addition — the refusals are what keep the
+  *stated* guarantee true until then.
 
   A dataset **above the gate has no lines integrity at all** — the accepted coverage cliff of
   skipping the fold (§10, §12): sensitive editable datasets are bet to be modest-cardinality
