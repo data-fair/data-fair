@@ -43,7 +43,10 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined, 
       if (!prop) {
         throw httpError(400, `La colonne "${key}" d'une contrainte d'unicité n'existe pas dans le schéma.`)
       }
-      if (prop['x-calculated'] || prop['x-extension']) {
+      // the ownership columns are calculated but stamped once per line by the own/ routes, and the
+      // primary key already accepts them: "one contribution per account" is a legitimate constraint
+      const ownershipCol = key === '_owner' || key === '_ownerName'
+      if ((prop['x-calculated'] && !ownershipCol) || prop['x-extension']) {
         throw httpError(400, `La colonne "${key}" est calculée ou issue d'un enrichissement et ne peut pas porter une contrainte d'unicité.`)
       }
       if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
