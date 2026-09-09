@@ -262,7 +262,9 @@ defineProps({
   selectedCols: { type: Array as () => string[], required: true }
 })
 
-const { selectedResults, bulkLines, saveLine, saving, addLineTrigger } = useDatasetEdition()
+// canCreate/canBulk are resolved by the edition store to the own-lines classes in own-lines mode;
+// routeBase carries the own/{owner} prefix so bulk reads hit the same owner-scoped route as the writes
+const { selectedResults, bulkLines, saveLine, saving, addLineTrigger, canCreate: canCreateLine, canBulk: canBulkLines, routeBase } = useDatasetEdition()
 
 watch(addLineTrigger, (v) => {
   if (v) {
@@ -271,15 +273,12 @@ watch(addLineTrigger, (v) => {
   }
 })
 
-const { can, jsonSchemaFetch, id: datasetId } = useDatasetStore()
+const { jsonSchemaFetch } = useDatasetStore()
 const { t } = useI18n()
 
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const deleteSelectedResultsDialog = ref(false)
-
-const canCreateLine = can('createLine')
-const canBulkLines = can('bulkLines')
 
 // when a bulk operation reports per-line errors we keep its summary to display in place of
 // the dialog form, instead of closing the dialog as if everything went fine
@@ -294,7 +293,7 @@ const deleteLines = useAsyncAction(async () => {
 })
 
 const showEditSelectedResultsDialog = useAsyncAction(async () => {
-  editingLines.value = await $fetch<{ results: Record<string, any>[] }>(`datasets/${datasetId}/lines`, {
+  editingLines.value = await $fetch<{ results: Record<string, any>[] }>(`${routeBase.value}/lines`, {
     params: {
       arrays: true,
       _id_in: selectedResults.value.map(r => r._id).join(','),

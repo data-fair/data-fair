@@ -33,10 +33,11 @@ watch(() => props.modelValue, (v) => {
   editConstraints.value = { constraints: v ? [...v] : [] }
 })
 
-// eligible columns: real stored columns with the values capability
+// eligible columns: real stored columns with the values capability, plus the line-ownership columns
+// which are calculated but constrainable (see checkConstraints)
 const eligibleKeys = computed(() =>
   (props.datasetSchema || [])
-    .filter(p => !p['x-calculated'] && !p['x-extension'] && p['x-capabilities']?.values !== false && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry' && p.type !== 'object' && !p.separator)
+    .filter(p => (!p['x-calculated'] || p.key === '_owner' || p.key === '_ownerName') && !p['x-extension'] && p['x-capabilities']?.values !== false && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry' && p.type !== 'object' && !p.separator)
     .map(p => p.key)
 )
 

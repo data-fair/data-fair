@@ -32,6 +32,7 @@ export const registerOwnLinesRoutes = (router: Router) => {
     if (!['organization', 'user'].includes(linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
     if (linesOwner.type === 'organization' && sessionState.account.type === 'organization' && sessionState.account.id === linesOwner.id && (sessionState.account.department || null) === (linesOwner.department || null)) {
       linesOwner.name = sessionState.account.name
+      linesOwner.departmentName = sessionState.account.departmentName
       return next()
     }
     if (linesOwner.type === 'user' && sessionState.user.id === linesOwner.id) {

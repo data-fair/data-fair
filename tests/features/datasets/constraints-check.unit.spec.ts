@@ -9,7 +9,9 @@ const schema = [
   { key: 'noval', type: 'string', 'x-capabilities': { values: false } },
   { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' },
   { key: 'obj', type: 'object' },
-  { key: 'm', type: 'string', separator: ',' }
+  { key: 'm', type: 'string', separator: ',' },
+  { key: '_owner', type: 'string', 'x-calculated': true, 'x-capabilities': { insensitive: false, text: false, textStandard: false } },
+  { key: '_ownerName', type: 'string', 'x-calculated': true, 'x-capabilities': { text: false } }
 ]
 
 test.describe('checkConstraints', () => {
@@ -23,6 +25,11 @@ test.describe('checkConstraints', () => {
 
   test('rejects a calculated column', () => {
     assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['calc'] }]), /calcul/i)
+  })
+
+  test('accepts the line-ownership columns despite being calculated', () => {
+    assert.doesNotThrow(() => checkConstraints(schema, [{ type: 'unique', properties: ['_owner', 'a'] }]))
+    assert.doesNotThrow(() => checkConstraints(schema, [{ type: 'unique', properties: ['_ownerName'] }]))
   })
 
   test('rejects a column without the values capability', () => {
