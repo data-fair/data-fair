@@ -33,7 +33,7 @@
     <!-- updatedByName / ownerName: show the user/owner avatar followed by their name (not the avatar URL) -->
     <template v-if="(property.key === '_updatedByName' || property.key === '_ownerName') && extendedValue.formatted.startsWith($sdUrl)">
       <v-avatar
-        :size="28"
+        :size="dense ? 24 : 28"
         :image="extendedValue.formatted"
         class="me-2"
       />
@@ -50,7 +50,7 @@
           v-bind="props"
         >
           <v-avatar
-            :size="28"
+            :size="dense ? 24 : 28"
             :image="extendedValue.formatted"
           />
         </span>
