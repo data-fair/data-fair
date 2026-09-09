@@ -114,8 +114,9 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
             extendedValue.avatar = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
             extendedValue.avatarTitle = raw._ownerName
           }
+          // no readable name exists for this concept, so the identifier stays the visible value
           if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && raw[property.key]) {
-            extendedValue.formatted = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
+            extendedValue.avatar = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
           }
 
           extendedResult.values[property.key] = extendedValue

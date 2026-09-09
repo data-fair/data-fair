@@ -26,7 +26,8 @@
       :style="`background-color:${extendedValue.raw}`"
     />
 
-    <!-- updatedBy / owner: the avatar of the account, captioned with its name, then the raw identifier -->
+    <!-- account columns (_updatedBy, _owner, the account concept): the avatar, captioned with the
+         readable name when one exists, then the raw identifier as copyable text -->
     <template v-if="extendedValue.avatar">
       <v-tooltip
         v-if="extendedValue.avatarTitle"
@@ -51,24 +52,6 @@
       <span class="pr-2">{{ extendedValue.formatted }}</span>
     </template>
 
-    <v-tooltip
-      v-else-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
-      location="top"
-    >
-      <template #activator="{props}">
-        <span
-          class="text-body-medium"
-          v-bind="props"
-        >
-          <v-avatar
-            :size="28"
-            :image="extendedValue.formatted"
-          />
-        </span>
-      </template>
-      <!-- TODO: fetch account name ? -->
-      {{ extendedValue.raw }}
-    </v-tooltip>
     <span
       v-else
       class="pr-2"
