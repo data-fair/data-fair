@@ -176,14 +176,22 @@ test.describe('permissions editor', () => {
       // Enter email
       await page.locator('.v-dialog').getByLabel(/Email/).fill('external@test.com')
 
-      // When Lister is checked, Lecture is checked and disabled with its explanatory subtitle
+      // When Lister is checked, Lecture is checked and disabled with its explanatory subtitle.
+      // Match on the title element rather than the option's accessible name: "Lecture" and
+      // "Lecture informations avancées" are both options, and the name of the former also
+      // absorbs the subtitle when it is shown, so no name pattern picks it out on its own.
       const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Classes d'actions/ })
       await actionsSelect.click()
-      await expect(page.getByRole('option', { name: /Lecture/ })).toBeDisabled()
-      await expect(page.getByRole('option', { name: /Lecture/ })).toContainText(/Toujours autorisé si la permission de lister est activée/)
+      const lectureOption = page.getByRole('option')
+        .filter({ has: page.locator('.v-list-item-title', { hasText: /^Lecture$/ }) })
+      // Vuetify greys the option out with a class and no aria-disabled, so toBeDisabled() —
+      // which needs the disabled attribute or aria-disabled — would read it as enabled and
+      // its negation would pass vacuously. Assert on the class that actually carries the state.
+      await expect(lectureOption).toHaveClass(/v-list-item--disabled/)
+      await expect(lectureOption).toContainText(/Toujours autorisé si la permission de lister est activée/)
       // Uncheck Lister so Lecture becomes enabled and remains the sole selected class
       await page.getByRole('option', { name: /^Lister$/ }).click()
-      await expect(page.getByRole('option', { name: /^Lecture$/ })).toBeEnabled()
+      await expect(lectureOption).not.toHaveClass(/v-list-item--disabled/)
       await page.keyboard.press('Escape')
 
       // Validate
