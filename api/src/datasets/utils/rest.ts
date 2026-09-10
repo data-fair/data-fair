@@ -13,7 +13,6 @@ import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
 import moment from 'moment'
 import crc from 'crc'
-import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
 import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
@@ -37,7 +36,7 @@ import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetInternal, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -50,6 +49,7 @@ import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
 import { defineReqContext, reqRestDataset, reqLinesOwnerOptional, reqResource, reqResourceType, reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { can } from '../../misc/utils/permissions.ts'
+import * as journals from '../../misc/utils/journals.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
@@ -116,7 +116,14 @@ const padI = (i: number, padSize = padISize) => {
   return new Array((padSize - str.length) + 1).join('0') + str
 }
 
+const md5File = async (filePath: string) => {
+  const hash = crypto.createHash('md5')
+  for await (const chunk of fs.createReadStream(filePath)) hash.update(chunk)
+  return hash.digest('hex')
+}
+
 export const uploadAttachment = multer({
+  defParamCharset: 'utf8',
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
@@ -169,6 +176,7 @@ const tmpSharedStorage = {
 }
 
 export const uploadBulk = multer({
+  defParamCharset: 'utf8',
   storage: tmpSharedStorage
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
@@ -477,13 +485,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
     if (historizeLines) {
-      operation.fullBody._needsHistorizing = {
-        context: historizeContext ?? {
-          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
-          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
-          ...(who ? { who } : {})
-        }
+      const context = historizeContext ?? {
+        operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+        origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+        ...(who ? { who } : {})
       }
+      // stamp the date HERE, not in the relay: a retried anchor must reproduce a byte-identical
+      // body or its same-key re-PUT reads as a rewrite to the trail check (see HistorizeContextHint)
+      operation.fullBody._needsHistorizing = { context: { ...context, date: context.date ?? updatedAt.toISOString() } }
     }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
@@ -608,6 +617,17 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         const message = errorsText(validate.errors, '', operation.body)
         if (dataset.nonBlockingValidation) {
           operation._warning = message
+          // the index mapping is strict: a property outside the schema would get the whole line
+          // rejected by elasticsearch, drop it (the warning above names it) and keep the line
+          let additional = validate.errors?.filter(e => e.keyword === 'additionalProperties') ?? []
+          while (additional.length) {
+            for (const e of additional) {
+              delete operation.body[e.params.additionalProperty]
+              delete operation.fullBody[e.params.additionalProperty]
+            }
+            if (validate(operation.body)) break
+            additional = validate.errors?.filter(e => e.keyword === 'additionalProperties') ?? []
+          }
         } else {
           operation._error = message
           operation._status = 400
@@ -1012,11 +1032,23 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexName = aliasName(dataset)
+  // the dataset comes from mongo with its internal flags, RestDataset just does not type them
+  const stream = indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh, stampBytes: !!(dataset as DatasetInternal)._esLineBytes })
   await pump(
     ...await readStreams(dataset, { _id: { $in: lineIds } }),
-    indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    stream,
     markIndexedStream(dataset)
   )
+  if (stream.nbRejectedItems) {
+    // the line is stored in mongo but elasticsearch rejected it (e.g. a field the index does not
+    // map): it kept its _needsIndexing flag so the next worker pass over the dataset retries it.
+    // Report it (journal + owner notification, like the worker does) and do not answer 200 to a
+    // client expecting read-after-write.
+    const message = `indexation refusée par elasticsearch pour ${stream.nbRejectedItems} ligne(s) : ${stream.firstRejectionReason}`
+    await journals.log('datasets', dataset, { type: 'error', data: message } as any)
+    internalError('rest-line-index-rejected', `dataset ${dataset.id}: ${message}`)
+    throw httpError(500, `la ligne est enregistrée mais son ${message}`)
+  }
 
   await mongo.datasets.updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
     $set: {
@@ -1024,6 +1056,36 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
       count: await count(dataset)
     }
   })
+
+  // `/lines` revalidates against `finalizedAt` (cacheHeaders.resourceBased) and only `finalize`
+  // writes that field, so a freshly edited line is briefly behind a 304. That window is DELIBERATE
+  // and already covered on both sides: the write above sets `_partialRestStatus: 'indexed'`, which
+  // is exactly what the finalize task selects on (workers/tasks.ts) — it bumps `finalizedAt` within
+  // seconds — and a client that just wrote asks for its own data by a different cache key
+  // (`?indexedAt=`, set from this response in ui table/use-dataset-edition.ts, sent by
+  // composables/dataset/lines.ts instead of `?finalizedAt=`). Do NOT bump on that healthy path:
+  // it would only duplicate the pipeline's own bump and churn the public validator for nothing.
+  //
+  // The uncovered case is a dataset that accepts line writes but that the finalize task cannot
+  // select at all. readWritableDataset admits 'finalized' | 'indexed' | 'error'; finalize selects
+  // `{status:'indexed'}` and `{isRest, status:'finalized', _partialRestStatus:'indexed'}` — so
+  // 'error' is the hole, and there `finalizedAt` NEVER moves again: the edit stays invisible behind
+  // a 304 until someone reindexes by hand, and a reloaded page has no `?indexedAt=` to escape with.
+  //
+  // Written as the current second TRUNCATED, via $max. Never a future value, unlike the slug bump
+  // in utils/patch.ts which rounds UP to the next whole second: that one can afford to (a slug patch
+  // does not wake finalize), whereas a value rounded past `now` here would be rewound by a later
+  // finalize's plain-`now` $set — and a client still holding the future value sends it back as
+  // `?finalizedAt=`, tripping the hard 400 in cacheHeaders.resourceBased. $max keeps it monotonic
+  // against concurrent writers; values are always toISOString() strings, which compare
+  // lexicographically == chronologically. `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a
+  // covered change: no integrity stamp, no false breach. Only for an already finalized dataset —
+  // the field's presence doubles as a "has been finalized" flag (datasets/service.ts).
+  const finalizeWillRun = dataset.status === 'finalized' || dataset.status === 'indexed'
+  if (dataset.finalizedAt && !finalizeWillRun) {
+    await mongo.datasets.updateOne({ id: dataset.id },
+      { $max: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000).toISOString() } })
+  }
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1171,7 +1233,8 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
 
   // initDatasetIndex above replaced the index -> re-stamp, else a legacy stamp survives over a
   // new-shape index
-  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE } })
+  // the fresh empty index is trivially fully stamped with _bytes (same reasoning as routes/write.ts)
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE, _esLineBytes: true } })
 
   res.status(204).send()
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))

@@ -99,11 +99,26 @@ export const waitForDatasetError = async (
   // terminal 'validation-error' (carries hasDiagnosticFile). Non-terminal
   // validation-errors (e.g. breaking-changes detection on a draft) do NOT
   // make the dataset enter the error state, so we ignore them here.
-  await ws.waitFor(
-    `datasets/${datasetId}/journal`,
-    (e: any) => e.type === 'error' || (e.type === 'validation-error' && e.hasDiagnosticFile),
-    timeout
-  )
+  try {
+    await ws.waitFor(
+      `datasets/${datasetId}/journal`,
+      (e: any) => e.type === 'error' || (e.type === 'validation-error' && e.hasDiagnosticFile),
+      timeout
+    )
+  } catch (err: any) {
+    // a bare "Timeout of 15000ms exceeded" says nothing about which half failed: the worker never
+    // errored, or it errored before this wait had subscribed (waitFor only subscribes when called,
+    // and the journal is not replayed). report what the dataset actually did.
+    try {
+      const dataset = (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
+      const journal = (await ax.get(`/api/v1/datasets/${datasetId}/journal`, { params })).data
+      const events = Array.isArray(journal) ? journal.slice(0, 5).map((e: any) => e.type) : journal
+      err.message += ` — dataset status "${dataset.status}", last journal events ${JSON.stringify(events)}`
+    } catch (diagErr: any) {
+      err.message += ` — could not read dataset state for diagnostic: ${diagErr.message}`
+    }
+    throw err
+  }
   // The journal event is emitted before the generic worker error handler flips
   // the dataset status to 'error' (especially for 'validation-error', where the
   // worker also sends a notification before throwing). Poll until the status is

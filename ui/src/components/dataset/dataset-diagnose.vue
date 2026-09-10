@@ -82,7 +82,7 @@
               v-for="(l, i) in data.locks"
               :key="i"
             >
-              <code v-if="l">{{ l._id }} — pid {{ l.pid }}, expires {{ l.expiresAt }}</code>
+              <code v-if="l">{{ l._id }} — {{ t('lockOrigin') }} {{ l.origin || '?' }}, pid {{ l.pid }}, {{ t('lockRefreshed') }} {{ l.updatedAt ? formatDate(l.updatedAt) : t('lockNeverRefreshed') }}</code>
               <code
                 v-else
                 class="text-medium-emphasis"
@@ -127,6 +127,9 @@ fr:
   noIssues: Aucun problème détecté
   summary: Résumé
   locksFree: Aucun verrou actif
+  lockOrigin: origine
+  lockRefreshed: rafraîchi le
+  lockNeverRefreshed: jamais rafraîchi (ne peut pas expirer)
   rawJson: JSON brut
   warning:
     MissingIndex: Index Elasticsearch manquant
@@ -145,6 +148,9 @@ en:
   noIssues: No issues detected
   summary: Summary
   locksFree: No active locks
+  lockOrigin: origin
+  lockRefreshed: refreshed at
+  lockNeverRefreshed: never refreshed (cannot expire)
   rawJson: Raw JSON
   warning:
     MissingIndex: Elasticsearch index missing
@@ -166,8 +172,13 @@ import useDatasetStore from '~/composables/dataset/dataset-store'
 
 defineProps<{ tab?: string }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { id } = useDatasetStore()
+
+// the lock document's TTL field is `updatedAt` (set by @data-fair/lib-node/locks on acquire and
+// refreshed every ttl/2 by the holding process): a missing one means the TTL index can never reap
+// the row, so the dataset stays excluded from every worker task forever
+const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString(locale.value)
 
 type DiagnoseResponse = {
   filesInfos: any[]

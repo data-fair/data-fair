@@ -91,7 +91,9 @@ export default async function (dataset: DatasetInternal) {
 
   // only the REST path consumes the re-emitted lines (markIndexedStream); for file
   // datasets the sink is a no-op, so skip the per-line copy on the readable side
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
+  // a full reindex targets a fresh index that maps _bytes; a partial REST sync targets the
+  // existing one, which maps it iff the dataset is marked _esLineBytes
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), stampBytes: !partialUpdate || !!dataset._esLineBytes })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {

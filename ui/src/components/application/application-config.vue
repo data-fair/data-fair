@@ -205,29 +205,36 @@ const draftSchema = ref<any>()
 
 const completeSchema = (schema: any) => {
   debug('complete schema for vjsf')
-  let datasetsProp
-  if (schema.definitions && schema.definitions.datasets) {
-    datasetsProp = schema.definitions.datasets
-  } else if (schema.properties && schema.properties.datasets) {
-    datasetsProp = schema.properties && schema.properties.datasets
-  } else if (schema.allOf) {
-    const datasetsAllOf = schema.allOf.find((a: any) => a.properties && a.properties.datasets)
-    if (datasetsAllOf) datasetsProp = datasetsAllOf.properties.datasets
+  // a base app can declare its datasets in a definition, directly in properties, or in an allOf branch,
+  // and a built schema often carries a resolved copy next to the original definition. patch every occurrence:
+  // stopping at the first one found silently misses the copy the form actually renders.
+  const datasetsProps: any[] = []
+  if (schema.definitions && schema.definitions.datasets) datasetsProps.push(schema.definitions.datasets)
+  if (schema.properties && schema.properties.datasets) datasetsProps.push(schema.properties.datasets)
+  if (schema.allOf) {
+    for (const allOfItem of schema.allOf) {
+      if (allOfItem.properties && allOfItem.properties.datasets) datasetsProps.push(allOfItem.properties.datasets)
+    }
   }
-  if (!datasetsProp) {
-    console.error('dit not find a "datasets" property in schema')
-  } else {
+  if (!datasetsProps.length) {
+    console.error('did not find a "datasets" property in schema')
+  }
+
+  const fixFromUrl = (fromUrl: string) => {
+    return fromUrl.replace('owner={context.owner.type}:{context.owner.id}', '{context.datasetFilter}')
+  }
+  for (const datasetsProp of datasetsProps) {
     if (roDataset) {
       datasetsProp.readOnly = true
     }
 
-    const fixFromUrl = (fromUrl: string) => {
-      return fromUrl.replace('owner={context.owner.type}:{context.owner.id}', '{context.datasetFilter}')
-    }
     // manage retro-compatibility of use of "context.owner" to "context.datasetsFilter"
     if (datasetsProp['x-fromUrl']) datasetsProp['x-fromUrl'] = fixFromUrl(datasetsProp['x-fromUrl'])
-    if (datasetsProp.items['x-fromUrl']) datasetsProp.items['x-fromUrl'] = fixFromUrl(datasetsProp.items['x-fromUrl'])
+    if (datasetsProp.items?.['x-fromUrl']) datasetsProp.items['x-fromUrl'] = fixFromUrl(datasetsProp.items['x-fromUrl'])
     if (Array.isArray(datasetsProp.items)) {
+      // json-layout only considers a tuple entry required up to minItems, and base app schemas rarely declare it.
+      // an application always needs its first dataset, so state it explicitly and let the validation enforce it.
+      datasetsProp.minItems = datasetsProp.minItems ?? 1
       for (const item of datasetsProp.items) {
         if (item['x-fromUrl']) item['x-fromUrl'] = fixFromUrl(item['x-fromUrl'])
       }

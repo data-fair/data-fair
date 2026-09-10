@@ -25,6 +25,7 @@ const wrapLocalize = (raw) => (errors) => {
   raw(errors)
   customMessages.forEach((msg, i) => { errors[i].message = msg })
 }
+/** @type {Record<string, (errors?: any[] | null) => void>} */
 export const localize = new Proxy(ajvI18n, {
   get (target, prop) {
     const raw = target[prop]

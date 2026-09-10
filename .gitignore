@@ -24,7 +24,6 @@ test-results/
 /benchmark/results/*.json
 /benchmark/capabilities-defaults/data/
 /benchmark/capabilities-defaults/results.json
-/docs/**/*.pdf
 .playwright-mcp
 /superpowers/**/*.md
 /docs/superpowers/
