@@ -639,10 +639,15 @@ fixtures also feed the screenshots of the client-facing presentation
   `_`-prefixed field (internal/calculated: `_id`, `_uniqueRefs`, …) plus a fixed top-level list:
   `status`, `draft`, `integrity`, `count`, `storage`, `esWarning`, `finalizedAt`,
   `dataUpdatedAt`, `dataUpdatedBy`, `updatedAt`, `updatedBy`, `createdBy`, `errorStatus`,
-  `errorRetry`, `loaded`, `descendants`. These are fields that legitimately churn under normal
-  operation (worker-maintained bookkeeping, cache/derived state) without representing a
+  `errorRetry`, `loaded`, `descendants`, `partOf`. Most of these are fields that legitimately churn
+  under normal operation (worker-maintained bookkeeping, cache/derived state) without representing a
   meaningful metadata edit — hashing them would produce false breaches on ordinary background
-  activity. Nested strips remove the same kind of churn one level down:
+  activity. `partOf` (the child annotation, see [part-of.md](part-of.md)) is the one exception: it is
+  user-facing metadata, but the unflag cascade (`api/src/misc/utils/part-of.ts` `handleChildren`, an
+  `updateMany` `$unset`) writes it raw outside `applyPatch`, so covering it would false-breach on
+  every organic cascade. The trade accepted: tampering with `partOf` is **not** detected — the field
+  can be re-covered later by routing that cascade through `applyPatch`. Nested strips remove the same
+  kind of churn one level down:
   `extensions[].needsUpdate` / `extensions[].nextUpdate` (autoUpdateExtension), `rest.ttl.checkedAt`
   (the TTL worker), `extras.applications` (syncApplications propagation), and
   `readApiKey.expiresAt` / `readApiKey.renewAt` (the renewApiKey worker, which rotates these on its
