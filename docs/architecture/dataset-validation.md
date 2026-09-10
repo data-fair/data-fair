@@ -51,7 +51,7 @@ process-file worker
          discard writer, advance status to 'extended' or 'validated'
 ```
 
-Phase A's `ValidateStream` (defined inline in `process-file.ts`) keeps the existing 3-error inline summary in the journal `validation-error.data` field for human readability; the diagnostic file is the exhaustive source.
+Phase A's `ValidateStream` (defined inline in `process-file.ts`) writes a one-line summary (error ratio + failing-line count) in the journal `validation-error.data` field; it deliberately carries **no error sample** — the diagnostic file is the only, and exhaustive, source. (An inline 3-error extract used to be included; it was dropped once the CSV shipped, since it was both redundant and invisible in the journal UI. `index-stream.ts` keeps its own extract because ES indexing errors never produce a diagnostic file.)
 
 Phase B reuses `extensionsUtils.extend()` with an `onLineError(absoluteIndex, err)` hook. The hook is invoked from `ExtensionsStream` for every row whose remote-service result has an `errorKey`, and for every row whose `exprEval` throws.
 
@@ -134,7 +134,7 @@ A failed run emits exactly one `validation-error` journal event with these field
 
 | Field | Meaning |
 |---|---|
-| `data` | Human-readable summary, multi-line; reuses the existing 3-error inline format for schema failures, plus a one-liner for blocking extensions |
+| `data` | Human-readable summary: one line for schema failures (ratio + failing-line count, no error sample), plus a one-liner for blocking extensions |
 | `hasDiagnosticFile` | `true` when a downloadable CSV exists for this attempt (UI gates the download button on this) |
 | `diagnosticErrorCount` | Number of rows actually in the CSV (can be capped at 10 000) |
 | `diagnosticCapped` | `true` if the cap was hit |
@@ -158,6 +158,7 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 
 - **Mandatory toggle** — `ui/src/components/dataset/extension/dataset-extension-remote-service-card.vue` adds a checkbox bound to `extension.mandatory`, with a hint explaining the consequence. Only on `remoteService` cards (no `exprEval` toggle by design).
 - **Download button** — `ui/src/components/journal-view.vue` renders a "Télécharger le diagnostic" button on any `validation-error` event whose `hasDiagnosticFile === true`. The button derives its URL from the injected `datasetStore.resourceUrl`, appending `?draft=true` for draft events.
+- **Long messages** — the same component clamps every event message to 2 lines and adds a "Voir le message complet" toggle when `event.data` exceeds 140 chars or is multi-line; expanded, the message scrolls inside a 300px-tall block. Event *labels* are bounded (70 entries in `shared/events.json`, 128 chars max) but `event.data` is not — a breaking-changes list grows with the schema (3 400+ chars observed), and for `type: 'error'` events the data **is** the title.
 
 ## Modules & files
 

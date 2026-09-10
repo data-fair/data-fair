@@ -3,6 +3,7 @@ import type { Dataset, Settings } from '#types'
 
 import config from '#config'
 import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
+import { gettingStartedGuide } from './getting-started-guide.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
@@ -59,7 +60,7 @@ export default (
   if (!ds) throw new Error('dataset is required (or pass options.merged=true)')
   const isAdmin = !!sessionState?.user?.adminMode
 
-  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(ds, publicUrl, settings, undefined, options)
+  const { api, userApiRate, anonymousApiRate, bulkLineSchema, gettingStartedInputs } = datasetAPIDocs(ds, publicUrl, settings, undefined, options)
 
   const title = `API privée du jeu de données : ${ds.title || ds.id}`
 
@@ -878,6 +879,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
   }
+
+  // Last, so the guide is built from the paths that survived the contextual filter above: a caller
+  // restricted to metadata must not be pointed at /lines or /full.
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
 
   return api
 }

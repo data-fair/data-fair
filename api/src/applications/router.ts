@@ -139,7 +139,8 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
   partOf.assertOwnerChangeAllowed(application)
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  // (checked against all the user's memberships, the new owner is rarely the active account)
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   // the child datasets follow their parent application, they consume the new owner's dataset limits
   if (req.body.type !== application.owner.type || req.body.id !== application.owner.id) {

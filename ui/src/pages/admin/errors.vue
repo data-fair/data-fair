@@ -25,7 +25,15 @@
                 {{ error.title }} ({{ error.owner.name }})
               </a>
             </v-list-item-title>
-            <v-list-item-subtitle>{{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})</v-list-item-subtitle>
+            <v-list-item-subtitle v-if="error.integrityIssue">
+              {{ t(error.integrityIssue) }}
+              <template v-if="error.integrityCheckedAt">
+                ({{ dayjs(error.integrityCheckedAt).format("lll") }})
+              </template>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-else-if="error.event">
+              {{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})
+            </v-list-item-subtitle>
 
             <template #append>
               <v-btn
@@ -111,6 +119,8 @@ fr:
   errors: Erreurs
   reindex: Réindexer
   noDatasetsInError: Aucun jeu de données en erreur
+  breach: "Intégrité rompue : le contenu a divergé de son ancrage"
+  trail-altered: "Historique de révisions altéré : révisions masquées ou réécrites"
   datasetsInError: Jeux de données en erreur
   noApplicationsInError: Aucune application en erreur
   applicationsInError: Applications en erreur
@@ -120,6 +130,8 @@ en:
   errors: Errors
   reindex: Reindex
   noDatasetsInError: No datasets in error
+  breach: "Integrity breach: content diverged from its anchor"
+  trail-altered: "Integrity trail altered: revisions hidden or rewritten"
   datasetsInError: Datasets in error
   noApplicationsInError: No applications in error
   applicationsInError: Applications in error
@@ -146,7 +158,11 @@ type ResourceErrors = {
     errorMessageDraft?: string,
     updatedAt: string
     owner: { type: string, id: string, name: string },
-    event: { data: string, date: string }
+    event?: { data: string, date: string }
+    // set when the dataset is listed for a compromised integrity rather than a pipeline error:
+    // its real status stays 'finalized' and its last journal event describes an unrelated run
+    integrityIssue?: 'breach' | 'trail-altered' | null
+    integrityCheckedAt?: string
   }[]
 }
 

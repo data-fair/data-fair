@@ -1,6 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
+import { valuesIncludeClause, parseQMode, DEFAULT_Q_MODE } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import { type Client } from '@elastic/elasticsearch'
 
@@ -25,6 +26,13 @@ export default async (client: Client, dataset: any, fieldKey: string, query: Rec
       }
     }
   }
+
+  // `q` and any filter naming THIS column are statements about the values being listed, not about
+  // which rows to keep (`q` is scoped to this single column, see the qFields above). On a
+  // multi-valued column the two differ — the terms agg emits every value of each matching row —
+  // so the buckets are narrowed back to the values actually asked for.
+  const include = valuesIncludeClause(field, query, parseQMode(query.q_mode, DEFAULT_Q_MODE))
+  if (include) esQuery.aggs.values.terms.include = include
 
   if (query.q) {
     // top hit relevance order in case of a filter

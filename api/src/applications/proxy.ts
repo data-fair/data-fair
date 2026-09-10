@@ -147,7 +147,13 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
-  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(application)))
+  // anchored on the assignment the contract defines, so that an application merely naming the
+  // placeholder elsewhere does not consume the substitution (app-calendar 1.3.0 names it in a
+  // comment above the script). Function replacement: the JSON is data, not a $-pattern.
+  // < and > are escaped so no title or label can close the script (`</script>`) or the comment
+  // an application may have wrapped the assignment in (`-->`); the escapes re-parse identically.
+  const applicationJson = JSON.stringify(application).replace(/</g, '\\u003C').replace(/>/g, '\\u003E')
+  const document = parse5.parse(rawHtml.replace(/window\.APPLICATION\s*=\s*%APPLICATION%/g, () => `window.APPLICATION=${applicationJson}`))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
   if (!html) throw new Error(req.__('errors.brokenHTML'))
 
@@ -177,6 +183,18 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
     if (prepend) head.childNodes.unshift(node)
     else head.childNodes.push(node)
   }
+
+  // data-fair owns the title of the served document, for the same reason it owns lang: the
+  // <title> an application declares is the name of its model in the catalog — that document
+  // is fetched directly from the base application URL when importing it, never through this
+  // proxy — not the name of the visualization being served. Leaving it in place titles every
+  // page after its model ("Charts" for a chart of sports facilities), which fails WCAG 2.4.2 /
+  // RGAA 8.6 as soon as the application is opened on its own instead of embedded in a portal.
+  // Every declared title is dropped, not just the first: some applications declare several,
+  // one per language (base-applications/service.ts picks between them at import time), and
+  // leaving the extras would keep the model name in the document behind the browser's pick.
+  head.childNodes = head.childNodes.filter((c: any) => c.tagName !== 'title')
+  pushHeadNode({ nodeName: 'title', tagName: 'title', attrs: [] }, application.title)
 
   // Data-fair generates a manifest per app
   const manifestUrl = new URL(application.exposedUrl).pathname + '/manifest.json'

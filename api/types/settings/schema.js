@@ -114,6 +114,12 @@ export default {
                 const: 'dataset-publication',
                 title: 'Un jeu de données a été publié sur un catalogue'
               }, {
+                const: 'dataset-integrity-breach',
+                title: 'L\'intégrité d\'un jeu de données est rompue'
+              }, {
+                const: 'dataset-integrity-trail-altered',
+                title: 'L\'historique de révisions d\'un jeu de données est altéré'
+              }, {
                 const: 'application-application-created',
                 title: 'Une nouvelle visualisation a été créée'
               }, {

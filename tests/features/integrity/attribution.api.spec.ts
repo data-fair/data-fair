@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test'
 import fs from 'fs-extra'
 import path from 'node:path'
 import FormData from 'form-data'
-import { axios, axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axios, axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, setConfig, waitForFinalize, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, listIntegrityKeys,
@@ -115,8 +115,8 @@ test('a worker-origin re-anchor (no preceding request context) writes no `.who`'
 
   // simulate an organic worker re-anchor: new bytes out-of-band, then an empty stamp (no
   // context at all → anchorDataset defaults to origin 'worker', hint.who is undefined)
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   // rev0 JSON+.file+.who (enable is attributed), rev1 JSON+.file (worker-origin, no who) = 5
   const keys = await waitForIntegrityRevisions(prefix, 5)
   expect(keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
@@ -184,7 +184,7 @@ test('_fix after an out-of-band tamper carries the fixing superadmin in `.who`',
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   const fix = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).data
   expect(fix.status).toBe('ok')
 
@@ -205,7 +205,7 @@ test('dedupe writes no new revision and no new `.who`, even when the hint carrie
 
   // no actual content change: the stamp carries a who, but anchorDataset's hash-match dedupe
   // returns early — BEFORE the who-first write — so no `.who` must appear either
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     _needsHistorizing: { context: { operation: 'update', origin: 'user', who: { user: { id: 'someone-else' }, ip: '9.9.9.9' } } }
   })
   await waitForFlagCleared(dataset.id)
@@ -355,7 +355,7 @@ test.describe('attribution kill switch (synchronous admin actions only — see l
     const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
     const dataset = await sendDataset('datasets/dataset1.csv', admin)
     await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-    await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
     const fix = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).data
     expect(fix.status).toBe('ok')
     await expect(integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))).rejects.toMatchObject({ name: 'NoSuchKey' })
@@ -401,8 +401,8 @@ test('a revision listing item with no `.who` sibling simply lacks `who`, respons
   await waitForIntegrityRevisions(prefix, 2)
 
   // simulate a worker-origin re-anchor (no who hint at all, mirrors the sibling test above)
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForIntegrityRevisions(prefix, 4) // rev0 JSON+.file+.who, rev1 JSON+.file (no who)
 
   const res = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
@@ -432,8 +432,8 @@ test('GET revisions/{i} has no `who` when the sibling is absent, shape stable', 
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForIntegrityRevisions(prefix, 2)
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'legitimate worker rewrite' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: {} })
   await waitForIntegrityRevisions(prefix, 4)
 
   const detail = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/1`)).data
@@ -446,7 +446,7 @@ test('owner-admin reads a line revision listing and sees `who` on the attributed
   const dataset = await restDataset(admin, [{ attr1: 'v1' }])
   await waitForFinalize(admin, dataset.id)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }) // logged-in write → attributed
-  await waitForLinesDrained(admin, dataset.id)
+  await waitForLinesDrained(dataset.id)
 
   const list = (await owner.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions`)).data
   expect(list.count).toBe(1)

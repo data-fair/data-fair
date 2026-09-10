@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { isMetricAggregatable, getSimpleMetricsFields } from '../../../../api/src/datasets/es/operations.ts'
+import { assertMetricAccepted, isMetricAggregatable, getSimpleMetricsFields } from '../../../../api/src/datasets/es/operations.ts'
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
 
@@ -48,9 +48,10 @@ test.describe('simple_metrics_agg effective fields list', () => {
   })
 
   test('default list narrows to the columns accepting the requested metrics', () => {
-    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'avg' }), ['n', 'd'])
-    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'cardinality' }), ['n', 's', 'd'])
-    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'min,max' }), ['n', 's', 'd'])
+    // boolean columns accept the same metric aggs as numeric ones (doc-valued as 0/1)
+    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'avg' }), ['n', 'd', 'b'])
+    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'cardinality' }), ['n', 's', 'd', 'b'])
+    assert.deepEqual(getSimpleMetricsFields(dataset, { metrics: 'min,max' }), ['n', 's', 'd', 'b'])
   })
 
   test('explicit fields are returned as requested', () => {
@@ -76,5 +77,20 @@ test.describe('simple_metrics_agg effective fields list', () => {
 
   test('explicit field incompatible with the requested metric → 400', () => {
     assert.throws(() => getSimpleMetricsFields(dataset, { fields: 's', metrics: 'avg' }), (e: any) => e.status === 400)
+  })
+})
+
+test.describe('boolean columns accept numeric-like metric aggs', () => {
+  test('sum/avg/min/max/stats/percentiles are accepted on boolean', () => {
+    for (const metric of ['avg', 'sum', 'min', 'max', 'stats', 'percentiles', 'value_count', 'cardinality']) {
+      assert.doesNotThrow(() => assertMetricAccepted(bool, metric), `metric ${metric} should be accepted on boolean`)
+    }
+  })
+
+  test('non-aggregatable columns (object) reject every metric, even value_count', () => {
+    // string columns accept value_count, objects fail isMetricAggregatable before the metric list is even consulted
+    assert.doesNotThrow(() => assertMetricAccepted(str, 'value_count'))
+    assert.throws(() => assertMetricAccepted(obj, 'value_count'), (e: any) => e.status === 400)
+    assert.throws(() => assertMetricAccepted(obj, 'sum'), (e: any) => e.status === 400)
   })
 })

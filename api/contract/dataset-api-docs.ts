@@ -11,6 +11,7 @@ import { acceptedMetricAggs } from '../src/datasets/es/operations.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters } from '../src/datasets/es/commons.ts'
+import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -1484,5 +1485,11 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   ]
   api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
-  return { api, userApiRate, anonymousApiRate, bulkLineSchema }
+  // Built last, from the pruned paths, so it never points at a route this doc doesn't expose.
+  // The private doc discards this description and re-appends the guide after its own contextual
+  // filter — same reason: it must reflect what the caller can actually call.
+  const gettingStartedInputs: GettingStartedInputs = { aggField: valuesProperties[0]?.key, hasBbox }
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
+
+  return { api, userApiRate, anonymousApiRate, bulkLineSchema, gettingStartedInputs }
 }

@@ -193,7 +193,6 @@
                               :src="baseApp.image"
                               :alt="baseApp.title"
                               height="150"
-                              cover
                             />
                             <v-card-text v-if="baseApp.disabled?.length">
                               <v-alert

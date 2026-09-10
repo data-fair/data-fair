@@ -86,6 +86,7 @@
     <permission-dialog
       v-if="!disabled"
       :permission-classes="permissionClasses"
+      :resource-type="resourceType"
       :owner="ownerDetails"
       @update:model-value="addPermission"
     >
@@ -166,6 +167,7 @@
               v-if="!disabled"
               :model-value="item"
               :permission-classes="permissionClasses"
+              :resource-type="resourceType"
               :owner="ownerDetails"
               @update:model-value="p => editPermission(index, p)"
             >
@@ -544,15 +546,15 @@ async function fetchOwnerDetails () {
 
 // --- Permission CRUD for detailed mode ---
 
-function addPermission (p: Permission) {
+function addPermission (permissions: Permission[]) {
   if (!props.modelValue) return
-  save([...props.modelValue, p])
+  save([...props.modelValue, ...permissions])
 }
 
-function editPermission (index: number, p: Permission) {
+function editPermission (index: number, permissions: Permission[]) {
   if (!props.modelValue) return
   const next = [...props.modelValue]
-  next[index] = p
+  next.splice(index, 1, ...permissions)
   save(next)
 }
 
