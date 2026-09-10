@@ -11,6 +11,7 @@ import { acceptedMetricAggs } from '../src/datasets/es/operations.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters } from '../src/datasets/es/commons.ts'
+import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -86,49 +87,6 @@ const apiRate = (key: 'user' | 'anonymous', label: string): string => {
 }
 const userApiRate = apiRate('user', "authentifié (session ou clé d'API)")
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
-
-/**
- * "Par où commencer ?" guide appended to the per-dataset doc descriptions (public and private variants).
- * It orients users towards the few most useful operations instead of the full operations list, and gives
- * copy-paste URLs — most importantly the vector tiles URL for GIS integration. Never used in merged mode.
- */
-export const gettingStartedGuide = (ds: Dataset, serverUrl: string): string => {
-  const linesUrl = `${serverUrl}/lines`
-  const aggFields: any[] = ((ds as any).schema || [])
-    .filter((p: any) => !p.key.startsWith('_geo') && (!p['x-capabilities'] || p['x-capabilities'].values !== false))
-  const aggField = aggFields.length ? aggFields[0].key : '<colonne>'
-  const downloadApplicable = isDatasetOperationApplicable('downloadFullData', datasetContext(ds))
-
-  const items: string[] = [
-    '**Obtenir les métadonnées** — `GET /` ("Lire les informations") retourne la fiche complète du jeu de données : titre, description, provenance, colonnes, etc. `GET /schema` ("Lire le schéma") détaille les colonnes et leurs types.',
-    `**Requêter les lignes** — \`GET /lines\` ("Lire les lignes") : recherche textuelle (\`q\`), filtres par colonne (par exemple \`ma_colonne_eq=une_valeur\`), tri, pagination via la propriété \`next\` de la réponse, export tableur avec \`format=csv\` ou \`format=xlsx\`. Exemple :
-
-  \`${linesUrl}?size=10&q=exemple\``
-  ]
-  if (aggFields.length) {
-    items.push(`**Agréger** — \`GET /values_agg\` ("Agréger les valeurs") compte ou calcule une métrique par valeur d'une colonne. Exemple, comptage des lignes par valeur de la colonne \`${aggField}\` :
-
-  \`${serverUrl}/values_agg?field=${aggField}&metric=value_count\`
-
-  \`GET /metric_agg\` ("Calculer une métrique") calcule une métrique globale (somme, moyenne, percentiles, etc.).`)
-  }
-  if (downloadApplicable) {
-    items.push('**Télécharger** — `GET /full` ("Télécharger (données enrichies)") retourne toutes les lignes dans un fichier unique, colonnes calculées incluses.')
-  }
-  if ((ds as any).bbox && (ds as any).bbox.length === 4) {
-    items.push(`**Carte / SIG** — ce jeu de données est géographique et expose des tuiles vectorielles : collez cette URL comme gabarit de tuiles dans votre outil (QGIS : nouvelle couche "Tuiles vectorielles" ; MapLibre / Mapbox GL JS : source de type "vector") :
-
-  \`${linesUrl}?format=pbf&xyz={x},{y},{z}\`
-
-  Le paramètre \`sampling\` (\`neighbors\` par défaut, ou \`max\`) ajuste la densité d'échantillonnage par tuile. Pour un export géographique ponctuel, préférez \`format=geojson\` (ou \`shp\`, \`wkt\`).`)
-  }
-
-  return `
-**Par où commencer ?** Cette documentation expose beaucoup d'opérations ; quelques points d'accès suffisent pour la plupart des besoins d'intégration.
-
-${items.map(i => '- ' + i).join('\n')}
-  `
-}
 
 /**
  * Builds the public per-dataset OpenAPI documentation served at /datasets/{id}/api-docs.json.
@@ -555,7 +513,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
-  let description = `
+  const description = `
 Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${ds.title || (ds as any).slug}**".
 
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
@@ -658,10 +616,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     url: `${publicUrl}/api/v1/datasets/${publicationSite ? (ds as any).slug : (ds as any).id}`,
     description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${ds.title}`
   }]
-
-  if (!merged) {
-    description += gettingStartedGuide(ds, servers[0].url)
-  }
 
   const info: any = {
     title: `API publique du jeu de données : ${ds.title || (ds as any).slug}`,
@@ -1531,5 +1485,11 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   ]
   api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
-  return { api, userApiRate, anonymousApiRate, bulkLineSchema }
+  // Built last, from the pruned paths, so it never points at a route this doc doesn't expose.
+  // The private doc discards this description and re-appends the guide after its own contextual
+  // filter — same reason: it must reflect what the caller can actually call.
+  const gettingStartedInputs: GettingStartedInputs = { aggField: valuesProperties[0]?.key, hasBbox }
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
+
+  return { api, userApiRate, anonymousApiRate, bulkLineSchema, gettingStartedInputs }
 }
