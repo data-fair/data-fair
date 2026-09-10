@@ -420,7 +420,7 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="showChangeOwnerSection && (showPartOfSection || canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="showChangeOwnerSection && (showPartOfSection || canDeleteAllLines || showDeleteSection)" />
 
           <part-of-section
             v-if="showPartOfSection && dataset"
@@ -432,7 +432,7 @@
             @changed="store.datasetFetch.refresh()"
           />
 
-          <v-divider v-if="showPartOfSection && (canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="showPartOfSection && (canDeleteAllLines || showDeleteSection)" />
 
           <v-list-item
             v-if="canDeleteAllLines"
@@ -457,10 +457,10 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="canDeleteAllLines && can('delete').value" />
+          <v-divider v-if="canDeleteAllLines && showDeleteSection" />
 
           <v-list-item
-            v-if="can('delete').value"
+            v-if="showDeleteSection"
             :prepend-icon="mdiDelete"
             class="py-4"
           >
@@ -926,6 +926,9 @@ const showPartOfSection = computed(() => can('writePartOf').value && !isMasterDa
 // a child always lives in the same account as its parent, it can only follow it (see the API guard)
 const showChangeOwnerSection = computed(() => can('changeOwner').value && !dataset.value?.partOf)
 
+// a child is deleted along with its parent, never on its own (see the API guard)
+const showDeleteSection = computed(() => can('delete').value && !dataset.value?.partOf)
+
 const partOfCandidates = computed(() => [
   ...(virtualDatasetsFetch.data.value?.results ?? []).map(d => ({ type: 'dataset' as const, id: d.id, title: d.title })),
   ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
@@ -1253,7 +1256,7 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (showChangeOwnerSection.value || showPartOfSection.value || canDeleteAllLines.value || can('delete').value) {
+  if (showChangeOwnerSection.value || showPartOfSection.value || canDeleteAllLines.value || showDeleteSection.value) {
     result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible or sensitive operations: change owner, define/remove this dataset as a child of a parent resource (partOf), delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 

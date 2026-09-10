@@ -112,8 +112,8 @@
 <i18n lang="yaml">
 fr:
   title: Ressource parente
-  descriptionDataset: Si ce jeu de données n'existe que pour servir la seule ressource qui l'utilise (un jeu de données virtuel qui l'agrège, ou une application qui l'affiche), vous pouvez le définir comme son enfant. Il n'apparaîtra alors plus dans la liste des jeux de données, et restera accessible depuis sa ressource parente.
-  descriptionApplication: Si cette application n'existe que pour servir la seule application qui l'utilise (par exemple un tableau de bord qui l'intègre), vous pouvez la définir comme son enfant. Elle n'apparaîtra alors plus dans la liste des applications, et restera accessible depuis son application parente.
+  descriptionDataset: "Un jeu enfant n'existe que pour servir la ressource qui l'utilise : il disparaît de la liste des jeux de données, reste accessible depuis son parent, et se supprime avec lui."
+  descriptionApplication: "Une application enfant n'existe que pour servir l'application qui l'utilise : elle disparaît de la liste des applications, reste accessible depuis son parent, et se supprime avec lui."
   currentParent: "Actuellement défini comme enfant de : {title}"
   noCandidateDataset: Ce jeu de données n'est utilisé par aucun jeu de données virtuel ni aucune application, il est donc impossible de le définir comme enfant.
   noCandidateApplication: Cette application n'est utilisée par aucune autre application, il est donc impossible de la définir comme enfant.
@@ -129,8 +129,8 @@ fr:
   errorMsg: Échec de la mise à jour de la ressource parente
 en:
   title: Parent resource
-  descriptionDataset: If this dataset only exists to serve the single resource that uses it (a virtual dataset that aggregates it, or an application that displays it), you can define it as its child. It will no longer appear in the dataset list, and will stay reachable from its parent resource.
-  descriptionApplication: If this application only exists to serve the single application that uses it (e.g. a dashboard that embeds it), you can define it as its child. It will no longer appear in the application list, and will stay reachable from its parent application.
+  descriptionDataset: "A child dataset only exists to serve the resource that uses it: it disappears from the dataset list, stays reachable from its parent, and is deleted along with it."
+  descriptionApplication: "A child application only exists to serve the application that uses it: it disappears from the application list, stays reachable from its parent, and is deleted along with it."
   currentParent: "Currently defined as a child of: {title}"
   noCandidateDataset: This dataset is not used by any virtual dataset nor any application, so it cannot be defined as a child.
   noCandidateApplication: This application is not used by any other application, so it cannot be defined as a child.

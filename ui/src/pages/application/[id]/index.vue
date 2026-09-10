@@ -334,10 +334,10 @@
             @changed="store.applicationFetch.refresh()"
           />
 
-          <v-divider v-if="can('writePartOf') && can('delete')" />
+          <v-divider v-if="can('writePartOf') && showDeleteSection" />
 
           <v-list-item
-            v-if="can('delete')"
+            v-if="showDeleteSection"
             :prepend-icon="mdiDelete"
             class="py-4"
           >
@@ -560,6 +560,8 @@ const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
 // a child always lives in the same account as its parent, it can only follow it (see the API guard)
 const showChangeOwnerSection = computed(() => can('delete') && !application.value?.partOf)
+// a child is deleted along with its parent, never on its own (see the API guard)
+const showDeleteSection = computed(() => can('delete') && !application.value?.partOf)
 const showDeleteDialog = ref(false)
 const upgrading = ref(false)
 
@@ -690,7 +692,7 @@ const sections = computedDeepDiff(() => {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Activity tracking for this application.' }
   }
 
-  if (can('delete') || can('writePartOf')) {
+  if (showDeleteSection.value || can('writePartOf')) {
     result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive or sensitive operations: change owner, define/remove this application as a child of a parent application (partOf), delete the application.' }
   }
 
