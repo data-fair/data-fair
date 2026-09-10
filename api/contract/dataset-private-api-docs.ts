@@ -2,7 +2,7 @@ import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { Dataset, Settings } from '#types'
 
 import config from '#config'
-import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
+import datasetAPIDocs, { mergedSampleDataset, gettingStartedGuide } from './dataset-api-docs.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
@@ -108,6 +108,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
   api.security = [{ apiKey: [] }, { sdCookie: [] }]
+
+  if (!merged) {
+    description += gettingStartedGuide(ds, `${publicUrl}/api/v1/datasets/${(ds as any).id}`)
+  }
 
   Object.assign(api.info, { title, description })
 
