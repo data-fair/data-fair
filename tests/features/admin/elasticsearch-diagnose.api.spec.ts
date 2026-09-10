@@ -69,9 +69,15 @@ test.describe('admin/elasticsearch/diagnose', () => {
     await testUser1.post('/api/v1/datasets/esdiag-legacy/_bulk_lines', [{ attr1: 'a' }])
     await waitForFinalize(testUser1, 'esdiag-legacy')
     // a file dataset never carries the marker before its first full reindex, it is not concerned
-    await sendDataset('datasets/dataset1.csv', testUser1)
+    const fileDataset = await sendDataset('datasets/dataset1.csv', testUser1)
 
-    const listed = async () => (await adminUser.get('/api/v1/admin/elasticsearch/diagnose')).data.restDatasetsWithoutLineBytes.results.map((d: any) => d.id)
+    // the listing is global while clean() only removes test_* owned data: a dev database seeded with
+    // dev-fixtures or used by hand holds unrelated REST datasets predating the marker, so restrict
+    // the assertions to the datasets this test owns
+    const ourIds = ['esdiag-legacy', fileDataset.id]
+    const listed = async () => (await adminUser.get('/api/v1/admin/elasticsearch/diagnose')).data.restDatasetsWithoutLineBytes.results
+      .map((d: any) => d.id)
+      .filter((id: string) => ourIds.includes(id))
     assert.deepEqual(await listed(), [])
 
     await patchRawDataset('esdiag-legacy', { $unset: { _esLineBytes: 1 } })
