@@ -289,6 +289,30 @@ test.describe('application partOf attribute', () => {
     assert.equal(datasetRes.data.partOf, undefined)
   })
 
+  test('an application defined as a child cannot be deleted on its own, only once unflagged', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    await assert.rejects(
+      ax.delete(`/api/v1/applications/${childApp.id}`),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        assert.ok(err.data.includes('retirez d\'abord l\'attribut enfant'), err.data)
+        assert.ok(err.data.includes(`"${parentApp.title}"`), err.data)
+        return true
+      }
+    )
+
+    // retiring the child attribute is the documented way out
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: null })
+    const res = await ax.delete(`/api/v1/applications/${childApp.id}`)
+    assert.equal(res.status, 204)
+  })
+
   test('a still-referenced child identified only by href is not treated as an orphan', async () => {
     const ax = testUser1
     const childA = await sendDataset('datasets/dataset1.csv', ax)

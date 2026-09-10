@@ -28,6 +28,7 @@ import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
+import * as virtualDatasetsUtils from '../utils/virtual.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
 import { updateTotalStorage, checkMoveLimits } from '../utils/storage.ts'
@@ -165,6 +166,10 @@ export const registerMetadataRoutes = (router: Router) => {
         }
       }
 
+      // a virtual dataset already holding members cannot be emptied by a patch: checked before
+      // detectOrphans so the user isn't asked for a childrenAction on a patch that will be rejected anyway
+      virtualDatasetsUtils.assertKeepsAMember(dataset, patch)
+
       // dropping members from a virtual dataset can orphan datasets still defined as its partOf
       // children: detected (and refused) up-front, but applied only once the patch itself is
       // persisted — the cascade is irreversible and preparePatch/applyPatch can still reject the request
@@ -265,6 +270,10 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
+
+    // guards on the stored document, reqDataset can be the draft view (alwaysDraft)
+    partOf.assertNotChild(datasetFull)
+    await virtualDatasetsUtils.assertNotLastMember(datasetFull)
 
     // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
     await partOf.handleChildrenBeforeDeletion({ app: req.app, sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.query.childrenAction as string | undefined)

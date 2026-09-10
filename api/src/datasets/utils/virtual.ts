@@ -10,6 +10,17 @@ import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
 import { type VirtualFilter, type QueryableDescendant } from '../es/operations.ts'
 
+// a virtual dataset that already aggregates at least one member cannot be patched down to zero;
+// creation with zero members, or patching an already-empty one, both stay allowed
+export const assertKeepsAMember = (dataset: any, patch: any) => {
+  if (!dataset.isVirtual || !('virtual' in patch)) return
+  const storedChildren = new Set(dataset.virtual?.children ?? [])
+  const patchedChildren = patch.virtual?.children ?? []
+  if (storedChildren.size > 0 && patchedChildren.length === 0) {
+    throw httpError(400, 'Un jeu de données virtuel doit agréger au moins un jeu de données. Pour ne plus l\'utiliser, supprimez le jeu virtuel lui-même.')
+  }
+}
+
 // distinguish "the dataset does not exist anymore" from "it exists but is not readable by the
 // account owning the virtual dataset" — and report exactly which child is at fault
 const missingChildrenDetails = async (missingIds: string[]) => {
@@ -299,4 +310,27 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
     if (!extraProperties?.includes('permissions')) delete descendant.permissions
     return descendant
   })
+}
+
+/** A virtual dataset left without any member cannot be queried: refuse to delete its last one.
+ * Same-account parents only: a stranger's virtual dataset must neither block a deletion nor be named. */
+export const assertNotLastMember = async (dataset: any) => {
+  const parents = await mongo.datasets
+    .find({ 'virtual.children': dataset.id, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
+      { projection: { _id: 0, id: 1, title: 1, 'virtual.children': 1 } })
+    .toArray()
+  const emptied = parents.filter(parent => new Set(parent.virtual?.children ?? []).size === 1)
+  if (!emptied.length) return
+  const list = emptied.map(parent => `"${parent.title}" (${parent.id})`).join(', ')
+  throw httpError(409, emptied.length === 1
+    ? `Ce jeu de données est le seul membre du jeu de données virtuel ${list}. Supprimez d'abord ce jeu virtuel, ou ajoutez-lui un autre membre.`
+    : `Ce jeu de données est le seul membre des jeux de données virtuels ${list}. Supprimez d'abord ces jeux virtuels, ou ajoutez-leur un autre membre.`)
+}
+
+/** A deleted dataset leaves the virtual datasets aggregating it, whose status bump re-finalizes them. */
+export const detachFromVirtualParents = async (datasetId: string) => {
+  await mongo.datasets.updateMany(
+    { 'virtual.children': datasetId },
+    { $pull: { 'virtual.children': datasetId }, $set: { status: 'indexed' } }
+  )
 }

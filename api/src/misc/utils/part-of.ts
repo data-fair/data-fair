@@ -227,6 +227,15 @@ export const prepareAtCreation = async (childType: ResourceType, resource: any, 
 }
 
 /**
+ * A child shares its parent's lifecycle and is deleted with it, never on its own. Only the delete
+ * routes call this: the cascades go through the services, so they keep deleting children.
+ */
+export const assertNotChild = (resource: any) => {
+  if (!resource.partOf) return
+  throw httpError(409, `Cette ressource est définie comme enfant de "${resource.partOf.title ?? resource.partOf.id}" et se supprime avec elle. Pour la supprimer seule, retirez d'abord l'attribut enfant.`)
+}
+
+/**
  * A child only exists to serve its parent, and both always live in the same account: it can only
  * follow its parent, never change accounts on its own.
  */

@@ -158,6 +158,8 @@ router.delete('/:applicationId', readApplication, permissionMiddleware('delete',
   const application = reqApplication(req)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
+  partOf.assertNotChild(application)
+
   // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
   await partOf.handleChildrenBeforeDeletion({ ...ctx, app: req.app }, 'application', application, req.query.childrenAction as string | undefined)
 

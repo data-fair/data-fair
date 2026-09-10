@@ -477,6 +477,8 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 
   await db.collection('datasets').deleteOne({ id: dataset.id })
+  // only for the stored document: the delete route calls this twice when a draft exists
+  if (!dataset.draftReason) await virtualDatasetsUtils.detachFromVirtualParents(dataset.id)
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
   // notify catalogs that the dataset has been deleted

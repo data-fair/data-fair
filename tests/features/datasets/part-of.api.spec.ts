@@ -278,6 +278,31 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
+  test('a dataset defined as a child cannot be deleted on its own, only once unflagged', async () => {
+    const ax = testUser1
+    const child = await sendDataset('datasets/dataset1.csv', ax)
+    // a second member so that deleting the child never trips the last-member guard instead
+    const member = await sendDataset('datasets/dataset2.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [child.id, member.id] }, schema: [{ key: 'id' }] })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${child.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    await assert.rejects(
+      ax.delete(`/api/v1/datasets/${child.id}`),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        assert.ok(err.data.includes('retirez d\'abord l\'attribut enfant'), err.data)
+        assert.ok(err.data.includes(`"${virtualDataset.title}"`), err.data)
+        return true
+      }
+    )
+
+    // retiring the child attribute is the documented way out
+    await ax.patch(`/api/v1/datasets/${child.id}`, { partOf: null })
+    const res = await ax.delete(`/api/v1/datasets/${child.id}`)
+    assert.equal(res.status, 204)
+  })
+
   test('cannot define a reference (master-data) dataset as a child', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
