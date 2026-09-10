@@ -95,4 +95,59 @@ test.describe('deleting a member of a virtual dataset', () => {
     const detached = (await testUser3.get(`/api/v1/datasets/${foreignVirtual.id}`)).data
     assert.deepEqual(detached.virtual.children, [])
   })
+
+  test('a virtual dataset of another department of the same organization never blocks a deletion either', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep2 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep2.setOrg('test_org1', 'dep2')
+
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser4Dep1)
+    assert.equal(dataset.owner.department, 'dep1')
+    await testUser4Dep1.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['read'] }])
+
+    const virtualRes = await testUser4Dep2.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset of another department',
+      virtual: { children: [dataset.id] },
+      schema: [{ key: 'id' }]
+    })
+    const otherDepVirtual = await waitForFinalize(testUser4Dep2, virtualRes.data.id)
+    assert.equal(otherDepVirtual.owner.department, 'dep2')
+
+    // a department is a distinct scope, exactly as in partOf's isSameOwner: no 409, no title leaked
+    const res = await testUser4Dep1.delete(`/api/v1/datasets/${dataset.id}`)
+    assert.equal(res.status, 204)
+
+    const detached = (await testUser4Dep2.get(`/api/v1/datasets/${otherDepVirtual.id}`)).data
+    assert.deepEqual(detached.virtual.children, [])
+  })
+
+  test('the refusal names every virtual dataset the deletion would empty', async () => {
+    const ax = testUser1
+    const member = await sendDataset('datasets/dataset1.csv', ax)
+    const createVirtual = async (title: string) => {
+      const res = await ax.post('/api/v1/datasets', {
+        isVirtual: true,
+        title,
+        virtual: { children: [member.id] },
+        schema: [{ key: 'id' }]
+      })
+      return await waitForFinalize(ax, res.data.id)
+    }
+    const virtual1 = await createVirtual('a first lonely virtual dataset')
+    const virtual2 = await createVirtual('a second lonely virtual dataset')
+
+    await assert.rejects(
+      ax.delete(`/api/v1/datasets/${member.id}`),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        assert.ok(err.data.includes('Ce jeu de données est le seul membre des jeux de données virtuels '), err.data)
+        assert.ok(err.data.includes(`"${virtual1.title}" (${virtual1.id})`), err.data)
+        assert.ok(err.data.includes(`"${virtual2.title}" (${virtual2.id})`), err.data)
+        assert.ok(err.data.includes('Supprimez d\'abord ces jeux virtuels, ou ajoutez-leur un autre membre.'), err.data)
+        return true
+      }
+    )
+  })
 })

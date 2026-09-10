@@ -651,7 +651,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         }
       } catch (err) {
         // the parent virtual dataset may have become invalid (a conflict introduced by this very
-        // patch, another child deleted or not shared anymore...): don't fail this dataset's own
+        // patch, another child not shared anymore...): don't fail this dataset's own
         // patch for it, the parent will surface the error at its next finalization or query
         internalError('virtual-schema-sync', err)
       }

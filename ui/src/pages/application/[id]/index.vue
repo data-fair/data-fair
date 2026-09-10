@@ -322,7 +322,7 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="showChangeOwnerSection || can('writePartOf')" />
+          <v-divider v-if="showChangeOwnerSection && (can('writePartOf') || showDeleteSection)" />
 
           <part-of-section
             v-if="can('writePartOf') && application"

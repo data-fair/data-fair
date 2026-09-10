@@ -55,7 +55,7 @@ fr:
   descDataset: Définir ce jeu de données comme n'existant que pour servir une ressource parente (jeu de données virtuel ou application).
   descApplication: Définir cette application comme n'existant que pour servir une application parente (par exemple un tableau de bord).
   currentDescDataset: "Ce jeu de données est défini comme enfant de : {title}. Il se supprime avec lui ; pour le supprimer seul, retirez d'abord l'attribut enfant."
-  currentDescApplication: "Cette application est définie comme enfant de : {title}. Elle se supprime avec elle ; pour la supprimer seule, retirez d'abord l'attribut enfant."
+  currentDescApplication: "Cette application est définie comme enfant de : {title}. Elle est supprimée en même temps que celle-ci ; pour la supprimer seule, retirez d'abord l'attribut enfant."
 en:
   partOf: Parent resource
   define: Define as child

@@ -4,7 +4,7 @@ import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { Account } from '@data-fair/lib-express'
-import type { VirtualDataset } from '#types'
+import type { Dataset, VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
@@ -12,7 +12,7 @@ import { type VirtualFilter, type QueryableDescendant } from '../es/operations.t
 
 // a virtual dataset that already aggregates at least one member cannot be patched down to zero;
 // creation with zero members, or patching an already-empty one, both stay allowed
-export const assertKeepsAMember = (dataset: any, patch: any) => {
+export const assertKeepsAMember = (dataset: Pick<Dataset, 'isVirtual' | 'virtual'>, patch: Pick<Dataset, 'virtual'>) => {
   if (!dataset.isVirtual || !('virtual' in patch)) return
   const storedChildren = new Set(dataset.virtual?.children ?? [])
   const patchedChildren = patch.virtual?.children ?? []
@@ -313,11 +313,16 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
 }
 
 /** A virtual dataset left without any member cannot be queried: refuse to delete its last one.
- * Same-account parents only: a stranger's virtual dataset must neither block a deletion nor be named. */
-export const assertNotLastMember = async (dataset: any) => {
+ * Same-account parents only, department included (the scope partOf's isSameOwner uses): a virtual
+ * dataset outside that scope must neither block the deletion nor be named, the detach handles it. */
+export const assertNotLastMember = async (dataset: Pick<Dataset, 'id' | 'owner'>) => {
   const parents = await mongo.datasets
-    .find({ 'virtual.children': dataset.id, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
-      { projection: { _id: 0, id: 1, title: 1, 'virtual.children': 1 } })
+    .find({
+      'virtual.children': dataset.id,
+      'owner.type': dataset.owner.type,
+      'owner.id': dataset.owner.id,
+      'owner.department': dataset.owner.department ? dataset.owner.department : { $exists: false }
+    }, { projection: { _id: 0, id: 1, title: 1, 'virtual.children': 1 } })
     .toArray()
   const emptied = parents.filter(parent => new Set(parent.virtual?.children ?? []).size === 1)
   if (!emptied.length) return
@@ -327,7 +332,9 @@ export const assertNotLastMember = async (dataset: any) => {
     : `Ce jeu de données est le seul membre des jeux de données virtuels ${list}. Supprimez d'abord ces jeux virtuels, ou ajoutez-leur un autre membre.`)
 }
 
-/** A deleted dataset leaves the virtual datasets aggregating it, whose status bump re-finalizes them. */
+/** A deleted dataset leaves the virtual datasets aggregating it, whose status bump re-finalizes them.
+ * `virtual` is integrity-covered, but this raw write never false-breaches: a virtual dataset can
+ * never be integrity-enrolled (neither file nor rest, see integrity/service.ts enableIntegrityUnlocked). */
 export const detachFromVirtualParents = async (datasetId: string) => {
   await mongo.datasets.updateMany(
     { 'virtual.children': datasetId },
