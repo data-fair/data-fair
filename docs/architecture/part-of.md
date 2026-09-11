@@ -27,6 +27,27 @@ partOf: { type: 'application', id: 'abcd1234', title: 'My dashboard' }
 | application | dataset | `configuration.datasets[].id` | `configuration.datasets.id` |
 | application | application | `configuration.applications[].id` | `configuration.applications.id` |
 
+Solid arrows are the references the parents already hold (what the link table reads); dotted arrows are the annotation stored on the child:
+
+```mermaid
+flowchart LR
+    subgraph parents["Parents — reference read from the parent"]
+        V["virtual dataset\nvirtual.children[]"]
+        A["application\nconfiguration.datasets[].id\nconfiguration.applications[].id"]
+    end
+    subgraph children["Children — annotation stored on the child"]
+        D1["dataset\npartOf: { type: 'dataset', id: V }"]
+        D2["dataset\npartOf: { type: 'application', id: A }"]
+        A2["application\npartOf: { type: 'application', id: A }"]
+    end
+    V -- "member" --> D1
+    A -- "config ref" --> D2
+    A -- "config ref" --> A2
+    D1 -. "partOf" .-> V
+    D2 -. "partOf" .-> A
+    A2 -. "partOf" .-> A
+```
+
 Both directions are resolved from that table — `childRefs()` (what a parent references, applied as well to a stored resource as to an unsaved edit: a configuration draft, the members being added to a virtual dataset), `parentFilters()` (the mongo filters matching the parents of a given child), `orphanRefs()` (what a new version of a parent would stop referencing). Adding a new way to relate two resources means adding one line to that table; nothing else in the feature changes. The UI warnings and the API guards compare the same two sides through the same helpers.
 
 ## 2. Definition-time rules
@@ -40,6 +61,19 @@ Both directions are resolved from that table — `childRefs()` (what a parent re
 5. parent and child live in the **same account** — `isSameOwner`, which treats a department as a distinct scope (`owner.type`, `owner.id` and `owner.department` must all match) — so a cascading deletion can never reach another account.
 
 Then the parent's title is denormalized onto the ref.
+
+```mermaid
+flowchart LR
+    P["PATCH\n{ partOf: { type, id } }"] --> S{"may be a child?\n(not itself,\nnot a reference dataset)"}
+    S -->|no| R1["400"]
+    S -->|yes| CH{"chaining?\n(has children, or the\nparent is a child)"}
+    CH -->|yes| R2["400"]
+    CH -->|no| N{"parents referencing it\n(parentFilters)"}
+    N -->|"0, 2+, or 1 ≠ designated"| R3["400 — ambiguous\nor mismatch"]
+    N -->|"exactly the designated one"| O{"same owner\n(type, id, department)?"}
+    O -->|no| R4["400"]
+    O -->|yes| T["store partOf with the\ndenormalized parent title"]
+```
 
 ### Creation directly under a parent
 
@@ -71,6 +105,17 @@ Two situations, one cascade. Deleting a parent (`handleChildrenBeforeDeletion`) 
 - `delete` — the children are deleted through their own service function, so their own cascades keep running;
 - `unflag` — `updateMany $unset: { partOf: 1 }`, the children survive as standalone resources.
 
+```mermaid
+flowchart LR
+    W["Parent write\n(DELETE, members edit,\nconfiguration write)"] --> D{"detectOrphans /\nhandleChildrenBeforeDeletion:\nchildren no longer referenced?"}
+    D -->|none| Persist["persist\nthe write"]
+    D -->|"some, no childrenAction"| R["409 — say what\nbecomes of them"]
+    D -->|"childrenAction=delete or unflag"| Persist
+    Persist --> Apply{"applyOrphans,\nafter the write"}
+    Apply -->|delete| Del["deleteDataset / deleteApplication\n(their own cascades run)"]
+    Apply -->|unflag| Un["updateMany\n$unset: partOf"]
+```
+
 Detection and application are deliberately separate for the editing case: the cascade is irreversible, so it only runs **once the write that orphans the children is persisted** (`applyOrphans` after `applyPatch`). A rejected write never deletes anything.
 
 ### The parent changes account
@@ -88,6 +133,20 @@ A virtual dataset with no member cannot be queried, so three guards keep it non-
 - `assertKeepsAMember(dataset, patch)` — a PATCH may not empty a virtual dataset that already aggregates at least one member (400). Creating one with zero members, or patching an already-empty one, stay allowed. Checked *before* `detectOrphans`, so the user is not asked for a `childrenAction` on a patch that will be rejected anyway.
 - `assertNotLastMember(dataset)` — deleting the **single member** of a virtual dataset is refused (409), naming the parents that would be emptied. Scoped like `isSameOwner`: only virtual datasets of the same account **and department** are considered — one outside that scope neither blocks the deletion nor is named.
 - `detachFromVirtualParents(datasetId)` — after a dataset is deleted, `$pull` its id from every virtual dataset referencing it and bump their status to `indexed`, which re-finalizes them over the remaining members. Unlike the guard this is **account-agnostic**: a dangling reference is cleaned up whoever owns the parent. It runs only for the stored document, not for a draft (the delete route calls `deleteDataset` twice when a draft exists).
+
+The order of the guards on the dataset delete route, and where the cascade joins:
+
+```mermaid
+flowchart LR
+    DEL["DELETE\n/datasets/:id"] --> G1{"partOf set?\n(assertNotChild,\nstored document)"}
+    G1 -->|yes| E1["409 — deleted\nwith its parent"]
+    G1 -->|no| G2{"single member of a\nvirtual dataset of the same\naccount and department?\n(assertNotLastMember)"}
+    G2 -->|yes| E2["409 — names the\nvirtual datasets"]
+    G2 -->|no| G3["handleChildrenBeforeDeletion\n(its own partOf children)"]
+    G3 --> S["deleteDataset\n(service)"]
+    S --> P["detachFromVirtualParents:\n$pull from every virtual.children,\nstatus → indexed (re-finalization)"]
+    C["partOf cascade\n(childrenAction=delete\non the parent)"] -.-> S
+```
 
 ## 6. Integrity classification
 
