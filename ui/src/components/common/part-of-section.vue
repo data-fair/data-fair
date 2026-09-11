@@ -54,16 +54,16 @@ fr:
   unset: Retirer l'attribut enfant
   descDataset: Définir ce jeu de données comme n'existant que pour servir une ressource parente (jeu de données virtuel ou application).
   descApplication: Définir cette application comme n'existant que pour servir une application parente (par exemple un tableau de bord).
-  currentDescDataset: "Ce jeu de données est défini comme enfant de : {title}. Il se supprime avec lui ; pour le supprimer seul, retirez d'abord l'attribut enfant."
-  currentDescApplication: "Cette application est définie comme enfant de : {title}. Elle est supprimée en même temps que celle-ci ; pour la supprimer seule, retirez d'abord l'attribut enfant."
+  currentDescDataset: "Ce jeu de données est défini comme enfant de : {title}. Il se gère et se supprime depuis sa ressource parente."
+  currentDescApplication: "Cette application est définie comme enfant de : {title}. Elle se gère et se supprime depuis son application parente."
 en:
   partOf: Parent resource
   define: Define as child
   unset: Remove the child attribute
   descDataset: Define this dataset as existing only to serve a parent resource (virtual dataset or application).
   descApplication: Define this application as existing only to serve a parent application (e.g. a dashboard).
-  currentDescDataset: "This dataset is defined as a child of: {title}. It is deleted along with it; to delete it on its own, remove the child attribute first."
-  currentDescApplication: "This application is defined as a child of: {title}. It is deleted along with it; to delete it on its own, remove the child attribute first."
+  currentDescDataset: "This dataset is defined as a child of: {title}. It is managed and deleted from its parent resource."
+  currentDescApplication: "This application is defined as a child of: {title}. It is managed and deleted from its parent application."
 </i18n>
 
 <script setup lang="ts">

@@ -86,6 +86,6 @@ test.describe('dataset structure - removing a partOf child from a virtual datase
     await expect(dangerZone).toBeVisible({ timeout: 10000 })
 
     await expect(dangerZone.getByRole('button', { name: 'Supprimer le jeu de données', exact: true })).toHaveCount(0)
-    await expect(dangerZone.getByText(/retirez d'abord l'attribut enfant/)).toBeVisible()
+    await expect(dangerZone.getByText(/se supprime depuis sa ressource parente/)).toBeVisible()
   })
 })

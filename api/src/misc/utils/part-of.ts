@@ -127,7 +127,10 @@ const handleChildren = async (ctx: PartOfDeletionContext, parent: ResourceRef, a
     const ids = children.filter(ref => ref.type === childType).map(ref => ref.id)
     const filter = childrenFilter(parent, ids)
     if (action === 'unflag') {
+      const [child] = await collection(childType).find(filter, { projection: { owner: 1 } }).limit(1).toArray()
       await collection(childType).updateMany(filter, { $unset: { partOf: 1 } })
+      // unflagged datasets count again in the number of datasets (children share their parent's account)
+      if (childType === 'dataset' && child) await (await import('../../datasets/utils/storage.ts')).updateTotalStorage(child.owner)
     } else {
       const resources = await collection(childType).find(filter).toArray()
       for (const resource of resources) await deleteResource(ctx, childType, resource)
@@ -232,7 +235,7 @@ export const prepareAtCreation = async (childType: ResourceType, resource: any, 
  */
 export const assertNotChild = (resource: any) => {
   if (!resource.partOf) return
-  throw httpError(409, `Cette ressource est définie comme enfant de "${resource.partOf.title ?? resource.partOf.id}" et se supprime avec elle. Pour la supprimer seule, retirez d'abord l'attribut enfant.`)
+  throw httpError(409, `Cette ressource est définie comme enfant de "${resource.partOf.title ?? resource.partOf.id}" : elle se gère et se supprime depuis sa ressource parente.`)
 }
 
 /**
