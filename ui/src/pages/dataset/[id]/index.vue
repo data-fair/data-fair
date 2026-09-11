@@ -501,9 +501,11 @@
       :title="t('deleteDataset')"
       :message="t('deleteMsg', { title: dataset?.title })"
       :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
+      :danger="lastMemberParents.length ? t('lastMemberDanger', { titles: lastMemberParents.map(d => d.title).join(', ') }, lastMemberParents.length) : undefined"
+      :force-label="adminMode ? t('forceDelete') : undefined"
       kind="resources"
       :loading="confirmRemove.loading.value"
-      @confirm="action => confirmRemove.execute(action)"
+      @confirm="(action, force) => confirmRemove.execute(action, force)"
     />
 
     <children-action-dialog
@@ -626,6 +628,8 @@ fr:
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   childrenWarning: aucune ressource enfant | Ce jeu de données a une ressource enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} ressources enfants qui n'existent que dans ce cadre.
+  lastMemberDanger: "Ce jeu de données est le seul membre du jeu de données virtuel {titles}, qui ne pourrait plus être requêté. Supprimez d'abord ce jeu virtuel, ou ajoutez-lui un autre membre. | Ce jeu de données est le seul membre du jeu de données virtuel {titles}, qui ne pourrait plus être requêté. Supprimez d'abord ce jeu virtuel, ou ajoutez-lui un autre membre. | Ce jeu de données est le seul membre des jeux de données virtuels {titles}, qui ne pourraient plus être requêtés. Supprimez d'abord ces jeux virtuels, ou ajoutez-leur un autre membre."
+  forceDelete: Forcer la suppression, les jeux virtuels concernés seront vidés (mode administrateur)
   virtualOrphansTitle: Jeux de données enfants
   virtualOrphansMsg: Cette modification retire des jeux de données définis comme enfants de ce jeu virtuel, ils n'existent que dans ce cadre.
   virtualOrphansWarning: aucun jeu de données enfant retiré | Un jeu de données enfant est retiré des jeux de données agrégés. | {count} jeux de données enfants sont retirés des jeux de données agrégés.
@@ -691,6 +695,8 @@ en:
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   childrenWarning: no child resource | This dataset has a child resource that only exists within this context. | This dataset has {count} child resources that only exist within this context.
+  lastMemberDanger: "This dataset is the single member of the virtual dataset {titles}, which could no longer be queried. Delete that virtual dataset first, or add it another member. | This dataset is the single member of the virtual dataset {titles}, which could no longer be queried. Delete that virtual dataset first, or add it another member. | This dataset is the single member of the virtual datasets {titles}, which could no longer be queried. Delete those virtual datasets first, or add them another member."
+  forceDelete: Force the deletion, the virtual datasets involved will be emptied (admin mode)
   virtualOrphansTitle: Child datasets
   virtualOrphansMsg: This change removes datasets defined as children of this virtual dataset, they only exist within this context.
   virtualOrphansWarning: no child dataset removed | A child dataset is removed from the aggregated datasets. | {count} child datasets are removed from the aggregated datasets.
@@ -943,13 +949,16 @@ const openPartOfDialog = () => {
 // the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
 // shown once the count is known — otherwise a quick confirm would delete without a childrenAction
 const childrenCount = ref(0)
+// the virtual datasets this one is the single member of: the api refuses to empty them
+const lastMemberParents = computed(() => (virtualDatasetsFetch.data.value?.results ?? []).filter(d => new Set(d.virtual?.children ?? []).size === 1))
 const openDeleteDialog = useAsyncAction(async () => {
   childrenCount.value = (await fetchChildRefs({ id })).length
+  await virtualDatasetsFetch.refresh()
   showDeleteDialog.value = true
 })
 
-const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
-  await remove(childrenAction)
+const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag', force?: boolean) => {
+  await remove(childrenAction, force)
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
 

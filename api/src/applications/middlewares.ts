@@ -114,6 +114,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
     if (newApplication.partOf && !await mongo.applications.countDocuments({ id: newApplication.id })) {
       await partOf.prepareAtCreation('application', newApplication, ctx.sessionState)
     }
+    await partOf.assertNoForeignChildren('application', {}, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {
       setReqIsNewApplication(req, true)

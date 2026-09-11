@@ -9,6 +9,24 @@
     >
       <v-card-text class="pb-0">
         {{ message }}
+        <template v-if="danger">
+          <v-alert
+            type="error"
+            variant="outlined"
+            density="compact"
+            class="mt-4"
+          >
+            {{ danger }}
+          </v-alert>
+          <v-checkbox
+            v-if="forceLabel"
+            v-model="force"
+            :label="forceLabel"
+            color="error"
+            hide-details
+            class="mt-2"
+          />
+        </template>
         <template v-if="warning">
           <v-alert
             type="warning"
@@ -46,7 +64,8 @@
           color="warning"
           variant="flat"
           :loading="loading"
-          @click="emit('confirm', warning ? action : undefined)"
+          :disabled="!!danger && !force"
+          @click="emit('confirm', warning ? action : undefined, force)"
         >
           {{ confirmLabel ?? t('yes') }}
         </v-btn>
@@ -78,6 +97,9 @@ defineProps<{
   message: string
   // alert shown above the delete-vs-unflag choice; when absent the dialog is a plain confirmation
   warning?: string
+  // blocking alert: confirmation is impossible unless forceLabel offers a checkbox to override it
+  danger?: string
+  forceLabel?: string
   // which radio label variants to use: children of a virtual dataset are datasets, children of an
   // application are resources (datasets and/or applications)
   kind: 'datasets' | 'resources'
@@ -87,7 +109,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  confirm: [action?: 'delete' | 'unflag']
+  confirm: [action?: 'delete' | 'unflag', force?: boolean]
 }>()
 
 const { t } = useI18n()
@@ -95,5 +117,6 @@ const { t } = useI18n()
 const show = defineModel<boolean>({ default: false })
 
 const action = ref<'delete' | 'unflag'>('unflag')
-watch(show, (visible) => { if (visible) action.value = 'unflag' })
+const force = ref(false)
+watch(show, (visible) => { if (visible) { action.value = 'unflag'; force.value = false } })
 </script>

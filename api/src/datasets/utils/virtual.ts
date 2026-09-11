@@ -3,7 +3,7 @@ import config from '#config'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import type { Account } from '@data-fair/lib-express'
+import type { Account, SessionState } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
@@ -312,24 +312,30 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
   })
 }
 
-/** A virtual dataset left without any member cannot be queried: refuse to delete its last one.
- * Same-account parents only, department included (the scope partOf's isSameOwner uses): a virtual
- * dataset outside that scope must neither block the deletion nor be named, the detach handles it. */
-export const assertNotLastMember = async (dataset: Pick<Dataset, 'id' | 'owner'>) => {
+/** A virtual dataset left without any member cannot be queried: refuse to delete its last one,
+ * whoever owns the virtual dataset. Parents of the same account are named, foreign ones only
+ * counted — except in admin mode, which sees them all and can force the deletion (they are detached). */
+export const assertNotLastMember = async (dataset: Pick<Dataset, 'id' | 'owner'>, sessionState: SessionState, force = false) => {
+  const adminMode = !!sessionState.user?.adminMode
+  if (force && adminMode) return
   const parents = await mongo.datasets
-    .find({
-      'virtual.children': dataset.id,
-      'owner.type': dataset.owner.type,
-      'owner.id': dataset.owner.id,
-      'owner.department': dataset.owner.department ? dataset.owner.department : { $exists: false }
-    }, { projection: { _id: 0, id: 1, title: 1, 'virtual.children': 1 } })
+    .find({ 'virtual.children': dataset.id }, { projection: { _id: 0, id: 1, title: 1, owner: 1, 'virtual.children': 1 } })
     .toArray()
   const emptied = parents.filter(parent => new Set(parent.virtual?.children ?? []).size === 1)
   if (!emptied.length) return
-  const list = emptied.map(parent => `"${parent.title}" (${parent.id})`).join(', ')
-  throw httpError(409, emptied.length === 1
-    ? `Ce jeu de données est le seul membre du jeu de données virtuel ${list}. Supprimez d'abord ce jeu virtuel, ou ajoutez-lui un autre membre.`
-    : `Ce jeu de données est le seul membre des jeux de données virtuels ${list}. Supprimez d'abord ces jeux virtuels, ou ajoutez-leur un autre membre.`)
+  const own = emptied.filter(parent => parent.owner.type === dataset.owner.type && parent.owner.id === dataset.owner.id)
+  const foreign = emptied.filter(parent => !own.includes(parent))
+  const name = (parent: any) => `"${parent.title}" (${parent.id})`
+  const sentences: string[] = []
+  if (adminMode) {
+    const list = emptied.map(parent => `${name(parent)} — ${parent.owner.name ?? parent.owner.id}`).join(', ')
+    sentences.push(`Ce jeu de données est le seul membre de ${emptied.length} jeu(x) de données virtuel(s) : ${list}. Supprimez-les ou ajoutez-leur un autre membre, ou forcez la suppression avec "force=true" pour les vider.`)
+  } else {
+    if (own.length === 1) sentences.push(`Ce jeu de données est le seul membre du jeu de données virtuel ${name(own[0])}. Supprimez d'abord ce jeu virtuel, ou ajoutez-lui un autre membre.`)
+    if (own.length > 1) sentences.push(`Ce jeu de données est le seul membre des jeux de données virtuels ${own.map(name).join(', ')}. Supprimez d'abord ces jeux virtuels, ou ajoutez-leur un autre membre.`)
+    if (foreign.length) sentences.push(`${own.length ? 'Il est aussi' : 'Ce jeu de données est'} le seul membre de ${foreign.length} jeu(x) de données virtuel(s) d'autres comptes : contactez leurs propriétaires, ou un administrateur de la plateforme.`)
+  }
+  throw httpError(409, sentences.join(' '))
 }
 
 /** A deleted dataset leaves the virtual datasets aggregating it, whose status bump re-finalizes them.

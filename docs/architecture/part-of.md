@@ -133,7 +133,7 @@ Refused: `assertNotChild` (409) on `DELETE /datasets/:id` and `DELETE /applicati
 A virtual dataset with no member cannot be queried, so three guards keep it non-empty and consistent, all in `datasets/utils/virtual.ts`:
 
 - `assertKeepsAMember(dataset, patch)` — a PATCH may not empty a virtual dataset that already aggregates at least one member (400). Creating one with zero members, or patching an already-empty one, stay allowed. Checked *before* `detectOrphans`, so the user is not asked for a `childrenAction` on a patch that will be rejected anyway.
-- `assertNotLastMember(dataset)` — deleting the **single member** of a virtual dataset is refused (409), naming the parents that would be emptied. Scoped like `isSameOwner`: only virtual datasets of the same account **and department** are considered — one outside that scope neither blocks the deletion nor is named.
+- `assertNotLastMember(dataset, sessionState, force)` — deleting the **single member** of a virtual dataset is refused (409), **whoever owns the virtual dataset**: a dataset others have built on is not deleted without a check. Virtual datasets of the same account (any department) are named; foreign ones are only counted ("N jeu(x) … d'autres comptes"), so nothing leaks across accounts. In **admin mode** the message lists them all with their owner, and `?force=true` skips the guard (the detach then empties them). Note that the API lets a virtual dataset aggregate any dataset its owner can read — a public one included — while the UI picker only offers the account's own datasets and the reference data declared for virtual datasets: a public dataset can therefore be locked through the API by a stranger's virtual dataset, and only a superadmin can unlock it.
 - `detachFromVirtualParents(datasetId)` — after a dataset is deleted, `$pull` its id from every virtual dataset referencing it and bump their status to `indexed`, which re-finalizes them over the remaining members. Unlike the guard this is **account-agnostic**: a dangling reference is cleaned up whoever owns the parent. It runs only for the stored document, not for a draft (the delete route calls `deleteDataset` twice when a draft exists).
 
 The order of the guards on the dataset delete route, and where the cascade joins:
@@ -142,8 +142,8 @@ The order of the guards on the dataset delete route, and where the cascade joins
 flowchart LR
     DEL["DELETE\n/datasets/:id"] --> G1{"partOf set?\n(assertNotChild,\nstored document)"}
     G1 -->|yes| E1["409 — deleted\nwith its parent"]
-    G1 -->|no| G2{"single member of a\nvirtual dataset of the same\naccount and department?\n(assertNotLastMember)"}
-    G2 -->|yes| E2["409 — names the\nvirtual datasets"]
+    G1 -->|no| G2{"single member of a\nvirtual dataset, any account?\n(assertNotLastMember,\nunless admin force=true)"}
+    G2 -->|yes| E2["409 — names own virtual\ndatasets, counts foreign ones"]
     G2 -->|no| G3["handleChildrenBeforeDeletion\n(its own partOf children)"]
     G3 --> S["deleteDataset\n(service)"]
     S --> P["detachFromVirtualParents:\n$pull from every virtual.children,\nstatus → indexed (re-finalization)"]
@@ -158,8 +158,8 @@ The `virtual` field, by contrast, **is** covered, and `detachFromVirtualParents`
 
 ## 7. Known limits
 
-- **The single-parent invariant is enforced at definition time only.** Nothing stops a second parent from later referencing an already-defined child. The pathological case: a virtual dataset adds a dataset that is already the child of an application; deleting that application with `childrenAction=delete` then empties the virtual dataset, an error state its own guards cannot prevent (they only see patches, not cascades).
-- **A `partOf` stored on a draft is ignored** by the whole feature: the rules, the listing filter and the cascades all read the stored document. Symmetrically, a draft-only dataset never detaches from a virtual parent.
+- **The single-parent invariant is kept after definition time** by `assertNoForeignChildren`, called by every parent write (virtual members edit and creation, application configuration writes and creation): a parent may not start referencing a resource already defined as the child of another one (400). Only the refs the write adds are checked, so a legacy state never blocks an unrelated edit — and is not repaired either.
+- **`partOf` follows the draft rule of every other metadata.** While a file draft is pending, every PATCH — title and description included — lands under `dataset.draft` and only becomes effective when the draft is validated (see [dataset-drafts.md](dataset-drafts.md)); `partOf` is no exception, and the feature reads the published document like the listings do. A never-published draft-only dataset also never detaches from a virtual parent (it cannot be a member of one in practice).
 - **The last-member guard counts references, not live members.** It reads `virtual.children`, so a legacy dangling ref (a member deleted before the detach existed) counts as a member and can let the real last one be deleted.
 - **No index on the children lookup.** `partOf.type` / `partOf.id` are unindexed, and the lookup now runs on every resource deletion and every application configuration write.
 - **A benign race.** A child that bumps a parent deleted right after may leave an orphan journal document behind.
@@ -171,6 +171,7 @@ The `virtual` field, by contrast, **is** covered, and `detachFromVirtualParents`
 - `ui/src/components/common/children-action-dialog.vue` — the delete-vs-unflag choice, raised before every operation that would orphan children (resource deletion, virtual members edit, application configuration write).
 - On a child, the danger zone hides the change-owner and delete entries (the API refuses both) and keeps only the parent-resource block; the parent is linked from the info block (`dataset-metadata-details.vue`).
 - `ui/src/components/dataset/dataset-virtual.vue` hides the remove-member icon and shows a hint when a virtual dataset is down to its last member.
+- The dataset delete dialog lists the visible virtual datasets this one is the single member of (`virtualDatasetsFetch`, `children=<id>`) and blocks the confirmation; in admin mode a "force" checkbox sends `?force=true`. Foreign virtual datasets a regular user cannot see are caught by the API 409.
 
 ## 9. Quick map of the relevant files
 

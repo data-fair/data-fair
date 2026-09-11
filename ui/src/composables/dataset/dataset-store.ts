@@ -147,12 +147,12 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   })
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
 
-  // full list (id/title) of the virtual datasets this one is a member of — used to pick a partOf parent
-  const virtualDatasetsFetch = useFetch<{ results: Pick<Dataset, 'id' | 'title'>[] }>(() => {
+  // the virtual datasets this one is a member of — to pick a partOf parent, and to warn before a deletion
+  const virtualDatasetsFetch = useFetch<{ results: Pick<Dataset, 'id' | 'title' | 'virtual'>[] }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/datasets`
   }, {
-    query: computed(() => ({ children: id, size: 100, select: 'id,title' })),
+    query: computed(() => ({ children: id, size: 100, select: 'id,title,virtual' })),
     immediate: false,
     watch: false
   })
@@ -195,8 +195,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const publishedDataset = ref<ExtendedDataset | null>(null)
   watch(publishedDatasetFetch.data, () => { publishedDataset.value = publishedDatasetFetch.data.value })
 
-  const remove = async (childrenAction?: 'delete' | 'unflag') => {
-    await $fetch('/datasets/' + id, { method: 'DELETE', query: childrenAction ? { childrenAction } : undefined })
+  const remove = async (childrenAction?: 'delete' | 'unflag', force = false) => {
+    await $fetch('/datasets/' + id, { method: 'DELETE', query: { ...(childrenAction ? { childrenAction } : {}), ...(force ? { force: 'true' } : {}) } })
   }
 
   const changeOwner = async (owner: { type: string, id: string, department?: string }) => {

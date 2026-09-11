@@ -291,7 +291,7 @@ test.describe('dataset partOf attribute', () => {
       ax.delete(`/api/v1/datasets/${child.id}`),
       (err: any) => {
         assert.equal(err.status, 409)
-        assert.ok(err.data.includes('retirez d\'abord l\'attribut enfant'), err.data)
+        assert.ok(err.data.includes('se supprime depuis sa ressource parente'), err.data)
         assert.ok(err.data.includes(`"${virtualDataset.title}"`), err.data)
         return true
       }
@@ -619,6 +619,24 @@ test.describe('dataset partOf attribute', () => {
     })
     assert.equal(res.status, 201)
     assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
+  test('a virtual dataset cannot aggregate a dataset defined as the child of another resource', async () => {
+    const ax = testUser1
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const { data: child } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child of an application', partOf: { type: 'application', id: app.id } })
+
+    const isRefused = (err: any) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes(`"${child.title}" (${child.id}) est définie comme enfant de "${app.title}"`), err.data)
+      return true
+    }
+    // at creation
+    await assert.rejects(ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [child.id] } }), isRefused)
+    // and when editing the members
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [] } })
+    await waitForDatasetError(ax, virtualDataset.id)
+    await assert.rejects(ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child.id] } }), isRefused)
   })
 
   test('a child does not count in the number of datasets, its storage still does', async () => {

@@ -286,6 +286,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   // a dataset can be created directly as the child of the parent that will reference it right after
   if (dataset.partOf) await partOf.prepareAtCreation('dataset', dataset, sessionState)
+  if (dataset.isVirtual) await partOf.assertNoForeignChildren('dataset', {}, dataset)
 
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date

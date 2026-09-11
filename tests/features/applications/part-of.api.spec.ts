@@ -301,7 +301,7 @@ test.describe('application partOf attribute', () => {
       ax.delete(`/api/v1/applications/${childApp.id}`),
       (err: any) => {
         assert.equal(err.status, 409)
-        assert.ok(err.data.includes('retirez d\'abord l\'attribut enfant'), err.data)
+        assert.ok(err.data.includes('se supprime depuis sa ressource parente'), err.data)
         assert.ok(err.data.includes(`"${parentApp.title}"`), err.data)
         return true
       }
@@ -505,5 +505,20 @@ test.describe('application partOf attribute', () => {
         return true
       }
     )
+  })
+
+  test('an application cannot reference a dataset defined as the child of another resource', async () => {
+    const ax = testUser1
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a parent virtual dataset', virtual: { children: [] } })
+    const { data: child } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child of a virtual dataset', partOf: { type: 'dataset', id: virtualDataset.id } })
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    const isRefused = (err: any) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes(`"${child.title}" (${child.id}) est définie comme enfant de "${virtualDataset.title}"`), err.data)
+      return true
+    }
+    await assert.rejects(ax.put(`/api/v1/applications/${app.id}/config`, { datasets: [{ id: child.id, href: child.href }] }), isRefused)
+    await assert.rejects(ax.patch(`/api/v1/applications/${app.id}`, { configuration: { datasets: [{ id: child.id, href: child.href }] } }), isRefused)
   })
 })

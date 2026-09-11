@@ -11,7 +11,7 @@ import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { can } from './permissions.ts'
 import { type LogContext } from './req-context.ts'
-import { resourceTypes, parentFilters, orphanRefs, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
+import { resourceTypes, childRefs, parentFilters, orphanRefs, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 import { isMasterData } from '../../../contract/master-data.js'
 import type { Collection } from 'mongodb'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -168,6 +168,27 @@ export const detectOrphans = async (parentType: ResourceType, parent: any, newPa
 export const applyOrphans = async (ctx: PartOfDeletionContext, parentType: ResourceType, parentId: string, orphans?: Orphans) => {
   if (!orphans) return
   await handleChildren(ctx, { type: parentType, id: parentId }, orphans.action, orphans.refs)
+}
+
+/**
+ * The single-parent invariant, kept after definition time: a parent may not start referencing a
+ * resource already defined as the child of another one, or deleting that other parent with
+ * childrenAction=delete would silently empty this one. Only the refs the new version adds are
+ * checked, so a legacy state never blocks an unrelated edit. `parent` is the stored version ({} at
+ * creation), `newParent` the version about to be written.
+ */
+export const assertNoForeignChildren = async (parentType: ResourceType, parent: any, newParent: any) => {
+  const known = childRefs(parentType, parent)
+  const added = childRefs(parentType, newParent).filter(ref => !known.some(k => k.type === ref.type && k.id === ref.id))
+  for (const childType of resourceTypes) {
+    const ids = added.filter(ref => ref.type === childType).map(ref => ref.id)
+    if (!ids.length) continue
+    const foreign = await collection(childType).findOne(
+      { id: { $in: ids }, 'partOf.id': { $exists: true }, $nor: [{ 'partOf.type': parentType, 'partOf.id': parent.id }] },
+      { projection: { _id: 0, id: 1, title: 1, partOf: 1 } }
+    )
+    if (foreign) throw httpError(400, `La ressource "${foreign.title ?? foreign.id}" (${foreign.id}) est définie comme enfant de "${foreign.partOf.title ?? foreign.partOf.id}" : elle ne peut pas être utilisée par une autre ressource.`)
+  }
 }
 
 /**
