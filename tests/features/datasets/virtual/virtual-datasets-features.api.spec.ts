@@ -413,7 +413,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
   })
 
-  test('a patch on a child is not blocked by an unrelated broken virtual parent', async () => {
+  test('deleting a child detaches it from its virtual parent, which keeps accepting patches on the remaining child', async () => {
     const ax = testUser1
     const child1 = await sendDataset('datasets/dataset1.csv', ax)
     const child2 = await sendDataset('datasets/dataset2.csv', ax)
@@ -423,13 +423,14 @@ test.describe('virtual datasets features', () => {
       virtual: { children: [child1.id, child2.id] },
       schema: [{ key: 'id' }]
     })
-    await waitForFinalize(ax, res.data.id)
+    const virtualDataset = await waitForFinalize(ax, res.data.id)
 
-    // the virtual parent becomes broken: one of its children is deleted
+    // deleting a member detaches it from the parent instead of leaving a dangling reference behind
     await ax.delete('/api/v1/datasets/' + child2.id)
+    const detached = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
+    assert.deepEqual(detached.virtual.children, [child1.id])
 
-    // an innocuous schema patch on the remaining child still works: the immediate sync of the
-    // broken parent is skipped, the parent will surface its own error at next finalization
+    // an innocuous schema patch on the remaining child still works, and syncs the repaired parent
     child1.schema[0].title = 'a new title'
     res = await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
     assert.equal(res.status, 200)

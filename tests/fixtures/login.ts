@@ -7,7 +7,8 @@ async function performLogin (page: any, context: any, baseUrl: string, url: stri
   const loginUrl = `${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}`
   await page.goto(loginUrl)
   await page.getByLabel('Adresse mail').fill(`${user}@test.com`)
-  await page.getByLabel('Mot de passe').fill('passwd')
+  // exact: the login page also has a "Afficher le mot de passe" toggle button
+  await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
   await page.getByRole('button', { name: 'Se connecter' }).click()
   // super-admin accounts get an "activate admin mode for this session?" interstitial that blocks
   // the redirect; keep a normal session (the dedicated adminMode fixtures handle the admin case).

@@ -1,5 +1,6 @@
 import type { Application, BaseApp, AppConfig, Event, Dataset, Permission } from '#api/types'
 import { provide } from 'vue'
+import { configRefIds, type ConfigRef } from '@data-fair/data-fair-shared/utils/config-refs.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('application-store')
@@ -37,11 +38,12 @@ const createApplicationStore = (id: string) => {
   const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, { immediate: false })
   const config = ref<AppConfig | null>(null)
   watch(configFetch.data, () => { config.value = configFetch.data.value })
-  const writeConfig = async (newConfig: AppConfig) => {
+  const writeConfig = async (newConfig: AppConfig, childrenAction?: 'delete' | 'unflag') => {
     debug('writeConfig', newConfig)
     await $fetch<AppConfig>('/applications/' + id + '/configuration', {
       method: 'PUT',
       body: newConfig,
+      query: childrenAction ? { childrenAction } : undefined,
       headers: {
         'Content-Type': 'application/json'
       }
@@ -103,19 +105,13 @@ const createApplicationStore = (id: string) => {
   const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
 
-  type ConfigRef = { id?: string, href?: string, [k: string]: unknown } | null
-  const extractIds = (items: ConfigRef[] | undefined) =>
-    (items || [])
-      .map((d) => d?.id || d?.href?.split('/').pop())
-      .filter(Boolean) as string[]
-
   const datasetsFetch = useFetch<{ results: Dataset[] }>(() => {
-    const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
+    const datasetsIds = configRefIds(config.value?.datasets as ConfigRef[])
     if (!datasetsIds.length) return null
     return `${$apiPath}/datasets`
   }, {
     query: computed(() => {
-      const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
+      const datasetsIds = configRefIds(config.value?.datasets as ConfigRef[])
       return {
         id: datasetsIds.join(','),
         size: 10000,
@@ -128,12 +124,12 @@ const createApplicationStore = (id: string) => {
   })
 
   const childrenAppsFetch = useFetch<{ results: Application[] }>(() => {
-    const appIds = extractIds(config.value?.applications as ConfigRef[])
+    const appIds = configRefIds(config.value?.applications as ConfigRef[])
     if (!appIds.length) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => {
-      const appIds = extractIds(config.value?.applications as ConfigRef[])
+      const appIds = configRefIds(config.value?.applications as ConfigRef[])
       return {
         id: appIds.join(','),
         size: 10000,
@@ -153,6 +149,16 @@ const createApplicationStore = (id: string) => {
     query: computed(() => ({ application: id, size: 0 }))
   })
   const nbParentApps = computed(() => nbParentAppsFetch.data.value?.count ?? 0)
+
+  // full list (id/title) of the parent applications using this one — used to pick a partOf parent
+  const parentAppsFetch = useFetch<{ results: Pick<Application, 'id' | 'title'>[] }>(() => {
+    if (!application.value) return null
+    return `${$apiPath}/applications`
+  }, {
+    query: computed(() => ({ application: id, size: 100, select: 'id,title' })),
+    immediate: false,
+    watch: false
+  })
 
   const permissionsFetch = useFetch<Permission[]>($apiPath + `/applications/${id}/permissions`, { immediate: false, watch: false })
   const permissions = ref<Permission[] | null>(null)
@@ -176,8 +182,8 @@ const createApplicationStore = (id: string) => {
     permissions.value = newPermissions
   }
 
-  const remove = async () => {
-    await $fetch('/applications/' + id, { method: 'DELETE' })
+  const remove = async (childrenAction?: 'delete' | 'unflag') => {
+    await $fetch('/applications/' + id, { method: 'DELETE', query: childrenAction ? { childrenAction } : undefined })
   }
 
   const changeOwner = async (owner: { type: string, id: string, department?: string }) => {
@@ -211,6 +217,7 @@ const createApplicationStore = (id: string) => {
     datasetsFetch,
     childrenAppsFetch,
     nbParentApps,
+    parentAppsFetch,
     remove,
     changeOwner,
   }

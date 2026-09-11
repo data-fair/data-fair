@@ -20,6 +20,8 @@ import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
+import { updateTotalStorage } from '../datasets/utils/storage.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
@@ -80,6 +82,12 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   if (reqQuery.overflow === 'true') {
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
+
+  // children are hidden by default (see partOf.listFilter); lookups by known id(s) and the
+  // "dataset"/"application" reverse-lookups (e.g. nbParentApps: which applications reference me)
+  // are targeted fetches, not browsing, and are exempted
+  const partOfFilter = partOf.listFilter(reqQuery, ['id', 'ids', 'dataset', 'application'])
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 
@@ -226,6 +234,11 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
       newApplication[key] = (existingApplication as any)[key]
     }
   }
+  // partOf has its own gated write paths: the write-class parent check at creation, and the
+  // writePartOf danger zone (admin) on PATCH. A full replace uses neither, so it preserves the
+  // existing value rather than letting the request body set or drop it.
+  if ('partOf' in existingApplication) newApplication.partOf = (existingApplication as any).partOf
+  else delete newApplication.partOf
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
@@ -249,6 +262,9 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
 }
 
 export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any) => {
+  // defining the application as a child is validated on its effective (patched) view
+  if (patch.partOf) await partOf.prepareAtDefinition('application', { ...application, ...patch }, patch.partOf)
+
   // Retry previously failed publications
   if (!patch.publications) {
     const failedPublications = (application.publications || []).filter((p: any) => p.status === 'error')
@@ -269,10 +285,14 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
+  // null is used to unset the property, $set would instead store a literal null (invalid against the resource schema)
+  const unsetPartOf = patch.partOf === null
+  if (unsetPartOf) delete patch.partOf
+
   let patchedApplication
   try {
     patchedApplication = await mongo.applications
-      .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: application.id }, { $set: patch, ...(unsetPartOf ? { $unset: { partOf: '' } } : {}) }, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
@@ -354,6 +374,14 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   }
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
+
+  // a parent takes its children along: a child only exists to serve its parent, and both always
+  // live in the same account (the children of a child do not exist, chains are forbidden)
+  const { movedDatasets } = await partOf.changeChildrenOwner(ctx, 'application', application.id, newOwner)
+  if (movedDatasets) {
+    await updateTotalStorage(application.owner)
+    await updateTotalStorage(newOwner)
+  }
 
   await syncDatasets(patchedApp)
   return patchedApp! as Application

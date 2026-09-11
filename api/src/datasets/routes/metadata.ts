@@ -2,7 +2,6 @@
 import type { Router, Request, Response, NextFunction } from 'express'
 import type { Request as DfRequest, Event } from '#types'
 import clone from '@data-fair/lib-utils/clone.js'
-import moment from 'moment'
 import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -10,7 +9,6 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
-import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
@@ -21,21 +19,21 @@ import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
-import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
+import { findDatasets, applyPatch, deleteDataset, changeDatasetOwner } from '../service.ts'
+import * as partOf from '../../misc/utils/part-of.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
+import * as virtualDatasetsUtils from '../utils/virtual.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
-import { dir } from '../utils/files.ts'
-import { updateTotalStorage } from '../utils/storage.ts'
+import { updateTotalStorage, checkMoveLimits } from '../utils/storage.ts'
 
 const clean = datasetUtils.clean
-const debugLimits = debugModule('limits')
 const debugBreakingChanges = debugModule('breaking-changes')
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -58,6 +56,7 @@ const sendSchema = (req: Request, res: Response, schema: any) => {
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
+const permissionsWritePartOf = permissions.middleware('writePartOf', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
@@ -144,6 +143,7 @@ export const registerMetadataRoutes = (router: Router) => {
     (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    (req: Request, res: Response, next: NextFunction) => ('partOf' in req.body) ? permissionsWritePartOf(req, res, next) : next(),
     async (req, res) => {
       // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
       const dataset: any = clone(reqDataset(req))
@@ -166,6 +166,19 @@ export const registerMetadataRoutes = (router: Router) => {
         }
       }
 
+      // a virtual dataset already holding members cannot be emptied by a patch: checked before
+      // detectOrphans so the user isn't asked for a childrenAction on a patch that will be rejected anyway
+      virtualDatasetsUtils.assertKeepsAMember(dataset, patch)
+      // a member already defined as the child of another resource cannot be aggregated
+      if (patch.virtual) await partOf.assertNoForeignChildren('dataset', dataset, { ...dataset, ...patch })
+
+      // dropping members from a virtual dataset can orphan datasets still defined as its partOf
+      // children: detected (and refused) up-front, but applied only once the patch itself is
+      // persisted — the cascade is irreversible and preparePatch/applyPatch can still reject the request
+      const orphans = patch.virtual
+        ? await partOf.detectOrphans('dataset', dataset, { ...dataset, ...patch }, req.query.childrenAction as string | undefined)
+        : undefined
+
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
       if (!isEmpty) {
@@ -175,6 +188,10 @@ export const registerMetadataRoutes = (router: Router) => {
             if (err.code !== 11000) throw err
             throw httpError(400, req.__('errors.dupSlug'))
           })
+
+        await partOf.applyOrphans({ app: req.app, sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
+        // a child does not count in the number of datasets
+        if ('partOf' in patch) await updateTotalStorage(dataset.owner)
 
         if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
@@ -212,75 +229,27 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const sessionState = reqSessionAuthenticated(req)
 
+    partOf.assertOwnerChangeAllowed(dataset)
+    // only the dataset children weigh on the dataset limits checked below, but they all follow their parent
+    const children = await partOf.listChildren('dataset', dataset.id)
+    const movedDatasets = [dataset, ...children.filter(child => child.type === 'dataset').map(child => child.resource)]
+
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
     // (checked against all the user's memberships, the new owner is rarely the active account)
     if (!permissions.canDoForOwner(req.body, 'datasets', 'post', sessionState, true)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
 
     if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
-      const remaining = await limits.remaining(req.body)
-      if (remaining.nbDatasets === 0) {
-        debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
-        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
-      }
-      if (dataset.storage) {
-        if (remaining.storage !== -1 && remaining.storage < dataset.storage.size) {
-          debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
-        }
-        if (remaining.indexed !== -1 && dataset.storage.indexed && remaining.indexed < dataset.storage.indexed.size) {
-          debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
-        }
-      }
+      await checkMoveLimits(req.getLocale(), req.body, movedDatasets)
     }
 
-    const patch: any = {
-      owner: req.body,
-      updatedBy: { id: sessionState.user.id },
-      updatedAt: moment().toISOString()
-    }
+    const patchedDataset = await changeDatasetOwner(dataset, req.body, sessionState)
+    await partOf.changeChildrenOwner({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, req.body)
 
-    const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === req.body.type && dataset.owner.id === req.body.id
-    if (sameOrg && !dataset.owner.department && req.body.department) {
-      // moving from org root to a department, we keep the publicationSites
-    } else {
-      patch.publicationSites = []
-    }
-    if (!sameOrg && req.body.publications) {
-      patch.publications = []
-    }
-
-    const preservePermissions = (dataset.permissions || []).filter((p: any) => {
-      // keep public permissions
-      if (!p.type) return true
-      if (sameOrg) {
-        // keep individual user permissions (user partners)
-        if (p.type === 'user') return true
-        // keep permissions to external org (org partners)
-        if (p.type === 'organization' && p.id !== dataset.owner.id) return true
-      }
-      return false
-    })
-    await permissions.initResourcePermissions(patch, preservePermissions)
-
-    const changeOwnerUpdate: any = { $set: patch }
-    const patchedDataset: any = await mongo.db.collection('datasets')
-      .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
-
-    // Move all files
-    if (dir(dataset) !== dir(patchedDataset)) {
-      try {
-        await filesStorage.moveDir(dir(dataset), dir(patchedDataset))
-      } catch (err) {
-        console.warn('Error while moving dataset directory', err)
-      }
-    }
-
-    const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+    const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
     const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
 
     eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner })
-    eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: patch.owner })
+    eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: req.body })
     const event = {
       title: 'Changement de propriétaire d\'un jeu de données',
       body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
@@ -291,12 +260,12 @@ export const registerMetadataRoutes = (router: Router) => {
       sender: { ...dataset.owner, role: 'admin' }
     }
     eventsQueue.pushEvent(event, sessionState)
-    eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+    eventsQueue.pushEvent({ ...event, sender: { ...req.body, role: 'admin' } }, sessionState)
 
     await syncRemoteService(patchedDataset)
 
     await updateTotalStorage(dataset.owner)
-    await updateTotalStorage(patch.owner)
+    await updateTotalStorage(req.body)
 
     res.status(200).json(clean(req as DfRequest, patchedDataset))
   })
@@ -305,6 +274,13 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
+
+    // guards on the stored document, reqDataset can be the draft view (alwaysDraft)
+    partOf.assertNotChild(datasetFull)
+    await virtualDatasetsUtils.assertNotLastMember(datasetFull, reqSessionAuthenticated(req), req.query.force === 'true')
+
+    // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
+    await partOf.handleChildrenBeforeDeletion({ app: req.app, sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.query.childrenAction as string | undefined)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

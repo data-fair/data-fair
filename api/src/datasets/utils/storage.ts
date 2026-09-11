@@ -50,6 +50,33 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
   }
 }
 
+/**
+ * Datasets moving to another account start consuming its limits: the one being transferred, plus the
+ * partOf children a parent takes along with it. Shared by the dataset and application change-owner
+ * routes, both of which can move several datasets at once.
+ */
+export const checkMoveLimits = async (locale: string, newOwner: AccountKeys, datasets: any[]) => {
+  if (!datasets.length) return
+  const remaining = await limits.remaining(newOwner)
+  // partOf children count in the storage quotas but not in the number of datasets
+  const nbMovedDatasets = datasets.filter(d => !d.partOf).length
+  const debugInfo = { owner: newOwner, remaining, nbMovedDatasets }
+  if (remaining.nbDatasets !== -1 && remaining.nbDatasets < nbMovedDatasets) {
+    debugLimits('exceedLimitNbDatasets/changeOwner', debugInfo)
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitNbDatasets' }))
+  }
+  const movedSize = datasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
+  if (remaining.storage !== -1 && remaining.storage < movedSize) {
+    debugLimits('exceedLimitStorage/changeOwner', { ...debugInfo, movedSize })
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitStorage' }))
+  }
+  const movedIndexed = datasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
+  if (remaining.indexed !== -1 && movedIndexed && remaining.indexed < movedIndexed) {
+    debugLimits('exceedLimitIndexed/changeOwner', { ...debugInfo, movedIndexed })
+    throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitIndexed' }))
+  }
+}
+
 export type UpdateStorageOptions = {
   deleted?: boolean
   checkRemaining?: boolean
@@ -217,8 +244,9 @@ export const updateStorage = async (dataset: Dataset, options?: UpdateStorageOpt
 export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = false) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
-    { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
-    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: 1 } } }
+    { $project: { 'storage.size': 1, 'storage.indexed.size': 1, partOf: 1 } },
+    // partOf children count in the storage quotas but not in the number of datasets
+    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: { $cond: [{ $ifNull: ['$partOf', false] }, 0, 1] } } } }
   ]
   const res = await mongo.datasets.aggregate(aggQuery).toArray()
   const totalStorage = { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }

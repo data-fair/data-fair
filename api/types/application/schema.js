@@ -1,6 +1,7 @@
 import owner from '../../contract/owner.js'
 import eventBy from '../../contract/event-by.js'
 import publicationSchema from '../../contract/publication.js'
+import partOf from '../../contract/part-of.js'
 
 const baseAppReference = {
   type: 'object',
@@ -181,6 +182,11 @@ export default {
           }
         }
       }
+    },
+    partOf: {
+      ...partOf,
+      title: 'Application enfant',
+      description: 'Si renseigné, cette application n\'existe que pour servir une ressource parente. Elle est alors masquée des listes par défaut.'
     },
     permissions: { $ref: 'https://github.com/data-fair/data-fair/permissions' }
   }

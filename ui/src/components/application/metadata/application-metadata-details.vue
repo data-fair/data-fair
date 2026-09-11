@@ -72,7 +72,7 @@
       </v-col>
 
       <v-col
-        v-if="nbParentApps > 0"
+        v-if="nbParentApps > 0 && !application.partOf"
         cols="12"
         md="6"
         lg="4"
@@ -84,6 +84,24 @@
           <div>
             <router-link :to="`/applications?application=${application.id}`">
               {{ t('nbParentApps', nbParentApps) }}
+            </router-link>
+          </div>
+        </v-list-item>
+      </v-col>
+
+      <v-col
+        v-if="application.partOf"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiFamilyTree">
+          <div class="text-body-small text-medium-emphasis">
+            {{ t('partOfLabel') }}
+          </div>
+          <div>
+            <router-link :to="`/${application.partOf.type}/${application.partOf.id}`">
+              {{ application.partOf.title }}
             </router-link>
           </div>
         </v-list-item>
@@ -101,6 +119,7 @@ fr:
   created: Création
   usedByLabel: Utilisée par
   nbParentApps: aucune application | 1 application | {count} applications
+  partOfLabel: Ressource parente
 en:
   owner: Owner
   baseApp: Application model
@@ -109,10 +128,11 @@ en:
   created: Created
   usedByLabel: Used by
   nbParentApps: no application | 1 application | {count} applications
+  partOfLabel: Parent resource
 </i18n>
 
 <script setup lang="ts">
-import { mdiImageMultiple, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
+import { mdiFamilyTree, mdiImageMultiple, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
 import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useApplicationStore from '~/composables/application/application-store'
 
