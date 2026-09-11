@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, mockAppUrl, config } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, waitForDatasetError } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -619,5 +619,47 @@ test.describe('dataset partOf attribute', () => {
     })
     assert.equal(res.status, 201)
     assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
+  test('a child does not count in the number of datasets, its storage still does', async () => {
+    const ax = testUser1
+    const child = await sendDataset('datasets/dataset1.csv', ax)
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a parent', virtual: { children: [child.id] } })
+    await waitForFinalize(ax, virtualDataset.id)
+    const before = (await ax.get('/api/v1/limits/user/test_user1')).data
+    assert.ok(before.nb_datasets.consumption >= 2)
+
+    await ax.patch(`/api/v1/datasets/${child.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+    const asChild = (await ax.get('/api/v1/limits/user/test_user1')).data
+    assert.equal(asChild.nb_datasets.consumption, before.nb_datasets.consumption - 1)
+    assert.equal(asChild.store_bytes.consumption, before.store_bytes.consumption)
+    assert.equal(asChild.indexed_bytes.consumption, before.indexed_bytes.consumption)
+
+    await ax.patch(`/api/v1/datasets/${child.id}`, { partOf: null })
+    const unflagged = (await ax.get('/api/v1/limits/user/test_user1')).data
+    assert.equal(unflagged.nb_datasets.consumption, before.nb_datasets.consumption)
+  })
+
+  test('a child can be created when the number of datasets is exhausted', async () => {
+    const ax = testUser1
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a parent', virtual: { children: [] } })
+    await waitForDatasetError(ax, virtualDataset.id)
+    // limits persist across tests: pin the current values back at the end
+    const initial = (await ax.get('/api/v1/limits/user/test_user1')).data
+    const setLimits = (nbDatasets: { limit: number, consumption: number }) => ax.post('/api/v1/limits/user/test_user1', {
+      store_bytes: initial.store_bytes,
+      indexed_bytes: initial.indexed_bytes,
+      nb_datasets: nbDatasets,
+      lastUpdate: new Date().toISOString()
+    }, { params: { key: config.secretKeys.limits } })
+    // cap the number of datasets at the current consumption (the virtual dataset alone)
+    await setLimits({ limit: 1, consumption: 1 })
+    try {
+      await assert.rejects(ax.post('/api/v1/datasets', { isRest: true, title: 'a standalone dataset' }), (err: any) => err.status === 429)
+      const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualDataset.id } })
+      assert.equal(res.status, 201)
+    } finally {
+      await setLimits(initial.nb_datasets)
+    }
   })
 })

@@ -96,6 +96,8 @@ A child may also be **created** under its parent (`prepareAtCreation()`, from `d
 
 No index was added for the children lookups (`partOf.type` + `partOf.id`); see §7.
 
+**Quotas.** A child only exists for its parent, so it does not count in the account's `nb_datasets` limit — neither at creation (`POST /datasets` with `partOf` skips the "before upload" check) nor when it follows its parent to another account (`checkMoveLimits`). It counts like any dataset in `store_bytes` and `indexed_bytes`. `updateTotalStorage` excludes children from the count and is re-run whenever a dataset's `partOf` changes (define, unflag, cascades).
+
 ## 5. Lifecycle
 
 ### The parent stops referencing its children
@@ -120,7 +122,7 @@ Detection and application are deliberately separate for the editing case: the ca
 
 ### The parent changes account
 
-A child cannot change account on its own (`assertOwnerChangeAllowed`, 409): it can only follow its parent. The parent's change-owner route moves its children along (`changeChildrenOwner`), and the moved child **datasets** are counted against the new account's limits first (`checkMoveLimits`). Chains being forbidden, the recursion terminates at depth one.
+A child cannot change account on its own (`assertOwnerChangeAllowed`, 409): it can only follow its parent. The parent's change-owner route moves its children along (`changeChildrenOwner`), and the moved child **datasets** are counted against the new account's storage limit first (`checkMoveLimits` — not against its number of datasets, see §4). Chains being forbidden, the recursion terminates at depth one.
 
 ### The child is deleted directly
 

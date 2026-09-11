@@ -188,6 +188,8 @@ export const registerMetadataRoutes = (router: Router) => {
           })
 
         await partOf.applyOrphans({ app: req.app, sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
+        // a child does not count in the number of datasets
+        if ('partOf' in patch) await updateTotalStorage(dataset.owner)
 
         if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)

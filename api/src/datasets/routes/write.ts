@@ -65,7 +65,8 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', sessionState)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
-    if ((await limits.remaining(owner)).nbDatasets === 0) {
+    // partOf children do not count in the number of datasets
+    if (!body.partOf && (await limits.remaining(owner)).nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
       throw httpError(429, req.__('errors.exceedLimitNbDatasets'))
     }
