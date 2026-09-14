@@ -38,7 +38,12 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
 
   useAgentTool({
     name: 'get_current_location',
-    description: 'Get the current page location in the application, including its full URL, route path, name, parameters, and breadcrumbs.',
+    // Says what it answers, not just what it returns. Described only as "the
+    // current page location", a model with a dataset id to find has no reason to
+    // reach for it and searches by name instead — a simulation caught exactly
+    // that, on a dataset page, calling list_datasets then describe_dataset to
+    // work out where it already was.
+    description: 'Get the current page location in the application, including its full URL, route path, name, parameters, and breadcrumbs. When the user is looking at a dataset, application, processing or catalog, its id is in the returned parameters: read it from here rather than searching for the resource by name.',
     annotations: { title: t('getCurrentLocation'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
