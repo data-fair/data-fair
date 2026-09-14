@@ -21,8 +21,8 @@ const s3Options = {
   endpoint: `http://localhost:${s3Port}`,
   bucket: 'bucketdev',
   credentials: {
-    accessKeyId: 'minioadmin',
-    secretAccessKey: 'minioadmin'
+    accessKeyId: 'rustfsadmin',
+    secretAccessKey: 'rustfsadmin'
   },
   forcePathStyle: true
 }

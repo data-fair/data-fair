@@ -6,7 +6,7 @@ import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
 const endpoint = integrityEndpoint
 const bucket = 'data-fair-integrity'
-const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
+const credentials = { accessKeyId: 'rustfsadmin', secretAccessKey: 'rustfsadmin' }
 
 export const integrityTestClient = new S3Client({ region: 'us-east-1', endpoint, credentials, forcePathStyle: true })
 

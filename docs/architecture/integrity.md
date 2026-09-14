@@ -598,7 +598,7 @@ sidecar (`amazon/aws-cli`) provisions them on startup:
 - `data-fair-integrity` — created with `--object-lock-enabled-for-bucket` (compliance WORM), the integrity store
 
 `api/config/development.cjs` points `s3` and `integrity.s3` at the same RustFS (`S3_PORT`,
-`minioadmin`/`minioadmin`; RustFS enforces credentials, unlike s3mock). `integrity.active`
+`rustfsadmin`/`rustfsadmin`; RustFS enforces credentials, unlike s3mock). `integrity.active`
 is `true` with a 2-day revision retention and a 1-day attribution retention (deliberately
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
 but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).

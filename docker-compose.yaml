@@ -62,8 +62,8 @@ services:
       - test
     image: rustfs/rustfs:1.0.0-rc.6
     environment:
-      - RUSTFS_ACCESS_KEY=minioadmin
-      - RUSTFS_SECRET_KEY=minioadmin
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
     ports:
       - ${S3_PORT}:9000
     volumes:
@@ -79,8 +79,8 @@ services:
     depends_on:
       - s3
     environment:
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_ENDPOINT_URL=http://s3:9000
     entrypoint: >
