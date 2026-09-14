@@ -21,6 +21,10 @@ import {
 } from '@data-fair/lib-agents-sim'
 
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
+// This default must track nextUserMessage's own (persona.ts reads
+// process.env.SIM_USER_MODEL ?? 'haiku' itself) — there is no shared export,
+// so if upstream changes its default this sidecar value silently goes stale.
+// Deliberate duplication, not an oversight.
 const USER_MODEL = process.env.SIM_USER_MODEL ?? 'haiku'
 const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
 
@@ -32,6 +36,7 @@ for (const simCase of selected) {
     let error: string | undefined
 
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()) })
+    page.on('pageerror', err => consoleErrors.push(`pageerror: ${err.message}`))
     // The chat iframe POSTs to the agents service's gateway route, so the
     // browser sees the full message array and tool definitions. page.on covers
     // sub-frames, which is why capturing on the top-level page is enough.
@@ -39,6 +44,31 @@ for (const simCase of selected) {
 
     const conversation: Array<{ role: string, text: string }> = []
     let perception: ReturnType<typeof createPagePerception> | undefined
+
+    // Written up front and overwritten on the way out. A Playwright test timeout
+    // aborts the body without running the catch, so without this the previous
+    // run's sidecar and verdict would still be on disk and would be read as this
+    // run's result — the one thing the sidecar exists to prevent.
+    writeEvidence(simCase.name, {
+      case: simCase.name,
+      goal: simCase.goal,
+      persona: simCase.persona,
+      route: simCase.route,
+      conversation: [],
+      gateway: [],
+      consoleErrors: [],
+      observations: []
+    }, {
+      case: simCase.name,
+      valid: false,
+      error: 'run did not complete (timed out or was killed)',
+      assistantModel: ASSISTANT_MODEL,
+      userModel: USER_MODEL,
+      turns: 0,
+      durationMs: 0,
+      finishedAt: new Date().toISOString()
+    })
+
     try {
       // Setup lives inside the try too: a case that fails to dispatch (bridge
       // down, seeding rejected) must still write an invalid sidecar naming the
@@ -99,7 +129,11 @@ for (const simCase of selected) {
           break
         }
         await chat.sendMessage(message)
-        await chat.waitForTurn()
+        // Explicit ceiling, not the driver's own 10-minute default: 8 turns ×
+        // 5 minutes stays inside the 45-minute test budget (see
+        // playwright.sim.config.ts), so a wedged turn surfaces as a recorded
+        // invalid run rather than an unrecorded test-timeout abort.
+        await chat.waitForTurn(5 * 60 * 1000)
         // Read first, then replace: clearing up front means a throw from
         // readConversation leaves the transcript empty, losing every prior turn
         // — and an empty transcript is the one thing a judge cannot judge.
@@ -111,6 +145,15 @@ for (const simCase of selected) {
         // inflate the sidecar's turn count past what the transcript shows.
         turns++
       }
+
+      // A judge cannot judge an empty transcript, and a persona that says DONE
+      // on its first message produces one while looking like a clean run.
+      if (turns === 0 && !error) error = 'no turns completed — the simulated user stopped before saying anything'
+      // captureGateway matches browser requests to /v1/chat/completions. Zero
+      // exchanges means the capture missed the path entirely, not that the
+      // assistant was idle — and the judge, told to look for tools offered but
+      // never used, would manufacture friction points out of the silence.
+      if (gateway.length === 0 && !error) error = 'no gateway exchanges captured — the chat never reached the agents service, or the capture path changed'
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
     }

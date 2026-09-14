@@ -13,13 +13,25 @@ export default defineConfig({
   fullyParallel: false,
   // A judged scenario is many model turns, each of which can be a slow first
   // token. The app's own watchdog is a 90s idle timer that re-arms per stream
-  // part, so a legitimate turn has no fixed ceiling.
-  timeout: 15 * 60 * 1000,
+  // part, so a legitimate turn has no fixed ceiling on its own — but the test
+  // as a whole must still end well before this fires: the budget must exceed
+  // maxTurns × the per-turn timeout (see simulate.sim.spec.ts's waitForTurn
+  // call), so the driver's own diagnosable timeout always fires first. A test
+  // timeout here is the bad order — it aborts the body without running the
+  // catch, so the run's evidence is never written (see the pessimistic
+  // sidecar in simulate.sim.spec.ts).
+  timeout: 45 * 60 * 1000,
   reporter: 'list',
 
   use: {
     baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
     trace: 'retain-on-failure',
+    // A missing element should fail in seconds with a diagnosis, not hang for
+    // the whole test timeout. 30s rather than the default suite's 5s/10s: the
+    // dev stack is doing real work during a simulation and the drawer's
+    // iframe boots an entire SPA.
+    actionTimeout: 30_000,
+    navigationTimeout: 30_000,
   },
 
   projects: [

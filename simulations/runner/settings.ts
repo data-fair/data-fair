@@ -58,8 +58,10 @@ export function bridgeSettings (modelId: string) {
  * `ownerAx` is the owner-context client from seedDatasets.
  */
 export async function seedSettings (modelId: string, ownerAx: any) {
-  // Imported here rather than at module top level so the unit suite can load
-  // this file for bridgeSettings without authenticating.
+  // Imported here rather than at module top level, so the unit suite (which
+  // only needs bridgeSettings from this file) never loads
+  // tests/support/axios.ts. Not a hazard avoidance: that module has no
+  // authenticating side effect at load, it just isn't needed there.
   const { axiosAuth } = await import('../../tests/support/axios.ts')
   const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
   await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, bridgeSettings(modelId))

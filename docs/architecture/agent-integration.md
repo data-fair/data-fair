@@ -431,7 +431,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `@data-fair/lib-vue-agents` | Vue composables: `useAgentTool`, `useAgentSubAgent`, `useFrameServer` |
 | `@data-fair/lib-vuetify-agents` | Vue components: `DfAgentChatDrawer`, `DfAgentChatToggle`, `DfAgentChatAction` |
 
-## Simulations
+## 9. Simulations
 
 Unit and e2e tests answer "does this mechanism work". They cannot answer whether
 the assistant served a person, because that depends on what a real model says to
@@ -443,8 +443,9 @@ chat drawer in a real browser; the assistant under test runs on
 `SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
 configured as an `openai-compatible` provider on the agents service. The run is
 captured as a transcript — what was said, every gateway request with its tool
-definitions and tool calls, and any console errors — and a `simulation-judge`
-subagent reads it and returns a verdict with a friction list.
+definitions and tool calls, any console errors, and what the persona looked at
+and did on screen — and a `simulation-judge` subagent reads it and returns a
+verdict with a friction list.
 
 The friction list is the point. "Unsatisfactory" says a run went badly; a friction
 point names the reply or tool result that misled the person and what they did
@@ -464,7 +465,21 @@ the turn loop.
 
 **Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
 from `simulations/resources/*.csv`, so no case inherits another run's state and
-no case can dirty the `dev_fixtures` demo data.
+no case can dirty the `dev_fixtures` demo data. `clean()` resets the dev
+environment's whole test state, not just `test_`-owned datasets: it also wipes
+the `limits`, `applicationsKeys`, `remoteServices`, `baseApplications`,
+`extensions-cache`, `thumbnails-cache`, `locks` and integrity collections
+unfiltered, and removes the tmp directory — this is pre-existing `clean()`
+behaviour shared with `npm test`, not something the simulation suite adds.
+
+**Perception.** Since 0.4.0 the persona has `look`, `click` and `type` MCP
+tools — no `evaluate`, no raw selectors — so it can check the screen instead of
+only trusting chat text. The chat composer (input, send, stop, reset) is
+structurally off-limits to it: those calls are refused before the element is
+even looked up, which is what keeps the conversation the runner's to send,
+not the persona's. Every call is recorded as an `Observation`, and the judge
+cross-checks the persona's claims against them rather than taking an assertion
+about what is or isn't on screen at face value.
 
 Rate limits are the practical ceiling — three Claude roles per case on one
 subscription. A run cut short by a rate limit is an **invalid run**, not a product

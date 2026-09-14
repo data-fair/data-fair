@@ -29,6 +29,10 @@ async function uploadCsv (ax: any, id: string, file: string, body: Record<string
  * which seedSettings needs to flip the agentChat flag.
  */
 export async function seedDatasets () {
+  // Imported here rather than at module top level to keep this file's own
+  // top-level free of a dependency it only needs inside this one function.
+  // Not a hazard avoidance: tests/support/axios.ts has no authenticating
+  // side effect at load, it just isn't needed until this call runs.
   const { axiosAuth, waitForWorkerIdle } = await import('../../tests/support/axios.ts')
   const ax = await axiosAuth(`${OWNER_USER}@test.com`, OWNER.id)
 
