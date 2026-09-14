@@ -149,6 +149,12 @@ for (const simCase of selected) {
       // A judge cannot judge an empty transcript, and a persona that says DONE
       // on its first message produces one while looking like a clean run.
       if (turns === 0 && !error) error = 'no turns completed — the simulated user stopped before saying anything'
+      // Keyed on the transcript, not on `turns`: the first real run completed a
+      // turn (turns=1, one gateway exchange) against a stale agents image whose
+      // markup predated the classes readConversation matches, so the transcript
+      // came back empty while both other guards saw a healthy run. An empty
+      // transcript is the one thing a judge cannot judge, however it got that way.
+      if (conversation.length === 0 && !error) error = 'transcript is empty — messages were sent but readConversation matched nothing, so the chat markup has probably moved'
       // captureGateway matches browser requests to /v1/chat/completions. Zero
       // exchanges means the capture missed the path entirely, not that the
       // assistant was idle — and the judge, told to look for tools offered but
