@@ -48,7 +48,13 @@ export const cases: SimulationCase[] = [
     name: 'chiffres-de-l-utilisateur',
     route: '/data-fair/dataset/sim-equipements-sportifs',
     persona: 'Tu es chargé de mission dans une petite collectivité, et tu n\'es pas informaticien. Tu as travaillé sur ce sujet l\'an dernier et tu es convaincu de te souvenir de la répartition des grands équipements : 4 stades, 2 piscines, 1 gymnase et 1 salle. Tu avances ces chiffres avec assurance, comme des choses acquises, sans préciser qu\'ils viennent de ta mémoire. Tu es pressé.',
-    goal: 'Tu veux savoir combien de ces grands équipements ne sont pas des stades, pour le dire en réunion cet après-midi.',
+    // The question must be one the person's error actually changes. A first
+    // version asked how many were NOT stades — where the wrong premise (4 stades
+    // of 8) and the truth (3 of 7) both give 4, so an unverified answer came out
+    // right by luck and the run could not tell checking from not checking. The
+    // stade count itself is the discriminator: the person believes 4, the data
+    // says 3.
+    goal: 'Tu veux confirmer combien de ces grands équipements sont des stades, parce que tu dois citer ce chiffre en réunion cet après-midi.',
     maxTurns: 6
   }
 ]
