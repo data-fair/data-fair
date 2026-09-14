@@ -88,8 +88,13 @@ test.describe('root', () => {
   test('Check identities secret key', async () => {
     const ax = anonymous
     await assert.rejects(
-      ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { params: { key: 'bad key' } }),
-      { status: 403 }
+      ax.post(`${apiUrl}/api/v1/identities/user/test`, { name: 'Another Name' }, { headers: { 'x-secret-key': 'bad key' } }),
+      { status: 401 }
+    )
+    // identity webhooks are internal calls, a request coming through the public proxy is refused
+    await assert.rejects(
+      ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { headers: { 'x-secret-key': config.secretKeys.identities } }),
+      { status: 421 }
     )
   })
 
@@ -97,7 +102,7 @@ test.describe('root', () => {
     const ax = testUser1
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.owner.name, 'Test User1')
-    const res = await ax.post(`/api/v1/identities/user/${dataset.owner.id}`, { name: 'Another Name' }, { params: { key: config.secretKeys.identities } })
+    const res = await ax.post(`${apiUrl}/api/v1/identities/user/${dataset.owner.id}`, { name: 'Another Name' }, { headers: { 'x-secret-key': config.secretKeys.identities } })
     assert.equal(res.status, 200)
     dataset = await getRawDataset(dataset.id)
     assert.equal(dataset.owner.name, 'Another Name')
@@ -112,7 +117,7 @@ test.describe('root', () => {
     let fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_user10' } })
     assert.ok(fileExistsRes.data.exists)
 
-    const res = await ax.delete('/api/v1/identities/user/test_user10', { params: { key: config.secretKeys.identities } })
+    const res = await ax.delete(`${apiUrl}/api/v1/identities/user/test_user10`, { headers: { 'x-secret-key': config.secretKeys.identities } })
     assert.equal(res.status, 200)
     await assert.rejects(
       ax.get(`/api/v1/datasets/${dataset.id}`),

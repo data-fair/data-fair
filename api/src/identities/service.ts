@@ -11,6 +11,7 @@ import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 export type Identity = { type: string, id: string, name?: string }
 type Department = { id: string, name: string }
+type Partner = { id: string, name: string }
 
 // resources displayed with their owner name and carrying user permissions
 const resourceCollectionNames = ['applications', 'datasets', 'catalogs']
@@ -21,7 +22,7 @@ const ownedCollectionNames = [...resourceCollectionNames, 'applications-keys', '
 const privateAccessCollectionNames = ['remote-services', 'base-applications']
 
 // notify a name change across all resources owned by, shared with or authored by an identity
-export const renameIdentity = async (identity: Identity, departments?: Department[]) => {
+export const renameIdentity = async (identity: Identity, departments?: Department[], partners?: Partner[]) => {
   for (const c of resourceCollectionNames) {
     const collection = mongo.db.collection(c)
     const ownerFilter = { 'owner.type': identity.type, 'owner.id': identity.id }
@@ -30,6 +31,18 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       for (const department of departments) {
         const departmentFilter = { 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }
         await collection.updateMany(departmentFilter, { $set: { 'owner.departmentName': department.name } })
+      }
+    }
+
+    // permissions granted to other organizations are only meaningful inside a partnership:
+    // the directory sends the complete list of partners, what is not in it was withdrawn
+    if (identity.type === 'organization' && partners) {
+      const partnerIds = partners.map(p => p.id)
+      const cursor = collection.find({ ...ownerFilter, permissions: { $elemMatch: { type: 'organization', id: { $nin: [identity.id, ...partnerIds] } } } })
+      for await (const doc of cursor) {
+        const permissions = doc.permissions.filter((permission: any) => permission.type !== 'organization' || permission.id === identity.id || partnerIds.includes(permission.id))
+        await collection.updateOne({ id: doc.id }, { $set: { permissions } })
+        if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
       }
     }
 
@@ -77,7 +90,7 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
   }
 }
 
-// remove resources owned, permissions, and anonymize created/updated events + the whole data directory
+// remove resources owned, permissions and the whole data directory (created/updated only hold the user id)
 export const deleteIdentity = async (app: Application, identity: Identity) => {
   const datasetsCursor = mongo.db.collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
