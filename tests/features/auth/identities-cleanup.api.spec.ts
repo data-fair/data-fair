@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, anonymousAx, clean, checkPendingTasks, config, apiUrl } from '../../support/axios.ts'
+import { clearDatasetCache } from '../../support/workers.ts'
 
 // identity webhooks are internal calls, simple-directory reaches the API directly and not through the public proxy
 const identitiesUrl = `${apiUrl}/api/v1/identities`
@@ -77,6 +78,27 @@ test.describe('personal information storage cleanup', () => {
     // test_org3 is no longer a partner, test_org2 still is, the user permission is not concerned
     await anonymousAx.post(`${identitiesUrl}/organization/test_org1`, { name: 'Test Org 1', partners: [{ id: 'test_org2', name: 'Test Org 2' }] }, identitiesHeaders)
     assert.deepEqual((await u1Org.get(`/api/v1/datasets/${id}/permissions`)).data, [permissions[0], permissions[2]])
+  })
+
+  test('organization rename, partnership end and delete are reflected in master data shares', async () => {
+    const id = 'identities-cleanup-7'
+    await u1Org.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id })
+    await u1Org.patch('/api/v1/datasets/' + id, { masterData: { shareOrgs: [{ id: 'test_org2', name: 'Test Org 2' }, { id: 'test_org3', name: 'Test Org 3' }] } })
+    // identity webhooks do not bump updatedAt, the memoized dataset must be dropped to read the change
+    const shareOrgs = async () => {
+      await clearDatasetCache()
+      return (await u1Org.get('/api/v1/datasets/' + id)).data.masterData.shareOrgs
+    }
+
+    await anonymousAx.post(`${identitiesUrl}/organization/test_org2`, { name: 'Renamed Org 2' }, identitiesHeaders)
+    assert.deepEqual(await shareOrgs(), [{ id: 'test_org2', name: 'Renamed Org 2' }, { id: 'test_org3', name: 'Test Org 3' }])
+
+    // test_org3 is no longer a partner of test_org1
+    await anonymousAx.post(`${identitiesUrl}/organization/test_org1`, { name: 'Test Org 1', partners: [{ id: 'test_org2', name: 'Renamed Org 2' }] }, identitiesHeaders)
+    assert.deepEqual(await shareOrgs(), [{ id: 'test_org2', name: 'Renamed Org 2' }])
+
+    await anonymousAx.delete(`${identitiesUrl}/organization/test_org2`, identitiesHeaders)
+    assert.deepEqual(await shareOrgs(), [])
   })
 
   test('identity delete removes permission entries', async () => {

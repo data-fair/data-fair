@@ -14,7 +14,7 @@ type Department = { id: string, name: string }
 type Partner = { id: string, name: string }
 
 // resources displayed with their owner name and carrying user permissions
-const resourceCollectionNames = ['applications', 'datasets', 'catalogs']
+const resourceCollectionNames = ['applications', 'datasets']
 // all collections holding owned documents (deleted along with the identity);
 // applications-keys and journals only store the owner type/id(/department) for filtering, no names
 const ownedCollectionNames = [...resourceCollectionNames, 'applications-keys', 'journals']
@@ -87,6 +87,14 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       }
       await mongo.datasets.updateOne({ id: dataset.id }, { $set: { masterData: dataset.masterData } })
     }
+    // master data is shared with partners, a share to a former partner is withdrawn
+    if (partners) {
+      const partnerIds = partners.map(p => p.id)
+      await mongo.datasets.updateMany(
+        { 'owner.type': 'organization', 'owner.id': identity.id, 'masterData.shareOrgs': { $elemMatch: { id: { $nin: partnerIds } } } },
+        { $pull: { 'masterData.shareOrgs': { id: { $nin: partnerIds } } } } as any
+      )
+    }
   }
 }
 
@@ -128,6 +136,14 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
   // settings and limits
   await mongo.db.collection('settings').deleteMany({ type: identity.type, id: identity.id })
   await mongo.db.collection('limits').deleteOne({ type: identity.type, id: identity.id })
+
+  // dataset.masterData.shareOrgs
+  if (identity.type === 'organization') {
+    await mongo.datasets.updateMany(
+      { 'masterData.shareOrgs': { $elemMatch: { id: identity.id } } },
+      { $pull: { 'masterData.shareOrgs': { id: identity.id } } } as any
+    )
+  }
 
   // whole data directory
   await filesStorage.removeDir(ownerDir(identity))
