@@ -10,6 +10,7 @@ import { clean } from '../tests/support/axios.ts'
 import { cases } from './cases/index.ts'
 import { seedDatasets } from './runner/fixtures.ts'
 import { assertBridgeUp, seedSettings, OWNER, OWNER_USER } from './runner/settings.ts'
+import { captureGatewayErrors } from './runner/gateway-errors.ts'
 import {
   createChatDriver,
   chatDriverStrings,
@@ -41,6 +42,10 @@ for (const simCase of selected) {
     // browser sees the full message array and tool definitions. page.on covers
     // sub-frames, which is why capturing on the top-level page is enough.
     const gateway = captureGateway(page)
+    // Requests say what the assistant was offered; responses say whether the
+    // model actually answered. Only the second can tell a provider failure from
+    // a product one.
+    const gatewayErrors = captureGatewayErrors(page)
 
     const conversation: Array<{ role: string, text: string }> = []
     let perception: ReturnType<typeof createPagePerception> | undefined
@@ -178,6 +183,22 @@ for (const simCase of selected) {
       if (gateway.length === 0 && !error) error = 'no gateway exchanges captured — the chat never reached the agents service, or the capture path changed'
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
+    }
+
+    // Outside the try, and overriding whatever else was recorded. A provider
+    // failure is never the product's fault and must not be judged as though it
+    // were — but it also does not throw: the gateway answers 200 and writes the
+    // failure into the SSE body, so the turn "completes" and the error text
+    // lands in the transcript as if the assistant had said it.
+    //
+    // It overrides rather than defers because every other symptom is downstream
+    // of it. A model that never answers is WHY the persona runs out of turns and
+    // why the composer goes stale; recording those instead would name the
+    // consequence and hide the cause. Verified against a real provider failure,
+    // which first reported "Reached maximum number of turns".
+    await gatewayErrors.settle()
+    if (gatewayErrors.messages.length) {
+      error = `provider error from the agents gateway (run is not judgeable): ${gatewayErrors.messages[0]}`
     }
 
     const transcript: Transcript = {

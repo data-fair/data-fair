@@ -489,7 +489,43 @@ not the persona's. Every call is recorded as an `Observation`, and the judge
 cross-checks the persona's claims against them rather than taking an assertion
 about what is or isn't on screen at face value.
 
-Rate limits are the practical ceiling — three Claude roles per case on one
-subscription. A run cut short by a rate limit is an **invalid run**, not a product
-failure; `sim-<case>.run.json` is what distinguishes them, and an invalid run must
-never be judged.
+**Provider failures are not product failures.** When the model stream dies — a
+rate limit, a dead bridge, a model the provider will not serve — the agents
+gateway does not fail the request. It writes an error chunk into the SSE body
+and closes cleanly, so the chat shows an alert, the Stop button disappears, the
+turn "finishes" and nothing throws. Left alone, that run records as valid and a
+judge blames the assistant for never replying. `simulations/runner/gateway-errors.ts`
+reads the gateway's own `error` chunk — a JSON field the service emits, not the
+prose it renders, so it survives translation and restyling — and invalidates the
+run. Rate limits are the practical ceiling here: three Claude roles per case on
+one subscription. An invalid run must never be judged, and
+`sim-<case>.run.json` is what tells the two apart.
+
+### Writing a case
+
+A case is a page, a person and something they want, with no expected result. Two
+rules matter more than the prose, and both were learned by getting them wrong:
+
+**The goal must need the assistant.** Since the persona can look, click and type,
+it will simply do anything the interface hands over. The first version of the
+find-a-dataset case asked someone to locate one of two datasets and open it; the
+persona looked, clicked it, and stopped — zero gateway exchanges, the assistant
+never addressed, and a green-looking run that tested nothing. Aim at what the UI
+will not give you for free: an answer across many rows, a filtered view nobody
+can construct by pointing, a config that needs the schema. If a competent person
+could get there unaided, the case will measure navigation rather than the
+assistant.
+
+**What you want asserted must be observable, not conversational.** A goal's
+trailing clause does not reliably buy an extra turn. `lien-ouvert-par-l-utilisateur`
+ends with wanting to ask a further question once the link is open; the persona
+verified the link and stopped, satisfied, without asking. The case still held,
+because the thing under test — that the chat survives the navigation — is visible
+in the `look` observation either way. Had it depended on a second message being
+sent, it would have proved nothing. Write the goal so the evidence lands in the
+observations, and treat any particular turn happening as a bonus.
+
+The two registered cases are deliberately a matched pair over the ways the page
+can move: `lien-ouvert-par-l-utilisateur` covers the person clicking a link the
+assistant wrote, and `question-sur-les-donnees` covers the assistant navigating
+through its own `navigate` tool. Both must leave the chat usable afterwards.
