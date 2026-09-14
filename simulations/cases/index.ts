@@ -7,12 +7,24 @@
 import type { SimulationCase } from '@data-fair/lib-agents-sim'
 
 export const cases: SimulationCase[] = [
+  // Covers the navigation the PERSON performs, by clicking a link the assistant
+  // produced. Its companion below covers the navigation the ASSISTANT performs.
+  // The two are different code paths — decideAgentNavigation resolving an
+  // in-chat link against the host router, versus the navigate tool — and both
+  // have to leave the chat usable afterwards, which is what the goal's last
+  // clause puts under test.
+  //
+  // The goal deliberately needs something the UI does not hand over. An earlier
+  // version of this case asked only to find and open a dataset, and a persona
+  // with look/click simply did it itself: zero gateway exchanges, the assistant
+  // never addressed. A filtered view is not reachable by pointing at things, so
+  // asking is the only way through.
   {
-    name: 'trouver-un-jeu-de-donnees',
+    name: 'lien-ouvert-par-l-utilisateur',
     route: '/data-fair/datasets',
-    persona: 'Tu es chargé de mission dans une petite collectivité. Tu es à l\'aise avec des tableaux mais tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, une agrégation ou un filtre, et tu n\'emploieras jamais ces mots. Tu demandes ce que tu veux en langage courant et tu es pressé.',
-    goal: 'Tu veux retrouver le jeu de données qui recense les équipements sportifs de la commune, et l\'ouvrir pour le voir à l\'écran.',
-    maxTurns: 4
+    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, une agrégation ou un filtre, et tu n\'emploieras jamais ces mots. Tu prépares une réunion et tu veux garder de quoi y revenir. Si une réponse est vague, ou si on te dit que c\'est fait sans que tu voies quoi que ce soit à l\'écran, tu le dis.',
+    goal: 'Tu veux un lien vers la liste des équipements sportifs de plus de 500 places, que tu ouvriras toi-même pour vérifier qu\'il montre bien les bonnes données. Une fois que tu l\'as ouvert et vérifié, tu veux encore pouvoir poser une question à l\'assistant sur ce que tu as sous les yeux.',
+    maxTurns: 6
   },
   {
     name: 'question-sur-les-donnees',

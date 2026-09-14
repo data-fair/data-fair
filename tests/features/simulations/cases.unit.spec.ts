@@ -17,10 +17,12 @@ test.describe('case registry', () => {
     assert.ok(cases.length > 0, 'the registry is empty — every simulation would report "not run"')
     // Both designed cases are registered. A case silently dropped during a
     // refactor would otherwise just report "not run" and be scrolled past.
-    assert.ok(
-      cases.some(c => c.name === 'question-sur-les-donnees'),
-      'the data-question case is missing from the registry'
-    )
+    // They are a matched pair covering the two ways the page can navigate —
+    // the person clicking a link the assistant produced, and the assistant
+    // navigating itself — so losing either one silently halves the coverage.
+    for (const name of ['lien-ouvert-par-l-utilisateur', 'question-sur-les-donnees']) {
+      assert.ok(cases.some(c => c.name === name), `case ${name} is missing from the registry`)
+    }
     assert.equal(new Set(cases.map(c => c.name)).size, cases.length, 'duplicate case name')
     for (const c of cases) {
       assert.match(c.name, /^[a-z0-9-]+$/, `${c.name}: evidence files are named after this`)

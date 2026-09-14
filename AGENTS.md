@@ -70,7 +70,7 @@ The underlying scripts, for reference:
 
 ```bash
 npm run simulate                                # every case
-SIM_CASES=trouver-un-jeu-de-donnees npm run simulate
+SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate
 npm run simulate:report
 ```
 

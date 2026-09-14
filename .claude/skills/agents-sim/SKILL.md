@@ -44,7 +44,7 @@ while someone is relying on that data.
 
    ```bash
    npm run simulate                              # every case
-   SIM_CASES=trouver-un-jeu-de-donnees npm run simulate  # one case
+   SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate  # one case
    ```
 
    Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`) and
