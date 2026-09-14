@@ -625,18 +625,51 @@ test.describe('dataset partOf attribute', () => {
     const ax = testUser1
     const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const { data: child } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child of an application', partOf: { type: 'application', id: app.id } })
+    // a child of a parent of the same type, the creation-time check must not exempt it
+    const { data: otherVirtual } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'another virtual dataset', virtual: { children: [] } })
+    const { data: virtualChild } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child of a virtual dataset', partOf: { type: 'dataset', id: otherVirtual.id } })
 
-    const isRefused = (err: any) => {
+    const isRefused = (parent: any, foreign: any) => (err: any) => {
       assert.equal(err.status, 400)
-      assert.ok(err.data.includes(`"${child.title}" (${child.id}) est définie comme enfant de "${app.title}"`), err.data)
+      assert.ok(err.data.includes(`"${foreign.title}" (${foreign.id}) est définie comme enfant de "${parent.title}"`), err.data)
       return true
     }
     // at creation
-    await assert.rejects(ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [child.id] } }), isRefused)
-    // and when editing the members
+    await assert.rejects(ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [child.id] } }), isRefused(app, child))
+    await assert.rejects(ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [virtualChild.id] } }), isRefused(otherVirtual, virtualChild))
+    // and when editing the members, through both write routes
     const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [] } })
     await waitForDatasetError(ax, virtualDataset.id)
-    await assert.rejects(ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child.id] } }), isRefused)
+    await assert.rejects(ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child.id] } }), isRefused(app, child))
+    await assert.rejects(ax.put(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [virtualChild.id] } }), isRefused(otherVirtual, virtualChild))
+  })
+
+  test('the PUT route gates partOf on the admin permission like the PATCH route', async () => {
+    const ax = testOrg1Admin
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a parent', virtual: { children: [] } })
+    await waitForDatasetError(ax, virtualDataset.id)
+    const { data: child } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    await assert.rejects(testOrg1Contrib.put(`/api/v1/datasets/${child.id}`, { partOf: null }), (err: any) => err.status === 403)
+    const res = await ax.put(`/api/v1/datasets/${child.id}`, { partOf: null })
+    assert.equal(res.status, 200)
+    assert.equal((await ax.get(`/api/v1/datasets/${child.id}`)).data.partOf, undefined)
+  })
+
+  test('renaming a parent refreshes the title denormalized on its children', async () => {
+    const ax = testUser1
+    const { data: virtualDataset } = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a parent', virtual: { children: [] } })
+    await waitForDatasetError(ax, virtualDataset.id)
+    const { data: child } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a child', partOf: { type: 'dataset', id: virtualDataset.id } })
+    await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { title: 'a renamed parent' })
+    assert.equal((await ax.get(`/api/v1/datasets/${child.id}`)).data.partOf.title, 'a renamed parent')
+  })
+
+  test('?partOf=false is the default listing, not a lookup of a parent named "false"', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const res = await ax.get('/api/v1/datasets', { params: { partOf: 'false' } })
+    assert.ok(res.data.results.find((d: any) => d.id === dataset.id))
   })
 
   test('a child does not count in the number of datasets, its storage still does', async () => {

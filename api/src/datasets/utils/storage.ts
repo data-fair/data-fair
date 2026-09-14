@@ -50,11 +50,7 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
   }
 }
 
-/**
- * Datasets moving to another account start consuming its limits: the one being transferred, plus the
- * partOf children a parent takes along with it. Shared by the dataset and application change-owner
- * routes, both of which can move several datasets at once.
- */
+/** Datasets moving to another account start consuming its limits. Shared by both change-owner routes. */
 export const checkMoveLimits = async (locale: string, newOwner: AccountKeys, datasets: any[]) => {
   if (!datasets.length) return
   const remaining = await limits.remaining(newOwner)

@@ -312,9 +312,8 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
   })
 }
 
-/** A virtual dataset left without any member cannot be queried: refuse to delete its last one,
- * whoever owns the virtual dataset. Parents of the same account are named, foreign ones only
- * counted — except in admin mode, which sees them all and can force the deletion (they are detached). */
+// refuse to delete the last member of a virtual dataset of any account: own parents are named,
+// foreign ones only counted, admin mode sees them all and can force (they are then emptied)
 export const assertNotLastMember = async (dataset: Pick<Dataset, 'id' | 'owner'>, sessionState: SessionState, force = false) => {
   const adminMode = !!sessionState.user?.adminMode
   if (force && adminMode) return
@@ -338,9 +337,8 @@ export const assertNotLastMember = async (dataset: Pick<Dataset, 'id' | 'owner'>
   throw httpError(409, sentences.join(' '))
 }
 
-/** A deleted dataset leaves the virtual datasets aggregating it, whose status bump re-finalizes them.
- * `virtual` is integrity-covered, but this raw write never false-breaches: a virtual dataset can
- * never be integrity-enrolled (neither file nor rest, see integrity/service.ts enableIntegrityUnlocked). */
+// a deleted dataset leaves the virtual datasets aggregating it, the status bump re-finalizes them
+// (raw write on the integrity-covered `virtual`: safe, a virtual dataset is never integrity-enrolled)
 export const detachFromVirtualParents = async (datasetId: string) => {
   await mongo.datasets.updateMany(
     { 'virtual.children': datasetId },

@@ -109,12 +109,11 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
-    // partOf is only meaningful on the creation branch: an update goes through replaceApplication,
-    // which preserves the stored partOf and ignores the one carried by the body
-    if (newApplication.partOf && !await mongo.applications.countDocuments({ id: newApplication.id })) {
-      await partOf.prepareAtCreation('application', newApplication, ctx.sessionState)
+    // the partOf guards only apply to a creation, an update goes through replaceApplication and its own guards
+    if (!await mongo.applications.countDocuments({ id: newApplication.id })) {
+      if (newApplication.partOf) await partOf.prepareAtCreation('application', newApplication, ctx.sessionState)
+      await partOf.assertNoForeignChildren('application', {}, newApplication)
     }
-    await partOf.assertNoForeignChildren('application', {}, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {
       setReqIsNewApplication(req, true)

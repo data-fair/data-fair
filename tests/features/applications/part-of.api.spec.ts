@@ -520,5 +520,21 @@ test.describe('application partOf attribute', () => {
     }
     await assert.rejects(ax.put(`/api/v1/applications/${app.id}/config`, { datasets: [{ id: child.id, href: child.href }] }), isRefused)
     await assert.rejects(ax.patch(`/api/v1/applications/${app.id}`, { configuration: { datasets: [{ id: child.id, href: child.href }] } }), isRefused)
+    // and at creation, through both routes
+    await assert.rejects(ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), configuration: { datasets: [{ id: child.id, href: child.href }] } }), isRefused)
+    await assert.rejects(ax.put('/api/v1/applications/a-new-application', { url: mockAppUrl('monapp1'), configuration: { datasets: [{ id: child.id, href: child.href }] } }), isRefused)
+  })
+
+  test('renaming a parent application refreshes the title denormalized on its children', async () => {
+    const ax = testUser1
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a parent' })
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a child', partOf: { type: 'application', id: parentApp.id } })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const configuration = { applications: [{ id: childApp.id, href: childRef.href }] }
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, configuration)
+    await ax.patch(`/api/v1/applications/${parentApp.id}`, { title: 'a renamed parent' })
+    assert.equal((await ax.get(`/api/v1/applications/${childApp.id}`)).data.partOf.title, 'a renamed parent')
+    await ax.put(`/api/v1/applications/${parentApp.id}`, { url: mockAppUrl('monapp1'), title: 'a replaced parent', configuration })
+    assert.equal((await ax.get(`/api/v1/applications/${childApp.id}`)).data.partOf.title, 'a replaced parent')
   })
 })

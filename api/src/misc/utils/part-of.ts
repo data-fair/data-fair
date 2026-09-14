@@ -1,37 +1,24 @@
-// The `partOf` annotation: a generic link declaring a resource as the child of the single parent
-// resource it only exists to serve. It works on weakly-typed resource refs ({ type, id, title }),
-// exactly the shape it is stored with in the model, and knows nothing of the features that make a
-// parent reference its children (a virtual dataset's members, an application's configuration): those
-// are resolved through the parent-children utilities in shared, the only place that knows how one
-// resource type references another. The single type-specific constraint partOf adds on top is
-// `cannotBeChild` below.
-// The datasets/applications service functions consumed by the cascades are imported dynamically:
-// both services import this module, so a static import would be a cycle.
+// The partOf annotation: a resource is the child of the single parent it only exists to serve.
+// How a parent references its children is the business of shared/utils/parent-children.ts.
+// The datasets/applications services are imported dynamically, both import this module.
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { can } from './permissions.ts'
 import { type LogContext } from './req-context.ts'
-import { resourceTypes, childRefs, parentFilters, orphanRefs, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
+import { resourceTypes, childRefs, parentFilters, orphanRefs, sameRef, type ResourceType, type ResourceRef } from '@data-fair/data-fair-shared/utils/parent-children.ts'
 import { isMasterData } from '../../../contract/master-data.js'
-import type { Collection } from 'mongodb'
+import type { Collection, Document } from 'mongodb'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 
 export type { ResourceType, ResourceRef }
 export type PartOf = ResourceRef & { title?: string }
 export type ChildrenAction = 'delete' | 'unflag'
+export type Orphans = { action: ChildrenAction, refs: ResourceRef[] }
 type Owner = { type: string, id: string, department?: string }
 
-/** ambient request-derived context needed by the owner-change cascade */
 export type PartOfContext = { sessionState: SessionStateAuthenticated, logCtx: LogContext }
-/** the deletion cascades additionally need the express app (deleteDataset unindexes through it) */
-export type PartOfDeletionContext = PartOfContext & { app: any }
 
-/**
- * The only constraint partOf adds per resource type: which resources may not be subordinated to a
- * parent at all. Nothing here restricts what a child or a parent may be — any resource can be the
- * child of any other. Reference data is the one exception, because it exists to be reused across
- * many contexts rather than to serve a single parent.
- */
+// reference data exists to be reused across many contexts, not to serve a single parent
 const cannotBeChild: Record<ResourceType, (resource: any) => string | undefined> = {
   dataset: (dataset) => {
     if (isMasterData(dataset.masterData)) return 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource'
@@ -44,28 +31,18 @@ const assertCanBeChild = (childType: ResourceType, resource: any) => {
   if (message) throw httpError(400, message)
 }
 
-// this module deliberately works on weakly-typed documents, both collections are queried the same way
 const collection = (type: ResourceType): Collection<any> => type === 'dataset' ? mongo.datasets : mongo.applications
 
-/** A parent and its child always live in the same account: departments are distinct permission and storage scopes. */
+// a department is a distinct permission and storage scope
 const isSameOwner = (a?: Owner, b?: Owner) =>
   !!a && !!b && a.type === b.type && a.id === b.id && (a.department || null) === (b.department || null)
 
-/**
- * Children defined as `partOf` only exist to serve their parent, so an operation that stops
- * referencing them has to say what becomes of them. Narrows the childrenAction query param, or
- * refuses the request rather than silently orphaning them.
- */
 const requireChildrenAction = (childrenAction: string | undefined, message: string): ChildrenAction => {
   if (childrenAction !== 'delete' && childrenAction !== 'unflag') throw httpError(409, message)
   return childrenAction
 }
 
-/**
- * Rules on a designated parent that do not depend on it referencing the child: it must not be a
- * child itself (chains would leave silent orphans behind cascading deletions) and it must live in
- * the same account (so that cascading deletions never reach another account).
- */
+// chains would leave silent orphans behind a cascading deletion, and a cascade must never reach another account
 const assertEligibleParent = (parent: any, childOwner: Owner) => {
   if (parent.partOf) throw httpError(400, 'La ressource parente est elle-même définie comme enfant d\'une autre ressource, les chaînages ne sont pas autorisés')
   if (!isSameOwner(parent.owner, childOwner)) throw httpError(400, 'La ressource parente doit appartenir au même compte que la ressource enfant')
@@ -84,52 +61,37 @@ const findReferencingParents = async (child: ResourceRef) => {
 const childrenFilter = (parent: ResourceRef, onlyIds?: string[]) =>
   ({ 'partOf.type': parent.type, 'partOf.id': parent.id, ...(onlyIds ? { id: { $in: onlyIds } } : {}) })
 
-/** The children of a parent resource, whatever their type, as full documents. */
-export const listChildren = async (parentType: ResourceType, parentId: string): Promise<{ type: ResourceType, resource: any }[]> => {
+/** The children of a parent resource, whatever their type. */
+export const listChildren = async (parentType: ResourceType, parentId: string, projection?: Document): Promise<{ type: ResourceType, resource: any }[]> => {
   const children: { type: ResourceType, resource: any }[] = []
   for (const childType of resourceTypes) {
-    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parentId })).toArray()
+    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parentId }), { projection }).toArray()
     children.push(...found.map(resource => ({ type: childType, resource })))
   }
   return children
 }
 
-const listChildrenRefs = async (parentType: ResourceType, parentId: string): Promise<ResourceRef[]> => {
-  const refs: ResourceRef[] = []
-  for (const childType of resourceTypes) {
-    const found = await collection(childType).find(childrenFilter({ type: parentType, id: parentId }), { projection: { _id: 0, id: 1 } }).toArray()
-    refs.push(...found.map(child => ({ type: childType, id: child.id })))
-  }
-  return refs
-}
+const listChildrenRefs = async (parentType: ResourceType, parentId: string): Promise<ResourceRef[]> =>
+  (await listChildren(parentType, parentId, { _id: 0, id: 1 })).map(child => ({ type: child.type, id: child.resource.id }))
 
-export const countChildren = async (parentType: ResourceType, parentId: string): Promise<number> => {
-  let count = 0
-  for (const childType of resourceTypes) {
-    count += await collection(childType).countDocuments(childrenFilter({ type: parentType, id: parentId }))
-  }
-  return count
-}
-
-const deleteResource = async (ctx: PartOfDeletionContext, type: ResourceType, resource: any) => {
-  if (type === 'dataset') await (await import('../../datasets/service.ts')).deleteDataset(ctx.app, resource)
+const deleteResource = async (ctx: PartOfContext, type: ResourceType, resource: any) => {
+  if (type === 'dataset') await (await import('../../datasets/service.ts')).deleteDataset(resource)
   else await (await import('../../applications/service.ts')).deleteApplication(ctx, resource)
 }
 
 /**
- * Cascade applied to the children that stop being referenced by their parent, because it is deleted
- * or no longer references them: either delete them, or unflag them so they survive on their own.
- * No per-child permission check: a child exists only to serve its parent and shares its lifecycle,
- * so whoever can authorize the parent operation decides what becomes of the children.
+ * Children that stop being referenced by their parent: either delete them, or unflag them so they
+ * survive on their own. No per-child permission check, whoever can act on the parent decides.
+ * The parent may already be deleted when this runs (see detectOrphans / applyOrphans).
  */
-const handleChildren = async (ctx: PartOfDeletionContext, parent: ResourceRef, action: ChildrenAction, children: ResourceRef[]) => {
+const handleChildren = async (ctx: PartOfContext, parent: ResourceRef, action: ChildrenAction, children: ResourceRef[]) => {
   for (const childType of new Set(children.map(ref => ref.type))) {
     const ids = children.filter(ref => ref.type === childType).map(ref => ref.id)
     const filter = childrenFilter(parent, ids)
     if (action === 'unflag') {
       const [child] = await collection(childType).find(filter, { projection: { owner: 1 } }).limit(1).toArray()
       await collection(childType).updateMany(filter, { $unset: { partOf: 1 } })
-      // unflagged datasets count again in the number of datasets (children share their parent's account)
+      // unflagged datasets count again in the number of datasets
       if (childType === 'dataset' && child) await (await import('../../datasets/utils/storage.ts')).updateTotalStorage(child.owner)
     } else {
       const resources = await collection(childType).find(filter).toArray()
@@ -139,52 +101,41 @@ const handleChildren = async (ctx: PartOfDeletionContext, parent: ResourceRef, a
 }
 
 /**
- * Deletion guard for a parent resource: refuses the deletion (409) while it still has children,
- * unless childrenAction says what becomes of them, then applies that cascade first.
+ * Refuses (409) a parent write that would orphan its partOf children unless childrenAction says what
+ * becomes of them. `newParent` is the version about to be written, undefined when the parent is
+ * deleted. The cascade itself is applied by applyOrphans once the write is persisted, it is irreversible.
  */
-export const handleChildrenBeforeDeletion = async (ctx: PartOfDeletionContext, parentType: ResourceType, parent: any, childrenAction?: string) => {
+export const detectOrphans = async (parentType: ResourceType, parent: any, newParent: any | undefined, childrenAction?: string): Promise<Orphans | undefined> => {
   const children = await listChildrenRefs(parentType, parent.id)
-  if (!children.length) return
-  const action = requireChildrenAction(childrenAction, `Cette ressource a ${children.length} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
-  await handleChildren(ctx, { type: parentType, id: parent.id }, action, children)
-}
-
-export type Orphans = { action: ChildrenAction, refs: ResourceRef[] }
-
-/**
- * Editing a parent can orphan resources still defined as its partOf children: mirror the deletion
- * guard, restricted to the children the new version no longer references. Only call it when the
- * links are actually being rewritten. Detection is separate from applyOrphans because the cascade is
- * irreversible: it must only run once the write that orphans the children has been persisted (it can
- * still be rejected).
- */
-export const detectOrphans = async (parentType: ResourceType, parent: any, newParent: any, childrenAction?: string): Promise<Orphans | undefined> => {
-  const refs = orphanRefs(await listChildrenRefs(parentType, parent.id), parentType, newParent)
+  const refs = newParent ? orphanRefs(children, parentType, newParent) : children
   if (!refs.length) return
-  const action = requireChildrenAction(childrenAction, `Cette modification retire ${refs.length} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+  const message = newParent
+    ? `Cette modification retire ${refs.length} ressource(s) enfant(s) qui n'existent que dans ce cadre.`
+    : `Cette ressource a ${refs.length} ressource(s) enfant(s) qui n'existent que dans ce cadre.`
+  const action = requireChildrenAction(childrenAction, `${message} Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
   return { action, refs }
 }
 
-export const applyOrphans = async (ctx: PartOfDeletionContext, parentType: ResourceType, parentId: string, orphans?: Orphans) => {
+export const applyOrphans = async (ctx: PartOfContext, parentType: ResourceType, parentId: string, orphans?: Orphans) => {
   if (!orphans) return
   await handleChildren(ctx, { type: parentType, id: parentId }, orphans.action, orphans.refs)
 }
 
 /**
- * The single-parent invariant, kept after definition time: a parent may not start referencing a
- * resource already defined as the child of another one, or deleting that other parent with
- * childrenAction=delete would silently empty this one. Only the refs the new version adds are
- * checked, so a legacy state never blocks an unrelated edit. `parent` is the stored version ({} at
- * creation), `newParent` the version about to be written.
+ * The single-parent invariant after definition time: a parent may not start referencing a resource
+ * already defined as the child of another one. Only the refs added by `newParent` over the stored
+ * `parent` ({} at creation) are checked, so a legacy state never blocks an unrelated edit.
  */
 export const assertNoForeignChildren = async (parentType: ResourceType, parent: any, newParent: any) => {
   const known = childRefs(parentType, parent)
-  const added = childRefs(parentType, newParent).filter(ref => !known.some(k => k.type === ref.type && k.id === ref.id))
+  const added = childRefs(parentType, newParent).filter(ref => !known.some(k => sameRef(k, ref)))
   for (const childType of resourceTypes) {
     const ids = added.filter(ref => ref.type === childType).map(ref => ref.id)
     if (!ids.length) continue
+    // the mongo client ignores undefined values: never send a $nor on a missing parent id
+    const ownChildren = parent.id ? { $nor: [{ 'partOf.type': parentType, 'partOf.id': parent.id }] } : {}
     const foreign = await collection(childType).findOne(
-      { id: { $in: ids }, 'partOf.id': { $exists: true }, $nor: [{ 'partOf.type': parentType, 'partOf.id': parent.id }] },
+      { id: { $in: ids }, 'partOf.id': { $exists: true }, ...ownChildren },
       { projection: { _id: 0, id: 1, title: 1, partOf: 1 } }
     )
     if (foreign) throw httpError(400, `La ressource "${foreign.title ?? foreign.id}" (${foreign.id}) est définie comme enfant de "${foreign.partOf.title ?? foreign.partOf.id}" : elle ne peut pas être utilisée par une autre ressource.`)
@@ -192,110 +143,82 @@ export const assertNoForeignChildren = async (parentType: ResourceType, parent: 
 }
 
 /**
- * Definition-time rules, when a patch defines an existing resource as a child: the resource must be
- * allowed to be a child and have no children of its own; it must be referenced by exactly one parent
- * resource — 0 or 2+ makes the relationship ambiguous — which must be the one designated by the
- * patch, and an eligible parent. Denormalizes the parent's current title on the partOf, never
- * trusting the one sent by the client. `resource` is the effective view: the stored document with
- * the patch applied.
+ * Definition-time rules, when a patch defines an existing resource as a child. `resource` is the
+ * effective view (stored document + patch). Denormalizes the parent's current title on the partOf.
  */
 export const prepareAtDefinition = async (childType: ResourceType, resource: any, partOf: PartOf) => {
   if (partOf.type === childType && partOf.id === resource.id) throw httpError(400, 'Une ressource ne peut pas être définie comme son propre enfant')
   assertCanBeChild(childType, resource)
-  // a resource that has partOf children of its own cannot itself become a child: chains would leave
-  // silent orphans behind cascading deletions
-  if (await countChildren(childType, resource.id) > 0) throw httpError(400, 'Une ressource qui a des ressources enfants ne peut pas être elle-même définie comme enfant, les chaînages ne sont pas autorisés')
+  if ((await listChildrenRefs(childType, resource.id)).length) throw httpError(400, 'Une ressource qui a des ressources enfants ne peut pas être elle-même définie comme enfant, les chaînages ne sont pas autorisés')
   const parents = await findReferencingParents({ type: childType, id: resource.id })
   if (parents.length !== 1) throw httpError(400, `Cette ressource ne peut être définie comme enfant que si elle est utilisée par une seule ressource parente ; elle en compte actuellement ${parents.length}.`)
   const parent = parents[0]
   if (parent.type !== partOf.type || parent.id !== partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique ressource qui utilise celle-ci.')
   assertEligibleParent(parent, resource.owner)
-  // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
   partOf.title = parent.title
 }
 
-/**
- * The write operation on the parent that would make it reference the child. Creating a child under
- * a parent and making that parent point at it are the same right: whoever can do one can do the other.
- */
+// the write on the parent that would make it reference the child: writing `virtual` on a dataset,
+// the configuration on an application (two routes, two operations, the disjunction is deliberate)
 const canReferenceChild = (parent: any, parentType: ResourceType, sessionState: SessionState) =>
   parentType === 'dataset'
-    // a member is added to a virtual dataset by patching `virtual`, one of the breaking keys
     ? can('datasets', parent, 'writeDescriptionBreaking', sessionState)
-    // an application's configuration is written by two routes, gated by two different operations;
-    // the disjunction is deliberate — do not tighten it to writeConfig, that would 403 integrators
-    // who reference children through the writeDescription-gated PATCH route
-    : can('applications', parent, 'writeConfig', sessionState) ||
-      can('applications', parent, 'writeDescription', sessionState)
+    : can('applications', parent, 'writeConfig', sessionState) || can('applications', parent, 'writeDescription', sessionState)
 
 /**
- * Creation-time gate, used when a child is created directly under its parent. The parent cannot
- * reference the child yet, so the definition-time "used by exactly one parent resource" rule is
- * replaced by a permission check on the parent. It is a write-class check, not the admin-class
- * writePartOf that guards the danger zone: subordinating a resource that already stands on its own
- * is an admin act on that resource, creating one that never stood on its own is not. Whoever holds
- * this right can also unflag the child afterwards, by dropping it from the parent's members.
+ * Creation-time rules, when a child is created directly under its parent. The parent cannot
+ * reference it yet, so the "used by exactly one parent" rule is replaced by a write-class permission
+ * check on the parent (not the admin-class writePartOf: the child never stood on its own).
  */
 export const prepareAtCreation = async (childType: ResourceType, resource: any, sessionState: SessionState) => {
   assertCanBeChild(childType, resource)
   const partOf: PartOf = resource.partOf
-  // read whole: which fields tell a parent apart is the link table's business, not this module's
   const parent = await collection(partOf.type).findOne({ id: partOf.id })
   if (!parent) throw httpError(400, 'La ressource parente indiquée n\'existe pas')
   assertEligibleParent(parent, resource.owner)
   if (!canReferenceChild(parent, partOf.type, sessionState)) {
     throw httpError(403, 'Vous n\'avez pas la permission de modifier cette ressource parente pour qu\'elle référence une ressource enfant')
   }
-  // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
   partOf.title = parent.title
 }
 
-/**
- * A child shares its parent's lifecycle and is deleted with it, never on its own. Only the delete
- * routes call this: the cascades go through the services, so they keep deleting children.
- */
+/** A child is deleted with its parent, never on its own. Only the delete routes call this, the cascades go through the services. */
 export const assertNotChild = (resource: any) => {
   if (!resource.partOf) return
   throw httpError(409, `Cette ressource est définie comme enfant de "${resource.partOf.title ?? resource.partOf.id}" : elle se gère et se supprime depuis sa ressource parente.`)
 }
 
-/**
- * A child only exists to serve its parent, and both always live in the same account: it can only
- * follow its parent, never change accounts on its own.
- */
+/** A child can only follow its parent into another account. */
 export const assertOwnerChangeAllowed = (resource: any) => {
   if (resource.partOf) throw httpError(409, 'Cette ressource est définie comme enfant d\'une autre ressource, elle ne peut pas changer de compte indépendamment de celle-ci.')
 }
 
-/**
- * A parent takes its children along when it changes accounts. Chains being forbidden, the children
- * of a child do not exist and the recursion through changeApplicationOwner terminates immediately.
- * Returns the number of moved datasets so the caller can refresh the accounts' storage totals.
- */
-export const changeChildrenOwner = async (ctx: PartOfContext, parentType: ResourceType, parentId: string, newOwner: any): Promise<{ movedDatasets: number }> => {
-  let movedDatasets = 0
+/** A parent takes its children along when it changes accounts (chains are forbidden, the recursion ends at depth one). */
+export const changeChildrenOwner = async (ctx: PartOfContext, parentType: ResourceType, parentId: string, newOwner: any) => {
   for (const child of await listChildren(parentType, parentId)) {
     if (child.type === 'dataset') {
-      const patched = await (await import('../../datasets/service.ts')).changeDatasetOwner(child.resource, newOwner, ctx.sessionState)
-      // a child cannot be reference data, the sync only cleans up a possible stale remote service
+      const patched = await (await import('../../datasets/service.ts')).changeDatasetOwner(ctx, child.resource, newOwner)
       await (await import('../../remote-services/service.ts')).syncDataset(patched)
-      movedDatasets++
     } else {
       await (await import('../../applications/service.ts')).changeApplicationOwner(ctx, child.resource, newOwner)
     }
   }
-  return { movedDatasets }
+}
+
+/** The parent's title is denormalized on its children, keep it current when the parent is renamed. */
+export const syncChildrenTitle = async (parentType: ResourceType, parentId: string, title: string) => {
+  for (const childType of resourceTypes) {
+    await collection(childType).updateMany(childrenFilter({ type: parentType, id: parentId }), { $set: { 'partOf.title': title } })
+  }
 }
 
 /**
- * Children are hidden from resource listings by default: ?partOf=true reveals only children,
- * ?partOf=<parentId> the children of that specific parent. The caller exempts its targeted-fetch
- * params (lookups by known id/slug, reverse-lookups such as "which parents reference me") — those
- * are not browsing and must keep working even when the resource happens to be someone's child.
+ * Children are hidden from listings by default: ?partOf=true reveals only children, ?partOf=<parentId>
+ * the children of that parent. Targeted fetches (the caller's exempted params) are never filtered.
  */
 export const listFilter = (reqQuery: Record<string, any>, exemptedParams: string[]): Record<string, any> | undefined => {
   if (reqQuery.partOf === 'true') return { 'partOf.id': { $exists: true } }
-  if (reqQuery.partOf) return { 'partOf.id': reqQuery.partOf }
+  if (reqQuery.partOf && reqQuery.partOf !== 'false') return { 'partOf.id': reqQuery.partOf }
   if (exemptedParams.some(param => reqQuery[param])) return undefined
   return { 'partOf.id': { $exists: false } }
 }

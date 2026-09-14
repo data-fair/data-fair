@@ -926,13 +926,9 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
-// a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see the cannotBeChild rule)
+// reference data cannot be a child, and a child can neither change account nor be deleted on its own (api guards)
 const showPartOfSection = computed(() => can('writePartOf').value && !isMasterData(dataset.value?.masterData))
-
-// a child always lives in the same account as its parent, it can only follow it (see the API guard)
 const showChangeOwnerSection = computed(() => can('changeOwner').value && !dataset.value?.partOf)
-
-// a child is deleted along with its parent, never on its own (see the API guard)
 const showDeleteSection = computed(() => can('delete').value && !dataset.value?.partOf)
 
 const partOfCandidates = computed(() => [
@@ -940,14 +936,12 @@ const partOfCandidates = computed(() => [
   ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
 ])
 const partOfCandidatesLoading = computed(() => virtualDatasetsFetch.loading.value || applicationsFetch.loading.value)
-// both fetches feed the candidate list, refresh them so it reflects the current parents
 const openPartOfDialog = () => {
   virtualDatasetsFetch.refresh()
   applicationsFetch.refresh()
 }
 
-// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
-// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
+// the delete dialog needs the children count before opening, to offer the delete-vs-unflag choice
 const childrenCount = ref(0)
 // the virtual datasets this one is the single member of: the api refuses to empty them
 const lastMemberParents = computed(() => (virtualDatasetsFetch.data.value?.results ?? []).filter(d => new Set(d.virtual?.children ?? []).size === 1))
@@ -967,16 +961,13 @@ const confirmDeleteAllLines = useAsyncAction(async () => {
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
 }, { success: t('deleteAllLinesSuccess') })
 
-// saving the structure of a virtual dataset can drop members that are still defined as its partOf
-// children: offer the same delete-vs-unflag choice as the deletion flow before persisting, otherwise
-// the API rightfully refuses the patch with a 409
+// dropping members of a virtual dataset can orphan its partOf children: offer the delete-vs-unflag
+// choice before saving, the api refuses the patch (409) without a childrenAction
 const showVirtualOrphansDialog = ref(false)
 const virtualOrphansCount = ref(0)
 
 const saveStructure = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
   if (!childrenAction && dataset.value) {
-    // saving can orphan datasets still defined as partOf children of this one, but only if it
-    // changes the resources it references at all
     const newVersion = { ...dataset.value, ...structureEditFetch.data.value }
     const savedVersion = { ...dataset.value, ...structureEditFetch.serverData.value }
     if (!equal(childRefs('dataset', newVersion), childRefs('dataset', savedVersion))) {

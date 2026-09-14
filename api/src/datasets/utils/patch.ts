@@ -17,7 +17,7 @@ import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 
-export const preparePatch = async (app: any, patch: any, dataset: any, sessionState: SessionStateAuthenticated, locale: string, draftValidationMode?: string, files?: any[]): Promise<{ removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean }> => {
+export const preparePatch = async (app: any, patch: any, dataset: any, sessionState: SessionStateAuthenticated, locale: string, draftValidationMode?: string, files?: any[], childrenAction?: string): Promise<{ removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean, orphans?: partOfUtils.Orphans }> => {
   const db = mongo.db
 
   // Strip publicUrl from image URL for multi-domain compatibility
@@ -197,18 +197,22 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch._readApiKey = null
   }
 
-  // a dataset already defined as a child cannot be turned into reference data; the reciprocal rule
-  // (a reference dataset cannot become a child) belongs to the child-eligibility rules applied by
-  // prepareAtDefinition below. Only guard the patch that actively establishes the state, checked
-  // against the effective value of the other side: a naive "both present → 400" would lock every
-  // unrelated patch on a legacy document holding both.
+  // a child cannot become reference data (the reciprocal is in prepareAtDefinition), checked on the
+  // effective values so that an unrelated patch on a legacy document holding both is not locked
   const effectivePartOf = 'partOf' in patch ? patch.partOf : dataset.partOf
   if ('masterData' in patch && isMasterData(patch.masterData) && effectivePartOf) {
     throw httpError(400, 'Un jeu de données défini comme enfant d\'une autre ressource ne peut pas devenir une donnée de référence')
   }
 
-  // defining the dataset as a child is validated on its effective (patched) view
   if (patch.partOf) await partOfUtils.prepareAtDefinition('dataset', { ...dataset, ...patch }, patch.partOf)
+
+  // a members edit: checked before detectOrphans so a patch rejected anyway does not ask for a childrenAction
+  virtualDatasetsUtils.assertKeepsAMember(dataset, patch)
+  let orphans: partOfUtils.Orphans | undefined
+  if (patch.virtual) {
+    await partOfUtils.assertNoForeignChildren('dataset', dataset, { ...dataset, ...patch })
+    orphans = await partOfUtils.detectOrphans('dataset', dataset, { ...dataset, ...patch }, childrenAction)
+  }
 
   const coordXProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
   const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
@@ -305,5 +309,5 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     }
   }
 
-  return { removedRestProps, attemptMappingUpdate }
+  return { removedRestProps, attemptMappingUpdate, orphans }
 }

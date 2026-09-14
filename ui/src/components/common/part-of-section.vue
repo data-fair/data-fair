@@ -13,9 +13,7 @@
         tag="span"
       >
         <template #title>
-          <router-link :to="parentLink">
-            {{ resource.partOf.title }}
-          </router-link>
+          <part-of-link :part-of="resource.partOf" />
         </template>
       </i18n-t>
       <template v-else>
@@ -88,6 +86,4 @@ const { t } = useI18n()
 const showDialog = ref(false)
 
 const isDataset = computed(() => props.resourceType === 'datasets')
-// the detail routes are the singular of the resource type, which is exactly what partOf.type holds
-const parentLink = computed(() => `/${props.resource.partOf?.type}/${props.resource.partOf?.id}`)
 </script>

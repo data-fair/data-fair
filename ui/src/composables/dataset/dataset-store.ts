@@ -196,7 +196,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   watch(publishedDatasetFetch.data, () => { publishedDataset.value = publishedDatasetFetch.data.value })
 
   const remove = async (childrenAction?: 'delete' | 'unflag', force = false) => {
-    await $fetch('/datasets/' + id, { method: 'DELETE', query: { ...(childrenAction ? { childrenAction } : {}), ...(force ? { force: 'true' } : {}) } })
+    await $fetch('/datasets/' + id, { method: 'DELETE', query: { childrenAction, force: force ? 'true' : undefined } })
   }
 
   const changeOwner = async (owner: { type: string, id: string, department?: string }) => {

@@ -166,20 +166,7 @@ export const registerMetadataRoutes = (router: Router) => {
         }
       }
 
-      // a virtual dataset already holding members cannot be emptied by a patch: checked before
-      // detectOrphans so the user isn't asked for a childrenAction on a patch that will be rejected anyway
-      virtualDatasetsUtils.assertKeepsAMember(dataset, patch)
-      // a member already defined as the child of another resource cannot be aggregated
-      if (patch.virtual) await partOf.assertNoForeignChildren('dataset', dataset, { ...dataset, ...patch })
-
-      // dropping members from a virtual dataset can orphan datasets still defined as its partOf
-      // children: detected (and refused) up-front, but applied only once the patch itself is
-      // persisted — the cascade is irreversible and preparePatch/applyPatch can still reject the request
-      const orphans = patch.virtual
-        ? await partOf.detectOrphans('dataset', dataset, { ...dataset, ...patch }, req.query.childrenAction as string | undefined)
-        : undefined
-
-      const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
+      const { removedRestProps, attemptMappingUpdate, isEmpty, orphans } = await preparePatch(req.app, patch, dataset, sessionState, locale, undefined, undefined, req.query.childrenAction as string | undefined)
 
       if (!isEmpty) {
         await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
@@ -189,9 +176,8 @@ export const registerMetadataRoutes = (router: Router) => {
             throw httpError(400, req.__('errors.dupSlug'))
           })
 
-        await partOf.applyOrphans({ app: req.app, sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
-        // a child does not count in the number of datasets
-        if ('partOf' in patch) await updateTotalStorage(dataset.owner)
+        // the orphans cascade is irreversible, it only runs once the patch is persisted
+        await partOf.applyOrphans({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
 
         if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
@@ -230,7 +216,7 @@ export const registerMetadataRoutes = (router: Router) => {
     const sessionState = reqSessionAuthenticated(req)
 
     partOf.assertOwnerChangeAllowed(dataset)
-    // only the dataset children weigh on the dataset limits checked below, but they all follow their parent
+    // the child datasets follow their parent, they consume the new owner's storage limits
     const children = await partOf.listChildren('dataset', dataset.id)
     const movedDatasets = [dataset, ...children.filter(child => child.type === 'dataset').map(child => child.resource)]
 
@@ -242,8 +228,7 @@ export const registerMetadataRoutes = (router: Router) => {
       await checkMoveLimits(req.getLocale(), req.body, movedDatasets)
     }
 
-    const patchedDataset = await changeDatasetOwner(dataset, req.body, sessionState)
-    await partOf.changeChildrenOwner({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, req.body)
+    const patchedDataset = await changeDatasetOwner({ sessionState, logCtx: reqEventLogContext(req) }, dataset, req.body)
 
     const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
     const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
@@ -278,14 +263,11 @@ export const registerMetadataRoutes = (router: Router) => {
     // guards on the stored document, reqDataset can be the draft view (alwaysDraft)
     partOf.assertNotChild(datasetFull)
     await virtualDatasetsUtils.assertNotLastMember(datasetFull, reqSessionAuthenticated(req), req.query.force === 'true')
+    // the children cascade is applied once the parent is gone
+    const orphans = await partOf.detectOrphans('dataset', dataset, undefined, req.query.childrenAction as string | undefined)
 
-    // children only exist to serve their parent: refuse the deletion unless childrenAction says what becomes of them
-    await partOf.handleChildrenBeforeDeletion({ app: req.app, sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset, req.query.childrenAction as string | undefined)
-
-    await deleteDataset(req.app, dataset)
-    if (dataset.draftReason && datasetFull.status !== 'draft') {
-      await deleteDataset(req.app, datasetFull)
-    }
+    await deleteDataset(datasetFull)
+    await partOf.applyOrphans({ sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
 
     eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
     const sessionState = await session.req(req)

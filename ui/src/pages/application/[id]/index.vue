@@ -558,9 +558,8 @@ const cancelMetadata = () => {
 
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
-// a child always lives in the same account as its parent, it can only follow it (see the API guard)
+// a child can neither change account nor be deleted on its own (api guards)
 const showChangeOwnerSection = computed(() => can('delete') && !application.value?.partOf)
-// a child is deleted along with its parent, never on its own (see the API guard)
 const showDeleteSection = computed(() => can('delete') && !application.value?.partOf)
 const showDeleteDialog = ref(false)
 const upgrading = ref(false)
@@ -620,8 +619,7 @@ const confirmUpgrade = async () => {
   }
 }
 
-// the dialog only offers the delete-vs-unflag choice when there are children, so it can only be
-// shown once the count is known — otherwise a quick confirm would delete without a childrenAction
+// the delete dialog needs the children count before opening, to offer the delete-vs-unflag choice
 const childrenCount = ref(0)
 const openDeleteDialog = useAsyncAction(async () => {
   childrenCount.value = (await fetchChildRefs({ id: route.params.id })).length

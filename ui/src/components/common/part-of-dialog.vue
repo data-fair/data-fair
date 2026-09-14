@@ -25,9 +25,7 @@
               tag="span"
             >
               <template #title>
-                <router-link :to="parentLink">
-                  {{ resource.partOf.title ?? resource.partOf.id }}
-                </router-link>
+                <part-of-link :part-of="resource.partOf" />
               </template>
             </i18n-t>
           </v-alert>
@@ -151,9 +149,8 @@ import type { ResourceRef } from '@data-fair/data-fair-shared/utils/parent-child
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  // `title` is optional on the stored partOf, the api denormalizes it
   resource: { id: string, partOf?: ResourceRef & { title?: string } | null }
-  // candidates are built by the caller from freshly fetched resources, their title is always populated
+  // the resources currently referencing this one, fetched by the page
   candidates: (ResourceRef & { title: string })[]
   candidatesLoading?: boolean
 }>()
@@ -167,9 +164,6 @@ const { t } = useI18n()
 const showDialog = defineModel<boolean>({ default: false })
 
 const isDataset = computed(() => props.resourceType === 'datasets')
-
-// the detail routes are the singular of the resource type, which is exactly what partOf.type holds
-const parentLink = computed(() => `/${props.resource.partOf?.type}/${props.resource.partOf?.id}`)
 
 const save = useAsyncAction(
   async () => {

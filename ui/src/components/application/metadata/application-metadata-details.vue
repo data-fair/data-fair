@@ -100,9 +100,7 @@
             {{ t('partOfLabel') }}
           </div>
           <div>
-            <router-link :to="`/${application.partOf.type}/${application.partOf.id}`">
-              {{ application.partOf.title }}
-            </router-link>
+            <part-of-link :part-of="application.partOf" />
           </div>
         </v-list-item>
       </v-col>

@@ -151,9 +151,7 @@
             {{ t('partOfLabel') }}
           </div>
           <div>
-            <router-link :to="`/${dataset.partOf.type}/${dataset.partOf.id}`">
-              {{ dataset.partOf.title }}
-            </router-link>
+            <part-of-link :part-of="dataset.partOf" />
           </div>
         </v-list-item>
       </v-col>

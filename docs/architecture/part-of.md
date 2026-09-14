@@ -13,7 +13,7 @@ partOf: { type: 'application', id: 'abcd1234', title: 'My dashboard' }
 ```
 
 - `type` + `id` are the link. It is a **weak** reference: no foreign key, no index, nothing guarantees the parent still exists (see §7).
-- `title` is a denormalized display copy, always written server-side from the parent's current title — never trusted from the client.
+- `title` is a denormalized display copy, always written server-side from the parent's current title — never trusted from the client — and refreshed on the children whenever the parent is renamed (`syncChildrenTitle`, from every title write on a dataset or an application).
 - **A single parent.** The field is not an array; the "exactly one parent" invariant is checked when the annotation is defined (§2).
 - The shape is declared once in `api/contract/part-of.js` and reused verbatim by `api/types/dataset/schema.js` and `api/types/application/schema.js` — nothing in it varies per resource type. Patching `partOf: null` unflags the resource (`$unset`).
 
@@ -77,11 +77,11 @@ flowchart LR
 
 ### Creation directly under a parent
 
-A child may also be **created** under its parent (`prepareAtCreation()`, from `datasets/service.ts` `createDataset` and the application creation branch of `PUT /applications/:id`). The parent cannot reference a resource that does not exist yet, so rule 4 is replaced by a permission check on the parent (§3). Rules 2, 3 and 5 still apply.
+A child may also be **created** under its parent (`prepareAtCreation()`, from `datasets/service.ts` `createDataset`, `POST /applications` and the creation branch of `PUT /applications/:id`). The parent cannot reference a resource that does not exist yet, so rule 4 is replaced by a permission check on the parent (§3). Rules 2, 3 and 5 still apply.
 
 ## 3. Permissions
 
-- **`writePartOf`** is a new **admin-class** operation on both datasets and applications (`shared/permissions/operations.ts`). Both PATCH routes gate on `'partOf' in req.body`, so only a patch that touches the field requires it. Subordinating a resource that already stands on its own — or releasing it — is an admin act on that resource.
+- **`writePartOf`** is a new **admin-class** operation on both datasets and applications (`shared/permissions/operations.ts`). Both PATCH routes and the dataset `PUT /datasets/:id` update route (which shares the patch schema) gate on `'partOf' in req.body`, so only a patch that touches the field requires it. Subordinating a resource that already stands on its own — or releasing it — is an admin act on that resource.
 - **Creation under a parent** is deliberately *not* admin-gated: it requires a **write-class** right on the parent, the very write that would make it reference the child (`canReferenceChild`) — `writeDescriptionBreaking` for a virtual dataset parent (a member is added by patching `virtual`), and `writeConfig` **or** `writeDescription` for an application parent (its configuration is written by two routes gated by two different operations; the disjunction is deliberate, tightening it to `writeConfig` would 403 integrators). Creating a child that never stood on its own is not an admin act, and whoever holds that right can unflag the child again by dropping it from the parent.
 - **The cascades check nothing per child.** A child exists only to serve its parent, so whoever can authorize the operation on the parent decides what becomes of the children.
 - A **full-replace `PUT /applications/:id`** uses neither gate, so it preserves the stored `partOf` and ignores the one in the body: the field is PATCH-only on an existing resource.
@@ -90,7 +90,7 @@ A child may also be **created** under its parent (`prepareAtCreation()`, from `d
 
 `listFilter()` is applied by `GET /datasets` and `GET /applications`:
 
-- default: `{ 'partOf.id': { $exists: false } }` — children are excluded from browsing;
+- default (also `?partOf=false`): `{ 'partOf.id': { $exists: false } }` — children are excluded from browsing, and so are they from the DCAT catalog of a publication site (`catalog/service.ts`);
 - `?partOf=true` — only children; `?partOf=<parentId>` — only the children of that parent;
 - **exempted params**: when the query carries a targeted-fetch param the filter is dropped entirely — `id`, `ids`, `slug`, `slugs`, `children` for datasets, `id`, `ids`, `dataset`, `application` for applications. Those are lookups by known id/slug and reverse-lookups ("which parents reference me"), not browsing, and must keep working on a resource that happens to be someone's child.
 
@@ -102,14 +102,14 @@ No index was added for the children lookups (`partOf.type` + `partOf.id`); see �
 
 ### The parent stops referencing its children
 
-Two situations, one cascade. Deleting a parent (`handleChildrenBeforeDeletion`) or persisting a version of it that no longer references defined children (`detectOrphans`: a virtual dataset's members edit, an application configuration write through PATCH or `PUT /config[uration]`) **returns 409** unless the request says what becomes of the children, with `?childrenAction=`:
+Two situations, one cascade. Deleting a parent or persisting a version of it that no longer references defined children (`detectOrphans`, without or with the new version: a virtual dataset's members edit through PATCH or PUT, an application configuration write through PATCH, PUT or `PUT /config[uration]`) **returns 409** unless the request says what becomes of the children, with `?childrenAction=`:
 
 - `delete` — the children are deleted through their own service function, so their own cascades keep running;
 - `unflag` — `updateMany $unset: { partOf: 1 }`, the children survive as standalone resources.
 
 ```mermaid
 flowchart LR
-    W["Parent write\n(DELETE, members edit,\nconfiguration write)"] --> D{"detectOrphans /\nhandleChildrenBeforeDeletion:\nchildren no longer referenced?"}
+    W["Parent write\n(DELETE, members edit,\nconfiguration write)"] --> D{"detectOrphans:\nchildren no longer referenced?"}
     D -->|none| Persist["persist\nthe write"]
     D -->|"some, no childrenAction"| R["409 — say what\nbecomes of them"]
     D -->|"childrenAction=delete or unflag"| Persist
@@ -118,11 +118,13 @@ flowchart LR
     Apply -->|unflag| Un["updateMany\n$unset: partOf"]
 ```
 
-Detection and application are deliberately separate for the editing case: the cascade is irreversible, so it only runs **once the write that orphans the children is persisted** (`applyOrphans` after `applyPatch`). A rejected write never deletes anything.
+Detection and application are deliberately separate: the cascade is irreversible, so it only runs **once the write that orphans the children is persisted** — `applyOrphans` after the patch, the replace, the configuration write or the deletion of the parent itself (deleting the children first would let their detach bump a parent about to disappear). A rejected write never deletes anything.
+
+Where the sequence lives follows [code-conventions.md](code-conventions.md): for applications inside the service functions (`replaceApplication`, `patchApplication`, `writeApplicationConfig`, each taking `childrenAction`), for datasets inside `preparePatch` (which returns the `orphans` the route applies after `applyPatch`) so that the PATCH and PUT routes share it. The delete routes keep their own guards (`assertNotChild`, the last-member rule, `detectOrphans`), the cascades reuse the services without them.
 
 ### The parent changes account
 
-A child cannot change account on its own (`assertOwnerChangeAllowed`, 409): it can only follow its parent. The parent's change-owner route moves its children along (`changeChildrenOwner`), and the moved child **datasets** are counted against the new account's storage limit first (`checkMoveLimits` — not against its number of datasets, see §4). Chains being forbidden, the recursion terminates at depth one.
+A child cannot change account on its own (`assertOwnerChangeAllowed`, 409): it can only follow its parent. The parent's change-owner service function moves its children along (`changeChildrenOwner`, from `changeDatasetOwner` and `changeApplicationOwner`), and the moved child **datasets** are counted against the new account's storage limit first (`checkMoveLimits` — not against its number of datasets, see §4). Chains being forbidden, the recursion terminates at depth one.
 
 ### The child is deleted directly
 
@@ -134,7 +136,7 @@ A virtual dataset with no member cannot be queried, so three guards keep it non-
 
 - `assertKeepsAMember(dataset, patch)` — a PATCH may not empty a virtual dataset that already aggregates at least one member (400). Creating one with zero members, or patching an already-empty one, stay allowed. Checked *before* `detectOrphans`, so the user is not asked for a `childrenAction` on a patch that will be rejected anyway.
 - `assertNotLastMember(dataset, sessionState, force)` — deleting the **single member** of a virtual dataset is refused (409), **whoever owns the virtual dataset**: a dataset others have built on is not deleted without a check. Virtual datasets of the same account (any department) are named; foreign ones are only counted ("N jeu(x) … d'autres comptes"), so nothing leaks across accounts. In **admin mode** the message lists them all with their owner, and `?force=true` skips the guard (the detach then empties them). Note that the API lets a virtual dataset aggregate any dataset its owner can read — a public one included — while the UI picker only offers the account's own datasets and the reference data declared for virtual datasets: a public dataset can therefore be locked through the API by a stranger's virtual dataset, and only a superadmin can unlock it.
-- `detachFromVirtualParents(datasetId)` — after a dataset is deleted, `$pull` its id from every virtual dataset referencing it and bump their status to `indexed`, which re-finalizes them over the remaining members. Unlike the guard this is **account-agnostic**: a dangling reference is cleaned up whoever owns the parent. It runs only for the stored document, not for a draft (the delete route calls `deleteDataset` twice when a draft exists).
+- `detachFromVirtualParents(datasetId)` — after a dataset is deleted, `$pull` its id from every virtual dataset referencing it and bump their status to `indexed`, which re-finalizes them over the remaining members. Unlike the guard this is **account-agnostic**: a dangling reference is cleaned up whoever owns the parent. It runs only for the stored document, not for its draft view (`deleteDataset` deletes the pending draft of a dataset itself, so the delete route, the identity cleanup and the partOf cascade all go through the same path).
 
 The order of the guards on the dataset delete route, and where the cascade joins:
 
@@ -144,8 +146,8 @@ flowchart LR
     G1 -->|yes| E1["409 — deleted\nwith its parent"]
     G1 -->|no| G2{"single member of a\nvirtual dataset, any account?\n(assertNotLastMember,\nunless admin force=true)"}
     G2 -->|yes| E2["409 — names own virtual\ndatasets, counts foreign ones"]
-    G2 -->|no| G3["handleChildrenBeforeDeletion\n(its own partOf children)"]
-    G3 --> S["deleteDataset\n(service)"]
+    G2 -->|no| G3["detectOrphans\n(its own partOf children)"]
+    G3 --> S["deleteDataset\n(service), then applyOrphans"]
     S --> P["detachFromVirtualParents:\n$pull from every virtual.children,\nstatus → indexed (re-finalization)"]
     C["partOf cascade\n(childrenAction=delete\non the parent)"] -.-> S
 ```
@@ -163,6 +165,7 @@ The `virtual` field, by contrast, **is** covered, and `detachFromVirtualParents`
 - **The last-member guard counts references, not live members.** It reads `virtual.children`, so a legacy dangling ref (a member deleted before the detach existed) counts as a member and can let the real last one be deleted.
 - **No index on the children lookup.** `partOf.type` / `partOf.id` are unindexed, and the lookup now runs on every resource deletion and every application configuration write.
 - **A benign race.** A child that bumps a parent deleted right after may leave an orphan journal document behind.
+- **A parent that does not reference its child yet.** A child created directly under its parent is an orphan until the parent's next write references it, so that write must carry a `childrenAction` if it still does not (the UI never sends such a write: it creates the child and references it in the same flow).
 
 ## 8. UI surface
 
@@ -177,10 +180,11 @@ The `virtual` field, by contrast, **is** covered, and `detachFromVirtualParents`
 
 - `api/src/misc/utils/part-of.ts` — every rule and cascade; the header comment states the model.
 - `shared/utils/parent-children.ts` — the link table and the generic resolution helpers, shared by the API and the UI.
-- `api/src/datasets/routes/metadata.ts` — dataset PATCH gate, change-owner and DELETE guards, orphan detection/application.
+- `api/src/datasets/routes/metadata.ts`, `api/src/datasets/routes/write.ts` — the dataset `writePartOf` gates, the change-owner and DELETE guards, the orphans application after the write.
 - `api/src/applications/router.ts`, `api/src/applications/middlewares.ts`, `api/src/applications/service.ts` — the same for applications, plus the creation branch and the full-replace preservation.
-- `api/src/datasets/utils/patch.ts` — the `masterData` mutual exclusion and the definition-time hook.
+- `api/src/datasets/utils/patch.ts` — the `masterData` mutual exclusion, the definition-time hook and the members-edit guards (`assertKeepsAMember`, `assertNoForeignChildren`, `detectOrphans`).
 - `api/src/datasets/utils/virtual.ts` — the three virtual-dataset guards and the detach.
 - `api/src/datasets/utils/storage.ts` — `checkMoveLimits`, shared by both change-owner routes.
+- `api/src/catalog/service.ts` — hides the children from the DCAT catalog.
 - `shared/permissions/operations.ts` — declares `writePartOf` in the admin class of both resource types.
 - `tests/features/datasets/part-of.api.spec.ts`, `tests/features/applications/part-of.api.spec.ts`, `tests/features/datasets/virtual/virtual-last-member.api.spec.ts`, `tests/features/datasets/virtual/virtual-member-deletion.api.spec.ts` — the behavior contract.

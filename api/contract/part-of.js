@@ -1,7 +1,4 @@
-// The `partOf` annotation is the same on every resource type: a reference to the single parent
-// resource the child only exists to serve, over the weak resource ref it is stored with. Any
-// resource can be the child of any other, so nothing here varies per type — only the title and
-// description, which name the child, are set at the referencing site.
+// the partOf annotation: a weak ref to the single parent resource the child only exists to serve
 export default {
   type: 'object',
   additionalProperties: false,
