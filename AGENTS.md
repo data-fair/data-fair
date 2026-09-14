@@ -55,8 +55,18 @@ Judged simulations of the back-office AI assistant: a simulated user drives the
 real chat in a real browser, and a judge reads the transcript. They answer "did a
 person get what they came for", which no other test here does.
 
-The bridge (`npm run dev-bridge`) must already be running — it is a long-running
-foreground process, so the maintainer starts it, never an agent.
+**Run them with the `/agents-sim` skill**, not by hand. A simulation is not
+finished when the browser closes: the transcripts still have to be judged and
+reported, and evidence from a previous run has to be cleared first or a case that
+never dispatched will report the old verdict as if it were this one's. The skill
+does all of that in order; the npm scripts below are just the pieces it drives.
+
+The bridge must already be running. It has a `bridge` pane in the zellij layout,
+so it usually is — if not, the maintainer starts it with `npm run dev-bridge`,
+never an agent, because it is a long-running foreground process.
+`bash dev/status.sh` reports it as `dev-bridge (opt)`.
+
+The underlying scripts, for reference:
 
 ```bash
 npm run simulate                                # every case

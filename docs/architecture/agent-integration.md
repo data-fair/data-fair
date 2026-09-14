@@ -452,9 +452,17 @@ point names the reply or tool result that misled the person and what they did
 next, which is what turns a run into a concrete change to a prompt or a tool
 description.
 
+**Running them.** The entry point is the `/agents-sim` skill, not the npm
+scripts. A run is only finished once the transcripts have been judged and
+reported, and stale evidence has to be cleared first or a case that never
+dispatched reports the previous run's verdict as its own; the skill sequences
+that, `npm run simulate` is only the browser half.
+
 **Prerequisites**, each of which fails confusingly if missing: the dev stack up
 (`bash dev/status.sh`), the UI built (`ui/dist/index.html`), and the bridge
-running (`npm run dev-bridge`). The runner checks the bridge and says so.
+running. The bridge has its own `bridge` pane in the zellij layout and is
+reported by `dev/status.sh` as `dev-bridge (opt)` — optional because only
+simulations need it, and idle it costs nothing. The runner checks it and says so.
 
 **Layout.** `playwright.sim.config.ts` is a separate config so a bare
 `playwright test` can never reach the cases and spend quota. `simulations/cases/`
