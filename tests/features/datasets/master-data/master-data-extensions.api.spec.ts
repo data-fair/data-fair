@@ -64,15 +64,15 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
           'x-capabilities': { text: false },
           'x-refersTo': 'http://schema.org/description'
         },
-        { key: 'extraFilter', type: 'string' },
-        { key: 'extraMulti', type: 'string', separator: ', ' }
+        { key: 'extra_filter', type: 'string' },
+        { key: 'extra_multi', type: 'string', separator: ', ' }
       ]
       ,
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',
         description: '',
-        filters: [{ property: { key: 'extraFilter' }, values: ['filterOk'] }],
+        filters: [{ property: { key: 'extra_filter' }, values: ['filterOk'] }],
         input: [{ type: 'equals', property: siretProperty }]
       }]
     )
@@ -92,8 +92,8 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
 
     // feed some data to the master
     const items = [
-      { siret: '82898347800011', extra: 'Extra information', extraFilter: 'filterOk', extraMulti: 'multi1,multi2' },
-      { siret: '82898347800012', extra: 'Extra information', extraFilter: 'filterKo' }
+      { siret: '82898347800011', extra: 'Extra information', extra_filter: 'filterOk', extra_multi: 'multi1,multi2' },
+      { siret: '82898347800012', extra: 'Extra information', extra_filter: 'filterKo' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await waitForFinalize(ax, 'master')
@@ -106,7 +106,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.equal(res.data.length, 2)
     assert.equal(res.data[0].siret, '82898347800011')
     assert.equal(res.data[0].extra, 'Extra information')
-    assert.equal(res.data[0].extraMulti, 'multi1, multi2')
+    assert.equal(res.data[0].extra_multi, 'multi1, multi2')
     assert.ok(res.data[1]._error)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }, { siret: 'unknown' }])
     assert.equal(res.data.length, 2)
@@ -119,11 +119,11 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.equal(res.data[1].siret, '82898347800011')
     assert.equal(res.data[1].extra, 'Extra information')
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,extraFilter,extraMulti,_key,_error
+    assert.equal(res.data, `siret,extra,extra_filter,extra_multi,_key,_error
 82898347800011,Extra information,filterOk,"multi1, multi2",0,
 `)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\nunknown\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,extraFilter,extraMulti,_key,_error
+    assert.equal(res.data, `siret,extra,extra_filter,extra_multi,_key,_error
 ,,,,0,La donnée de référence ne contient pas de ligne correspondante.
 82898347800011,Extra information,filterOk,"multi1, multi2",1,
 `)
@@ -143,7 +143,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra', 'extraMulti']
+        select: ['extra', 'extra_multi']
       }]
     })
     await waitForJournalEvent('slave', 'extend-end')
@@ -160,7 +160,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.equal(extraProp['x-capabilities'].text, false)
     assert.equal(extraProp['x-refersTo'], 'http://schema.org/description')
     assert.equal(extraProp['x-concept']?.id, 'description')
-    let extraMultiProp = slave.schema.find((p: any) => p.key === '_siret.extraMulti')
+    let extraMultiProp = slave.schema.find((p: any) => p.key === '_siret.extra_multi')
     assert.ok(extraMultiProp)
     assert.equal(extraMultiProp.separator, ', ')
     assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
@@ -170,21 +170,21 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     const formSchema = (await ax.get('/api/v1/datasets/slave/schema', {
       params: { mimeType: 'application/schema+json', extension: 'true', arrays: true }
     })).data
-    const extraMultiFormProp = formSchema.properties['_siret.extraMulti']
+    const extraMultiFormProp = formSchema.properties['_siret.extra_multi']
     assert.equal(extraMultiFormProp.type, 'array')
     assert.ok(extraMultiFormProp['x-extension'], 'multi-valued extension field must keep x-extension at the array level')
     assert.ok(formSchema.properties['_siret.extra']['x-extension'])
 
     const simulated = (await ax.post('/api/v1/datasets/slave/_simulate-extension?arrays=true', { siret: '82898347800011' })).data
-    assert.deepEqual(simulated['_siret.extraMulti'], ['multi1', 'multi2'])
+    assert.deepEqual(simulated['_siret.extra_multi'], ['multi1', 'multi2'])
 
     let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results.length, 4)
     assert.equal(results[0]['_siret.extra'], 'Extra information')
-    assert.equal(results[0]['_siret.extraMulti'], 'multi1, multi2')
+    assert.equal(results[0]['_siret.extra_multi'], 'multi1, multi2')
     assert.equal(results[1]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
-    results = (await ax.get('/api/v1/datasets/slave/lines', { params: { '_siret.extraMulti_eq': 'multi1' } })).data.results
+    results = (await ax.get('/api/v1/datasets/slave/lines', { params: { '_siret.extra_multi_eq': 'multi1' } })).data.results
     assert.equal(results.length, 2)
 
     // create file slave dataset
@@ -204,16 +204,16 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra', 'extraMulti']
+        select: ['extra', 'extra_multi']
       }]
     })
     await waitForFinalize(ax, slaveFile.id)
-    extraMultiProp = slave.schema.find((p: any) => p.key === '_siret.extraMulti')
+    extraMultiProp = slave.schema.find((p: any) => p.key === '_siret.extra_multi')
     assert.ok(extraMultiProp)
     assert.equal(extraMultiProp.separator, ', ')
     assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
     lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
-    assert.equal(lines[0]['_siret.extraMulti'], 'multi1, multi2')
+    assert.equal(lines[0]['_siret.extra_multi'], 'multi1, multi2')
 
     // activate auto update
     await ax.patch('/api/v1/datasets/slave', {
@@ -223,10 +223,10 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra', 'extraMulti']
+        select: ['extra', 'extra_multi']
       }]
     })
-    const items2 = [{ siret: '82898347800011', extra: 'Extra information 2', extraFilter: 'filterOk' }]
+    const items2 = [{ siret: '82898347800011', extra: 'Extra information 2', extra_filter: 'filterOk' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
     await waitForFinalize(ax, 'master')
     slave = (await ax.get('/api/v1/datasets/slave')).data

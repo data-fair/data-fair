@@ -770,7 +770,7 @@ async function createRestDataset () {
   }
   if (restAttachments.value) {
     body.schema.push({
-      key: 'attachmentPath',
+      key: 'attachment_path',
       type: 'string',
       title: t('attachment'),
       'x-refersTo': 'http://schema.org/DigitalDocument'

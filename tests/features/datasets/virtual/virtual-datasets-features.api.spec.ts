@@ -267,7 +267,7 @@ test.describe('virtual datasets features', () => {
       attachmentsAsImage: true,
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const child = res.data
@@ -281,12 +281,12 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 201)
     const line = res.data
     assert.ok(line._id)
-    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
-    assert.ok(line.attachmentPath.endsWith('/avatar.jpeg'))
+    assert.ok(line.attachment_path.startsWith(res.data._id + '/'))
+    assert.ok(line.attachment_path.endsWith('/avatar.jpeg'))
     await waitForFinalize(ax, child.id)
     const lines = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results
     assert.equal(lines.length, 1)
-    const attachmentPath = lines[0].attachmentPath
+    const attachmentPath = lines[0].attachment_path
     res = await ax.get(`/api/v1/datasets/${child.id}/attachments/${attachmentPath}`)
     assert.equal(res.status, 200)
 
@@ -315,7 +315,7 @@ test.describe('virtual datasets features', () => {
     await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, {
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     await waitForFinalize(ax, res.data.id)
@@ -346,7 +346,7 @@ test.describe('virtual datasets features', () => {
       attachmentsAsImage: true,
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const child = res.data
@@ -358,7 +358,7 @@ test.describe('virtual datasets features', () => {
     res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     await waitForFinalize(ax, child.id)
-    const attachmentPath = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results[0].attachmentPath
+    const attachmentPath = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results[0].attachment_path
 
     // level 1 virtual, with a filter to check that filtered intermediate levels work too
     res = await ax.post('/api/v1/datasets', {
@@ -367,7 +367,7 @@ test.describe('virtual datasets features', () => {
       title: 'virtual level 1',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const virtual1 = await waitForFinalize(ax, res.data.id)
@@ -388,7 +388,7 @@ test.describe('virtual datasets features', () => {
       title: 'virtual level 2',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const virtual2 = await waitForFinalize(ax, res.data.id)
@@ -445,7 +445,7 @@ test.describe('virtual datasets features', () => {
         attachmentsAsImage,
         schema: [
           { key: 'attr1', type: 'integer' },
-          { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+          { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
         ]
       })
       const child = res.data
@@ -464,7 +464,7 @@ test.describe('virtual datasets features', () => {
       title: 'a virtual dataset',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const virtualDataset = await waitForFinalize(ax, res.data.id)

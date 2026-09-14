@@ -276,6 +276,27 @@ This is a correctness concern that surfaces at finalize time alongside schema va
 - Per-request: exact-match filters with a >200-char operand return `400`; existence/range/prefix filters on flagged columns are routed to length-safe alternatives (`.wildcard` sub-field or union with an analyzed sub-field) where available; where no safe alternative exists, a `queryAdviceUncertainFilter` correctness hint is attached to the response.
 - A one-time backfill upgrade script (`api/upgrade/6.12.0/ignored-keyword-fields.ts`) populates `_esIgnoredKeywordFields` for pre-existing finalized datasets; it calls `es.connect()` itself because upgrade scripts run before `es.init()`.
 
+## Schema key normalization
+
+Column keys are expected to be *normalized*: `escapeKey` (`datasets/utils/operations.ts`) is the single definition, `slugify(key, { lower: true, strict: true, replacement: '_' })` by default, with `legacy` and `compat-ods` variants selected per dataset via `analysis.escapeKeyAlgorithm`.
+
+Every place data-fair *derives* a key already applies it — `analyze-csv.ts` and `analyze-geojson.ts` for file columns, `extensions.ts` for enriched columns, the UI's add-column dialog (`ui/src/utils/escape-key.ts`, same algorithm). A schema submitted through the API was the one path that bypassed all of them, and the key landed verbatim in the ES mapping (`buildIndexMappings` does `properties[prop.key] = esProp`).
+
+Two ways that corrupts an index:
+
+- **A dot** is expanded by Elasticsearch into an object path. A lone `foo.bar` column silently becomes a nested `foo: { bar }` mapping; add a scalar `foo` column and index creation fails with `can't merge a non object mapping [foo] with an object mapping`. On the PATCH path this leaves the dataset in status `error` / `errorStatus: 'analyzed'` with **no index at all**, which no retry can clear.
+- **A leading `_`** is reserved for data-fair's calculated columns (`_id`, `_i`, `_rand`, `_geopoint`, `_updatedAt`, `_file.content`…) and shadows one.
+
+`checkSchemaKeys` (`datasets/utils/data-schema.ts`) closes that path with a `400`, on the two places a client supplies keys: dataset creation (`service.ts`) and a structure change (`preparePatch`, before any side effect). Keys are rejected rather than rewritten — silently renaming a column would break the line writes of the client that declared it.
+
+Scope, deliberately narrow:
+
+- Only keys **absent from the dataset's current schema** are checked, so datasets predating the gate stay patchable, as do those whose keys a worker produced with another `escapeKey` algorithm.
+- `x-calculated` and `x-extension` properties are exempt: they legitimately use `_` prefixes and dots (an extension key is `propertyPrefix.field`, and `buildIndexMappings` maps it to a real nested object).
+- **Virtual datasets are exempt**: their schema is derived from their children by `prepareVirtualDatasetPatch`, never from the request.
+
+Consequence for clients: a key must equal its own normalized form, so camelCase is refused (`attachmentPath` → `attachmentpath`). The back-office creates the REST attachment column as `attachment_path` accordingly (`ui/src/pages/new-dataset.vue`); datasets created before carry `attachmentPath` and are unaffected. The bulk-write path already assumed this contract — `autoAdjustKeys` (`data-streams.ts`) escapes each incoming CSV header and matches it to the normalized schema key, recording the raw header as `x-originalName`.
+
 ## Related design specs
 
 - `docs/superpowers/specs/2026-04-29-extension-validation-design.md` — original mandatory-extension + diagnostic-file design (partly superseded).

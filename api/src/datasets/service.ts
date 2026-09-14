@@ -15,7 +15,7 @@ import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
-import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
+import { fixConcepts, getSchemaBreakingChanges, checkSchemaKeys } from './utils/data-schema.ts'
 import { checkConstraints } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
@@ -281,6 +281,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
+  // a client-supplied schema is the one place an un-normalized key can enter data-fair (every
+  // producer of keys calls escapeKey) — checked before prepareExtensionsSchema below, which adds
+  // the legitimately dotted extension keys. Virtual schemas are derived from the children.
+  if (!body.isVirtual) checkSchemaKeys(dataset.schema, [], dataset.analysis?.escapeKeyAlgorithm)
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
     await checkExtensions(await datasetUtils.extendedSchema(db, dataset, false), dataset.extensions)

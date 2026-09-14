@@ -435,7 +435,7 @@ val 1;val 1, val 2
       isRest: true,
       title: 'rest-parquet',
       schema: [
-        { key: 'date-time1', type: 'string', format: 'date-time', 'x-required': true },
+        { key: 'date_time1', type: 'string', format: 'date-time', 'x-required': true },
         { key: 'date1', type: 'string', format: 'date', 'x-required': true },
         { key: 'str1', type: 'string', 'x-required': true },
         { key: 'str2', type: 'string' },
@@ -444,9 +444,9 @@ val 1;val 1, val 2
       ]
     }).then(r => r.data)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
-      { 'date-time1': '2025-09-10T08:00:00.000Z', date1: '2025-09-10', str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 },
-      { 'date-time1': '2025-09-11T08:00:00.000Z', date1: '2025-09-11', str1: 'String 1 - 2', int1: 22 },
-      { 'date-time1': '2025-09-12T08:00:00.000Z', date1: '2025-09-12', str1: 'String 1 - 3', str2: 'String 2 - 3', int1: 33, nb1: 3.3 },
+      { date_time1: '2025-09-10T08:00:00.000Z', date1: '2025-09-10', str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 },
+      { date_time1: '2025-09-11T08:00:00.000Z', date1: '2025-09-11', str1: 'String 1 - 2', int1: 22 },
+      { date_time1: '2025-09-12T08:00:00.000Z', date1: '2025-09-12', str1: 'String 1 - 3', str2: 'String 2 - 3', int1: 33, nb1: 3.3 },
     ])
     await waitForFinalize(ax, dataset.id)
 
@@ -454,7 +454,7 @@ val 1;val 1, val 2
     assert.equal(typeof res.data, 'object')
     const reader = await parquetjs.ParquetReader.openBuffer(res.data)
     const parquetSchema = reader.getSchema()
-    assert.equal(parquetSchema.schema['date-time1'].type, 'TIMESTAMP_MILLIS')
+    assert.equal(parquetSchema.schema['date_time1'].type, 'TIMESTAMP_MILLIS')
     assert.equal(parquetSchema.schema.date1.type, 'DATE')
     assert.equal(parquetSchema.schema.str1.type, 'UTF8')
     assert.equal(parquetSchema.schema.str1.optional, false)
@@ -467,10 +467,10 @@ val 1;val 1, val 2
     let i = 0
     while ((record = await cursor.next())) {
       if (i === 0) {
-        assert.deepEqual(record, { 'date-time1': new Date('2025-09-10T08:00:00.000Z'), date1: new Date('2025-09-10'), str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 })
+        assert.deepEqual(record, { date_time1: new Date('2025-09-10T08:00:00.000Z'), date1: new Date('2025-09-10'), str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 })
       }
       if (i === 1) {
-        assert.deepEqual(record, { 'date-time1': new Date('2025-09-11T08:00:00.000Z'), date1: new Date('2025-09-11'), str1: 'String 1 - 2', int1: 22, nb1: null, str2: null })
+        assert.deepEqual(record, { date_time1: new Date('2025-09-11T08:00:00.000Z'), date1: new Date('2025-09-11'), str1: 'String 1 - 2', int1: 22, nb1: null, str2: null })
       }
       i++
     }

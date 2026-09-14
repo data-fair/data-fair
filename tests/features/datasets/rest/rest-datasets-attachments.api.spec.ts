@@ -24,7 +24,7 @@ test.describe('REST datasets - Attachments', () => {
       title: 'rest5',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
 
@@ -37,8 +37,8 @@ test.describe('REST datasets - Attachments', () => {
     assert.equal(res.status, 201)
     const line = res.data
     assert.ok(line._id)
-    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
-    assert.ok(line.attachmentPath.endsWith('/test.pdf'))
+    assert.ok(line.attachment_path.startsWith(res.data._id + '/'))
+    assert.ok(line.attachment_path.endsWith('/test.pdf'))
     await waitForFinalize(ax, 'rest5')
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
@@ -47,7 +47,7 @@ test.describe('REST datasets - Attachments', () => {
     assert.equal(res.data.results[0].attr1, 10)
     let attachments = await lsAttachments('rest5')
     assert.equal(attachments.length, 1)
-    assert.equal(attachments[0], res.data.results[0].attachmentPath)
+    assert.equal(attachments[0], res.data.results[0].attachment_path)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await waitForFinalize(ax, 'rest5')
@@ -65,7 +65,7 @@ test.describe('REST datasets - Attachments', () => {
       title: 'rest5',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
 
@@ -90,7 +90,7 @@ test.describe('REST datasets - Attachments', () => {
       title: 'rest6',
       schema: [
         { key: 'attr1', type: 'string' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
 
@@ -98,8 +98,8 @@ test.describe('REST datasets - Attachments', () => {
     const attachmentsContent = fs.readFileSync('./tests/resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
-      { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
-      { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' }
+      { _id: 'line1', attr1: 'test1', attachment_path: 'test.odt' },
+      { _id: 'line2', attr1: 'test1', attachment_path: 'dir1/test.pdf' }
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 200)
@@ -131,7 +131,7 @@ test.describe('REST datasets - Attachments', () => {
     const attachmentsContent2 = fs.readFileSync('./tests/resources/datasets/files3.zip')
     form2.append('attachments', attachmentsContent2, 'files3.zip')
     form2.append('actions', Buffer.from(JSON.stringify([
-      { _id: 'line3', attr1: 'test2', attachmentPath: 'files3/test2.odt' }
+      { _id: 'line3', attr1: 'test2', attachment_path: 'files3/test2.odt' }
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     assert.equal(res.status, 200)
@@ -149,7 +149,7 @@ test.describe('REST datasets - Attachments', () => {
     const attachmentsContent3 = fs.readFileSync('./tests/resources/datasets/files2.zip')
     form3.append('attachments', attachmentsContent3, 'files2.zip')
     form3.append('actions', Buffer.from(JSON.stringify([
-      { _id: 'line4', attr1: 'test3', attachmentPath: 'test.odt' }
+      { _id: 'line4', attr1: 'test3', attachment_path: 'test.odt' }
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() }, params: { drop: true } })
     assert.equal(res.status, 200)
@@ -167,8 +167,8 @@ test.describe('REST datasets - Attachments', () => {
     const attachmentsContent4 = fs.readFileSync('./tests/resources/datasets/files4.zip')
     form4.append('attachments', attachmentsContent4, 'files4.zip')
     form4.append('actions', Buffer.from(JSON.stringify([
-      { _id: 'line5', attr1: 'test5', attachmentPath: 'testé.txt' },
-      { _id: 'line6', attr1: 'test6', attachmentPath: 'test-missing.txt' }
+      { _id: 'line5', attr1: 'test5', attachment_path: 'testé.txt' },
+      { _id: 'line6', attr1: 'test6', attachment_path: 'test-missing.txt' }
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form4, { headers: { 'Content-Length': form4.getLengthSync(), ...form4.getHeaders() } })
     assert.equal(res.status, 200)
@@ -197,9 +197,9 @@ test.describe('REST datasets - Attachments', () => {
       isRest: true,
       title: 'restsync',
       schema: [
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ],
-      primaryKey: ['attachmentPath']
+      primaryKey: ['attachment_path']
     })
     // Create a line with an attached file
     const form = new FormData()
@@ -239,7 +239,7 @@ test.describe('REST datasets - Attachments', () => {
     // _attachment_url is an absolute URL (publicUrl + datasetId + lineId + md5 + filename) stored in the
     // index. Mapped as a keyword with ignore_above:200, any value over 200 chars is silently dropped from
     // the index (kept only in _source) so _exists_ / term / agg / sort return nothing while normal
-    // responses still show the value. A long filename pushes BOTH attachmentPath and _attachment_url well
+    // responses still show the value. A long filename pushes BOTH attachment_path and _attachment_url well
     // over 200, so the fix must be length-independent (a higher ignore_above or switching field would not
     // be enough).
     let res = await ax.post('/api/v1/datasets/rest-attachment-long-url', {
@@ -249,7 +249,7 @@ test.describe('REST datasets - Attachments', () => {
       rest: { primaryKeyMode: 'sha256' },
       schema: [
         { key: 'attr1', type: 'string' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     assert.equal(res.status, 201)
@@ -262,8 +262,8 @@ test.describe('REST datasets - Attachments', () => {
     // a primaryKey upsert returns 200 (not 201); just make sure the line was stored with its attachment path
     res = await ax.post('/api/v1/datasets/rest-attachment-long-url/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.ok([200, 201].includes(res.status))
-    assert.ok(res.data.attachmentPath?.endsWith('/' + longName))
-    assert.ok(res.data.attachmentPath.length > 200, `expected attachmentPath > 200 chars, got ${res.data.attachmentPath.length}`)
+    assert.ok(res.data.attachment_path?.endsWith('/' + longName))
+    assert.ok(res.data.attachment_path.length > 200, `expected attachment_path > 200 chars, got ${res.data.attachment_path.length}`)
     await waitForFinalize(ax, 'rest-attachment-long-url')
 
     // the _attachment_url is present in normal responses and is well over 200 chars
@@ -293,7 +293,7 @@ test.describe('REST datasets - Attachments', () => {
       title: 'rest stale att',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     assert.equal(res.status, 201)
@@ -326,7 +326,7 @@ test.describe('REST datasets - Attachments', () => {
       isRest: true,
       title: 'rest attachment ko',
       schema: [
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const dataset = res.data
@@ -339,8 +339,8 @@ test.describe('REST datasets - Attachments', () => {
     assert.equal(res.status, 201)
     const line = res.data
     assert.ok(line._id)
-    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
-    assert.ok(line.attachmentPath.endsWith('/Capture d\u2019\u00e9cran du 2024-11-19 10-20-57.png'))
+    assert.ok(line.attachment_path.startsWith(res.data._id + '/'))
+    assert.ok(line.attachment_path.endsWith('/Capture d\u2019\u00e9cran du 2024-11-19 10-20-57.png'))
     await waitForFinalize(ax, dataset.id)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
