@@ -15,12 +15,13 @@ test.describe('case registry', () => {
     // overwrites another case's transcript and a slash writes outside the
     // evidence directory.
     assert.ok(cases.length > 0, 'the registry is empty — every simulation would report "not run"')
-    // Both designed cases are registered. A case silently dropped during a
+    // Every designed case is registered. A case silently dropped during a
     // refactor would otherwise just report "not run" and be scrolled past.
-    // They are a matched pair covering the two ways the page can navigate —
+    // The first two are a matched pair over the ways the page can navigate —
     // the person clicking a link the assistant produced, and the assistant
-    // navigating itself — so losing either one silently halves the coverage.
-    for (const name of ['lien-ouvert-par-l-utilisateur', 'question-sur-les-donnees']) {
+    // navigating itself. The third holds a persona to figures that are wrong,
+    // so the grounding rule is exercised on purpose rather than by luck.
+    for (const name of ['lien-ouvert-par-l-utilisateur', 'question-sur-les-donnees', 'chiffres-de-l-utilisateur']) {
       assert.ok(cases.some(c => c.name === name), `case ${name} is missing from the registry`)
     }
     assert.equal(new Set(cases.map(c => c.name)).size, cases.length, 'duplicate case name')
