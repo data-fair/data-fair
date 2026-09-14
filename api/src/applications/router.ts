@@ -121,7 +121,8 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
   const sessionState = reqSessionAuthenticated(req)
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  // (checked against all the user's memberships, the new owner is rarely the active account)
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
   const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)

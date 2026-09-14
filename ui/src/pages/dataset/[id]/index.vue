@@ -46,6 +46,14 @@
         >
           {{ t('save') }}
         </v-btn>
+        <df-agent-chat-action
+          v-if="structureHasRealDiff"
+          action-id="summarize-structure-changes"
+          :visible-prompt="t('summarizeChanges')"
+          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — by delegating to the dataset_changes_summarizer sub-agent. Report its summary as-is so the user can check what they are about to save.'"
+          :btn-props="{ class: 'ml-2' }"
+          :title="t('summarizeChanges')"
+        />
       </template>
 
       <template #windows>
@@ -144,7 +152,7 @@
           v-if="metadataEditFetch.hasDiff.value"
           action-id="summarize-metadata-changes"
           :visible-prompt="t('summarizeChanges')"
-          :hidden-context="'Summarize the pending metadata changes for this dataset using the summarize_metadata_changes tool.'"
+          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — by delegating to the dataset_changes_summarizer sub-agent. Report its summary as-is so the user can check what they are about to save.'"
           :btn-props="{ class: 'ml-2' }"
           :title="t('summarizeChanges')"
         />
@@ -697,15 +705,19 @@ import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import useStore from '~/composables/use-store'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
+import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metadata-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentColumnLabelsTools } from '~/composables/dataset/agent-column-labels-tools'
+import { useAgentSchemaOrderTools } from '~/composables/dataset/agent-schema-order-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
@@ -808,28 +820,41 @@ watch(() => dataset.value?.image, (newImage) => {
   }
 })
 
-// Agent tools for metadata editing
-useAgentDatasetSummaryTools(locale, metadataEditFetch.data, (s) => {
-  if (metadataEditFetch.data.value) metadataEditFetch.data.value.summary = s
+// Agent tools. Every one of them writes into the edited copy only: the section lights up
+// as modified, the changed fields and columns are highlighted, and the human presses
+// Enregistrer. No agent tool ever reaches the API.
+const { vocabularyArray } = useStore()
+
+// Schema writes go through one helper so a tool can mutate the array in place and still
+// trigger the reactivity the columns list relies on.
+const mutateSchema = (mutate: (schema: any[]) => void) => {
+  const schema = structureEditFetch.data.value?.schema
+  if (!schema) return
+  mutate(schema)
+  structureEditFetch.data.value.schema = [...schema]
+}
+
+useAgentDatasetSummaryTools(locale, metadataEditFetch.data)
+useAgentDatasetDescriptionTools(locale)
+useAgentDatasetMetadataTools(locale, metadataEditFetch.data, (patch) => {
+  if (!metadataEditFetch.data.value) return
+  Object.assign(metadataEditFetch.data.value, patch)
 })
-useAgentDatasetDescriptionTools(locale, (d) => {
-  if (metadataEditFetch.data.value) metadataEditFetch.data.value.description = d
+useAgentDatasetChangesSummaryTools(locale, {
+  metadataData: metadataEditFetch.data,
+  metadataServer: metadataEditFetch.serverData,
+  structureData: structureEditFetch.data,
+  structureServer: structureEditFetch.serverData
 })
-useAgentDatasetChangesSummaryTools(locale, metadataEditFetch.data, metadataEditFetch.serverData)
 useAgentExpressionTools(locale, structureEditFetch.data, (extensionIndex, expr) => {
   if (structureEditFetch.data.value?.extensions?.[extensionIndex]) {
     structureEditFetch.data.value.extensions[extensionIndex].expr = expr
   }
 })
-useAgentSchemaAnnotationTools(locale, structureEditFetch.data, (annotations) => {
-  if (!structureEditFetch.data.value?.schema) return
-  for (const ann of annotations) {
-    const prop = structureEditFetch.data.value.schema.find((p: any) => p.key === ann.key)
-    if (prop) {
-      if (ann.title !== undefined) prop.title = ann.title
-      if (ann.description !== undefined) prop.description = ann.description
-    }
-  }
+useAgentSchemaAnnotationTools(locale, structureEditFetch.data, vocabularyArray.data as any, mutateSchema)
+useAgentColumnLabelsTools(locale, structureEditFetch.data, mutateSchema)
+useAgentSchemaOrderTools(locale, structureEditFetch.data, (schema) => {
+  if (structureEditFetch.data.value) structureEditFetch.data.value.schema = schema
 })
 useAgentPropertyConfigTools(locale, structureEditFetch.data, (configs) => {
   if (!structureEditFetch.data.value?.schema) return

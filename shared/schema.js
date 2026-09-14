@@ -73,6 +73,7 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         readOnly: cleanProp.readOnly,
         anyOf: cleanProp.anyOf,
         oneOf: cleanProp.oneOf,
+        'x-group': cleanProp['x-group'],
         layout: { ...layout }
       }
     } else {
@@ -80,6 +81,7 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
       delete itemsProps.title
       delete itemsProps.description
       delete itemsProps.readOnly
+      delete itemsProps['x-group']
 
       /** @type {any} */
       const array = {
@@ -92,6 +94,7 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
       // keep the extension marker on the array itself, not only on its items, so the edit
       // form recognizes multi-valued extension fields (otherwise they are never rendered)
       if (cleanProp['x-extension']) array['x-extension'] = cleanProp['x-extension']
+      if (cleanProp['x-group']) array['x-group'] = cleanProp['x-group']
       if (layout.getItems) {
         array.layout = { getItems: layout.getItems }
       }

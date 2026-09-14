@@ -318,10 +318,12 @@ export const deletePublicationSite = async (ctx: SettingsWriteContext, siteType:
   validateSettings(settings)
   await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   const ref = `${siteType}:${siteId}`
-  const publicationSitesFilter = { publicationSites: ref }
+  // a pending publication request points at the site too, it becomes dangling if left behind
+  const publicationSitesFilter = { $or: [{ publicationSites: ref }, { requestedPublicationSites: ref }] }
+  const pullRef = { $pull: { publicationSites: ref, requestedPublicationSites: ref } }
   // stamp BEFORE the $pull: the pull removes the very element this filter matches, so stamping
   // after would match nothing (over-stamping here is harmless, the relay dedupes)
   await stampHistorizeMany(publicationSitesFilter)
-  await mongo.datasets.updateMany(publicationSitesFilter, { $pull: { publicationSites: ref } })
-  await mongo.applications.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
+  await mongo.datasets.updateMany(publicationSitesFilter, pullRef)
+  await mongo.applications.updateMany(publicationSitesFilter, pullRef)
 }

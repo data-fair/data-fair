@@ -111,15 +111,15 @@ export const canDoForOwnerMiddleware = function (operationClass: string, ignoreD
 }
 
 /** Returns the session's role within the resource owner (or null if the session is anonymous, an application key, or unrelated to the owner). */
-export const getOwnerRole = (owner: AccountKeys, sessionState: SessionState | undefined, ignoreDepartment = false) => {
+export const getOwnerRole = (owner: AccountKeys, sessionState: SessionState | undefined, ignoreDepartment = false, allAccounts = false) => {
   if (!sessionState?.user || !sessionState?.account || (sessionState as SessionState & { isApplicationKey?: boolean }).isApplicationKey) return null
-  return getAccountRole(sessionState, owner, { acceptDepAsRoot: ignoreDepartment })
+  return getAccountRole(sessionState, owner, { acceptDepAsRoot: ignoreDepartment, allAccounts })
 }
 
 /** Returns the operation classes the session can perform by virtue of being a member of the resource owner (admin/contrib/null). */
-const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourceType: ResourceType) => {
+const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourceType: ResourceType, allAccounts = false) => {
   const operationsClasses = permissionsClasses.operationsClasses[resourceType]
-  const ownerRole = getOwnerRole(owner, sessionState)
+  const ownerRole = getOwnerRole(owner, sessionState, false, allAccounts)
   if (!ownerRole) return null
   // classes of operations the user can do based on him being member of the resource's owner
   if (ownerRole === config.adminRole || (sessionState.user?.adminMode)) {
@@ -310,10 +310,11 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
 /**
  * Returns true if the session is a member of the given owner with the rights to perform an operation class.
  * Used at resource creation, where permissions are still expressed at the operation class level.
+ * allAccounts checks the user's memberships instead of only the active account (owner transfers).
  */
-export const canDoForOwner = function (owner: AccountKeys, resourceType: ResourceType, operationClass: string, sessionState: SessionState) {
+export const canDoForOwner = function (owner: AccountKeys, resourceType: ResourceType, operationClass: string, sessionState: SessionState, allAccounts = false) {
   if (sessionState.user?.adminMode) return true
-  const ownerClasses = getOwnerClasses(owner, sessionState, resourceType)
+  const ownerClasses = getOwnerClasses(owner, sessionState, resourceType, allAccounts)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 

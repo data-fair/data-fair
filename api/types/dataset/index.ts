@@ -27,6 +27,13 @@ export type HistorizeContextHint = {
   origin: RevisionOrigin
   reason?: string
   who?: WhoHint
+  // When the stamp was written, NOT when the relay got round to anchoring it. Carrying it on the
+  // stamp is what makes a re-anchor of the same stamp byte-identical: the relay used to generate
+  // the date at write time, so a retried line re-PUT its own key with a differing body, which the
+  // trail check correctly reads as a same-key rewrite (`version-divergence`, confirmed). It also
+  // matches what the date-skew check already assumes — that a relay retry legitimately delays the
+  // object write past the stamp date. Optional: pre-existing stamps have none, relay falls back.
+  date?: string
 }
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'

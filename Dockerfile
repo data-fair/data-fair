@@ -1,6 +1,7 @@
-FROM node:24.14.0-alpine3.22 AS base
+FROM node:24.20.0-alpine3.23 AS base
 
-# RUN npm install -g npm@11.1.0
+# pick up alpine security fixes published after the base image was built
+RUN apk upgrade --no-cache
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -11,7 +12,7 @@ FROM base AS geodeps
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl4.1-libcrypto
+RUN apk add --no-cache libressl4.2-libcrypto
 RUN apk add --no-cache git
 
 # build CGAL (not yet present in alpine repos)
@@ -28,7 +29,8 @@ WORKDIR /tmp
 RUN git clone https://github.com/data-fair/prepair.git
 WORKDIR /tmp/prepair
 RUN git checkout fix-build-filesystem
-RUN cmake -D CMAKE_BUILD_TYPE=Release .
+# prepair's CMakeLists declares a minimum older than what cmake 4 still accepts
+RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_POLICY_VERSION_MINIMUM=3.5 .
 RUN make
 RUN mv prepair /usr/bin/prepair
 
@@ -119,7 +121,7 @@ FROM base AS parquet-writer-builder
 RUN apk add --no-cache curl build-base gcc
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y
 ENV PATH=/root/.cargo/bin:$PATH
-RUN npm i -g @napi-rs/cli@3.2.0
+RUN npm i -g @napi-rs/cli@3.9.0
 ADD /parquet-writer parquet-writer
 WORKDIR /app/parquet-writer
 RUN npm run build
@@ -145,10 +147,13 @@ ADD /shared shared
 
 ADD package.json README.md LICENSE BUILD.json* ./
 
+# npm/npx/corepack are not needed at runtime and carry their own vulnerable dependencies
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 WORKDIR /app/api
 
 # configure node webapp environment
-ENV DEBUG db,upgrade*
+ENV DEBUG="db,upgrade*"
 
 # TODO: activate this line on next major release
 #USER node

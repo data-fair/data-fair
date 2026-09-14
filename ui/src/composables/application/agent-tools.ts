@@ -1,21 +1,25 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator, buildPaginatedQuery } from '~/composables/agent/utils'
-import { formatApplicationConfig } from './agent-tools-logic'
+import { createAgentTranslator, agentToolError, buildPaginatedQuery } from '~/composables/agent/utils'
+import { formatApplicationConfig, getConfigValue, projectConfigSchema } from './agent-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
     listApplications: 'Lister les applications',
     describeApplication: 'Décrire une application',
     listBaseApplications: 'Lister les modèles d\'application',
-    getApplicationConfig: 'Lire la configuration de l\'application'
+    getApplicationConfig: 'Lire la configuration de l\'application',
+    getApplicationConfigSchema: 'Lire le schéma de configuration',
+    getApplicationConfigDraft: 'Lire le brouillon de configuration'
   },
   en: {
     listApplications: 'List applications',
     describeApplication: 'Describe an application',
     listBaseApplications: 'List application models',
-    getApplicationConfig: 'Read application configuration'
+    getApplicationConfig: 'Read application configuration',
+    getApplicationConfigSchema: 'Read the configuration schema',
+    getApplicationConfigDraft: 'Read the configuration draft'
   }
 }
 
@@ -49,6 +53,19 @@ function serializeApplicationInfo (app: any): string {
 
   return meta.join('\n')
 }
+
+// Fetch the config-schema.json of an application model. Cross-origin static file
+// (koumoul.com / cdn.jsdelivr.net), so plain fetch rather than the API $fetch.
+async function fetchConfigSchema (baseAppUrl: string): Promise<any> {
+  const schemaUrl = baseAppUrl.replace(/\/?$/, '/') + 'config-schema.json'
+  const res = await window.fetch(schemaUrl)
+  if (!res.ok) throw new Error(`could not fetch ${schemaUrl} (${res.status})`)
+  return res.json()
+}
+
+// Cache-buster: intermediate caches have been observed serving stale configurations,
+// silently cancelling a previous write when the stale body was re-submitted.
+const noCache = () => ({ _: `${Date.now()}${Math.floor(Math.random() * 1e6)}` })
 
 export function useAgentApplicationTools (locale: Ref<string>) {
   const t = createAgentTranslator(messages, locale)
@@ -105,26 +122,78 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'get_application_config',
-    description: 'Get the current validated configuration of an application (the live config, not the editable draft). Returns the configuration as JSON: selected datasets, display options, and other settings defined by the application model. Read-only — use the appConfig_form subagent to change the configuration.',
+    description: 'Get the current validated configuration of an application (the live config, not the editable draft). Returns compact JSON, truncated when large — pass "path" to read a sub-tree (e.g. "sections/0"). Read-only — configuration is changed from the application configuration page, where the appConfig_form subagent drives the form and the user validates the draft.',
     annotations: { title: t('getApplicationConfig'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
       properties: {
-        applicationId: { type: 'string' as const, description: 'The exact application ID' }
+        applicationId: { type: 'string' as const, description: 'The exact application ID' },
+        path: { type: 'string' as const, description: 'Optional slash-separated data path into the configuration (e.g. "sections/0/elements")' }
       },
       required: ['applicationId'] as const
     },
     execute: async (params) => {
       let config: any
       try {
-        config = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration`)
+        config = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration`, { query: noCache() })
       } catch {
         return 'This application is not configured yet.'
       }
+      if (params.path) config = getConfigValue(config, params.path)
       return formatApplicationConfig(config)
     }
   })
 
+  useAgentTool({
+    name: 'get_application_config_schema',
+    description: 'Get a compact listing of the JSON schema that governs an application\'s configuration: data paths, types, titles, required flags and allowed values. Call it before editing a configuration draft, and drill down with "path" (e.g. "sections/<i>/elements") since deep structures are elided. Pass applicationId for an existing application, or baseApplicationUrl (from list_base_applications) when the application does not exist yet.',
+    annotations: { title: t('getApplicationConfigSchema'), readOnlyHint: true },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        applicationId: { type: 'string' as const, description: 'The application ID (its application model provides the schema)' },
+        baseApplicationUrl: { type: 'string' as const, description: 'The application model URL, as returned by list_base_applications — alternative to applicationId' },
+        path: { type: 'string' as const, description: 'Optional slash-separated data path to a sub-schema (e.g. "sections/<i>" — use "<i>" or an index for array items)' }
+      }
+    },
+    execute: async (params) => {
+      try {
+        let baseAppUrl = params.baseApplicationUrl
+        if (!baseAppUrl && params.applicationId) {
+          const app = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}`, { query: { select: 'id,url,urlDraft' } })
+          baseAppUrl = app.urlDraft || app.url
+        }
+        if (!baseAppUrl) return agentToolError('get_application_config_schema', 'pass applicationId or baseApplicationUrl')
+        const schema = await fetchConfigSchema(baseAppUrl)
+        return projectConfigSchema(schema, params.path)
+      } catch (err) {
+        return agentToolError('get_application_config_schema', err)
+      }
+    }
+  })
+
+  useAgentTool({
+    name: 'get_application_config_draft',
+    description: 'Get the editable configuration draft of an application. Returns compact JSON, truncated when large — pass "path" to read a sub-tree. The draft is edited from the application configuration page, where the appConfig_form subagent drives the form; the user then validates it.',
+    annotations: { title: t('getApplicationConfigDraft'), readOnlyHint: true },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        applicationId: { type: 'string' as const, description: 'The exact application ID' },
+        path: { type: 'string' as const, description: 'Optional slash-separated data path into the draft (e.g. "sections/0")' }
+      },
+      required: ['applicationId'] as const
+    },
+    execute: async (params) => {
+      try {
+        let draft = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration-draft`, { query: noCache() })
+        if (params.path) draft = getConfigValue(draft, params.path)
+        return formatApplicationConfig(draft)
+      } catch (err) {
+        return agentToolError('get_application_config_draft', err)
+      }
+    }
+  })
   useAgentTool({
     name: 'list_base_applications',
     description: 'List available application models. Returns id, title, category, and URL.',

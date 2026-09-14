@@ -219,6 +219,34 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
   the `getDatasetFresh` validation path and the `?updatedAt=`/`?finalizedAt=` bypass.
 - **Slug changes** bump `finalizedAt` (`datasets/utils/patch.ts`, right after `updatedAt` is stamped) —
   see below.
+### Freshness after a REST line write
+
+A line edit is live in the ES alias as soon as `commitLines` returns, but `/lines` revalidates
+against `finalizedAt`, which only the finalize task writes. The resulting window is **deliberate**,
+and covered on both sides:
+
+- `commitLines` sets `_partialRestStatus: 'indexed'`, which is what the finalize task selects on
+  (`workers/tasks.ts`) — so `finalizedAt` moves within seconds without the public validator
+  changing any faster than once per write.
+- The writer does not wait for it: `ui/src/components/dataset/table/use-dataset-edition.ts` records
+  an `indexedAt` from each write and `composables/dataset/lines.ts` sends `?indexedAt=…` **instead
+  of** `?finalizedAt=…`. The server never reads that parameter — its whole job is to be a different
+  URL, so the browser and proxy hold no entry for it and send no `If-Modified-Since`. That is the
+  "serve me fresh data because I just wrote" escape hatch.
+
+The one gap `commitLines` closes itself: a dataset that still accepts line writes but that the
+finalize task cannot select **at all**. `readWritableDataset` admits `finalized` | `indexed` |
+`error`, while finalize selects `{status:'indexed'}` and `{isRest, status:'finalized',
+_partialRestStatus:'indexed'}` — so on `status: 'error'`, `finalizedAt` never moves again and the
+edit stays behind a 304 until someone reindexes by hand (a reloaded page has no `indexedAt` to
+escape with). Only in that case does `commitLines` bump `finalizedAt` itself.
+
+That bump rounds **down** to the current second and is applied with `$max`, never up into the
+future — unlike the slug bump, which can round up safely because a slug patch does not wake
+finalize. A future value here would be rewound by a later finalize's plain-`now` `$set`, after
+which a client still holding it sends it back as `?finalizedAt=` and earns the hard 400 above.
+Trade-off of rounding down: an edit in the same second as the current `finalizedAt` does not move
+the validator, which the next edit or any finalize resolves.
 - **Cache busting**: the `x-fg87fa6658fpbuia83hb8` header/cookie (or `x-cache-bypass` in the test
   harness) makes the proxy bypass its cache; `DELETE /api/v1/test-env/dataset-cache` and
   `…/publication-sites-cache` clear the memoize caches; restarting the proxy empties the

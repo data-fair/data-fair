@@ -1,6 +1,6 @@
 import * as findUtils from '../misc/utils/find.ts'
 import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
-import soasLoader from 'soas'
+import { listActions } from './soas.ts'
 import * as ajv from '../misc/utils/ajv.ts'
 import { type SessionState } from '@data-fair/lib-express'
 import { type RemoteService } from '#types'
@@ -21,18 +21,16 @@ export const initNew = (body) => {
 
 // TODO: explain ? simplify ? hard to understand piece of code
 export const computeActions = (apiDoc) => {
-  const actions = soasLoader(apiDoc).actions()
-  for (const a of actions) {
-    a.input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
+  return listActions(apiDoc).map(a => {
+    const input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
     const outputSchema = a.outputSchema
+    let output: any[] = []
     if (outputSchema) {
-      const outputProps = a.outputSchema.properties || (a.outputSchema.items && a.outputSchema.items.properties) || {}
-      a.output = Object.keys(outputProps).map(prop => ({ name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop] }))
-    } else {
-      a.output = []
+      const outputProps = outputSchema.properties || (outputSchema.items && outputSchema.items.properties) || {}
+      output = Object.keys(outputProps).map(prop => ({ name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop] }))
     }
-  }
-  return actions
+    return { ...a, input, output }
+  })
 }
 
 export const clean = (remoteService: RemoteService, sessionState: SessionState, html) => {

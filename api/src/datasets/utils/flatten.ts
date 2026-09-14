@@ -8,7 +8,9 @@
 import type { DatasetLine } from '#types'
 import memoize from 'memoizee'
 
-const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, fillNull: string, dataset: any): (line: any) => DatasetLine => {
+// the statements applied to a line: nested keys (extension sub-objects) moved to flat keys, separator
+// arrays joined, fillNull keys defaulted. Empty when the schema needs none of it, i.e. flatten is the identity
+const flattenStatements = (preserveArrays: boolean, fillNull: string, dataset: any): string => {
   let jitCode = ''
   const nestedKeys: string[] = []
   const fillNullArr = fillNull.split(',').filter(Boolean)
@@ -41,10 +43,12 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
   for (const fillNullKey of fillNullArr) {
     jitCode += `if (o["${fillNullKey}"] === undefined) { o["${fillNullKey}"] = null }\n`
   }
-  jitCode += 'return o;'
+  return jitCode
+}
 
+const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, fillNull: string, dataset: any): (line: any) => DatasetLine => {
   // @ts-ignore
-  return new Function('o', jitCode)
+  return new Function('o', flattenStatements(preserveArrays, fillNull, dataset) + 'return o;')
 }
 
 const memoizedCompileFlatten = memoize(compileFlatten, {
@@ -61,4 +65,10 @@ export const getFlatten = (dataset: any, preserveArrays: boolean = false, fillNu
 
 export const getFlattenNoCache = (dataset: any, preserveArrays: boolean = false, fillNull: string[] = []) => {
   return compileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, fillNull.join(','), dataset)
+}
+
+// true when flatten(line) would return the line unchanged (no nested key, no separator column to join, no
+// fillNull), letting callers that must not mutate their input skip the flatten and the copy it requires
+export const isFlattenIdentity = (dataset: any, preserveArrays: boolean = false, fillNull: string[] = []) => {
+  return flattenStatements(preserveArrays, fillNull.join(','), dataset) === ''
 }

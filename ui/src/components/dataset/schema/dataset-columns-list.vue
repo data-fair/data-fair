@@ -52,7 +52,14 @@ function isModified (column: SchemaProperty): boolean {
   if (!props.originalSchema) return false
   const original = props.originalSchema.find(p => p.key === column.key)
   if (!original) return true
-  return !equal(column, original)
+  if (!equal(column, original)) return true
+  // A column can be untouched and still be a pending change: reordering moves it without
+  // altering it, and comparing by key alone would leave a reshuffle invisible until after
+  // the save. Compare positions among the columns present on both sides, so an added or
+  // removed column does not flag every column after it.
+  const commonBefore = props.originalSchema.filter(p => props.columns.some(c => c.key === p.key)).map(p => p.key)
+  const commonAfter = props.columns.filter(c => props.originalSchema!.some(p => p.key === c.key)).map(c => c.key)
+  return commonAfter.indexOf(column.key) !== commonBefore.indexOf(column.key)
 }
 
 function columnColor (column: SchemaProperty): string | undefined {

@@ -19,14 +19,14 @@ en:
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { type BBox } from 'geojson'
-import maplibregl, { LayerSpecification, LngLatBoundsLike } from 'maplibre-gl'
+// maplibre 6 has no default export
+import * as maplibregl from 'maplibre-gl'
+import { LayerSpecification, LngLatBoundsLike } from 'maplibre-gl'
 import { useTheme } from 'vuetify'
 import bbox from '@turf/bbox'
 import bboxPolygon from '@turf/bbox-polygon'
 import { useMapStyle } from './use-map-style'
-
-// @ts-ignore
-maplibregl.config.CSP_NONCE = $cspNonce
+import './maplibre-worker'
 
 const { height } = defineProps({
   height: { type: Number, required: true }
@@ -57,24 +57,35 @@ const dataLayers: LayerSpecification[] = [{
 }]
 const { style } = useMapStyle()
 
+const { t } = useI18n()
+const { sendUiNotif } = useUiNotif()
+
 watch(datasetBbox, (box) => {
   if (!box) return
-  const map = new maplibregl.Map({
-    container: 'map',
-    style,
-    transformRequest: (url) => {
-      if (url.startsWith($siteUrl)) {
-      // include cookies, for data-fair sessions
-        return { url, credentials: 'include' }
-      } else {
-        return { url }
-      }
-    },
-    // preserveDrawingBuffer: noInteraction, // for capture ? TODO: only apply this if in a capture context ?
-    attributionControl: false,
-  }).addControl(new maplibregl.AttributionControl({
-    compact: false
-  }))
+  // maplibre 6 dropped WebGL1 and THROWS GPUInitializationError from the constructor rather
+  // than emitting an "error" event, so a browser without a WebGL2 context is handled here
+  let map: maplibregl.Map
+  try {
+    map = new maplibregl.Map({
+      container: 'map',
+      style,
+      transformRequest: (url) => {
+        if (url.startsWith($siteUrl)) {
+        // include cookies, for data-fair sessions
+          return { url, credentials: 'include' }
+        } else {
+          return { url }
+        }
+      },
+      // preserveDrawingBuffer: noInteraction, // for capture ? TODO: only apply this if in a capture context ?
+      attributionControl: false,
+    }).addControl(new maplibregl.AttributionControl({
+      compact: false
+    }))
+  } catch (error) {
+    sendUiNotif({ type: 'error', error, msg: t('mapError') })
+    return
+  }
 
   map.fitBounds(box as LngLatBoundsLike, { padding: 30, duration: 0 })
 

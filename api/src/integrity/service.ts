@@ -87,8 +87,12 @@ export const enableIntegrity = async (dataset: DatasetInternal, who?: WhoHint): 
 const enableIntegrityUnlocked = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> => {
   if (!config.integrity?.active) throw httpError(400, 'integrity capability is not configured on this deployment')
   const isRest = isRestDataset(dataset)
-  if (!isRest && (!isFileDataset(dataset) || !dataset.originalFile?.md5)) {
-    throw httpError(400, 'integrity can only be enabled on a finalized file dataset or an editable (rest) dataset')
+  // deliberately NOT gated on originalFile.md5: that descriptor is only persisted for files
+  // uploaded since it was introduced, so datasets predating it were refused for a reason unrelated
+  // to the guarantee. The anchor hashes the storage bytes with sha256 (see hash.ts) and nothing
+  // reads originalFile.md5 — a restore fills it in-flight from the payload bytes either way.
+  if (!isRest && !isFileDataset(dataset)) {
+    throw httpError(400, 'integrity can only be enabled on a file dataset or an editable (rest) dataset')
   }
   // Truth-grounding refusals (§5 explicit limits): never enroll a dataset whose stated guarantee
   // would be partial. Attachment bytes are outside the snapshot — neither detected nor restorable —
@@ -122,7 +126,9 @@ const enableIntegrityUnlocked = async (dataset: DatasetInternal, who?: WhoHint):
   // anchor synchronously: enable is a rare superadmin action, and the response then reflects
   // the anchored state. On failure (S3 down) active stays true with no anchor — the check
   // reports 'unknown' and a later _fix retries (fail-loud, no compensating rollback).
-  const context: HistorizeContextHint = { operation: 'enable', origin: 'superadmin', ...(who ? { who } : {}) }
+  // date on the stamp, like every other line stamp (see HistorizeContextHint): it is what makes a
+  // replay of this stamp reproduce a byte-identical body instead of a same-key rewrite
+  const context: HistorizeContextHint = { operation: 'enable', origin: 'superadmin', date: enableDate, ...(who ? { who } : {}) }
   await anchorDataset(dataset, context)
   if (isRest) {
     // async backfill: stamp every line (hint-first) and let the relay drain; GET _integrity
@@ -400,7 +406,11 @@ const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: stri
   return await checkDataset(fresh as unknown as DatasetInternal)
 }
 
-export type RestoreResult = { status: 'restoring' } | Check
+// `restored` lists the covered metadata keys this restore actually changed — EMPTY means the
+// revision matched the live state and nothing was rewritten. Without it a no-op restore is
+// indistinguishable from a real one, and the panel reports success either way. It is absent on
+// the 'restoring' branches, where work is by definition pending.
+export type RestoreResult = { status: 'restoring' } | (Check & { restored: string[] })
 
 export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> =>
   await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale, who))
@@ -463,7 +473,11 @@ const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: nu
     await anchorDataset(dataset, restoreContext, { force: true })
     await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _needsHistorizing: '' } })
     const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
-    return await checkDataset(freshAfter as unknown as DatasetInternal)
+    // note for REST datasets: this list can only ever hold covered METADATA keys. A dataset
+    // revision's payload is coveredMetadata() — line content is not in it (it lives in the
+    // per-line revisions), so a dataset restore never rolls data back, and on an untouched
+    // REST dataset it legitimately reports []
+    return { ...await checkDataset(freshAfter as unknown as DatasetInternal), restored: [...Object.keys($set), ...Object.keys($unset)] }
   }
 
   // file restore: the raw metadata write stays (the re-ingest reprocesses everything downstream

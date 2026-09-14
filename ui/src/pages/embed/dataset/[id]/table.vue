@@ -12,7 +12,8 @@
       v-model:fixed="fixed"
       v-model:selected-item="selectedItem"
       :height="windowHeight"
-      :no-interaction="!interaction"
+      :interactions="interactions"
+      :pagination="pagination"
       :selectable="selectable"
     />
   </v-container>
@@ -24,6 +25,7 @@
 
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
+import { parseInteractions } from '~/composables/dataset/interactions'
 
 const { height: windowHeight } = useWindowSize()
 
@@ -37,7 +39,13 @@ const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
-const interaction = useBooleanSearchParam('interaction', true)
+// which interactive elements are active, cf parseInteractions: absent/"1" for all, "0" for none,
+// "count,search" for a subset, "-filters" for all but a subset
+// default "1" so that an absent param stays distinguishable from a legacy empty "?interaction="
+const interaction = useStringSearchParam('interaction', '1')
+const interactions = computed(() => parseInteractions(interaction.value))
+// pages instead of infinite scroll, more reliable in an iframe of constrained height
+const pagination = useBooleanSearchParam('pagination', false)
 const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_id_eq')
 </script>

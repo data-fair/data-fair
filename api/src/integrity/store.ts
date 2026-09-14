@@ -1,5 +1,7 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, ListObjectVersionsCommand, DeleteObjectCommand, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
+import { NodeHttpHandler } from '@smithy/node-http-handler'
+import { HttpAgent, HttpsAgent } from 'agentkeepalive'
 import type { Readable } from 'node:stream'
 import type { RevisionContext, WhoBody } from './operations.ts'
 
@@ -49,7 +51,28 @@ export class IntegrityStore {
       region: opts.region || 'us-east-1',
       endpoint: opts.endpoint,
       credentials: opts.credentials,
-      forcePathStyle: opts.forcePathStyle ?? true
+      forcePathStyle: opts.forcePathStyle ?? true,
+      // the SDK default is 3, and the SigV4 signer spends one of them correcting a clock skew
+      // (it only learns the server time from the failed response): leave room for the corrected
+      // retry plus a genuine transient on top
+      maxAttempts: 5,
+      requestHandler: new NodeHttpHandler({
+        // `socketTimeout` (inactivity), NOT `requestTimeout` (total wall-clock): readPayload
+        // streams a whole dataset file out of a revision on restore, so a total-duration cap
+        // would kill large restores, while an idle cap only fires on a genuinely stalled
+        // request. Without one an unanswered PUT hangs the relay task forever, and the worker
+        // never reaches the `finally` that releases the dataset lock — leaving the dataset
+        // frozen out of task selection (workers/index.ts matches only unlocked datasets).
+        // (Note for anyone tempted to add `requestTimeout`: it is a no-op warning unless
+        // `throwOnRequestTimeout: true` is passed alongside it.)
+        connectionTimeout: 5000,
+        socketTimeout: 60000,
+        // sized to the relay's per-batch concurrency (BATCH in lines-relay.ts): requests are
+        // signed BEFORE they queue for a socket, so a pool narrower than the batch ages
+        // signatures in the queue and earns RequestTimeTooSkewed on a slow store
+        httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 100, maxFreeSockets: 50, timeout: 60000 }),
+        httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 100, maxFreeSockets: 50, timeout: 60000 })
+      })
     })
     this.bucket = opts.bucket
   }
@@ -183,6 +206,19 @@ export class IntegrityStore {
   async getRetention (key: string, versionId?: string): Promise<Date | undefined> {
     const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key, VersionId: versionId }))
     return res.ObjectLockRetainUntilDate
+  }
+
+  // Does this exact key already hold a (current) version? Used by the relay to avoid re-PUTting
+  // an anchor that already exists — a same-key write with a differing body is what the trail
+  // check reports as a rewrite, so re-anchoring unchanged content must be skipped, not repeated.
+  async objectExists (key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      return true
+    } catch (err: any) {
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) return false
+      throw err
+    }
   }
 
   // Level-2 file payload: a sibling `{revisionKey}.file` object under the same compliance

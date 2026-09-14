@@ -97,6 +97,7 @@ const storage = {
 export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes, ...jsonTypes])
 
 const middleware = multer({
+  defParamCharset: 'utf8',
   limits: {
     files: 2 // no more than the dataset file + attachments archive
   },

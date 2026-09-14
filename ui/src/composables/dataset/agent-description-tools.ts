@@ -1,39 +1,20 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator } from '~/composables/agent/utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
-    setDatasetDescription: 'Définir la description du jeu de données',
     descriptionWriterSubAgent: 'Rédiger une description de jeu de données',
     descriptionWriterSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis rédiger une description détaillée.'
   },
   en: {
-    setDatasetDescription: 'Set the dataset description',
     descriptionWriterSubAgent: 'Write a dataset description',
     descriptionWriterSubAgentDesc: 'Read the dataset metadata and schema, then write a detailed description.'
   }
 }
 
-export function useAgentDatasetDescriptionTools (locale: Ref<string>, setDescription: (description: string) => void) {
+export function useAgentDatasetDescriptionTools (locale: Ref<string>) {
   const t = createAgentTranslator(messages, locale)
-
-  useAgentTool({
-    name: 'set_dataset_description',
-    description: 'Set the description field of the dataset currently being edited. The description supports markdown formatting.',
-    annotations: { title: t('setDatasetDescription') },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        description: { type: 'string' as const, description: 'The markdown description text to set' }
-      },
-      required: ['description'] as const
-    },
-    execute: async (params) => {
-      setDescription(params.description)
-      return 'Description updated successfully.'
-    }
-  })
 
   const descriptionWriterPrompts: Record<string, string> = {
     fr: `Tu es un expert en documentation de jeux de données pour Data Fair, une plateforme de publication de données ouvertes. Les descriptions sont affichées sur les pages de jeux de données pour aider les utilisateurs à comprendre le jeu en détail.
@@ -51,7 +32,9 @@ Format :
 - Rédige dans la même langue que le titre et les métadonnées existantes
 - Ne répète pas simplement le résumé ; la description doit apporter de la profondeur et du contexte
 - Si le jeu a une portée géographique ou temporelle, mentionne-la
-- Si le jeu a des colonnes notables, mets en avant les plus importantes`,
+- Si le jeu a des colonnes notables, mets en avant les plus importantes
+- **La description survit aux mises à jour du jeu.** N'y écris rien qui change quand la donnée change : pas de nombre de lignes, pas de liste des valeurs d'une colonne, pas de bornes chiffrées, pas de date de dernière mise à jour. Explique ce que porte une colonne, jamais ce qu'elle contient aujourd'hui.
+- Les codes et leur signification (\`COM\` = commune, \`1\` = homme) ne vont pas ici : ils se posent en libellés de valeurs, avec l'outil dédié`,
     en: `You are a dataset documentation expert for Data Fair, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
 
 Task:
@@ -67,7 +50,9 @@ Format:
 - Write in the same language as the dataset title and existing metadata
 - Do not simply repeat the summary; the description should add depth and context
 - If the dataset has geographic or temporal scope, mention it
-- If the dataset has notable columns, highlight the most important ones`
+- If the dataset has notable columns, highlight the most important ones
+- **The description outlives the data.** Write nothing that changes when the data changes: no row count, no list of a column's values, no numeric bounds, no last-update date. Explain what a column carries, never what it currently holds.
+- Codes and their meaning (\`COM\` = commune, \`1\` = male) do not belong here: they are set as value labels, with the dedicated tool`
   }
 
   useAgentSubAgent({

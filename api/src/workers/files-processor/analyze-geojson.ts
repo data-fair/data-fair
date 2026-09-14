@@ -1,7 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import streamJsonParser from 'stream-json/Parser.js'
-import streamJsonPick from 'stream-json/filters/Pick.js'
-import streamValues from 'stream-json/streamers/StreamValues.js'
+import { parser as streamJsonParser } from 'stream-json/parser.js'
+import { pick as streamJsonPick } from 'stream-json/filters/pick.js'
+import { streamValues } from 'stream-json/streamers/stream-values.js'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.ts'
@@ -17,13 +17,13 @@ export default async function (dataset: FileDataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
-  const crsParser = streamJsonParser.parser()
+  const crsParser = streamJsonParser.asStream()
   crsParser.on('error', () => {
     // ignore invalid json errors at this stage, it will be handled later
   })
   const crsPipeline = crsParser
-    .pipe(streamJsonPick.pick({ filter: 'crs' }))
-    .pipe(streamValues.streamValues())
+    .pipe(streamJsonPick.asStream({ filter: 'crs' }))
+    .pipe(streamValues.asStream())
   let crs: any
   crsPipeline.on('data', (data) => {
     crs = data.value
@@ -38,6 +38,9 @@ export default async function (dataset: FileDataset) {
   const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => crsParser.write(decodedData))
   crsParser.end()
 
+  // keep track of the original name behind each key to detect collisions
+  // (e.g. a feature top-level "id" and a property "_id" both escape to "id")
+  const originalNamesByKey = new Map<string, string>([['geometry', 'geometry']])
   for (const property in sampleValues) {
     const key = fieldsSniffer.escapeKey(property, dataset?.analysis?.escapeKeyAlgorithm)
     const existingField = dataset.schema?.find(f => f.key === key)
@@ -46,7 +49,13 @@ export default async function (dataset: FileDataset) {
       'x-originalName': property,
       ...fieldsSniffer.sniff([...sampleValues[property]], attachments, existingField)
     }
-    if (field.type !== 'empty') schema.push(field)
+    if (field.type === 'empty') continue
+    const collidingName = originalNamesByKey.get(key)
+    if (collidingName !== undefined) {
+      throw httpError(400, `[noretry] Échec de l'analyse du fichier, les colonnes "${collidingName}" et "${property}" correspondent à la même clé "${key}".`)
+    }
+    originalNamesByKey.set(key, property)
+    schema.push(field)
   }
 
   dataset.status = 'analyzed'

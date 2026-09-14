@@ -1,5 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
+import { getCsvSerializer } from '../utils/csv-jit.ts'
+import { getFlattenNoCache, isFlattenIdentity } from '../utils/flatten.ts'
 import capabilities from '../../../contract/capabilities.js'
 
 export interface ExtractedError {
@@ -332,6 +334,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
 
 export const acceptedMetricAggsByType: Record<string, string[]> = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  // booleans are doc-valued as 0/1, and ES registers them for all these metric aggs:
+  // sum = count of true values, avg = proportion of true (cf Sum/Avg/Min/Max/Stats/PercentilesAggregatorFactory)
+  boolean: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
   string: ['min', 'max', 'cardinality', 'value_count'],
   other: ['value_count']
 }
@@ -343,13 +348,16 @@ for (const metrics of Object.values(acceptedMetricAggsByType)) {
 }
 export const defaultMetricAggsByType: Record<string, string[]> = {
   number: ['min', 'max'],
+  boolean: [],
   string: ['cardinality'],
   other: []
 }
 
-export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+export const getMetricType = (field: any): 'number' | 'string' | 'boolean' | 'other' => {
   if (field.type === 'integer' || field.type === 'number') {
     return 'number'
+  } else if (field.type === 'boolean') {
+    return 'boolean'
   } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
     return 'number'
   } else if (field.type === 'string') {
@@ -810,34 +818,29 @@ export const buildIndexMappings = (
 }
 
 // CSV-equivalent size accounting for the indexed_bytes metric.
-// Counted columns are exactly the ones the CSV export emits (outputs.ts): schema
-// properties without x-calculated. Extension columns are nested objects in the
-// indexed item, so counting walks the top-level key segment of each property.
-export const lineBytesSpec = (schema: any[]): { prefixes: Set<string>, nbCols: number } => {
-  const counted = (schema ?? []).filter(p => !p['x-calculated'])
-  return {
-    prefixes: new Set(counted.map(p => p.key.split('.')[0])),
-    nbCols: counted.length
-  }
+// `_bytes` is defined as the byte length of the row the default CSV export (`/lines?format=csv`,
+// no select, ',' delimiter — compileForRequest in outputs.ts) emits for the line, header and BOM
+// excluded. It is computed with the export's own serializer + flatten so the two cannot drift:
+// strings quoted (embedded quotes doubled), booleans as 1/0, separator arrays joined, extension
+// sub-objects flattened, calculated columns excluded. Compiled without the memo caches: the stamp
+// runs on the schema being indexed, which may differ from the one cached under the same
+// (id, finalizedAt) key by a previous read or reindex.
+// flatten is null when the schema has no nested extension key and no separator column: the export's flatten
+// would be the identity, so the line is serialized as-is without the defensive copy it would otherwise need
+export interface LineBytesSpec { row: (line: Record<string, any>) => string, flatten: ((line: Record<string, any>) => Record<string, any>) | null }
+
+export const lineBytesSpec = (dataset: { id: string, finalizedAt?: string, schema?: any[] }): LineBytesSpec => {
+  const schema = dataset.schema ?? []
+  const selectKeys = schema.filter(p => !p['x-calculated']).map(p => p.key)
+  const { row } = getCsvSerializer({ dataset: { ...dataset, schema }, selectKeys, header: false, bom: false, cache: false })
+  const fullDataset = { ...dataset, schema }
+  return { row, flatten: isFlattenIdentity(fullDataset) ? null : getFlattenNoCache(fullDataset) }
 }
 
-const valueBytes = (value: any): number => {
-  if (value === null || value === undefined) return 0
-  if (typeof value === 'string') return Buffer.byteLength(value)
-  if (typeof value === 'object') {
-    let sum = 0
-    for (const v of Object.values(value)) sum += valueBytes(v)
-    return sum
-  }
-  return Buffer.byteLength(String(value))
-}
-
-// per line: value bytes + 1 byte per counted column (separator / newline),
-// mirroring the size of a CSV export of the same data
-export const lineBytes = (item: Record<string, any>, spec: { prefixes: Set<string>, nbCols: number }): number => {
-  let sum = spec.nbCols
-  for (const prefix of spec.prefixes) sum += valueBytes(item[prefix])
-  return sum
+// the flatten helper mutates its input (moves nested extension values to flat keys, joins separator
+// arrays), so it runs on a shallow copy and the indexed line is left untouched
+export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): number => {
+  return Buffer.byteLength(spec.row(spec.flatten ? spec.flatten({ ...item }) : item))
 }
 
 /**
@@ -1205,4 +1208,155 @@ export const chooseStrictestCandidate = <T extends { sampledCount: number }> (
   floorSample: number
 ): T => {
   return candidates.find(candidate => candidate.sampledCount >= floorSample) ?? candidates[candidates.length - 1]
+}
+
+// ---- value-level narrowing for multi-valued (separator) columns ----
+
+// A `terms` aggregation is document-scoped: it emits every value a matching document holds in the
+// field. On a single-valued column document and value are 1:1 so this is invisible, but on a
+// multi-valued (`separator`) column the sibling values of a matching row ride along — a `q` meant
+// to narrow an autocomplete list cannot narrow it, and since `size` truncates AFTER that, the real
+// matches can be pushed out of the page entirely.
+//
+// The narrowing is done with the aggregation's `include`, the only value-level filter ES offers
+// that stays on the term dictionary (a runtime field would work too, but it runs a script per
+// matching document and loses global ordinals). `include` matches the RAW keyword bytes: no
+// analyzer, so case and diacritics folding — what `insensitive_normalizer` does at index time —
+// has to be carried by the pattern itself, each letter expanded into a class of its variants.
+
+const luceneRegexpSpecials = '.?+*|{}[]()"\\#@&<>~'
+
+// base letter -> every Latin code point that folds to it (both cases). Built once from the same
+// decomposition `asciifolding` applies, so the pattern accepts exactly what the index normalizes
+// together.
+const foldingVariants = (() => {
+  const variants = new Map<string, string[]>()
+  for (let codePoint = 0x41; codePoint <= 0x24f; codePoint++) {
+    const char = String.fromCodePoint(codePoint)
+    const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    if (base.length !== 1 || !/[a-z]/.test(base)) continue
+    const entry = variants.get(base)
+    if (entry) entry.push(char)
+    else variants.set(base, [char])
+  }
+  return variants
+})()
+
+// `q` is read literally here, so a query using simple_query_string operators (OR, negation,
+// phrases, fuzziness) has no faithful literal reading — narrowing on it would empty the list.
+// `*` and `?` are absent on purpose: those are translated, not declined.
+const nonLiteralQ = /[|"()~]|(^|\s)[+-]/
+
+/**
+ * Ceiling on the user wildcards translated into the pattern. `.*` segments are what makes
+ * determinization expensive — `.*a.*b.*c.*…` is the textbook subset-construction blow-up, roughly
+ * doubling the state count per segment — and the length cap alone does not bound them (200
+ * characters of `a*b*c*…` is 100 of them). Three keeps the automaton trivial while covering every
+ * realistic query; past it the values are simply left un-narrowed.
+ */
+const MAX_PATTERN_WILDCARDS = 3
+
+const foldedChar = (char: string) => {
+  const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  const variants = foldingVariants.get(base)
+  if (variants) return `[${variants.join('')}]`
+  if (char === '*') return '.*'
+  if (char === '?') return '.'
+  return luceneRegexpSpecials.includes(char) ? `\\${char}` : char
+}
+
+/**
+ * The `include` regexp narrowing a multi-valued column's values to those matching `q`, or
+ * `undefined` when `q` has no literal reading and the values must be left alone.
+ *
+ * A `prefix` query keeps the values starting with it, a `contains` one the values holding it
+ * anywhere. The query is always read as a SINGLE contiguous string, never split into per-word
+ * alternatives: lucene's `&` intersection would express "every word, in any order" and is the
+ * more forgiving semantics, but intersecting N `.*word.*` automata is exponential in N and
+ * determinization runs uninterruptibly inside ES — a crafted multi-word `q` exhausted a node's
+ * whole heap in testing. The pattern this builds is a plain concatenation, linear in the query
+ * length, and that length is capped: a pattern longer than the longest indexable keyword cannot
+ * match any value anyway.
+ */
+export const valuesIncludePattern = (q: string, mode: 'prefix' | 'contains'): string | undefined => {
+  const trimmed = q.trim()
+  if (!trimmed || trimmed.length > KEYWORD_IGNORE_ABOVE || nonLiteralQ.test(trimmed)) return undefined
+  if ((trimmed.match(/\*/g)?.length ?? 0) > MAX_PATTERN_WILDCARDS) return undefined
+  const pattern = [...trimmed].map(foldedChar).join('')
+  if (mode === 'contains') return `.*${pattern}.*`
+  return pattern.endsWith('.*') ? pattern : `${pattern}.*`
+}
+
+// The narrowing filters, in the order they win. A value the caller named explicitly (`_in`/`_eq`)
+// is never narrowed away by a looser predicate, and `q` — the least specific instruction — comes
+// last. A terms agg accepts a single `include`, hence a precedence rather than a conjunction.
+const EXACT_VALUE_SUFFIXES = ['_in', '_eq'] as const
+const PREDICATE_SUFFIXES = { _starts: 'prefix', _contains: 'contains', _search: 'contains' } as const
+
+// `a,b` — or `"a,b",c` when a value holds a comma. Mirrors the parsing in commons.ts's filter
+// loop, minus its throwing: a malformed value is rejected there, on the row-filtering path.
+const parseFilterValues = (raw: string): string[] => {
+  if (!raw) return []
+  try {
+    if (raw.startsWith('"')) return JSON.parse(`[${raw}]`)
+  } catch { return [] }
+  return raw.split(',').filter(Boolean)
+}
+
+// A column is addressable by key (`tags_in`) or, for dashboards applying a filter across
+// datasets, by the concept it carries (`_c_topic_in`) — the same two forms commons.ts resolves.
+const sameColumnParam = (prop: any, query: Record<string, any>, suffix: string): string | undefined => {
+  const byKey = query[`${prop.key}${suffix}`]
+  if (byKey) return byKey
+  const conceptId = prop['x-concept']?.primary ? prop['x-concept'].id : undefined
+  return conceptId ? query[`_c_${conceptId}${suffix}`] : undefined
+}
+
+/**
+ * The values an `_in`/`_eq` filter on THIS column names explicitly, or `undefined` when none does.
+ * Shared with the `x-labelsRestricted` shortcut, which answers without going to Elasticsearch at
+ * all and must narrow the same way.
+ */
+export const sameColumnExactValues = (prop: any, query: Record<string, any>): string[] | undefined => {
+  for (const suffix of EXACT_VALUE_SUFFIXES) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (!raw) continue
+    const values = parseFilterValues(raw)
+    if (values.length) return values
+  }
+  return undefined
+}
+
+/**
+ * The `include` narrowing the listed values of a multi-valued column, or `undefined` to leave the
+ * buckets alone.
+ *
+ * A filter on ANOTHER column selects rows and must not touch the value list — `city_eq=Paris`
+ * still lists every tag the Paris rows carry. A filter on the column being listed is a statement
+ * about the values themselves, so it narrows them; negative filters need nothing, having already
+ * removed every row holding the value.
+ */
+export const valuesIncludeClause = (
+  prop: any,
+  query: Record<string, any>,
+  qMode: string
+): string | string[] | undefined => {
+  // single-valued columns need no narrowing: document and value are 1:1, and a literal pattern
+  // would only lose the analyzed (stemmed) matches the query legitimately made
+  if (!prop?.separator) return undefined
+
+  const exactValues = sameColumnExactValues(prop, query)
+  if (exactValues) return exactValues
+
+  for (const [suffix, mode] of Object.entries(PREDICATE_SUFFIXES)) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (raw) return valuesIncludePattern(raw, mode)
+  }
+
+  const q = (query.q ?? query._c_q)?.trim()
+  if (!q) return undefined
+  // complete mode reads `q` as a prefix, unless the column opted into the wildcard capability —
+  // its doc-level clause then also matches `*q*`, and the narrowing must not undo that
+  const prefix = qMode === 'complete' && !prop['x-capabilities']?.wildcard
+  return valuesIncludePattern(q, prefix ? 'prefix' : 'contains')
 }

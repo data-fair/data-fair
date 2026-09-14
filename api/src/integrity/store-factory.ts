@@ -19,3 +19,8 @@ export const integrityStore = (): IntegrityStore => {
   }
   return _store
 }
+
+// Test-only: the store is a process-wide singleton built once from config, so a test that
+// repoints `integrity.s3` (to simulate an unreachable store) needs the next call to rebuild it.
+// Never called by the app — see api/src/misc/routers/test-env.ts.
+export const resetIntegrityStore = () => { _store = undefined }

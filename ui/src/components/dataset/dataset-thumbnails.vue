@@ -103,10 +103,8 @@ const onScrollItem = async (index: number) => {
 
 </script>
 
-<style lang="less">
-  .search-results {
-    .highlighted {
-      font-weight: bold;
-    }
+<style>
+  .search-results .highlighted {
+    font-weight: bold;
   }
 </style>

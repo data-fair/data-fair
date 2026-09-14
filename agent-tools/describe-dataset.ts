@@ -12,7 +12,9 @@ const schemaColumnProperty = {
     type: { type: 'string' as const, description: 'Data type of the column' },
     title: { type: 'string' as const, description: 'Human-readable column title' },
     description: { type: 'string' as const, description: 'Column description' },
-    enum: { type: 'array' as const, items: { type: 'string' as const }, description: 'List of all possible values for this column' },
+    // Multi-type: data-fair emits integer/boolean enums on typed columns; a string-only
+    // schema made MCP output validation reject the whole result (observed in real traces).
+    enum: { type: 'array' as const, items: { type: ['string', 'number', 'boolean'] as const }, description: 'List of all possible values for this column' },
     enumTruncated: { type: 'boolean' as const, description: 'Whether the enum list was truncated because it exceeded 20 values' },
     enumTotal: { type: 'number' as const, description: 'Total number of enum values before truncation' },
     labels: { type: 'object' as const, description: 'Object mapping actual data values (keys) to human-readable labels (values). Use keys for filters.' },

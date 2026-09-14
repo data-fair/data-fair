@@ -40,8 +40,16 @@ jobs:
     - name: Use localhost as DEV_HOST in CI
       run: sed -i 's/^DEV_HOST=.*/DEV_HOST=localhost/' .env
 
+    # minio-init is a one-shot container: --wait counts it as up while it is still running,
+    # but reports an error if it exits before the last service turns healthy, which is a race
+    # it loses often. Keeping it out of the wait and running it to completion afterwards also
+    # closes the other half of the problem: --wait used to return while the buckets were still
+    # being created, so the tests could start without them.
     - name: Start test services
-      run: docker compose --profile test up -d --wait
+      run: docker compose --profile test up -d --wait --scale minio-init=0
+
+    - name: Create minio buckets
+      run: docker compose --profile test run --rm minio-init
 
     - name: Start mock server
       run: dotenv -- npm run dev-mock &

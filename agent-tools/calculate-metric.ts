@@ -13,7 +13,9 @@ export const schema = {
     properties: {
       datasetId: datasetIdProperty,
       fieldKey: { type: 'string' as const, description: 'The column key to calculate the metric on (use keys from describe_dataset)' },
-      metric: { type: 'string' as const, description: 'Metric to calculate. Available: avg, sum, min, max (for numbers); min, max, cardinality, value_count (for strings); value_count (for others); stats returns count/min/max/avg/sum; percentiles returns distribution.' },
+      // enum: the model kept guessing invalid metrics (e.g. "count") and burning 400s; the
+      // valid list is closed, so declare it.
+      metric: { type: 'string' as const, enum: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'cardinality', 'percentiles'] as const, description: 'Metric to calculate. Available: avg, sum, min, max (for numbers); min, max, cardinality, value_count (for strings); value_count (for others); stats returns count/min/max/avg/sum; percentiles returns distribution. To count rows per group use aggregate_data; to count non-null values of a column use value_count.' },
       percents: { type: 'string' as const, description: 'Comma-separated percentages for percentiles metric (default: "1,5,25,50,75,95,99"). Only used when metric is "percentiles".' },
       ...filterProperties
     },

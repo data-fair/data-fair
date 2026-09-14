@@ -87,7 +87,7 @@ en:
 <script setup lang="ts">
 import { mdiChevronDown, mdiChevronRight, mdiTableColumnPlusAfter } from '@mdi/js'
 
-const cols = defineModel<string[]>({ default: [] })
+const cols = defineModel<string[]>({ default: () => [] })
 
 const { t } = useI18n()
 const { dataset } = useDatasetStore()
