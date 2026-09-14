@@ -114,6 +114,24 @@ test.describe('geo files support', () => {
     assert.ok(!res.data.results[0]._vt)
   })
 
+  test('Reject geojson with colliding column keys (feature id and _id property)', async () => {
+    // a feature top-level `id` is mapped to a property `id`, and a property `_id`
+    // is escaped to the same `id` key: this collision must produce a clear error
+    // instead of silently creating two confusing columns
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-duplicate-id-key.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-duplicate-id-key.geojson')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+
+    const errorDataset = await waitForDatasetError(ax, res.data.id)
+    assert.equal(errorDataset.status, 'error')
+    const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
+    const errorEvent = journal.find((e: any) => e.type === 'error')
+    assert.ok(errorEvent.data.includes('"id"'), `expected error to mention the colliding key, got: ${errorEvent.data}`)
+  })
+
   test('Upload geojson with geometry type GeometryCollection', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-geometry-collection.geojson')
