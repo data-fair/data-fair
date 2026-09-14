@@ -10,7 +10,7 @@ const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
 
 export const integrityTestClient = new S3Client({ region: 'us-east-1', endpoint, credentials, forcePathStyle: true })
 
-// the real IntegrityStore, constructed with explicit MinIO options (no #config in the test process)
+// the real IntegrityStore, constructed with explicit RustFS options (no #config in the test process)
 export const integrityTestStore = new IntegrityStore({ region: 'us-east-1', endpoint, bucket, credentials, forcePathStyle: true })
 
 export const ensureIntegrityBucket = async (): Promise<void> => {

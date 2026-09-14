@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
-// The S3 files-storage backend, exercised against the dev MinIO (same convention as
+// The S3 files-storage backend, exercised against the dev RustFS (same convention as
 // s3-multipart-copy.api.spec.ts: skipped when no S3 service is reachable).
 //
 // Context: on S3, `pathExists` is a ListObjectsV2 Prefix match while the fs backend
