@@ -49,6 +49,26 @@ npx playwright test path/to/file  # specific file
 
 The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
 
+### Simulations
+
+Judged simulations of the back-office AI assistant: a simulated user drives the
+real chat in a real browser, and a judge reads the transcript. They answer "did a
+person get what they came for", which no other test here does.
+
+```bash
+npm run dev-bridge                              # must be running first
+npm run simulate                                # every case
+SIM_CASES=trouver-un-jeu-de-donnees npm run simulate
+npm run simulate:report
+```
+
+They are **not** part of `npm test` or `npm run quality`, and must never be: every
+case spends Claude plan quota. A run also calls `clean()`, deleting every
+`test_`-owned dataset in the dev environment.
+
+Cases live in `simulations/cases/index.ts`. See
+[docs/architecture/agent-integration.md](docs/architecture/agent-integration.md).
+
 ### Linting & Type Checking
 
 ```bash
@@ -73,7 +93,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Publication Sites](docs/architecture/publication-sites.md) — publication sites model, permissions gate (admin / staging / department), and sync with the `portals` service
 - [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
 - [Dataset Validation](docs/architecture/dataset-validation.md) — schema validation, mandatory extensions, diagnostic CSV, file vs REST flows
-- [AI Agent Integration](docs/architecture/agent-integration-architecture.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
+- [AI Agent Integration](docs/architecture/agent-integration-architecture.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant, and the judged simulation suite that exercises them end to end. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
 - [Load Management](docs/architecture/load-management.md) — rate limiting, request timeouts and Elasticsearch query controls across the app and the reverse-proxy layer, plus notes on possible further hardening
 - [Caching & cache headers](docs/architecture/caching.md) — the five caching layers (reverse-proxy cache, HTTP cache headers, `memoizee` in-process caches, MongoDB-backed caches, ad-hoc object caches), how they coordinate freshness, and the config reference
 - [Map base layer & tileserver](docs/architecture/map-tiles.md) — where dataset maps get their MapLibre style (`map.style`, the same-origin `/tileserver` convention) and the 302 redirect keeping legacy `tileserver-koumoul` remote-service URLs alive, with its removal conditions

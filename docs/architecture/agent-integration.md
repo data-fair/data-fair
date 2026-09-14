@@ -430,3 +430,43 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 |---------|------|
 | `@data-fair/lib-vue-agents` | Vue composables: `useAgentTool`, `useAgentSubAgent`, `useFrameServer` |
 | `@data-fair/lib-vuetify-agents` | Vue components: `DfAgentChatDrawer`, `DfAgentChatToggle`, `DfAgentChatAction` |
+
+## Simulations
+
+Unit and e2e tests answer "does this mechanism work". They cannot answer whether
+the assistant served a person, because that depends on what a real model says to
+a real question. The simulation suite answers it by having a simulated person try.
+
+One case is a page, a persona and a goal — deliberately with no expected result.
+A simulated user (Claude, `SIM_USER_MODEL`, default `haiku`) types into the real
+chat drawer in a real browser; the assistant under test runs on
+`SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
+configured as an `openai-compatible` provider on the agents service. The run is
+captured as a transcript — what was said, every gateway request with its tool
+definitions and tool calls, and any console errors — and a `simulation-judge`
+subagent reads it and returns a verdict with a friction list.
+
+The friction list is the point. "Unsatisfactory" says a run went badly; a friction
+point names the reply or tool result that misled the person and what they did
+next, which is what turns a run into a concrete change to a prompt or a tool
+description.
+
+**Prerequisites**, each of which fails confusingly if missing: the dev stack up
+(`bash dev/status.sh`), the UI built (`ui/dist/index.html`), and the bridge
+running (`npm run dev-bridge`). The runner checks the bridge and says so.
+
+**Layout.** `playwright.sim.config.ts` is a separate config so a bare
+`playwright test` can never reach the cases and spend quota. `simulations/cases/`
+holds the registry, `simulations/runner/` the seeding, `simulations/tmp/` the
+evidence (gitignored). The harness primitives come from
+`@data-fair/lib-agents-sim`; this repo owns the cases, the login, the seeding and
+the turn loop.
+
+**Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
+from `simulations/resources/*.csv`, so no case inherits another run's state and
+no case can dirty the `dev_fixtures` demo data.
+
+Rate limits are the practical ceiling — three Claude roles per case on one
+subscription. A run cut short by a rate limit is an **invalid run**, not a product
+failure; `sim-<case>.run.json` is what distinguishes them, and an invalid run must
+never be judged.
