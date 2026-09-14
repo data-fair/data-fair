@@ -1,5 +1,5 @@
 ---
-name: simulate
+name: agents-sim
 description: Run the scenario simulations - drive real browser conversations with a simulated user, then dispatch a judge per transcript. Use when asked to run the simulations, or after changing a system prompt, a tool description, or the chat orchestration.
 ---
 
@@ -20,8 +20,9 @@ Three things must be true, and each fails confusingly if it is not:
 
 Ask the user to start anything that is down. Never start or stop dev processes yourself.
 
-A run calls `clean()`, which deletes every `test_`-owned dataset in the dev
-environment. Do not run simulations while someone is relying on that data.
+A run calls `clean()`, which wipes the dev environment's test state — see the warning
+in AGENTS.md's Simulations section for exactly what it deletes. Do not run simulations
+while someone is relying on that data.
 
 ## Steps
 

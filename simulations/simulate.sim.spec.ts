@@ -12,10 +12,12 @@ import { seedDatasets } from './runner/fixtures.ts'
 import { assertBridgeUp, seedSettings, OWNER, OWNER_USER } from './runner/settings.ts'
 import {
   createChatDriver,
+  chatDriverStrings,
   captureGateway,
   nextUserMessage, isDone,
   writeEvidence, type Transcript,
-  selectCases
+  selectCases,
+  createPagePerception
 } from '@data-fair/lib-agents-sim'
 
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
@@ -36,6 +38,7 @@ for (const simCase of selected) {
     const gateway = captureGateway(page)
 
     const conversation: Array<{ role: string, text: string }> = []
+    let perception: ReturnType<typeof createPagePerception> | undefined
     try {
       // Setup lives inside the try too: a case that fails to dispatch (bridge
       // down, seeding rejected) must still write an invalid sidecar naming the
@@ -49,7 +52,13 @@ for (const simCase of selected) {
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
       const root = page.frameLocator('iframe')
-      const composer = root.getByPlaceholder('Tapez votre message...')
+      // Single source of truth for the composer's locale-dependent strings: the
+      // chat driver and the perception's off-limits list must agree on exactly
+      // what "the composer" is called, or the guard could miss it.
+      const locale = 'fr' as const
+      const strings = chatDriverStrings(locale)
+
+      const composer = root.getByPlaceholder(strings.input)
       // Unlike the agents repo's _dev pages, where the chat IS the page, data-fair
       // keeps it behind an app-bar toggle. Clicking unconditionally would close a
       // drawer that something else had already opened.
@@ -59,10 +68,27 @@ for (const simCase of selected) {
       }
       await composer.waitFor({ state: 'visible', timeout: 30000 })
 
-      const chat = createChatDriver(root, { locale: 'fr' })
+      const chat = createChatDriver(root, { locale })
+
+      // A person sees the whole viewport, not one frame: data-fair renders the
+      // chat in a <d-frame>, so the persona looks at both the host page and the
+      // frame.
+      // offLimits: the composer belongs to the runner, not the persona. Refusing
+      // these names structurally is what stops the persona from typing its
+      // message into the page and pressing Send itself, rather than relying on an
+      // instruction it is free to ignore. `strings.reset` is off-limits for a
+      // different reason: it is not product surface, it is this harness's own
+      // recording, and a mid-run click erases the transcript the run exists to
+      // produce. Ordinary controls stay reachable — including the drawer toggle,
+      // which a real user can and does click.
+      perception = createPagePerception(
+        [{ label: 'page', root: page }, { label: 'chat panel', root: page.frameLocator('iframe') }],
+        { offLimits: [strings.input, strings.send, strings.stop, strings.reset] }
+      )
 
       for (let i = 0; i < simCase.maxTurns; i++) {
-        const message = await nextUserMessage(simCase, conversation, simCase.maxTurns - i)
+        perception.setTurn(i + 1)
+        const message = await nextUserMessage(simCase, conversation, simCase.maxTurns - i, { perception })
         if (isDone(message)) break
         if (message === '') {
           // Distinct from a real stop: the persona subprocess produced no text
@@ -96,7 +122,8 @@ for (const simCase of selected) {
       route: simCase.route,
       conversation,
       gateway,
-      consoleErrors
+      consoleErrors,
+      observations: perception?.observations ?? []
     }
     // `valid` is derived, never hardcoded: the sidecar exists to tell a run that
     // really happened apart from one that fell over, so that reportCases says

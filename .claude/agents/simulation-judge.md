@@ -1,6 +1,6 @@
 ---
 name: simulation-judge
-description: Judge one scenario simulation transcript and return a JSON verdict. Use when asked to verdict a simulation run produced by the /simulate skill.
+description: Judge one scenario simulation transcript and return a JSON verdict. Use when asked to verdict a simulation run produced by the /agents-sim skill.
 tools: Read
 ---
 
@@ -15,6 +15,15 @@ The transcript holds:
 - `gateway` — every request the page made, carrying the tools it offered and the
   tool calls the assistant actually made
 - `consoleErrors` — browser errors during the run
+- `observations` — what the person actually looked at and did, recorded per turn:
+  `{ turn, tool, args, result }`. `look` returns the accessibility outline of the
+  screen at that moment.
+
+A claim about what is on screen must be supported by a preceding `look` in
+`observations`. A persona asserting a visual fact it never observed is a HARNESS
+fault, not product friction — say so plainly in `notes` and do not count it as a
+friction point. This has happened: a run once had the person insist a panel was
+closed having never looked, and the judge reported it as a product failure.
 
 `gateway` records what the browser SENT to the server, and each request carries
 the whole conversation so far — so the assistant's FINAL reply of a conversation
