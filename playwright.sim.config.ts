@@ -25,7 +25,18 @@ export default defineConfig({
 
   use: {
     baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
-    trace: 'retain-on-failure',
+    // Headed by default, unlike every other project here: simulations never run
+    // in CI and are always started by a maintainer, and watching a simulated
+    // person use the product is most of the value. Since 0.4.0 the persona has
+    // its own look/click/type tools, so what you see is it moving around the
+    // page on its own — a run you cannot see is far harder to diagnose than one
+    // you can. SIM_HEADLESS=1 opts out.
+    headless: !!process.env.SIM_HEADLESS,
+    // 'on', not 'retain-on-failure': most of a simulation is a model thinking,
+    // so the trace's per-action DOM snapshots are a better record than watching
+    // live, and a satisfied-but-odd run is exactly the one worth replaying. A
+    // suite that runs a handful of times a day can afford to keep every trace.
+    trace: 'on',
     // A missing element should fail in seconds with a diagnosis, not hang for
     // the whole test timeout. 30s rather than the default suite's 5s/10s: the
     // dev stack is doing real work during a simulation and the drawer's

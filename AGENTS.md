@@ -64,6 +64,13 @@ SIM_CASES=trouver-un-jeu-de-donnees npm run simulate
 npm run simulate:report
 ```
 
+A run opens a **real browser window** and drives it in front of you — the persona
+looks around the page, clicks and types on its own. Do not touch that window
+while it runs: you and the persona would be driving the same page, and a stray
+click lands in the transcript as something the product did. Set `SIM_HEADLESS=1`
+to run without a window. Every run also writes a Playwright trace, so a finished
+run can be replayed action by action with `npx playwright show-trace`.
+
 They are **not** part of `npm test` or `npm run quality`, and must never be: every
 case spends Claude plan quota. A run also calls `clean()`, which resets the dev
 environment's whole test state — not just `test_`-owned datasets, applications
