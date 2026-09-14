@@ -63,7 +63,20 @@ export default defineConfig({
     {
       name: 'simulate',
       dependencies: ['state-setup'],
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // 1920×1080, not Desktop Chrome's 1280×720. ui/src/layouts/default.vue
+        // keeps the chat drawer `temporary` below Vuetify's xl breakpoint
+        // (1920px), and a temporary drawer lays a scrim over the whole app — so
+        // at 1280 the persona could not click anything behind the chat, and
+        // Playwright reported "v-navigation-drawer__scrim intercepts pointer
+        // events" on every attempt. That is the product's real behaviour at that
+        // width, correctly refused rather than forced, but it is not the layout
+        // the assistant is designed around: its prompt assumes the user can see
+        // and reach the app while the chat is open. Simulate the designed
+        // experience; a narrow-viewport case would be a separate, deliberate one.
+        viewport: { width: 1920, height: 1080 },
+      },
     },
   ],
 })
