@@ -4,6 +4,7 @@ import { clean, computeActions, initNew } from './operations.ts'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
 import * as settingsUtils from '../misc/utils/settings.ts'
+import { rootSettingsFilter } from '../settings/operations.ts'
 import debugLib from 'debug'
 import datasetAPIDocs from '../../contract/dataset-api-docs.ts'
 import axios from '../misc/utils/axios.ts'
@@ -58,7 +59,7 @@ export const syncDataset = async (dataset: Dataset) => {
   )) {
     debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}`, dataset.masterData)
     const settings = await mongo.settings
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
 
     const existingService = await mongo.remoteServices
       .findOne({ id })
