@@ -89,14 +89,26 @@ for (const simCase of selected) {
       const strings = chatDriverStrings(locale)
 
       const composer = root.getByPlaceholder(strings.input)
-      // Unlike the agents repo's _dev pages, where the chat IS the page, data-fair
-      // keeps it behind an app-bar toggle. Clicking unconditionally would close a
-      // drawer that something else had already opened.
-      const alreadyOpen = await composer.waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false)
-      if (!alreadyOpen) {
+      /**
+       * Unlike the agents repo's _dev pages, where the chat IS the page, data-fair
+       * keeps it behind an app-bar toggle. Clicking unconditionally would close a
+       * drawer that something else had already opened, hence the probe first.
+       *
+       * Called before every send, not just once at the start: the drawer does not
+       * survive a full page navigation, because lib-vuetify-agents' `toggle()`
+       * flips the ref without persisting it while only the auto-open path writes
+       * `df-agent-chat-open`. So a persona that clicks a link the assistant gave
+       * it — the most ordinary thing a person can do — loses the chat. That is the
+       * product's behaviour to judge, not the harness's to die on: reopening keeps
+       * the run alive so the friction reaches the transcript instead of killing it.
+       */
+      const ensureChatOpen = async () => {
+        const open = await composer.waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false)
+        if (open) return
         await page.locator('.df-agent-chat-toggle').click()
+        await composer.waitFor({ state: 'visible', timeout: 30000 })
       }
-      await composer.waitFor({ state: 'visible', timeout: 30000 })
+      await ensureChatOpen()
 
       const chat = createChatDriver(root, { locale })
 
@@ -128,6 +140,10 @@ for (const simCase of selected) {
           error = `simulated user returned no message (empty completion) on turn ${i + 1}`
           break
         }
+        // The persona may have navigated the page — or closed the drawer itself —
+        // between turns, so re-open before sending rather than assuming the
+        // composer survived whatever it just did.
+        await ensureChatOpen()
         await chat.sendMessage(message)
         // Explicit ceiling, not the driver's own 10-minute default: 8 turns ×
         // 5 minutes stays inside the 45-minute test budget (see
