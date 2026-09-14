@@ -50,8 +50,8 @@ class TestS3Storage {
     })
   }
 
-  // same mapping as the real backend: callers always pass dataDir-prefixed paths (a relative
-  // dataDir must not be prefixed twice, RustFS refuses keys with a `..` segment)
+  // same mapping as the real backend: callers pass dataDir-prefixed paths, prefixing a relative
+  // dataDir twice yields `../` keys that S3 backends refuse (which silently skipped these tests)
   private bucketPath (path: string) {
     if (path === this.dataDir) return ''
     return path.replace(this.dataDir + '/', '')

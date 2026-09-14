@@ -590,8 +590,8 @@ faithful enough S3 implementation to exercise object-lock locally (compliance re
 delete / shorten / downgrade, per-version retention, delete markers), which `adobe/s3mock`
 is not, and Garage (no object lock, no versioning) cannot be. It replaced MinIO in
 September 2026 when the archived community edition's images were pulled from Docker Hub.
-RustFS is stricter than MinIO on one point: keys containing a `..` segment are refused
-(400 `InvalidArgument`). Because RustFS does not auto-create buckets, a one-shot `s3-init`
+Like MinIO, it refuses keys containing a `..` segment (400 `InvalidArgument`). Because
+RustFS does not auto-create buckets, a one-shot `s3-init`
 sidecar (`amazon/aws-cli`) provisions them on startup:
 
 - `bucketdev` — files storage, mutable
