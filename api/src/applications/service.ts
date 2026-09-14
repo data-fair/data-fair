@@ -20,6 +20,9 @@ import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
+import { updateTotalStorage } from '../datasets/utils/storage.ts'
+import * as partOf from '../misc/utils/part-of.ts'
+import { configRefIds } from '@data-fair/data-fair-shared/utils/config-refs.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
@@ -81,6 +84,10 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
+  // partOf children are hidden from browsing, not from lookups by id or reverse-lookups
+  const partOfFilter = partOf.listFilter(reqQuery, ['id', 'ids', 'dataset', 'application'])
+  if (partOfFilter) extraFilters.push(partOfFilter)
+
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 
   const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
@@ -130,10 +137,9 @@ export const curateApplication = async (application: Application) => {
 
 // update references to an application into the datasets it references (or used to reference before a patch)
 export const syncDatasets = async (newApp: any, oldApp: any = {}) => {
-  const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
-    .map((dataset: any) => dataset.id ?? dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
-  for (const id of [...new Set(ids)]) {
-    await syncApplications(id as string)
+  const ids = [...configRefIds(newApp?.configuration?.datasets), ...configRefIds(oldApp?.configuration?.datasets)]
+  for (const id of new Set(ids)) {
+    await syncApplications(id)
   }
 }
 
@@ -219,13 +225,22 @@ export const tryInsertApplication = async (ctx: ApplicationWriteContext, newAppl
   }
 }
 
-export const replaceApplication = async (ctx: ApplicationWriteContext, existingApplication: Application, newApplication: any, isNew: boolean) => {
+export const replaceApplication = async (ctx: ApplicationWriteContext, existingApplication: Application, newApplication: any, isNew: boolean, childrenAction?: string) => {
+  let orphans: partOf.Orphans | undefined
+  if (!isNew) {
+    const replaced = { ...existingApplication, configuration: newApplication.configuration }
+    await partOf.assertNoForeignChildren('application', existingApplication, replaced)
+    orphans = await partOf.detectOrphans('application', existingApplication, replaced, childrenAction)
+  }
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(existingApplication)) {
     if (!(patchKeys as string[]).includes(key)) {
       newApplication[key] = (existingApplication as any)[key]
     }
   }
+  // partOf is only written through its gated paths (creation, PATCH), a full replace preserves it
+  if ('partOf' in existingApplication) newApplication.partOf = (existingApplication as any).partOf
+  else delete newApplication.partOf
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
@@ -245,10 +260,20 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   }
 
   await mongo.db.collection('applications').replaceOne({ id: existingApplication.id }, newApplication)
+  await partOf.applyOrphans(ctx, 'application', newApplication.id, orphans)
+  if (newApplication.title !== existingApplication.title) await partOf.syncChildrenTitle('application', newApplication.id, newApplication.title)
   return newApplication
 }
 
-export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any) => {
+export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any, childrenAction?: string) => {
+  if (patch.partOf) await partOf.prepareAtDefinition('application', { ...application, ...patch }, patch.partOf)
+  let orphans: partOf.Orphans | undefined
+  if (patch.configuration) {
+    const patched = { ...application, configuration: patch.configuration }
+    await partOf.assertNoForeignChildren('application', application, patched)
+    orphans = await partOf.detectOrphans('application', application, patched, childrenAction)
+  }
+
   // Retry previously failed publications
   if (!patch.publications) {
     const failedPublications = (application.publications || []).filter((p: any) => p.status === 'error')
@@ -269,16 +294,22 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
+  // null is used to unset the property, $set would instead store a literal null (invalid against the resource schema)
+  const unsetPartOf = patch.partOf === null
+  if (unsetPartOf) delete patch.partOf
+
   let patchedApplication
   try {
     patchedApplication = await mongo.applications
-      .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: application.id }, { $set: patch, ...(unsetPartOf ? { $unset: { partOf: '' } } : {}) }, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
   }
   // configuration.datasets changes affect the application-key middleware matching
   clearApplicationKeysCaches()
+  await partOf.applyOrphans(ctx, 'application', application.id, orphans)
+  if (patch.title) await partOf.syncChildrenTitle('application', application.id, patch.title)
 
   eventsLog.info('df.applications.patch', `patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { ...ctx.logCtx, account: patchedApplication!.owner })
 
@@ -355,6 +386,11 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
+  // the partOf children follow their parent
+  await partOf.changeChildrenOwner(ctx, 'application', application.id, newOwner)
+  await updateTotalStorage(application.owner)
+  await updateTotalStorage(newOwner)
+
   await syncDatasets(patchedApp)
   return patchedApp! as Application
 }
@@ -391,7 +427,10 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   await syncDatasets(application)
 }
 
-export const writeApplicationConfig = async (ctx: ApplicationWriteContext, application: Application, appConfig: any) => {
+export const writeApplicationConfig = async (ctx: ApplicationWriteContext, application: Application, appConfig: any, childrenAction?: string) => {
+  const written = { ...application, configuration: appConfig }
+  await partOf.assertNoForeignChildren('application', application, written)
+  const orphans = await partOf.detectOrphans('application', application, written, childrenAction)
   const db = mongo.db
   await db.collection('applications').updateOne(
     { id: application.id },
@@ -410,6 +449,8 @@ export const writeApplicationConfig = async (ctx: ApplicationWriteContext, appli
       }
     }
   )
+
+  await partOf.applyOrphans(ctx, 'application', application.id, orphans)
 
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 

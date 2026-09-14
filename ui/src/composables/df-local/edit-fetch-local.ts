@@ -3,6 +3,7 @@
 
 import { ref, watch, computed, type Ref, type ComputedRef } from 'vue'
 import { ofetch } from 'ofetch'
+import { withQuery } from 'ufo'
 import { useFetch, type UseFetchOptions } from '@data-fair/lib-vue/fetch.js'
 import useAsyncAction, { type AsyncActionOptions } from '@data-fair/lib-vue/async-action.js'
 import equal from 'fast-deep-equal'
@@ -53,19 +54,22 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
     return patch
   }
 
-  const save = useAsyncAction(async () => {
+  // extraQuery adds query params to the write, merged into the url the fetch was configured with
+  // (e.g. childrenAction when saving a virtual dataset whose partOf children are being orphaned)
+  const save = useAsyncAction(async (extraQuery?: Record<string, string>) => {
     if (!data.value || !serverData.value || !fetch.data.value) {
       throw new Error('cannot save data that has not been fetched yet')
     }
     let res
     const dataBeforeSave = clone(data.value)
+    const url = extraQuery ? withQuery(fetch.fullUrl.value!, extraQuery) : fetch.fullUrl.value!
     if (options.patch) {
       const patch = getPatch(serverData.value, data.value)
       if (!patch || !Object.keys(patch).length) return
-      res = await ofetch(fetch.fullUrl.value!, { method: 'PATCH', body: patch })
+      res = await ofetch(url, { method: 'PATCH', body: patch })
     } else {
       // TODO: add if-unmodified-since header ?
-      res = await ofetch(fetch.fullUrl.value!, { method: 'PUT', body: data.value })
+      res = await ofetch(url, { method: 'PUT', body: data.value })
     }
     if (options.fetchAfterSave || !res) {
       fetch.refresh()

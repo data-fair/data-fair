@@ -80,6 +80,7 @@
               </div>
               <template #append>
                 <v-icon
+                  v-if="dataset.virtual.children.length > 1"
                   color="warning"
                   :title="t('delete')"
                   @click="deleteChild(index as number)"
@@ -90,6 +91,13 @@
             </v-list-item>
           </v-list>
         </v-card>
+
+        <p
+          v-if="dataset.virtual.children.length === 1"
+          class="text-body-small mt-3"
+        >
+          {{ t('lastMemberHint') }}
+        </p>
 
         <!-- Selected columns -->
         <h2 class="text-headline-small mt-4">
@@ -253,6 +261,7 @@ fr:
   addFilter: Ajouter un filtre
   noFilter: Aucun filtre defini.
   filterActiveAccount: Filtrer sur les comptes actifs
+  lastMemberHint: Un jeu de données virtuel doit conserver au moins un jeu agrégé. Pour ne plus l'utiliser, supprimez le jeu virtuel.
 en:
   search: Search
   children: Aggregated datasets
@@ -272,6 +281,7 @@ en:
   addFilter: Add a filter
   noFilter: No filter defined.
   filterActiveAccount: Filter on active accounts
+  lastMemberHint: A virtual dataset must keep at least one aggregated dataset. To stop using it, delete the virtual dataset.
 </i18n>
 
 <script setup lang="ts">

@@ -8,7 +8,9 @@ export const findCatalogDatasets = async (publicationSite: any, sessionState: Se
   const query = {
     $and: [
       { publicationSites: `${publicationSite.type}:${publicationSite.id}` },
-      { $or: permissions.filter(sessionState, 'datasets') }
+      { $or: permissions.filter(sessionState, 'datasets') },
+      // partOf children are hidden from browsing, like in the datasets listing
+      { 'partOf.id': { $exists: false } }
     ]
   }
 

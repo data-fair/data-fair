@@ -68,7 +68,9 @@ export const whoKey = (owner: { type: string, id: string }, datasetId: string, i
 export const EXCLUDED_TOP_LEVEL = new Set([
   'status', 'draft', 'integrity', 'count', 'storage', 'esWarning', 'finalizedAt',
   'dataUpdatedAt', 'dataUpdatedBy', 'updatedAt', 'updatedBy', 'createdBy',
-  'errorStatus', 'errorRetry', 'loaded', 'descendants'
+  'errorStatus', 'errorRetry', 'loaded', 'descendants',
+  // the partOf unflag cascade writes it raw (updateMany $unset) outside applyPatch, so covering it would false-breach
+  'partOf'
 ])
 
 export const coveredPatchKeys = (patch: Record<string, any>): string[] =>

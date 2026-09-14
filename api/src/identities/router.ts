@@ -26,7 +26,7 @@ router.post('/:type/:id', async (req, res) => {
 // Remove resources owned, permissions and anonymize created and updated
 router.delete('/:type/:id', async (req, res) => {
   if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
-  await deleteIdentity(req.app, { type: req.params.type, id: req.params.id })
+  await deleteIdentity({ type: req.params.type, id: req.params.id })
   res.send()
 })
 

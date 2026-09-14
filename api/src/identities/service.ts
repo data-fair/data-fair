@@ -1,7 +1,6 @@
 // Synchronize data with the users/organizations directory.
 // Useful both for functionalities and to help respect GDPR rules.
 
-import { type Application } from 'express'
 import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
@@ -78,10 +77,10 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
 }
 
 // remove resources owned, permissions, and anonymize created/updated events + the whole data directory
-export const deleteIdentity = async (app: Application, identity: Identity) => {
+export const deleteIdentity = async (identity: Identity) => {
   const datasetsCursor = mongo.db.collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
-    await datasetsService.deleteDataset(app, dataset)
+    await datasetsService.deleteDataset(dataset)
   }
 
   for (const c of ownedCollectionNames) {
