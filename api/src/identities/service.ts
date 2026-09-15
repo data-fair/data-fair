@@ -32,6 +32,12 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         const departmentFilter = { 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }
         await collection.updateMany(departmentFilter, { $set: { 'owner.departmentName': department.name } })
       }
+      // the directory sends the complete list of departments: a department missing from it was
+      // deleted, its resources keep the id (still reachable by the organization admins) but not the name
+      await collection.updateMany(
+        { ...ownerFilter, 'owner.department': { $exists: true, $nin: departments.map(d => d.id) } },
+        { $unset: { 'owner.departmentName': 1 } }
+      )
     }
 
     // permissions granted to other organizations are only meaningful inside a partnership:

@@ -35,6 +35,22 @@ test.describe('personal information storage cleanup', () => {
     assert.deepEqual(res.data.updatedBy, { id: 'test_user1' })
   })
 
+  test('organization update renames a department and forgets the name of a deleted one', async () => {
+    const id = 'identities-cleanup-8'
+    await u1Org.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, owner: { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep1' } })
+    await anonymousAx.post(`${identitiesUrl}/organization/test_org1`, { name: 'Test Org 1', departments: [{ id: 'dep1', name: 'Renamed Department' }] }, identitiesHeaders)
+    await clearDatasetCache()
+    let dataset = (await u1Org.get('/api/v1/datasets/' + id)).data
+    assert.equal(dataset.owner.departmentName, 'Renamed Department')
+
+    // dep1 is missing from the complete list of departments: it was deleted, only its id remains
+    await anonymousAx.post(`${identitiesUrl}/organization/test_org1`, { name: 'Test Org 1', departments: [{ id: 'dep2', name: 'Department 2' }] }, identitiesHeaders)
+    await clearDatasetCache()
+    dataset = (await u1Org.get('/api/v1/datasets/' + id)).data
+    assert.equal(dataset.owner.department, 'dep1')
+    assert.equal(dataset.owner.departmentName, undefined)
+  })
+
   test('identity rename still syncs user permission entry names', async () => {
     const id = 'identities-cleanup-3'
     await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id })
