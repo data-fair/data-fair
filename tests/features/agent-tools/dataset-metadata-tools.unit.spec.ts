@@ -132,6 +132,7 @@ test.describe('buildMetadataPatch', () => {
 
     const disabled = buildMetadataPatch({ searchTerms: 'a' }, {}, { ...ctx, datasetsMetadata: { searchTerms: { active: false } } })
     assert.equal(disabled.outcomes[0].status, 'rejected')
+    assert.ok(disabled.outcomes[0].reason!.includes('disabled'))
 
     const missingSetting = buildMetadataPatch({ searchTerms: 'a' }, {}, { ...ctx, datasetsMetadata: { keywords: { active: true } } })
     assert.equal(missingSetting.outcomes[0].status, 'applied', 'a missing searchTerms setting means active')

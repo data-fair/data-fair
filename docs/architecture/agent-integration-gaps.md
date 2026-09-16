@@ -22,7 +22,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 - **Page guidance**: dataset and application detail pages (shared renderer)
 
-**Total: 37 tools, 10 subagents, 12 action buttons**
+**Total: 46 tools, 13 subagents, 20 action buttons**
 
 ---
 
