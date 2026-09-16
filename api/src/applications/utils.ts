@@ -52,7 +52,7 @@ export const clean = (application: Application, publicUrl: string, publicationSi
 }
 
 const memoizedGetFreshDataset = memoize(async (id) => {
-  return await mongo.db.collection('datasets').findOne({ id })
+  return await mongo.datasets.findOne({ id })
 }, {
   profileName: 'getAppFreshDataset',
   promise: true,
@@ -94,7 +94,7 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
 
       const freshDataset = tolerateStale
         ? clone(await memoizedGetFreshDataset(dataset.id))
-        : (await mongo.db.collection('datasets').findOne({ id: dataset.id }))
+        : (await mongo.datasets.findOne({ id: dataset.id }))
 
       if (freshDataset) {
         if (checkWithPersonalSession) {

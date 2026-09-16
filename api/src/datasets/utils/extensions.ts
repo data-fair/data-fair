@@ -397,7 +397,7 @@ class ExtensionsStream extends Transform {
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
           const pseudoSessionState = getPseudoSessionState(this.dataset.owner, 'extension', '_master-data', 'admin')
-          const masterDataset = await mongo.db.collection('datasets').findOne({ id: masterDatasetId })
+          const masterDataset = await mongo.datasets.findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!(permissionsUtils.list('datasets', masterDataset, pseudoSessionState) as string[]).includes('readLines')) {
             throw new Error(`[noretry] permission manquante sur le jeu de données de référence "${masterDataset.slug}" (${masterDataset.id})`)
