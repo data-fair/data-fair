@@ -147,4 +147,14 @@ test.describe('settings API', () => {
     const resave = await testUser1.put('/api/v1/settings/user/test_user1', { apiKeys: reread.apiKeys })
     assert.equal(resave.status, 200)
   })
+
+  test('accepts catalogSearch switches', async () => {
+    const res = await testUser1Org.put('/api/v1/settings/organization/test_org1', {
+      catalogSearch: { indexSchemaLabels: false, indexEnumValues: true }
+    })
+    assert.deepEqual(res.data.catalogSearch, { indexSchemaLabels: false, indexEnumValues: true })
+    const fetched = (await testUser1Org.get('/api/v1/settings/organization/test_org1')).data
+    assert.deepEqual(fetched.catalogSearch, { indexSchemaLabels: false, indexEnumValues: true })
+    await assert.rejects(testUser1Org.put('/api/v1/settings/organization/test_org1', { catalogSearch: { unknown: true } }), { status: 400 })
+  })
 })
