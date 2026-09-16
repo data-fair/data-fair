@@ -45,15 +45,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   updateOn: 'blur',
   density: 'comfortable',
   xI18n: true,
-  locale: locale.value,
-  // unlike the rest of settingsSchema (base title in English, x-i18n-title providing fr),
-  // catalogSearch's sub-properties are authored with a French base title and only an
-  // x-i18n-title.en variant. @json-layout/core resolves x-i18n as
-  // `value[locale] ?? value[defaultLocale] ?? schema[title]`, and defaultLocale defaults
-  // to 'en' — so on locale 'fr' it would pick the 'en' override instead of falling back to
-  // the French base title. Pin defaultLocale to 'fr' so that fallback lands correctly; the
-  // 'en' locale still resolves straight from x-i18n-title.en either way.
-  defaultLocale: 'fr'
+  locale: locale.value
 }))
 </script>
 

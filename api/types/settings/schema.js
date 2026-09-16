@@ -545,22 +545,22 @@ export default {
     },
     catalogSearch: {
       type: 'object',
-      title: 'Recherche du catalogue',
-      'x-i18n-title': { en: 'Catalog search' },
-      description: 'Ce que la recherche textuelle du catalogue voit en plus des métadonnées. Une correspondance peut révéler qu\'une colonne ou une valeur existe à quiconque peut lister le jeu de données, même sans accès à son schéma ou à ses lignes ; les jeux de données exposés à de tels lecteurs sont automatiquement exclus.',
-      'x-i18n-description': { en: 'What the catalog text search sees on top of the metadata. A match can reveal that a column or a value exists to anyone who can list the dataset, even without access to its schema or lines; datasets exposed to such readers are excluded automatically.' },
+      title: 'Catalog search',
+      'x-i18n-title': { fr: 'Recherche du catalogue' },
+      description: 'What the catalog text search sees on top of the metadata. A match can reveal that a column or a value exists to anyone who can list the dataset, even without access to its schema or lines; datasets exposed to such readers are excluded automatically.',
+      'x-i18n-description': { fr: 'Ce que la recherche textuelle du catalogue voit en plus des métadonnées. Une correspondance peut révéler qu\'une colonne ou une valeur existe à quiconque peut lister le jeu de données, même sans accès à son schéma ou à ses lignes ; les jeux de données exposés à de tels lecteurs sont automatiquement exclus.' },
       additionalProperties: false,
       properties: {
         indexSchemaLabels: {
           type: 'boolean',
-          title: 'Libellés et descriptions de colonnes',
-          'x-i18n-title': { en: 'Column titles and descriptions' },
+          title: 'Column titles and descriptions',
+          'x-i18n-title': { fr: 'Libellés et descriptions de colonnes' },
           default: true
         },
         indexEnumValues: {
           type: 'boolean',
-          title: 'Valeurs distinctes des colonnes à faible cardinalité',
-          'x-i18n-title': { en: 'Distinct values of low-cardinality columns' },
+          title: 'Distinct values of low-cardinality columns',
+          'x-i18n-title': { fr: 'Valeurs distinctes des colonnes à faible cardinalité' },
           default: false
         }
       }
