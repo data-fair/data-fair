@@ -224,6 +224,34 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
+  test('owner transfer recomputes _searchText for the new owner\'s catalogSearch settings', async () => {
+    // test_user5 is admin of both test_org2 and test_org6 (dev/resources/organizations.json)
+    const testUser5Org2 = await axiosAuth('test_user5@test.com', 'test_org2')
+    const testUser5Org6 = await axiosAuth('test_user5@test.com', 'test_org6')
+    const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+
+    // test_org2 opts into indexing enum values, test_org6 keeps the default (off)
+    await testUser5Org2.put('/api/v1/settings/organization/test_org2', { catalogSearch: { indexEnumValues: true } })
+
+    // collapsable.csv's `roles` column has exactly 2 distinct values across its 10 rows, low
+    // enough cardinality for finalize to stamp an enum on it; "contrib" only ever appears inside
+    // that enum value, never in a title or description
+    const dataset = await sendDataset('datasets/collapsable.csv', testUser5Org2)
+    const enumCol = dataset.schema.find((p: any) => p.key === 'roles')
+    assert.ok(enumCol?.enum?.length, 'the roles column must carry a non-empty enum')
+    assert.equal(await count(testUser5Org2, 'contrib'), 1, 'org2 opted into enum values')
+
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/owner`, {
+      type: 'organization',
+      id: 'test_org6',
+      name: 'Test Org 6'
+    })
+
+    // the dataset now belongs to test_org6, which never enabled indexEnumValues: its _searchText
+    // must be recomputed under org6's settings, not carried over from org2's
+    assert.equal(await count(testUser5Org6, 'contrib'), 0, '_searchText must not still match on the previous owner\'s enum values')
+  })
+
   test('Upload new dataset in org zone then change ownership to department', async () => {
     const ax = testUser1Org
     let dataset = await sendDataset('datasets/dataset1.csv', ax)

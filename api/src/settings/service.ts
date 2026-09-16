@@ -178,6 +178,20 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
+
+  // sweep BEFORE the settings document is replaced: a crash mid-sweep then leaves old settings +
+  // old _searchText (consistent), and a retried save re-detects the same difference and completes.
+  // Sweeping after the replace (as this used to) let an interrupted opt-out become permanent: the
+  // settings document already says the switch is off, so updateCatalogSearch's equal() short-circuit
+  // would skip the sweep on every later save and the unswept half of the catalog would keep
+  // enum-bearing _searchText forever — the exact direction the settings disclaimer promises to honour.
+  // No truthy guard on existingSettings here: it is null on the owner's very first settings write,
+  // but existing datasets may already have been indexed under the implicit default catalogSearch,
+  // so that first write can still be a real change to recompute.
+  if (isMainSettings(settings)) {
+    await updateCatalogSearch(owner, existingSettings && isMainSettings(existingSettings) ? existingSettings.catalogSearch : undefined, settings.catalogSearch)
+  }
+
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
@@ -189,13 +203,6 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata) {
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
-  }
-
-  // no truthy guard on oldSettings here: findOneAndReplace returns null on the owner's very
-  // first settings write, but existing datasets may already have been indexed under the
-  // implicit default catalogSearch, so that first write can still be a real change to recompute
-  if (isMainSettings(settings)) {
-    await updateCatalogSearch(owner, oldSettings && isMainSettings(oldSettings) ? oldSettings.catalogSearch : undefined, settings.catalogSearch)
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
@@ -221,8 +228,13 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
 // the schema-derived search text of every dataset of the owner depends on these switches
 const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: CatalogSearchSettings | undefined, newCatalogSearch: CatalogSearchSettings | undefined) => {
   if (equal(oldCatalogSearch ?? {}, newCatalogSearch ?? {})) return
+  // no draftReason filter here: a stored dataset document never carries a top-level `draftReason`
+  // (it only ever lives at `draft.draftReason`), so that clause would match every document and do
+  // nothing. The real non-draft-only effect: a file-new draft's top-level `schema` is `[]` (its
+  // real schema sits under `draft.schema`), and computeSearchText returns undefined for an empty
+  // schema — a file-updated draft's top-level schema is the still-published one, correctly swept.
   const cursor = mongo.datasets.find(
-    { 'owner.type': owner.type, 'owner.id': owner.id, draftReason: { $exists: false } },
+    { 'owner.type': owner.type, 'owner.id': owner.id },
     { projection: { id: 1, schema: 1, permissions: 1, _searchText: 1 } }
   )
   const ops: AnyBulkWriteOperation<DatasetInternal & { _id: string }>[] = []

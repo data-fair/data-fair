@@ -29,6 +29,7 @@ import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
+import { searchTextPatch } from '../utils/search-text.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
 import { dir } from '../utils/files.ts'
@@ -263,7 +264,13 @@ export const registerMetadataRoutes = (router: Router) => {
     })
     await permissions.initResourcePermissions(patch, preservePermissions)
 
+    // the new owner's settings.catalogSearch may differ from the previous owner's (e.g. the
+    // previous owner had indexEnumValues on): recompute rather than carry over stale _searchText
+    const { _searchText } = await searchTextPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
+
     const changeOwnerUpdate: any = { $set: patch }
+    if (_searchText === null) changeOwnerUpdate.$unset = { _searchText: true }
+    else changeOwnerUpdate.$set._searchText = _searchText
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
