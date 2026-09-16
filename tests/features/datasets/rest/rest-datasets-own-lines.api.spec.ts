@@ -378,4 +378,32 @@ test.describe('REST datasets with owner specific lines', () => {
     res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0]._owner, undefined)
   })
+
+  test('Refuse to deactivate line ownership while a unique constraint references _owner', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }],
+      constraints: [{ type: 'unique', properties: ['col1', '_owner'] }]
+    })
+    assert.equal(res.status, 201)
+    let dataset = res.data
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { col1: 'value 1' })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+
+    // the constraint would keep referencing a column that no longer exists in the schema
+    await assert.rejects(
+      testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: false } }),
+      (err: any) => err.status === 400
+    )
+
+    // dropping the constraint in the same patch makes it acceptable
+    res = await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { rest: { lineOwnership: false }, constraints: [] })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    assert.equal(dataset.schema.find((p: any) => p.key === '_owner'), undefined)
+    res = await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'col1', type: 'string', title: 'Column 1' }] })
+    assert.equal(res.status, 200)
+  })
 })

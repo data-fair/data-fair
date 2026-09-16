@@ -172,9 +172,15 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // getLineId derives _id from the primary key, so unsetting a column it reads would make the next
     // write on an existing line compute a different _id and insert a duplicate instead of updating it.
     // `'primaryKey' in patch` because a patch may drop the primary key altogether by setting it to null.
+    const ownershipCol = (key: string) => key === '_owner' || key === '_ownerName'
     const primaryKey = 'primaryKey' in patch ? patch.primaryKey : dataset.primaryKey
-    if (primaryKey?.some((key: string) => key === '_owner' || key === '_ownerName')) {
+    if (primaryKey?.some(ownershipCol)) {
       throw httpError(400, 'Impossible de désactiver la propriété des lignes tant que les colonnes de propriété font partie de la clé primaire')
+    }
+    // same for a unique constraint: it would keep referencing columns gone from the schema and make
+    // every later schema patch fail in checkConstraints
+    if (effectiveConstraints?.some((c: any) => c.properties?.some(ownershipCol))) {
+      throw httpError(400, 'Impossible de désactiver la propriété des lignes tant qu\'une contrainte d\'unicité porte sur les colonnes de propriété')
     }
     removedRestProps.push({ key: '_owner' })
     removedRestProps.push({ key: '_ownerName' })
