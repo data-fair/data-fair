@@ -97,12 +97,18 @@ export const SEARCH_TEXT_LIMITS = {
   enumsBytes: 8192
 } as const
 
-// first `max` characters, cut back to the last whitespace so no word is split
+// first `max` characters, cut back to the last whitespace so no word is split. When the first
+// `max` characters contain no whitespace at all (one long unbroken token: a URL, a code), look
+// forward for the next whitespace instead of cutting mid-token — capped at 2×max so a single
+// token cannot swallow the whole labels budget; past that cap it is hard-truncated at `max`.
 const head = (text: string, max: number): string => {
   if (text.length <= max) return text
   const cut = text.slice(0, max)
   const space = cut.lastIndexOf(' ')
-  return (space > 0 ? cut.slice(0, space) : cut).trim()
+  if (space > 0) return cut.slice(0, space).trim()
+  const cap = max * 2
+  const nextSpace = text.slice(0, cap).indexOf(' ', max)
+  return (nextSpace > 0 ? text.slice(0, nextSpace) : text.slice(0, max)).trim()
 }
 
 // concatenate strings in order, dropping whole entries once the byte budget is reached

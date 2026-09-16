@@ -55,6 +55,21 @@ test.describe('computeSearchText', () => {
     assert.doesNotMatch(straddlingText, /y/, 'no partial fragment of the straddling word')
   })
 
+  test('description head with no space in the first 200 chars extends forward to the next word boundary, capped', () => {
+    // a single unbroken 250-char token (e.g. a URL) followed by more words: the first 200 chars
+    // contain no space at all, so a naive slice(0, 200) would split the token mid-word. The fix
+    // looks forward for the next space instead of cutting there.
+    const token = 'a'.repeat(250)
+    const text = computeSearchText({ schema: [col('a', { description: token + ' suite du texte' })] })!
+    assert.equal(text, token, 'extends to the token\'s own end rather than splitting it mid-word')
+
+    // a single unbroken token longer than the 2x cap (400 chars): no space to extend to within
+    // the cap, so it falls back to a hard truncation at 200 rather than growing unbounded
+    const giant = 'b'.repeat(500)
+    const giantText = computeSearchText({ schema: [col('b', { description: giant })] })!
+    assert.equal(giantText, 'b'.repeat(SEARCH_TEXT_LIMITS.descriptionHead))
+  })
+
   test('identical labels are deduplicated', () => {
     const text = computeSearchText({ schema: [col('a', { title: 'Femmes 15 ans' }), col('b', { title: 'Femmes 15 ans' })] })
     assert.equal(text, 'Femmes 15 ans')
