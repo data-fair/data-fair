@@ -1,4 +1,5 @@
 // pure functions for the datasets module — no I/O. The unit-test surface.
+import type { Dataset } from '#types'
 
 // matches the separator used by memoizee's built-in `primitive` normalizer
 const KEY_SEP = '\u0001'
@@ -71,4 +72,72 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true
+}
+
+// trim leading/trailing whitespace of the free-text fields (explicit list: separators,
+// regex patterns and date formats are syntaxes where whitespace is significant)
+export const trimDataset = (dataset: Partial<Dataset>) => {
+  if (dataset.title) dataset.title = dataset.title.trim()
+  if (dataset.summary) dataset.summary = dataset.summary.trim()
+  if (dataset.description) dataset.description = dataset.description.trim()
+  if (dataset.origin) dataset.origin = dataset.origin.trim()
+  if (dataset.image) dataset.image = dataset.image.trim()
+  if (dataset.creator) dataset.creator = dataset.creator.trim()
+  if (dataset.spatial) dataset.spatial = dataset.spatial.trim()
+  if (dataset.keywords) {
+    dataset.keywords = [...new Set(dataset.keywords.map(keyword => keyword.trim()).filter(Boolean))]
+  }
+  for (const key of Object.keys(dataset.customMetadata ?? {})) {
+    if (dataset.customMetadata![key]) dataset.customMetadata![key] = dataset.customMetadata![key].trim()
+  }
+  if (dataset.conformsTo) {
+    if (dataset.conformsTo.title) dataset.conformsTo.title = dataset.conformsTo.title.trim()
+    if (dataset.conformsTo.version) dataset.conformsTo.version = dataset.conformsTo.version.trim()
+    if (dataset.conformsTo.url) dataset.conformsTo.url = dataset.conformsTo.url.trim()
+  }
+  // the generated attachment types lose the fields shared by the oneOf branches
+  const attachments = (dataset.attachments ?? []) as { title?: string, description?: string, name?: string, url?: string, targetUrl?: string }[]
+  for (const attachment of attachments) {
+    if (attachment.title) attachment.title = attachment.title.trim()
+    if (attachment.description) attachment.description = attachment.description.trim()
+    if (attachment.name) attachment.name = attachment.name.trim()
+    if (attachment.url) attachment.url = attachment.url.trim()
+    if (attachment.targetUrl) attachment.targetUrl = attachment.targetUrl.trim()
+  }
+  for (const prop of dataset.schema ?? []) {
+    if (prop.title) prop.title = prop.title.trim()
+    if (prop.description) prop.description = prop.description.trim()
+    if (prop['x-group']) prop['x-group'] = prop['x-group'].trim()
+    if (prop['x-originalName']) prop['x-originalName'] = prop['x-originalName'].trim()
+    if (prop.patternErrorMessage) prop.patternErrorMessage = prop.patternErrorMessage.trim()
+    if (prop['x-labels']) {
+      prop['x-labels'] = Object.fromEntries(Object.entries(prop['x-labels']).map(([value, label]) => [value.trim(), label.trim()]))
+    }
+    if (prop['x-transform']) {
+      if (prop['x-transform'].expr) prop['x-transform'].expr = prop['x-transform'].expr.trim()
+      if (prop['x-transform'].examples) prop['x-transform'].examples = prop['x-transform'].examples.map(example => example.trim())
+    }
+  }
+  for (const extension of dataset.extensions ?? []) {
+    if (extension.type === 'exprEval') {
+      if (extension.expr) extension.expr = extension.expr.trim()
+    } else if (extension.type === 'remoteService') {
+      if (extension.propertyPrefix) extension.propertyPrefix = extension.propertyPrefix.trim()
+      for (const overwrite of Object.values(extension.overwrite ?? {})) {
+        if (overwrite.title) overwrite.title = overwrite.title.trim()
+        if (overwrite['x-originalName']) overwrite['x-originalName'] = overwrite['x-originalName'].trim()
+      }
+    }
+  }
+  for (const filter of dataset.virtual?.filters ?? []) {
+    filter.values = filter.values.map(value => value.trim()).filter(Boolean)
+  }
+  const searchs: { title?: string, description?: string, filters?: { values: string[] }[] }[] = [...dataset.masterData?.bulkSearchs ?? [], ...dataset.masterData?.singleSearchs ?? []]
+  for (const search of searchs) {
+    if (search.title) search.title = search.title.trim()
+    if (search.description) search.description = search.description.trim()
+    for (const filter of search.filters ?? []) {
+      filter.values = filter.values.map(value => value.trim()).filter(Boolean)
+    }
+  }
 }

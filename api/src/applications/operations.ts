@@ -47,3 +47,15 @@ export const buildLoginHtml = (loginHtml: string, opts: { siteUrl: string, appli
     .replace('{AUTH_ROUTE}', authUrl.href)
     .replace('{LOGO}', logoUrl.href)
 }
+
+// trim leading/trailing whitespace of the free-text fields (configuration is the base
+// application's own form, not ours to touch)
+export const trimApplication = (application: Partial<Application>) => {
+  if (application.title) application.title = application.title.trim()
+  if (application.summary) application.summary = application.summary.trim()
+  if (application.description) application.description = application.description.trim()
+  if (application.image) application.image = application.image.trim()
+  for (const attachment of application.attachments ?? []) {
+    if (attachment.title) attachment.title = attachment.title.trim()
+  }
+}

@@ -103,3 +103,41 @@ export const parseOwnerParams = (type: 'user' | 'organization', idParam: string)
   if (!department) params.ownerFilter.department = { $exists: false }
   return params
 }
+
+// trim leading/trailing whitespace of the free-text fields
+export const trimSettings = (settings: Partial<Settings>) => {
+  for (const topic of settings.topics ?? []) {
+    if (topic.title) topic.title = topic.title.trim()
+  }
+  for (const license of settings.licenses ?? []) {
+    if (license.title) license.title = license.title.trim()
+    if (license.href) license.href = license.href.trim()
+  }
+  for (const concept of settings.privateVocabulary ?? []) {
+    if (concept.title) concept.title = concept.title.trim()
+    if (concept.description) concept.description = concept.description.trim()
+    if (concept.tag) concept.tag = concept.tag.trim()
+  }
+  for (const apiKey of settings.apiKeys ?? []) {
+    if (apiKey.title) apiKey.title = apiKey.title.trim()
+  }
+  for (const webhook of settings.webhooks ?? []) {
+    if (webhook.title) webhook.title = webhook.title.trim()
+    if (webhook.target?.params?.url) webhook.target.params.url = webhook.target.params.url.trim()
+  }
+  if (settings.datasetsMetadata) {
+    const { spatial, temporal, frequency, creator, modified, keywords, conformsTo } = settings.datasetsMetadata
+    for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
+      if (option?.title) option.title = option.title.trim()
+    }
+    for (const custom of settings.datasetsMetadata.custom ?? []) {
+      if (custom.key) custom.key = custom.key.trim()
+      if (custom.title) custom.title = custom.title.trim()
+    }
+  }
+  if (settings.info?.contact) {
+    if (settings.info.contact.name) settings.info.contact.name = settings.info.contact.name.trim()
+    if (settings.info.contact.url) settings.info.contact.url = settings.info.contact.url.trim()
+    if (settings.info.contact.email) settings.info.contact.email = settings.info.contact.email.trim()
+  }
+}
