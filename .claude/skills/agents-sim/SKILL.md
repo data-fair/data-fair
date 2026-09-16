@@ -52,6 +52,36 @@ while someone is relying on that data.
    moderation guard) and `SIM_USER_MODEL` (default `haiku`), and recorded per
    run, so verdicts from different tiers are never compared silently.
 
+   **Confirm it started.** A suite takes minutes, so you will want to background
+   it — and a run that never launched looks exactly like a run still going. The
+   sidecar is written BEFORE each case begins, so within a minute of starting:
+
+   ```bash
+   ls simulations/tmp/*.run.json      # a file here means a case really started
+   ```
+
+   An empty `simulations/tmp/` after a minute means the run is not going; find
+   out why rather than waiting longer.
+
+   **Wait on the process id, never on a text pattern.** `pgrep -f` matches full
+   command lines, including the command line of the waiter you are writing — so
+
+   ```bash
+   until ! pgrep -f "playwright.sim.config"; do sleep 15; done   # WRONG
+   ```
+
+   matches itself and waits forever, silently, producing nothing. One session lost
+   an hour and three quarters to exactly this, and then repeated it while trying to
+   fix it. Capture the pid and watch that instead:
+
+   ```bash
+   nohup npm run simulate > sim.log 2>&1 &
+   SIMPID=$!
+   while kill -0 "$SIMPID" 2>/dev/null; do sleep 20; done
+   ```
+
+   For the same reason, never `pkill -f` a pattern taken from your own script.
+
 4. **Ignore the runner's own account of how it went.** The transcript at
    `simulations/tmp/sim-<case>.json` is the evidence. A Playwright `passed` line
    means the run was valid, not that the product behaved.
