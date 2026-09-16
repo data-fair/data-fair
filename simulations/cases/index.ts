@@ -56,5 +56,41 @@ export const cases: SimulationCase[] = [
     // says 3.
     goal: 'Tu veux confirmer combien de ces grands équipements sont des stades, parce que tu dois citer ce chiffre en réunion cet après-midi.',
     maxTurns: 6
+  },
+  // The handover at the end of a workflow: does the assistant keep working once
+  // the wizard is gone?
+  //
+  // The creation wizard ends with a button only the person can press. At that
+  // moment the page changes, the wizard's tools disappear with it, and the
+  // application reports both the creation and the new location. Everything this
+  // case is about happens in that gap: the assistant should carry straight on
+  // from what it was told, on the page the person now has in front of them,
+  // without being prompted again and without asking where they are.
+  //
+  // Scope is deliberate. The person asks for the dataset to exist and to be told
+  // what comes next — NOT for its columns to be built. No tool can add a column
+  // to a schema (the assistant can annotate and configure existing ones only),
+  // so a goal that required fields would be unsatisfiable by construction and
+  // would measure a missing capability instead of the handover. Whether the
+  // assistant handles its own limits gracefully is a real question, and a
+  // different case.
+  //
+  // An earlier version asked for the fields and failed exactly that way: the
+  // assistant promised to define them through the add-row dialog, retracted a
+  // turn later, and fell back on asking the person to describe their screen.
+  //
+  // The persona also stops acting once the dataset exists, and that is load
+  // bearing rather than politeness. When it kept following instructions, the
+  // assistant sent it hunting for an "Ajouter une colonne" button — the one
+  // thing nothing can help with — and it burned its whole per-message tool
+  // budget clicking around, so the run was thrown away before the handover
+  // could be read. What is under test is whether the ASSISTANT carries on, not
+  // whether the person can execute more steps.
+  {
+    name: 'creation-guidee-jeu-de-donnees',
+    route: '/data-fair/datasets',
+    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu ne lis pas l\'écran en détail et tu ne veux pas avoir à le décrire à quelqu\'un. Tu fais ce qu\'on te dit de faire, un pas à la fois, jusqu\'à la création. Après ça tu t\'arrêtes : tu ne pars pas explorer l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
+    goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux qu\'on te dise sur quoi cliquer jusqu\'à ce que ce soit créé. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
+    maxTurns: 6
   }
 ]
