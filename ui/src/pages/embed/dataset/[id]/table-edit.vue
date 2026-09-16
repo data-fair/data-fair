@@ -12,6 +12,7 @@
       :height="windowHeight"
       :interactions="interactions"
       :edit="true"
+      :own-lines="ownLines"
     />
   </v-container>
 </template>
@@ -41,4 +42,6 @@ const sort = useStringSearchParam('sort')
 // default "1" so that an absent param stays distinguishable from a legacy empty "?interaction="
 const interaction = useStringSearchParam('interaction', '1')
 const interactions = computed(() => parseInteractions(interaction.value))
+// ?ownLines=true restricts the embedded editable table to the active account's own lines
+const ownLines = useBooleanSearchParam('ownLines')
 </script>

@@ -242,7 +242,6 @@
               hide-details
             />
             <v-checkbox
-              v-if="session.state.user?.adminMode"
               v-model="restLineOwnership"
               :label="t('lineOwnership')"
               density="comfortable"
@@ -407,7 +406,6 @@ import { type ListedDataset } from '~/components/dataset/select/utils'
 const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute<'/new-dataset'>()
-const session = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 
 const showAgentChat = useShowAgentChat()

@@ -58,7 +58,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const taskProgress = ref<TaskProgress>()
   watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
 
-  const jsonSchemaFetch = useFetch<Record<string, unknown>>($apiPath + `/datasets/${id}/schema`, {
+  // /schema needs readSchema; a manageOwnLines-only holder (crowd-sourcing own-lines) only has
+  // readSafeSchema, so fall back to /safe-schema — same shape minus the cardinality/enum data clues,
+  // enough to render the edit forms
+  const jsonSchemaFetch = useFetch<Record<string, unknown>>(() => {
+    const useSafe = !dataset.value?.userPermissions.includes('readSchema')
+    return $apiPath + `/datasets/${id}/${useSafe ? 'safe-schema' : 'schema'}`
+  }, {
     query: () => ({
       draft,
       mimeType: 'application/schema+json',

@@ -4,13 +4,23 @@ import { ExtendedResult } from '~/composables/dataset/lines'
 export type DatasetEdition = ReturnType<typeof createDatasetEdition>
 const datasetEditionKey = Symbol('dataset-edition')
 
-const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<string | undefined>) => {
-  const { id, dataset } = useDatasetStore()
+const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<string | undefined>, linesOwner?: Ref<string | undefined>) => {
+  const { id, dataset, can } = useDatasetStore()
   const selectedResults = ref<ExtendedResult[]>([])
 
   watch(baseFetchUrl, () => {
     selectedResults.value = []
   })
+
+  // own-lines mode: writes go through own/{owner}/* and are gated on the *OwnLine permission classes,
+  // so a holder of manageOwnLines edits only their own lines. The route base and the capability checks
+  // both switch on the presence of an owner — resolved here so every action component stays agnostic.
+  const ownLines = computed(() => !!linesOwner?.value)
+  const routeBase = computed(() => ownLines.value ? `datasets/${id}/own/${linesOwner!.value}` : `datasets/${id}`)
+  const canCreate = computed(() => !!can(ownLines.value ? 'createOwnLine' : 'createLine').value)
+  const canUpdate = computed(() => !!can(ownLines.value ? 'updateOwnLine' : 'updateLine').value)
+  const canDelete = computed(() => !!can(ownLines.value ? 'deleteOwnLine' : 'deleteLine').value)
+  const canBulk = computed(() => !!can(ownLines.value ? 'bulkOwnLines' : 'bulkLines').value)
 
   const addLineTrigger = ref(false)
   const saving = ref(false)
@@ -23,7 +33,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
     try {
       let summary: RestActionsSummary
       try {
-        summary = await $fetch(`datasets/${id}/_bulk_lines`, { method: 'POST', body })
+        summary = await $fetch(`${routeBase.value}/_bulk_lines`, { method: 'POST', body })
       } catch (err: any) {
         // when every operation fails the endpoint answers 400 with the summary object as the body
         if (err?.data && typeof err.data === 'object' && Array.isArray(err.data.errors)) summary = err.data
@@ -54,7 +64,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
         body._action = 'create'
       }
       formData.append('_body', JSON.stringify(body))
-      const res = await $fetch(`datasets/${id}/lines`, { method: 'POST', body: formData })
+      const res = await $fetch(`${routeBase.value}/lines`, { method: 'POST', body: formData })
       indexedAt.value = res._updatedAt
     } finally {
       saving.value = false
@@ -67,7 +77,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   const removeLine = async (lineId: string) => {
     saving.value = true
     try {
-      await $fetch(`datasets/${id}/lines/${lineId}`, { method: 'DELETE' })
+      await $fetch(`${routeBase.value}/lines/${lineId}`, { method: 'DELETE' })
       indexedAt.value = new Date().toISOString()
     } finally {
       saving.value = false
@@ -80,12 +90,18 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
     saving,
     bulkLines,
     saveLine,
-    removeLine
+    removeLine,
+    ownLines,
+    routeBase,
+    canCreate,
+    canUpdate,
+    canDelete,
+    canBulk
   }
 }
 
-export const provideDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<string | undefined>) => {
-  const store = createDatasetEdition(baseFetchUrl, indexedAt)
+export const provideDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<string | undefined>, linesOwner?: Ref<string | undefined>) => {
+  const store = createDatasetEdition(baseFetchUrl, indexedAt, linesOwner)
   provide(datasetEditionKey, store)
   return store
 }

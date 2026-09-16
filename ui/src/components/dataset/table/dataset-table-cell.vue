@@ -39,25 +39,6 @@
       />
     </template>
 
-    <template v-else-if="header.key === '_owner'">
-      <v-tooltip
-        v-if="result._owner"
-        location="top"
-      >
-        <template #activator="{ props: tooltipProps }">
-          <span
-            class="text-body-medium"
-            v-bind="tooltipProps"
-          >
-            <v-avatar :size="28">
-              <img :src="`${$sdUrl}/api/avatars/${result._owner.split(':').join('/')}/avatar.png`">
-            </v-avatar>
-          </span>
-        </template>
-        {{ result._owner }}
-      </v-tooltip>
-    </template>
-
     <template v-if="header.key === '_actions'">
       <template v-if="selectable">
         <v-btn
