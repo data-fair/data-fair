@@ -36,6 +36,8 @@ test.describe('computeSearchText', () => {
     assert.match(text, /bénévole/)
     assert.doesNotMatch(text, /42/)
     assert.doesNotMatch(text, /x{101}/)
+    // the over-long value is dropped entirely, not truncated to the cap
+    assert.doesNotMatch(text, /x{100}/)
   })
 
   test('description head is cut at a word boundary', () => {
@@ -43,6 +45,14 @@ test.describe('computeSearchText', () => {
     const text = computeSearchText({ schema: [col('a', { description })] })!
     assert.ok(text.length <= SEARCH_TEXT_LIMITS.descriptionHead)
     assert.ok(text.endsWith('mot'), 'no partial word')
+
+    // a fixture where a word genuinely straddles the 200-char boundary: a naive
+    // slice(0, 200) with no last-space lookup would split "yyyy...y" mid-word
+    const straddling = 'x'.repeat(195) + ' ' + 'y'.repeat(20)
+    const straddlingText = computeSearchText({ schema: [col('b', { description: straddling })] })!
+    assert.ok(straddlingText.length <= SEARCH_TEXT_LIMITS.descriptionHead)
+    assert.ok(straddlingText.endsWith('x'.repeat(195)), 'cuts back before the straddling word, not mid-word')
+    assert.doesNotMatch(straddlingText, /y/, 'no partial fragment of the straddling word')
   })
 
   test('identical labels are deduplicated', () => {
@@ -57,6 +67,12 @@ test.describe('computeSearchText', () => {
     assert.match(text, /^Colonne 0 /)
     const kept = text.split('\n').length
     assert.doesNotMatch(text, new RegExp(`Colonne ${kept} `), 'the first dropped column is absent entirely')
+    // every kept line is a complete, well-formed column label — never a truncated fragment
+    // (a buggy implementation that joins-then-slices at the byte boundary would produce a
+    // partial last line here and fail this check even though the two asserts above still pass)
+    for (const line of text.split('\n')) {
+      assert.match(line, /^Colonne \d+ (libellé long ){9}libellé long$/, `line is a whole, untruncated column: ${JSON.stringify(line)}`)
+    }
   })
 
   test('guard: a grantee with list but not readSchema drops the labels, not readLines drops the enums', () => {
