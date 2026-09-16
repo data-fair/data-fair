@@ -116,6 +116,9 @@ module.exports = {
       __format: 'json'
     }
   },
+  catalogSearch: {
+    language: 'CATALOG_SEARCH_LANGUAGE'
+  },
   cache: {
     publicMaxAge: {
       __name: 'CACHE_PUBLIC_MAX_AGE',

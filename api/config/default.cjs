@@ -73,6 +73,11 @@ module.exports = {
     maxBulkOps: 1000,
     options: {} // optional mongo client options
   },
+  catalogSearch: {
+    // language of the MongoDB text index over dataset/application metadata (any mongo text-index
+    // language name, or 'none' for no stemming and no stopwords)
+    language: 'french'
+  },
   map: {
     // a maplibre style to display geo data
     // a relative "./" prefix is resolved against the site root, an absolute URL is used as is
