@@ -51,4 +51,37 @@ test.describe('catalog search', () => {
 
     await assert.rejects(u1.patch('/api/v1/datasets/cs-bureaux', { searchTerms: 'x'.repeat(1001) }), { status: 400 })
   })
+
+  test('column labels feed the search, keys do not, and _searchText never leaves the API', async () => {
+    await u1.post('/api/v1/datasets/cs-erp', {
+      isRest: true,
+      title: 'Accessibilité des ERP',
+      schema: [
+        { key: 'accueil_chambre_nombre_accessibles', type: 'integer', title: 'Nombre de chambres accessibles à une personne en fauteuil roulant' },
+        { key: 'nom', type: 'string' }
+      ]
+    })
+    const byLabel = (await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', select: 'id' } })).data
+    assert.equal(byLabel.count, 1)
+    assert.equal(byLabel.results[0].id, 'cs-erp')
+    const byKey = (await u1.get('/api/v1/datasets', { params: { q: 'accueil_chambre_nombre_accessibles', size: 0 } })).data
+    assert.equal(byKey.count, 0)
+
+    for (const res of [
+      (await u1.get('/api/v1/datasets/cs-erp')).data,
+      (await u1.get('/api/v1/datasets', { params: { q: 'fauteuil' } })).data.results[0],
+      (await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', select: 'id,_searchText' } })).data.results[0],
+      (await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', select: 'id,_searchText', raw: 'true' } })).data.results[0]
+    ]) assert.equal(res._searchText, undefined)
+
+    // a title edit is an innocuous schema patch (no reprocessing): still recomputed
+    await u1.patch('/api/v1/datasets/cs-erp', {
+      schema: [
+        { key: 'accueil_chambre_nombre_accessibles', type: 'integer', title: 'Chambres PMR' },
+        { key: 'nom', type: 'string' }
+      ]
+    })
+    assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', size: 0 } })).data.count, 0)
+    assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'PMR', size: 0 } })).data.count, 1)
+  })
 })

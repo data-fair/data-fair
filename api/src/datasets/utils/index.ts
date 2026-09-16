@@ -197,6 +197,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset.permissions
   delete dataset._id
   delete dataset._modified
+  delete dataset._searchText
   delete dataset._uniqueRefs
   delete dataset.initFrom
   delete dataset.loaded

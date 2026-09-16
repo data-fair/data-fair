@@ -18,6 +18,7 @@ import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadata
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
+import { searchTextPatch } from './utils/search-text.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
@@ -142,7 +143,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   for (const [k, v] of Object.entries(rawSort)) {
     sort[k === 'modified' ? '_modified' : k] = v
   }
-  const project = findUtils.project(reqQuery.select, ['_modified'], reqQuery.raw === 'true')
+  const project = findUtils.project(reqQuery.select, ['_modified', '_searchText'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
@@ -375,6 +376,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
+  const { _searchText } = await searchTextPatch(dataset)
+  if (_searchText) dataset._searchText = _searchText
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -539,6 +542,16 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch._modified = computeModified({ ...dataset, ...patch })
   }
 
+  // schema-derived search text: recomputed when the schema is patched (finalize patches it with
+  // the enums stamped; column title/description edits are innocuous props that trigger no
+  // reprocessing, so nothing else would). Skipped for drafts — the field describes the published
+  // dataset. Kept out of `patch`: the write routes report Object.keys(patch) to the user as the
+  // fields they modified.
+  let searchTextUpdate: { _searchText: string | null } | undefined
+  if (patch.schema && !dataset.draftReason && !patch.draftReason) {
+    searchTextUpdate = await searchTextPatch({ ...dataset, ...patch })
+  }
+
   Object.assign(dataset, patch)
 
   // if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
@@ -600,6 +613,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       mongoPatch.$set = mongoPatch.$set || {}
       mongoPatch.$set[key] = patch[key]
     }
+  }
+  if (searchTextUpdate) {
+    if (searchTextUpdate._searchText === null) (mongoPatch.$unset ??= {})._searchText = true
+    else (mongoPatch.$set ??= {})._searchText = searchTextUpdate._searchText
+    dataset._searchText = searchTextUpdate._searchText ?? undefined
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 
