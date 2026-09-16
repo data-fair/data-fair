@@ -10,7 +10,8 @@ import exprEvalFactory from '../../../shared/expr-eval.js'
 // in the API's extensions module. The factory now refuses a missing zone.
 test.describe('expr-eval default timezone', () => {
   test('the factory refuses a missing default timezone', () => {
-    assert.throws(() => exprEvalFactory(undefined), /defaultTimezone is required/)
+    // the cast is the point of the test: a mis-wired caller reaches this with undefined
+    assert.throws(() => exprEvalFactory(undefined as unknown as string), /defaultTimezone is required/)
     assert.throws(() => exprEvalFactory(''), /defaultTimezone is required/)
   })
 
