@@ -465,6 +465,26 @@ export default {
             }
           }
         },
+        searchTerms: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'Termes de recherche associés',
+              type: 'boolean',
+              default: true,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'Libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
+              }
+            }
+          }
+        },
         conformsTo: {
           type: 'object',
           properties: {

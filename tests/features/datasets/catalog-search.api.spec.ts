@@ -33,4 +33,22 @@ test.describe('catalog search', () => {
     assert.equal(stem.count, 1)
     assert.equal(stem.results[0].id, 'cs-logements')
   })
+
+  test('searchTerms is patchable, searchable at title weight, and readable', async () => {
+    await metaOnly('cs-bureaux', { title: 'Contours des bureaux de vote', description: 'Découpage géographique des bureaux' })
+    await metaOnly('cs-legislatives', { title: 'Circonscriptions législatives', description: 'Résultats des élections législatives par circonscription' })
+
+    const patched = await u1.patch('/api/v1/datasets/cs-bureaux', { searchTerms: 'élections scrutin électeurs' })
+    assert.equal(patched.data.searchTerms, 'élections scrutin électeurs')
+    const fetched = (await u1.get('/api/v1/datasets/cs-bureaux')).data
+    assert.equal(fetched.searchTerms, 'élections scrutin électeurs')
+
+    // both match "élections"; the searchTerms hit (weight 3) outranks the description hit (weight 1)
+    const res = (await u1.get('/api/v1/datasets', { params: { q: 'élections', select: 'id,searchTerms' } })).data
+    assert.equal(res.count, 2)
+    assert.equal(res.results[0].id, 'cs-bureaux')
+    assert.equal(res.results[0].searchTerms, 'élections scrutin électeurs')
+
+    await assert.rejects(u1.patch('/api/v1/datasets/cs-bureaux', { searchTerms: 'x'.repeat(1001) }), { status: 400 })
+  })
 })
