@@ -218,6 +218,29 @@ test.describe('settings cross-subEdit interference', () => {
   })
 })
 
+test.describe('settings catalog search', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('catalog search switches save with the metadata section', async ({ page, goToWithAuth }) => {
+    await goToSettingsOrg(page, goToWithAuth)
+    await page.locator('#quality').scrollIntoViewIfNeeded()
+
+    // default tab is Métadonnées, where the catalog search switches live
+    const enumSwitch = page.locator('#quality').getByLabel('Valeurs distinctes des colonnes à faible cardinalité')
+    await expect(enumSwitch).toBeVisible()
+    await expect(page.locator('#quality').getByText(/quiconque peut lister le jeu de données/)).toBeVisible()
+    await enumSwitch.check()
+
+    await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
+    await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
+
+    const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    await expect.poll(async () => (await u1Org.get('/api/v1/settings/organization/test_org1')).data.catalogSearch?.indexEnumValues).toBe(true)
+  })
+})
+
 test.describe('settings auto-save', () => {
   test.beforeEach(async () => {
     await clean()

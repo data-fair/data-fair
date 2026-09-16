@@ -127,6 +127,7 @@
               v-model="settings.datasetsMetadata"
               v-model:valid="datasetsMetadataValid"
             />
+            <settings-catalog-search v-model="settings.catalogSearch" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="licenses">
@@ -449,6 +450,8 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
+  // same false-diff guard for the catalog search switches (vjsf fills their defaults on mount)
+  s.catalogSearch = { indexSchemaLabels: true, indexEnumValues: false, ...(s.catalogSearch || {}) }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {
@@ -460,7 +463,7 @@ watch(settingsEditFetch.serverData, (s) => {
 // Sub-edits for sections with save/cancel
 const topicsEdit = settingsEditFetch.createSubEdit(['topics'], { success: t('saved') })
 const qualityEdit = settingsEditFetch.createSubEdit(
-  ['licenses', 'datasetsMetadata', 'privateVocabulary'],
+  ['licenses', 'datasetsMetadata', 'privateVocabulary', 'catalogSearch'],
   { success: t('saved') }
 )
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
