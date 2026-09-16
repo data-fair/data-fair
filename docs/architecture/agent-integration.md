@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 46 tools, only 8 perform writes (navigate, set_expression, set_dataset_metadata, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 54 tools (`grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`), only 8 perform writes (navigate, set_expression, set_dataset_metadata, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -35,8 +35,8 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["46 Tools"]
-            SubAgents["13 Subagents"]
+            Tools["54 Tools"]
+            SubAgents["12 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR

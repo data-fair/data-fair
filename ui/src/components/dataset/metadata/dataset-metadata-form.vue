@@ -308,7 +308,7 @@ fr:
   image: Adresse d'une image utilisée comme vignette
   keywords: Mots clés
   searchTerms: Termes de recherche associés
-  searchTermsHelp: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes."
+  searchTermsHelp: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel."
   searchTermsPrompt: Aide-moi à trouver des termes de recherche pour ce jeu de données
   projection: Système de coordonnées
   creator: Personne ou organisme créateur
@@ -349,7 +349,7 @@ en:
   image: URL of an image used as thumbnail
   keywords: Keywords
   searchTerms: Search terms
-  searchTermsHelp: "Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording."
+  searchTermsHelp: "Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. Not shown anywhere, but present in the dataset's public API response — do not put anything confidential here."
   searchTermsPrompt: Help me find search terms for this dataset
   projection: Coordinate reference system
   creator: Creator person or entity

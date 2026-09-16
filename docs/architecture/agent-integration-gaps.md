@@ -22,7 +22,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 - **Page guidance**: dataset and application detail pages (shared renderer)
 
-**Total: 46 tools, 13 subagents, 20 action buttons**
+**Total: 54 tools, 12 subagents, 20 action buttons** (counted with `grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`, the same for `useAgentSubAgent(`, and `grep -rno "<df-agent-chat-action\|<DfAgentChatAction" ui/src --include=*.vue | wc -l`; the itemized breakdown above predates several of these tools/subagents and is not kept in sync item-by-item)
 
 ---
 

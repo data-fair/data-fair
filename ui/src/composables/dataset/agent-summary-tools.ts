@@ -102,7 +102,7 @@ Example of a good summary (French):
   })
 
   const searchTermsPrompts: Record<string, string> = {
-    fr: `Tu proposes des termes de recherche cachés pour un jeu de données publié sur Data Fair. Ces termes ne sont jamais affichés : ils servent uniquement à ce que la recherche textuelle du catalogue retrouve le jeu de données quand quelqu'un emploie d'autres mots que ceux du titre ou du résumé.
+    fr: `Tu proposes des termes de recherche cachés pour un jeu de données publié sur Data Fair. Ces termes ne sont affichés dans aucune interface : ils servent uniquement à ce que la recherche textuelle du catalogue retrouve le jeu de données quand quelqu'un emploie d'autres mots que ceux du titre ou du résumé. Ils restent toutefois présents dans la réponse API publique du jeu de données : ne propose rien de confidentiel ou de jargon interne.
 
 Tâche :
 1. Appelle read_dataset_info pour obtenir les métadonnées, le schéma (libellés et descriptions de colonnes, valeurs d'énumération) et des exemples.
@@ -115,7 +115,7 @@ Règles :
 - Ajoute les notions voisines qu'une personne taperait pour trouver ce jeu (ex. "élections" pour des bureaux de vote).
 - Des termes ou des expressions de 1 à 4 mots, en français, sans phrase, sans ponctuation finale, sans explication.
 - Pas de valeurs recopiées des données, pas de chiffres, pas de dates.`,
-    en: `You propose hidden search terms for a dataset published on Data Fair. These terms are never displayed: their only purpose is to let the catalog text search find the dataset when someone uses other words than the title or summary.
+    en: `You propose hidden search terms for a dataset published on Data Fair. These terms are not shown in any interface: their only purpose is to let the catalog text search find the dataset when someone uses other words than the title or summary. They are still present in the dataset's public API response, though: do not propose anything confidential or internal jargon.
 
 Task:
 1. Call read_dataset_info to get the metadata, the schema (column titles and descriptions, enum values) and samples.

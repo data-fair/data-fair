@@ -30,6 +30,8 @@ Le catalogue est indexé par l'index texte MongoDB `datasets.fulltext` (`api/src
 
 L'analyse linguistique de cet index est le français (racinisation et mots vides), configurable via `config.catalogSearch.language` (`api/config/default.cjs`), par défaut `'french'` — n'importe quel nom de langue reconnu par MongoDB, ou `'none'` pour désactiver la racinisation. Le même réglage de langue s'applique à l'index `applications.fulltext`.
 
+Changer `default_language` change les paramètres de l'index texte, ce que MongoDB refuse en place : `ensureIndex` (`@data-fair/lib-node/mongo.js`) reçoit l'erreur de conflit 85/86, supprime l'index (`dropIndex`) puis le recrée (`createIndex`). Entre ces deux appels, toute requête `$text` sur la collection échoue ("text index required for $text query") : sur le premier pod qui exécute `configure()` après un déploiement changeant ce réglage, la recherche du catalogue côté portail et la liste des jeux de données du back-office renvoient une erreur 500 pendant la reconstruction de l'index. C'est un comportement attendu et transitoire (la reconstruction est rapide sur les volumes visés par cette fonctionnalité), pas un bug ; il n'est pas contourné à ce stade.
+
 Le score reste néanmoins celui d'un moteur sans pondération par rareté (IDF) : il combine la fréquence des termes dans le document et le poids du champ, mais un mot fréquent dans les titres du catalogue pèse autant qu'un mot rare qui désigne précisément le bon jeu de données. Les poids de champ et le vocabulaire ajouté ci-dessous compensent cette limite en pratique, mais un mot générique présent dans le titre peut toujours dépasser une correspondance thématique plus pertinente. Voir la section Perspectives pour la portée exacte de cette limite et son évolution possible.
 
 ## Les termes de recherche associés
@@ -37,6 +39,8 @@ Le score reste néanmoins celui d'un moteur sans pondération par rareté (IDF) 
 `searchTerms` est un champ de texte libre par jeu de données (1000 caractères maximum), destiné aux synonymes, sigles avec leur développement (ex. "PLU" → "Plan Local d'Urbanisme") et formulations courantes qui ne figurent pas forcément dans le titre officiel. Il est déclaré dans `api/types/dataset/schema.js`, modifiable dans le formulaire de métadonnées du back-office (`ui/src/components/dataset/metadata/dataset-metadata-form.vue`), et activable par organisation via `settings.datasetsMetadata.searchTerms.active` (par défaut activé).
 
 Ce champ n'est jamais affiché aux visiteurs des portails et n'est pas une facette : c'est précisément pour cela qu'il n'est pas simplement ajouté à `keywords`, qui sert de facette et, sur les catalogues réels, de liste de tags thématiques — y verser des dizaines de synonymes la rendrait inutilisable. Il est indexé au même poids que le titre (×3), car sans IDF un synonyme à poids faible ne peut pas l'emporter sur un mot générique présent dans soixante titres à poids fort.
+
+« Jamais affiché » ne veut pas dire privé : le champ est renvoyé par l'API à quiconque a la permission `readDescription`, y compris un visiteur anonyme d'un jeu de données public — il n'est simplement affiché dans aucune interface. N'y mettez donc pas de jargon interne ou d'information confidentielle.
 
 Il peut être renseigné à la main ou proposé par l'assistant : un bouton d'action `suggest-search-terms` dans le formulaire de métadonnées déclenche le sous-agent `search_terms_writer` (`ui/src/composables/dataset/agent-summary-tools.ts`), qui lit titre, résumé, description, mots-clés, thématiques et schéma pour proposer une liste de termes. Rien n'est enregistré automatiquement : le sous-agent propose, l'utilisateur approuve, et l'outil `set_dataset_metadata` (`ui/src/composables/dataset/agent-metadata-tools-logic.ts`) remplit le champ du formulaire — c'est l'utilisateur qui clique sur Enregistrer.
 
@@ -65,7 +69,7 @@ flowchart LR
 
 `_searchText` est un champ calculé, jamais saisi à la main, produit par la fonction pure `computeSearchText` (`api/src/datasets/operations.ts`). Il rassemble :
 
-- les titres des colonnes du schéma (tronqués à 200 caractères) et le début de leur description (les 200 premiers caractères, coupés sur un espace) — inclus par défaut, désactivable par organisation ;
+- les titres des colonnes du schéma (tronqués à 200 caractères) et le début de leur description (les 200 premiers caractères, coupés sur un espace ; si aucun espace ne figure dans ces 200 premiers caractères — un jeton unique comme une URL —, la coupe cherche l'espace suivant jusqu'à 400 caractères, au-delà desquels elle retombe sur une troncature brute à 200) — inclus par défaut, désactivable par organisation ;
 - les valeurs `enum` (chaînes de caractères) des colonnes — désactivé par défaut, activable par organisation.
 
 Le champ est borné : 8 Kio pour chaque partie (libellés, valeurs), 16 Kio au total ; au-delà de la limite, des colonnes entières sont écartées plutôt que des chaînes tronquées. Les clés de colonnes ne sont volontairement pas indexées : mesuré sur trois catalogues réels, elles n'apportaient aucun gain par rapport aux titres, qui en sont déjà des variantes (`benchmark/catalog-search/FINDINGS.md`, §4).
