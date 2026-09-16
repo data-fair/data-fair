@@ -8,6 +8,7 @@ import filesStorage from '#files-storage'
 import * as datasetsService from '../datasets/service.ts'
 import { ownerDir } from '../datasets/utils/files.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
+import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 
 export type Identity = { type: string, id: string, name?: string }
 type Department = { id: string, name: string }
@@ -96,10 +97,16 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
     // master data is shared with partners, a share to a former partner is withdrawn
     if (partners) {
       const partnerIds = partners.map(p => p.id)
-      await mongo.datasets.updateMany(
-        { 'owner.type': 'organization', 'owner.id': identity.id, 'masterData.shareOrgs': { $elemMatch: { id: { $nin: partnerIds } } } },
-        { $pull: { 'masterData.shareOrgs': { id: { $nin: partnerIds } } } } as any
-      )
+      const filter = { 'owner.type': 'organization', 'owner.id': identity.id, 'masterData.shareOrgs': { $elemMatch: { id: { $nin: partnerIds } } } }
+      const sharedDatasetIds = await mongo.datasets.distinct('id', filter)
+      // shareOrgs ids are covered by the integrity hash, stamp before the $pull invalidates the filter
+      await stampHistorizeMany(filter)
+      await mongo.datasets.updateMany(filter, { $pull: { 'masterData.shareOrgs': { id: { $nin: partnerIds } } } } as any)
+      // the shares are mirrored in the privateAccess of the master data remote service
+      for (const datasetId of sharedDatasetIds) {
+        const dataset = await mongo.datasets.findOne({ id: datasetId })
+        if (dataset) await syncRemoteService(dataset)
+      }
     }
   }
 }
@@ -143,12 +150,12 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
   await mongo.db.collection('settings').deleteMany({ type: identity.type, id: identity.id })
   await mongo.db.collection('limits').deleteOne({ type: identity.type, id: identity.id })
 
-  // dataset.masterData.shareOrgs
+  // dataset.masterData.shareOrgs (the remote service privateAccess mirror was pulled above)
   if (identity.type === 'organization') {
-    await mongo.datasets.updateMany(
-      { 'masterData.shareOrgs': { $elemMatch: { id: identity.id } } },
-      { $pull: { 'masterData.shareOrgs': { id: identity.id } } } as any
-    )
+    const filter = { 'masterData.shareOrgs': { $elemMatch: { id: identity.id } } }
+    // shareOrgs ids are covered by the integrity hash, stamp before the $pull invalidates the filter
+    await stampHistorizeMany(filter)
+    await mongo.datasets.updateMany(filter, { $pull: { 'masterData.shareOrgs': { id: identity.id } } } as any)
   }
 
   // whole data directory

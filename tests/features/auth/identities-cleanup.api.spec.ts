@@ -9,6 +9,7 @@ const identitiesHeaders = { headers: { 'x-secret-key': config.secretKeys.identit
 
 const u1 = await axiosAuth('test_user1@test.com')
 const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 test.describe('personal information storage cleanup', () => {
   test.beforeEach(async () => { await clean() })
@@ -98,23 +99,31 @@ test.describe('personal information storage cleanup', () => {
 
   test('organization rename, partnership end and delete are reflected in master data shares', async () => {
     const id = 'identities-cleanup-7'
-    await u1Org.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id })
-    await u1Org.patch('/api/v1/datasets/' + id, { masterData: { shareOrgs: [{ id: 'test_org2', name: 'Test Org 2' }, { id: 'test_org3', name: 'Test Org 3' }] } })
+    // a master data dataset: its shares are mirrored in the privateAccess of a remote service
+    await u1Org.put('/api/v1/datasets/' + id, { isRest: true, title: id, schema: [{ key: 'code', type: 'string' }], masterData: { virtualDatasets: { active: true } } })
+    await u1Org.patch('/api/v1/datasets/' + id, { masterData: { virtualDatasets: { active: true }, shareOrgs: [{ id: 'test_org2', name: 'Test Org 2' }, { id: 'test_org3', name: 'Test Org 3' }] } })
     // identity webhooks do not bump updatedAt, the memoized dataset must be dropped to read the change
     const shareOrgs = async () => {
       await clearDatasetCache()
       return (await u1Org.get('/api/v1/datasets/' + id)).data.masterData.shareOrgs
     }
+    const privateAccess = async () => {
+      const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+      return remoteService.privateAccess.map((p: any) => p.id)
+    }
+    assert.deepEqual(await privateAccess(), ['test_org1', 'test_org2', 'test_org3'])
 
     await anonymousAx.post(`${identitiesUrl}/organization/test_org2`, { name: 'Renamed Org 2' }, identitiesHeaders)
     assert.deepEqual(await shareOrgs(), [{ id: 'test_org2', name: 'Renamed Org 2' }, { id: 'test_org3', name: 'Test Org 3' }])
 
-    // test_org3 is no longer a partner of test_org1
+    // test_org3 is no longer a partner of test_org1, it loses the share and the access to the remote service
     await anonymousAx.post(`${identitiesUrl}/organization/test_org1`, { name: 'Test Org 1', partners: [{ id: 'test_org2', name: 'Renamed Org 2' }] }, identitiesHeaders)
     assert.deepEqual(await shareOrgs(), [{ id: 'test_org2', name: 'Renamed Org 2' }])
+    assert.deepEqual(await privateAccess(), ['test_org1', 'test_org2'])
 
     await anonymousAx.delete(`${identitiesUrl}/organization/test_org2`, identitiesHeaders)
     assert.deepEqual(await shareOrgs(), [])
+    assert.deepEqual(await privateAccess(), ['test_org1'])
   })
 
   test('identity delete removes permission entries', async () => {
