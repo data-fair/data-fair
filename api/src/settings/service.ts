@@ -19,6 +19,7 @@ import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
+import { computeSearchText, type CatalogSearchSettings } from '../datasets/operations.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -188,6 +189,10 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
   }
 
+  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings)) {
+    await updateCatalogSearch(owner, oldSettings.catalogSearch, settings.catalogSearch)
+  }
+
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
 }
 
@@ -206,6 +211,27 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
+}
+
+// the schema-derived search text of every dataset of the owner depends on these switches
+const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: CatalogSearchSettings | undefined, newCatalogSearch: CatalogSearchSettings | undefined) => {
+  if (equal(oldCatalogSearch ?? {}, newCatalogSearch ?? {})) return
+  const cursor = mongo.datasets.find(
+    { 'owner.type': owner.type, 'owner.id': owner.id, draftReason: { $exists: false } },
+    { projection: { id: 1, schema: 1, permissions: 1, _searchText: 1 } }
+  )
+  const ops: any[] = []
+  const flush = async () => {
+    if (ops.length) await mongo.datasets.bulkWrite(ops, { ordered: false })
+    ops.length = 0
+  }
+  for await (const dataset of cursor) {
+    const _searchText = computeSearchText(dataset, newCatalogSearch)
+    if ((_searchText ?? null) === (dataset._searchText ?? null)) continue
+    ops.push({ updateOne: { filter: { id: dataset.id }, update: _searchText ? { $set: { _searchText } } : { $unset: { _searchText: true } } } })
+    if (ops.length >= 200) await flush()
+  }
+  await flush()
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {

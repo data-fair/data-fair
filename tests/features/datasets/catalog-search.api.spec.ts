@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { sendDataset } from '../../support/workers.ts'
 
 const u1 = await axiosAuth('test_user1@test.com')
 
@@ -98,5 +99,27 @@ test.describe('catalog search', () => {
     assert.equal(await count(), 0)
     await u1.put('/api/v1/datasets/cs-guard/permissions', [{ classes: ['list', 'read'] }])
     assert.equal(await count(), 1)
+  })
+
+  test('enum values are searchable only when the organization opts in, and switches recompute existing datasets', async () => {
+    const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    const settings = async (catalogSearch: Record<string, boolean>) => u1Org.put('/api/v1/settings/organization/test_org1', { catalogSearch })
+    await settings({ indexSchemaLabels: true, indexEnumValues: false })
+
+    // collapsable.csv's `roles` column has exactly 2 distinct values ("admin;contrib" and "admin")
+    // across its 10 rows, low enough cardinality for finalize to stamp an enum on it. "contrib"
+    // appears only inside that enum value: no column title/description/dataset title contains it.
+    const dataset = await sendDataset('datasets/collapsable.csv', u1Org)
+    const enumCol = dataset.schema.find((p: any) => p.key === 'roles')
+    assert.ok(enumCol?.enum?.length, 'the roles column must carry a non-empty enum')
+    const value = 'contrib'
+    const count = async (q: string) => (await u1Org.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+
+    assert.equal(await count(value), 0, 'enum values are off by default')
+    await settings({ indexSchemaLabels: true, indexEnumValues: true })
+    assert.equal(await count(value), 1, 'the switch recomputes existing datasets')
+    await settings({ indexSchemaLabels: false, indexEnumValues: false })
+    assert.equal(await count(value), 0)
+    assert.equal(await count('groupLabel'), 0, 'labels off too')
   })
 })
