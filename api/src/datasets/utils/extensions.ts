@@ -87,7 +87,7 @@ export const prepareExtensions = (locale: string, extensions: any[], oldExtensio
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-export const compileExpression = exprEval(config.defaultTimezone).compile
+export const compileExpression = exprEval(config.defaultTimeZone).compile
 // Resolve each active extension into a "detailed" descriptor that can be consumed
 // by ExtensionsStream (loads remoteService + action, prepares input mapping, compiles
 // expression, etc.). Throws on configuration errors at the dataset level.
@@ -653,7 +653,7 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
     } else if (extension.property) {
       const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
       const availableSchema = await prepareExtensionsSchema(schema, previousExtensions)
-      const exprError = exprEval(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
+      const exprError = exprEval(config.defaultTimeZone).check(extension.expr, availableSchema, fullSchema)
       if (exprError) throw httpError(400, `${errorPrefix}${exprError}`)
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
