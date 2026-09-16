@@ -225,7 +225,7 @@ const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: Catalog
     { 'owner.type': owner.type, 'owner.id': owner.id, draftReason: { $exists: false } },
     { projection: { id: 1, schema: 1, permissions: 1, _searchText: 1 } }
   )
-  const ops: AnyBulkWriteOperation<DatasetInternal>[] = []
+  const ops: AnyBulkWriteOperation<DatasetInternal & { _id: string }>[] = []
   const flush = async () => {
     if (ops.length) await mongo.datasets.bulkWrite(ops, { ordered: false })
     ops.length = 0
