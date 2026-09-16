@@ -20,6 +20,7 @@ import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import debugLib from 'debug'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
+import { findAction } from '../../remote-services/operations.ts'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { Readable } from 'node:stream'
@@ -102,7 +103,7 @@ const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
       if (!remoteService) {
         throw new Error(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
       }
-      const action = remoteService.actions.find((a: any) => a.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) {
         throw new Error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
       }
@@ -111,7 +112,7 @@ const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
       const inputMapping = await prepareInputMapping(action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find((o: any) => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find((input: any) => input.concept === 'http://schema.org/identifier')
-      if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
+      if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', { cause: action })
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
       const property = dataset.schema?.find(p => p.key === extension.property.key)
@@ -549,7 +550,7 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
     if (extension.type === 'remoteService') {
       const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) continue
-      const action = remoteService.actions.find((action: any) => action.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) continue
       const extensionKey = getExtensionKey(extension)
       const extensionId = `${extension.remoteService}/${extension.action}`
@@ -643,7 +644,7 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
     if (extension.type === 'remoteService') {
       const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) throw httpError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
-      const action = remoteService.actions.find((action: any) => action.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) throw httpError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
       const errorPrefix = `[noretry] erreur de validation de l'extension "${action.summary}", `
       if (!action.input.find((i: any) => i.concept && availableConcepts.has(i.concept))) {
