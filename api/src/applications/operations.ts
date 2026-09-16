@@ -1,5 +1,6 @@
 import type { Application } from '#types'
 import escapeHtml from 'escape-html'
+import trimFields from '../misc/utils/trim-fields.ts'
 
 type ApplicationWithExposedUrl = Application & { exposedUrl: string }
 
@@ -46,4 +47,11 @@ export const buildLoginHtml = (loginHtml: string, opts: { siteUrl: string, appli
     .replace('{ERROR}', opts.error ? `<p style="color:red">${escapeHtml(opts.error)}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl.href)
     .replace('{LOGO}', logoUrl.href)
+}
+
+// trim leading/trailing whitespace of the free-text fields (configuration is the base
+// application's own form, not ours to touch)
+export const trimApplication = (application: Partial<Application>) => {
+  trimFields(application, 'title', 'summary', 'description', 'image')
+  for (const attachment of application.attachments ?? []) trimFields(attachment, 'title')
 }

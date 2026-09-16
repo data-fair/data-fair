@@ -2,6 +2,7 @@ import slug from 'slugify'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User } from '@data-fair/lib-express'
+import trimFields from '../misc/utils/trim-fields.ts'
 
 export function validateSettings (settings: any): asserts settings is Settings | DepartmentSettings {
   if ((settings as DepartmentSettings).department) {
@@ -102,4 +103,24 @@ export const parseOwnerParams = (type: 'user' | 'organization', idParam: string)
   params.ownerFilter = { ...owner }
   if (!department) params.ownerFilter.department = { $exists: false }
   return params
+}
+
+// trim leading/trailing whitespace of the free-text fields
+export const trimSettings = (settings: Partial<Settings>) => {
+  for (const topic of settings.topics ?? []) trimFields(topic, 'title')
+  for (const license of settings.licenses ?? []) trimFields(license, 'title', 'href')
+  for (const concept of settings.privateVocabulary ?? []) trimFields(concept, 'title', 'description', 'tag')
+  for (const apiKey of settings.apiKeys ?? []) trimFields(apiKey, 'title')
+  for (const webhook of settings.webhooks ?? []) {
+    trimFields(webhook, 'title')
+    if (webhook.target?.params) trimFields(webhook.target.params, 'url')
+  }
+  if (settings.datasetsMetadata) {
+    const { spatial, temporal, frequency, creator, modified, keywords, conformsTo } = settings.datasetsMetadata
+    for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
+      if (option) trimFields(option, 'title')
+    }
+    for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title')
+  }
+  if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
 }

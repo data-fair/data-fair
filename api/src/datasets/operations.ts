@@ -1,4 +1,6 @@
 // pure functions for the datasets module — no I/O. The unit-test surface.
+import type { Dataset } from '#types'
+import trimFields from '../misc/utils/trim-fields.ts'
 
 // matches the separator used by memoizee's built-in `primitive` normalizer
 const KEY_SEP = '\u0001'
@@ -71,4 +73,39 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   // draft-only changes are invisible to every field above
   if (useDraft && cachedFull.draft?.updatedAt !== fresh.draft?.updatedAt) return false
   return true
+}
+
+// trim leading/trailing whitespace of the free-text fields (explicit list: separators,
+// regex patterns and date formats are syntaxes where whitespace is significant)
+export const trimDataset = (dataset: Partial<Dataset>) => {
+  trimFields(dataset, 'title', 'summary', 'description', 'origin', 'image', 'creator', 'spatial')
+  if (dataset.keywords) dataset.keywords = [...new Set(dataset.keywords.map(keyword => keyword.trim()).filter(Boolean))]
+  if (dataset.customMetadata) trimFields(dataset.customMetadata, ...Object.keys(dataset.customMetadata))
+  if (dataset.conformsTo) trimFields(dataset.conformsTo, 'title', 'version', 'url')
+  // the generated attachment types lose the fields shared by the oneOf branches
+  const attachments = (dataset.attachments ?? []) as { title?: string, description?: string, name?: string, url?: string, targetUrl?: string }[]
+  for (const attachment of attachments) trimFields(attachment, 'title', 'description', 'name', 'url', 'targetUrl')
+  for (const prop of dataset.schema ?? []) {
+    trimFields(prop, 'title', 'description', 'x-group', 'x-originalName', 'patternErrorMessage')
+    if (prop['x-labels']) {
+      prop['x-labels'] = Object.fromEntries(Object.entries(prop['x-labels']).map(([value, label]) => [value.trim(), label.trim()]))
+    }
+    if (prop['x-transform']) {
+      trimFields(prop['x-transform'], 'expr')
+      if (prop['x-transform'].examples) prop['x-transform'].examples = prop['x-transform'].examples.map(example => example.trim())
+    }
+  }
+  for (const extension of dataset.extensions ?? []) {
+    if (extension.type === 'exprEval') trimFields(extension, 'expr')
+    else if (extension.type === 'remoteService') {
+      trimFields(extension, 'propertyPrefix')
+      for (const overwrite of Object.values(extension.overwrite ?? {})) trimFields(overwrite, 'title', 'x-originalName')
+    }
+  }
+  for (const filter of dataset.virtual?.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
+  const searchs: { title?: string, description?: string, filters?: { values: string[] }[] }[] = [...dataset.masterData?.bulkSearchs ?? [], ...dataset.masterData?.singleSearchs ?? []]
+  for (const search of searchs) {
+    trimFields(search, 'title', 'description')
+    for (const filter of search.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
+  }
 }

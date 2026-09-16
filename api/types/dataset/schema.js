@@ -759,7 +759,7 @@ const datasetProperties = {
               type: 'string'
             }
           },
-          overwriteProperties: {
+          overwrite: {
             type: 'object',
             description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
             additionalProperties: {
