@@ -30,17 +30,36 @@ dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ## The caps
 
-### vite dev server — `ui/package.json`
+### vite dev server — `dev/with-memory-cap.sh`, wired into `ui/package.json`
 
-```
-NODE_OPTIONS=--max-old-space-size=2048
-```
+The dev server runs inside a transient systemd user scope with `MemoryMax=4G`
+(override with `DEV_MEMORY_MAX`). When it is exceeded the *cgroup* OOM killer kills
+that process only: the host never reaches the global OOM path, so nothing else on
+the machine is touched. Normal peak for this app is ~2 GiB, and the runaways that
+prompted this were 4.3–5.8 GiB, so 4G separates the two. The wrapper no-ops where
+`systemd-run` is unavailable (macOS, non-systemd), so it is safe for every contributor.
 
-Normal operation sits around 1–2 GiB resident, so 2 GiB of old space is generous
-headroom; the cap exists to catch the runaway, not to squeeze normal use. When it
-trips, vite dies with a `JavaScript heap out of memory` error in `dev/logs/dev-ui.log`
-and the pane has to be restarted. That is the intended trade: a dev server that
-fails loudly and locally, instead of a laptop that logs you out.
+**A V8 heap limit does not work here, which is worth knowing before you reach for
+one.** `NODE_OPTIONS=--max-old-space-size` was tried first and is useless for this
+process, because vite's memory is mostly not V8. Measured on a 2 GiB dev server:
+
+| component | size | share |
+|---|---|---|
+| `[anon:mimalloc]` — rolldown's native Rust allocator | 1758 MiB | 86% |
+| V8 heap | 224 MiB | 11% |
+| node binary, misc | ~75 MiB | 3% |
+
+The V8 side is a bounded cache, not a leak: sweeping all 303 source modules three
+times, forcing GC between sweeps, left retained heap at 259 → 265 → 271 MiB. It
+saturates with app size and stays there. A 2 GiB old-space limit would never have
+fired before the host died.
+
+What the native side scales with is *not* transform count and *not* request
+concurrency — both were tested and neither moved it (600 repeat transforms actually
+shrank it; concurrency 8/24/48 left the arena count at 4). Two dev servers of the
+same app with the same uptime sat at 552 MiB and 1758 MiB, the larger being the one
+that had been driving real browsers through the simulations. The trigger is still
+unidentified; the cap is what makes it survivable meanwhile.
 
 ### Elasticsearch — `docker-compose.yaml`
 
