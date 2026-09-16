@@ -246,6 +246,10 @@ export const registerWriteRoutes = (router: Router) => {
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
     eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
+    // this route bypasses clean(): strip the guarded calculated field by hand rather than
+    // routing the whole response through clean(), which would also add derived fields
+    // (thumbnail URL, links, …) this route has never returned
+    delete dataset._searchText
     return res.send(dataset)
   })
 
@@ -276,6 +280,10 @@ export const registerWriteRoutes = (router: Router) => {
 
     await updateStorage(datasetFull)
 
+    // this route bypasses clean(): strip the guarded calculated field by hand rather than
+    // routing the whole response through clean(), which would also add derived fields
+    // (thumbnail URL, links, …) this route has never returned
+    delete datasetFull._searchText
     return res.send(datasetFull)
   })
 }

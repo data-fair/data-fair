@@ -1,12 +1,25 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 const u1 = await axiosAuth('test_user1@test.com')
 
 const metaOnly = async (id: string, body: Record<string, any>) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })
+}
+
+// uploads a new file version in draft mode (file-updated draft) and waits for the sample to be
+// indexed. Must differ from the dataset's current file: an update whose md5 matches the current
+// file is treated by preparePatch as a no-op patch and never opens a draft at all.
+const openDraft = async (id: string, fileName: string) => {
+  const datasetFd = fs.readFileSync('./tests/resources/datasets/' + fileName)
+  const form = new FormData()
+  form.append('file', datasetFd, fileName)
+  await u1.post('/api/v1/datasets/' + id, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
+  return waitForFinalize(u1, id)
 }
 
 test.describe('catalog search', () => {
@@ -121,5 +134,28 @@ test.describe('catalog search', () => {
     await settings({ indexSchemaLabels: false, indexEnumValues: false })
     assert.equal(await count(value), 0)
     assert.equal(await count('groupLabel'), 0, 'labels off too')
+  })
+
+  test('_searchText is stripped from the draft validate and cancel responses', async () => {
+    // a FILE dataset (not isRest — REST datasets never enter draft mode)
+    const dataset = await sendDataset('datasets/dataset1.csv', u1)
+    const schema = dataset.schema.map((p: any) => p.key === 'nb' ? { ...p, title: 'Nombre fromageries' } : p)
+    await u1.patch('/api/v1/datasets/' + dataset.id, { schema })
+    // prove _searchText is genuinely non-empty before checking it never leaves the two routes below:
+    // the column title is only findable through the search index, not through the column key or data
+    assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'fromageries', size: 0 } })).data.count, 1)
+
+    // validate a draft: the raw response of POST /:datasetId/draft must not carry _searchText
+    await openDraft(dataset.id, 'dataset2.csv')
+    const validated = (await u1.post(`/api/v1/datasets/${dataset.id}/draft`)).data
+    assert.equal(validated._searchText, undefined)
+    await waitForFinalize(u1, dataset.id)
+
+    // cancel a second draft: the raw response of DELETE /:datasetId/draft must not carry it either
+    // (a different file than the current one — dataset1.csv, since validation above moved the
+    // dataset's current file to dataset2.csv — so this upload is a genuine change, not a no-op)
+    await openDraft(dataset.id, 'dataset1.csv')
+    const cancelled = (await u1.delete(`/api/v1/datasets/${dataset.id}/draft`)).data
+    assert.equal(cancelled._searchText, undefined)
   })
 })
