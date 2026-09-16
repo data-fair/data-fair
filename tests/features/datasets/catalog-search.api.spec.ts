@@ -84,4 +84,19 @@ test.describe('catalog search', () => {
     assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', size: 0 } })).data.count, 0)
     assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'PMR', size: 0 } })).data.count, 1)
   })
+
+  test('a list-only grantee removes the schema vocabulary from the search', async () => {
+    await u1.post('/api/v1/datasets/cs-guard', {
+      isRest: true,
+      title: 'Annuaire santé',
+      schema: [{ key: 'spec', type: 'string', title: 'Spécialité du médecin' }]
+    })
+    const count = async () => (await u1.get('/api/v1/datasets', { params: { q: 'médecin', size: 0 } })).data.count
+    assert.equal(await count(), 1)
+    // public may list but not read the schema: the labels must not leak through search matches
+    await u1.put('/api/v1/datasets/cs-guard/permissions', [{ classes: ['list'] }])
+    assert.equal(await count(), 0)
+    await u1.put('/api/v1/datasets/cs-guard/permissions', [{ classes: ['list', 'read'] }])
+    assert.equal(await count(), 1)
+  })
 })
