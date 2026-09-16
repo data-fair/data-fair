@@ -1312,6 +1312,9 @@ type ReqFile = { filename: string, originalname: string, mimetype: string, path:
 
 export const bulkLines = async (req: RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  // the attachments archive is consumed later by the worker, but only once it was recorded on the dataset
+  const attachmentsFile = req.files?.attachments?.[0]
+  let attachmentsRecorded = false
   try {
     const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
@@ -1328,9 +1331,9 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     res.setHeader('X-Accel-Buffering', 'no')
 
     // If attachments are sent, add them to the existing ones
-    const attachmentsFile = req.files?.attachments?.[0]
     if (attachmentsFile) {
       await mongo.datasets.updateOne({ id: dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
+      attachmentsRecorded = true
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
@@ -1498,6 +1501,9 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // already gone) mask the response or escape as an unhandled rejection
     for (const file of req.files?.actions || []) {
       await fs.remove(file.path).catch((err) => console.warn('failed to clean up bulk actions temp file', file.path, err))
+    }
+    if (attachmentsFile && !attachmentsRecorded) {
+      await fs.remove(attachmentsFile.path).catch((err) => console.warn('failed to clean up bulk attachments temp file', attachmentsFile.path, err))
     }
   }
 }
