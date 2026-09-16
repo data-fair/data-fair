@@ -440,7 +440,11 @@ One case is a page, a persona and a goal — deliberately with no expected resul
 A simulated user (Claude, `SIM_USER_MODEL`, default `haiku`) types into the real
 chat drawer in a real browser; the assistant under test runs on
 `SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
-configured as an `openai-compatible` provider on the agents service. The run is
+configured as an `openai-compatible` provider on the agents service. The
+background roles — sub-agents, compaction, the moderation guard — run on
+`SIM_TOOLS_MODEL` (default `haiku`) instead, matching where a deployment puts a
+small model: a sub-agent prompt only a large model can follow reads as working
+until the cheap tier runs it. The run is
 captured as a transcript — what was said, every gateway request with its tool
 definitions and tool calls, any console errors, and what the persona looked at
 and did on screen — and a `simulation-judge` subagent reads it and returns a

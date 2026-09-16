@@ -22,6 +22,10 @@ import {
 } from '@data-fair/lib-agents-sim'
 
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
+// The sub-agent, compaction and moderation roles, pinned separately and lower:
+// that is where a deployment puts a small model, so that is where the product
+// has to work. See BACKGROUND_ROLES in runner/settings.ts.
+const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
 // This default must track nextUserMessage's own (persona.ts reads
 // process.env.SIM_USER_MODEL ?? 'haiku' itself) — there is no shared export,
 // so if upstream changes its default this sidecar value silently goes stale.
@@ -67,7 +71,7 @@ for (const simCase of selected) {
       case: simCase.name,
       valid: false,
       error: 'run did not complete (timed out or was killed)',
-      assistantModel: ASSISTANT_MODEL,
+      assistantModel: `${ASSISTANT_MODEL} (tools: ${TOOLS_MODEL})`,
       userModel: USER_MODEL,
       turns: 0,
       durationMs: 0,
@@ -82,7 +86,7 @@ for (const simCase of selected) {
       await assertBridgeUp()
       await clean()
       const ownerAx = await seedDatasets()
-      await seedSettings(ASSISTANT_MODEL, ownerAx)
+      await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
@@ -218,7 +222,7 @@ for (const simCase of selected) {
       case: simCase.name,
       valid: !error,
       error,
-      assistantModel: ASSISTANT_MODEL,
+      assistantModel: `${ASSISTANT_MODEL} (tools: ${TOOLS_MODEL})`,
       userModel: USER_MODEL,
       turns,
       durationMs: Date.now() - started,

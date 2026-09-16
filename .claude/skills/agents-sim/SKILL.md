@@ -47,9 +47,10 @@ while someone is relying on that data.
    SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate  # one case
    ```
 
-   Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`) and
-   `SIM_USER_MODEL` (default `haiku`), and recorded per run, so verdicts from
-   different tiers are never compared silently.
+   Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`),
+   `SIM_TOOLS_MODEL` (default `haiku`, for sub-agents, compaction and the
+   moderation guard) and `SIM_USER_MODEL` (default `haiku`), and recorded per
+   run, so verdicts from different tiers are never compared silently.
 
 4. **Ignore the runner's own account of how it went.** The transcript at
    `simulations/tmp/sim-<case>.json` is the evidence. A Playwright `passed` line
