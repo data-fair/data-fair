@@ -39,6 +39,33 @@ export const waitForIntegrityRevisions = async (prefix: string, expected: number
   return keys
 }
 
+/**
+ * The revision JSONs among a prefix's keys: a revision's `.file` payload and its `.who`
+ * attribution sibling are not revisions.
+ */
+export const revisionKeys = (keys: string[]): string[] =>
+  keys.filter((k) => !k.endsWith('.file') && !k.endsWith('.who')).sort()
+
+/**
+ * Wait for `expected` *revisions*, ignoring `.file` and `.who` keys.
+ *
+ * Gate on this rather than on `waitForIntegrityRevisions` whenever the test then reads the
+ * newest revision. The `.who` sibling is written by the async attribution relay, out of band
+ * with the revision itself, so a raw key count can be reached by a `.who` landing before the
+ * revision the test is actually waiting for — leaving `revisionKeys(...).at(-1)` pointing at
+ * the *previous* revision. That race made the restore specs below fail intermittently, on a
+ * different member of the family each run.
+ */
+export const waitForIntegrityRevisionCount = async (prefix: string, expected: number, timeoutMs = 20000): Promise<string[]> => {
+  const start = Date.now()
+  let keys = await listIntegrityKeys(prefix)
+  while (revisionKeys(keys).length < expected && Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    keys = await listIntegrityKeys(prefix)
+  }
+  return keys
+}
+
 export const revisionsPrefix = (dataset: any): string =>
   `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
 

@@ -45,6 +45,20 @@ Opportunistic; touch when already in the area.
 - `7` remaining `.then()` chains → async/await sweep. `S`, repo-wide.
 - `6` sequential independent awaits in middleware chains — measured negligible; skip unless a latency
   budget demands it. (no action)
+- `7c` **typed mongo collections, the remaining ~95 call sites** `P3 · M`. `DfMongo` exposes typed
+  collection accessors, but most code still reaches for `mongo.db.collection('<name>')`, which yields an
+  untyped `WithId<Document>` that then flows into functions expecting a `Dataset`/`Application`/… The five
+  sites that actually produced a type error were migrated during the typing-root-causes pass; the rest is a
+  mechanical sweep with no immediate ratchet payoff, so it wants the API suite running to be worth doing.
+  Collections with no accessor yet (`journals`, `thumbnails-cache`, `cache`, `extensions-cache`, `locks`,
+  the `integrity-*` family) need a type before they get one. Once the sweep lands, a `no-restricted-syntax`
+  lint rule can keep `db.collection(<literal>)` from coming back.
+- `7d` **remote-services router type mismatches** `P3 · S`. Typing `mongo-escape`'s escape/unescape as
+  identity functions surfaced two real mismatches in `remote-services/router.js`: a `RemoteService` is
+  passed to `setReqResource`, which wants a `Resource` (a `Pick` of `Dataset` — a remote service has no
+  `slug` and its `id` is optional), and a `RemoteServicePatch` is used as a `$set` on a `RemoteService`
+  while the handler assigns `updatedAt` / `actions`, neither of which the patch type declares. Both belong
+  with that router's own conversion to TypeScript, not to a cross-cutting typing pass.
 
 ### PR 8 — Test-suite speed `P2 · L` (the planned next big step)
 Current: Playwright `workers: 1`, `fullyParallel: false`, full suite on every push. Levers in likely
