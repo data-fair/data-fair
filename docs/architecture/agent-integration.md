@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 39 tools, only 9 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 39 tools, only 8 perform writes (navigate, set_expression, set_dataset_metadata, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -36,7 +36,7 @@ graph TB
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
             Tools["39 Tools"]
-            SubAgents["10 Subagents"]
+            SubAgents["13 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -188,23 +188,23 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button next to summary textarea |
+| **Trigger** | Action button next to the summary textarea, on the metadata form |
 | **Action ID** | `summarize-dataset` |
 | **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata and sample data, produces ≤300 char plain text summary |
-| **Pattern** | Generate, present to user, apply on approval via `set_dataset_summary`. The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. |
-| **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_summary` |
-| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` |
+| **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
+| **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_metadata` |
+| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.6 Write Dataset Description
 
 | | |
 |---|---|
-| **Trigger** | Action button next to description markdown editor |
+| **Trigger** | Action button next to the description markdown editor, on the metadata form |
 | **Action ID** | `describe-dataset` |
 | **Subagent** | `dataset_description_writer` — reads metadata, produces 500-2000 char markdown description |
-| **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_description` |
-| **Tools** | `read_dataset_info`, `set_dataset_description` |
-| **Source** | `ui/src/composables/dataset/agent-description-tools.ts` |
+| **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_metadata` (description field). Nothing is saved — the user still clicks Enregistrer. |
+| **Tools** | `read_dataset_info`, `set_dataset_metadata` |
+| **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.7 Summarize Metadata Changes
 
@@ -309,6 +309,17 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Pattern** | Same as the dataset summary/description flow. The parent passes the current `applicationId` to the subagent (via the action button's hidden-context); the subagent reads context with the global `describe_application` + `get_application_config` tools. Generated text is presented and applied on approval via `set_application_summary` / `set_application_description` (which write the edit-form field — the user still saves). `set_application_summary` validates ≤300 chars and rejects generic openings ("This application is…" / "Cette application est…"), forcing a retry. |
 | **Source** | `ui/src/composables/application/agent-metadata-tools.ts`, `ui/src/components/application/metadata/application-metadata-form.vue`, `ui/src/pages/application/[id]/index.vue` |
 
+### 4.17 Suggest Search Terms
+
+| | |
+|---|---|
+| **Trigger** | Action button next to the search terms field, on the metadata form |
+| **Action ID** | `suggest-search-terms` |
+| **Subagent** | `search_terms_writer` (model: `summarizer`) — reads metadata, schema and samples, returns a newline-separated list of hidden search terms (synonyms, acronyms with expansion, everyday wording) |
+| **Pattern** | The lead agent presents the list to the user and asks for approval, then applies it on approval via `set_dataset_metadata` (searchTerms field, one line of terms separated by commas or newlines). Nothing is saved — the user still clicks Enregistrer. |
+| **Tools** | `read_dataset_info`, `set_dataset_metadata` |
+| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
+
 ## 5. Tool Reference
 
 | Tool | Category | R/W | Source |
@@ -324,8 +335,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `calculate_metric` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `get_field_values` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `read_dataset_info` | Dataset summary | R | `dataset/agent-summary-tools.ts` |
-| `set_dataset_summary` | Dataset summary | **W** | `dataset/agent-summary-tools.ts` |
-| `set_dataset_description` | Dataset description | **W** | `dataset/agent-description-tools.ts` |
+| `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
 | `read_dataset_changes` | Dataset changes | R | `dataset/agent-changes-summary-tools.ts` |
 | `get_expression_context` | Expressions | R | `dataset/agent-expression-tools.ts` |
 | `get_sample_data` | Expressions | R | `dataset/agent-expression-tools.ts` |
@@ -369,6 +380,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
 | `dataset_summarizer` | summarizer | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
+| `search_terms_writer` | summarizer | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
 | `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
 | `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
 | `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
@@ -396,8 +408,9 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
 | `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
 | `ui/src/composables/dataset/agent-data-quality-tools.ts` | `data_quality_checker` subagent (reuses data query tools) |
-| `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (2) + `dataset_summarizer` subagent |
-| `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (2) + `dataset_description_writer` subagent |
+| `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (1) + `dataset_summarizer` and `search_terms_writer` subagents |
+| `ui/src/composables/dataset/agent-metadata-tools.ts` | Metadata read/write tools (2): `read_dataset_metadata`, `set_dataset_metadata` |
+| `ui/src/composables/dataset/agent-description-tools.ts` | `dataset_description_writer` subagent (writes via `set_dataset_metadata`, in `agent-metadata-tools.ts`) |
 | `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
 | `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
 | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
@@ -409,7 +422,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/components/application/metadata/application-metadata-form.vue` | `summarize-application` and `describe-application` action buttons |
 | `ui/src/composables/application/agent-creation-tools.ts` | Application creation wizard tools (4) |
 | `ui/src/composables/dataset/agent-creation-tools.ts` | Dataset creation wizard tools (5) |
-| `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
+| `ui/src/components/dataset/metadata/dataset-metadata-form.vue` | `summarize-dataset`, `describe-dataset` and `suggest-search-terms` action buttons |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |

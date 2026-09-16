@@ -40,11 +40,11 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ### 2. Dataset Metadata Completion (topics, keywords, license)
 
-**Current state:** `dataset-metadata-form.vue` has manual dropdowns for license, topics, keywords, origin, image. No AI help.
+**Implemented:** `read_dataset_metadata` / `set_dataset_metadata` (`ui/src/composables/dataset/agent-metadata-tools.ts`) are a single reader/writer for the whole metadata card — title, summary, description, keywords, license, topics, origin, creator, frequency, spatial and the hidden `searchTerms` field — each gated by the owner's `datasets-metadata` settings and, for license/topics, the organization's closed lists. The `search_terms_writer` subagent (behind the `suggest-search-terms` action button on the metadata form) proposes the hidden search vocabulary — synonyms, acronyms with their expansion, everyday wording — for `searchTerms`. As with every metadata write here, nothing is saved automatically: the tools fill the form and the user still reviews and clicks Enregistrer.
 
-**Opportunity:** An action button "Help complete metadata" on the edit-metadata page that reads the dataset content and suggests appropriate topics (from the owner's configured list), keywords, license, and temporal/spatial metadata. Valuable because users often skip metadata or don't know what to fill in.
+**Remaining gap:** automatic suggestion of `relatedDatasets` — no tool reads the catalog to propose datasets that are likely related to the one being edited.
 
-**Location:** `ui/src/pages/dataset/[id]/edit-metadata.vue`, `ui/src/components/dataset/dataset-metadata-form.vue`
+**Location:** `ui/src/composables/dataset/agent-metadata-tools.ts`, `ui/src/composables/dataset/agent-summary-tools.ts`, `ui/src/components/dataset/metadata/dataset-metadata-form.vue`
 
 ---
 
@@ -165,7 +165,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | Priority | Gap | Value | Effort |
 |----------|-----|-------|--------|
 | ~~Done~~ | ~~1. Description generation~~ | ~~High — frequently needed~~ | ~~Low — pattern exists~~ |
-| **High** | 2. Metadata completion | High — often skipped by users | Low-Med |
+| ~~Done~~ | ~~2. Metadata completion~~ | ~~High — often skipped by users~~ | ~~Low-Med~~ |
 | **High** | 3. Schema annotation | High — very tedious manually | Med |
 | **High** | 14. Dataset journal tool | Med-High — debugging/auditing | Low — read-only API call |
 | **High** | 11. Storage stats tool | Med — account management | Low — read-only API call |
