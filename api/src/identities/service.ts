@@ -130,7 +130,7 @@ type IdentityReport = {
 }
 
 // produce a report of every piece of data in the service related to an identity
-export const reportIdentity = async (query: Record<string, any>): Promise<IdentityReport> => {
+export const reportIdentity = async (query: Pick<Identity, 'type' | 'id'>): Promise<IdentityReport> => {
   const collections = [
     { id: 'remote-services', title: 'Configurations de services' },
     { id: 'applications', title: 'Configurations d\'applications' },

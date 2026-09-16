@@ -6,11 +6,11 @@ import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
 const endpoint = integrityEndpoint
 const bucket = 'data-fair-integrity'
-const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
+const credentials = { accessKeyId: 'rustfsadmin', secretAccessKey: 'rustfsadmin' }
 
 export const integrityTestClient = new S3Client({ region: 'us-east-1', endpoint, credentials, forcePathStyle: true })
 
-// the real IntegrityStore, constructed with explicit MinIO options (no #config in the test process)
+// the real IntegrityStore, constructed with explicit RustFS options (no #config in the test process)
 export const integrityTestStore = new IntegrityStore({ region: 'us-east-1', endpoint, bucket, credentials, forcePathStyle: true })
 
 export const ensureIntegrityBucket = async (): Promise<void> => {

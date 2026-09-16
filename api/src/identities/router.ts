@@ -32,5 +32,6 @@ router.delete('/:type/:id', async (req, res) => {
 
 // Ask for a report of every piece of data in the service related to an identity
 router.get('/:type/:id/report', async (req, res) => {
-  res.send(await reportIdentity(req.query))
+  if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
+  res.send(await reportIdentity({ type: req.params.type, id: req.params.id }))
 })

@@ -11,6 +11,13 @@ const pathsOf = async (ax: any, id: string, query = '') => {
   return Object.keys(doc.paths)
 }
 
+/** The "Par où commencer ?" section alone — the rest of the description mentions routes too. */
+const guideOf = async (ax: any, id: string) => {
+  const { description } = (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json`)).data.info
+  const start = description.indexOf('**Par où commencer ?**')
+  return start === -1 ? '' : description.slice(start)
+}
+
 test.describe('private-api-docs contextual to permissions', () => {
   test.beforeEach(async () => { await clean() })
   test.afterEach(async ({}, testInfo) => { if (testInfo.status === 'passed') await checkPendingTasks() })
@@ -52,5 +59,32 @@ test.describe('private-api-docs contextual to permissions', () => {
     ])
     const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/api-docs.json`)).data
     assert.equal(doc.openapi, '3.1.0')
+  })
+
+  // The guide is appended after the contextual filter, so it can only cite surviving routes.
+  // Pointing a restricted caller at /lines would send them straight into a 403.
+  test('the getting started guide only cites operations the caller may call', async () => {
+    const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-guide', schema: [{ key: 'ville', type: 'string' }] })
+    await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
+      { type: 'user', id: 'test_user5', classes: ['list'], operations: ['readDescription', 'readSchema', 'getValuesAgg', 'readPrivateApiDoc'] }
+    ])
+
+    const ownerGuide = await guideOf(owner, ds.id)
+    assert.ok(ownerGuide.includes('/lines'), 'the owner keeps /lines, so the guide must show it')
+
+    const paths = await pathsOf(contrib, ds.id)
+    assert.ok(!paths.includes('/lines'), 'precondition: /lines is filtered out for this contrib')
+    const contribGuide = await guideOf(contrib, ds.id)
+    assert.ok(contribGuide.length, 'the contrib still has enough operations for a guide')
+    assert.ok(!contribGuide.includes('/lines'), 'the guide must not cite the filtered out /lines')
+    assert.ok(contribGuide.includes('/values_agg'), 'the guide must still cite the granted /values_agg')
+  })
+
+  test('the guide is dropped when almost everything is filtered out', async () => {
+    const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-guide-empty', schema: [{ key: 'ville', type: 'string' }] })
+    await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
+      { type: 'user', id: 'test_user5', classes: [], operations: ['readDescription', 'readPrivateApiDoc'] }
+    ])
+    assert.equal(await guideOf(contrib, ds.id), '', 'a single bullet orients nobody')
   })
 })

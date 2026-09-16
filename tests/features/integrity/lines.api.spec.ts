@@ -642,7 +642,7 @@ test('a due lines renewal advances line revision locks but never their `.who` si
 // T5: purge per-suffix retention at line level — the current (latest, non-tombstone) anchor of a
 // line is protected regardless of its own lock state (same carve-out as the dataset level), but
 // its `.who` sibling is never part of that carve-out and ages out on its own (short) lock alone.
-// Manufactured directly (bypassing the relay): MinIO compliance locks can never be shortened once
+// Manufactured directly (bypassing the relay): RustFS compliance locks can never be shortened once
 // set, so a genuinely lapsed lock can only be produced by writing one short from the start and
 // letting real time pass.
 // ---------------------------------------------------------------------------------------------

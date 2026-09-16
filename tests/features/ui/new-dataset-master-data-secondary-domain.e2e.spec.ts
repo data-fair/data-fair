@@ -67,7 +67,7 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     const loginUrl = `${baseUrl1}/simple-directory/login?redirect=${encodeURIComponent(mainTarget)}`
     await page.goto(loginUrl)
     await page.getByLabel('Adresse mail').fill('test_user1@test.com')
-    await page.getByLabel('Mot de passe').fill('passwd')
+    await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
     await page.getByRole('button', { name: 'Se connecter' }).click()
     await page.waitForURL(/\/data-fair\/(\?|$|#)/, { timeout: 10000 })
 
