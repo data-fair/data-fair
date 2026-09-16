@@ -78,7 +78,11 @@ export const schema = {
         description: 'Array of 3 sample data rows showing real values from the dataset. Use these examples to understand exact formatting, casing, and typical values for _eq and _search filters.'
       }
     },
-    required: ['id', 'title', 'page', 'count'] as const
+    // Only what a dataset always has. `page` and `count` are legitimately absent
+    // for one just created through the wizard — never indexed, no public page —
+    // and requiring them made describe_dataset throw on exactly the dataset the
+    // assistant had helped create, the moment it looked at it.
+    required: ['id', 'title'] as const
   }
 } as const
 
@@ -88,10 +92,18 @@ export const schema = {
 export function buildStructuredContent (fetchedData: any, sampleLines?: any[], link?: string): Record<string, any> {
   const dataset: any = {
     id: fetchedData.id,
-    title: fetchedData.title,
-    page: link ?? fetchedData.page,
-    count: fetchedData.count
+    title: fetchedData.title
   }
+
+  // Guarded like every other field below, and for a concrete reason: a dataset
+  // the wizard has just created has no rows and no public page, so assigning
+  // these unconditionally left keys whose value is literally `undefined`. The
+  // host rejects those ("Instances of 'undefined' type are not supported"), so
+  // describe_dataset threw precisely when the assistant looked at a dataset it
+  // had just helped create.
+  const page = link ?? fetchedData.page
+  if (page !== undefined) dataset.page = page
+  if (fetchedData.count !== undefined) dataset.count = fetchedData.count
 
   if (fetchedData.slug) dataset.slug = fetchedData.slug
   if (fetchedData.summary) dataset.summary = fetchedData.summary
