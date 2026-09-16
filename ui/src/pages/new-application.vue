@@ -269,6 +269,8 @@ import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentApplicationCreationTools } from '~/composables/application/agent-creation-tools'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { buildApplicationWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
 
@@ -422,6 +424,16 @@ const importing = ref(false)
 const createError = ref<string | null>(null)
 
 // ---- Agent tools ----
+// What the wizard currently shows, so the assistant reads it from its context
+// instead of asking, and its own tool calls come back with the resulting screen.
+useAgentState('wizard', () => buildApplicationWizardState({
+  step: step.value,
+  creationType: creationType.value,
+  selected: creationType.value === 'copy' ? copyApp.value?.title : selectedBaseApp.value?.title,
+  title: appTitle.value,
+  ready: !!appTitle.value && !!(creationType.value === 'copy' ? copyApp.value : selectedBaseApp.value)
+}))
+
 useAgentApplicationCreationTools(locale, {
   step,
   creationType,
@@ -477,6 +489,7 @@ async function createApplication () {
     }
 
     const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+    emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
     router.push(`/application/${application.id}`)
   } catch (error: any) {
     createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')

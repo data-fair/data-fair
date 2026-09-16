@@ -322,6 +322,31 @@
 
         <!-- Step: Action / Confirmation -->
         <v-stepper-window-item value="action">
+          <!--
+            Recap of what is about to be created. Without it this step shows only
+            an owner picker, so someone told "your dataset is configured, just
+            click Create" has nothing on screen to check that against — the gap
+            a judged simulation caught, where the person answered "you say it is
+            done but I see nothing".
+          -->
+          <v-card
+            variant="tonal"
+            class="mb-4"
+            max-width="500"
+            data-testid="dataset-recap"
+          >
+            <v-card-text>
+              <div
+                v-for="line of recapLines"
+                :key="line.label"
+                class="d-flex"
+              >
+                <span class="text-medium-emphasis mr-2">{{ line.label }}</span>
+                <span class="font-weight-medium">{{ line.value }}</span>
+              </div>
+            </v-card-text>
+          </v-card>
+
           <df-owner-pick v-model="owner" />
 
           <dataset-conflicts
@@ -399,6 +424,8 @@ import axios, { type CancelTokenSource } from 'axios'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { buildDatasetWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
@@ -618,11 +645,53 @@ const paramsValid = computed(() => {
   return false
 })
 
+/**
+ * Every creation path ends here: tell the assistant the dataset exists BEFORE
+ * navigating, so a `wait_for_user_action` it declared resolves on the creation
+ * rather than on the route change that follows it. The wizard then unmounts and
+ * withdraws its `wizard` state, which is why this is the last chance to report.
+ */
+async function goToCreated (dataset: { id: string, title?: string }) {
+  emitAgentEvent('dataset-created', { id: dataset.id, title: dataset.title ?? effectiveTitle.value, type: datasetType.value })
+  await router.push(`/dataset/${dataset.id}`)
+}
+
+// What the confirmation step shows back to the person, and the only place they
+// can check the assistant's claims about what it configured.
+const recapLines = computed(() => {
+  const lines: { label: string, value: string }[] = []
+  if (datasetType.value) lines.push({ label: t('recapType'), value: t('type_' + datasetType.value) })
+  if (effectiveTitle.value) lines.push({ label: t('recapTitle'), value: effectiveTitle.value })
+  if (datasetType.value === 'file' && file.value) lines.push({ label: t('recapFile'), value: file.value.name })
+  if (datasetType.value === 'rest') {
+    if (restHistory.value) lines.push({ label: t('recapHistory'), value: t('recapEnabled') })
+    if (restAttachments.value) lines.push({ label: t('recapAttachments'), value: t('recapEnabled') })
+  }
+  if (datasetType.value === 'virtual' && virtualChildren.value.length) {
+    lines.push({ label: t('recapChildren'), value: String(virtualChildren.value.length) })
+  }
+  return lines
+})
+
 const canCreate = computed(() => {
   return !createAction.loading.value && conflictsOk.value && !!owner.value
 })
 
 // ---- Agent tools ----
+// What the wizard currently shows. Keyed state, so the assistant reads it from
+// its context instead of asking, and a tool call it makes comes back with the
+// resulting screen attached.
+useAgentState('wizard', () => buildDatasetWizardState({
+  step: step.value,
+  type: datasetType.value,
+  title: effectiveTitle.value,
+  ready: paramsValid.value && canCreate.value,
+  fileName: file.value?.name,
+  history: restHistory.value,
+  attachments: restAttachments.value,
+  childrenCount: virtualChildren.value.length
+}))
+
 useAgentDatasetCreationTools(locale, {
   step,
   datasetType,
@@ -751,7 +820,7 @@ async function createFileDataset () {
 
   const dataset = res.data
   if (dataset.error) throw new Error(dataset.error)
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createRestDataset () {
@@ -793,7 +862,7 @@ async function createRestDataset () {
     body,
     query: params
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createVirtualDataset () {
@@ -842,7 +911,7 @@ async function createVirtualDataset () {
     method: 'POST',
     body
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createMetaOnlyDataset () {
@@ -859,7 +928,7 @@ async function createMetaOnlyDataset () {
     method: 'POST',
     body
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 </script>
 
@@ -887,6 +956,13 @@ fr:
   selectFile: Sélectionnez ou glissez/déposez un fichier
   selectAttachments: Pièces jointes (archive zip, optionnel)
   title: Titre du jeu de données
+  recapType: "Type :"
+  recapTitle: "Titre :"
+  recapFile: "Fichier :"
+  recapHistory: "Historique des révisions :"
+  recapAttachments: "Pièces jointes :"
+  recapChildren: "Jeux de données sources :"
+  recapEnabled: activé
   titleTooShort: Le titre doit contenir au moins 4 caractères
   attachmentsAsImage: Traiter les pièces jointes comme des images
   formats: Formats supportés
@@ -937,6 +1013,13 @@ en:
   selectFile: Select or drag and drop a file
   selectAttachments: Attachments (zip archive, optional)
   title: Dataset title
+  recapType: "Type:"
+  recapTitle: "Title:"
+  recapFile: "File:"
+  recapHistory: "Revision history:"
+  recapAttachments: "Attachments:"
+  recapChildren: "Source datasets:"
+  recapEnabled: enabled
   titleTooShort: Title must be at least 4 characters
   attachmentsAsImage: Process the attachments as images
   formats: Supported formats

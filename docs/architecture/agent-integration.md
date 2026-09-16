@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 39 tools, only 9 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 38 tools, only 9 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -35,7 +35,7 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["39 Tools"]
+            Tools["38 Tools"]
             SubAgents["10 Subagents"]
             TR --> Tools
             SR --> SubAgents
@@ -117,14 +117,14 @@ sequenceDiagram
 
 ## 3. System Prompt
 
-Defined in `ui/src/layouts/default.vue`, locale-dependent. Instructs the agent to be a Data Fair assistant: help navigate, explore datasets, query data, configure applications, manage metadata. Key directives: respond in the user's language, be concise, frequently use `getCurrentLocation`, and use `navigate` to show filtered data after subagent exploration.
+Defined in `ui/src/layouts/default.vue`, locale-dependent. Instructs the agent to be a Data Fair assistant: help navigate, explore datasets, query data, configure applications, manage metadata. Key directives: respond in the user's language, be concise, and use `navigate` to show filtered data after subagent exploration. It no longer tells the agent to keep asking where the user is: the application reports that itself (see [Host events](#10-host-events)).
 
 ### Absolute-URL link convention
 
 Chat prose renders inside the agents iframe, which resolves a clicked link against its *own* URL before the host (`useAgentChatBase`) can act on it — so a relative link the model writes (`/dataset/{id}/table`, or worse a bare `dataset/...`) loses the deployment path prefix (e.g. `/data-fair/`) and the host full-reloads to a 404. Models also resist hand-assembling relative paths and tend to hallucinate an origin. Rather than fight that, the integration hands the model **ready-made absolute URLs** and tells it to use them verbatim:
 
 - `list_pages` emits absolute URLs (origin + history base + path) via `toAbsoluteUrl` — `{id}` templates and a trailing `?<query>` are the only things the model substitutes.
-- `get_current_location` returns the current page's absolute `URL`.
+- The host-reported `location` state carries the current page's absolute `url` (see [Host events](#10-host-events)); it replaced the `get_current_location` tool.
 - `list_datasets` (now surfaced in its text output) and `describe_dataset` emit a per-dataset `Link`. The shared formatters default this to the API `page` field — the public/portal page, correct for the portal and MCP consumers. **The back-office integration must not use `page`**: on a secondary domain the API rewrites `page` to the portal URL (via the publication site's `datasetUrlTemplate`) or, through the `setResourceLinks` fallback, to the *primary* back-office (`config.publicUrl`) — never the current secondary back-office the user is in. So `useAgentDatasetTools` passes a `datasetLink` option (`agent-tools/{list-datasets,describe-dataset}.ts`) that builds a current-site link (`window.location.origin + $sitePath + /data-fair/dataset/{id}`), overriding both the text `Link` and `structuredContent.page`. The system prompt points at that link as the base for `/table?<filterQuery>` and `/map?<filterQuery>`. Map links also accept a `category=<column_key>` param (documented in the dataset_data subagent prompt): the map preview colors features per value of that column and shows an interactive legend, so the agent can hand out richer map links for categorical columns.
 - `navigate` accepts either an absolute URL or a bare path: `toRoutePath` reduces any input (full URL, base-prefixed path, or bare router path — even one with a wrong/hallucinated origin) back to a base-less router path for `router.push`, mirroring the host handler's logic.
 
@@ -158,7 +158,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 **The dropped-operator-suffix variant (and the ownership fix).** The same class recurs without `_c_`: the orchestrator, lacking the suffix rule, hand-authors a filter as `lieu_departement=Finistère` (no `_eq`) — often by *dictating that format to the `dataset_data` subagent in the task*, which then takes the caller's format for granted and emits ready-to-use URLs in it, even though its own `Filter query:` output line correctly read `lieu_departement_eq=…`. A suffix-less key matches no operator in the table/map URL parser and is silently dropped, landing the user on the unfiltered dataset. Fixed by **ownership prompting**, not by a parser tweak: the `subagent_dataset_data` tool description tells the caller to describe the data need *in plain language, not filter/URL syntax*; the subagent prompt makes its verbatim `filterQuery` the only correct filter syntax and forbids hand-assembling `column=value` links even when the task phrased the filter differently. The principle generalizes the `_c_` fix: don't patch each malformed-syntax symptom in the always-present prompt — move authorship to the one agent (and tool output) that has the schema. (A read-side fallback — rewriting a bare `<column>` URL param to `<column>_eq` in `useFilters` — was rejected: it can't be done safely without the schema, and matching bare param keys against schema keys collides with generic column names like `sort`/`select`/`page`.)
 
-**Defensive resolution of mis-prefixed column filters.** Prompt rules alone can't stop the mistake, because it self-perpetuates: a `_c_<col>_<suffix>` that lands in the address bar is echoed back by `get_current_location`, and the model trusts the concrete live URL over the abstract prohibition and re-emits it. The malformed key cannot be normalized at the URL boundary (navigate / get_current_location) without the schema, because `_c_<conceptId>_<suffix>` is a **legitimate, API-accepted concept filter** when `<conceptId>` is a real primary concept — indistinguishable from a mis-prefixed column key without knowing the dataset's columns. So the resolution lives where the schema exists: the ES query parser (`api/src/datasets/es/commons.ts`) resolves a `_c_<x>_<suffix>` key against primary concept ids first and, when none matches, **falls back to a column-key lookup** before the existing silent-ignore (`continue`). A genuine inapplicable dashboard concept filter still matches neither and is ignored as before. This fixes the agent data tools *and* the table/map preview in one place: the table forwards every `_c_*` param straight to the API via `useConceptFilters` (`dataset-table.vue` `extraParams`), so the same fallback applies. The pre-existing always-on `ignoredParamsAdvice` hint still nudges the model toward the bare column form.
+**Defensive resolution of mis-prefixed column filters.** Prompt rules alone can't stop the mistake, because it self-perpetuates: a `_c_<col>_<suffix>` that lands in the address bar is echoed back in the host-reported `location` state (formerly by `get_current_location`), and the model trusts the concrete live URL over the abstract prohibition and re-emits it. The malformed key cannot be normalized at the URL boundary (navigate / the reported location) without the schema, because `_c_<conceptId>_<suffix>` is a **legitimate, API-accepted concept filter** when `<conceptId>` is a real primary concept — indistinguishable from a mis-prefixed column key without knowing the dataset's columns. So the resolution lives where the schema exists: the ES query parser (`api/src/datasets/es/commons.ts`) resolves a `_c_<x>_<suffix>` key against primary concept ids first and, when none matches, **falls back to a column-key lookup** before the existing silent-ignore (`continue`). A genuine inapplicable dashboard concept filter still matches neither and is ignored as before. This fixes the agent data tools *and* the table/map preview in one place: the table forwards every `_c_*` param straight to the API via `useConceptFilters` (`dataset-table.vue` `extraParams`), so the same fallback applies. The pre-existing always-on `ignoredParamsAdvice` hint still nudges the model toward the bare column form.
 
 **Always-on ignored-parameter hint.** The dataset data API returns advisory entries in `meta.hints` (an array of standalone sentences, suppressed only when `hint=false` is passed) for silently-ignored query parameters: a `_c_`-prefixed column filter (suggests the bare column filter), an inert `_c_` filter that matches no concept, or an unrecognised/misspelled parameter. The advice is generated by `ignoredParamsAdvice` in `api/src/misc/utils/query-advice.ts` and emitted via `buildQueryHints`/`attachQueryHints` — independent of the slow-query performance-advice gate. It is wired into `/lines`, `/geo_agg`, `/values_agg`, `/metric_agg`, and `/simple_metrics_agg`. The `search_data`, `aggregate_data`, and `calculate_metric` agent tools print one `> Hint:` line per entry in their formatted output so the model can self-correct without a round-trip error. `search_data` also surfaces the other `meta` transparency fields of the approximate-count feature (see `load-management.md` §9): an estimated total is reported as `~N (±x% sampled estimate)` (`meta.totalMarginPct`) and the words that `q_mode=adapt` ignored in filtering would be named (`meta.ignoredWords` — defensive: the tool hardcodes `q_mode=complete`, which adapt exempts, so this line should not fire today), so the model reports totals honestly.
 
@@ -210,7 +210,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button on edit-metadata page (visible when unsaved changes exist) |
+| **Trigger** | Action button on the dataset page (visible when unsaved metadata changes exist) |
 | **Action ID** | `summarize-metadata-changes` |
 | **Subagent** | `dataset_changes_summarizer` (model: `summarizer`) — reads unified diff, produces <500 char plain text summary |
 | **Pattern** | Direct delegation, no user confirmation needed (read-only output) |
@@ -313,7 +313,6 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | Tool | Category | R/W | Source |
 |------|----------|-----|--------|
-| `get_current_location` | Navigation | R | `agent/navigation-tools.ts` |
 | `list_pages` | Navigation | R | `agent/navigation-tools.ts` |
 | `navigate` | Navigation | **W** | `agent/navigation-tools.ts` |
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
@@ -410,7 +409,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/composables/application/agent-creation-tools.ts` | Application creation wizard tools (4) |
 | `ui/src/composables/dataset/agent-creation-tools.ts` | Dataset creation wizard tools (5) |
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
-| `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
+| `ui/src/pages/dataset/[id]/index.vue` | `summarize-metadata-changes` action button, and the schema editor — there is no separate schema route |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |
 | `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` and `check-data-quality` action buttons, line edit tools |
@@ -529,3 +528,49 @@ The two registered cases are deliberately a matched pair over the ways the page
 can move: `lien-ouvert-par-l-utilisateur` covers the person clicking a link the
 assistant wrote, and `question-sur-les-donnees` covers the assistant navigating
 through its own `navigate` tool. Both must leave the chat usable afterwards.
+
+## 10. Host events
+
+Tools are how the assistant acts on the application. **Host events** are how the
+application tells the assistant what the user did and what is on screen, without
+being asked — the other direction, and the one that was missing.
+
+The mechanism lives in `@data-fair/lib-vue-agents` (>= 0.5.0) and is documented
+in full in the agents repo (`docs/architecture/host-events.md`). In short: a page
+emits events on the per-tab BroadcastChannel; a **keyed** event is state-like and
+the chat retains only the last one per key; an **unkeyed** event is a transition.
+The chat delivers each exactly once and persisted — appended to the result of the
+tool call that caused it, returned by a `wait_for_user_action` the assistant
+declared, or folded into the next user turn's hidden context — plus a
+`<host-state>` snapshot whenever a conversation activates. Nothing a page emits
+ever starts a model turn.
+
+### What this application publishes
+
+| Key / event | Where | Carries |
+|---|---|---|
+| `location` (keyed) | `ui/src/layouts/default.vue` | absolute `url`, `path`, route `name`, `params`, `query`, breadcrumb trail |
+| `wizard` (keyed) | `ui/src/pages/new-dataset.vue` | `step`, `type`, `title`, `ready`, plus the options of the chosen type (`file`, `history`/`attachments`, `children`) |
+| `wizard` (keyed) | `ui/src/pages/new-application.vue` | `step`, `creationType`, `selected`, `title`, `ready` |
+| `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
+| `application-created` | `ui/src/pages/new-application.vue` | `id`, `title` — emitted before the redirect |
+
+The payload builders are pure and unit-tested in
+`ui/src/composables/agent/host-state.ts` /
+`tests/features/agent-tools/host-state.unit.spec.ts`; the `useAgentState` calls
+sit in the components that own the reactive sources. Payloads omit empty fields
+on purpose: a keyed state is re-sent in full in every activation snapshot, so an
+empty field costs tokens every time for nothing.
+
+**Why the creation events are emitted before `router.push`.** The wizard unmounts
+on the redirect and withdraws its `wizard` state, so that is the last moment it
+can report. Emitting first also means a `wait_for_user_action` the assistant
+declared resolves on the creation itself rather than on the route change.
+
+### `get_current_location` is gone
+
+It was removed with this mechanism, along with the system prompt's "use it
+frequently" line. It answered a question the application can simply state, and
+every call cost a full model request carrying the whole history and tool list.
+`navigate` and `list_pages` are unchanged; `ui/src/composables/agent/url-utils.ts`
+still builds the absolute URLs, and the reported `location.url` uses it.

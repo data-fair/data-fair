@@ -1,64 +1,35 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
+import type { Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { unwrapFilterQuery } from '@data-fair/agent-tools-data-fair/_utils'
 import { createAgentTranslator } from './utils'
-import { toAbsoluteUrl, toRoutePath } from './url-utils'
+import { toAbsoluteUrl, toRoutePath, suggestRoutes } from './url-utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
-import type { BreadcrumbItem } from '~/composables/layout/use-breadcrumbs'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
-    getCurrentLocation: 'Obtenir la localisation actuelle',
     listPages: 'Lister les pages',
     navigateToPage: 'Naviguer vers une page'
   },
   en: {
-    getCurrentLocation: 'Get current location',
     listPages: 'List pages',
     navigateToPage: 'Navigate to page'
   }
 }
 
 interface AgentNavigationToolsDeps {
-  route: RouteLocationNormalizedLoaded
   router: Router
   navigationGroups: ComputedRef<NavGroup[]>
-  breadcrumbItems: Ref<BreadcrumbItem[]>
   locale: Ref<string>
 }
 
-export function useAgentNavigationTools ({ route, router, navigationGroups, breadcrumbItems, locale }: AgentNavigationToolsDeps) {
+export function useAgentNavigationTools ({ router, navigationGroups, locale }: AgentNavigationToolsDeps) {
   const t = createAgentTranslator(messages, locale)
 
   // Absolute application URL for a router path (or {id} template). Tools run in the
   // main frame, so window.location.origin is the Data Fair app origin, and the router
   // history base carries the deployment path prefix (e.g. /data-fair/).
   const appUrl = (path: string) => toAbsoluteUrl(window.location.origin, router.options.history.base, path)
-
-  useAgentTool({
-    name: 'get_current_location',
-    // Says what it answers, not just what it returns. Described only as "the
-    // current page location", a model with a dataset id to find has no reason to
-    // reach for it and searches by name instead — a simulation caught exactly
-    // that, on a dataset page, calling list_datasets then describe_dataset to
-    // work out where it already was.
-    description: 'Get the current page location in the application, including its full URL, route path, name, parameters, and breadcrumbs. When the user is looking at a dataset, application, processing or catalog, its id is in the returned parameters: read it from here rather than searching for the resource by name.',
-    annotations: { title: t('getCurrentLocation'), readOnlyHint: true },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {}
-    },
-    execute: async () => {
-      const breadcrumbs = breadcrumbItems.value.map(b => `- ${b.text}: ${typeof b.to === 'string' ? appUrl(b.to) : b.to?.path ? appUrl(b.to.path) : ''}`).join('\n')
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `**URL**: ${appUrl(route.fullPath)}\n**Path**: ${route.path}\n**Name**: ${route.name as string}\n**Params**: ${JSON.stringify({ ...route.params })}\n**Query**: ${JSON.stringify({ ...route.query })}\n**Breadcrumbs**:\n${breadcrumbs}`
-        }]
-      }
-    }
-  })
 
   useAgentTool({
     name: 'list_pages',
@@ -124,7 +95,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
 
   useAgentTool({
     name: 'navigate',
-    description: 'Navigate to a page in the application. Accepts either a full absolute URL (as returned by list_pages, get_current_location, or the page field of dataset/application tools) or a bare path — both work. Use list_datasets, list_applications, list_processings, or list_catalogs to find resource IDs. Optionally pass query parameters. IMPORTANT: when you search or filter data from a dataset, always offer to navigate the user to the filtered table view by passing the same filter parameters as query params to the dataset table page.',
+    description: 'Navigate to a page in the application. Accepts either a full absolute URL (as returned by list_pages, the host-reported location, or the page field of dataset/application tools) or a bare path — both work. Use list_datasets, list_applications, list_processings, or list_catalogs to find resource IDs. Optionally pass query parameters. IMPORTANT: when you search or filter data from a dataset, always offer to navigate the user to the filtered table view by passing the same filter parameters as query params to the dataset table page.',
     annotations: { title: t('navigateToPage') },
     inputSchema: {
       type: 'object' as const,
@@ -146,6 +117,27 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         const { path, query: embeddedQuery } = toRoutePath(window.location.origin, router.options.history.base, params.path)
         const queryString = unwrapFilterQuery(params.query as string | undefined) || embeddedQuery
         const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : undefined
+
+        // Refuse a route that does not exist, rather than pushing to it.
+        // `router.push` on an unmatched path succeeds and renders nothing: the
+        // person is left on a blank page and every tool the real page registers
+        // disappears with it, so the assistant loses both the screen and its
+        // means to act, silently. A judged simulation caught exactly that, on an
+        // invented `/dataset/{id}/edit-schema`, after which the assistant spent
+        // the rest of the conversation asking the person what they could see.
+        // Failing here instead turns it into one self-correcting tool result.
+        const resolved = router.resolve(query ? { path, query } : path)
+        if (!resolved.matched.length) {
+          const suggestions = suggestRoutes(router.getRoutes().map(r => r.path), path)
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `**Success**: false\n**Error**: there is no page at "${path}" — that route does not exist.\n**Pages that do exist here**:\n${suggestions.map(s => `- ${appUrl(s)}`).join('\n')}`
+            }],
+            isError: true
+          }
+        }
+
         await router.push(query ? { path, query } : path)
         await new Promise(resolve => setTimeout(resolve, 500))
         const currentRoute = router.currentRoute.value
