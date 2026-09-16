@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "NODE_CONFIG_DIR=../api/config/ vite --port $DEV_UI_PORT",
+    "dev": "NODE_CONFIG_DIR=../api/config/ NODE_OPTIONS=--max-old-space-size=2048 vite --port $DEV_UI_PORT",
     "build": "vite build",
     "prepare-webfont-css": "",
     "preview": "vite preview",
