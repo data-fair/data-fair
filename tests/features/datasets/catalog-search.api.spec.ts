@@ -128,12 +128,43 @@ test.describe('catalog search', () => {
     const value = 'contrib'
     const count = async (q: string) => (await u1Org.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
 
+    // a REST dataset with an explicit column title, so the indexSchemaLabels switch also gets a
+    // real (non-vacuous) assertion: collapsable.csv's own columns get no title at all when
+    // uploaded without one, so no label ever reaches _searchText for that fixture
+    await u1Org.post('/api/v1/datasets/cs-org-labels', {
+      isRest: true,
+      title: 'cs-org-labels',
+      schema: [{ key: 'x', type: 'string', title: 'Colonne griffonmarker' }]
+    })
+
     assert.equal(await count(value), 0, 'enum values are off by default')
+    assert.equal(await count('griffonmarker'), 1, 'labels are on by default')
+
     await settings({ indexSchemaLabels: true, indexEnumValues: true })
     assert.equal(await count(value), 1, 'the switch recomputes existing datasets')
+
     await settings({ indexSchemaLabels: false, indexEnumValues: false })
     assert.equal(await count(value), 0)
-    assert.equal(await count('groupLabel'), 0, 'labels off too')
+    assert.equal(await count('griffonmarker'), 0, 'labels off too, also recomputed')
+  })
+
+  test('the organization\'s very first settings write still recomputes datasets already indexed under the implicit default', async () => {
+    const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    // beforeEach's clean() deletes settings documents matching id /^test_/, so test_org1 starts
+    // this test with NO settings document at all: mongo.settings.findOneAndReplace's pre-image
+    // (writeSettings' `oldSettings`) will be null on the upcoming first write
+
+    // uploaded before any settings write ever happens: indexed under the implicit default
+    // catalogSearch (indexSchemaLabels: true, indexEnumValues: false)
+    const dataset = await sendDataset('datasets/collapsable.csv', u1Org)
+    const enumCol = dataset.schema.find((p: any) => p.key === 'roles')
+    assert.ok(enumCol?.enum?.length, 'the roles column must carry a non-empty enum')
+    const count = async (q: string) => (await u1Org.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+    assert.equal(await count('contrib'), 0, 'enum values are off under the implicit default')
+
+    // the very first settings write this organization ever makes
+    await u1Org.put('/api/v1/settings/organization/test_org1', { catalogSearch: { indexEnumValues: true } })
+    assert.equal(await count('contrib'), 1, 'a first-ever settings write must still recompute existing datasets')
   })
 
   test('_searchText is stripped from the draft validate and cancel responses', async () => {

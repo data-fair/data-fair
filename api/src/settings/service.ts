@@ -20,6 +20,8 @@ import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 import { computeSearchText, type CatalogSearchSettings } from '../datasets/operations.ts'
+import type { AnyBulkWriteOperation } from 'mongodb'
+import type { DatasetInternal } from '#types'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -189,8 +191,11 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
   }
 
-  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings)) {
-    await updateCatalogSearch(owner, oldSettings.catalogSearch, settings.catalogSearch)
+  // no truthy guard on oldSettings here: findOneAndReplace returns null on the owner's very
+  // first settings write, but existing datasets may already have been indexed under the
+  // implicit default catalogSearch, so that first write can still be a real change to recompute
+  if (isMainSettings(settings)) {
+    await updateCatalogSearch(owner, oldSettings && isMainSettings(oldSettings) ? oldSettings.catalogSearch : undefined, settings.catalogSearch)
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
@@ -220,7 +225,7 @@ const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: Catalog
     { 'owner.type': owner.type, 'owner.id': owner.id, draftReason: { $exists: false } },
     { projection: { id: 1, schema: 1, permissions: 1, _searchText: 1 } }
   )
-  const ops: any[] = []
+  const ops: AnyBulkWriteOperation<DatasetInternal>[] = []
   const flush = async () => {
     if (ops.length) await mongo.datasets.bulkWrite(ops, { ordered: false })
     ops.length = 0
