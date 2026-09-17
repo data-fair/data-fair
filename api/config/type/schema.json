@@ -37,7 +37,9 @@
     "info",
     "baseAppsCategories",
     "remoteServices",
+    "remoteServicesPrivateMapping",
     "catalogs",
+    "defaultRemoteKey",
     "remoteTimeout",
     "ogr2ogr",
     "dateFormats",
@@ -418,6 +420,7 @@
     },
     "defaultRemoteKey": {
       "type": "object",
+      "required": ["in", "name", "value"],
       "properties": {
         "in": { "type": "string" },
         "name": { "type": "string" },

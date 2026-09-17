@@ -19,6 +19,10 @@ dayjs.extend(utc)
  * @returns
  */
 export default (defaultTimezone) => {
+  // Without a zone, every date function below silently falls back to the process timezone,
+  // so a mis-wired caller yields wrong-but-plausible dates instead of an error. Refuse it.
+  if (!defaultTimezone) throw new Error('defaultTimezone is required to build the expression parser')
+
   const parser = new Parser({
     //  Useless in our use case
     //  mathematical
