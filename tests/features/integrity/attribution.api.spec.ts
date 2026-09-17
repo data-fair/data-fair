@@ -1,7 +1,7 @@
 // tests/features/integrity/attribution.api.spec.ts
 // T2: the `.who` attribution sibling — store.writeWho/getWho, locked with its OWN retention
 // (config integrity.attribution.retentionDays), shorter than the revision's own retention
-// (config integrity.retention.days) and never extended. This is the MinIO proof that a
+// (config integrity.retention.days) and never extended. This is the RustFS proof that a
 // per-object retain-until shorter than the sibling revision's is honored (design doc §6.1/§6.3).
 // T3 (this file, extended): threading `who` from the HTTP boundary through the dataset-level
 // write path — user PATCH, `_fix` after tamper, dedupe suppression, and the attribution kill
@@ -48,7 +48,7 @@ test('writeWho stores a compliance-locked .who sibling with its own (shorter) re
   expect(backWho).toEqual(whoBody)
 
   // and their retain-until dates genuinely differ: the .who sibling is shorter than its revision,
-  // proving MinIO honors a per-object COMPLIANCE date distinct from (and shorter than) a sibling's
+  // proving RustFS honors a per-object COMPLIANCE date distinct from (and shorter than) a sibling's
   const revisionRetention = await store.getRetention(key)
   const whoRetention = await store.getRetention(whoKey)
   expect(revisionRetention).toBeTruthy()

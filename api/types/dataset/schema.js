@@ -660,7 +660,7 @@ const datasetProperties = {
   },
   constraints: {
     type: 'array',
-    title: "Contraintes d'unicité",
+    title: 'Contraintes',
     description: "Contraintes de validation à l'échelle du jeu de données, au delà des validations par colonne.",
     items: {
       type: 'object',
@@ -678,6 +678,16 @@ const datasetProperties = {
             title: 'Colonnes',
             description: 'La combinaison des valeurs de ces colonnes doit être unique sur chaque ligne du jeu de données.',
             items: { type: 'string' }
+          }
+        }
+      }, {
+        required: ['type'],
+        title: 'Cohérence des dates',
+        description: 'La colonne portant le concept "Date de fin" doit contenir, sur chaque ligne, une date supérieure ou égale à la colonne portant le concept "Date de début".',
+        properties: {
+          type: {
+            type: 'string',
+            const: 'dateCoherence'
           }
         }
       }]
