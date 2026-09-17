@@ -87,6 +87,10 @@ test.describe('host events published to the assistant', () => {
     expect('file' in wizard).toBe(false)
 
     await page.getByRole('button', { name: /Continuer/ }).click()
+    // `ready` is the one field that tells the assistant the person can press the
+    // button now. It turns true only once the confirmation step's conflict check
+    // (an API call) has come back, so it must be seen to arrive before any click.
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'wizard')?.ready, { timeout: 15000 }).toBe(true)
     await page.getByRole('button', { name: /Créer le jeu de données/ }).click()
     await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
 
@@ -98,5 +102,19 @@ test.describe('host events published to the assistant', () => {
     expect(detail.title).toBe('Demandes de subvention')
     expect(detail.type).toBe('rest')
     expect(detail.id).toBeTruthy()
+
+    // Pressing Create must not report the form as no longer ready. It used to: `ready`
+    // folded in `!createAction.loading`, so the click itself published
+    // `ready:false`, and the chat's keyed coalescing (last value wins) replaced the
+    // `true` the assistant had never yet been handed. A judged run then showed the
+    // model "ready:false" as the state at the very moment of creation, and no
+    // ready:true anywhere in its record — while the person's own look showed an
+    // enabled Create button. Ready means "complete and submittable from here", not
+    // "not currently submitting".
+    const wizardEvents = (await readEvents(page)).filter(e => e.key === 'wizard').map(e => JSON.parse(e.detail!))
+    const firstReady = wizardEvents.findIndex(w => w.ready === true)
+    expect(firstReady, 'ready:true was never published').toBeGreaterThanOrEqual(0)
+    const regressed = wizardEvents.slice(firstReady).filter(w => w.ready === false)
+    expect(regressed, 'the click reported the form as not ready').toEqual([])
   })
 })

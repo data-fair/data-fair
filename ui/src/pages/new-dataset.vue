@@ -685,7 +685,13 @@ useAgentState('wizard', () => buildDatasetWizardState({
   step: step.value,
   type: datasetType.value,
   title: effectiveTitle.value,
-  ready: paramsValid.value && canCreate.value,
+  // Complete and submittable from here — deliberately not `canCreate`, which also
+  // folds in `!createAction.loading`. That made the click itself publish
+  // `ready:false`, and the chat keeps only the last value per key, so the `true`
+  // the assistant had never yet received was overwritten before delivery: a judged
+  // run saw "ready:false" as the state at the moment of creation and no
+  // ready:true anywhere. Being mid-submit does not make the form less complete.
+  ready: paramsValid.value && conflictsOk.value && !!owner.value,
   fileName: file.value?.name,
   history: restHistory.value,
   attachments: restAttachments.value,
