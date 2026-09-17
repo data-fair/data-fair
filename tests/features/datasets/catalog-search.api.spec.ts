@@ -167,7 +167,7 @@ test.describe('catalog search', () => {
     assert.equal(await count('contrib'), 1, 'a first-ever settings write must still recompute existing datasets')
   })
 
-  test('_searchText is stripped from the draft validate and cancel responses', async () => {
+  test('the draft validate and cancel responses carry no internal or privileged field', async () => {
     // a FILE dataset (not isRest — REST datasets never enter draft mode)
     const dataset = await sendDataset('datasets/dataset1.csv', u1)
     const schema = dataset.schema.map((p: any) => p.key === 'nb' ? { ...p, title: 'Nombre fromageries' } : p)
@@ -176,17 +176,29 @@ test.describe('catalog search', () => {
     // the column title is only findable through the search index, not through the column key or data
     assert.equal((await u1.get('/api/v1/datasets', { params: { q: 'fromageries', size: 0 } })).data.count, 1)
 
-    // validate a draft: the raw response of POST /:datasetId/draft must not carry _searchText
+    // and prove _readApiKey is genuinely populated too — asserting a field is absent from a
+    // response proves nothing if the document never carried it. This is the field that made these
+    // two routes a privilege-escalation surface: a bearer credential otherwise gated behind the
+    // `getReadApiKey` READ operation, while validateDraft/cancelDraft are WRITE-class, so a
+    // write-only grantee could collect it here.
+    await u1.patch('/api/v1/datasets/' + dataset.id, { readApiKey: { active: true, interval: 'P1W' } })
+    assert.ok((await u1.get(`/api/v1/datasets/${dataset.id}/read-api-key`)).data.current)
+
+    // everything clean() removes, and which must therefore not appear on either response
+    const forbidden = ['_searchText', '_readApiKey', 'permissions', '_id', 'initFrom', '_uniqueRefs',
+      '_partialRestStatus', '_indexShape', '_esLineBytes', '_needsHistorizing', 'loaded']
+    const assertClean = (body: any, route: string) => {
+      for (const key of forbidden) assert.equal(body[key], undefined, `${route} must not return ${key}`)
+    }
+
     await openDraft(dataset.id, 'dataset2.csv')
-    const validated = (await u1.post(`/api/v1/datasets/${dataset.id}/draft`)).data
-    assert.equal(validated._searchText, undefined)
+    assertClean((await u1.post(`/api/v1/datasets/${dataset.id}/draft`)).data, 'POST /draft')
     await waitForFinalize(u1, dataset.id)
 
-    // cancel a second draft: the raw response of DELETE /:datasetId/draft must not carry it either
-    // (a different file than the current one — dataset1.csv, since validation above moved the
-    // dataset's current file to dataset2.csv — so this upload is a genuine change, not a no-op)
+    // cancel a second draft (a different file than the current one — dataset1.csv, since the
+    // validation above moved the dataset's current file to dataset2.csv — so this upload is a
+    // genuine change, not a no-op that would never open a draft)
     await openDraft(dataset.id, 'dataset1.csv')
-    const cancelled = (await u1.delete(`/api/v1/datasets/${dataset.id}/draft`)).data
-    assert.equal(cancelled._searchText, undefined)
+    assertClean((await u1.delete(`/api/v1/datasets/${dataset.id}/draft`)).data, 'DELETE /draft')
   })
 })
