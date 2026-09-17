@@ -94,11 +94,19 @@ export const cases: SimulationCase[] = [
   // and the handover under test was unreachable. The one click the case is
   // built on is now stated as something this person does, so the reluctance
   // covers exploring and describing rather than acting.
+  //
+  // The first wording of that ("quand on te dit sur quel bouton cliquer, tu
+  // cliques") overshot: the persona opened with "dites-moi sur quoi cliquer, je
+  // le ferai moi-même", the assistant complied, and the person executed five
+  // wizard steps by hand across six turns without ever reaching Create — the
+  // assistant's own wizard tools sat unused. The goal said "dis-moi sur quoi
+  // cliquer" too. Both now say the assistant prepares everything and the person
+  // presses one button, which is the shape the case exists to measure.
   {
     name: 'creation-guidee-jeu-de-donnees',
     route: '/data-fair/datasets',
-    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu n\'explores pas l\'écran de toi-même et tu ne veux pas avoir à le décrire à quelqu\'un. En revanche, quand on te dit précisément sur quel bouton cliquer, tu cliques toi-même sur la page avec tes outils — c\'est la seule chose que tu fais à l\'écran, et tu ne prétends jamais avoir cliqué sans l\'avoir fait. Tu fais ce qu\'on te dit de faire, un pas à la fois, jusqu\'à la création. Après ça tu t\'arrêtes : tu n\'explores pas l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
-    goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux qu\'on te dise sur quoi cliquer jusqu\'à ce que ce soit créé. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
+    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu n\'explores pas l\'écran de toi-même et tu ne veux pas avoir à le décrire à quelqu\'un. Tu ne veux pas faire les étapes toi-même : tu laisses l\'assistant tout préparer. La seule chose que tu fais à l\'écran, c\'est presser toi-même, avec tes outils, le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Après ça tu t\'arrêtes : tu n\'explores pas l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
+    goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux que l\'assistant prépare tout ça pour toi ; tu presseras toi-même le bouton de création quand il te dira que c\'est prêt. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
     maxTurns: 6
   }
 ]
