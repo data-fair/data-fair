@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 38 tools, only 9 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 34 tools, only 7 perform writes (navigate, set_expression, set_property_config, open_add_line_dialog, open_edit_line_dialog, set_application_summary, set_application_description). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -215,6 +215,15 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `dataset_changes_summarizer` (model: `summarizer`) — reads unified diff, produces <500 char plain text summary |
 | **Pattern** | Direct delegation, no user confirmation needed (read-only output) |
 | **Tools** | `read_dataset_changes` |
+| `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata | **W** | `dataset/agent-metadata-tools.ts` |
+| `read_schema_for_annotation` | Schema annotation | R | `dataset/agent-schema-annotation-tools.ts` |
+| `annotate_schema` | Schema annotation | **W** | `dataset/agent-schema-annotation-tools.ts` |
+| `reorder_columns` | Schema order | **W** | `dataset/agent-schema-order-tools.ts` |
+| `read_column_values` | Column labels | R | `dataset/agent-column-labels-tools.ts` |
+| `set_column_labels` | Column labels | **W** | `dataset/agent-column-labels-tools.ts` |
+| `get_application_config_schema` | Application config | R | `application/agent-tools.ts` |
+| `get_application_config_draft` | Application config | R | `application/agent-tools.ts` |
 | **Source** | `ui/src/composables/dataset/agent-changes-summary-tools.ts` |
 
 ### 4.8 Write Calculated Expression
@@ -324,8 +333,6 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `calculate_metric` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `get_field_values` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `read_dataset_info` | Dataset summary | R | `dataset/agent-summary-tools.ts` |
-| `set_dataset_summary` | Dataset summary | **W** | `dataset/agent-summary-tools.ts` |
-| `set_dataset_description` | Dataset description | **W** | `dataset/agent-description-tools.ts` |
 | `read_dataset_changes` | Dataset changes | R | `dataset/agent-changes-summary-tools.ts` |
 | `get_expression_context` | Expressions | R | `dataset/agent-expression-tools.ts` |
 | `get_sample_data` | Expressions | R | `dataset/agent-expression-tools.ts` |
@@ -361,6 +368,9 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `explore_github` | Service info | R | `agent/releases-tools.ts` |
 
 All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently the dataset and application detail pages) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The renderer (`buildGuidance` + the `Guided*` types) is shared in `composables/agent/page-guidance.ts`; each page composable supplies its own heading, intro, and `agentDesc`-annotated `sections`. The agent is instructed to call it only when unsure how to help the user on the current page.
+
+`wait_for_user_action` is not in this table: it is the chat's own built-in (see
+[Host events](#10-host-events)), offered on any page that has published host state.
 
 ## 6. Subagent Reference
 
