@@ -15,7 +15,7 @@ import {
   createChatDriver,
   chatDriverStrings,
   captureGateway,
-  nextUserMessage, isDone,
+  nextUserMessage, isDone, resolveUserModel,
   writeEvidence, type Transcript,
   selectCases,
   createPagePerception
@@ -26,11 +26,11 @@ const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
 // that is where a deployment puts a small model, so that is where the product
 // has to work. See BACKGROUND_ROLES in runner/settings.ts.
 const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
-// This default must track nextUserMessage's own (persona.ts reads
-// process.env.SIM_USER_MODEL ?? 'haiku' itself) — there is no shared export,
-// so if upstream changes its default this sidecar value silently goes stale.
-// Deliberate duplication, not an oversight.
-const USER_MODEL = process.env.SIM_USER_MODEL ?? 'haiku'
+// Asked of the package rather than re-derived here. The duplicated literal this
+// replaces went stale the moment lib-agents-sim changed its default: a run used
+// sonnet and this sidecar recorded haiku, which defeats the one thing the field
+// is for — never comparing verdicts from different tiers silently.
+const USER_MODEL = resolveUserModel()
 const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
 
 for (const simCase of selected) {
