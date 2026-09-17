@@ -28,6 +28,8 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { createDataset, applyPatch, cancelDraft } from '../service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
+import * as partOf from '../../misc/utils/part-of.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import * as restDatasetsUtils from '../utils/rest.ts'
@@ -65,7 +67,8 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', sessionState)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
-    if ((await limits.remaining(owner)).nbDatasets === 0) {
+    // partOf children do not count in the number of datasets
+    if (!body.partOf && (await limits.remaining(owner)).nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
       throw httpError(429, req.__('errors.exceedLimitNbDatasets'))
     }
@@ -167,6 +170,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     }
 
     const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+    if ('partOf' in patch && !can('datasets', dataset, 'writePartOf', reqSession(req))) throw httpError(403, req.__('errors.missingPermission'))
 
     // TODO: do not use always as default value when the dataset is public or published ?
     const canBreak = can('datasets', dataset, 'writeDescriptionBreaking', reqSession(req))
@@ -185,7 +189,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!['never', 'always', 'compatible', 'compatibleOrCancel'].includes(draftValidationMode)) throw httpError(400, `unknown value for draft validation mode ${draftValidationMode}`)
     if (!canBreak && draftValidationMode === 'always') throw httpError(403, 'draft mode "always" is not permitted')
 
-    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale, draftValidationMode, files)
+    const { removedRestProps, attemptMappingUpdate, isEmpty, orphans } = await preparePatch(req.app, patch, dataset, sessionState, locale, draftValidationMode, files, req.query.childrenAction as string | undefined)
       .catch(err => {
         if (err.code !== 11000) throw err
         throw httpError(400, req.__('errors.dupSlug'))
@@ -194,6 +198,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
+      await partOf.applyOrphans({ sessionState, logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, orphans)
 
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 

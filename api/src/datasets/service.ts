@@ -2,24 +2,26 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import clone from '@data-fair/lib-utils/clone.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
 import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
-import { updateStorage } from './utils/storage.ts'
+import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
-import { curateDataset, titleFromFileName } from './utils/index.ts'
+import { curateDataset, titleFromFileName, mergeDraft } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
 import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
@@ -83,6 +85,10 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
   }
+
+  // partOf children are hidden from browsing, not from lookups by id/slug or reverse-lookups
+  const partOfFilter = partOf.listFilter(reqQuery, ['id', 'ids', 'slug', 'slugs', 'children'])
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
   if (reqQuery.type) {
@@ -276,6 +282,11 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
 
   const dataset = { ...body }
   dataset.owner = owner
+
+  // a dataset can be created directly as the child of the parent that will reference it right after
+  if (dataset.partOf) await partOf.prepareAtCreation('dataset', dataset, sessionState)
+  if (dataset.isVirtual) await partOf.assertNoForeignChildren('dataset', {}, dataset)
+
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
   dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
@@ -391,8 +402,61 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   return insertedDataset
 }
 
-export const deleteDataset = async (app: any, dataset: any) => {
+/** Moves a dataset to another account, its partOf children follow. Shared by the change-owner route and the partOf cascade. */
+export const changeDatasetOwner = async (ctx: partOf.PartOfContext, dataset: any, newOwner: any) => {
+  const patch: any = {
+    owner: newOwner,
+    updatedBy: { id: ctx.sessionState.user.id },
+    updatedAt: new Date().toISOString()
+  }
+
+  const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === newOwner.type && dataset.owner.id === newOwner.id
+  if (sameOrg && !dataset.owner.department && newOwner.department) {
+    // moving from org root to a department, we keep the publicationSites
+  } else {
+    patch.publicationSites = []
+  }
+  if (!sameOrg && newOwner.publications) {
+    patch.publications = []
+  }
+
+  const preservePermissions = (dataset.permissions || []).filter((p: any) => {
+    // keep public permissions
+    if (!p.type) return true
+    if (sameOrg) {
+      // keep individual user permissions (user partners)
+      if (p.type === 'user') return true
+      // keep permissions to external org (org partners)
+      if (p.type === 'organization' && p.id !== dataset.owner.id) return true
+    }
+    return false
+  })
+  await permissions.initResourcePermissions(patch, preservePermissions)
+
+  const changeOwnerUpdate: any = { $set: patch }
+  const patchedDataset: any = await mongo.db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
+
+  if (dir(dataset) !== dir(patchedDataset)) {
+    try {
+      await filesStorage.moveDir(dir(dataset), dir(patchedDataset))
+    } catch (err) {
+      console.warn('Error while moving dataset directory', err)
+    }
+  }
+
+  await partOf.changeChildrenOwner(ctx, 'dataset', dataset.id, newOwner)
+  return patchedDataset
+}
+
+/** Deletes a stored dataset, along with its pending draft when it has one. */
+export const deleteDataset = async (dataset: any) => {
   const db = mongo.db
+  // the draft view has its own directory and index, a never-published dataset is only that
+  if (dataset.draft) {
+    await deleteDataset(mergeDraft(clone(dataset)))
+    if (dataset.status === 'draft') return
+  }
   // terminal trail revision (integrity round 3, §S2): the trail of an enrolled dataset must end
   // with a signed-off 'delete' revision, or the daily scope audit reads the aging-out tail as an
   // out-of-band disarm. Written BEFORE any destructive step (revision-first ordering — the
@@ -416,6 +480,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 
   await db.collection('datasets').deleteOne({ id: dataset.id })
+  if (!dataset.draftReason) await virtualDatasetsUtils.detachFromVirtualParents(dataset.id)
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
   // notify catalogs that the dataset has been deleted
@@ -603,6 +668,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 
+  // a child does not count in the number of datasets, and its parent's title is denormalized on it
+  if ('partOf' in patch) await updateTotalStorage(dataset.owner)
+  if (patch.title) await partOf.syncChildrenTitle('dataset', dataset.id, patch.title)
+
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
@@ -613,7 +682,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         }
       } catch (err) {
         // the parent virtual dataset may have become invalid (a conflict introduced by this very
-        // patch, another child deleted or not shared anymore...): don't fail this dataset's own
+        // patch, another child not shared anymore...): don't fail this dataset's own
         // patch for it, the parent will surface the error at its next finalization or query
         internalError('virtual-schema-sync', err)
       }

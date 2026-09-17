@@ -5,6 +5,7 @@ import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
+import * as partOf from '../misc/utils/part-of.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
@@ -108,6 +109,11 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+    // the partOf guards only apply to a creation, an update goes through replaceApplication and its own guards
+    if (!await mongo.applications.countDocuments({ id: newApplication.id })) {
+      if (newApplication.partOf) await partOf.prepareAtCreation('application', newApplication, ctx.sessionState)
+      await partOf.assertNoForeignChildren('application', {}, newApplication)
+    }
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {
       setReqIsNewApplication(req, true)
