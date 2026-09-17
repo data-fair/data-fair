@@ -52,7 +52,7 @@
           <template v-if="orgSelectType === 'partner'">
             <v-select
               v-model="partners"
-              :items="owner.partners"
+              :items="partnerItems"
               item-title="name"
               item-value="id"
               return-object
@@ -229,7 +229,7 @@ const props = defineProps<{
   modelValue?: Permission
   permissionClasses: Record<string, { id: string, title: string }[]>
   resourceType: 'datasets' | 'applications'
-  owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id: string, name: string }[] }
+  owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id?: string, name: string }[] }
 }>()
 
 const emit = defineEmits<{
@@ -438,6 +438,13 @@ const orgSelectType = computed({
   }
 })
 
+// --- Computed: partner items ---
+// simple-directory only fills a partner's `id` once the partnership is accepted;
+// a pending invitation designates no organization yet, so there is nothing to
+// grant a permission to and it must not be offered.
+const partnerItems = computed(() => (props.owner.partners ?? [])
+  .filter((p): p is { id: string, name: string } => !!p.id))
+
 // --- Computed get/set: member ---
 const member = computed({
   get () {
@@ -468,7 +475,9 @@ const valid = computed(() => {
   if ((!p.operations || !p.operations.length) && (!p.classes || !p.classes.length)) return false
   if (p.type === 'organization') {
     if (orgSelectType.value === 'partner') {
-      if (!partners.value.length) return false
+      // every selected partner must designate an organization, the API rejects
+      // the whole permissions array otherwise
+      if (!partners.value.length || partners.value.some(org => !org.id)) return false
     } else if (!p.id) return false
   }
   if (p.type === 'user' && !(p.id || p.email)) return false

@@ -430,3 +430,102 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 |---------|------|
 | `@data-fair/lib-vue-agents` | Vue composables: `useAgentTool`, `useAgentSubAgent`, `useFrameServer` |
 | `@data-fair/lib-vuetify-agents` | Vue components: `DfAgentChatDrawer`, `DfAgentChatToggle`, `DfAgentChatAction` |
+
+## 9. Simulations
+
+Unit and e2e tests answer "does this mechanism work". They cannot answer whether
+the assistant served a person, because that depends on what a real model says to
+a real question. The simulation suite answers it by having a simulated person try.
+
+One case is a page, a persona and a goal — deliberately with no expected result.
+A simulated user (Claude, `SIM_USER_MODEL`, default `haiku`) types into the real
+chat drawer in a real browser; the assistant under test runs on
+`SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
+configured as an `openai-compatible` provider on the agents service. The run is
+captured as a transcript — what was said, every gateway request with its tool
+definitions and tool calls, any console errors, and what the persona looked at
+and did on screen — and a `simulation-judge` subagent reads it and returns a
+verdict with a friction list.
+
+The friction list is the point. "Unsatisfactory" says a run went badly; a friction
+point names the reply or tool result that misled the person and what they did
+next, which is what turns a run into a concrete change to a prompt or a tool
+description.
+
+**Running them.** The entry point is the `/agents-sim` skill, not the npm
+scripts. A run is only finished once the transcripts have been judged and
+reported, and stale evidence has to be cleared first or a case that never
+dispatched reports the previous run's verdict as its own; the skill sequences
+that, `npm run simulate` is only the browser half.
+
+**Prerequisites**, each of which fails confusingly if missing: the dev stack up
+(`bash dev/status.sh`), the UI built (`ui/dist/index.html`), and the bridge
+running. The bridge has its own `bridge` pane in the zellij layout and is
+reported by `dev/status.sh` as `dev-bridge (opt)` — optional because only
+simulations need it, and idle it costs nothing. The runner checks it and says so.
+
+**Layout.** `playwright.sim.config.ts` is a separate config so a bare
+`playwright test` can never reach the cases and spend quota. `simulations/cases/`
+holds the registry, `simulations/runner/` the seeding, `simulations/tmp/` the
+evidence (gitignored). The harness primitives come from
+`@data-fair/lib-agents-sim`; this repo owns the cases, the login, the seeding and
+the turn loop.
+
+**Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
+from `simulations/resources/*.csv`, so no case inherits another run's state and
+no case can dirty the `dev_fixtures` demo data. `clean()` resets the dev
+environment's whole test state, not just `test_`-owned datasets: it also wipes
+the `limits`, `applicationsKeys`, `remoteServices`, `baseApplications`,
+`extensions-cache`, `thumbnails-cache`, `locks` and integrity collections
+unfiltered, and removes the tmp directory — this is pre-existing `clean()`
+behaviour shared with `npm test`, not something the simulation suite adds.
+
+**Perception.** Since 0.4.0 the persona has `look`, `click` and `type` MCP
+tools — no `evaluate`, no raw selectors — so it can check the screen instead of
+only trusting chat text. The chat composer (input, send, stop, reset) is
+structurally off-limits to it: those calls are refused before the element is
+even looked up, which is what keeps the conversation the runner's to send,
+not the persona's. Every call is recorded as an `Observation`, and the judge
+cross-checks the persona's claims against them rather than taking an assertion
+about what is or isn't on screen at face value.
+
+**Provider failures are not product failures.** When the model stream dies — a
+rate limit, a dead bridge, a model the provider will not serve — the agents
+gateway does not fail the request. It writes an error chunk into the SSE body
+and closes cleanly, so the chat shows an alert, the Stop button disappears, the
+turn "finishes" and nothing throws. Left alone, that run records as valid and a
+judge blames the assistant for never replying. `simulations/runner/gateway-errors.ts`
+reads the gateway's own `error` chunk — a JSON field the service emits, not the
+prose it renders, so it survives translation and restyling — and invalidates the
+run. Rate limits are the practical ceiling here: three Claude roles per case on
+one subscription. An invalid run must never be judged, and
+`sim-<case>.run.json` is what tells the two apart.
+
+### Writing a case
+
+A case is a page, a person and something they want, with no expected result. Two
+rules matter more than the prose, and both were learned by getting them wrong:
+
+**The goal must need the assistant.** Since the persona can look, click and type,
+it will simply do anything the interface hands over. The first version of the
+find-a-dataset case asked someone to locate one of two datasets and open it; the
+persona looked, clicked it, and stopped — zero gateway exchanges, the assistant
+never addressed, and a green-looking run that tested nothing. Aim at what the UI
+will not give you for free: an answer across many rows, a filtered view nobody
+can construct by pointing, a config that needs the schema. If a competent person
+could get there unaided, the case will measure navigation rather than the
+assistant.
+
+**What you want asserted must be observable, not conversational.** A goal's
+trailing clause does not reliably buy an extra turn. `lien-ouvert-par-l-utilisateur`
+ends with wanting to ask a further question once the link is open; the persona
+verified the link and stopped, satisfied, without asking. The case still held,
+because the thing under test — that the chat survives the navigation — is visible
+in the `look` observation either way. Had it depended on a second message being
+sent, it would have proved nothing. Write the goal so the evidence lands in the
+observations, and treat any particular turn happening as a bonus.
+
+The two registered cases are deliberately a matched pair over the ways the page
+can move: `lien-ouvert-par-l-utilisateur` covers the person clicking a link the
+assistant wrote, and `question-sur-les-donnees` covers the assistant navigating
+through its own `navigate` tool. Both must leave the chat usable afterwards.

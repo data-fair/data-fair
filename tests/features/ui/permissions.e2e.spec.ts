@@ -231,6 +231,39 @@ test.describe('permissions editor', () => {
       }, { timeout: 5000 }).toBeTruthy()
     })
 
+    // Regression guard: simple-directory only fills a partner's `id` once the
+    // partnership is accepted. A pending invitation used to be offered in the
+    // partner select and produced a permission with no id, which the API rejects
+    // with "Error in permissions format" (400). It must not be listed at all.
+    test('a pending partner is not offered in the partner select', async ({ page, goToWithAuth }) => {
+      await page.route('**/simple-directory/api/organizations/test_org1', async (route) => {
+        const response = await route.fetch()
+        const org = await response.json()
+        org.partners = [
+          { name: 'Partenaire En Attente', contactEmail: 'pending@test.com', partnerId: 'pending-partner', createdAt: '2026-01-01T00:00:00.000Z' },
+          ...(org.partners ?? [])
+        ]
+        await route.fulfill({ json: org })
+      })
+
+      await goToPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+
+      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
+
+      const orgTypeSelect = page.locator('.v-dialog .v-select').nth(1)
+      await orgTypeSelect.click()
+      await page.getByRole('option', { name: /partenaires/ }).click()
+
+      const partnerSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Partenaire/ })
+      await partnerSelect.click()
+      // the accepted partners are listed, the pending one is not
+      await expect(page.getByRole('option', { name: /Test Org 2/ })).toBeVisible({ timeout: 5000 })
+      await expect(page.getByRole('option', { name: /Partenaire En Attente/ })).toHaveCount(0)
+    })
+
     // Regression guard for two bugs in the edit-permission dialog:
     // 1. The detailed-actions select grouped its entries with `{ header }`
     //    (Vuetify 2 syntax); on Vuetify 4 these rendered as "[object Object]".

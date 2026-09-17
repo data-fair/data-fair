@@ -27,3 +27,4 @@ test-results/
 .playwright-mcp
 /superpowers/**/*.md
 /docs/superpowers/
+/simulations/tmp/
