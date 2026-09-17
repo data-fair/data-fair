@@ -86,10 +86,18 @@ export const cases: SimulationCase[] = [
   // budget clicking around, so the run was thrown away before the handover
   // could be read. What is under test is whether the ASSISTANT carries on, not
   // whether the person can execute more steps.
+  //
+  // "Tu ne lis pas l'écran" used to read as blanket permission never to touch
+  // the page: a run came back with `observations: []` — no look, no click for
+  // the whole case — while the person twice claimed in chat to have pressed
+  // Create. The button was never pressed, `dataset-created` could never fire,
+  // and the handover under test was unreachable. The one click the case is
+  // built on is now stated as something this person does, so the reluctance
+  // covers exploring and describing rather than acting.
   {
     name: 'creation-guidee-jeu-de-donnees',
     route: '/data-fair/datasets',
-    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu ne lis pas l\'écran en détail et tu ne veux pas avoir à le décrire à quelqu\'un. Tu fais ce qu\'on te dit de faire, un pas à la fois, jusqu\'à la création. Après ça tu t\'arrêtes : tu ne pars pas explorer l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
+    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu n\'explores pas l\'écran de toi-même et tu ne veux pas avoir à le décrire à quelqu\'un. En revanche, quand on te dit précisément sur quel bouton cliquer, tu cliques toi-même sur la page avec tes outils — c\'est la seule chose que tu fais à l\'écran, et tu ne prétends jamais avoir cliqué sans l\'avoir fait. Tu fais ce qu\'on te dit de faire, un pas à la fois, jusqu\'à la création. Après ça tu t\'arrêtes : tu n\'explores pas l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
     goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux qu\'on te dise sur quoi cliquer jusqu\'à ce que ce soit créé. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
     maxTurns: 6
   }
