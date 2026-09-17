@@ -61,7 +61,8 @@ fr:
   helpExpression: Aide-moi à écrire l'expression
   exprEvalIntro: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
     Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\" rel=\"noopener\">expr-eval</a>.
-    Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre."
+    Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre.
+    Si le résultat est une chaîne vide ou <code>UNDEFINED()</code>, la colonne est laissée vide pour la ligne."
   exprEvalFunctions: "Quelques fonctions sont disponibles rappelant des fonctionnalités habituelles de tableurs :"
 en:
   results: Results
@@ -70,7 +71,8 @@ en:
   helpExpression: Help write the expression
   exprEvalIntro: "An expression (or formula) is used to calculate the content of a column based on the values of other columns.
     It must follow the syntax of the <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\" rel=\"noopener\">expr-eval</a> module.
-    The values of other columns are passed as parameters with their keys as parameter names."
+    The values of other columns are passed as parameters with their keys as parameter names.
+    If the result is an empty string or <code>UNDEFINED()</code>, the column is left empty for that row."
   exprEvalFunctions: "Some functions are available, similar to usual spreadsheet features:"
 </i18n>
 
