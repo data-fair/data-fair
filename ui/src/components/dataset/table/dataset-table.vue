@@ -475,6 +475,7 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
+import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -656,6 +657,10 @@ if (edit) {
       properties: {}
     },
     execute: async () => {
+      // A dataset with nothing to fill gets the reason, not an open dialog and an
+      // invitation to delegate into an empty form (see agent-edit-line-logic.ts).
+      const refusal = addLineDialogPrecondition(dataset.value?.schema)
+      if (refusal) return refusal
       addLineTrigger.value = true
       return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
     }
