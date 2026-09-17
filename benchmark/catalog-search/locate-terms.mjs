@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Where does a term live in a catalog: prose (title/summary/description/keywords/topics),
 // column titles+descriptions, column keys, or enum values? Used to craft judged queries that test
 // one indexing choice at a time.

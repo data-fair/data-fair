@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // What an agent gets from a live Data Fair MCP server today: the tool surface, then a few hard
 // catalog searches through search/list_datasets.
 //

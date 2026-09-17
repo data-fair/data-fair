@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Pull the full public catalog of a few live Data Fair portals into corpus/<host>.json.
 // Read-only, one request per catalog (page size is uncapped and the catalogs are small).
 //

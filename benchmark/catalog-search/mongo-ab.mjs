@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Real-engine A/B: load each pulled catalog into a scratch MongoDB database, build the datasets
 // text index in several variants (index language × extra indexed content) and run the judged
 // query set through each one. This is the only way to see actual $text scoring rather than a

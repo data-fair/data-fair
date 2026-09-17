@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Run the judged query set against the live catalog APIs — the production baseline the local
 // Mongo A/B must reproduce before its other variants mean anything.
 //

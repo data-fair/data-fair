@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Coverage and vocabulary-gain statistics over the pulled corpus.
 //
 //   node benchmark/catalog-search/stats.mjs

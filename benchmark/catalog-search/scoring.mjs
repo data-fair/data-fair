@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Shared scoring for the judged query runs. A run is { q, kind, expect: [slug], count, top: [slug] }.
 //
 // Metrics: hit@1 / hit@5 (an expected slug in the top 1 / top 5), MRR (1 / rank of the first

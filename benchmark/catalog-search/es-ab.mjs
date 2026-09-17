@@ -1,3 +1,5 @@
+// @ts-nocheck -- standalone bench script, not api code; without this the root tsc
+// (checkJs, no `benchmark` exclude) counts its untyped params against the type ratchet
 // Same judged queries, same corpus, against a real Elasticsearch index built with data-fair's own
 // French analyzer (copied from api/src/datasets/es/manage-indices.ts). Measures what BM25 + IDF buy
 // over the Mongo text index, variant by variant, on the same content.
