@@ -424,6 +424,7 @@ import axios, { type CancelTokenSource } from 'axios'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
+import { DATASET_WIZARD_GUIDANCE, DATASET_WIZARD_GUIDANCE_KEY } from '~/composables/dataset/agent-dataset-wizard-logic'
 import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
 import { buildDatasetWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
@@ -681,6 +682,11 @@ const canCreate = computed(() => {
 // What the wizard currently shows. Keyed state, so the assistant reads it from
 // its context instead of asking, and a tool call it makes comes back with the
 // resulting screen attached.
+// Told once on arrival (or on activation if the chat opens later), never on
+// step changes — see agent-dataset-wizard-logic.ts for why it stopped living
+// only behind the action button.
+useAgentState(DATASET_WIZARD_GUIDANCE_KEY, DATASET_WIZARD_GUIDANCE)
+
 useAgentState('wizard', () => buildDatasetWizardState({
   step: step.value,
   type: datasetType.value,
@@ -712,25 +718,8 @@ useAgentDatasetCreationTools(locale, {
   fileTitle
 })
 
-const createDatasetContext = computed(() => {
-  const lines = [
-    'Help the user create a new dataset.',
-    'Start by asking what kind of data they have and what they want to do with it.',
-    '',
-    'Based on their answer, recommend the right dataset type:',
-    '- "file" for uploading CSV, Excel, GeoJSON, or other file formats',
-    '- "rest" (Editable) for data that will be entered manually through forms, or via API',
-    '- "virtual" for creating a combined view over existing datasets',
-    '- "metaOnly" for a metadata-only record with no actual data',
-    '',
-    'Use select_dataset_type to set the type, then set_dataset_title and other configuration tools (set_rest_options, skip_init_from_step, advance_to_confirmation) to fill in the wizard steps.',
-    '',
-    'For "file" type datasets, you cannot upload the file — the user will do that manually. Focus on helping them choose the right type and set a title.',
-    '',
-    'Do NOT create the dataset — the user will review and click the create/import button themselves.'
-  ]
-  return lines.join('\n')
-})
+// The action button sends the same text as its hidden context: one source.
+const createDatasetContext = computed(() => DATASET_WIZARD_GUIDANCE)
 
 // ---- Upload progress ----
 const uploading = ref(false)

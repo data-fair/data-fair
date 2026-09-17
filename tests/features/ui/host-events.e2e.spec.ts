@@ -66,6 +66,39 @@ test.describe('host events published to the assistant', () => {
     expect(location.name).toBeTruthy()
   })
 
+  test('the dataset wizard tells the assistant how it works, once, on arrival', async ({ page, goToWithAuth }) => {
+    // Keyed, so it reaches an assistant that navigated here itself — the only
+    // channel used to be the action button's hidden context, and every judged run
+    // arrived by navigate — and reaches a chat that opens later, via activation.
+    // On the channel a keyed state appears once at mount and once more per
+    // `agent-state-request` (a chat opening asks every publisher to re-emit); the
+    // chat keeps one value per key. What must never happen is a re-emission on a
+    // step change: the guidance is constant, so it must not ride along on refreshes.
+    await page.addInitScript(collectEvents)
+    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    const guidanceEvents = async () => (await readEvents(page)).filter(e => e.key === 'wizard-guidance')
+    const stateRequests = async () => ((await page.evaluate('window.__hostEvents ?? []')) as Array<{ type: string }>).filter(m => m.type === 'agent-state-request').length
+    await expect.poll(async () => (await guidanceEvents()).length, { timeout: 15000 }).toBeGreaterThanOrEqual(1)
+
+    const first = (await guidanceEvents())[0].detail!
+    expect(first).toContain('wait_for_user_action')
+    expect(first).toContain('Structure > Schéma')
+    expect(first).not.toContain('[truncated]')
+    for (const e of await guidanceEvents()) expect(e.detail).toBe(first)
+    // Settle the chat's own re-emission handshake before counting.
+    await page.waitForTimeout(1500)
+    const before = (await guidanceEvents()).length
+    expect(before).toBe(1 + await stateRequests())
+
+    // Drive two steps: the wizard state refreshes, the guidance does not.
+    const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
+    await expect(restCard).toBeVisible({ timeout: 10000 })
+    await restCard.click()
+    await page.getByRole('button', { name: /Ignorer/ }).click()
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'wizard')?.step, { timeout: 15000 }).toBe('params')
+    expect((await guidanceEvents()).length).toBe(before)
+  })
+
   test('the dataset wizard publishes what it holds, and reports the creation before redirecting', async ({ page, goToWithAuth }) => {
     await page.addInitScript(collectEvents)
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
