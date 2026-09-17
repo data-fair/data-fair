@@ -5,6 +5,11 @@ MongoDB text index to an Elasticsearch mirror (Mongo kept as fallback), and what
 `es-ab.mjs` runs the same judged queries on real ES indices built with data-fair's own
 `custom_french` analyzer (copied from `api/src/datasets/es/manage-indices.ts`).
 
+> **Read [ENGINE-OPTIONS.md](./ENGINE-OPTIONS.md) next.** This was the first and shallower ES look,
+> run against a query set that had saturated. The deeper comparison — on a harder query set, and
+> against the MongoDB options that also compute an IDF — puts ES at the ceiling (168/170) but
+> reaches 161/170 without it, and lands on a design that keeps everything in MongoDB.
+
 ## 1. Measured gain
 
 Same corpus, same 56 queries, same content per variant. MRR / hit@5 / median count.

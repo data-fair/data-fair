@@ -4,6 +4,11 @@ Spike run before designing the catalog-search work on `feat-better-catalog-searc
 which of the proposed levers (index language, calculated `_searchText` from the schema, a shadow
 content field, agent/MCP graph exploration) actually move catalog search, and by how much.
 
+> **Superseded in part.** The 56 judged queries here later SATURATED — against the content this
+> branch indexes, production scores 50/56, so they can no longer tell engines apart. The engine
+> comparison, a mechanically generated 170-query set, and the design that came out of it live in
+> [ENGINE-OPTIONS.md](./ENGINE-OPTIONS.md). The content findings below still stand.
+
 Scripts in this directory are throwaway but reproducible: `pull-corpus.mjs` → `stats.mjs`,
 `locate-terms.mjs`, `live-queries.mjs`, `mongo-ab.mjs` (needs a Mongo, uses its own scratch
 database), `mcp-probe.mjs`. `queries.json` is the judged query set, `shadow.json` the simulated
