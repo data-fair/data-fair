@@ -267,6 +267,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `editLine_form` — VJSF-managed form subagent for add/edit line dialogs |
 | **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then delegates form filling to VJSF subagent. User retains Save button control. |
 | **Tools** | `open_add_line_dialog`, `open_edit_line_dialog` |
+| **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: columns are added under Structure > Schéma. A refused dialog never registers `editLine_form`, so the empty-form dead end — a judged run spent two sub-agent round trips in it — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue`, `ui/src/components/dataset/form/dataset-edit-line-form.vue` |
 
 ### 4.13 Create Application
@@ -283,9 +284,9 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button in dataset creation stepper |
+| **Trigger** | Action button in the stepper, or simply arriving on the page: the wizard publishes its guidance as keyed `wizard-guidance` state (`ui/src/composables/dataset/agent-dataset-wizard-logic.ts`, one constant shared with the action button's hidden context), so an assistant that navigated here itself receives it — every judged run did, and none had it before. |
 | **Action ID** | `help-create-dataset` |
-| **Pattern** | **Stepper-driving**: agent asks about data source, recommends dataset type (file, rest, virtual, metaOnly), drives wizard. File upload remains manual. User retains final Create/Import. |
+| **Pattern** | **Stepper-driving**: agent asks about data source, recommends dataset type (file, rest, virtual, metaOnly), drives wizard. File upload remains manual. User retains final Create/Import. Once the confirmation step reports `ready`, the agent tells the person the button is ready and declares `wait_for_user_action`, so it learns of the creation without being asked. After Create the dataset has no columns; the person adds them under Structure > Schéma — the agent's part ends at Create. |
 | **Tools** | `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, `advance_to_confirmation` |
 | **Source** | `ui/src/composables/dataset/agent-creation-tools.ts`, `ui/src/pages/new-dataset.vue` |
 
@@ -556,6 +557,7 @@ ever starts a model turn.
 | `location` (keyed) | `ui/src/layouts/default.vue` | absolute `url`, `path`, route `name`, `params`, `query`, breadcrumb trail |
 | `wizard` (keyed) | `ui/src/pages/new-dataset.vue` | `step`, `type`, `title`, `ready`, plus the options of the chosen type (`file`, `history`/`attachments`, `children`) |
 | `wizard` (keyed) | `ui/src/pages/new-application.vue` | `step`, `creationType`, `selected`, `title`, `ready` |
+| `wizard-guidance` (keyed) | `ui/src/pages/new-dataset.vue` | the wizard's guidance text, a constant: emitted once at mount and once per `agent-state-request` (a chat opening asks every publisher to re-emit; the chat keeps one value per key), never on step changes, withdrawn on unmount |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
 | `application-created` | `ui/src/pages/new-application.vue` | `id`, `title` — emitted before the redirect |
 
@@ -565,6 +567,16 @@ The payload builders are pure and unit-tested in
 sit in the components that own the reactive sources. Payloads omit empty fields
 on purpose: a keyed state is re-sent in full in every activation snapshot, so an
 empty field costs tokens every time for nothing.
+
+**What `ready` means.** Complete and submittable from where the person stands:
+params valid, the confirmation step's conflict check passed, an owner. It is
+deliberately *not* the Create button's own guard (`canCreate`, which also folds in
+`!createAction.loading`): the click itself would then publish `ready:false`, and a
+keyed state being last-value-wins in the chat's buffer, that would overwrite the
+`true` the assistant had never yet been handed. A judged run saw exactly that —
+`ready:false` reported as the wizard's state at the very moment of creation, and no
+`ready:true` anywhere in its record, while the person's own look showed an enabled
+button. Being mid-submit does not make the form less complete.
 
 **Why the creation events are emitted before `router.push`.** The wizard unmounts
 on the redirect and withdraws its `wizard` state, so that is the last moment it
