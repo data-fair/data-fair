@@ -12,6 +12,8 @@ stemmer that is deliberately not a data-fair dependency:
 npm i --no-save @orama/stemmers
 node benchmark/catalog-search/gen-hard-queries.mjs                      # the 170-query set
 node benchmark/catalog-search/retrieval-safety.mjs                      # which candidates to retrieve
+ES=<es-url> node benchmark/catalog-search/combination-rule.mjs          # why ES appeared to win
+node benchmark/catalog-search/dismax-in-mongo.mjs        <mongo-url>    # dis_max as an aggregation
 node benchmark/catalog-search/text-query-levers.mjs      <mongo-url>    # why $text cannot be fixed at query time
 node benchmark/catalog-search/scale-fixtures.mjs         <mongo-url>    # builds ss_10000 / ss_50000 / ss_200000
 node benchmark/catalog-search/scoring-placement.mjs      <mongo-url>    # where the scoring should run
@@ -57,14 +59,15 @@ searchTerms ×3, summary ×2).
 | 2 | + query-time df stripping (>30% terms dropped) | 145/170 | 0.921 | 2.0 ms | cheap, modest |
 | 3 | + index-time IDF simulation (rare terms repeated in a hidden field) | 154/170 | 0.953 | 1.2 ms | needs recompute as the corpus shifts |
 | 2.5 | **`$text` for candidates + BM25F re-rank in node** | 160/170 | 0.970 | 1.3 ms | no index change at all |
-| 4 | **node tokenisation + plain multikey index + BM25F in node** | **161/170** | **0.974** | 3.0 ms | no `$text` at all; 0.5 MB index /433 docs |
+| 4 | **node tokenisation + plain multikey index + BM25F in node** | 161/170 | 0.974 | 3.0 ms | no `$text` at all; 0.5 MB index /433 docs |
+| 4b | **same, but dis_max instead of summing fields** | **168/170** | **0.994** | 3.2 ms | one line of arithmetic — see below |
 | — | MiniSearch 7.2 in-process | 158/170 | 0.964 | 0.1 ms | |
 | — | Orama 3.1 in-process | 162/170 | 0.975 | 0.2 ms | BM25 + stemmers for 30 languages |
-| 5 | **Elasticsearch** (data-fair's own french analyzer) | **168/170** | **0.994** | 3.9 ms | the ceiling |
+| 5 | **Elasticsearch** (data-fair's own french analyzer, `best_fields`) | **168/170** | **0.994** | 3.9 ms | matched, not ahead |
 
-Read it as three tiers, not a ladder: **no-IDF (140)**, **IDF by any means (154–162)**, **ES (168)**.
-Everything that computes a real IDF lands within a few points of everything else that does. The
-choice between them is therefore an *operational* one, not a quality one.
+Read it as three tiers, not a ladder: **no-IDF (140)**, **IDF, fields summed (154–162)**, **IDF,
+fields dis_max'd (168)**. What separates the top tier from the middle is not the engine and not
+even the IDF — it is how per-field scores are combined. Rung 4b and ES are the same score.
 
 ## Why there is no query-time fix
 
@@ -89,10 +92,46 @@ document and reaches 154/170 — while the mirror-image trick at query time does
 Query-time you can only *delete* common terms, a binary approximation of boosting rather than a
 graded one, which is why it recovers 5 points of a 28-point gap.
 
+## What Elasticsearch was actually doing better
+
+ES scored 168/170 and rung 4 161/170, and both compute BM25 — so the gap had to be something
+other than the engine. It was. **The ES benchmark and rung 4 were using different ranking
+functions.**
+
+Rung 4 summed every weighted (term, field) contribution: textbook BM25F. The ES query was
+`multi_match` / `best_fields` / `tie_breaker: 0.3`, which is a **dis_max**: sum the per-term scores
+*within* each field to get that field's score, then take the **maximum** field plus 0.3 × the rest.
+
+Ablating the two structural differences independently (`combination-rule.mjs`), on 170 queries:
+
+| | fields summed | fields dis_max'd |
+|---|---|---|
+| **rung 4**, document-level IDF | 161/170 (0.974) | **168/170 (0.994)** |
+| **rung 4**, Lucene-style per-field IDF | 161/170 (0.974) | **168/170 (0.994)** |
+| **ES**, `light_french` | 160/170 (0.971) | 168/170 (0.994) |
+| **ES**, snowball `french` | 158/170 (0.965) | 164/170 (0.982) |
+
+Three things fall out:
+
+- **The combination rule is worth the entire gap.** Give rung 4 the dis_max shape and it scores
+  exactly ES's 168/170 and 0.994. Tell ES to sum its fields and it drops to 160 — *below* rung 4's
+  161 at the same setting. ES has no BM25 advantage here whatsoever.
+- **Per-field IDF is worth nothing** on this corpus, though Lucene keeps a separate inverted index
+  per field and computes it that way. Rung 4's single document-level `df` is fine.
+- **The stemmer is worth a few points** and is the one place ES is genuinely better configured:
+  `light_french` (strips plurals and feminines) beats aggressive snowball by 4–6. Porting a light
+  French stemmer is the remaining cheap win, and is independent of everything above.
+
+Why dis_max helps is not mysterious: summing rewards a document for matching the same query term
+in many fields, which on a catalog means long descriptions drown out a precise title. Dis_max asks
+"how well does the *best* field match?" and treats the rest as a tiebreak. The 7 queries it fixes
+were all ranked **2nd** by the summing version, with 0 regressions the other way.
+
 ## The operational differences, which is where the decision actually lives
 
 | | rung 2.5 re-rank | rung 4 own index | in-process (Orama/MiniSearch) | Elasticsearch |
 |---|---|---|---|---|
+| Ranking quality (hit@1, dis_max where applicable) | 160/170 | **168/170** | 158–162/170 | **168/170** |
 | IDF | yes | yes | yes | yes |
 | Per-document language | no (one `$text` analyzer) | **yes** — you pick the stemmer per doc in node | one analyzer per index | per-field analyzers |
 | Permission filter | native (same `$text` query) | **native** — compound `{owner, _terms}` index, IXSCAN verified | must re-filter after retrieval | needs `_listProfiles` tokens + mongo hydration |
@@ -125,11 +164,12 @@ optimistic.)
 ## Recommendation
 
 **Rung 4 — tokenise in node, store a term array, index it as an ordinary multikey index, score
-with BM25F.** (Where that scoring runs is settled further down, and the answer is *not* in node:
-generating the BM25F expression into the aggregation costs 1–2 ms of API CPU instead of ~190 ms.)
+with a dis_max over per-field BM25.** (Where that scoring runs is settled further down, and the
+answer is *not* in node: generating the expression into the aggregation costs 1–2 ms of API CPU
+instead of ~190 ms.)
 
-It reaches 161/170 against ES's 168, i.e. it closes about three quarters of the gap between today
-and the ceiling, and it is the only option that simultaneously:
+It reaches **168/170, MRR 0.994 — the same as Elasticsearch** — and it is the only option that
+simultaneously:
 
 - computes a real IDF;
 - makes the catalog **multi-language per document**, which `$text` cannot be;
@@ -148,9 +188,11 @@ pass measured in milliseconds.
 no document, only the sort, and already delivers 160/170. It is a strictly smaller step that can
 ship first and be replaced by rung 4 later without either being wasted.
 
-**Elasticsearch remains the ceiling and remains unjustified** on quality alone — +7 hit@1 over
-rung 4, paid for with a sync pipeline, a permission-token scheme, an availability dependency on
-the catalog read path, and a recipe no ES-less deployment can reuse. The case for it is
+**Elasticsearch is no longer a quality ceiling, and is unjustified on quality at all.** Its
+apparent +7 was a scoring-shape difference, not an engine difference: told to sum its fields it
+scores 160/170, *below* rung 4 at the same setting. Everything ES would still cost — a sync
+pipeline, a permission-token scheme, an availability dependency on the catalog read path, a recipe
+no ES-less deployment can reuse — now buys nothing measurable here. The case for it is
 multi-resource centralized search (datasets + applications + pages), which is a different feature,
 not this one.
 
@@ -313,8 +355,18 @@ field.
 **drop terms with `df = 0`** → look up `df` and compute the `idf` constants → pick the gate
 (rarest K, **K ≥ 2**) → generate the pipeline with the idf constants baked in as literals.
 
-**Query time (mongo).** `$match {permission, _terms: {$in: gate}}` → `$addFields` BM25F →
-`$sort` → `$skip` / `$limit` → `$project`. Node receives only the page.
+**Query time (mongo).** `$match {permission, _terms: {$in: gate}}` → `$addFields` with the
+**dis_max** expression (per-field BM25 summed over terms, then `$max` of the field scores plus
+0.3 × the remainder) → `$sort` → `$skip` / `$limit` → `$project`. Node receives only the page.
+Verified against the node implementation on all 170 queries: identical top-3, and dis_max costs
+about 8% more than a plain sum (200 ms vs 184 ms at 50k, 789 ms vs 732 ms at 200k), with node CPU
+unchanged at 2–3 ms.
+
+**Sort on `{ _score: -1, slug: 1 }`, not on `_score` alone.** Near-duplicate datasets produce
+*exact* score ties — Enedis has whole families of them — and MongoDB leaves tied documents in an
+undefined order. Without the secondary key, 34 of 170 queries returned a different top-3 than the
+node reference *with identical scores*, and the same query can reorder between calls. With it,
+zero mismatches.
 
 Two things to size when building it: the generated pipeline grows as terms × fields (4 × 7 = 28
 `$let` blocks for the query benchmarked here), so cap the query's term count; and `$sort` on a

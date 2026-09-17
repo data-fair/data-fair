@@ -5,10 +5,11 @@ MongoDB text index to an Elasticsearch mirror (Mongo kept as fallback), and what
 `es-ab.mjs` runs the same judged queries on real ES indices built with data-fair's own
 `custom_french` analyzer (copied from `api/src/datasets/es/manage-indices.ts`).
 
-> **Read [ENGINE-OPTIONS.md](./ENGINE-OPTIONS.md) next.** This was the first and shallower ES look,
-> run against a query set that had saturated. The deeper comparison — on a harder query set, and
-> against the MongoDB options that also compute an IDF — puts ES at the ceiling (168/170) but
-> reaches 161/170 without it, and lands on a design that keeps everything in MongoDB.
+> **Read [ENGINE-OPTIONS.md](./ENGINE-OPTIONS.md) next — it supersedes the quality case made here.**
+> This was the first and shallower ES look, run against a query set that had since saturated. On a
+> harder set, ES's apparent advantage turned out to be a scoring-shape difference rather than an
+> engine one: matching its `best_fields` dis_max, a pure MongoDB implementation reaches the same
+> 168/170 and MRR 0.994, while ES told to sum its fields drops to 160/170.
 
 ## 1. Measured gain
 
