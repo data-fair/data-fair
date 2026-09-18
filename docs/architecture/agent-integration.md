@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 34 tools, only 7 perform writes (navigate, set_expression, set_property_config, open_add_line_dialog, open_edit_line_dialog, set_application_summary, set_application_description). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 53 tools, 12 write (navigate, set_dataset_metadata, set_expression, set_property_config, add_columns, annotate_schema, reorder_columns, set_column_labels, open_add_line_dialog, open_edit_line_dialog, set_application_summary, set_application_description), and all but `navigate` and the two dialog openers write into the page's edit form client-side — the user still presses Enregistrer. The nine creation-wizard tools likewise manipulate form state only; no agent tool reaches the API.
 
 ### Activation flow
 
@@ -35,8 +35,8 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["38 Tools"]
-            SubAgents["10 Subagents"]
+            Tools["53 Tools"]
+            SubAgents["11 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -246,6 +246,18 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `schema_annotator` — suggests human-readable titles and descriptions for columns |
 | **Source** | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` |
 
+### 4.9b Declare Columns (REST Dataset)
+
+| | |
+|---|---|
+| **Trigger** | No action button: reached from the creation flow, whose wizard guidance names the tool, or from the person asking for columns |
+| **Pattern** | The agent proposes a set of columns in conversation, and once the person agrees declares them all in one `add_columns` call. The columns are staged in the edited schema — `dataset-columns-list.vue` flags a column absent from the original as pending — and the person clicks Enregistrer. |
+| **Tools** | `add_columns` |
+| **Precondition** | Only an editable (REST) dataset: anywhere else the columns come from the file or the source, and the form itself offers no add-column button. The tool returns that reason instead of staging. |
+| **Types** | The names offered to the model (`text`, `long-text`, `formatted-text`, `date`, `date-time`, `integer`, `number`, `boolean`) each resolve to one entry of `propertyTypes` in `ui/src/utils/dataset.ts`, and a unit test pins that the two lists still cover each other in both directions — a type added to the dialog and not here would be silently unreachable by the agent. |
+| **Staged payload** | Identical to what `dataset-add-column-dialog.vue` emits: `key` (slugified from the name, as the form derives it), `x-originalName`, `type`, `format`/`x-display` when the type has them, and an empty `title`. Titles, descriptions and concepts come afterwards from `annotate_schema`. |
+| **Source** | `ui/src/composables/dataset/agent-add-column-tools.ts`, `agent-add-column-tools-logic.ts` |
+
 ### 4.10 Optimize Property Config
 
 | | |
@@ -276,7 +288,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `editLine_form` — VJSF-managed form subagent for add/edit line dialogs |
 | **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then delegates form filling to VJSF subagent. User retains Save button control. |
 | **Tools** | `open_add_line_dialog`, `open_edit_line_dialog` |
-| **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: columns are added under Structure > Schéma. A refused dialog never registers `editLine_form`, so the empty-form dead end — a judged run spent two sub-agent round trips in it — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
+| **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: the columns are declared first with `add_columns`, under Structure > Schéma. A refused dialog never registers `editLine_form`, so the empty-form dead end — a judged run spent two sub-agent round trips in it — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue`, `ui/src/components/dataset/form/dataset-edit-line-form.vue` |
 
 ### 4.13 Create Application
@@ -295,7 +307,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button in the stepper, or simply arriving on the page: the wizard publishes its guidance as keyed `wizard-guidance` state (`ui/src/composables/dataset/agent-dataset-wizard-logic.ts`, one constant shared with the action button's hidden context), so an assistant that navigated here itself receives it — every judged run did, and none had it before. |
 | **Action ID** | `help-create-dataset` |
-| **Pattern** | **Stepper-driving**: agent asks about data source, recommends dataset type (file, rest, virtual, metaOnly), drives wizard. File upload remains manual. User retains final Create/Import. Once the confirmation step reports `ready`, the agent tells the person the button is ready and declares `wait_for_user_action`, so it learns of the creation without being asked. After Create the dataset has no columns; the person adds them under Structure > Schéma — the agent's part ends at Create. |
+| **Pattern** | **Stepper-driving**: agent asks about data source, recommends dataset type (file, rest, virtual, metaOnly), drives wizard. File upload remains manual. User retains final Create/Import. Once the confirmation step reports `ready`, the agent tells the person the button is ready and declares `wait_for_user_action`, so it learns of the creation without being asked. After Create an editable dataset has no columns; the agent opens its page and declares the ones it agreed on with `add_columns` (§4.9b), and the person clicks Enregistrer. |
 | **Tools** | `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, `advance_to_confirmation` |
 | **Source** | `ui/src/composables/dataset/agent-creation-tools.ts`, `ui/src/pages/new-dataset.vue` |
 
@@ -327,6 +339,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `navigate` | Navigation | **W** | `agent/navigation-tools.ts` |
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
 | `describe_dataset` | Dataset metadata | R | `dataset/agent-tools.ts` |
+| `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata | **W** | `dataset/agent-metadata-tools.ts` |
 | `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `search_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `aggregate_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
@@ -340,6 +354,12 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `set_expression` | Expressions | **W** | `dataset/agent-expression-tools.ts` |
 | `read_property_config` | Property config | R | `dataset/agent-property-config-tools.ts` |
 | `set_property_config` | Property config | **W** | `dataset/agent-property-config-tools.ts` |
+| `add_columns` | Schema structure | **W** | `dataset/agent-add-column-tools.ts` |
+| `read_schema_for_annotation` | Schema annotation | R | `dataset/agent-schema-annotation-tools.ts` |
+| `annotate_schema` | Schema annotation | **W** | `dataset/agent-schema-annotation-tools.ts` |
+| `reorder_columns` | Schema structure | **W** | `dataset/agent-schema-order-tools.ts` |
+| `read_column_values` | Value labels | R | `dataset/agent-column-labels-tools.ts` |
+| `set_column_labels` | Value labels | **W** | `dataset/agent-column-labels-tools.ts` |
 | `open_add_line_dialog` | REST data entry | **W** | `dataset/table/dataset-table.vue` |
 | `open_edit_line_dialog` | REST data entry | **W** | `dataset/table/dataset-table.vue` |
 | `geocode_address` | Geolocation | R | `agent/geo-tools.ts` |
@@ -347,6 +367,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `list_applications` | Applications | R | `application/agent-tools.ts` |
 | `describe_application` | Applications | R | `application/agent-tools.ts` |
 | `get_application_config` | Applications | R | `application/agent-tools.ts` |
+| `get_application_config_draft` | Applications | R | `application/agent-tools.ts` |
+| `get_application_config_schema` | Applications | R | `application/agent-tools.ts` |
 | `list_base_applications` | Applications | R | `application/agent-tools.ts` |
 | `set_application_summary` | Application metadata | **W** | `application/agent-metadata-tools.ts` |
 | `set_application_description` | Application metadata | **W** | `application/agent-metadata-tools.ts` |

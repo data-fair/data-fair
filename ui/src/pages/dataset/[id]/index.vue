@@ -716,6 +716,7 @@ import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metada
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentAddColumnTools } from '~/composables/dataset/agent-add-column-tools'
 import { useAgentColumnLabelsTools } from '~/composables/dataset/agent-column-labels-tools'
 import { useAgentSchemaOrderTools } from '~/composables/dataset/agent-schema-order-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
@@ -853,6 +854,7 @@ useAgentExpressionTools(locale, structureEditFetch.data, (extensionIndex, expr) 
 })
 useAgentSchemaAnnotationTools(locale, structureEditFetch.data, vocabularyArray.data as any, mutateSchema)
 useAgentColumnLabelsTools(locale, structureEditFetch.data, mutateSchema)
+useAgentAddColumnTools(locale, structureEditFetch.data, mutateSchema)
 useAgentSchemaOrderTools(locale, structureEditFetch.data, (schema) => {
   if (structureEditFetch.data.value) structureEditFetch.data.value.schema = schema
 })

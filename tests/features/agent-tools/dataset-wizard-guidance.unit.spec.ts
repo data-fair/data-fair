@@ -24,6 +24,13 @@ test.describe('DATASET_WIZARD_GUIDANCE', () => {
     assert.match(DATASET_WIZARD_GUIDANCE, /no columns yet/)
   })
 
+  test('names the tool that declares those columns', () => {
+    // Without it the guidance sent the agent to a page and left it to describe a
+    // procedure, which is what every judged run ended on.
+    assert.match(DATASET_WIZARD_GUIDANCE, /add_columns/)
+    assert.match(DATASET_WIZARD_GUIDANCE, /Enregistrer/)
+  })
+
   test('names every wizard tool and every type', () => {
     for (const t of ['select_dataset_type', 'set_dataset_title', 'set_rest_options', 'skip_init_from_step', 'advance_to_confirmation']) assert.ok(DATASET_WIZARD_GUIDANCE.includes(t), t)
     for (const ty of ['file', 'rest', 'virtual', 'metaOnly']) assert.ok(DATASET_WIZARD_GUIDANCE.includes(ty), ty)
