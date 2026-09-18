@@ -1,0 +1,113 @@
+import { test } from '@playwright/test'
+import assert from 'node:assert/strict'
+import type { Permission } from '../../../api/types/index.ts'
+import {
+  deriveFragmentPermissions, validatePartOf, parsePartOfParam, shouldHideFragments,
+  fragmentForbiddenPatchKey, PART_OF_CHANGE_OPERATION, partOfCollectionName, resourceTypeToPartOfType
+} from '../../../api/src/fragments/operations.ts'
+
+const orgOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
+const contribWrite: Permission = { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
+const contribRead: Permission = { ...contribWrite, classes: ['list', 'read', 'readAdvanced'], operations: [] }
+const publicRead: Permission = { classes: ['read', 'list'] }
+const userWriteOnly: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['write'] }
+const userReadOnly: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] }
+const userAdmin: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['admin'] }
+const userByEmailWriteDesc: Permission = { type: 'user', email: 'test_user3@test.com', operations: ['writeDescription'] }
+
+test.describe('deriveFragmentPermissions', () => {
+  test('dataset fragment of a virtual dataset: management inherited and implies read, read alone dropped', () => {
+    const derived = deriveFragmentPermissions([contribWrite, contribRead, publicRead, userWriteOnly, userReadOnly, userAdmin, userByEmailWriteDesc], 'datasets', 'datasets')
+    assert.deepEqual(derived, [
+      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'write'] },
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] },
+      { type: 'user', email: 'test_user3@test.com', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
+    ])
+  })
+
+  test('dataset fragment of an application: same as above, cross-type classes', () => {
+    const appContribWrite: Permission = { type: 'organization', id: 'test_org1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
+    const derived = deriveFragmentPermissions([appContribWrite, publicRead, userAdmin], 'applications', 'datasets')
+    assert.deepEqual(derived, [
+      { type: 'organization', id: 'test_org1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] }
+    ])
+  })
+
+  test('application fragment of an application: read is inherited too', () => {
+    const derived = deriveFragmentPermissions([publicRead, userReadOnly, { type: 'user', id: 'u', operations: ['readConfig'] }], 'applications', 'applications')
+    assert.deepEqual(derived, [
+      { classes: ['list', 'read'] },
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] },
+      { type: 'user', id: 'u', operations: ['readConfig'] }
+    ])
+  })
+
+  test('is idempotent', () => {
+    const once = deriveFragmentPermissions([contribWrite, contribRead, userAdmin], 'datasets', 'datasets')
+    assert.deepEqual(deriveFragmentPermissions(once, 'datasets', 'datasets'), once)
+  })
+
+  test('handles undefined and empty input', () => {
+    assert.deepEqual(deriveFragmentPermissions(undefined, 'datasets', 'datasets'), [])
+    assert.deepEqual(deriveFragmentPermissions([], 'applications', 'applications'), [])
+  })
+})
+
+test.describe('validatePartOf', () => {
+  const virtualParent = { id: 'v', owner: orgOwner, isVirtual: true }
+  const appParent = { id: 'a', owner: orgOwner }
+  const base = { fragmentType: 'datasets' as const, fragment: { owner: orgOwner }, nbFragments: 0 }
+
+  test('accepts a dataset under a virtual dataset and under an application', () => {
+    assert.equal(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent }), null)
+    assert.equal(validatePartOf({ ...base, partOf: { type: 'application', id: 'a' }, parent: appParent }), null)
+  })
+  test('accepts an application under an application only', () => {
+    assert.equal(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'application', id: 'a' }, parent: appParent }), null)
+    assert.match(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /application/)
+  })
+  test('refuses a non virtual dataset parent', () => {
+    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'f' }, parent: { id: 'f', owner: orgOwner } })!, /virtuel/)
+  })
+  test('refuses self, a fragment parent, a different owner, a resource that has fragments, a published resource', () => {
+    assert.match(validatePartOf({ ...base, fragment: { id: 'v', owner: orgOwner }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /elle-même/)
+    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: { ...virtualParent, partOf: { type: 'application', id: 'a' } } })!, /lui-même un fragment/)
+    assert.match(validatePartOf({ ...base, fragment: { owner: { type: 'organization', id: 'test_org1', department: 'dep1' } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /propriétaire/)
+    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent, nbFragments: 2 })!, /fragments/)
+    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publicationSites: ['data-fair-portals:p'] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /portail/)
+    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publications: [{ catalog: 'c' }] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /catalogue/)
+  })
+})
+
+test.describe('helpers', () => {
+  test('parsePartOfParam', () => {
+    assert.deepEqual(parsePartOfParam('dataset:abc'), { type: 'dataset', id: 'abc' })
+    assert.deepEqual(parsePartOfParam('application:a:b'), { type: 'application', id: 'a:b' })
+    assert.throws(() => parsePartOfParam('foo:abc'), { status: 400 })
+    assert.throws(() => parsePartOfParam('dataset'), { status: 400 })
+  })
+  test('shouldHideFragments', () => {
+    assert.equal(shouldHideFragments({}), true)
+    assert.equal(shouldHideFragments({ q: 'x', owner: 'user:u' }), true)
+    assert.equal(shouldHideFragments({ partOf: 'dataset:v' }), false)
+    for (const key of ['id', 'ids', 'slug', 'slugs', 'children', 'dataset', 'application']) {
+      assert.equal(shouldHideFragments({ [key]: 'x' }), false, key)
+    }
+  })
+  test('fragmentForbiddenPatchKey', () => {
+    assert.equal(fragmentForbiddenPatchKey({ title: 't' }, true), null)
+    assert.equal(fragmentForbiddenPatchKey({ publicationSites: [] }, false), null)
+    assert.equal(fragmentForbiddenPatchKey({ publicationSites: [] }, true), 'publicationSites')
+    assert.equal(fragmentForbiddenPatchKey({ requestedPublicationSites: [] }, true), 'requestedPublicationSites')
+    assert.equal(fragmentForbiddenPatchKey({ publications: [] }, true), 'publications')
+  })
+  test('constants', () => {
+    assert.deepEqual(PART_OF_CHANGE_OPERATION, { datasets: 'changeOwner', applications: 'delete' })
+    assert.equal(partOfCollectionName('dataset'), 'datasets')
+    assert.equal(partOfCollectionName('application'), 'applications')
+    assert.equal(resourceTypeToPartOfType('datasets'), 'dataset')
+    assert.equal(resourceTypeToPartOfType('applications'), 'application')
+  })
+})
