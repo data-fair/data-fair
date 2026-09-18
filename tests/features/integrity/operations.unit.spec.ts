@@ -456,7 +456,7 @@ const COVERED_TOP_LEVEL = [
   'publications', 'publicationSites', 'requestedPublicationSites', 'hasFiles',
   'attachmentsAsImage', 'isVirtual', 'virtual', 'isRest', 'rest', 'isMetaOnly', 'topics',
   'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'permissions',
-  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation'
+  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation', 'partOf'
 ]
 
 test('every dataset-schema property is consciously classified for integrity coverage', () => {
