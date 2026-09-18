@@ -104,10 +104,20 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
   const newApplication = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
-  await service.initApplicationPermissions(ctx.sessionState, newApplication)
+  // canDoForOwner alone does not tell apart a genuine create from a PUT to an existing document: it is
+  // evaluated against newApplication.owner, which for a caller with no active organization resolves to
+  // their own personal account and is then almost always true, whether or not this application id already
+  // exists. The existence check below is what actually distinguishes the two: without it, deriving/validating
+  // a fragment's parent ACL (initApplicationPermissions) would run against a throwaway document on every PUT
+  // to an existing fragment, and could wrongly 404 on the parent for a caller who only holds a derived (not
+  // direct) permission on the existing sub-resource. It is an optimization, not a TOCTOU-safe guard on its
+  // own — tryInsertApplication's duplicate-key handling right below remains the actual source of truth.
+  const alreadyExists = await mongo.applications.countDocuments({ id: req.params.applicationId }, { limit: 1 }) > 0
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+  if (!alreadyExists && permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+    // only derive/validate the parent ACL on a genuine create
+    await service.initApplicationPermissions(ctx.sessionState, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {
       setReqIsNewApplication(req, true)

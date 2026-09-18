@@ -4,6 +4,7 @@ import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/a
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
 const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')   // contrib of test_org1
+const testUser3 = await axiosAuth('test_user3@test.com')                   // external
 
 const createApp = async (ax = testUser1Org, body: any = {}) => (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), ...body })).data
 
@@ -54,5 +55,16 @@ test.describe('application fragments', () => {
   test('refusals: an application cannot be a fragment of a dataset', async () => {
     const virtual = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, title: 'v' })).data
     await assert.rejects(createApp(testUser1Org, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })
+  })
+
+  test('PUT on an existing sub-application echoing its partOf is not blocked by the parent check', async () => {
+    const dashboard = await createApp()
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    // write-only entry on the parent: derived to write + read on the sub-application, but no readDescription on the parent itself
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['write'] }])
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    const res = await testUser3.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), title: 'sub renamed by test_user3', partOf: { type: 'application', id: dashboard.id } })
+    assert.equal(res.status, 200)
+    assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data.partOf, { type: 'application', id: dashboard.id })
   })
 })
