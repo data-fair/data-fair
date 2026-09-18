@@ -25,6 +25,7 @@ import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } 
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
+import * as fragmentsService from '../fragments/service.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import type { Db } from 'mongodb'
@@ -292,6 +293,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
+  if (dataset.partOf) {
+    // a fragment carries the ACL derived from its parent, never the creation defaults (spec §3.7)
+    dataset.permissions = (await fragmentsService.preparePartOf('datasets', dataset, dataset.partOf, sessionState)).permissions
+  }
 
   if (dataset.initFrom) {
     dataset.initFrom.role = permissions.getOwnerRole(dataset.owner, sessionState)
