@@ -212,7 +212,7 @@ f(x) = x * 2; f(column_name)
 - GET(obj, key, default?): get property from parsed JSON object
 - TRUTHY(val): boolean truthiness
 - DEFINED(val): true if value is not null/undefined
-- UNDEFINED(): an undefined result — the calculated column is left empty for this row (same as an empty string result)`
+- NO_VALUE(): an undefined result — the calculated column is left empty for this row (same as an empty string result). To test whether a value is undefined, use "not DEFINED(value)"`
 
   const expressionHelperPrompts: Record<string, string> = {
     fr: `Tu es un assistant d'écriture d'expressions pour Data Fair, une plateforme de gestion de données. Tu aides les utilisateurs à écrire des expressions expr-eval pour les colonnes calculées.

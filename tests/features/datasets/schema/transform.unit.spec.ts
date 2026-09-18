@@ -45,7 +45,7 @@ c`)
     assert.equal(parser.parse('join("-", filter(f(item) = item, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
     assert.equal(parser.parse('join("-", filter(TRUTHY, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
     assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false } as any), 'true-false')
-    assert.equal(parser.parse('UNDEFINED()').evaluate({}), undefined)
+    assert.equal(parser.parse('NO_VALUE()').evaluate({}), undefined)
 
     assert.equal(parser.parse('EXTRACT(a, "<", ">")').evaluate({ a: 'Hello <world>' }), 'world')
     assert.equal(parser.parse('EXTRACT(a, "statut: ", "\n")').evaluate({
@@ -71,7 +71,7 @@ bla bla`
     assert.equal(compile('CONCAT(a, b)', { type: 'number' })({ a: '', b: '' }), null)
     assert.equal(compile('CONCAT(a,";",b)', { type: 'number', separator: ';' })({ a: '11', b: '' }), '11')
     assert.equal(compile('[a,b]', { type: 'number', separator: ';' })({ a: '', b: '' }), null)
-    assert.equal(compile('a ? UNDEFINED() : nb', { type: 'number' })({ a: true, nb: 1 }), null)
-    assert.equal(compile('a ? UNDEFINED() : nb', { type: 'string' })({ a: true, nb: 1 }), null)
+    assert.equal(compile('a ? NO_VALUE() : nb', { type: 'number' })({ a: true, nb: 1 }), null)
+    assert.equal(compile('a ? NO_VALUE() : nb', { type: 'string' })({ a: true, nb: 1 }), null)
   })
 })

@@ -207,7 +207,7 @@ export default (defaultTimezone) => {
     return arg !== undefined && arg !== null
   }
 
-  parser.functions.UNDEFINED = function () {
+  parser.functions.NO_VALUE = function () {
     return undefined
   }
 
