@@ -543,6 +543,21 @@ test.describe('parseQuery', () => {
   test('an unterminated quote is treated as plain text', () => {
     assert.deepEqual(parseQuery('"courbe de charge', analyzer).phrases, [])
   })
+
+  test('a dash before a quote negates the phrase instead of requiring it', () => {
+    // the original bug inverted intent: the quote was stripped first and the '-' vanished,
+    // so an exclusion silently became a requirement
+    const p = parseQuery('-"courbe de charge"', analyzer)
+    assert.deepEqual(p.negated.sort(), ['charg', 'courb'])
+    assert.deepEqual(p.phrases, [])
+    assert.equal(p.positive.includes('courb'), false)
+  })
+
+  test('a negated phrase composes with a positive term', () => {
+    const p = parseQuery('gaz -"courbe de charge"', analyzer)
+    assert.deepEqual(p.positive, ['gaz'])
+    assert.deepEqual(p.negated.sort(), ['charg', 'courb'])
+  })
 })
 
 test.describe('planQuery', () => {
@@ -586,6 +601,15 @@ test.describe('planQuery', () => {
     const plan = planQuery(parseQuery('charge -gaz', analyzer), stats({ charg: 10, gaz: 5 }), def)!
     assert.deepEqual(plan.negated, ['gaz'])
     assert.equal(plan.idf.gaz, undefined)
+  })
+
+  test('negation wins over the same term used positively', () => {
+    // otherwise the term sits in the gate AND the exclusion: unsatisfiable, with no signal
+    assert.equal(planQuery(parseQuery('charge -charge', analyzer), stats({ charg: 10 }), def), null)
+    const plan = planQuery(parseQuery('charge gaz -charge', analyzer), stats({ charg: 10, gaz: 5 }), def)!
+    assert.deepEqual(plan.terms, ['gaz'])
+    assert.equal(plan.gate.includes('charg'), false)
+    assert.deepEqual(plan.negated, ['charg'])
   })
 })
 
@@ -644,11 +668,21 @@ export const parseQuery = (q: string, analyzer: Analyzer): ParsedQuery => {
   let rest = text
   for (const match of text.matchAll(PHRASE_RE)) {
     const tokens = analyzer.analyze(match[1])
-    if (tokens.length > 1) {
-      const base = tokens[0].position
-      phrases.push(tokens.map(t => ({ term: t.term, delta: t.position - base })))
+    // A '-' immediately before the quote negates the phrase. Without this the quote is stripped
+    // first and the orphaned '-' vanishes, so `-"courbe de charge"` would make the phrase
+    // REQUIRED — the exact opposite of the request, silently. Term-level approximation: this
+    // excludes documents containing those TERMS, not documents containing the exact phrase.
+    // `$text` did true phrase exclusion; never inverting intent matters more than matching it.
+    const negatedPhrase = match.index !== undefined && match.index > 0 && text[match.index - 1] === '-'
+    if (negatedPhrase) {
+      for (const t of tokens) negated.push(t.term)
+    } else {
+      if (tokens.length > 1) {
+        const base = tokens[0].position
+        phrases.push(tokens.map(t => ({ term: t.term, delta: t.position - base })))
+      }
+      for (const t of tokens) positive.push(t.term)
     }
-    for (const t of tokens) positive.push(t.term)
     rest = rest.replace(match[0], ' ')
   }
 
@@ -671,7 +705,10 @@ export const queryTerms = (parsed: ParsedQuery): string[] =>
 export const planQuery = (parsed: ParsedQuery, stats: CorpusStats, def: ResolvedDefinition): QueryPlan | null => {
   // A term absent from the corpus cannot match or contribute to a score. Dropping it here is also
   // what stops a typo from becoming the gate.
-  const terms = parsed.positive.filter(t => (stats.df[t] ?? 0) > 0)
+  // Negation wins: a term that is both positive and negated would otherwise sit in the gate AND
+  // in the exclusion, making the query unsatisfiable with no signal that it is vacuous.
+  const negatedSet = new Set(parsed.negated)
+  const terms = parsed.positive.filter(t => !negatedSet.has(t) && (stats.df[t] ?? 0) > 0)
   if (!terms.length) return null
 
   const idf: Record<string, number> = {}
