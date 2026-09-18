@@ -334,6 +334,16 @@ const ownerFilter = computed(() => {
 const datasetId = computed(() => route.query.dataset as string | undefined)
 const dataset = ref<any>(null)
 
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type, id: raw.slice(i + 1) }
+})
+
 onMounted(async () => {
   if (datasetId.value) {
     creationType.value = 'baseApp'
@@ -459,6 +469,7 @@ async function createApplication () {
       title: appTitle.value
     }
     if (owner.value) body.owner = owner.value
+    if (partOf.value) body.partOf = partOf.value
 
     if (creationType.value === 'copy' && copyApp.value) {
       body.url = copyApp.value.url

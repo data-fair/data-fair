@@ -412,6 +412,15 @@ const breadcrumbs = useBreadcrumbs()
 
 const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type, id: raw.slice(i + 1) }
+})
 
 breadcrumbs.receive({
   breadcrumbs: isSimple.value
@@ -712,6 +721,7 @@ async function createFileDataset () {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
+  if (partOf.value) body.partOf = partOf.value
   if (attachments.value && attachmentsAsImage.value) {
     body.attachmentsAsImage = true
   }
@@ -764,6 +774,7 @@ async function createRestDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (initFrom.value) {
     body.initFrom = initFrom.value
@@ -805,6 +816,7 @@ async function createVirtualDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value
@@ -850,6 +862,7 @@ async function createMetaOnlyDataset () {
     isMetaOnly: true,
     title: metaOnlyTitle.value
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value

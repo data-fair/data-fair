@@ -3,6 +3,11 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
+    <fragment-banner
+      v-if="dataset.partOf"
+      :part-of="dataset.partOf"
+    />
+
     <!-- Metadata details -->
     <df-section-tabs
       v-if="sections.informations"
@@ -169,6 +174,13 @@
 
         <v-tabs-window-item value="attachments">
           <dataset-metadata-attachments />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="fragments">
+          <fragments-list
+            :part-of="{ type: 'dataset', id: dataset.id }"
+            :fragments="fragments"
+          />
         </v-tabs-window-item>
       </template>
     </df-section-tabs>
@@ -398,7 +410,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('changeOwner').value"
+            v-if="can('changeOwner').value && !dataset.partOf"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -416,6 +428,52 @@
                 @click="showOwnerDialog = true"
               >
                 {{ t('changeOwner') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
+          <v-list-item
+            v-if="dataset.partOf && can('changeOwner').value"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('detach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('detachDesc') }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                :loading="confirmDetach.loading.value"
+                @click="confirmDetach.execute()"
+              >
+                {{ t('detach') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+          <v-list-item
+            v-if="!dataset.partOf && can('changeOwner').value"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('attach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('attachDesc') }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showAttachDialog = true"
+              >
+                {{ t('attach') }}
               </v-btn>
             </template>
           </v-list-item>
@@ -476,8 +534,16 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('changeOwner').value"
+      v-if="can('changeOwner').value && !dataset.partOf"
       v-model="showOwnerDialog"
+      :resource="dataset"
+      resource-type="datasets"
+      @changed="store.datasetFetch.refresh()"
+    />
+
+    <fragment-attach-dialog
+      v-if="!dataset.partOf && can('changeOwner').value"
+      v-model="showAttachDialog"
       :resource="dataset"
       resource-type="datasets"
       @changed="store.datasetFetch.refresh()"
@@ -493,6 +559,14 @@
       >
         <v-card-text class="pb-0">
           {{ t('deleteMsg', { title: dataset?.title }) }}
+          <v-alert
+            v-if="nbFragments"
+            type="warning"
+            variant="tonal"
+            class="mt-4"
+          >
+            {{ t('deleteFragmentsWarning', { count: nbFragments }) }}
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -501,6 +575,15 @@
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
+          </v-btn>
+          <v-btn
+            v-if="nbFragments"
+            color="warning"
+            variant="outlined"
+            :loading="confirmDetachAllAndRemove.loading.value"
+            @click="confirmDetachAllAndRemove.execute()"
+          >
+            {{ t('detachFirst') }}
           </v-btn>
           <v-btn
             color="warning"
@@ -579,6 +662,7 @@ fr:
   schema: Schéma
   constraints: Contraintes
   attachments: Pièces jointes
+  fragments: Fragments
   save: Enregistrer
   cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
@@ -614,6 +698,13 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
+  detach: Détacher du parent
+  detachDesc: Cette ressource redevient un jeu de données indépendant, avec les permissions qu'elle porte actuellement.
+  detachSuccess: Le jeu de données a été détaché.
+  attach: Rattacher à un parent
+  attachDesc: Faire de ce jeu de données un fragment d'un jeu de données virtuel ou d'une application.
+  deleteFragmentsWarning: "Ce jeu de données a {count} fragment(s) qui seront supprimés avec lui."
+  detachFirst: Détacher d'abord
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
   deleteAllLinesTitle: Suppression des lignes du jeu de données
@@ -640,6 +731,7 @@ en:
   schema: Schema
   constraints: Constraints
   attachments: Attachments
+  fragments: Fragments
   save: Save
   cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
@@ -675,6 +767,13 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
+  detach: Detach from parent
+  detachDesc: This resource becomes an independent dataset again, with the permissions it currently carries.
+  detachSuccess: The dataset was detached.
+  attach: Attach to a parent
+  attachDesc: Make this dataset a fragment of a virtual dataset or of an application.
+  deleteFragmentsWarning: "This dataset has {count} fragment(s) that will be deleted with it."
+  detachFirst: Detach first
   deleteAllLines: Delete all lines
   deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
   deleteAllLinesTitle: Delete all the lines of the dataset
@@ -748,7 +847,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
 
@@ -906,6 +1005,19 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
 const confirmRemove = useAsyncAction(async () => {
+  await remove()
+  await router.push('/datasets')
+}, { success: t('deleteDatasetSuccess') })
+
+const showAttachDialog = ref(false)
+const confirmDetach = useAsyncAction(async () => {
+  await detach()
+  await store.datasetFetch.refresh()
+}, { success: t('detachSuccess') })
+const confirmDetachAllAndRemove = useAsyncAction(async () => {
+  for (const fragment of fragments.value.datasets) {
+    await $fetch(`datasets/${fragment.id}`, { method: 'PATCH', body: { partOf: null } })
+  }
   await remove()
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
@@ -1095,6 +1207,9 @@ const sections = computedDeepDiff(() => {
   if (!d.draftReason) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
   }
+  if (d.isVirtual || nbFragments.value) {
+    metadataTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): listed only here, deleted with it. A "new fragment" button creates one.' })
+  }
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → `dataset_changes_summarizer` subagent (produces a <500 char plain-text summary of the diff).' }
 
   // Exploration section (direct component tabs)
@@ -1125,14 +1240,16 @@ const sections = computedDeepDiff(() => {
   // Share section
   if (!d.draftReason || d.draftReason.key === 'file-updated') {
     const shareTabs: any[] = []
-    if (can('getPermissions').value) {
+    if (can('getPermissions').value && !d.partOf) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / write / admin permissions to specific users, organisations, departments or partners, or open access to "anyone".' })
     }
     if (can('setReadApiKey').value) {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey, agentDesc: 'Generate and manage a read-only API key — for embedding or programmatic access without a user session.' })
     }
-    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this dataset on the organisation\'s data portals (open or limited audience).' })
-    if ($uiConfig.catalogsIntegration && accountRole.value === 'admin') {
+    if (!d.partOf) {
+      shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this dataset on the organisation\'s data portals (open or limited audience).' })
+    }
+    if ($uiConfig.catalogsIntegration && accountRole.value === 'admin' && !d.partOf) {
       shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection, agentDesc: 'Publish this dataset to external catalogs (data.gouv.fr, CKAN, etc.). Rendered as a d-frame from the catalogs service — admin-only.' })
     }
     if (d.finalizedAt) {
