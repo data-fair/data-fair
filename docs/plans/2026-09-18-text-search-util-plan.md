@@ -555,9 +555,14 @@ test.describe('planQuery', () => {
   })
 
   test('phrase terms are ALL in the gate, however common', () => {
-    const parsed = parseQuery('"courbe de charge" gaz', analyzer)
-    const plan = planQuery(parsed, stats({ courb: 900, charg: 900, gaz: 1 }), def)!
-    assert.ok(plan.gate.includes('courb') && plan.gate.includes('charg'))
+    // four terms against a rarest-3 gate, with the phrase's two terms the COMMONEST: without the
+    // phrase rule they fall outside the gate, so this test can actually fail
+    const parsed = parseQuery('"courbe de charge" gaz eolien', analyzer)
+    const plan = planQuery(parsed, stats({ courb: 900, charg: 950, gaz: 1, eolien: 2 }), def)!
+    assert.equal(def.gateSize, 3)
+    assert.ok(plan.gate.includes('courb'), 'a common phrase term must still be gated on')
+    assert.ok(plan.gate.includes('charg'), 'a common phrase term must still be gated on')
+    assert.ok(plan.gate.length > def.gateSize, 'the phrase widens the gate beyond rarest-K')
   })
 
   test('idf falls as df rises', () => {
@@ -1671,7 +1676,7 @@ git commit -m "feat(text-search): backfill the term index on existing datasets a
 ### Task 10: Switch the query path
 
 **Files:**
-- Modify: `api/src/misc/utils/find.ts` — `query()`, `sort()`, `basePipeline()`, `facetsQuery()`, `sumsQuery()`
+- Modify: `api/src/misc/utils/find.ts` — `query()`, `sort()`, `basePipeline()`, `facetsQuery()`, `sumsQuery()`, plus a new exported `ownerScopeOf()`
 - Modify: `api/src/datasets/service.ts:136-155` (the list query)
 - Modify: `api/src/applications/service.ts:84-91` (the list query)
 - Modify: `tests/features/datasets/catalog-search.api.spec.ts` (expectations that assumed `$text`)
@@ -1679,7 +1684,8 @@ git commit -m "feat(text-search): backfill the term index on existing datasets a
 **Interfaces:**
 - Consumes: `datasetsTextSearch` / `datasetsStats`, `applicationsTextSearch` / `applicationsStats`.
 - Produces: `findUtils.query(..., textFilter?: any)`, `findUtils.facetsQuery(..., textFilter?: any)`,
-  `findUtils.sumsQuery(..., textFilter?: any)`, `findUtils.sort(sortStr, q, relevanceSort?: Record<string, number>)`.
+  `findUtils.sumsQuery(..., textFilter?: any)`, `findUtils.sort(sortStr, q, relevanceSort?: Record<string, number>)`,
+  `findUtils.ownerScopeOf(reqQuery, publicationSite?): Record<string, any> | undefined`.
 
 - [ ] **Step 1: Add the `textFilter` parameter in `find.ts`**
 
@@ -1714,14 +1720,38 @@ adding `relevanceSort?: Record<string, number>` as a third parameter.
 
 In `api/src/datasets/service.ts`, before building `query`:
 
+First add `ownerScopeOf` to `api/src/misc/utils/find.ts` and export it — both services need it:
+
 ```ts
-  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScopeOf(reqQuery, publicationSite)) : null
+/**
+ * The single-owner scope of a request, or undefined when it spans owners.
+ *
+ * Corpus statistics and the candidate gate are both scoped to this when it is set, which is the
+ * largest scaling lever in the design: on a 200k-document instance an owner-scoped portal query
+ * examines 321 documents instead of 62,360, because the compound {owner.type, owner.id, _terms}
+ * index gates by owner first. Returning undefined is always CORRECT, only slower — so anything
+ * ambiguous must return undefined rather than guess an owner.
+ */
+export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?: { owner: { type: string, id: string } }): Record<string, any> | undefined => {
+  if (publicationSite) return { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
+  if (!reqQuery.owner) return undefined
+  const owners = reqQuery.owner.split(',')
+  // several owners, or a negation like `-organization:x`, is not a single-owner scope
+  if (owners.length !== 1 || owners[0].startsWith('-')) return undefined
+  const [type, id] = owners[0].split(':')
+  if (!type || !id) return undefined
+  return { 'owner.type': type, 'owner.id': id }
+}
+```
+
+Then, in the service, before building `query`:
+
+```ts
+  const ownerScope = ownerScopeOf(reqQuery, publicationSite)
+  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? datasetsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 ```
-
-where `ownerScopeOf` returns `{ 'owner.type', 'owner.id' }` when the request is scoped to a single
-owner (a `publicationSite`, or a single `?owner=` value) and `undefined` otherwise.
 
 Pass `textFilter` to `findUtils.query`, `findUtils.facetsQuery` and `findUtils.sumsQuery`, and
 pass `datasetsTextSearch.sortSpec()` as `sort()`'s third argument.
