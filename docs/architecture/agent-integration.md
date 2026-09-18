@@ -296,7 +296,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button in application creation stepper |
+| **Trigger** | Action button in the stepper, or simply arriving on the page: the wizard publishes its guidance as keyed `wizard-guidance` state (`ui/src/composables/application/agent-application-wizard-logic.ts`, one constant shared with the action button's hidden context), so an assistant that navigated here itself receives it. Until then it lived only in the button's context — a channel no judged run has used, since they all navigate. |
 | **Action ID** | `help-create-application` |
 | **Pattern** | **Stepper-driving**: agent asks user what visualization they want, uses `list_base_applications`/`list_applications` for discovery, then drives the wizard with creation tools. User retains final Save. |
 | **Tools** | `select_creation_type`, `select_base_application`, `select_copy_application`, `set_application_title` |
@@ -590,7 +590,7 @@ ever starts a model turn.
 | `location` (keyed) | `ui/src/layouts/default.vue` | absolute `url`, `path`, route `name`, `params`, `query`, breadcrumb trail |
 | `wizard` (keyed) | `ui/src/pages/new-dataset.vue` | `step`, `type`, `title`, `ready`, plus the options of the chosen type (`file`, `history`/`attachments`, `children`) |
 | `wizard` (keyed) | `ui/src/pages/new-application.vue` | `step`, `creationType`, `selected`, `title`, `ready` |
-| `wizard-guidance` (keyed) | `ui/src/pages/new-dataset.vue` | the wizard's guidance text, a constant: emitted once at mount and once per `agent-state-request` (a chat opening asks every publisher to re-emit; the chat keeps one value per key), never on step changes, withdrawn on unmount |
+| `wizard-guidance` (keyed) | `ui/src/pages/new-dataset.vue`, `ui/src/pages/new-application.vue` | the wizard's guidance text, a constant: emitted once at mount and once per `agent-state-request` (a chat opening asks every publisher to re-emit; the chat keeps one value per key), never on step changes, withdrawn on unmount. The two wizards share the key deliberately: only one is ever mounted, and the chat keeps one value per key, so a stale guidance cannot outlive its page. |
 | `structure` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `columns` (the ones a person put there), `unsaved`, `ready` — `ready` is `unsaved && valid`, i.e. Enregistrer can be pressed right now |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
 | `dataset-structure-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id`, `columns` — emitted after a save that really landed, so a declared wait resolves on it |

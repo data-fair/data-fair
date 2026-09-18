@@ -161,6 +161,22 @@ test.describe('host events published to the assistant', () => {
     expect(regressed, 'the click reported the form as not ready').toEqual([])
   })
 
+  test('the application wizard tells the assistant how it works too', async ({ page, goToWithAuth }) => {
+    // The same on-arrival channel as the dataset wizard. It had none: its guidance
+    // lived only in the action button's hidden context, which no judged run has
+    // ever gone through — they navigate here themselves.
+    await page.addInitScript(collectEvents)
+    await goToWithAuth('/data-fair/new-application', 'test_user1')
+
+    // A guidance detail is a raw string, not JSON — lastKeyed would try to parse it.
+    const guidanceEvents = async () => (await readEvents(page)).filter(e => e.key === 'wizard-guidance')
+    await expect.poll(async () => (await guidanceEvents()).length, { timeout: 15000 }).toBeGreaterThanOrEqual(1)
+    const guidance = (await guidanceEvents()).pop()!.detail!
+    expect(guidance).toContain('select_base_application')
+    expect(guidance).toContain('wait_for_user_action')
+    expect(guidance).not.toContain('[truncated]')
+  })
+
   test('the schema form reports whether Enregistrer can be pressed, and that it was', async ({ page, goToWithAuth }) => {
     // The half of the flow after Create used to publish nothing at all. A judged
     // run had the assistant stage six columns and then assert « Le bouton
