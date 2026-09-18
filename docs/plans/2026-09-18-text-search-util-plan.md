@@ -294,6 +294,16 @@ test.describe('validateDefinition', () => {
     assert.throws(() => validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: 1 }), /gateSize/)
   })
 
+  test('refuses a NaN gateSize', () => {
+    // `NaN < 2` is false, so a naive comparison would silently accept it
+    assert.throws(() => validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: NaN }), /gateSize/)
+  })
+
+  test('accepts gateSize 2 as the valid boundary', () => {
+    // the accept side matters too: an off-by-one regression to `< 3` would otherwise pass
+    assert.equal(validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: 2 }).gateSize, 2)
+  })
+
   test('refuses an empty field map and non-positive weights', () => {
     assert.throws(() => validateDefinition({ fields: {}, language: 'fr', version: 1 }), /fields/)
     assert.throws(() => validateDefinition({ fields: { title: 0 }, language: 'fr', version: 1 }), /weight/)
@@ -400,7 +410,9 @@ export const validateDefinition = (def: TextSearchDefinition): ResolvedDefinitio
   const gateSize = def.gateSize ?? 3
   // Not a tuning knob: gating on a single term makes the query an AND on it, so one unknown word
   // (a typo) becomes the gate and the result page is empty. See the spec's §5.
-  if (gateSize < 2) throw new Error('text-search: gateSize must be at least 2')
+  // NaN-safe: `NaN < 2` is false, so the naive `gateSize < 2` would let a NaN through the very
+  // check that makes an empty-page-on-one-typo failure impossible. Matches the weight check above.
+  if (!(gateSize >= 2)) throw new Error('text-search: gateSize must be at least 2')
   return { ...def, gateSize, tieBreaker: def.tieBreaker ?? 0.3, tieBreakField: def.tieBreakField ?? 'id' }
 }
 ```
