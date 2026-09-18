@@ -20,6 +20,15 @@ test.describe('validateDefinition', () => {
     assert.throws(() => validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: 1 }), /gateSize/)
   })
 
+  test('refuses NaN gateSize', () => {
+    assert.throws(() => validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: NaN }), /gateSize/)
+  })
+
+  test('accepts gateSize 2 as the valid boundary', () => {
+    const d = validateDefinition({ fields: { title: 1 }, language: 'fr', version: 1, gateSize: 2 })
+    assert.equal(d.gateSize, 2)
+  })
+
   test('refuses an empty field map and non-positive weights', () => {
     assert.throws(() => validateDefinition({ fields: {}, language: 'fr', version: 1 }), /fields/)
     assert.throws(() => validateDefinition({ fields: { title: 0 }, language: 'fr', version: 1 }), /weight/)

@@ -31,6 +31,6 @@ export const validateDefinition = (def: TextSearchDefinition): ResolvedDefinitio
   const gateSize = def.gateSize ?? 3
   // Not a tuning knob: gating on a single term makes the query an AND on it, so one unknown word
   // (a typo) becomes the gate and the result page is empty. See the spec's §5.
-  if (gateSize < 2) throw new Error('text-search: gateSize must be at least 2')
+  if (!(gateSize >= 2)) throw new Error('text-search: gateSize must be at least 2')
   return { ...def, gateSize, tieBreaker: def.tieBreaker ?? 0.3, tieBreakField: def.tieBreakField ?? 'id' }
 }
