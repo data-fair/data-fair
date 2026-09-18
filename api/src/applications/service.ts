@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import * as fragmentsService from '../fragments/service.ts'
-import { parsePartOfParam, shouldHideFragments } from '../fragments/operations.ts'
+import { partOfListFilter } from '../fragments/operations.ts'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
@@ -84,12 +84,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   }
 
   // fragments are reached from their parent, not from the catalog (spec §4)
-  if (reqQuery.partOf) {
-    const partOf = parsePartOfParam(reqQuery.partOf)
-    extraFilters.push({ 'partOf.type': partOf.type, 'partOf.id': partOf.id })
-  } else if (shouldHideFragments(reqQuery)) {
-    extraFilters.push({ partOf: { $exists: false } })
-  }
+  const partOfFilter = partOfListFilter(reqQuery)
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 

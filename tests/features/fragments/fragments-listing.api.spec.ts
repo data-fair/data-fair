@@ -25,6 +25,9 @@ test.describe('fragments listing', () => {
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: `dataset:${virtual.id}` } })), [fragment.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { id: fragment.id } })), [fragment.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { ids: fragment.id } })), [fragment.id])
+    // partOf=true reveals every fragment whatever its parent, partOf=false is the default
+    assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: 'true' } })), [fragment.id])
+    assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: 'false' } })), [virtual.id])
     assert.equal((await testUser1Org.get('/api/v1/datasets', { params: { size: 0 } })).data.count, 1)
     await assert.rejects(testUser1Org.get('/api/v1/datasets', { params: { partOf: 'nope' } }), { status: 400 })
 
@@ -40,5 +43,6 @@ test.describe('fragments listing', () => {
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications')), [dashboard.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { partOf: `application:${dashboard.id}` } })), [sub.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { ids: sub.id } })), [sub.id])
+    assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { partOf: 'true' } })), [sub.id])
   })
 })

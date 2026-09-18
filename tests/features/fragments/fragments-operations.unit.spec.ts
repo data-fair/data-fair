@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import type { Permission } from '../../../api/types/index.ts'
 import {
-  deriveFragmentPermissions, validatePartOf, parsePartOfParam, shouldHideFragments,
+  deriveFragmentPermissions, validatePartOf, partOfListFilter,
   fragmentForbiddenPatchKey, fragmentWriteBodyError, PART_OF_CHANGE_OPERATION,
   partOfCollectionName, resourceTypeToPartOfType
 } from '../../../api/src/fragments/operations.ts'
@@ -97,22 +97,32 @@ test.describe('validatePartOf', () => {
     assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent, nbFragments: 2 })!, /fragments/)
     assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publicationSites: ['data-fair-portals:p'] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /portail/)
     assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publications: [{ catalog: 'c' }] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /catalogue/)
+    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, masterData: { singleSearchs: [{ id: 's' }] } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /référence/)
+    // an empty master-data sub-object is not reference data
+    assert.equal(validatePartOf({ ...base, fragment: { owner: orgOwner, masterData: {} }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent }), null)
   })
 })
 
 test.describe('helpers', () => {
-  test('parsePartOfParam', () => {
-    assert.deepEqual(parsePartOfParam('dataset:abc'), { type: 'dataset', id: 'abc' })
-    assert.deepEqual(parsePartOfParam('application:a:b'), { type: 'application', id: 'a:b' })
-    assert.throws(() => parsePartOfParam('foo:abc'), { status: 400 })
-    assert.throws(() => parsePartOfParam('dataset'), { status: 400 })
+  test('partOfListFilter: targeting a parent', () => {
+    assert.deepEqual(partOfListFilter({ partOf: 'dataset:abc' }), { 'partOf.type': 'dataset', 'partOf.id': 'abc' })
+    // an id may itself contain a colon, only the first one separates the type
+    assert.deepEqual(partOfListFilter({ partOf: 'application:a:b' }), { 'partOf.type': 'application', 'partOf.id': 'a:b' })
+    assert.throws(() => partOfListFilter({ partOf: 'foo:abc' }), { status: 400 })
+    assert.throws(() => partOfListFilter({ partOf: 'dataset' }), { status: 400 })
   })
-  test('shouldHideFragments', () => {
-    assert.equal(shouldHideFragments({}), true)
-    assert.equal(shouldHideFragments({ q: 'x', owner: 'user:u' }), true)
-    assert.equal(shouldHideFragments({ partOf: 'dataset:v' }), false)
+  test('partOfListFilter: every fragment, whatever its parent', () => {
+    assert.deepEqual(partOfListFilter({ partOf: 'true' }), { 'partOf.id': { $exists: true } })
+  })
+  test('partOfListFilter: fragments hidden by default', () => {
+    assert.deepEqual(partOfListFilter({}), { partOf: { $exists: false } })
+    assert.deepEqual(partOfListFilter({ q: 'x', owner: 'user:u' }), { partOf: { $exists: false } })
+    // an explicit false is the default, not a request to reveal them
+    assert.deepEqual(partOfListFilter({ partOf: 'false' }), { partOf: { $exists: false } })
+  })
+  test('partOfListFilter: pinning queries are never filtered', () => {
     for (const key of ['id', 'ids', 'slug', 'slugs', 'children', 'dataset', 'application']) {
-      assert.equal(shouldHideFragments({ [key]: 'x' }), false, key)
+      assert.equal(partOfListFilter({ [key]: 'x' }), undefined, key)
     }
   })
   test('fragmentForbiddenPatchKey', () => {
@@ -142,6 +152,13 @@ test.describe('helpers', () => {
     // a standalone resource may be published
     assert.equal(fragmentWriteBodyError({ publicationSites: [] }, {}, { allowPartOfChange: false }), null)
     assert.equal(fragmentWriteBodyError(undefined, fragment, { allowPartOfChange: false }), null)
+    // a fragment is never reference data either, and attaching + declaring it in one body is refused
+    assert.match(fragmentWriteBodyError({ masterData: { bulkSearchs: [{ id: 'b' }] } }, fragment, { allowPartOfChange: true })!, /référence/)
+    assert.match(fragmentWriteBodyError({ partOf: parent, masterData: { virtualDatasets: { active: true } } }, undefined, { allowPartOfChange: true })!, /référence/)
+    // presence of the key is not the signal: clearing it, or an empty sub-object, must keep working
+    assert.equal(fragmentWriteBodyError({ masterData: {} }, fragment, { allowPartOfChange: true }), null)
+    assert.equal(fragmentWriteBodyError({ masterData: null }, fragment, { allowPartOfChange: true }), null)
+    assert.equal(fragmentWriteBodyError({ masterData: { bulkSearchs: [{ id: 'b' }] } }, {}, { allowPartOfChange: true }), null)
   })
   test('constants', () => {
     assert.deepEqual(PART_OF_CHANGE_OPERATION, { datasets: 'changeOwner', applications: 'delete' })
