@@ -115,6 +115,43 @@ export function buildDatasetWizardState (input: DatasetWizardInput): DatasetWiza
   return state
 }
 
+/**
+ * The schema form on the dataset page, which is where the creation flow now ends.
+ *
+ * The wizard has always published `ready`, so the assistant can say "the Create
+ * button is live" without looking at the screen, and `dataset-created` so a
+ * declared wait wakes on the creation itself. The schema form had neither: a
+ * judged run staged six columns with add_columns, asserted the Enregistrer button
+ * was ready with no way to know it, and — having no event to wait on — asked the
+ * person to report the save back. This is the same contract on the second half.
+ */
+export interface DatasetStructureInput {
+  /** Columns a person put there: not the calculated or internal ones. */
+  columns: number
+  /** The edited copy differs from what the server holds. */
+  unsaved: boolean
+  /** The form itself is in a saveable state (master data, extensions). */
+  valid: boolean
+}
+
+export interface DatasetStructureState {
+  columns: number
+  unsaved: boolean
+  /** Enregistrer can be pressed right now. */
+  ready: boolean
+}
+
+export function buildDatasetStructureState (input: DatasetStructureInput): DatasetStructureState {
+  return {
+    columns: input.columns,
+    unsaved: input.unsaved,
+    // Deliberately the conjunction rather than the button's own disabled prop:
+    // a form with nothing staged has an inert button too, and telling someone to
+    // press it would be as wrong as telling them to press an invalid one.
+    ready: input.unsaved && input.valid
+  }
+}
+
 export interface ApplicationWizardInput {
   step: string
   creationType?: 'copy' | 'baseApp' | null

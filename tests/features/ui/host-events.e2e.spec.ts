@@ -160,4 +160,44 @@ test.describe('host events published to the assistant', () => {
     const regressed = wizardEvents.slice(firstReady).filter(w => w.ready === false)
     expect(regressed, 'the click reported the form as not ready').toEqual([])
   })
+
+  test('the schema form reports whether Enregistrer can be pressed, and that it was', async ({ page, goToWithAuth }) => {
+    // The half of the flow after Create used to publish nothing at all. A judged
+    // run had the assistant stage six columns and then assert « Le bouton
+    // Enregistrer est déjà prêt à être cliqué » with no way to know it, declare no
+    // wait because it had no event to wait on, and ask the person to report the
+    // save back. This is the wizard's `ready` + `dataset-created` pair, on the
+    // schema form.
+    const ax = await axiosAuth('test_user1@test.com')
+    const { data: created } = await ax.post('/api/v1/datasets', { isRest: true, title: 'Demandes de subvention', schema: [] })
+
+    await page.addInitScript(collectEvents)
+    await goToWithAuth(`/data-fair/dataset/${created.id}`, 'test_user1')
+
+    // On arrival: no columns, nothing staged, nothing to press.
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'structure'), { timeout: 15000 })
+      .toEqual({ columns: 0, unsaved: false, ready: false })
+
+    // Stage a column the way the form does, through the add-column dialog.
+    await page.getByRole('tab', { name: /Schéma/ }).click()
+    await page.getByRole('button', { name: /Ajouter une colonne/ }).click()
+    await page.getByLabel(/Nom de la colonne/).fill('Nom du demandeur')
+    await page.locator('.v-card-actions').getByRole('button', { name: /^Ajouter$/ }).click()
+
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'structure'), { timeout: 15000 })
+      .toEqual({ columns: 1, unsaved: true, ready: true })
+
+    await page.getByRole('button', { name: /Enregistrer/ }).first().click()
+
+    // The save is a transition, not a state refresh: it is what a declared
+    // wait_for_user_action resolves on, so the assistant learns of it unasked.
+    await expect.poll(async () => (await readEvents(page)).find(e => e.name === 'dataset-structure-saved'), { timeout: 30000 })
+      .toBeTruthy()
+    const saved = (await readEvents(page)).find(e => e.name === 'dataset-structure-saved')!
+    expect(saved.key, 'a keyed save would not resolve a wait').toBeFalsy()
+    expect(JSON.parse(saved.detail!).columns).toBe(1)
+
+    // And afterwards there is nothing left to press.
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'structure')?.unsaved, { timeout: 15000 }).toBe(false)
+  })
 })

@@ -253,6 +253,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Trigger** | No action button: reached from the creation flow, whose wizard guidance names the tool, or from the person asking for columns |
 | **Pattern** | The agent proposes a set of columns in conversation, and once the person agrees declares them all in one `add_columns` call. The columns are staged in the edited schema — `dataset-columns-list.vue` flags a column absent from the original as pending — and the person clicks Enregistrer. |
 | **Tools** | `add_columns` |
+| **Signals** | The page publishes `structure` (`columns`, `unsaved`, `ready`) and emits `dataset-structure-saved`, so the agent can say the Enregistrer button is live without looking at the screen and learn of the save by declaring `wait_for_user_action` — the same pair the creation wizard has (§10). |
 | **Precondition** | Only an editable (REST) dataset: anywhere else the columns come from the file or the source, and the form itself offers no add-column button. The tool returns that reason instead of staging. |
 | **Types** | The names offered to the model (`text`, `long-text`, `formatted-text`, `date`, `date-time`, `integer`, `number`, `boolean`) each resolve to one entry of `propertyTypes` in `ui/src/utils/dataset.ts`, and a unit test pins that the two lists still cover each other in both directions — a type added to the dialog and not here would be silently unreachable by the agent. |
 | **Staged payload** | Identical to what `dataset-add-column-dialog.vue` emits: `key` (slugified from the name, as the form derives it), `x-originalName`, `type`, `format`/`x-display` when the type has them, and an empty `title`. Titles, descriptions and concepts come afterwards from `annotate_schema`. |
@@ -590,7 +591,9 @@ ever starts a model turn.
 | `wizard` (keyed) | `ui/src/pages/new-dataset.vue` | `step`, `type`, `title`, `ready`, plus the options of the chosen type (`file`, `history`/`attachments`, `children`) |
 | `wizard` (keyed) | `ui/src/pages/new-application.vue` | `step`, `creationType`, `selected`, `title`, `ready` |
 | `wizard-guidance` (keyed) | `ui/src/pages/new-dataset.vue` | the wizard's guidance text, a constant: emitted once at mount and once per `agent-state-request` (a chat opening asks every publisher to re-emit; the chat keeps one value per key), never on step changes, withdrawn on unmount |
+| `structure` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `columns` (the ones a person put there), `unsaved`, `ready` — `ready` is `unsaved && valid`, i.e. Enregistrer can be pressed right now |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
+| `dataset-structure-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id`, `columns` — emitted after a save that really landed, so a declared wait resolves on it |
 | `application-created` | `ui/src/pages/new-application.vue` | `id`, `title` — emitted before the redirect |
 
 The payload builders are pure and unit-tested in
@@ -618,6 +621,18 @@ context while the assistant had already told the person the button was live. The
 tool now polls the same `wizardReady` computed for up to 5s and says what it found,
 naming the label the button actually shows (`nextButtonText`) rather than a guess.
 When the check has not come back in time it says so instead of claiming readiness.
+
+**Why the schema form publishes the same pair as the wizard.** The creation flow
+now ends on the dataset page, not at Create, and that page used to publish nothing.
+A judged run staged six columns with `add_columns`, asserted « Le bouton Enregistrer
+est déjà prêt à être cliqué » with no way to know it (true by luck), declared no wait
+because it had no event to wait on, and asked the person to report the save back —
+then had to call `describe_dataset` a second time to learn it had landed. `structure`
++ `dataset-structure-saved` are `ready` + `dataset-created` for the second half:
+stage, see `ready`, say so, wait, be told. `ready` is deliberately `unsaved && valid`
+rather than the Save button's own `disabled` prop — a form with nothing staged also
+has an inert button, and telling someone to press that is as wrong as telling them
+to press an invalid one.
 
 **Why the creation events are emitted before `router.push`.** The wizard unmounts
 on the redirect and withdraws its `wizard` state, so that is the last moment it

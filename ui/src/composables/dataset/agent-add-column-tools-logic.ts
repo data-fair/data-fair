@@ -121,7 +121,7 @@ export function formatAddOutcomes (outcomes: AddOutcome[]): string {
   if (added.length) {
     lines.push(`${added.length} column(s) are in the schema form now, on the page the user is already on:`)
     for (const o of added) lines.push(`- \`${o.key}\` — ${o.name}`)
-    lines.push('Nothing is sent yet. Tell the user the Enregistrer button is ready — they do not need to find a tab or check the columns first.')
+    lines.push('Nothing is sent yet. The `structure` host state reports `ready` once the Enregistrer button can be pressed: tell the user then — they do not need to find a tab or check the columns first — and declare wait_for_user_action, so the save reaches you without them having to say so.')
     lines.push('Titles, descriptions and concepts are set separately, with annotate_schema.')
   }
   if (rejected.length) {

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { buildLocationState, buildDatasetWizardState, buildApplicationWizardState } from '../../../ui/src/composables/agent/host-state.ts'
+import { buildLocationState, buildDatasetWizardState, buildApplicationWizardState, buildDatasetStructureState } from '../../../ui/src/composables/agent/host-state.ts'
 
 // These payloads are re-sent in full in the <host-state> snapshot at every
 // activation, so every field that is empty is a token the model re-reads for
@@ -132,6 +132,48 @@ test.describe('buildApplicationWizardState', () => {
     assert.deepEqual(
       buildApplicationWizardState({ step: 'selection', creationType: 'copy', selected: null, title: '', ready: false }),
       { step: 'selection', creationType: 'copy', ready: false }
+    )
+  })
+})
+
+/**
+ * The half of the flow after Create used to publish nothing. A judged run had the
+ * assistant stage six columns with add_columns and then assert « Le bouton
+ * Enregistrer est déjà prêt à être cliqué » with no way to know it — correct by
+ * luck — declare no wait because it had no event to wait on, and ask the person
+ * to report the save back. This is the wizard's own `ready` contract, on the
+ * schema form: `unsaved` says the staged change is really there, `ready` says the
+ * button can be pressed now.
+ */
+test.describe('buildDatasetStructureState', () => {
+  test('a form matching the server can neither be saved nor is it dirty', () => {
+    assert.deepEqual(
+      buildDatasetStructureState({ columns: 6, unsaved: false, valid: true }),
+      { columns: 6, unsaved: false, ready: false }
+    )
+  })
+
+  test('a staged change on a valid form is ready to save', () => {
+    assert.deepEqual(
+      buildDatasetStructureState({ columns: 6, unsaved: true, valid: true }),
+      { columns: 6, unsaved: true, ready: true }
+    )
+  })
+
+  test('a staged change on an invalid form is dirty but not ready', () => {
+    // Saying "click Enregistrer" here is the failure this state exists to stop.
+    assert.deepEqual(
+      buildDatasetStructureState({ columns: 6, unsaved: true, valid: false }),
+      { columns: 6, unsaved: true, ready: false }
+    )
+  })
+
+  test('an empty schema is reported as zero, not omitted', () => {
+    // A freshly created REST dataset has no columns, and that is exactly the fact
+    // the assistant needs on arrival; omitting it would read as "not reported".
+    assert.deepEqual(
+      buildDatasetStructureState({ columns: 0, unsaved: false, valid: true }),
+      { columns: 0, unsaved: false, ready: false }
     )
   })
 })
