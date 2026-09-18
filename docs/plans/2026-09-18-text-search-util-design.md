@@ -154,9 +154,17 @@ Built-in stemmers: a **light French stemmer** (a port of the Savoy algorithm tha
 doubled consonants — Apache-2.0, attributed in the file header) and a trivial English one.
 An unknown language degrades to deaccent + lowercase + stopwords with no stemming.
 
-Light stemming is not a convenience choice — it is **measurably better**: `light_french` beats
-aggressive Snowball by 4–6 hit@1 on the benchmark, while `@orama/stemmers` would add 3.9 MB for
-the worse result.
+**Why light rather than Snowball, corrected.** An earlier reading of the evidence claimed light
+stemming was *measurably better*. That result (light_french beating snowball by 4–6 hit@1) belongs
+to Elasticsearch's `best_fields` query, not to this design's dis_max scorer. Measured on our exact
+scorer, the two are within one query — snowball 167/170 (MRR 0.990), light_french 166/170 (0.987).
+
+So the choice is made on **implementation cost and dependencies, not quality**: a light stemmer is
+~60–80 hand-writable lines with zero dependencies, whereas Snowball French is a large algorithm
+with region logic that is error-prone to port, and `@orama/stemmers` would add 3.9 MB to get the
+same result. Light stemming also leaves tokens closer to their surface form, which helps the
+deferred typeahead (§12). If a future measurement shows the one-query gap matters, the `stemmers`
+override is the supported way to swap it.
 
 `defineTextSearch` accepts a `stemmers: Record<string, (word: string) => string>` override so a
 deployment wanting broader language coverage can supply its own without changing the util.
