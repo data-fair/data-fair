@@ -5,6 +5,9 @@ import { createAnalyzer, lightFrenchStem } from '../../../api/src/misc/utils/tex
 const fr = createAnalyzer('fr')
 const terms = (text: string) => fr.analyze(text).map(t => t.term)
 
+const en = createAnalyzer('en')
+const enTerms = (text: string) => en.analyze(text).map(t => t.term)
+
 test.describe('lightFrenchStem', () => {
   test('unifies singular and plural to the same stem', () => {
     // the point of stemming: both forms must collapse, or a query for one misses the other
@@ -39,6 +42,17 @@ test.describe('analyzer', () => {
     assert.deepEqual(terms('Consommation de GAZ'), ['consommation', 'gaz'])
   })
 
+  test('deaccents accented characters for stopword matching and stemming', () => {
+    // "même" is a French stopword, but stored unaccented as "meme". Without deaccenting,
+    // it would not be recognized and would remain in the output.
+    // "chose" should stem to "chos" after the s/e stripping rules.
+    assert.deepEqual(terms('la même chose'), ['chos'])
+    // "énergie" should stem correctly after deaccenting to "energie"
+    const energieTokens = fr.analyze('énergie')
+    assert.equal(energieTokens.length, 1)
+    assert.equal(energieTokens[0].term, 'energi')
+  })
+
   test('positions are RAW indices, so stopword gaps survive', () => {
     // "courbe de charge" must NOT look adjacent, or it would match "courbe et charge"
     const toks = fr.analyze('courbe de charge')
@@ -65,5 +79,24 @@ test.describe('analyzer', () => {
   test('a custom stemmer can be injected', () => {
     const up = createAnalyzer('fr', { fr: (w) => w.slice(0, 3) })
     assert.deepEqual(up.analyze('consommation').map(t => t.term), ['con'])
+  })
+})
+
+test.describe('English analyzer', () => {
+  test('unifies singular and plural to the same stem', () => {
+    // English stemmer must collapse common singular/plural patterns
+    for (const [a, b] of [['boxes', 'box'], ['cities', 'city'], ['datasets', 'dataset']]) {
+      assert.equal(
+        en.analyze(a)[0].term,
+        en.analyze(b)[0].term,
+        `${a} and ${b} should have the same stem`
+      )
+    }
+  })
+
+  test('preserves double-s words (class/classes)', () => {
+    // "ss" at the end should prevent the s-stripping rule from applying
+    assert.deepEqual(enTerms('class'), ['class'])
+    assert.deepEqual(enTerms('classes'), ['class'])
   })
 })

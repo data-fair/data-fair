@@ -28,7 +28,7 @@ alongside this plan; every "why" lives there and is not repeated here.
 - BM25 constants: `K1 = 1.2`, `B = 0.75`, `tieBreaker = 0.3`,
   `idf(t) = Math.log(1 + (N - df + 0.5) / (df + 0.5))`.
 - Sort is always `{ _score: -1, <tieBreakField>: 1 }` — never `_score` alone.
-- Run a single test file with `npx playwright test --project unit <path>` (or `--project api`).
+- Run a single test file with `npx playwright test --project=unit <path>` (or `--project=api`).
   Never run the whole suite while iterating; it is very long.
 - Do not run `git push`, `git merge` or `git rebase`. Commit only.
 - The branch is `feat-better-catalog-search` in the worktree
@@ -140,7 +140,7 @@ test.describe('analyzer', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/analysis.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/analysis.unit.spec.ts`
 Expected: FAIL — cannot find module `analysis.ts`.
 
 - [ ] **Step 3: Write the implementation**
@@ -238,7 +238,7 @@ export const createAnalyzer = (language: string, stemmers?: Record<string, Stemm
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/analysis.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/analysis.unit.spec.ts`
 Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Lint and commit**
@@ -361,7 +361,7 @@ test.describe('buildIndexFields', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/indexing.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/indexing.unit.spec.ts`
 Expected: FAIL — cannot find module `definition.ts`.
 
 - [ ] **Step 3: Write `definition.ts`**
@@ -462,7 +462,7 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/indexing.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/indexing.unit.spec.ts`
 Expected: PASS, 13 tests.
 
 - [ ] **Step 6: Lint and commit**
@@ -585,7 +585,7 @@ test('queryTerms lists every term needing a df lookup', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/query.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/query.unit.spec.ts`
 Expected: FAIL — cannot find module `query.ts`.
 
 - [ ] **Step 3: Write the implementation**
@@ -683,7 +683,7 @@ export const planQuery = (parsed: ParsedQuery, stats: CorpusStats, def: Resolved
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/query.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/query.unit.spec.ts`
 Expected: PASS, 11 tests.
 
 - [ ] **Step 5: Lint and commit**
@@ -771,7 +771,7 @@ test('INDEX_FIELD_NAMES lists exactly the fields that must never reach a respons
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/pipeline.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/pipeline.unit.spec.ts`
 Expected: FAIL — cannot find module `pipeline.ts`.
 
 - [ ] **Step 3: Write the implementation**
@@ -874,7 +874,7 @@ export const sortSpec = (def: ResolvedDefinition): Record<string, number> =>
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/pipeline.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/pipeline.unit.spec.ts`
 Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Lint and commit**
@@ -966,7 +966,7 @@ test('no terms means no counting at all', async () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/stats.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/stats.unit.spec.ts`
 Expected: FAIL — cannot find module `stats.ts`.
 
 - [ ] **Step 3: Write the implementation**
@@ -1042,7 +1042,7 @@ export const createStatsProvider = (
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/stats.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/stats.unit.spec.ts`
 Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Lint and commit**
@@ -1126,7 +1126,7 @@ test('an invalid definition is refused at construction', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project unit tests/features/text-search/facade.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/facade.unit.spec.ts`
 Expected: FAIL — cannot find module `index.ts`.
 
 - [ ] **Step 3: Write `index.ts`**
@@ -1233,7 +1233,7 @@ Add exactly the same three lines to the `applications` block.
 
 - [ ] **Step 6: Run the test to verify it passes**
 
-Run: `npx playwright test --project unit tests/features/text-search/facade.unit.spec.ts`
+Run: `npx playwright test --project=unit tests/features/text-search/facade.unit.spec.ts`
 Expected: PASS, 5 tests.
 
 - [ ] **Step 7: Lint and commit**
@@ -1323,7 +1323,7 @@ test.describe('search index fields stay server-side', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project api tests/features/text-search/response-hygiene.api.spec.ts`
+Run: `npx playwright test --project=api tests/features/text-search/response-hygiene.api.spec.ts`
 Expected: FAIL — `_terms` is present, because `findUtils.project` builds an *exclusion*
 projection and returns every field it does not name.
 
@@ -1414,7 +1414,7 @@ later cannot leak from a call site someone forgot.
 
 - [ ] **Step 7: Run the test to verify it passes**
 
-Run: `npx playwright test --project api tests/features/text-search/response-hygiene.api.spec.ts`
+Run: `npx playwright test --project=api tests/features/text-search/response-hygiene.api.spec.ts`
 Expected: PASS, 3 tests.
 
 - [ ] **Step 8: Lint and commit**
@@ -1487,7 +1487,7 @@ test.describe('deferred search-index recompute', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx playwright test --project api tests/features/text-search/recompute.api.spec.ts`
+Run: `npx playwright test --project=api tests/features/text-search/recompute.api.spec.ts`
 Expected: FAIL — the dataset stays unfindable, because no task drains the flag.
 
 - [ ] **Step 3: Register the task**
@@ -1564,7 +1564,7 @@ In `api/src/identities/service.ts` `renameIdentity`, after the two `updateMany` 
 
 - [ ] **Step 7: Run the test to verify it passes**
 
-Run: `npx playwright test --project api tests/features/text-search/recompute.api.spec.ts`
+Run: `npx playwright test --project=api tests/features/text-search/recompute.api.spec.ts`
 Expected: PASS.
 
 - [ ] **Step 8: Lint and commit**
@@ -1779,7 +1779,7 @@ Apply the same three changes in `api/src/applications/service.ts`, using
 
 - [ ] **Step 4: Update the existing catalog-search expectations**
 
-Run `npx playwright test --project api tests/features/datasets/catalog-search.api.spec.ts` and fix
+Run `npx playwright test --project=api tests/features/datasets/catalog-search.api.spec.ts` and fix
 each failure. Expect at least:
 - a fixture whose tag starts with `-` now parses as a negation (see the spec's §5); rename the
   fixture rather than changing the parser
@@ -1788,8 +1788,8 @@ each failure. Expect at least:
 - [ ] **Step 5: Verify**
 
 ```bash
-npx playwright test --project api tests/features/datasets/catalog-search.api.spec.ts
-npx playwright test --project api tests/features/applications
+npx playwright test --project=api tests/features/datasets/catalog-search.api.spec.ts
+npx playwright test --project=api tests/features/applications
 ```
 Expected: PASS.
 
@@ -1880,7 +1880,7 @@ test.describe('catalog search behaviour', () => {
 
 - [ ] **Step 2: Run them**
 
-Run: `npx playwright test --project api tests/features/text-search/search-behaviour.api.spec.ts`
+Run: `npx playwright test --project=api tests/features/text-search/search-behaviour.api.spec.ts`
 Expected: PASS, 4 tests.
 
 - [ ] **Step 3: Write the architecture doc**
@@ -1905,7 +1905,7 @@ Add to the architecture list in `AGENTS.md`:
 ```bash
 npm run lint
 bash dev/check-types-ratchet.sh
-npx playwright test --project unit tests/features/text-search
+npx playwright test --project=unit tests/features/text-search
 git add tests docs AGENTS.md
 git commit -m "test(text-search): cover the silent failures, and document the catalog search"
 ```
@@ -1919,8 +1919,8 @@ Run the full gate once every task is done — it is long, so run it only at the 
 ```bash
 npm run lint
 bash dev/check-types-ratchet.sh    # must report no increase over the 431 baseline
-npx playwright test --project unit
-npx playwright test --project api
+npx playwright test --project=unit
+npx playwright test --project=api
 ```
 
 The type ratchet is non-deterministic against stale generated types. If it reports an unexpected
