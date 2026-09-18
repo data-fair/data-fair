@@ -130,6 +130,33 @@ router.get('/raw-dataset/:id', async (req, res, next) => {
   }
 })
 
+// Patch an application document directly in MongoDB (test-only). Same shape as
+// patch-dataset above (flat body -> $set, optional `$unset` key -> $unset).
+router.post('/patch-application/:applicationId', async (req, res, next) => {
+  try {
+    const { $unset, ...flatSet } = req.body ?? {}
+    const update: any = {}
+    if (Object.keys(flatSet).length) update.$set = flatSet
+    if ($unset) update.$unset = $unset
+    if (!update.$set && !update.$unset) update.$set = {}
+    await mongo.applications.updateOne({ id: req.params.applicationId }, update)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Return the raw MongoDB document for an application
+router.get('/raw-application/:id', async (req, res, next) => {
+  try {
+    const application = await mongo.applications.findOne({ id: req.params.id })
+    if (!application) return res.status(404).json({ error: 'application not found' })
+    res.json(application)
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Return ES index mapping/settings for a dataset. Always the PUBLISHED alias (never the draft
 // one), which is what lets a test assert that a draft-mode operation left it untouched.
 router.get('/dataset-es-info/:id', async (req, res, next) => {
