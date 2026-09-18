@@ -54,13 +54,13 @@ test('no terms means no counting at all', async () => {
 })
 
 test('aggregation pipeline uses sanitised field keys (no dots in $group output)', async () => {
-  let capturedPipeline: any[] | null = null
+  const captured: { pipeline: any[] | null } = { pipeline: null }
   const collectionWithCapture = {
     calls: [],
     estimatedDocumentCount: async () => 1000,
     countDocuments: async (filter: any) => filter._terms === 'charg' ? 400 : 7,
     aggregate: (pipeline: any[]) => {
-      capturedPipeline = pipeline
+      captured.pipeline = pipeline
       // Return values keyed by sanitised field names with distinctive values to detect regressions
       return { toArray: async () => [{ description: 8, topics_title: 42, owner_name: 33 }] }
     }
@@ -75,10 +75,10 @@ test('aggregation pipeline uses sanitised field keys (no dots in $group output)'
   const stats = await createStatsProvider(collectionWithCapture, defWithDottedField).get(['charg'])
 
   // Verify the pipeline was captured
-  assert.ok(capturedPipeline, 'aggregation pipeline was built')
+  assert.ok(captured.pipeline, 'aggregation pipeline was built')
 
   // Find the $group stage
-  const groupStage = capturedPipeline.find(stage => stage.$group)
+  const groupStage = captured.pipeline.find(stage => stage.$group)
   assert.ok(groupStage, '$group stage exists in pipeline')
 
   // Verify all $group output keys are sanitised (no dots)

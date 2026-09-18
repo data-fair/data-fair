@@ -15,7 +15,7 @@ const SAFE_KEY = /^[a-z0-9]+$/
 
 /** Reads a dotted path, flattening arrays, and joins everything to one string. */
 export const extractFieldValue = (doc: any, path: string): string => {
-  let current: any = [doc]
+  let current: any[] = [doc]
   for (const segment of path.split('.')) {
     const next: any[] = []
     for (const node of current) {
