@@ -2,7 +2,7 @@
 // import data-fair modules; everything else must stay extractable to @data-fair/lib.
 import config from '#config'
 import mongo from '#mongo'
-import { defineTextSearch, createStatsProvider } from './index.ts'
+import { defineTextSearch, createStatsProvider, type StatsProvider } from './index.ts'
 
 /** Mirrors the weights of the `fulltext` index it replaces (see api/src/mongo.ts). */
 export const datasetsTextSearch = defineTextSearch({
@@ -33,5 +33,22 @@ export const applicationsTextSearch = defineTextSearch({
   version: 1
 })
 
-export const datasetsStats = createStatsProvider(mongo.datasets as any, datasetsTextSearch.definition)
-export const applicationsStats = createStatsProvider(mongo.applications as any, applicationsTextSearch.definition)
+// mongo.datasets / mongo.applications are resolved on first use, never at import time: router
+// modules are dynamically imported before mongo.init() runs (see app.js), so touching them at
+// module scope crash-loops the API with "db was not connected". Consumers still write
+// `datasetsStats`/`applicationsStats` as plain values — only the underlying provider is deferred.
+let datasetsStatsInner: StatsProvider | undefined
+export const datasetsStats: StatsProvider = {
+  get: (terms, ownerScope) => {
+    datasetsStatsInner ??= createStatsProvider(mongo.datasets as any, datasetsTextSearch.definition)
+    return datasetsStatsInner.get(terms, ownerScope)
+  }
+}
+
+let applicationsStatsInner: StatsProvider | undefined
+export const applicationsStats: StatsProvider = {
+  get: (terms, ownerScope) => {
+    applicationsStatsInner ??= createStatsProvider(mongo.applications as any, applicationsTextSearch.definition)
+    return applicationsStatsInner.get(terms, ownerScope)
+  }
+}

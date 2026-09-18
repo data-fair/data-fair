@@ -1,13 +1,6 @@
 import mongo from '#mongo'
 import { computeSearchText, type CatalogSearchSettings } from '../operations.ts'
-
-// collections.ts reads `mongo.datasets` / `mongo.applications` at module top level (to build its
-// stats providers). Router modules — this one's callers among them — are loaded by app.js via
-// dynamic `import()` BEFORE `mongo.init()` runs, so a static import here would run that read
-// while the db is still disconnected and crash the process on every start. A dynamic import
-// deferred to first call lands well after `mongo.init()`, once a request actually comes in.
-let textSearchPromise: Promise<typeof import('../../misc/utils/text-search/collections.ts')> | undefined
-const loadTextSearch = () => (textSearchPromise ??= import('../../misc/utils/text-search/collections.ts'))
+import { datasetsTextSearch } from '../../misc/utils/text-search/collections.ts'
 
 // INVARIANT: the search index fields (`_searchText`, `_terms`, `_pos`, `_len`, `_searchIndex`) are
 // derived from `schema`, `permissions` and `settings.catalogSearch`; any code that writes one of
@@ -34,7 +27,6 @@ export const getCatalogSearchSettings = async (owner: { type: string, id: string
 
 /** Everything derived from a dataset's indexed content. `null` values are `$unset`. */
 export const searchIndexPatch = async (dataset: { owner: { type: string, id: string }, schema?: any[] | null, permissions?: any[] | null }) => {
-  const { datasetsTextSearch } = await loadTextSearch()
   const catalogSearch = await getCatalogSearchSettings(dataset.owner)
   const _searchText = computeSearchText(dataset, catalogSearch) ?? null
   // _searchText is one of the indexed fields, so it must be computed BEFORE the index is built

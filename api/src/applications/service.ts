@@ -23,6 +23,7 @@ import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { applicationsTextSearch } from '../misc/utils/text-search/collections.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
 // filter (type/id/department) — see api/src/misc/utils/application-key.ts
@@ -31,14 +32,6 @@ const applicationKeyOwner = (owner: { type: string, id: string, department?: str
   if (owner.department) keyOwner.department = owner.department
   return keyOwner
 }
-
-// collections.ts reads `mongo.datasets` / `mongo.applications` at module top level (to build its
-// stats providers). Router modules — this one's callers among them — are loaded by app.js via
-// dynamic `import()` BEFORE `mongo.init()` runs, so a static import here would run that read
-// while the db is still disconnected and crash the process on every start. A dynamic import
-// deferred to first call lands well after `mongo.init()`, once a request actually comes in.
-let textSearchPromise: Promise<typeof import('../misc/utils/text-search/collections.ts')> | undefined
-const loadTextSearch = () => (textSearchPromise ??= import('../misc/utils/text-search/collections.ts'))
 
 const filterFields = {
   url: 'url',
@@ -61,8 +54,7 @@ const fieldsMap = {
   ...filterFields
 }
 
-export const applicationIndexPatch = async (application: any) => {
-  const { applicationsTextSearch } = await loadTextSearch()
+export const applicationIndexPatch = (application: any) => {
   const fields = applicationsTextSearch.buildIndexFields(application)
   return {
     _terms: fields?._terms ?? null,
@@ -201,7 +193,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   application.slug = baseslug
   setUniqueRefs(application)
   permissions.initResourcePermissions(application)
-  for (const [key, value] of Object.entries(await applicationIndexPatch(application))) {
+  for (const [key, value] of Object.entries(applicationIndexPatch(application))) {
     if (value !== null) application[key] = value
   }
   let insertOk = false
@@ -227,6 +219,9 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
 }
 
 export const tryInsertApplication = async (ctx: ApplicationWriteContext, newApplication: any): Promise<boolean> => {
+  for (const [key, value] of Object.entries(applicationIndexPatch(newApplication))) {
+    if (value !== null) newApplication[key] = value
+  }
   try {
     await mongo.db.collection('applications').insertOne(newApplication)
 
@@ -252,6 +247,11 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
+
+  for (const [key, value] of Object.entries(applicationIndexPatch(newApplication))) {
+    if (value !== null) newApplication[key] = value
+    else delete newApplication[key]
+  }
 
   if (!isNew) {
     eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
@@ -293,7 +293,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
   // kept out of `patch` itself: patch's keys are reported to the user/event log as the fields they modified
-  const searchIndex = await applicationIndexPatch({ ...application, ...patch })
+  const searchIndex = applicationIndexPatch({ ...application, ...patch })
   const applicationUpdate: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { ...patch } }
   for (const [key, value] of Object.entries(searchIndex)) {
     if (value === null) (applicationUpdate.$unset ??= {})[key] = true
