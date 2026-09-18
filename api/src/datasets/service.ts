@@ -26,6 +26,7 @@ import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import * as fragmentsService from '../fragments/service.ts'
+import { parsePartOfParam, shouldHideFragments } from '../fragments/operations.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import type { Db } from 'mongodb'
@@ -95,6 +96,14 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
       if (type === 'metaOnly') typeFilters.push({ isMetaOnly: true })
     }
     if (typeFilters.length) extraFilters.push({ $or: typeFilters })
+  }
+
+  // fragments are reached from their parent, not from the catalog (spec §4)
+  if (reqQuery.partOf) {
+    const partOf = parsePartOfParam(reqQuery.partOf)
+    extraFilters.push({ 'partOf.type': partOf.type, 'partOf.id': partOf.id })
+  } else if (shouldHideFragments(reqQuery)) {
+    extraFilters.push({ partOf: { $exists: false } })
   }
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
