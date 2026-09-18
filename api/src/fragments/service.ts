@@ -5,6 +5,7 @@ import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-exp
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import type { LogContext } from '../misc/utils/req-context.ts'
+import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { stampHistorize } from '../integrity/operations.ts'
 import {
   type PartOf, type FragmentResourceType, type FragmentLike,
@@ -53,12 +54,15 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
   return { parent, permissions: deriveFragmentPermissions(parent.permissions as Permission[] | undefined, parentType, resourceType) }
 }
 
+/** the shape applyPartOfChange needs of the resource it re-parents — a dataset or an application */
+export type FragmentResource = { id: string, owner: { type: string, id: string, department?: string }, partOf?: PartOf, permissions?: Permission[], integrity?: { active?: boolean } }
+
 /**
  * Attach (partOf set) or detach (partOf null) an existing resource. Gated by the operation that gates
  * the owner-change route (spec §3.5). Detach keeps the stored ACL as it is (spec §3.6).
  */
-export const applyPartOfChange = async (resourceType: FragmentResourceType, resource: any, partOf: PartOf | null, sessionState: SessionState, who?: WhoHint) => {
-  if (!permissions.can(resourceType, resource, PART_OF_CHANGE_OPERATION[resourceType], sessionState)) {
+export const applyPartOfChange = async <T extends FragmentResource> (resourceType: FragmentResourceType, resource: T, partOf: PartOf | null, sessionState: SessionState, who?: WhoHint): Promise<T> => {
+  if (!permissions.can(resourceType, resource as any, PART_OF_CHANGE_OPERATION[resourceType], sessionState)) {
     throw httpError(403, 'Vous n\'avez pas la permission de rattacher ou détacher cette ressource')
   }
   const update: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { updatedAt: new Date().toISOString() } }
@@ -80,7 +84,18 @@ export const applyPartOfChange = async (resourceType: FragmentResourceType, reso
   const updated = resourceType === 'datasets'
     ? await mongo.datasets.findOneAndUpdate({ id: resource.id }, update as any, { returnDocument: 'after' })
     : await mongo.applications.findOneAndUpdate({ id: resource.id }, update as any, { returnDocument: 'after' })
-  return updated
+  // racing delete (the parent's cascade, or a concurrent DELETE): the document is gone, so is the
+  // parentage change. 404 rather than letting both call sites dereference null and 500
+  if (!updated) throw httpError(404, 'La ressource a été supprimée pendant la modification de son rattachement')
+  if (resourceType === 'applications') {
+    // findCallingApplication memoizes { id, partOf, permissions } for 30s and both application-context
+    // proofs read partOf from it. Without this, a detached sub-application still resolves as a fragment
+    // of its ex-parent for up to 30s — a fail-open window on every detach. The PATCH route returns
+    // early for a partOf-only body (exactly what the UI sends), so patchApplication's own clear
+    // never runs; clearing here covers every call site of this function.
+    clearApplicationKeysCaches()
+  }
+  return updated as unknown as T
 }
 
 /** Recompute the derived ACL of every fragment of `parent` (spec §3.7). At most three updateMany. */

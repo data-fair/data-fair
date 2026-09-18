@@ -118,4 +118,31 @@ test.describe('application context for dataset fragments', () => {
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, parentPermissions)
     await assert.rejects(testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${dashboard.id}/` } }), { status: 403 })
   })
+
+  // same memo, the other field: findCallingApplication caches { id, partOf, permissions } and BOTH
+  // application-context proofs read partOf from it, so a detach that does not invalidate it leaves
+  // the sub-application resolving as a fragment of its ex-parent for up to 30s — fail-open. The UI
+  // detaches with a partOf-only PATCH body, which returns early and never reaches patchApplication's
+  // own cache clear, so the invalidation has to live in applyPartOfChange itself.
+  test('detaching a sub-application immediately closes its application-context reach', async () => {
+    const dashboard = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+    const sub = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), partOf: { type: 'application', id: dashboard.id } })).data
+    const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
+    await testUser1Org.put(`/api/v1/applications/${sub.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await clearDatasetCache()
+
+    // the sub-application reaches the utility dataset because it is a fragment of the same parent
+    const res = await testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${sub.id}/` } })
+    assert.equal(res.status, 200)
+
+    // detach: the partOf-only body the UI sends
+    await testUser1Org.patch(`/api/v1/applications/${sub.id}`, { partOf: null })
+    // test_user3 keeps its (now frozen) ACL on the detached application, so this really is the
+    // parentage edge being re-evaluated, not a permission loss
+    assert.ok((await testUser3.get(`/api/v1/applications/${sub.id}`)).data.userPermissions.includes('readConfig'))
+    // the very next request must be refused, with no sleep
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${sub.id}/` } }), { status: 403 })
+  })
 })
