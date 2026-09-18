@@ -584,7 +584,7 @@ const dataEntryContext = computed(() => {
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
     'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select` — then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id. The editLine_form subagent becomes available on the turn after the dialog opens; end your reply and delegate to it then.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -662,7 +662,12 @@ if (edit) {
       const refusal = addLineDialogPrecondition(dataset.value?.schema)
       if (refusal) return refusal
       addLineTrigger.value = true
-      return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
+      // Not "you can now delegate": editLine_form registers with the dialog and is
+      // absent from THIS request's tool list — same one-turn lag `navigate` warns about.
+      // A judged run took the old wording literally, found no such subagent, and burned a
+      // turn on a junk data_quality_checker dispatch to reach the one where it existed,
+      // leaving the person an apology about plumbing and a stray audit chip.
+      return 'Add line dialog opened. Finish your reply now: the editLine_form subagent registers with the dialog and becomes available on the next turn, to fill in the form fields. The user will click Save when ready.'
     }
   })
 
@@ -679,7 +684,7 @@ if (edit) {
     },
     execute: async (params: { lineId: string }) => {
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. You can now delegate to the editLine_form subagent to modify the form fields. The user will click Save when ready.'
+      return 'Edit line dialog opened. Finish your reply now: the editLine_form subagent registers with the dialog and becomes available on the next turn, to modify the form fields. The user will click Save when ready.'
     }
   })
 }
