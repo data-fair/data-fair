@@ -113,6 +113,37 @@ test.describe('dataset fragments', () => {
     await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })
   })
 
+  // POST /api/v1/datasets/:datasetId (and its PUT twin) shares the patch-req schema with PATCH but
+  // writes its body straight through preparePatch -> applyPatch's $set. Without the shared write
+  // guard, `partOf` landed there raw: no changeOwner gate (this route is gated on writeData/write,
+  // which a parent's CONTRIBUTOR holds through the derived entry), no parent validation, no derived
+  // ACL replacement — so a fragment could be detached, or an arbitrary dataset attached, by anyone
+  // who can merely write it. Parentage is changed by PATCH only.
+  test('POST /:datasetId cannot change partOf', async () => {
+    const virtual = await createVirtual()
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    // the contributor holds write on the fragment through the derived ACL, but not changeOwner
+    assert.ok((await testUser5Org.get(`/api/v1/datasets/${fragment.id}`)).data.userPermissions.includes('writeDescription'))
+    await assert.rejects(testUser5Org.post(`/api/v1/datasets/${fragment.id}`, { partOf: null }), { status: 400 })
+    // nor can an admin: this route is simply not the way to detach
+    await assert.rejects(testUser1Org.post(`/api/v1/datasets/${fragment.id}`, { partOf: null }), { status: 400 })
+    assert.deepEqual((await testUser1Org.get(`/api/v1/datasets/${fragment.id}`)).data.partOf, { type: 'dataset', id: virtual.id })
+
+    // and a plain dataset cannot be attached through it either
+    const plain = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    await assert.rejects(testUser5Org.post(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })
+    await assert.rejects(testUser1Org.post(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${plain.id}`)).data.partOf, undefined)
+
+    // a full-document round trip that echoes the unchanged partOf is still accepted
+    const res = await testUser1Org.post(`/api/v1/datasets/${fragment.id}`, { title: 'renamed', partOf: { type: 'dataset', id: virtual.id } })
+    assert.equal(res.status, 200)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${fragment.id}`)).data.title, 'renamed')
+
+    // the publication refusal applies on this route too, not only on PATCH
+    await assert.rejects(testUser1Org.post(`/api/v1/datasets/${fragment.id}`, { publicationSites: [] }), { status: 400 })
+  })
+
   test('a resource that has fragments cannot become a fragment', async () => {
     const virtual = await createVirtual()
     await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })

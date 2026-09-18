@@ -249,10 +249,9 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
 
-  // parentage is changed through PATCH only; PUT preserves it and refuses a divergent value
-  if ('partOf' in newApplication && JSON.stringify(newApplication.partOf ?? null) !== JSON.stringify(existingApplication.partOf ?? null)) {
-    throw httpError(400, 'partOf ne peut pas être modifié par PUT, utilisez PATCH')
-  }
+  // parentage is changed through PATCH only; PUT preserves it. A divergent value is refused
+  // upstream by the shared fragmentWriteGuard mounted on the route (fragments/middlewares.ts),
+  // which also refuses the publication keys on a fragment
   if (existingApplication.partOf) newApplication.partOf = existingApplication.partOf
 
   if (!isNew) {

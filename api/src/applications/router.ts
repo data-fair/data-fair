@@ -13,7 +13,7 @@ import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
-import { fragmentForbiddenPatchKey } from '../fragments/operations.ts'
+import { fragmentWriteGuard } from '../fragments/middlewares.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
@@ -91,7 +91,10 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
 })
 
 // PUT used to create or update
-router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), async (req, res) => {
+// the fragment guard is mounted after attemptInsert (which answers 201 and stops the chain on a
+// genuine create, where partOf is legitimate and validated by initApplicationPermissions) and after
+// the permission middleware, so an unauthorized caller still gets a 403 rather than a 400
+router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), fragmentWriteGuard(false), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
@@ -104,13 +107,14 @@ router.patch('/:applicationId',
   readApplication,
   permissionMiddleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  // fragments are never publishable — shared with the other three write routes (spec §5)
+  fragmentWriteGuard(true),
   async (req, res) => {
     const application = reqApplication(req)
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
 
-    // fragments: not publishable, and partOf changes are a dedicated write (spec §5)
-    const forbiddenKey = fragmentForbiddenPatchKey(patch, !!application.partOf || !!patch.partOf)
-    if (forbiddenKey) throw httpError(400, `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`)
+    // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
+    // the fragmentWriteGuard mounted above
     let partOfUpdated: any
     if ('partOf' in patch) {
       partOfUpdated = await fragmentsService.applyPartOfChange('applications', application, patch.partOf ?? null, reqSession(req))

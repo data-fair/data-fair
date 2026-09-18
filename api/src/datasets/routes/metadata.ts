@@ -29,7 +29,7 @@ import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
-import { fragmentForbiddenPatchKey } from '../../fragments/operations.ts'
+import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
 import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
@@ -152,6 +152,8 @@ export const registerMetadataRoutes = (router: Router) => {
     (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    // fragments are never publishable — shared with the other three write routes (spec §5)
+    fragmentWriteGuard(true),
     async (req, res) => {
       // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
       const dataset: any = clone(reqDataset(req))
@@ -161,9 +163,8 @@ export const registerMetadataRoutes = (router: Router) => {
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
 
-      // fragments: not publishable, and partOf changes are a dedicated write (spec §5)
-      const forbiddenKey = fragmentForbiddenPatchKey(patch, !!dataset.partOf || !!patch.partOf)
-      if (forbiddenKey) throw httpError(400, `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`)
+      // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
+      // the fragmentWriteGuard mounted above, shared with every other write route
       if ('partOf' in patch) {
         const updated = await fragmentsService.applyPartOfChange('datasets', dataset, patch.partOf, sessionState, whoFromReq(req))
         delete patch.partOf

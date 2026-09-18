@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import type { Permission } from '../../../api/types/index.ts'
 import {
   deriveFragmentPermissions, validatePartOf, parsePartOfParam, shouldHideFragments,
-  fragmentForbiddenPatchKey, PART_OF_CHANGE_OPERATION, partOfCollectionName, resourceTypeToPartOfType
+  fragmentForbiddenPatchKey, fragmentWriteBodyError, PART_OF_CHANGE_OPERATION,
+  partOfCollectionName, resourceTypeToPartOfType
 } from '../../../api/src/fragments/operations.ts'
 
 const orgOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
@@ -102,6 +103,27 @@ test.describe('helpers', () => {
     assert.equal(fragmentForbiddenPatchKey({ publicationSites: [] }, true), 'publicationSites')
     assert.equal(fragmentForbiddenPatchKey({ requestedPublicationSites: [] }, true), 'requestedPublicationSites')
     assert.equal(fragmentForbiddenPatchKey({ publications: [] }, true), 'publications')
+  })
+  test('fragmentWriteBodyError', () => {
+    const parent = { type: 'dataset' as const, id: 'v' }
+    const fragment = { partOf: parent }
+    // partOf may not be changed on a route that persists its body raw
+    assert.match(fragmentWriteBodyError({ partOf: parent }, undefined, { allowPartOfChange: false })!, /PATCH/)
+    assert.match(fragmentWriteBodyError({ partOf: null }, fragment, { allowPartOfChange: false })!, /PATCH/)
+    assert.match(fragmentWriteBodyError({ partOf: { type: 'dataset', id: 'other' } }, fragment, { allowPartOfChange: false })!, /PATCH/)
+    // an identical value is a no-op, a read-then-write round trip must still work
+    assert.equal(fragmentWriteBodyError({ partOf: parent, title: 't' }, fragment, { allowPartOfChange: false }), null)
+    assert.equal(fragmentWriteBodyError({ partOf: null }, {}, { allowPartOfChange: false }), null)
+    // the PATCH routes route partOf through applyPartOfChange instead
+    assert.equal(fragmentWriteBodyError({ partOf: parent }, undefined, { allowPartOfChange: true }), null)
+    // a fragment is never publishable, on any route
+    assert.match(fragmentWriteBodyError({ publicationSites: [] }, fragment, { allowPartOfChange: true })!, /publié/)
+    assert.match(fragmentWriteBodyError({ publications: [] }, fragment, { allowPartOfChange: false })!, /publié/)
+    // attaching and publishing in one body is refused too
+    assert.match(fragmentWriteBodyError({ partOf: parent, requestedPublicationSites: [] }, undefined, { allowPartOfChange: true })!, /publié/)
+    // a standalone resource may be published
+    assert.equal(fragmentWriteBodyError({ publicationSites: [] }, {}, { allowPartOfChange: false }), null)
+    assert.equal(fragmentWriteBodyError(undefined, fragment, { allowPartOfChange: false }), null)
   })
   test('constants', () => {
     assert.deepEqual(PART_OF_CHANGE_OPERATION, { datasets: 'changeOwner', applications: 'delete' })

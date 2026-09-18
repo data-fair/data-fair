@@ -102,6 +102,33 @@ export const fragmentForbiddenPatchKey = (patch: Record<string, any>, isFragment
   return FRAGMENT_ONLY_FORBIDDEN_KEYS.find(key => key in patch) ?? null
 }
 
+/**
+ * The single decision function behind the fragment write guard mounted on every resource write
+ * route (`fragments/middlewares.ts`). Returns a French refusal message, or null.
+ *
+ * Two rules, both of which must hold on ANY write route, not just PATCH:
+ * - parentage is changed through a dedicated PATCH flow (`applyPartOfChange`, which gates on the
+ *   owner-change operation, validates the parent and replaces the derived ACL). A route that
+ *   persists its body as-is must refuse a divergent `partOf` rather than write it raw — otherwise
+ *   every one of those guards is bypassed. An *identical* value is tolerated so a read-then-write
+ *   round trip of a fragment still works.
+ * - a fragment is never publishable, on any route.
+ */
+export const fragmentWriteBodyError = (
+  body: Record<string, any> | undefined,
+  resource: { partOf?: PartOf } | undefined,
+  { allowPartOfChange }: { allowPartOfChange: boolean }
+): string | null => {
+  const writeBody = body ?? {}
+  if (!allowPartOfChange && 'partOf' in writeBody &&
+    JSON.stringify(writeBody.partOf ?? null) !== JSON.stringify(resource?.partOf ?? null)) {
+    return 'partOf ne peut être modifié que par PATCH'
+  }
+  const forbiddenKey = fragmentForbiddenPatchKey(writeBody, !!resource?.partOf || !!writeBody.partOf)
+  if (forbiddenKey) return `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`
+  return null
+}
+
 const PINNING_QUERY_KEYS = ['id', 'ids', 'slug', 'slugs', 'children', 'dataset', 'application']
 
 /** Fragments are hidden from listings unless the query targets them (partOf) or pins resources by id / inverse reference (spec §4). */

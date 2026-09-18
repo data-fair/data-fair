@@ -27,6 +27,7 @@ import { emit as workerPing } from '../../workers/ping.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { createDataset, applyPatch, cancelDraft } from '../service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import { assertFragmentWriteBody } from '../../fragments/middlewares.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
@@ -167,6 +168,13 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     }
 
     const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+
+    // same fragment write guard as the three other write routes, applied here rather than in the
+    // route chain because this route also accepts multipart bodies: `req.body` is only the write
+    // body once getFormBody has run just above. Without it `partOf` would flow straight into
+    // preparePatch -> applyPatch's $set, bypassing the owner-change gate, the parent validation
+    // and the derived-ACL replacement of applyPartOfChange (spec §5).
+    assertFragmentWriteBody(patch, dataset, false)
 
     // TODO: do not use always as default value when the dataset is public or published ?
     const canBreak = can('datasets', dataset, 'writeDescriptionBreaking', reqSession(req))

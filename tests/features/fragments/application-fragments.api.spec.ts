@@ -70,6 +70,31 @@ test.describe('application fragments', () => {
     assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data.partOf, { type: 'application', id: dashboard.id })
   })
 
+  // PUT /:applicationId persists its body through a raw replaceOne: the publication keys are in
+  // patchKeys, so before the shared write guard they landed there unfiltered and a fragment could
+  // be published. Same route, same guard as the divergent-partOf refusal.
+  test('PUT /:applicationId cannot publish a fragment nor change its partOf', async () => {
+    const dashboard = await createApp()
+    const other = await createApp()
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+
+    await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), publicationSites: ['data-fair-portals:portal1'] }), { status: 400 })
+    await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), requestedPublicationSites: ['data-fair-portals:portal1'] }), { status: 400 })
+    await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), publications: [{ catalog: 'c', status: 'waiting' }] }), { status: 400 })
+    let stored = (await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data
+    assert.equal(stored.publicationSites, undefined)
+    assert.equal(stored.publications, undefined)
+
+    // parentage is still PATCH-only on this route
+    await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), partOf: { type: 'application', id: other.id } }), { status: 400 })
+    await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), partOf: null }), { status: 400 })
+    stored = (await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data
+    assert.deepEqual(stored.partOf, { type: 'application', id: dashboard.id })
+
+    // a standalone application may still be published through PUT
+    await testUser1Org.put(`/api/v1/applications/${other.id}`, { url: mockAppUrl('monapp1'), requestedPublicationSites: [] })
+  })
+
   test('a parent ACL change re-syncs its fragments', async () => {
     const dashboard = await createApp()
     const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
