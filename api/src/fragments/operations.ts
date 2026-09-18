@@ -27,6 +27,17 @@ const CLASS_ORDER = ['list', 'read', 'readAdvanced', 'write', 'admin', 'manageOw
 const MANAGEMENT_CLASSES = ['write', 'admin']
 const READ_CLASSES = ['list', 'read']
 
+/**
+ * Operations that sit in the `admin` class but are pure reads. They must NOT be carried over
+ * individually by rule A of the derivation, and must not trigger its "write implies read" grant:
+ * an entry holding only such an operation on the parent is a read-only entry, and a read-only
+ * entry never surfaces a fragment (docs/architecture/fragments.md §9). Without this exclusion a
+ * parent entry granting just `getPermissions` derived full list/read/readAdvanced on every
+ * fragment. An entry that covers the whole `admin` class genuinely holds management operations,
+ * so the class-level inheritance above is unaffected.
+ */
+export const READ_ONLY_ADMIN_OPERATIONS = ['getPermissions', 'readIntegrity', 'readIntegrityRevisions']
+
 const expandOperations = (permission: Permission, resourceType: ResourceType): Set<string> => {
   const ops = new Set<string>(permission.operations ?? [])
   for (const cls of permission.classes ?? []) {
@@ -54,7 +65,10 @@ export const deriveFragmentPermissions = (parentPermissions: Permission[] | unde
     }
     for (const cls of MANAGEMENT_CLASSES) {
       if (classes.has(cls)) continue
-      for (const op of operationsClasses[fragmentType]?.[cls] ?? []) if (ops.has(op)) operations.add(op)
+      for (const op of operationsClasses[fragmentType]?.[cls] ?? []) {
+        if (READ_ONLY_ADMIN_OPERATIONS.includes(op)) continue
+        if (ops.has(op)) operations.add(op)
+      }
     }
     if (classes.size || operations.size) {
       classes.add('list'); classes.add('read'); classes.add('readAdvanced')

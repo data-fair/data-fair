@@ -45,6 +45,24 @@ test.describe('deriveFragmentPermissions', () => {
     ])
   })
 
+  // a fragment must never surface through a parent's read-only ACL entry (docs §9). getPermissions,
+  // readIntegrity and readIntegrityRevisions are pure reads that happen to sit in the `admin` class:
+  // carrying them over used to trigger the "write implies read" grant and leak the whole fragment.
+  test('a read-only admin entry on the parent derives nothing', () => {
+    const readOnlyAdmin: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['getPermissions'] }
+    assert.deepEqual(deriveFragmentPermissions([readOnlyAdmin], 'datasets', 'datasets'), [])
+    assert.deepEqual(deriveFragmentPermissions([{ ...readOnlyAdmin, operations: ['readIntegrity', 'readIntegrityRevisions'] }], 'datasets', 'datasets'), [])
+    // applications: getPermissions is read-only there too
+    assert.deepEqual(deriveFragmentPermissions([readOnlyAdmin], 'applications', 'datasets'), [])
+  })
+
+  test('a mixed entry derives only its write side, plus read', () => {
+    const mixed: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['getPermissions', 'writeDescription'] }
+    assert.deepEqual(deriveFragmentPermissions([mixed], 'datasets', 'datasets'), [
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
+    ])
+  })
+
   test('is idempotent', () => {
     const once = deriveFragmentPermissions([contribWrite, contribRead, userAdmin], 'datasets', 'datasets')
     assert.deepEqual(deriveFragmentPermissions(once, 'datasets', 'datasets'), once)
