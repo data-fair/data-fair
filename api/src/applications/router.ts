@@ -12,6 +12,8 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
+import * as fragmentsService from '../fragments/service.ts'
+import { fragmentForbiddenPatchKey } from '../fragments/operations.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -99,6 +101,19 @@ router.patch('/:applicationId',
     const application = reqApplication(req)
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
 
+    // fragments: not publishable, and partOf changes are a dedicated write (spec §5)
+    const forbiddenKey = fragmentForbiddenPatchKey(patch, !!application.partOf || !!patch.partOf)
+    if (forbiddenKey) throw httpError(400, `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`)
+    let partOfUpdated: any
+    if ('partOf' in patch) {
+      partOfUpdated = await fragmentsService.applyPartOfChange('applications', application, patch.partOf ?? null, reqSession(req))
+      delete patch.partOf
+      if (!Object.keys(patch).length) {
+        res.status(200).json(clean(partOfUpdated, reqPublicBaseUrl(req), reqPublicationSite(req)))
+        return
+      }
+    }
+
     // Strip publicBaseUrl from image URL for multi-domain compatibility
     if (patch.image?.startsWith(reqPublicBaseUrl(req))) {
       patch.image = patch.image.slice(reqPublicBaseUrl(req).length)
@@ -107,7 +122,7 @@ router.patch('/:applicationId',
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
     let patched
     try {
-      patched = await service.patchApplication(ctx, application, patch)
+      patched = await service.patchApplication(ctx, partOfUpdated ?? application, patch)
     } catch (err: any) {
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
@@ -120,12 +135,16 @@ router.patch('/:applicationId',
 router.put('/:applicationId/owner', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
 
+  const application = reqApplication(req)
+  if (application.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+  if (await fragmentsService.countFragments('application', application.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
+
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   // (checked against all the user's memberships, the new owner is rarely the active account)
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
-  const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
+  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body)
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 

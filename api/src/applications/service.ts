@@ -5,6 +5,7 @@ import slug from 'slugify'
 import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import * as fragmentsService from '../fragments/service.ts'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
@@ -149,6 +150,15 @@ export const initNewApplication = async (body: any, owner: AccountKeys, user: { 
   return application
 }
 
+/** creation defaults, or the ACL derived from the parent for a fragment (spec §3.7) */
+export const initApplicationPermissions = async (sessionState: SessionState, application: any) => {
+  if (application.partOf) {
+    application.permissions = (await fragmentsService.preparePartOf('applications', application, application.partOf, sessionState)).permissions
+  } else {
+    permissions.initResourcePermissions(application)
+  }
+}
+
 export const createApplication = async (ctx: ApplicationWriteContext, application: any) => {
   application.id = nanoid()
 
@@ -180,7 +190,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   const baseslug = application.slug || slug(application.title, { lower: true, strict: true })
   application.slug = baseslug
   setUniqueRefs(application)
-  permissions.initResourcePermissions(application)
+  await initApplicationPermissions(ctx.sessionState, application)
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -229,6 +239,12 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
+
+  // parentage is changed through PATCH only; PUT preserves it and refuses a divergent value
+  if ('partOf' in newApplication && JSON.stringify(newApplication.partOf ?? null) !== JSON.stringify(existingApplication.partOf ?? null)) {
+    throw httpError(400, 'partOf ne peut pas être modifié par PUT, utilisez PATCH')
+  }
+  if (existingApplication.partOf) newApplication.partOf = existingApplication.partOf
 
   if (!isNew) {
     eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })

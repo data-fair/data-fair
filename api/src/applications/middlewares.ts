@@ -104,7 +104,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
   const newApplication = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
-  permissions.initResourcePermissions(newApplication)
+  await service.initApplicationPermissions(ctx.sessionState, newApplication)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
