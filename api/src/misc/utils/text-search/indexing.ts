@@ -1,5 +1,6 @@
 import type { Analyzer } from './analysis.ts'
 import type { ResolvedDefinition } from './definition.ts'
+import { fieldKey } from './definition.ts'
 
 export interface IndexFields {
   /** every distinct stem in the document — the multikey-indexed candidate gate */
@@ -34,7 +35,8 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
   const terms = new Set<string>()
   for (const field of Object.keys(def.fields)) {
     const tokens = analyzer.analyze(extractFieldValue(doc, field))
-    _len[field] = tokens.length
+    const sanitised = fieldKey(field)
+    _len[sanitised] = tokens.length
     if (!tokens.length) continue
     const positions: Record<string, number[]> = {}
     for (const { term, position } of tokens) {
@@ -43,7 +45,7 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
       ;(positions[term] ??= []).push(position)
       terms.add(term)
     }
-    _pos[field] = positions
+    _pos[sanitised] = positions
   }
   if (!terms.size) return null
   return { _terms: [...terms], _pos, _len }

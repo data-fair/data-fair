@@ -77,8 +77,17 @@ test.describe('buildIndexFields', () => {
 
   test('fields with no content are omitted from _pos but present in _len as 0', () => {
     const r = build({ title: 'charge' })!
-    assert.equal(r._pos['topics.title'], undefined)
-    assert.equal(r._len['topics.title'], 0)
+    assert.equal(r._pos['topics_title'], undefined)
+    assert.equal(r._len['topics_title'], 0)
+  })
+
+  test('dotted field paths are stored under sanitised keys (dots → underscores)', () => {
+    const r = build({ topics: [{ title: 'charge energie' }], title: 'other' })!
+    // _pos and _len keys use sanitised paths (dots replaced with underscores)
+    assert.deepEqual(r._pos['topics_title'].charg, [0])
+    assert.equal(r._len['topics_title'], 2)
+    // But _terms still contains the stems
+    assert.ok(r._terms.includes('charg'))
   })
 
   test('returns null when the document has nothing indexable', () => {

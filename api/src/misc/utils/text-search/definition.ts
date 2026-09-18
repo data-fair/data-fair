@@ -1,5 +1,15 @@
 import type { Stemmer } from './analysis.ts'
 
+/**
+ * Sanitise a field path for use as a MongoDB document key in aggregation expressions.
+ * Dotted paths like 'topics.title' are stored as literal keys, but when accessed via
+ * a path expression like `$_pos.topics.title`, MongoDB reads it as a nested path traversal
+ * (topics → title) instead of a literal lookup. This silently breaks scoring for dotted fields.
+ * Solution: store under a sanitised key with dots replaced by underscores, and use that
+ * key in all aggregation expressions.
+ */
+export const fieldKey = (path: string): string => path.replace(/\./g, '_')
+
 export interface TextSearchDefinition {
   /** dotted path → weight. Paths may traverse arrays, e.g. 'topics.title'. */
   fields: Record<string, number>
@@ -25,6 +35,17 @@ export interface ResolvedDefinition extends TextSearchDefinition {
 
 export const validateDefinition = (def: TextSearchDefinition): ResolvedDefinition => {
   if (!def.fields || !Object.keys(def.fields).length) throw new Error('text-search: fields must not be empty')
+
+  // Check for path collisions after sanitisation (e.g., 'topics.title' and 'topics_title' both become 'topics_title')
+  const sanitisedPaths = new Map<string, string>()
+  for (const field of Object.keys(def.fields)) {
+    const sanitised = fieldKey(field)
+    if (sanitisedPaths.has(sanitised) && sanitisedPaths.get(sanitised) !== field) {
+      throw new Error(`text-search: field paths "${sanitisedPaths.get(sanitised)}" and "${field}" collide after sanitisation (both become "${sanitised}")`)
+    }
+    sanitisedPaths.set(sanitised, field)
+  }
+
   for (const [field, weight] of Object.entries(def.fields)) {
     if (!(weight > 0)) throw new Error(`text-search: weight for "${field}" must be > 0`)
   }

@@ -1,5 +1,6 @@
 import type { ResolvedDefinition } from './definition.ts'
 import type { QueryPlan, PhraseTerm } from './query.ts'
+import { fieldKey } from './definition.ts'
 
 /**
  * Every field this util stores on a document. All of them must be excluded from API responses:
@@ -24,7 +25,7 @@ const phraseExpression = (phrase: PhraseTerm[], fields: string[]): any => ({
           $reduce: {
             input: phrase.map(({ term, delta }) => ({
               $map: {
-                input: { $ifNull: [`$_pos.${field}.${term}`, []] },
+                input: { $ifNull: [`$_pos.${fieldKey(field)}.${term}`, []] },
                 in: { $subtract: ['$$this', delta] }
               }
             })),
@@ -60,8 +61,8 @@ export const scoreExpression = (plan: QueryPlan, def: ResolvedDefinition): any =
         $let: {
           vars: {
             // term frequency is the number of recorded positions
-            tf: { $size: { $ifNull: [`$_pos.${field}.${term}`, []] } },
-            l: { $ifNull: [`$_len.${field}`, 0] }
+            tf: { $size: { $ifNull: [`$_pos.${fieldKey(field)}.${term}`, []] } },
+            l: { $ifNull: [`$_len.${fieldKey(field)}`, 0] }
           },
           in: {
             $cond: [{ $eq: ['$$tf', 0] }, 0, {

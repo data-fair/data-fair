@@ -51,3 +51,14 @@ test('INDEX_FIELD_NAMES lists exactly the fields that must never reach a respons
   // this list is the single source of truth for the projection excludes and clean() in Task 7
   assert.deepEqual([...INDEX_FIELD_NAMES], ['_terms', '_pos', '_len', '_searchIndex', '_needsSearchIndex'])
 })
+
+test('a definition with dotted fields produces paths using sanitised keys', () => {
+  const dottedDef = validateDefinition({ fields: { 'topics.title': 3, description: 1 }, language: 'fr', version: 1 })
+  const dottedPlan = (q: string, df: Record<string, number>) =>
+    planQuery(parseQuery(q, analyzer), { n: 1000, df, avgLen: { 'topics.title': 10, description: 50 } }, dottedDef)!
+  const expr = scoreExpression(dottedPlan('charge', { charg: 100 }), dottedDef)
+  const json = JSON.stringify(expr)
+  // The generated expression must use sanitised keys, not the dotted original
+  assert.ok(json.includes('$_pos.topics_title.charg'), 'must use sanitised key topics_title, not topics.title')
+  assert.ok(json.includes('$_len.topics_title'), 'must use sanitised key for field length')
+})
