@@ -54,16 +54,20 @@ test('no terms means no counting at all', async () => {
 })
 
 test('aggregation pipeline uses sanitised field keys (no dots in $group output)', async () => {
-  const c = fakeCollection()
   let capturedPipeline: any[] | null = null
-  const collectingAggregate = (pipeline: any[]) => {
-    capturedPipeline = pipeline
-    return c.aggregate(pipeline)
+  const collectionWithCapture = {
+    calls: [],
+    estimatedDocumentCount: async () => 1000,
+    countDocuments: async (filter: any) => filter._terms === 'charg' ? 400 : 7,
+    aggregate: (pipeline: any[]) => {
+      capturedPipeline = pipeline
+      // Return values keyed by sanitised field names with distinctive values to detect regressions
+      return { toArray: async () => [{ description: 8, topics_title: 42, owner_name: 33 }] }
+    }
   }
-  const collectionWithCapture = { ...c, aggregate: collectingAggregate }
 
   const defWithDottedField = validateDefinition({
-    fields: { 'topics.title': 3, 'owner.name': 1 },
+    fields: { description: 1, 'topics.title': 3, 'owner.name': 2 },
     language: 'fr',
     version: 1
   })
@@ -83,7 +87,10 @@ test('aggregation pipeline uses sanitised field keys (no dots in $group output)'
     assert.match(key, /^[^.]*$/, `$group output key "${key}" must not contain dots (use sanitised keys for MongoDB)`)
   }
 
-  // Verify the returned avgLen still has the original dotted keys
-  assert.ok(stats.avgLen['topics.title'] !== undefined, 'returned avgLen has original dotted key "topics.title"')
-  assert.ok(stats.avgLen['owner.name'] !== undefined, 'returned avgLen has original dotted key "owner.name"')
+  // Verify the round-trip: sanitised $group output is read back under original dotted keys
+  // Non-dotted field: 'description' -> 'description'
+  assert.equal(stats.avgLen.description, 8, 'non-dotted field round-trips: description=8')
+  // Dotted fields map through sanitisation: 'topics.title' -> 'topics_title' -> 'topics.title'
+  assert.equal(stats.avgLen['topics.title'], 42, 'dotted field round-trips: topics.title=42 (via topics_title key)')
+  assert.equal(stats.avgLen['owner.name'], 33, 'dotted field round-trips: owner.name=33 (via owner_name key)')
 })
