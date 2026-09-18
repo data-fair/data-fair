@@ -87,6 +87,14 @@ test('aggregation pipeline uses sanitised field keys (no dots in $group output)'
     assert.match(key, /^[^.]*$/, `$group output key "${key}" must not contain dots (use sanitised keys for MongoDB)`)
   }
 
+  // Verify $avg read paths are sanitised — this catches regressions in the pipeline builder
+  // The fake collection ignores the pipeline, so we must assert on the pipeline itself
+  // Non-dotted field: description reads from $_len.description
+  assert.equal(groupStage.$group.description.$avg, '$_len.description', 'non-dotted field read path: $_len.description')
+  // Dotted fields read from sanitised paths: topics.title -> $_len.topics_title, owner.name -> $_len.owner_name
+  assert.equal(groupStage.$group.topics_title.$avg, '$_len.topics_title', 'dotted field read path: topics.title -> $_len.topics_title (sanitised)')
+  assert.equal(groupStage.$group.owner_name.$avg, '$_len.owner_name', 'dotted field read path: owner.name -> $_len.owner_name (sanitised)')
+
   // Verify the round-trip: sanitised $group output is read back under original dotted keys
   // Non-dotted field: 'description' -> 'description'
   assert.equal(stats.avgLen.description, 8, 'non-dotted field round-trips: description=8')
