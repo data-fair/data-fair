@@ -47,13 +47,7 @@ test.describe('deferred search-index recompute', () => {
     const { data: created } = await u1.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Application eolienne' })
     const indexed = await getRawApplication(created.id)
     assert.ok(indexed._terms.length > 0, 'inline indexing should have populated _terms')
-    // NOTE: config.catalogSearch.language defaults to 'french' (a mongo $text language name), but
-    // createAnalyzer() expects a two-letter code ('fr') and silently degrades to no stemming/no
-    // stopwords for anything else (see analysis.ts createAnalyzer doc comment) — so in this
-    // environment "eolienne" is indexed as-is, not stemmed to "eolien". Pre-existing mismatch from
-    // earlier in this plan, out of scope here; asserting the term this environment actually
-    // produces rather than the stemmed form it would produce once that's fixed.
-    assert.ok(indexed._terms.includes('eolienne'))
+    assert.ok(indexed._terms.includes('eolien'), '"eolienne" must be stemmed to "eolien"')
     assert.equal(indexed._needsSearchIndex, undefined)
 
     // simulate a bulk write that changed indexed content without recomputing: the index is stale
@@ -69,7 +63,7 @@ test.describe('deferred search-index recompute', () => {
 
     const drained = await getRawApplication(created.id)
     assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared')
-    assert.ok(drained._terms.includes('eolienne'), 'the worker must rebuild the index with the expected term')
+    assert.ok(drained._terms.includes('eolien'), 'the worker must rebuild the index with the expected stem')
     assert.deepEqual(drained._terms, indexed._terms, 'recompute must reproduce the original inline index')
   })
 })
