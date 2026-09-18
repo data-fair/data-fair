@@ -62,3 +62,14 @@ test('a definition with dotted fields produces paths using sanitised keys', () =
   assert.ok(json.includes('$_pos.topics_title.charg'), 'must use sanitised key topics_title, not topics.title')
   assert.ok(json.includes('$_len.topics_title'), 'must use sanitised key for field length')
 })
+
+test('phrase matching on dotted fields uses sanitised keys (regression guard)', () => {
+  const dottedDef = validateDefinition({ fields: { title: 3, 'topics.title': 1 }, language: 'fr', version: 1 })
+  const dottedPlan = (q: string, df: Record<string, number>) =>
+    planQuery(parseQuery(q, analyzer), { n: 1000, df, avgLen: { title: 10, 'topics.title': 50 } }, dottedDef)!
+  const f = matchFilter(dottedPlan('"courbe de charge"', { courb: 50, charg: 100 }), dottedDef)
+  const json = JSON.stringify(f.$expr)
+  // The $expr phrase predicate must use sanitised keys, not the dotted original
+  assert.ok(json.includes('$_pos.topics_title.'), 'must use sanitised key topics_title in phrase expression')
+  assert.ok(!json.includes('$_pos.topics.title.'), 'must not use dotted key topics.title in phrase expression')
+})
