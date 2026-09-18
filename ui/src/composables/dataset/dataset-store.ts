@@ -147,6 +147,20 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   })
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
 
+  // fragments of this dataset (only a virtual dataset can have some, and only datasets can be fragments of a dataset)
+  const fragmentsFetch = useFetch<{ results: any[], count: number }>(() => {
+    if (!dataset.value?.isVirtual) return null
+    return `${$apiPath}/datasets`
+  }, {
+    query: computed(() => ({ partOf: `dataset:${id}`, size: 100, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
+  })
+  const fragments = computed(() => ({ datasets: fragmentsFetch.data.value?.results ?? [], applications: [] as any[] }))
+  const nbFragments = computed(() => fragmentsFetch.data.value?.count ?? 0)
+
+  const detach = async () => {
+    await patchDataset.execute({ partOf: null } as any)
+  }
+
   const dataFiles = computed(() => {
     if (!dataset.value) return []
     const files: { key: string, name: string, size?: number, url: string }[] = []
@@ -223,6 +237,10 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     applicationsFetch,
     nbVirtualDatasetsFetch,
     nbVirtualDatasets,
+    fragmentsFetch,
+    fragments,
+    nbFragments,
+    detach,
     publishedDatasetFetch,
     publishedDataset,
     dataFiles,

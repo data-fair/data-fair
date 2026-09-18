@@ -145,6 +145,18 @@ const createApplicationStore = (id: string) => {
     watch: false
   })
 
+  const fragmentDatasetsFetch = useFetch<{ results: any[], count: number }>(() => application.value ? `${$apiPath}/datasets` : null, {
+    query: computed(() => ({ partOf: `application:${id}`, size: 100, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
+  })
+  const fragmentApplicationsFetch = useFetch<{ results: any[], count: number }>(() => application.value ? `${$apiPath}/applications` : null, {
+    query: computed(() => ({ partOf: `application:${id}`, size: 100, select: 'title,id,status,description,updatedAt,owner,topics,partOf' }))
+  })
+  const fragments = computed(() => ({ datasets: fragmentDatasetsFetch.data.value?.results ?? [], applications: fragmentApplicationsFetch.data.value?.results ?? [] }))
+  const nbFragments = computed(() => (fragmentDatasetsFetch.data.value?.count ?? 0) + (fragmentApplicationsFetch.data.value?.count ?? 0))
+  const detach = async () => {
+    await patch({ partOf: null } as any)
+  }
+
   // number of parent applications using this one (reverse reference, like virtual datasets for a dataset)
   const nbParentAppsFetch = useFetch<{ count: number }>(() => {
     if (!application.value) return null
@@ -210,6 +222,11 @@ const createApplicationStore = (id: string) => {
     savePermissions,
     datasetsFetch,
     childrenAppsFetch,
+    fragmentDatasetsFetch,
+    fragmentApplicationsFetch,
+    fragments,
+    nbFragments,
+    detach,
     nbParentApps,
     remove,
     changeOwner,
