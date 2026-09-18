@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { nextTick } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator, agentToolError } from '~/composables/agent/utils'
+import { untilReady, formatAdvanceResult } from './agent-creation-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -27,6 +28,10 @@ interface DatasetCreationState {
   datasetType: Ref<DatasetType | null>
   hasInitFromStep: Ref<boolean>
   paramsValid: Ref<boolean>
+  /** The wizard's own readiness: params valid, conflict check passed, owner. */
+  ready: Ref<boolean>
+  /** The label the page shows on the next/create button right now. */
+  actionLabel: Ref<string>
   restTitle: Ref<string>
   restHistory: Ref<boolean>
   restAttachments: Ref<boolean>
@@ -171,7 +176,12 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
         return agentToolError('advance_to_confirmation', 'Parameters are not valid yet. Make sure the title is set and all required fields are filled.')
       }
       state.step.value = 'action'
-      return 'The wizard is now on the confirmation step. The user can review and click Create.'
+      // The confirmation step's conflict check only starts once that step mounts,
+      // so returning here reported ready:false every time and the ready:true a
+      // second later missed this result's drain window. Wait for it, bounded.
+      await nextTick()
+      const ready = await untilReady(() => state.ready.value, 5000)
+      return formatAdvanceResult(ready, state.actionLabel.value)
     }
   })
 }

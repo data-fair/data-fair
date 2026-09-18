@@ -33,6 +33,16 @@ const readEvents = async (page: any): Promise<HostEvent[]> => {
   return messages.filter(m => m.type === 'agent-event' && m.event).map(m => m.event as HostEvent)
 }
 
+/**
+ * The wizard's own next/create button, scoped to the stepper's actions.
+ *
+ * Unscoped, /Ignorer/ also matched the dismiss icon on every error notification
+ * stacked in the corner — five of them after a flaky API, and the click failed on
+ * strict mode instead of on anything this test is about.
+ */
+const wizardAction = (page: any, name: RegExp) =>
+  page.locator('.v-stepper-actions').getByRole('button', { name })
+
 /** The last value published for a keyed state, parsed back from its detail. */
 const lastKeyed = (events: HostEvent[], key: string) => {
   const keyed = events.filter(e => e.key === key)
@@ -94,7 +104,7 @@ test.describe('host events published to the assistant', () => {
     const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
     await expect(restCard).toBeVisible({ timeout: 10000 })
     await restCard.click()
-    await page.getByRole('button', { name: /Ignorer/ }).click()
+    await wizardAction(page, /Ignorer/).click()
     await expect.poll(async () => lastKeyed(await readEvents(page), 'wizard')?.step, { timeout: 15000 }).toBe('params')
     expect((await guidanceEvents()).length).toBe(before)
   })
@@ -106,7 +116,7 @@ test.describe('host events published to the assistant', () => {
     const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
     await expect(restCard).toBeVisible({ timeout: 10000 })
     await restCard.click()
-    await page.getByRole('button', { name: /Ignorer/ }).click()
+    await wizardAction(page, /Ignorer/).click()
     await page.getByLabel(/Titre du jeu de données/).fill('Demandes de subvention')
     await page.getByLabel(/Conserver un historique complet/).check()
 
@@ -119,12 +129,12 @@ test.describe('host events published to the assistant', () => {
     // An option that belongs to another type must not be reported at all.
     expect('file' in wizard).toBe(false)
 
-    await page.getByRole('button', { name: /Continuer/ }).click()
+    await wizardAction(page, /Continuer/).click()
     // `ready` is the one field that tells the assistant the person can press the
     // button now. It turns true only once the confirmation step's conflict check
     // (an API call) has come back, so it must be seen to arrive before any click.
     await expect.poll(async () => lastKeyed(await readEvents(page), 'wizard')?.ready, { timeout: 15000 }).toBe(true)
-    await page.getByRole('button', { name: /Créer le jeu de données/ }).click()
+    await wizardAction(page, /Créer le jeu de données/).click()
     await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
 
     // Emitted before the redirect: the wizard unmounts on it and withdraws its

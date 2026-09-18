@@ -588,6 +588,15 @@ keyed state being last-value-wins in the chat's buffer, that would overwrite the
 `ready:true` anywhere in its record, while the person's own look showed an enabled
 button. Being mid-submit does not make the form less complete.
 
+**Why `advance_to_confirmation` waits.** The confirmation step's conflict check
+is an API call that only starts when that step mounts, so a tool that set the step
+and returned at once always reported `ready:false` — and the `ready:true` a second
+later missed that result's drain window, reaching the model minutes later in hidden
+context while the assistant had already told the person the button was live. The
+tool now polls the same `wizardReady` computed for up to 5s and says what it found,
+naming the label the button actually shows (`nextButtonText`) rather than a guess.
+When the check has not come back in time it says so instead of claiming readiness.
+
 **Why the creation events are emitted before `router.push`.** The wizard unmounts
 on the redirect and withdraws its `wizard` state, so that is the last moment it
 can report. Emitting first also means a `wait_for_user_action` the assistant

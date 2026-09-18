@@ -685,19 +685,18 @@ const canCreate = computed(() => {
 // Told once on arrival (or on activation if the chat opens later), never on
 // step changes — see agent-dataset-wizard-logic.ts for why it stopped living
 // only behind the action button.
+// Complete and submittable from here — deliberately not `canCreate`, which also
+// folds in `!createAction.loading` (see agent-integration.md §10, "What ready means").
+// One definition, read by the host state and by advance_to_confirmation.
+const wizardReady = computed(() => paramsValid.value && conflictsOk.value && !!owner.value)
+
 useAgentState(DATASET_WIZARD_GUIDANCE_KEY, DATASET_WIZARD_GUIDANCE)
 
 useAgentState('wizard', () => buildDatasetWizardState({
   step: step.value,
   type: datasetType.value,
   title: effectiveTitle.value,
-  // Complete and submittable from here — deliberately not `canCreate`, which also
-  // folds in `!createAction.loading`. That made the click itself publish
-  // `ready:false`, and the chat keeps only the last value per key, so the `true`
-  // the assistant had never yet received was overwritten before delivery: a judged
-  // run saw "ready:false" as the state at the moment of creation and no
-  // ready:true anywhere. Being mid-submit does not make the form less complete.
-  ready: paramsValid.value && conflictsOk.value && !!owner.value,
+  ready: wizardReady.value,
   fileName: file.value?.name,
   history: restHistory.value,
   attachments: restAttachments.value,
@@ -706,6 +705,8 @@ useAgentState('wizard', () => buildDatasetWizardState({
 
 useAgentDatasetCreationTools(locale, {
   step,
+  ready: wizardReady,
+  actionLabel: nextButtonText,
   datasetType,
   hasInitFromStep,
   paramsValid,

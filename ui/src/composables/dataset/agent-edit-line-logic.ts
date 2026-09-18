@@ -20,5 +20,5 @@ export function fillableColumns (schema: Array<Record<string, any>> | undefined)
 export function addLineDialogPrecondition (schema: Array<Record<string, any>> | undefined): string | undefined {
   if (fillableColumns(schema).length) return undefined
   return 'Nothing to fill yet: this dataset has no columns, so the add-line dialog stays closed. ' +
-    'Columns are added on the dataset page under Structure > Schéma; once at least one exists, the dialog can be opened.'
+    'Columns are added on the dataset page under Structure > Schéma; at least one has to exist first.'
 }
