@@ -52,3 +52,38 @@ test('no terms means no counting at all', async () => {
   assert.deepEqual(stats.df, {})
   assert.equal(c.calls.filter(x => x[0] === 'count').length, 0)
 })
+
+test('aggregation pipeline uses sanitised field keys (no dots in $group output)', async () => {
+  const c = fakeCollection()
+  let capturedPipeline: any[] | null = null
+  const collectingAggregate = (pipeline: any[]) => {
+    capturedPipeline = pipeline
+    return c.aggregate(pipeline)
+  }
+  const collectionWithCapture = { ...c, aggregate: collectingAggregate }
+
+  const defWithDottedField = validateDefinition({
+    fields: { 'topics.title': 3, 'owner.name': 1 },
+    language: 'fr',
+    version: 1
+  })
+
+  const stats = await createStatsProvider(collectionWithCapture, defWithDottedField).get(['charg'])
+
+  // Verify the pipeline was captured
+  assert.ok(capturedPipeline, 'aggregation pipeline was built')
+
+  // Find the $group stage
+  const groupStage = capturedPipeline.find(stage => stage.$group)
+  assert.ok(groupStage, '$group stage exists in pipeline')
+
+  // Verify all $group output keys are sanitised (no dots)
+  const groupKeys = Object.keys(groupStage.$group)
+  for (const key of groupKeys) {
+    assert.match(key, /^[^.]*$/, `$group output key "${key}" must not contain dots (use sanitised keys for MongoDB)`)
+  }
+
+  // Verify the returned avgLen still has the original dotted keys
+  assert.ok(stats.avgLen['topics.title'] !== undefined, 'returned avgLen has original dotted key "topics.title"')
+  assert.ok(stats.avgLen['owner.name'] !== undefined, 'returned avgLen has original dotted key "owner.name"')
+})

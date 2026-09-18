@@ -41,13 +41,15 @@ export const createStatsProvider = (
   const averageLengths = memoize(
     async (key: string) => {
       const group: any = { _id: null }
-      for (const field of Object.keys(def.fields)) group[field] = { $avg: `$_len.${fieldKey(field)}` }
+      // $group output keys cannot contain dots, so we use sanitised keys and translate back at the boundary
+      for (const field of Object.keys(def.fields)) group[fieldKey(field)] = { $avg: `$_len.${fieldKey(field)}` }
       const pipeline: any[] = []
       if (key) pipeline.push({ $match: JSON.parse(key) })
       pipeline.push({ $group: group })
       const [row] = await collection.aggregate(pipeline).toArray()
       const avgLen: Record<string, number> = {}
-      for (const field of Object.keys(def.fields)) avgLen[field] = row?.[field] || 1
+      // Read from the sanitised output key but store under the original dotted field name
+      for (const field of Object.keys(def.fields)) avgLen[field] = row?.[fieldKey(field)] || 1
       return avgLen
     },
     { promise: true, maxAge: options.avgLenMaxAge ?? 60 * 60 * 1000, max: 500, primitive: true }
