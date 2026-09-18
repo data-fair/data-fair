@@ -477,3 +477,16 @@ export const endpoints = (dataset) => {
   }
   return endpoints
 }
+
+/**
+ * A dataset is reference data as soon as one of the master-data features is configured on it.
+ * The sub-object is often present but empty on datasets that are not reference data at all.
+ * @param {any} masterData
+ */
+export const isMasterData = (masterData) => !!masterData && !!(
+  masterData.shareOrgs?.length ||
+  masterData.singleSearchs?.length ||
+  masterData.bulkSearchs?.length ||
+  masterData.virtualDatasets?.active ||
+  masterData.standardSchema?.active
+)

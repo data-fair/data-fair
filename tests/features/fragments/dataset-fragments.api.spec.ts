@@ -63,6 +63,23 @@ test.describe('dataset fragments', () => {
     await assert.rejects(testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'f2', partOf: { type: 'dataset', id: fragment.id } }), { status: 400 })
   })
 
+  test('reference data can neither be attached nor declared on a fragment', async () => {
+    const virtual = await createVirtual()
+    const masterData = { virtualDatasets: { active: true } }
+
+    // a reference dataset exists to be reused across contexts, it cannot also die with one parent
+    const reference = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { masterData })
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${reference.id}`, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })
+    // an empty master-data sub-object is not reference data
+    const plain = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { masterData: {} })
+    assert.equal((await testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } })).status, 200)
+
+    // and the reciprocal, or the refusal above would be bypassed by attaching first
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${fragment.id}`, { masterData }), { status: 400 })
+    assert.equal((await testUser1Org.patch(`/api/v1/datasets/${fragment.id}`, { masterData: {} })).status, 200)
+  })
+
   test('read-only access to the virtual dataset does not grant direct read on the fragment, data flows through the virtual dataset', async () => {
     const virtual = await createVirtual()
     const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })

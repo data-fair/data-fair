@@ -2,6 +2,7 @@
 import type { Permission, ResourceType } from '#types'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { operationsClasses } from '@data-fair/data-fair-shared/permissions/operations.ts'
+import { isMasterData } from '../../contract/master-data.js'
 
 export type PartOf = { type: 'dataset' | 'application', id: string }
 export type FragmentResourceType = 'datasets' | 'applications'
@@ -15,7 +16,7 @@ export const PART_OF_CHANGE_OPERATION: Record<FragmentResourceType, string> = { 
 /** keys a fragment can never carry: a fragment is not publishable */
 export const FRAGMENT_ONLY_FORBIDDEN_KEYS = ['publicationSites', 'requestedPublicationSites', 'publications']
 
-export const parsePartOfParam = (value: string): PartOf => {
+const parsePartOfParam = (value: string): PartOf => {
   const i = value.indexOf(':')
   const type = i === -1 ? value : value.slice(0, i)
   const id = i === -1 ? '' : value.slice(i + 1)
@@ -92,7 +93,7 @@ export const deriveFragmentPermissions = (parentPermissions: Permission[] | unde
 }
 
 type OwnerLike = { type: string, id: string, department?: string }
-export type FragmentLike = { id?: string, owner: OwnerLike, publicationSites?: string[], requestedPublicationSites?: string[], publications?: any[] }
+export type FragmentLike = { id?: string, owner: OwnerLike, publicationSites?: string[], requestedPublicationSites?: string[], publications?: any[], masterData?: any }
 export type ParentLike = { id: string, owner: OwnerLike, isVirtual?: boolean, partOf?: PartOf }
 
 const sameOwner = (a: OwnerLike, b: OwnerLike) => a.type === b.type && a.id === b.id && (a.department ?? undefined) === (b.department ?? undefined)
@@ -107,6 +108,9 @@ export const validatePartOf = ({ fragmentType, fragment, partOf, parent, nbFragm
   if (nbFragments > 0) return 'Une ressource qui a des fragments ne peut pas devenir un fragment'
   if (fragment.publicationSites?.length || fragment.requestedPublicationSites?.length) return 'La ressource est publiée sur un portail, retirez la publication avant de la rattacher'
   if (fragment.publications?.length) return 'La ressource est publiée sur un catalogue, retirez la publication avant de la rattacher'
+  // reference data exists to be reused across many contexts, and other datasets' extensions point
+  // at it: it cannot also be a fragment that hides from listings and dies with a single parent
+  if (isMasterData(fragment.masterData)) return 'Un jeu de données de référence ne peut pas être rattaché à un parent, retirez la configuration de données de référence avant de le rattacher'
   return null
 }
 
@@ -126,7 +130,9 @@ export const fragmentForbiddenPatchKey = (patch: Record<string, any>, isFragment
  *   persists its body as-is must refuse a divergent `partOf` rather than write it raw — otherwise
  *   every one of those guards is bypassed. An *identical* value is tolerated so a read-then-write
  *   round trip of a fragment still works.
- * - a fragment is never publishable, on any route.
+ * - a fragment is never publishable, and is never reference data, on any route. The reciprocal of
+ *   the same rules in `validatePartOf`: without it the refusal at attach is trivially bypassed by
+ *   attaching first and publishing (or declaring reference data) afterwards.
  */
 export const fragmentWriteBodyError = (
   body: Record<string, any> | undefined,
@@ -138,15 +144,35 @@ export const fragmentWriteBodyError = (
     JSON.stringify(writeBody.partOf ?? null) !== JSON.stringify(resource?.partOf ?? null)) {
     return 'partOf ne peut être modifié que par PATCH'
   }
-  const forbiddenKey = fragmentForbiddenPatchKey(writeBody, !!resource?.partOf || !!writeBody.partOf)
+  const isFragment = !!resource?.partOf || !!writeBody.partOf
+  const forbiddenKey = fragmentForbiddenPatchKey(writeBody, isFragment)
   if (forbiddenKey) return `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`
+  // presence of the key is not the signal here: clearing masterData on a fragment, or sending back
+  // an empty sub-object in a read-then-write round trip, must keep working
+  if (isFragment && isMasterData(writeBody.masterData)) return 'Un fragment ne peut pas être défini comme donnée de référence'
   return null
 }
 
+/**
+ * Queries that pin resources by id, by slug or by inverse reference ("which applications use this
+ * dataset"). The caller already knows exactly what it is asking for, so hiding fragments there
+ * would only break a legitimate lookup.
+ */
 const PINNING_QUERY_KEYS = ['id', 'ids', 'slug', 'slugs', 'children', 'dataset', 'application']
 
-/** Fragments are hidden from listings unless the query targets them (partOf) or pins resources by id / inverse reference (spec §4). */
-export const shouldHideFragments = (reqQuery: Record<string, string | undefined>): boolean => {
-  if (reqQuery.partOf) return false
-  return !PINNING_QUERY_KEYS.some(key => reqQuery[key] !== undefined)
+/**
+ * The single mongo filter the `partOf` query param resolves to, shared by the datasets and the
+ * applications listings (spec §4):
+ * - `partOf=<type>:<id>` — only the fragments of that parent
+ * - `partOf=true` — every fragment, whatever its parent
+ * - absent, or `partOf=false` — fragments are hidden, unless the query pins resources
+ */
+export const partOfListFilter = (reqQuery: Record<string, string | undefined>): Record<string, any> | undefined => {
+  if (reqQuery.partOf === 'true') return { 'partOf.id': { $exists: true } }
+  if (reqQuery.partOf && reqQuery.partOf !== 'false') {
+    const partOf = parsePartOfParam(reqQuery.partOf)
+    return { 'partOf.type': partOf.type, 'partOf.id': partOf.id }
+  }
+  if (PINNING_QUERY_KEYS.some(key => reqQuery[key] !== undefined)) return undefined
+  return { partOf: { $exists: false } }
 }
