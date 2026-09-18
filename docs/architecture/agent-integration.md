@@ -508,6 +508,17 @@ evidence (gitignored). The harness primitives come from
 `@data-fair/lib-agents-sim`; this repo owns the cases, the login, the seeding and
 the turn loop.
 
+**A declared wait is a turn boundary.** The harness runs the simulated person
+only inside `nextUserMessage` — their look/click/type tools exist for that call
+and no longer — so while the assistant holds a turn, nobody can click anything.
+`wait_for_user_action` holds a turn precisely to hand control over, which made it
+unreachable: every declared wait ran its whole window and was then recorded as a
+wedged turn. `waitForTurn` now reports `'ended' | 'waiting'`, and on `'waiting'`
+the loop lets the person act, then waits for the turn the assistant resumes
+before speaking over it. This also retired the reading that a judged run had
+"missed the click by ten seconds": the person acted fourteen seconds after the
+timeout released the turn, which was the first moment they could.
+
 **Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
 from `simulations/resources/*.csv` plus one REST register built in code
 (`seedRestRegister`: a subsidy-request dataset with columns, history and two
