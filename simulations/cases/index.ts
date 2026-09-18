@@ -112,5 +112,25 @@ export const cases: SimulationCase[] = [
     // Enregistrer, which the goal has always needed — colleagues cannot enter a
     // request into a dataset with no columns.
     maxTurns: 9
+  },
+  // The step after the one above, and the only workflow mechanism nothing has
+  // judged: open_add_line_dialog / open_edit_line_dialog hand the form to the
+  // editLine_form VJSF subagent. A judged run once died there — the dialog opened
+  // on a dataset with no columns, the subagent spent two round trips discovering
+  // an empty form, and the person was handed a manual procedure. A precondition
+  // now refuses that dialog; this case exercises the path when it should succeed.
+  //
+  // A different person from the creation case on purpose: the creation goal says
+  // the COLLEAGUES enter the requests, and a standalone case cannot lean on a
+  // conversation that happened in another run. This one holds the content — the
+  // details of a request — which the creation persona never did, so "the
+  // assistant prepares, the person presses one button" has to work while the
+  // person is also the source of every value.
+  {
+    name: 'saisie-et-correction-d-une-demande',
+    route: '/data-fair/datasets',
+    persona: 'Tu travailles au service vie associative d\'une petite collectivité. Tu tiens le registre des demandes de subvention : tu connais les dossiers par cœur, mais pas l\'outil informatique. Tu n\'emploies jamais de vocabulaire technique (ni schéma, ni colonne, ni ligne, ni enregistrement) et tu ne vas pas chercher toi-même où cliquer : tu ne veux pas explorer l\'écran ni le décrire à quelqu\'un. La seule chose que tu fais à l\'écran, c\'est presser toi-même le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Tu donnes les informations d\'un dossier quand on te les demande, une réponse par question si on te les demande une par une.',
+    goal: 'Deux choses à régler dans le registre des demandes de subvention. D\'abord enregistrer une nouvelle demande qui vient d\'arriver : l\'association « Les Amis du Vieux Moulin » demande 4 500 € pour refaire la toiture du moulin, dossier déposé le 3 mars 2026, suivi par le service vie associative. Ensuite corriger une erreur que tu as repérée : la demande du club de judo du centre est inscrite à 12 000 € alors qu\'ils demandaient 1 200 € — il y a un zéro de trop. Tu veux que l\'assistant fasse la saisie et la correction à ta place ; tu presseras toi-même le bouton quand il te dira que c\'est prêt.',
+    maxTurns: 9
   }
 ]

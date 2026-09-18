@@ -509,8 +509,11 @@ evidence (gitignored). The harness primitives come from
 the turn loop.
 
 **Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
-from `simulations/resources/*.csv`, so no case inherits another run's state and
-no case can dirty the `dev_fixtures` demo data. `clean()` resets the dev
+from `simulations/resources/*.csv` plus one REST register built in code
+(`seedRestRegister`: a subsidy-request dataset with columns, history and two
+rows, one carrying a deliberate decimal slip for the data-entry case to fix), so
+no case inherits another run's state and no case can dirty the `dev_fixtures`
+demo data. `clean()` resets the dev
 environment's whole test state, not just `test_`-owned datasets: it also wipes
 the `limits`, `applicationsKeys`, `remoteServices`, `baseApplications`,
 `extensions-cache`, `thumbnails-cache`, `locks` and integrity collections
