@@ -73,6 +73,8 @@ router.post('', async (req, res) => {
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(patchedApplication, 'applications', reqSessionAuthenticated(req))
+}, async (patchedApplication) => {
+  await fragmentsService.syncFragmentPermissions('applications', patchedApplication)
 }))
 
 // retrieve a application by its id

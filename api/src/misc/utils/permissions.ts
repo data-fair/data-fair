@@ -343,7 +343,7 @@ export const initResourcePermissions = async (resource: Resource, extraPermissio
 }
 
 /** Builds the Express sub-router exposing GET /permissions, PUT /permissions and lookup helpers, mounted under each resource. */
-export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void)) => {
+export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void), onUpdated?: (resource: Resource) => Promise<void>) => {
   const router = Router()
 
   router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
@@ -390,6 +390,8 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
         stampHistorize(permissionsUpdate, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
       }
       await resources.updateOne({ id: resource.id }, permissionsUpdate)
+
+      if (onUpdated) await onUpdated({ ...resource, permissions })
 
       if (!wasPublic && willBePublic && onPublicCallback) {
         await onPublicCallback(req, { ...resource, permissions: req.body })

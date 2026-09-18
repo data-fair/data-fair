@@ -95,6 +95,8 @@ export const registerMetadataRoutes = (router: Router) => {
   router.use('/:datasetId/permissions', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
     // this callback function is called when the resource becomes public
     await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
+  }, async (patchedDataset) => {
+    await fragmentsService.syncFragmentPermissions('datasets', patchedDataset)
   }))
 
   // retrieve a dataset by its id

@@ -1,10 +1,11 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
 const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')   // contrib of test_org1
 const testUser3 = await axiosAuth('test_user3@test.com')                   // external
+const anonymous = axios()
 
 const createApp = async (ax = testUser1Org, body: any = {}) => (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), ...body })).data
 
@@ -66,5 +67,24 @@ test.describe('application fragments', () => {
     const res = await testUser3.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), title: 'sub renamed by test_user3', partOf: { type: 'application', id: dashboard.id } })
     assert.equal(res.status, 200)
     assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data.partOf, { type: 'application', id: dashboard.id })
+  })
+
+  test('a parent ACL change re-syncs its fragments', async () => {
+    const dashboard = await createApp()
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    await assert.rejects(testUser3.get(`/api/v1/applications/${sub.id}`), { status: 403 })
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    const res = await testUser3.get(`/api/v1/applications/${sub.id}`)
+    assert.ok(res.data.userPermissions.includes('readConfig'))
+    assert.ok(!res.data.userPermissions.includes('writeDescription'))
+    // the proxy lets a reader of the dashboard open the sub-application
+    const html = await testUser3.get(`/app/${sub.id}/`, { maxRedirects: 0 })
+    assert.equal(html.status, 200)
+    await assert.rejects(anonymous.get(`/app/${sub.id}/`, { maxRedirects: 0 }), { status: 302 })
+    // public dashboard -> public sub-application
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { classes: ['list', 'read'] }])
+    assert.equal((await anonymous.get(`/app/${sub.id}/`, { maxRedirects: 0 })).status, 200)
+    assert.equal((await anonymous.get(`/api/v1/applications/${sub.id}`)).data.visibility, 'public')
   })
 })
