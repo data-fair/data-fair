@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
+import { sendDataset } from '../../support/workers.ts'
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
 const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')   // contrib of test_org1
@@ -95,5 +96,32 @@ test.describe('application fragments', () => {
     await testUser1Org.delete(`/api/v1/applications/${dashboard.id}`)
     await assert.rejects(testUser1Org.get(`/api/v1/applications/${sub.id}`), { status: 404 })
     await assert.rejects(testUser1Org.get(`/api/v1/datasets/${utility.id}`), { status: 404 })
+  })
+
+  test('deleting an application recomputes the owner storage after cascading a draft dataset fragment', async () => {
+    const dashboard = await createApp()
+    // still a draft at delete time: deleteDataset's own internal storage recompute is skipped for
+    // a draft (guarded by `!dataset.draftReason` at every call site), and deleteApplication has no
+    // trailing recompute of its own — so only deleteFragments' post-loop updateTotalStorage call
+    // can account for it.
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, { params: { draft: 'true' } }, { partOf: { type: 'application', id: dashboard.id } })
+    const fragmentFull = (await testUser1Org.get(`/api/v1/datasets/${fragment.id}`, { params: { draft: 'true' } })).data
+    assert.ok(fragmentFull.draftReason)
+    // an unrelated, fully finalized dataset for the same owner: its own finalize pass calls
+    // updateTotalStorage, which primes the owner's cached totals to a real (non-default) baseline
+    // that already counts the draft fragment — otherwise "before" would trivially read 0 regardless
+    // of whether the fragment's removal is ever accounted for.
+    await sendDataset('datasets/dataset1.csv', testUser1Org)
+    const before = (await testUser1Org.get('/api/v1/stats')).data
+    assert.equal(before.limits.nb_datasets.consumption, 2)
+
+    await testUser1Org.delete(`/api/v1/applications/${dashboard.id}`)
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${fragment.id}`), { status: 404 })
+
+    const after = (await testUser1Org.get('/api/v1/stats')).data
+    // the draft fragment is gone: the owner's cached dataset count must reflect it, not stay stale
+    assert.equal(after.limits.nb_datasets.consumption, 1)
+    // the remaining dataset's own bytes are untouched by the cascade
+    assert.equal(after.limits.store_bytes.consumption, before.limits.store_bytes.consumption)
   })
 })

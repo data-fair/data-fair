@@ -112,6 +112,11 @@ export const deleteFragments = async (app: any, ctx: { sessionState: SessionStat
     // safety net mirroring the DELETE /:datasetId route (spec §6): deleteDataset only recomputes
     // the owner's cached total for a non-virtual, non-draft dataset, so a draft-only fragment would
     // otherwise leave it stale. Once for the whole batch, not per fragment.
+    // This call is genuinely redundant on the dataset-parent path (that route's own DELETE handler
+    // ends with an unconditional updateTotalStorage on the same owner), but it is the ONLY recompute
+    // on the application-parent path: applications/service.ts's deleteApplication has no trailing
+    // recompute of its own. Keeping it here makes deleteFragments self-consistent regardless of
+    // which router calls it — do not remove it as apparent dead weight on the dataset path.
     const parent = await getParent({ type: parentType, id: parentId } as PartOf)
     if (parent) {
       const { updateTotalStorage } = await import('../datasets/utils/storage.ts')
