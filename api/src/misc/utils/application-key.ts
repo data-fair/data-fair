@@ -8,8 +8,11 @@ import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type Resource, type BypassPermissions } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
+import type { SessionState } from '@data-fair/lib-express'
+import { reqSession } from '@data-fair/lib-express'
 import { reqResource, setReqBypassPermissions } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
+import { can } from './permissions.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
@@ -53,6 +56,10 @@ const findMatchingApplication = memoize(async (appId: string, datasetHref: strin
   }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
 }, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
 
+const findCallingApplication = memoize(async (appId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.applications.findOne({ id: appId, ...ownerFilterFromParts(ownerType, ownerId, ownerDep) }, { projection: { id: 1, partOf: 1, permissions: 1, owner: 1 } })
+}, { ...memoOpts, profileName: 'applicationContextCallingApp' })
+
 // called on applications-keys writes: same-node key changes apply immediately
 // (other nodes converge within the 30s TTL)
 export const clearApplicationKeysCaches = () => {
@@ -60,6 +67,7 @@ export const clearApplicationKeysCaches = () => {
   countParentApplicationOfDataset.clear()
   countParentApplicationOfApp.clear()
   findMatchingApplication.clear()
+  findCallingApplication.clear()
 }
 
 // same-origin gate for anonymous writes — compares URL origins (`startsWith` previously let
@@ -70,28 +78,44 @@ const matchingHost = (req: Request) => {
   return new URL(reqPublicBaseUrl(req)).origin === req.headers.origin
 }
 
-// pure application-key matching core (no req dependency) shared by the HTTP middleware below and
-// the websocket canSubscribe handler (api/src/app.js): resolves a key + calling application against
-// a dataset and returns the permission bypass it grants (or null). `appId` is the calling
-// application (referer over HTTP, message.appId over websocket); leave it undefined for the embed
-// page context, where the key's own application must reference the dataset.
-export const resolveApplicationKeyBypass = async (applicationKeyId: string, dataset: Resource, appId?: string): Promise<{ applicationKey: ApplicationKey, bypassPermissions: BypassPermissions } | null> => {
+// pure application-context matching core (no req dependency) shared by the HTTP middleware below and
+// the websocket canSubscribe handler (api/src/app.js). Two proofs unlock a dataset from an application
+// page: an application key (any dataset the application references), or, for a dataset that is a
+// fragment of an application, a session that can read the calling application (spec §3.4).
+// `appId` is the calling application (referer over HTTP, message.appId over websocket); leave it
+// undefined for the embed page context, where the key's own application must reference the dataset.
+export const resolveApplicationContextBypass = async (applicationKeyId: string | null, dataset: Resource, appId?: string, sessionState?: SessionState): Promise<{ applicationKey?: ApplicationKey, bypassPermissions: BypassPermissions } | null> => {
   const ownerType = dataset.owner.type
   const ownerId = dataset.owner.id
   const ownerDep = dataset.owner.department || ''
   const datasetHref = `${config.publicUrl}/api/v1/datasets/${dataset.id}`
+  const parentAppId = dataset.partOf?.type === 'application' ? dataset.partOf.id : undefined
 
-  const applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
-  if (!applicationKey) return null
-
+  let applicationKey: ApplicationKey | null = null
   let resolvedAppId = appId
-  if (resolvedAppId === undefined) {
-    // dataset embed page context: the key's own application must reference the dataset
-    resolvedAppId = applicationKey._id
-    if (!await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
-  } else if (applicationKey._id !== resolvedAppId) {
-    // the application key can be matched to a parent application key (case of dashboards, etc)
-    if (!await countParentApplicationOfApp(applicationKey._id, resolvedAppId, ownerType, ownerId, ownerDep)) return null
+  if (applicationKeyId) {
+    applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
+    if (!applicationKey) return null
+    if (resolvedAppId === undefined) {
+      // dataset embed page context: the key's own application must reference the dataset (or be its parent)
+      resolvedAppId = applicationKey._id
+      if (parentAppId !== applicationKey._id && !await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
+    } else if (applicationKey._id !== resolvedAppId) {
+      // the application key can be matched to a parent application key (case of dashboards, etc)
+      const callingApp = await findCallingApplication(resolvedAppId, ownerType, ownerId, ownerDep)
+      const isFragmentOfKeyApp = callingApp?.partOf?.type === 'application' && callingApp.partOf.id === applicationKey._id
+      if (!isFragmentOfKeyApp && !await countParentApplicationOfApp(applicationKey._id, resolvedAppId, ownerType, ownerId, ownerDep)) return null
+    }
+  } else {
+    // session proof, only for a dataset fragment of an application
+    if (!parentAppId || !resolvedAppId || !sessionState?.user) return null
+    const callingApp = await findCallingApplication(resolvedAppId, ownerType, ownerId, ownerDep)
+    if (!callingApp) return null
+    const reachable = resolvedAppId === parentAppId ||
+      (callingApp.partOf?.type === 'application' && callingApp.partOf.id === parentAppId) ||
+      !!await countParentApplicationOfApp(parentAppId, resolvedAppId, ownerType, ownerId, ownerDep)
+    if (!reachable) return null
+    if (!can('applications', callingApp as any, 'readConfig', sessionState)) return null
   }
 
   const cachedMatchingApplication = await findMatchingApplication(resolvedAppId, datasetHref, dataset.id, ownerType, ownerId, ownerDep)
@@ -120,7 +144,7 @@ export const resolveApplicationKeyBypass = async (applicationKeyId: string, data
   }
 
   const bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-  return { applicationKey, bypassPermissions }
+  return { applicationKey: applicationKey ?? undefined, bypassPermissions }
 }
 
 export default async (req: Request, res: Response, next: NextFunction) => {
@@ -170,15 +194,16 @@ export default async (req: Request, res: Response, next: NextFunction) => {
     return next()
   }
 
-  if (!applicationKeyId) return next()
+  const sessionState = reqSession(req)
+  if (!applicationKeyId && !(dataset.partOf?.type === 'application' && appId)) return next()
 
-  const match = await resolveApplicationKeyBypass(applicationKeyId, dataset, appId)
+  const match = await resolveApplicationContextBypass(applicationKeyId, dataset, appId, sessionState)
   if (!match) return next()
   const { applicationKey, bypassPermissions } = match
 
   // this is basically the "crowd-sourcing" use case
   // we apply some anti-spam protection
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
+  if (applicationKey && req.method !== 'GET' && req.method !== 'HEAD') {
     debug('protect anonymous write operation with multiple security tools')
     // 1rst level of anti-spam prevention, no cross origin requests on this route
     if (!matchingHost(req)) {
@@ -209,7 +234,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
   setReqBypassPermissions(req, bypassPermissions)
   debug('apply bypass permissions', bypassPermissions)
-  if (!reqUser(req)) {
+  if (applicationKey && !reqUser(req)) {
     debug('set pseudo user')
     setReqUser(
       req,

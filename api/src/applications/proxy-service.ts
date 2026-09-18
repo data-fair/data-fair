@@ -15,6 +15,7 @@ export const matchApplicationKey = async (application: any, applicationKeyId: st
     if (applicationKey._id === application.id) {
       return true
     } else {
+      if (application.partOf?.type === 'application' && application.partOf.id === applicationKey._id) return true
       // ths application key can be matched to a parent application key (case of dashboards, etc)
       const isParentApplicationKey = await mongo.db.collection('applications')
         .countDocuments({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
