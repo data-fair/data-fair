@@ -38,6 +38,7 @@ test.describe('fragments UI', () => {
     await expect(page.getByRole('link', { name: 'virtual parent' })).toBeVisible()
     await expect(page.locator('#share').getByRole('tab', { name: /Portails/ })).not.toBeVisible()
     await expect(page.locator('#share').getByRole('tab', { name: /^Permissions$/ })).not.toBeVisible()
+    await expect(page.locator('#share').getByRole('tab', { name: /Clé d'API/ })).not.toBeVisible()
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 

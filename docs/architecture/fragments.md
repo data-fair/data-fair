@@ -172,7 +172,7 @@ fragment collection), each just `{ $set: { permissions: deriveFragmentPermission
 | Writer | Action |
 |---|---|
 | `PUT /:id/permissions` | The `onUpdated` callback passed to `permissions.router(...)` calls `syncFragmentPermissions` right after the parent's own update, in the same request — `datasets/routes/metadata.ts:100` and `applications/router.ts:77-82` (which also clears the application-key caches, §5). |
-| Creation with `partOf` | `initResourcePermissions` is skipped entirely; the created resource's `permissions` is set straight to `preparePartOf(...).permissions` — `datasets/service.ts:309-312`, `applications/service.ts:163-169` (`initApplicationPermissions`). |
+| Creation with `partOf` | For an application, `initResourcePermissions` is skipped entirely — `initApplicationPermissions` (`applications/service.ts:163-169`) branches on `partOf` before ever calling it. For a dataset, `initResourcePermissions` runs unconditionally (`datasets/service.ts:308`) and its result is then **overwritten** by `preparePartOf(...).permissions` when `dataset.partOf` is set (`datasets/service.ts:309-312`) — same end state, different path. |
 | Attach (existing resource) | Same derivation, computed in `applyPartOfChange` at attach time (§7). |
 | Identity rewrites (`identities/service.ts`) | Unchanged: they rewrite ACL entries across both collections by owner filter, fragments included — no fragment-specific code needed. |
 | Owner change of the parent | Refused while the parent has fragments (§7), so there is nothing to re-sync. |
@@ -209,7 +209,7 @@ bypass) but gained a second proof and a widened reachability check to cover data
 
 **Two proofs unlock a dataset from an application page**, both resolved by the shared core
 `resolveApplicationContextBypass` (`api/src/misc/utils/application-key.ts:87-157`, used by both the
-HTTP middleware and the websocket `canSubscribe` handler in `api/src/app.js:286-311`, since a
+HTTP middleware and the websocket `canSubscribe` handler in `api/src/app.js:291-312`, since a
 browser sends no `Referer` on a websocket handshake and the key/appId are passed in the subscribe
 message instead):
 
@@ -263,7 +263,7 @@ still holds for fragments, so cross-owner leakage through this path is not newly
 
 ## 6. Listing
 
-Both `findDatasets` (`api/src/datasets/service.ts:105-110`) and `findApplications`
+Both `findDatasets` (`api/src/datasets/service.ts:105-111`) and `findApplications`
 (`api/src/applications/service.ts:86-91`) apply the same rule, built from two pure helpers in
 `api/src/fragments/operations.ts`:
 
@@ -282,8 +282,12 @@ Both `findDatasets` (`api/src/datasets/service.ts:105-110`) and `findApplication
 
 Facets and sums reuse the same `extraFilters`, so they follow the same rule; there is no `partOf`
 facet in this iteration. Single reads by id are untouched — `describe_dataset`, `describe_application`,
-data tools, embeds and the proxy all work on a fragment id and simply return `partOf` as part of the
-resource (§9 of [agent-integration.md](./agent-integration.md)).
+data tools, embeds and the proxy all work on a fragment id like on any other resource. The two
+`describe_*` agent tools are the one exception to "the resource as-is": they build a curated field
+whitelist (`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) that
+does not include `partOf`, in either the text summary or `structuredContent`, so the assistant
+cannot currently tell a fragment from a standalone resource through them (§9 of
+[agent-integration.md](./agent-integration.md)).
 
 Consumers that inherit the default hiding with no code change of their own: back-office lists, the
 `dataset-select` picker, vjsf `x-fromUrl` dataset pickers inside application configuration forms, the
@@ -375,12 +379,12 @@ permission model on the client, it is purely presentational.
 - **Parent delete dialog loop**: deleting a resource that has fragments shows a warning ("Ce jeu de
   données a N fragment(s) qui seront supprimés avec lui") with two actions: the default delete
   button (relies on the unconditional API cascade), or "Détacher d'abord"
-  (`confirmDetachAllAndRemove`, `dataset/[id]/index.vue:1017-1023` / `application/[id]/index.vue:727-734`),
+  (`confirmDetachAllAndRemove`, `dataset/[id]/index.vue:1017-1022` / `application/[id]/index.vue:728-736`),
   which `PATCH`es `partOf: null` on every fragment first, then deletes the now-childless parent.
 - **Agent tools**: no fragment-specific tool. `list_datasets` / `list_applications` inherit the
-  default listing hiding (§6); `describe_dataset` / `describe_application` work on a fragment id like
-  any other and expose `partOf` since they return the resource as-is. See
-  [agent-integration.md](./agent-integration.md).
+  default listing hiding (§6); `describe_dataset` / `describe_application` work on a fragment id
+  like any other, but their curated field whitelist does not include `partOf`, so they cannot be
+  used to tell a fragment from a standalone resource. See [agent-integration.md](./agent-integration.md).
 
 ## 9. Known limitations
 

@@ -323,8 +323,11 @@ functions as every other listing consumer, so they inherit the default hiding of
 that is a fragment of another resource simply does not appear unless the query pins it (by `id`,
 `slug`, `dataset`, `application`, …) or explicitly filters `partOf=`, neither of which these tools
 expose. Single-resource lookups are untouched: `describe_dataset` and `describe_application` work
-on a fragment id exactly like on any other resource and return `partOf` as part of the resource
-payload, since they surface the resource as-is. The "Fragments" tab shown on a virtual dataset's or
+on a fragment id exactly like on any other resource, but their curated field whitelist
+(`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) does not
+include `partOf`, in either the text summary or `structuredContent` — the assistant cannot
+currently tell a fragment from a standalone resource through these tools. The "Fragments" tab shown
+on a virtual dataset's or
 an application's own page carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
 `ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
 fragment" action within it.

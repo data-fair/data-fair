@@ -1243,7 +1243,7 @@ const sections = computedDeepDiff(() => {
     if (can('getPermissions').value && !d.partOf) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / write / admin permissions to specific users, organisations, departments or partners, or open access to "anyone".' })
     }
-    if (can('setReadApiKey').value) {
+    if (can('setReadApiKey').value && !d.partOf) {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey, agentDesc: 'Generate and manage a read-only API key — for embedding or programmatic access without a user session.' })
     }
     if (!d.partOf) {

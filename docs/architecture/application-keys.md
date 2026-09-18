@@ -248,9 +248,9 @@ setReqUser(req,
 
 `isApplicationKey: true` is a one-way flag that:
 
-- `getOwnerRole(...)` (`permissions.ts:115-118`) treats as anonymous — the pseudo-user gets **no**
+- `getOwnerRole(...)` (`permissions.ts:114-117`) treats as anonymous — the pseudo-user gets **no**
   owner-derived role, even though the synthesized id might collide with a real account id.
-- `matchPermission(...)` (`permissions.ts:138-159`) treats as not matching any user/org permission
+- `matchPermission(...)` (`permissions.ts:138-160`) treats as not matching any user/org permission
   entry, even one with `id: '*'`.
 
 So explicit ACLs on the resource cannot be unlocked by a key — only the `bypassPermissions` route
@@ -348,7 +348,7 @@ A failing test in `api-keys.api.spec.ts` lines 440-458 walks the full flow: too-
 | Proxy gate (HTML)                      | `api/src/applications/proxy.ts` (readConfig/key gates at `:45` and `:97`), `api/src/applications/middlewares.ts` (`setProxyResource`), `api/src/applications/proxy-service.ts` (`matchApplicationKey`, incl. the `partOf` edge) |
 | Dataset API middleware (data)          | `api/src/misc/utils/application-key.ts` (`resolveApplicationContextBypass` is the pure core) |
 | Websocket application context (data)   | `api/src/app.js` (`canSubscribe` callback)           |
-| Permission bypass plumbing             | `api/src/misc/utils/permissions.ts:115-159` (owner-role/permission exclusion), `:171-182` (bypass early-return) |
+| Permission bypass plumbing             | `api/src/misc/utils/permissions.ts:114-160` (owner-role/permission exclusion), `:171-182` (bypass early-return) |
 | Schema for `applicationKeyPermissions` | `api/types/application/.type/index.js`               |
 | Rate-limit config                      | `api/config/default.cjs` (`postApplicationKey`)      |
 | Tests covering the full flow          | `tests/features/auth/api-keys.api.spec.ts` (lines 245-499) |
