@@ -87,4 +87,13 @@ test.describe('application fragments', () => {
     assert.equal((await anonymous.get(`/app/${sub.id}/`, { maxRedirects: 0 })).status, 200)
     assert.equal((await anonymous.get(`/api/v1/applications/${sub.id}`)).data.visibility, 'public')
   })
+
+  test('deleting the dashboard deletes its sub-applications and utility datasets', async () => {
+    const dashboard = await createApp()
+    const sub = await createApp(testUser1Org, { partOf: { type: 'application', id: dashboard.id } })
+    const utility = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'u', partOf: { type: 'application', id: dashboard.id } })).data
+    await testUser1Org.delete(`/api/v1/applications/${dashboard.id}`)
+    await assert.rejects(testUser1Org.get(`/api/v1/applications/${sub.id}`), { status: 404 })
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${utility.id}`), { status: 404 })
+  })
 })

@@ -101,14 +101,21 @@ export const syncFragmentPermissions = async (parentType: FragmentResourceType, 
 export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: PartOf['type'], parentId: string) => {
   const { datasets, applications } = await findFragments(parentType, parentId)
   if (datasets.length) {
-    const { deleteDataset } = await import('../datasets/service.ts')
-    const { mergeDraft } = await import('../datasets/utils/index.ts')
+    const { deleteDataset, mergeDraft } = await import('../datasets/service.ts')
     const { syncDataset: syncRemoteService } = await import('../remote-services/service.ts')
     for (const datasetFull of datasets) {
       const dataset = mergeDraft({ ...datasetFull })
       await deleteDataset(app, dataset)
       if (dataset.draftReason && datasetFull.status !== 'draft') await deleteDataset(app, datasetFull)
       await syncRemoteService({ ...datasetFull, masterData: null } as any)
+    }
+    // safety net mirroring the DELETE /:datasetId route (spec §6): deleteDataset only recomputes
+    // the owner's cached total for a non-virtual, non-draft dataset, so a draft-only fragment would
+    // otherwise leave it stale. Once for the whole batch, not per fragment.
+    const parent = await getParent({ type: parentType, id: parentId } as PartOf)
+    if (parent) {
+      const { updateTotalStorage } = await import('../datasets/utils/storage.ts')
+      await updateTotalStorage(parent.owner as any)
     }
   }
   if (applications.length) {

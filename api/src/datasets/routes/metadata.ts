@@ -30,6 +30,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentForbiddenPatchKey } from '../../fragments/operations.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -325,6 +326,9 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
+
+    // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

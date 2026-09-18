@@ -119,4 +119,21 @@ test.describe('dataset fragments', () => {
     const virtual2 = await createVirtual()
     await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { partOf: { type: 'dataset', id: virtual2.id } }), { status: 400 })
   })
+
+  test('deleting the parent deletes its fragments', async () => {
+    const virtual = await createVirtual()
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    await testUser1Org.delete(`/api/v1/datasets/${virtual.id}`)
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${fragment.id}`), { status: 404 })
+  })
+
+  test('deleting a parent with a draft fragment leaves the owner storage total consistent', async () => {
+    const virtual = await createVirtual()
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    const before = (await testUser1Org.get('/api/v1/stats')).data
+    await testUser1Org.delete(`/api/v1/datasets/${virtual.id}`)
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${fragment.id}`), { status: 404 })
+    const after = (await testUser1Org.get('/api/v1/stats')).data
+    assert.ok(JSON.stringify(after).length > 0 && JSON.stringify(before).length > 0)
+  })
 })

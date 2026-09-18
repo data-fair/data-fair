@@ -36,6 +36,10 @@ import type { VirtualDataset } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
+// thin re-export: fragments/service.ts targets this module rather than datasets/utils/index.ts
+// directly (cross-module imports target service.ts/operations.ts/types.ts, see code-conventions.md §2)
+export { mergeDraft } from './utils/index.ts'
+
 const debugMasterData = debugLib('master-data')
 
 const filterFields = {
