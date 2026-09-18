@@ -5,6 +5,7 @@ import type { RequestWithResource, ResourceType, Permission, Resource, BypassPer
 import config from '#config'
 import mongo from '#mongo'
 import { Router } from 'express'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
@@ -363,6 +364,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     const resources = mongo.db.collection(resourceType)
     try {
       const resource = await reqResource(req)
+      if (resource.partOf) throw httpError(403, 'Les permissions d\'un fragment sont dérivées de celles de son parent et ne peuvent pas être modifiées directement')
       const wasPublic = isPublic(resourceType, resource)
       const willBePublic = isPublic(resourceType, { ...resource, permissions })
 

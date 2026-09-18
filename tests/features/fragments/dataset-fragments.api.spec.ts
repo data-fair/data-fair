@@ -85,4 +85,38 @@ test.describe('dataset fragments', () => {
     assert.ok(res.data.userPermissions.includes('readLines'))
     await testUser3.patch(`/api/v1/datasets/${fragment.id}`, { title: 'renamed by test_user3' })
   })
+
+  test('attach an existing dataset, then detach it keeping its ACL', async () => {
+    const virtual = await createVirtual()
+    const plain = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    // contributors cannot attach (changeOwner gate)
+    await assert.rejects(testUser5Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } }), { status: 403 })
+    let res = await testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } })
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtual.id })
+    let permissions = (await testUser1Org.get(`/api/v1/datasets/${plain.id}/permissions`)).data
+    assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
+    // re-parenting is refused
+    const virtual2 = await createVirtual()
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual2.id } }), { status: 400 })
+    // a fragment cannot be published nor have its ACL / owner changed
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { publicationSites: [] }), { status: 400 })
+    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, []), { status: 403 })
+    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 403 })
+    // the parent cannot change owner while it has fragments
+    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 400 })
+    // detach keeps the ACL as it is and re-opens ACL edition
+    res = await testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: null })
+    assert.equal(res.data.partOf, undefined)
+    permissions = (await testUser1Org.get(`/api/v1/datasets/${plain.id}/permissions`)).data
+    assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
+    await testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, [])
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })
+  })
+
+  test('a resource that has fragments cannot become a fragment', async () => {
+    const virtual = await createVirtual()
+    await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    const virtual2 = await createVirtual()
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { partOf: { type: 'dataset', id: virtual2.id } }), { status: 400 })
+  })
 })

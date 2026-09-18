@@ -28,6 +28,8 @@ import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import * as fragmentsService from '../../fragments/service.ts'
+import { fragmentForbiddenPatchKey } from '../../fragments/operations.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -153,6 +155,19 @@ export const registerMetadataRoutes = (router: Router) => {
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
 
+      // fragments: not publishable, and partOf changes are a dedicated write (spec §5)
+      const forbiddenKey = fragmentForbiddenPatchKey(patch, !!dataset.partOf || !!patch.partOf)
+      if (forbiddenKey) throw httpError(400, `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`)
+      if ('partOf' in patch) {
+        const updated = await fragmentsService.applyPartOfChange('datasets', dataset, patch.partOf, sessionState, whoFromReq(req))
+        delete patch.partOf
+        if (updated.partOf) dataset.partOf = updated.partOf
+        else delete dataset.partOf
+        dataset.permissions = updated.permissions
+        dataset.updatedAt = updated.updatedAt
+        eventsLog.info('df.datasets.partOf', `changed dataset parentage ${dataset.slug} (${dataset.id}) -> ${JSON.stringify(dataset.partOf ?? null)}`, { req, account: dataset.owner })
+      }
+
       // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
       // attachments and line ownership are outside the integrity snapshot, so acquiring them
       // while enrolled would silently degrade the stated guarantee — refuse the transition,
@@ -203,6 +218,9 @@ export const registerMetadataRoutes = (router: Router) => {
   // Change ownership of a dataset
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
+
+    if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+    if (await fragmentsService.countFragments('dataset', dataset.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
 
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
