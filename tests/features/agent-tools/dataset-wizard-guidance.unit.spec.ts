@@ -20,8 +20,8 @@ test.describe('DATASET_WIZARD_GUIDANCE', () => {
   })
 
   test('says what comes after creation, so no column step gets invented', () => {
-    assert.match(DATASET_WIZARD_GUIDANCE, /Structure > Schéma/)
     assert.match(DATASET_WIZARD_GUIDANCE, /no columns yet/)
+    assert.match(DATASET_WIZARD_GUIDANCE, /dataset page/)
   })
 
   test('names the tool that declares those columns', () => {
@@ -29,6 +29,15 @@ test.describe('DATASET_WIZARD_GUIDANCE', () => {
     // procedure, which is what every judged run ended on.
     assert.match(DATASET_WIZARD_GUIDANCE, /add_columns/)
     assert.match(DATASET_WIZARD_GUIDANCE, /Enregistrer/)
+  })
+
+  test('does not read as a route, and does not send the person looking', () => {
+    // It used to say "open its page, Structure > Schéma", and a judged run took
+    // that literally twice over: it navigated to /dataset/{id}/edit-schema, which
+    // does not exist, and then told a person who had said they would not explore
+    // the screen to go and find the tab and check the columns. They refused.
+    assert.ok(!DATASET_WIZARD_GUIDANCE.includes('>'), 'a "X > Y" path reads as a route to the model')
+    assert.match(DATASET_WIZARD_GUIDANCE, /do not send them looking/)
   })
 
   test('names every wizard tool and every type', () => {

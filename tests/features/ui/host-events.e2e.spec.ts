@@ -92,7 +92,7 @@ test.describe('host events published to the assistant', () => {
 
     const first = (await guidanceEvents())[0].detail!
     expect(first).toContain('wait_for_user_action')
-    expect(first).toContain('Structure > Schéma')
+    expect(first).toContain('add_columns')
     expect(first).not.toContain('[truncated]')
     for (const e of await guidanceEvents()) expect(e.detail).toBe(first)
     // Settle the chat's own re-emission handshake before counting.

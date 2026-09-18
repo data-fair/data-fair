@@ -20,4 +20,4 @@ export const DATASET_WIZARD_GUIDANCE =
   'virtual: a view over existing datasets; metaOnly: metadata only). ' +
   'Fill the wizard with select_dataset_type, set_dataset_title, set_rest_options, skip_init_from_step, advance_to_confirmation. ' +
   'The person presses Create themselves: once the confirmation step reports ready, tell them the button is ready and declare wait_for_user_action, so you learn of the creation without being asked. ' +
-  'After creation an editable dataset has no columns yet: open its page, Structure > Schéma, and declare the ones you agreed on with add_columns — the person reviews them and clicks Enregistrer.'
+  'After creation an editable dataset has no columns yet: on the dataset page, agree the columns with the person and declare them with add_columns. Then tell them to click Enregistrer — do not send them looking for a tab or ask them to check the columns themselves.'
