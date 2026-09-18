@@ -33,6 +33,13 @@
         >
           {{ t('warning') }}
         </v-alert>
+        <v-alert
+          type="info"
+          variant="outlined"
+          class="mt-2"
+        >
+          {{ t('prerequisites') }}
+        </v-alert>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -61,7 +68,8 @@ fr:
   title: Rattacher à un parent
   virtualParent: Jeu de données virtuel parent
   applicationParent: Application parente
-  warning: "Les permissions propres de la ressource seront remplacées par celles dérivées du parent. La ressource ne sera plus listée par défaut et sera supprimée avec son parent."
+  warning: "Les permissions propres de la ressource seront définitivement perdues et remplacées par celles dérivées du parent : les détacher ensuite ne les restaurera pas. La ressource ne sera plus listée par défaut et sera supprimée avec son parent."
+  prerequisites: "Une ressource publiée sur un portail ou un catalogue, ou configurée comme donnée de référence, ne peut pas être rattachée : retirez ces éléments au préalable."
   cancel: Annuler
   confirm: Rattacher
   successMsg: Ressource rattachée
@@ -70,7 +78,8 @@ en:
   title: Attach to a parent
   virtualParent: Parent virtual dataset
   applicationParent: Parent application
-  warning: "The resource's own permissions will be replaced by permissions derived from the parent. It will no longer be listed by default and will be deleted with its parent."
+  warning: "The resource's own permissions will be permanently lost and replaced by permissions derived from the parent: detaching it later will not restore them. It will no longer be listed by default and will be deleted with its parent."
+  prerequisites: "A resource published on a portal or a catalog, or configured as reference data, cannot be attached: remove these first."
   cancel: Cancel
   confirm: Attach
   successMsg: Resource attached

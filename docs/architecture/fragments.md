@@ -83,7 +83,8 @@ data it needs (parent lookup, sibling-fragment count) is fetched by `preparePart
 | Fragment has no fragments of its own | 400 | `validatePartOf`, `operations.ts:93` |
 | Fragment has no `publicationSites` / `requestedPublicationSites` | 400 | `validatePartOf`, `operations.ts:94` |
 | Fragment has no `publications` (external catalogs) | 400 | `validatePartOf`, `operations.ts:95` |
-| A fragment cannot be published (`publicationSites`, `requestedPublicationSites`, `publications`), on **any** write route | 400 | `fragmentWriteBodyError` / `fragmentForbiddenPatchKey` (`operations.ts`), applied by `fragments/middlewares.ts` on all four write routes (§3.1) |
+| Fragment is not reference data (`isMasterData(masterData)`) | 400 | `validatePartOf`, `operations.ts` |
+| A fragment cannot be published (`publicationSites`, `requestedPublicationSites`, `publications`) nor declared as reference data, on **any** write route | 400 | `fragmentWriteBodyError` / `fragmentForbiddenPatchKey` (`operations.ts`), applied by `fragments/middlewares.ts` on all four write routes (§3.1) |
 | `PUT /:id/permissions` on a fragment | 403 | `misc/utils/permissions.ts:367` |
 | `PUT /:id/owner` on a fragment | 403 | `datasets/routes/metadata.ts:228`, `applications/router.ts:146` |
 | `PUT /:id/owner` on a resource that still has fragments | 400 | `datasets/routes/metadata.ts:229`, `applications/router.ts:147` |
@@ -102,7 +103,7 @@ replacement and no publication refusal, and let `PUT /:applicationId` publish a 
 There is now **one** implementation: the express-free `fragmentWriteBodyError`
 (`api/src/fragments/operations.ts`), adapted by `api/src/fragments/middlewares.ts` as
 `fragmentWriteGuard(allowPartOfChange)` (a route-chain middleware) and `assertFragmentWriteBody`
-(the same check called directly from a handler). It says two things about any write body:
+(the same check called directly from a handler). It says three things about any write body:
 
 - `partOf` may not be changed on a route that does not go through `applyPartOfChange` — the dataset
   `POST`/`PUT /:datasetId` route and the application `PUT /:applicationId` route. An *identical*
@@ -110,6 +111,12 @@ There is now **one** implementation: the express-free `fragmentWriteBodyError`
   application PUT already did, and what the dataset route's equal-value stripping produces).
 - a fragment may never carry `publicationSites` / `requestedPublicationSites` / `publications`, on
   any of the four routes.
+- a fragment may never be reference data. Unlike the publication keys, **presence of the key is not
+  the signal**: `masterData` is an often-present but empty sub-object, and clearing it on a fragment
+  (or echoing an empty one back in a read-then-write round trip) has to keep working. The guard
+  therefore calls `isMasterData(body.masterData)` (`api/contract/master-data.js`), the same predicate
+  `validatePartOf` uses, which reads true only when one of the master-data features is actually
+  configured.
 
 | Route | How the guard is applied |
 |---|---|
@@ -121,8 +128,15 @@ There is now **one** implementation: the express-free `fragmentWriteBodyError`
 The guards are mounted **after** the permission middlewares on purpose: a caller who may not write
 the resource at all must keep getting a 403, not a 400 that leaks the body's shape.
 
-The last two publication refusals are refusals, not silent clean-ups: the user unpublishes first,
-then attaches. All new messages are French, per house convention, and name the blocking element.
+The publication and reference-data refusals are refusals, not silent clean-ups: the user unpublishes
+(or drops the master-data configuration) first, then attaches. All new messages are French, per house
+convention, and name the blocking element.
+
+The reference-data rule is **two-sided on purpose**. Reference data exists to be reused across many
+contexts, and other datasets' extensions point at it, so it cannot also be a resource that hides from
+listings and dies with a single parent. Refusing only at attach would be trivially bypassed by
+attaching first and declaring the master-data configuration afterwards, hence the same predicate on
+every write route.
 
 The API never checks that the parent actually references the fragment (`virtual.children`,
 `configuration.datasets`, `configuration.applications`). That link is intentionally weak: a
@@ -310,22 +324,25 @@ still holds for fragments, so cross-owner leakage through this path is not newly
 
 ## 6. Listing
 
-Both `findDatasets` (`api/src/datasets/service.ts:105-111`) and `findApplications`
-(`api/src/applications/service.ts:86-91`) apply the same rule, built from two pure helpers in
-`api/src/fragments/operations.ts`:
+Both `findDatasets` (`api/src/datasets/service.ts`) and `findApplications`
+(`api/src/applications/service.ts`) push the single filter returned by `partOfListFilter`
+(`api/src/fragments/operations.ts`) — one pure function so the two listings cannot drift:
 
-1. When `reqQuery.partOf` is present (`type:id`, parsed by `parsePartOfParam`, same syntax as
-   `owner`), the filter `{ 'partOf.type', 'partOf.id' }` is pushed. The standard ACL filter still
-   applies on top — the stored derived ACL makes that correct without any fragment-specific
-   listing logic: listing dataset fragments of a virtual dataset or of an application returns them
-   to owner members and to holders of derived management entries; listing sub-applications returns
-   them to whoever can read the dashboard.
-2. Otherwise, `shouldHideFragments(reqQuery)` (`operations.ts:108-111`) pushes
-   `{ partOf: { $exists: false } }` **unless** the query pins resources by one of `id`, `ids`,
-   `slug`, `slugs`, `children`, `dataset`, `application`. Those callers already know exactly what
+1. `partOf=<type>:<id>` (same syntax as `owner`) → `{ 'partOf.type', 'partOf.id' }`, the fragments of
+   that parent. A malformed value is a 400, not a silently ignored param.
+2. `partOf=true` → `{ 'partOf.id': { $exists: true } }`, every fragment whatever its parent. Mostly
+   an administration and debugging affordance ("what is hidden in this account?").
+3. Absent, or `partOf=false` → `{ partOf: { $exists: false } }`, fragments hidden — **unless** the
+   query pins resources by one of `id`, `ids`, `slug`, `slugs`, `children`, `dataset`,
+   `application`, in which case no filter is pushed at all. Those callers already know exactly what
    they are asking for (the virtual-children editor resolves child ids by `ids=`, a dataset page
    lists the applications built on it by `dataset=`), so hiding fragments there would only break a
    legitimate lookup.
+
+In cases 1 and 2 the standard ACL filter still applies on top — the stored derived ACL makes that
+correct without any fragment-specific listing logic: listing dataset fragments of a virtual dataset
+or of an application returns them to owner members and to holders of derived management entries;
+listing sub-applications returns them to whoever can read the dashboard.
 
 Facets and sums reuse the same `extraFilters`, so they follow the same rule; there is no `partOf`
 facet in this iteration. (`findApplications` now passes `extraFilters` to `facetsQuery` the way
@@ -374,6 +391,18 @@ resource in both collections and deletes each one through its full service delet
 files, keys). Fragments first, so a failed fragment deletion leaves a still-consistent parent.
 Dynamic imports (`await import('../datasets/service.ts')` etc.) avoid an import cycle, since both
 `datasets/service.ts` and `applications/service.ts` import `fragments/service.ts`.
+
+**Every** dataset deletion — cascaded or not — now also runs `detachFromVirtualParents`
+(`datasets/utils/virtual.ts`, called from `deleteDataset` right after the document is removed): it
+`$pull`s the id from every `virtual.children` referencing it and bumps those parents to `indexed` so
+they re-finalize over their remaining members. This is a general fix, not a fragments one — before
+it, deleting a member left a dangling id that broke the parent's next query — but the cascade makes
+it load-bearing here: deleting a virtual dataset's fragments could otherwise leave dangling ids in
+*other* virtual datasets that also aggregate them. It is skipped for a draft view
+(`dataset.draftReason`), whose id belongs to a published dataset that is not being deleted. The
+`$pull` writes `virtual`, which is integrity-covered metadata, without stamping — safe for one
+structural reason only: a virtual dataset is neither a file nor a rest dataset, so
+`enableIntegrityUnlocked` can never enroll it.
 
 The post-cascade `updateTotalStorage` call at the end of the dataset branch
 (`fragments/service.ts:120-124`) is **redundant on the dataset-parent path** — `DELETE
@@ -425,8 +454,10 @@ permission model on the client, it is purely presentational.
   carries an `agentDesc` for the back-office assistant (§9 of `agent-integration.md`).
 - **`fragment-attach-dialog.vue`**: on a standalone resource's danger zone, "Rattacher à un parent" —
   a `dataset-select` restricted to `virtual: true` and the same owner for a dataset parent, or an
-  autocomplete over `/applications?owner=...` for an application parent — with a warning that the
-  resource's own permissions will be replaced.
+  autocomplete over `/applications?owner=...` for an application parent. Two alerts: a warning that
+  the resource's own permissions are **permanently lost** and replaced by the derived ACL (detaching
+  later does not restore them, §7), and an informational note of the prerequisites the API refuses on
+  — a published resource, or one configured as reference data, cannot be attached.
 - **Parent delete dialog loop**: deleting a resource that has fragments shows a warning ("Ce jeu de
   données a N fragment(s) qui seront supprimés avec lui") with two actions: the default delete
   button (relies on the unconditional API cascade), or "Détacher d'abord"
@@ -508,13 +539,15 @@ work:
 | Concern | File |
 |---|---|
 | Pure logic: validation, derivation, write-guard decision, listing filter | `api/src/fragments/operations.ts` |
+| `isMasterData` predicate, shared by the attach validation and the write guard | `api/contract/master-data.js` |
 | Write guard mounted on all four write routes (§3.1) | `api/src/fragments/middlewares.ts` |
 | Mongo-backed operations: attach/detach, sync, delete cascade | `api/src/fragments/service.ts` |
 | Schema (`partOf` property) | `api/types/dataset/schema.js`, `api/types/application/schema.js` |
 | `Resource` type pick | `api/types/index.ts` |
 | Mongo index | `api/src/mongo.ts` |
 | Dataset PATCH / owner-change / delete routes | `api/src/datasets/routes/metadata.ts` |
-| Dataset creation | `api/src/datasets/service.ts` |
+| Dataset creation, delete cascade entry point | `api/src/datasets/service.ts` |
+| `detachFromVirtualParents` (every dataset delete, §7) | `api/src/datasets/utils/virtual.ts` |
 | Application PATCH / owner-change / delete / creation | `api/src/applications/router.ts`, `api/src/applications/service.ts` |
 | `PUT /permissions` refusal + sync hook wiring | `api/src/misc/utils/permissions.ts` (router), `datasets/routes/metadata.ts:96-104`, `applications/router.ts:74-83` |
 | Application-context middleware (§5) | `api/src/misc/utils/application-key.ts` |
@@ -523,4 +556,4 @@ work:
 | UI: banner, fragments tab, attach dialog | `ui/src/components/common/fragment-banner.vue`, `fragments-list.vue`, `fragment-attach-dialog.vue` |
 | UI: fragment page gates, delete dialog loop | `ui/src/pages/dataset/[id]/index.vue`, `ui/src/pages/application/[id]/index.vue` |
 | UI: new-resource `partOf` prefill | `ui/src/pages/new-dataset.vue`, `ui/src/pages/new-application.vue` |
-| Tests | `tests/features/fragments/*.spec.ts`, `tests/features/ui/fragments.e2e.spec.ts` |
+| Tests | `tests/features/fragments/*.spec.ts`, `tests/features/ui/fragments.e2e.spec.ts`, `tests/features/datasets/virtual/virtual-member-deletion.api.spec.ts` |
