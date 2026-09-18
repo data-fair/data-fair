@@ -152,6 +152,40 @@ export function buildDatasetStructureState (input: DatasetStructureInput): Datas
   }
 }
 
+/**
+ * The add/edit line dialog on the data-entry page.
+ *
+ * It published nothing at all. A judged run had the assistant fill the add-line
+ * form, end its turn with « Une fois que c'est fait, dites-le moi », and spend the
+ * person's whole next message on a save the application already knew about;
+ * `wait_for_user_action` was offered on every request and was never usable,
+ * because no event would have resolved it. This is `structure` +
+ * `dataset-structure-saved` one page along: what is true now, and — emitted from
+ * `saveLine` — the transition that ends the wait.
+ */
+export interface LineDialogInput {
+  /** Which dialog is open, or null when none is. */
+  mode: 'add' | 'edit' | null
+  /** The form validates, so Save will not be refused. */
+  valid: boolean
+}
+
+export interface LineDialogState {
+  mode: 'add' | 'edit' | 'none'
+  /** Save can be pressed right now. */
+  ready: boolean
+}
+
+export function buildLineDialogState (input: LineDialogInput): LineDialogState {
+  // 'none' rather than an absent state, the same way the wizard reports a type it
+  // does not have yet. `useAgentState` does not emit for an empty value and only
+  // withdraws a key on unmount, so returning nothing here would leave the chat
+  // holding the last open dialog for the rest of the session — telling the
+  // assistant a form is waiting to be saved long after the person saved it.
+  if (!input.mode) return { mode: 'none', ready: false }
+  return { mode: input.mode, ready: input.valid }
+}
+
 export interface ApplicationWizardInput {
   step: string
   creationType?: 'copy' | 'baseApp' | null

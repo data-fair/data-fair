@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { buildLocationState, buildDatasetWizardState, buildApplicationWizardState, buildDatasetStructureState } from '../../../ui/src/composables/agent/host-state.ts'
+import { buildLocationState, buildDatasetWizardState, buildApplicationWizardState, buildDatasetStructureState, buildLineDialogState } from '../../../ui/src/composables/agent/host-state.ts'
 
 // These payloads are re-sent in full in the <host-state> snapshot at every
 // activation, so every field that is empty is a token the model re-reads for
@@ -175,5 +175,36 @@ test.describe('buildDatasetStructureState', () => {
       buildDatasetStructureState({ columns: 0, unsaved: false, valid: true }),
       { columns: 0, unsaved: false, ready: false }
     )
+  })
+})
+
+/**
+ * The line-editing dialogs published nothing. A judged run had the assistant fill
+ * the add-line form, end its turn with « Une fois que c'est fait, dites-le moi »,
+ * and spend the person's whole second message on a save the application already
+ * knew about. `wait_for_user_action` was offered on every request and was never
+ * usable, because nothing would have resolved it.
+ *
+ * Same pair as the schema form: what is true now, and the transition that ends
+ * the wait.
+ */
+test.describe('buildLineDialogState', () => {
+  test('says "none" when no dialog is open, rather than going quiet', () => {
+    // An e2e caught this: useAgentState does not emit for an empty value and only
+    // withdraws a key on unmount, so publishing nothing here left the chat holding
+    // the last open dialog — an assistant would believe a form was still waiting
+    // to be saved for the rest of the session.
+    assert.deepEqual(buildLineDialogState({ mode: null, valid: false }), { mode: 'none', ready: false })
+  })
+
+  test('says which dialog is open and whether Save can be pressed', () => {
+    assert.deepEqual(buildLineDialogState({ mode: 'add', valid: true }), { mode: 'add', ready: true })
+    assert.deepEqual(buildLineDialogState({ mode: 'edit', valid: true }), { mode: 'edit', ready: true })
+  })
+
+  test('reports a half-filled form as not ready', () => {
+    // Telling someone to press a button the form will refuse is the failure this
+    // exists to stop — the same reason `ready` is not the button's own disabled prop.
+    assert.deepEqual(buildLineDialogState({ mode: 'add', valid: false }), { mode: 'add', ready: false })
   })
 })

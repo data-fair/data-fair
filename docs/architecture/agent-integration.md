@@ -620,6 +620,8 @@ ever starts a model turn.
 | `wizard` (keyed) | `ui/src/pages/new-dataset.vue` | `step`, `type`, `title`, `ready`, plus the options of the chosen type (`file`, `history`/`attachments`, `children`) |
 | `wizard` (keyed) | `ui/src/pages/new-application.vue` | `step`, `creationType`, `selected`, `title`, `ready` |
 | `wizard-guidance` (keyed) | `ui/src/pages/new-dataset.vue`, `ui/src/pages/new-application.vue` | the wizard's guidance text, a constant: emitted once at mount and once per `agent-state-request` (a chat opening asks every publisher to re-emit; the chat keeps one value per key), never on step changes, withdrawn on unmount. The two wizards share the key deliberately: only one is ever mounted, and the chat keeps one value per key, so a stale guidance cannot outlive its page. |
+| `line-dialog` (keyed) | `ui/src/components/dataset/table/dataset-table.vue` (inside the `edit` gate) | `mode` (`add` / `edit` / `none`) and `ready` — Save can be pressed right now. `none` rather than an absent state: `useAgentState` does not emit for an empty value and withdraws a key only on unmount, so going quiet would leave the chat holding the last open dialog. |
+| `dataset-line-saved` | `ui/src/components/dataset/table/use-dataset-edition.ts` (`saveLine`) | `id`, `action` (`create` / `update`), `lineId` — emitted from the one call both dialogs go through, and only on a save that landed |
 | `structure` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `columns` (the ones a person put there), `unsaved`, `ready` — `ready` is `unsaved && valid`, i.e. Enregistrer can be pressed right now |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
 | `dataset-structure-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id`, `columns` — emitted after a save that really landed, so a declared wait resolves on it |
@@ -650,6 +652,16 @@ context while the assistant had already told the person the button was live. The
 tool now polls the same `wizardReady` computed for up to 5s and says what it found,
 naming the label the button actually shows (`nextButtonText`) rather than a guess.
 When the check has not come back in time it says so instead of claiming readiness.
+
+**Why the line dialogs publish it too.** A judged run had the assistant fill the
+add-line form, end its turn with « Une fois que c'est fait, dites-le moi », and
+spend the person's whole next message on a save the application already knew
+about. `wait_for_user_action` was offered on every request and was never usable,
+because nothing would have resolved it. The state is shared through
+`use-dataset-edition.ts` because the two dialogs live in two components — add in
+the header actions, edit in the table — while only one can be open at a time, so
+the assistant gets one answer; and the event is emitted from `saveLine` for the
+same reason, it being the one call both go through.
 
 **Why the schema form publishes the same pair as the wizard.** The creation flow
 now ends on the dataset page, not at Create, and that page used to publish nothing.

@@ -476,6 +476,8 @@ import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronL
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
 import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
+import { useAgentState } from '@data-fair/lib-vue-agents'
+import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -645,9 +647,17 @@ const nextPage = async () => {
   paginationPage.value++
 }
 const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
-const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
+  // The pair the creation wizard and the schema form already have: what is true
+  // now, and — from saveLine — the transition that ends a declared wait. Inside the
+  // `edit` gate with the tools, because a read-only table has no dialog to report.
+  useAgentState('line-dialog', () => buildLineDialogState({
+    mode: lineDialog.value?.mode ?? null,
+    valid: !!lineDialog.value?.valid
+  }))
+
   useAgentTool({
     name: 'open_add_line_dialog',
     description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
@@ -765,6 +775,16 @@ const editLineValid = ref(false)
 const editLineForm = ref<VForm>()
 const editedLine = ref<DatasetLine>()
 const file = ref<File>()
+// Keep the shared dialog state in step with this dialog, so the assistant can be
+// told the Save button is live instead of asserting it. `editedLine` rather than
+// `showEditDialog` so it flips only once the row has actually loaded into the form.
+watch([editedLine, editLineValid], () => {
+  if (!editedLine.value) {
+    if (lineDialog.value?.mode === 'edit') lineDialog.value = null
+    return
+  }
+  lineDialog.value = { mode: 'edit', valid: editLineValid.value }
+}, { immediate: true })
 const editLine = useAsyncAction(async () => {
   await editLineForm.value?.validate()
   if (!editLineValid.value) return

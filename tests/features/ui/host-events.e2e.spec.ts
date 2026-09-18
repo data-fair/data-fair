@@ -161,6 +161,45 @@ test.describe('host events published to the assistant', () => {
     expect(regressed, 'the click reported the form as not ready').toEqual([])
   })
 
+  test('the add-line dialog reports itself, and the save ends the wait', async ({ page, goToWithAuth }) => {
+    // A judged run had the assistant fill this form, end its turn with « Une fois
+    // que c'est fait, dites-le moi », and spend the person's whole next message on
+    // a save the application already knew about. wait_for_user_action was offered
+    // on every request and was never usable, because nothing would resolve it.
+    const ax = await axiosAuth('test_user1@test.com')
+    const { data: created } = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'Registre',
+      schema: [{ key: 'nom', type: 'string', title: 'Nom' }]
+    })
+
+    await page.addInitScript(collectEvents)
+    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_user1')
+
+    // Nothing open: the state is withdrawn rather than saying "no dialog".
+    await expect(page.getByRole('button', { name: /Ajouter une ligne/ })).toBeVisible({ timeout: 15000 })
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'line-dialog')?.mode, { timeout: 15000 }).toBe('none')
+
+    await page.getByRole('button', { name: /Ajouter une ligne/ }).click()
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'line-dialog')?.mode, { timeout: 15000 }).toBe('add')
+
+    await page.getByLabel(/Nom/).first().fill('Les Amis du Vieux Moulin')
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'line-dialog')?.ready, { timeout: 15000 }).toBe(true)
+
+    await page.locator('.v-card-actions').getByRole('button', { name: /Enregistrer/ }).click()
+
+    // Unkeyed, so a declared wait resolves on it rather than treating it as a refresh.
+    await expect.poll(async () => (await readEvents(page)).find(e => e.name === 'dataset-line-saved'), { timeout: 30000 })
+      .toBeTruthy()
+    const saved = (await readEvents(page)).find(e => e.name === 'dataset-line-saved')!
+    expect(saved.key, 'a keyed save would not resolve a wait').toBeFalsy()
+    expect(JSON.parse(saved.detail!).action).toBe('create')
+
+    // And it says so on the way out: a state that just stopped updating would
+    // leave the assistant believing a form is still open.
+    await expect.poll(async () => lastKeyed(await readEvents(page), 'line-dialog')?.mode, { timeout: 15000 }).toBe('none')
+  })
+
   test('the application wizard tells the assistant how it works too', async ({ page, goToWithAuth }) => {
     // The same on-arrival channel as the dataset wizard. It had none: its guidance
     // lived only in the action button's hidden context, which no judged run has
