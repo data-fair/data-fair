@@ -402,10 +402,26 @@ export interface ResolvedDefinition extends TextSearchDefinition {
   tieBreakField: string
 }
 
+/**
+ * Sanitise a field path for use as a MongoDB document key. A dotted path like 'topics.title'
+ * stored as a literal key is UNADDRESSABLE from an aggregation path expression: `$_pos.topics.title`
+ * reads as the nested traversal _pos -> topics -> title, resolves to nothing, and scores the
+ * document ZERO while it still matches via _terms. Store under the sanitised key instead.
+ */
+export const fieldKey = (path: string): string => path.replace(/\./g, '_')
+
 export const validateDefinition = (def: TextSearchDefinition): ResolvedDefinition => {
   if (!def.fields || !Object.keys(def.fields).length) throw new Error('text-search: fields must not be empty')
   for (const [field, weight] of Object.entries(def.fields)) {
     if (!(weight > 0)) throw new Error(`text-search: weight for "${field}" must be > 0`)
+  }
+  // two paths that sanitise to the same key would overwrite each other's _pos/_len entries
+  const sanitised = new Map<string, string>()
+  for (const field of Object.keys(def.fields)) {
+    const key = fieldKey(field)
+    const seen = sanitised.get(key)
+    if (seen && seen !== field) throw new Error(`text-search: field paths "${seen}" and "${field}" collide after sanitisation (both become "${key}")`)
+    sanitised.set(key, field)
   }
   const gateSize = def.gateSize ?? 3
   // Not a tuning knob: gating on a single term makes the query an AND on it, so one unknown word
@@ -421,7 +437,7 @@ export const validateDefinition = (def: TextSearchDefinition): ResolvedDefinitio
 
 ```ts
 import type { Analyzer } from './analysis.ts'
-import type { ResolvedDefinition } from './definition.ts'
+import { fieldKey, type ResolvedDefinition } from './definition.ts'
 
 export interface IndexFields {
   /** every distinct stem in the document — the multikey-indexed candidate gate */
@@ -455,8 +471,10 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
   const _len: IndexFields['_len'] = {}
   const terms = new Set<string>()
   for (const field of Object.keys(def.fields)) {
+    // read the document by the ORIGINAL dotted path, but STORE under the sanitised key
     const tokens = analyzer.analyze(extractFieldValue(doc, field))
-    _len[field] = tokens.length
+    const key = fieldKey(field)
+    _len[key] = tokens.length
     if (!tokens.length) continue
     const positions: Record<string, number[]> = {}
     for (const { term, position } of tokens) {
@@ -465,7 +483,7 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
       ;(positions[term] ??= []).push(position)
       terms.add(term)
     }
-    _pos[field] = positions
+    _pos[key] = positions
   }
   if (!terms.size) return null
   return { _terms: [...terms], _pos, _len }
@@ -826,7 +844,7 @@ Expected: FAIL — cannot find module `pipeline.ts`.
 - [ ] **Step 3: Write the implementation**
 
 ```ts
-import type { ResolvedDefinition } from './definition.ts'
+import { fieldKey, type ResolvedDefinition } from './definition.ts'
 import type { QueryPlan, PhraseTerm } from './query.ts'
 
 /**
@@ -852,7 +870,7 @@ const phraseExpression = (phrase: PhraseTerm[], fields: string[]): any => ({
           $reduce: {
             input: phrase.map(({ term, delta }) => ({
               $map: {
-                input: { $ifNull: [`$_pos.${field}.${term}`, []] },
+                input: { $ifNull: [`$_pos.${fieldKey(field)}.${term}`, []] },
                 in: { $subtract: ['$$this', delta] }
               }
             })),
@@ -888,8 +906,8 @@ export const scoreExpression = (plan: QueryPlan, def: ResolvedDefinition): any =
         $let: {
           vars: {
             // term frequency is the number of recorded positions
-            tf: { $size: { $ifNull: [`$_pos.${field}.${term}`, []] } },
-            l: { $ifNull: [`$_len.${field}`, 0] }
+            tf: { $size: { $ifNull: [`$_pos.${fieldKey(field)}.${term}`, []] } },
+            l: { $ifNull: [`$_len.${fieldKey(field)}`, 0] }
           },
           in: {
             $cond: [{ $eq: ['$$tf', 0] }, 0, {
