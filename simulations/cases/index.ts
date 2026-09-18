@@ -107,6 +107,10 @@ export const cases: SimulationCase[] = [
     route: '/data-fair/datasets',
     persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu n\'explores pas l\'écran de toi-même et tu ne veux pas avoir à le décrire à quelqu\'un. Tu ne veux pas faire les étapes toi-même : tu laisses l\'assistant tout préparer. La seule chose que tu fais à l\'écran, c\'est presser toi-même, avec tes outils, le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Après ça tu t\'arrêtes : tu n\'explores pas l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
     goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux que l\'assistant prépare tout ça pour toi ; tu presseras toi-même le bouton de création quand il te dira que c\'est prêt. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
-    maxTurns: 6
+    // 9, not 6: the flow used to end at Create. With add_columns the assistant
+    // goes on to the dataset page, proposes the columns and has the person press
+    // Enregistrer, which the goal has always needed — colleagues cannot enter a
+    // request into a dataset with no columns.
+    maxTurns: 9
   }
 ]
