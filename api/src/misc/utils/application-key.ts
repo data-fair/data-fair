@@ -97,13 +97,22 @@ export const resolveApplicationContextBypass = async (applicationKeyId: string |
     applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
     if (!applicationKey) return null
     if (resolvedAppId === undefined) {
-      // dataset embed page context: the key's own application must reference the dataset (or be its parent)
+      // dataset embed page context: the key's own application must reference the dataset
       resolvedAppId = applicationKey._id
-      if (parentAppId !== applicationKey._id && !await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
+      if (!await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
     } else if (applicationKey._id !== resolvedAppId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
       const callingApp = await findCallingApplication(resolvedAppId, ownerType, ownerId, ownerDep)
-      const isFragmentOfKeyApp = callingApp?.partOf?.type === 'application' && callingApp.partOf.id === applicationKey._id
+      // the partOf edge only extends the key's reach within its own fragment family: a calling
+      // application that is a fragment of the key's application may be used to read a dataset that
+      // is itself a fragment of that SAME application. Attaching a fragment only needs readDescription
+      // on the parent (deliberately, not write) — if this also unlocked arbitrary same-owner datasets
+      // the calling app merely lists in its own config, any org member who can read a dashboard and
+      // create applications could attach a rogue fragment, point its config at any dataset, and read
+      // it through the dashboard's already-distributed key. Requiring the dataset to be a fragment of
+      // the *same* parent as the calling app closes that: reassigning someone else's dataset to your
+      // own parent still needs changeOwner on the dataset, which this path never grants.
+      const isFragmentOfKeyApp = callingApp?.partOf?.type === 'application' && callingApp.partOf.id === applicationKey._id && parentAppId === applicationKey._id
       if (!isFragmentOfKeyApp && !await countParentApplicationOfApp(applicationKey._id, resolvedAppId, ownerType, ownerId, ownerDep)) return null
     }
   } else {

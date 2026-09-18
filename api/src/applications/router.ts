@@ -14,6 +14,7 @@ import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attach
 import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
 import { fragmentForbiddenPatchKey } from '../fragments/operations.ts'
+import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -75,6 +76,10 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
   await publicationSites.onPublic(patchedApplication, 'applications', reqSessionAuthenticated(req))
 }, async (patchedApplication) => {
   await fragmentsService.syncFragmentPermissions('applications', patchedApplication)
+  // the application-context session proof memoizes this application's permissions for 30s
+  // (findCallingApplication in application-key.ts) — an ACL edit must invalidate it immediately,
+  // same as a key/config edit already does through the other call sites of this function
+  clearApplicationKeysCaches()
 }))
 
 // retrieve a application by its id
