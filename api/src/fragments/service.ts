@@ -83,13 +83,25 @@ export const applyPartOfChange = async (resourceType: FragmentResourceType, reso
   return updated
 }
 
-/** Recompute the derived ACL of every fragment of `parent` (spec §3.7). At most two updateMany. */
+/** Recompute the derived ACL of every fragment of `parent` (spec §3.7). At most three updateMany. */
 export const syncFragmentPermissions = async (parentType: FragmentResourceType, parent: { id: string, permissions?: Permission[] }) => {
   const type = resourceTypeToPartOfType(parentType)
   const filter = fragmentsFilter(type, parent.id)
   const updatedAt = new Date().toISOString()
-  await mongo.datasets.updateMany(filter, { $set: { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'datasets'), updatedAt } })
+  const $set = { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'datasets'), updatedAt }
+  // `permissions` is integrity-covered metadata: an unstamped writer makes the fragment's next
+  // integrity check report a metadata tamper breach for a legitimate system write. Split in two so
+  // the stamp stays single-document atomic with the write it accounts for (the same posture as the
+  // fragment's own attach/detach above and as PUT /permissions), rather than the two-phase
+  // stampHistorizeMany the self-invalidating $pull/$unset propagations are forced into.
+  // `propagation`, not `user`: the actor edited the PARENT's ACL, this write is its fan-out.
+  await mongo.datasets.updateMany({ ...filter, 'integrity.active': { $ne: true } }, { $set })
+  await mongo.datasets.updateMany(
+    { ...filter, 'integrity.active': true },
+    stampHistorize({ $set }, { operation: 'update', origin: 'propagation' }) as any
+  )
   if (parentType === 'applications') {
+    // applications have no integrity trail
     await mongo.applications.updateMany(filter, { $set: { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'applications'), updatedAt } })
   }
 }
