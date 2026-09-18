@@ -18,6 +18,7 @@ import { reqSession } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import type { Application, PublicationSite, Request } from '#types'
 import filesStorage from '#files-storage'
+import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
 
 export const clean = (application: Application, publicUrl: string, publicationSite: PublicationSite, query: Record<string, string> = {}) => {
   const select = query.select ? query.select.split(',') : []
@@ -38,6 +39,7 @@ export const clean = (application: Application, publicUrl: string, publicationSi
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
   delete application._uniqueRefs
+  for (const field of INDEX_FIELD_NAMES) delete (application as any)[field]
 
   const thumbnail = query.thumbnail || '300x200'
   if (application.image && application.public && !select.includes('-thumbnail')) {

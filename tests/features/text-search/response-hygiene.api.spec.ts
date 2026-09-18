@@ -46,4 +46,19 @@ test.describe('search index fields stay server-side', () => {
       }
     }
   })
+
+  test('never reach a single application GET, PUT or PATCH response', async () => {
+    const { data: created } = await u1.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Application de consommation' })
+    const { id, slug } = created
+    for (const field of INDEX_FIELDS) assert.equal(created[field], undefined, `${field} leaked from the POST response`)
+
+    const get = (await u1.get('/api/v1/applications/' + id)).data
+    for (const field of INDEX_FIELDS) assert.equal(get[field], undefined, `${field} leaked from the GET response`)
+
+    const put = (await u1.put('/api/v1/applications/' + id, { url: mockAppUrl('monapp1'), slug, title: 'updated title' })).data
+    for (const field of INDEX_FIELDS) assert.equal(put[field], undefined, `${field} leaked from the PUT response`)
+
+    const patch = (await u1.patch('/api/v1/applications/' + id, { title: 'patched title' })).data
+    for (const field of INDEX_FIELDS) assert.equal(patch[field], undefined, `${field} leaked from the PATCH response`)
+  })
 })
