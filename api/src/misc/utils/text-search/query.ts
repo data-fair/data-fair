@@ -35,15 +35,34 @@ export const parseQuery = (q: string, analyzer: Analyzer): ParsedQuery => {
   const phrases: PhraseTerm[][] = []
   const text = String(q ?? '')
 
-  // quoted groups first, so their words are not re-read as loose terms below
-  let rest = text
-  for (const match of text.matchAll(PHRASE_RE)) {
+  // Collect all quoted phrases with their indices
+  const phraseMatches = Array.from(text.matchAll(PHRASE_RE))
+
+  // Process each quoted phrase
+  for (const match of phraseMatches) {
     const tokens = analyzer.analyze(match[1])
-    if (tokens.length > 1) {
+    const indexOfQuote = match.index!
+
+    // Check if there's a `-` immediately before the quote
+    // This handles `-"phrase"` as term-level negation (excludes documents containing these terms,
+    // not necessarily the exact phrase). Note: MongoDB $text supported true phrase negation, but
+    // this approximation is simpler and never inverts intent like the original bug did.
+    const isNegatedPhrase = indexOfQuote > 0 && text[indexOfQuote - 1] === '-'
+
+    // Only create a phrase entry if it's not negated
+    if (tokens.length > 1 && !isNegatedPhrase) {
       const base = tokens[0].position
       phrases.push(tokens.map(t => ({ term: t.term, delta: t.position - base })))
     }
-    for (const t of tokens) positive.push(t.term)
+
+    for (const t of tokens) {
+      (isNegatedPhrase ? negated : positive).push(t.term)
+    }
+  }
+
+  // Remove phrases from text, replacing with spaces
+  let rest = text
+  for (const match of phraseMatches) {
     rest = rest.replace(match[0], ' ')
   }
 
@@ -64,9 +83,13 @@ export const queryTerms = (parsed: ParsedQuery): string[] =>
   [...new Set([...parsed.positive, ...parsed.negated])]
 
 export const planQuery = (parsed: ParsedQuery, stats: CorpusStats, def: ResolvedDefinition): QueryPlan | null => {
+  // Negation wins: remove any terms that are also negated (prevents vacuous plans like "charge -charge")
+  const negatedSet = new Set(parsed.negated)
+  let terms = parsed.positive.filter(t => !negatedSet.has(t))
+
   // A term absent from the corpus cannot match or contribute to a score. Dropping it here is also
   // what stops a typo from becoming the gate.
-  const terms = parsed.positive.filter(t => (stats.df[t] ?? 0) > 0)
+  terms = terms.filter(t => (stats.df[t] ?? 0) > 0)
   if (!terms.length) return null
 
   const idf: Record<string, number> = {}

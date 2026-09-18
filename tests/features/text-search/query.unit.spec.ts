@@ -33,6 +33,21 @@ test.describe('parseQuery', () => {
   test('an unterminated quote is treated as plain text', () => {
     assert.deepEqual(parseQuery('"courbe de charge', analyzer).phrases, [])
   })
+
+  test('-"phrase" negates: terms go to negated, not positive, and no phrase is created', () => {
+    const p = parseQuery('-"courbe de charge"', analyzer)
+    assert.deepEqual(p.negated.sort(), ['charg', 'courb'].sort())
+    assert.deepEqual(p.positive, [])
+    assert.deepEqual(p.phrases, [])
+  })
+
+  test('-"phrase" combined with positive term keeps phrase terms negated', () => {
+    const p = parseQuery('gaz -"courbe de charge"', analyzer)
+    assert.ok(p.positive.includes('gaz'))
+    assert.ok(!p.positive.includes('courb') && !p.positive.includes('charg'))
+    assert.ok(p.negated.includes('courb') && p.negated.includes('charg'))
+    assert.deepEqual(p.phrases, [])
+  })
 })
 
 test.describe('planQuery', () => {
@@ -76,6 +91,18 @@ test.describe('planQuery', () => {
     const plan = planQuery(parseQuery('charge -gaz', analyzer), stats({ charg: 10, gaz: 5 }), def)!
     assert.deepEqual(plan.negated, ['gaz'])
     assert.equal(plan.idf.gaz, undefined)
+  })
+
+  test('a self-contradictory query (term both positive and negated) returns null', () => {
+    assert.equal(planQuery(parseQuery('charge -charge', analyzer), stats({ charg: 10 }), def), null)
+  })
+
+  test('negation wins: a mixed query keeps only non-negated positive terms', () => {
+    const plan = planQuery(parseQuery('charge gaz -charge', analyzer), stats({ charg: 10, gaz: 5 }), def)!
+    assert.ok(plan.terms.includes('gaz'))
+    assert.ok(!plan.terms.includes('charg'))
+    assert.ok(!plan.gate.includes('charg'))
+    assert.deepEqual(plan.negated, ['charg'])
   })
 })
 
