@@ -13,6 +13,10 @@ permission model.
 > private requires authentication. Application keys let the owner mint a per-application URL that
 > grants exactly the operations the application needs.
 
+> See also: [Fragments (`partOf`)](./fragments.md) — the application-context middleware described
+> in §5 below also generalizes to a session proof for dataset fragments, and its reachability check
+> gained a `partOf` edge (§9).
+
 ## 1. Data model
 
 The keys live in their own MongoDB collection, `applications-keys`, one document per application.
@@ -28,7 +32,7 @@ type ApplicationKey = {
 }
 ```
 
-The collection has a single index on `keys.id` (`api/src/mongo.ts:99`) so a referer-derived key
+The collection has a single index on `keys.id` (`api/src/mongo.ts:103`) so a referer-derived key
 can be resolved in one query. There is no other state: a key is just an opaque id; the operations
 it unlocks are derived at request time from the application's configuration.
 
@@ -42,7 +46,7 @@ The JSON contract for the management endpoint is intentionally minimal:
 ## 2. Lifecycle (CRUD)
 
 Two endpoints, both gated by `permissions.middleware('…Keys', 'admin')` on the parent application
-(`api/src/applications/router.js:614-642`):
+(`api/src/applications/router.ts:250-258`):
 
 | Endpoint                                | Class | Purpose                                          |
 |-----------------------------------------|-------|--------------------------------------------------|
@@ -50,9 +54,10 @@ Two endpoints, both gated by `permissions.middleware('…Keys', 'admin')` on the
 | `POST /api/v1/applications/:id/keys`    | admin | Replace the full array; auto-fills `id = nanoid()` for new entries; upserts the doc with `_id = application.id` and `owner = application.owner` |
 
 When the parent application is deleted, its keys document is dropped too
-(`api/src/applications/router.js:425`). Identity changes (org → user, department moves, …) propagate
-through the standard owner-rewrite logic in `api/src/identities/router.js` which lists
-`applications-keys` among the collections to update.
+(`mongo.applicationsKeys.deleteOne(...)`, `api/src/applications/service.ts:391`, called from
+`deleteApplication`). Identity changes (org → user, department moves, …) propagate through the
+standard owner-rewrite logic in `api/src/identities/service.ts` which lists `applications-keys`
+among the collections to update.
 
 The UI exposes a single-key shortcut in
 `ui/src/components/application/application-protected-links.vue`: "Créer un lien protégé" POSTs an
@@ -66,9 +71,9 @@ Two equivalent encodings are accepted, throughout the codebase:
 1. Query parameter — `…/app/<appId>?key=<keyId>`
 2. Path prefix — `…/app/<keyId>:<appId>`
 
-The path-prefix form exists because some embedding contexts strip query parameters; the proxy
+The path-prefix form exists because some embedding contexts strip query parameters; `setProxyResource`
 detects it by splitting `req.params.applicationId` on `:`
-(`api/src/applications/proxy.js:42-48`). Both forms are URL-decoded with `decodeURIComponent`
+(`api/src/applications/middlewares.ts:61-67`). Both forms are URL-decoded with `decodeURIComponent`
 since the `:` makes the segment unsafe for raw use.
 
 The same two encodings apply to dataset embed pages (`/data-fair/embed/dataset/<keyId>:<datasetId>`
@@ -76,43 +81,52 @@ or `?key=…`), handled by the dataset-API middleware (see §5).
 
 ## 4. Enforcement point 1 — application proxy
 
-`api/src/applications/proxy.js` is what users actually load in their browser when they open
-`/data-fair/app/...`. The `setResource` middleware:
+`api/src/applications/proxy.ts` is what users actually load in their browser when they open
+`/data-fair/app/...`. The `setProxyResource` middleware (`api/src/applications/middlewares.ts:51-77`):
 
 1. Looks up the application by id/slug.
-2. If a key is present, queries `applications-keys` with an **owner filter** built from the
-   application's owner (`api/src/applications/proxy.js:50-72`).
-3. Accepts the key in either of two cases:
-   - it matches the application directly (`applicationKey._id === application.id`), or
+2. If a key is present, builds an **owner filter** from the application's owner
+   (`middlewares.ts:65-69`) and calls `matchApplicationKey` (`api/src/applications/proxy-service.ts:11-28`),
+   which queries `applications-keys` with that filter.
+3. Accepts the key in any of three cases (`proxy-service.ts:14-24`):
+   - it matches the application directly (`applicationKey._id === application.id`);
+   - the application is a fragment of the key's own application (`application.partOf.id ===
+     applicationKey._id`, added for [fragments](./fragments.md));
    - it matches a *parent* application whose `configuration.applications` references this app
-     (dashboard composition, §6).
-4. On success, sets `req.matchingApplicationKey` for downstream handlers.
+     (dashboard composition, §9).
+4. On success, sets the matching key id for downstream handlers via `setReqMatchingApplicationKey`.
 
-The proxy handler (`router.all('/:applicationId/*extraPath', ...)`, lines 191-196) is the gate:
+The proxy handler (`router.all(['/:applicationId/*extraPath', '/:applicationId'], ...)`,
+`proxy.ts:94-99`, and the `manifest.json` route at `proxy.ts:44-46`) is the gate:
 
-```js
-if (!permissions.can('applications', req.application, 'readConfig', reqSession(req))
-    && !req.matchingApplicationKey) {
-  return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
+```ts
+if (!permissions.can('applications', application, 'readConfig', reqSession(req)) && !reqMatchingApplicationKey(req)) {
+  return res.redirect(`${reqPublicBaseUrl(req)}/app/${req.params.applicationId}/login`)
 }
 ```
 
-So a valid key short-circuits the redirect to the SSO login page. The key id is then injected
-into the application configuration sent to the iframe as `req.application.applicationKey` so the
-in-app JS can propagate it to its own API calls (`proxy.js:203`).
+So a valid key short-circuits the redirect to the SSO login page. The key id is then injected into
+the application configuration sent to the iframe as `application.applicationKey`
+(`proxy.ts:106-107`) so the in-app JS can propagate it to its own API calls.
 
 ## 5. Enforcement point 2 — dataset API middleware
 
-`api/src/misc/utils/application-key.ts` is wired *very* broadly into the dataset router
-(`api/src/datasets/router.js` — `applicationKey` appears on every read endpoint, the `/lines`
-write endpoint, the `own/:owner/...` line endpoints, and the thumbnail/attachment routes). It
-runs *before* `permissions.middleware(...)`, so it can grant a bypass that the permission check
-will honor.
+`api/src/misc/utils/application-key.ts`'s default export is wired *very* broadly into the dataset
+routes (`api/src/datasets/routes/*.ts` — it appears on every read endpoint, the `/lines` write
+endpoint, the `own/:owner/...` line endpoints, and the thumbnail/attachment routes). It runs
+*before* `permissions.middleware(...)`, so it can grant a bypass that the permission check will
+honor. The actual matching logic is a pure, request-independent core,
+**`resolveApplicationContextBypass`** (`application-key.ts:87-157`) — named for what it now covers:
+not just an application key, but any proof that the request is coming from an application that may
+read this dataset. The default-exported Express middleware (`application-key.ts:159-256`) parses
+the request and calls it; the websocket `canSubscribe` handler in `api/src/app.js` calls it
+directly, since a browser sends no `Referer` on a websocket handshake (the key/appId travel in the
+subscribe message instead).
 
 Since this path fronts every data request issued by embedded apps, its MongoDB lookups
-(application key, parent-application checks, matching application) are memoized for 30 s —
-same staleness budget as the dataset cache; a revoked key or modified app configuration can
-keep granting/denying its bypass for up to 30 s per API process (see
+(application key, parent-application checks, matching application, calling-application lookup) are
+memoized for 30 s — same staleness budget as the dataset cache; a revoked key or modified app
+configuration can keep granting/denying its bypass for up to 30 s per API process (see
 [caching.md](./caching.md), layer 3).
 
 The middleware uses the HTTP `Referer` header — i.e. it trusts that the browser will report the
@@ -122,34 +136,47 @@ page that issued the request — to identify the calling application:
 2. Decide which app/dataset the referer is for, based on the path prefix:
    - `/data-fair/embed/dataset/...` → extract dataset id (or `keyId:datasetId`) and key
    - `/data-fair/app/...` → extract application id (or `keyId:appId`) and key
-3. Look up the key in `applications-keys` **with the dataset owner's ownerFilter**.
-4. Verify the calling app is allowed to reach this dataset — either the application directly
-   references it in `configuration.datasets` (matched by `href` or `id`), or the key belongs to a
-   parent dashboard that references the calling app in `configuration.applications`.
-5. Compute the bypass:
-   ```ts
-   req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions
-                        || { classes: ['read'] }
-   ```
-6. If no session is attached yet, install a **pseudo-session** carrying the flag
+3. Call `resolveApplicationContextBypass(applicationKeyId, dataset, appId, sessionState)`, which:
+   - with a key id, looks it up in `applications-keys` **with the dataset owner's ownerFilter**,
+     then verifies the calling app is allowed to reach this dataset — either the application
+     directly references it in `configuration.datasets` (matched by `href` or `id`), or the key
+     belongs to a parent dashboard that references the calling app in `configuration.applications`,
+     or (added for fragments, see below) the calling app is a fragment of the key's application;
+   - with no key id, tries the session proof described next.
+4. Compute the bypass: `matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }`.
+5. If no session is attached yet and a key matched, install a **pseudo-session** carrying the flag
    `isApplicationKey: true` (see §8).
 
-`permissions.list(...)` in `api/src/misc/utils/permissions.ts:158-164` translates
-`bypassPermissions` into a concrete operation set:
+### Session proof for dataset fragments
+
+`resolveApplicationContextBypass` also accepts a second proof, used **only when the dataset is
+itself a fragment of an application** (`dataset.partOf.type === 'application'`,
+`application-key.ts:118-128`): an authenticated session holding `readConfig` on the calling
+application. This lets a logged-in user who has never seen a key open a fragment dataset from the
+application page that owns it — the calling app is reachable when it *is* the dataset's parent app,
+is itself a fragment of it, or is a dashboard listing it in `configuration.applications`. **Every
+non-fragment dataset keeps today's behavior exactly**: no key, no bypass — the session proof branch
+requires `dataset.partOf` to even be considered. A session proof is an authenticated user, so it
+goes through the normal rate limiter, not the anti-spam stack of §10, which applies to the key
+proof only. See [fragments.md §5](./fragments.md) for the full reachability rule and why the
+`partOf` edge is narrowed to the same parent family.
+
+`permissions.list(...)` in `api/src/misc/utils/permissions.ts` translates `bypassPermissions` into
+a concrete operation set, as a hard override that early-returns before the owner-role and
+explicit-permission paths are even consulted:
 
 ```ts
 if (bypassPermissions) {
   for (const cl of bypassPermissions.classes || []) {
-    for (const op of operationsClasses[cl] || []) operations.add(op)
+    for (const operation of operationsClasses[cl] || []) operations.add(operation)
   }
-  for (const op of bypassPermissions.operations || []) operations.add(op)
-  return [...operations]   // owner-role and explicit-permission paths are skipped
+  for (const operation of bypassPermissions.operations || []) operations.add(operation)
+  return [...operations]
 }
 ```
 
-`bypassPermissions` is a hard override — once set, the rest of the permission logic is bypassed.
-This is also why the middleware's matching is so conservative: it only attaches a bypass when
-all five checks succeed.
+This is also why the middleware's matching is so conservative: it only attaches a bypass when the
+proof (key or session) and the reachability check both succeed.
 
 ## 6. Permission scoping per dataset
 
@@ -177,7 +204,7 @@ Examples covered by `tests/features/auth/api-keys.api.spec.ts`:
   ability to manage only their own rows through the application URL.
 
 The matching dataset entry is also enriched with base-app `datasetsFilters` defaults/consts
-before the bypass is computed (`application-key.ts:143-150`), so the same dataset can be reused
+before the bypass is computed (`application-key.ts:146-153`), so the same dataset can be reused
 by several apps with different default filters and the right one wins per request.
 
 ## 7. Owner scoping — the critical boundary
@@ -189,7 +216,8 @@ It is enforced by `ownerFilter`, built from the requested resource (the dataset 
 middleware, the application in the proxy) and added to every `applications-keys` lookup. The
 stored `owner` field on the keys doc is refreshed in three places: on every `POST /keys` upsert,
 on the application-owner-transfer endpoint (`PUT /:applicationId/owner`), and through the
-identity-rewrite path in `identities/router.js` (renames/merges).
+identity-rewrite path in `identities/service.ts` (`ownedCollectionNames` includes
+`applications-keys`; renames/merges).
 
 ```ts
 const ownerFilter = {
@@ -200,10 +228,8 @@ const ownerFilter = {
 ```
 
 This is why the POST endpoint stores `owner: application.owner` on the document and why the
-identity-rewrite collection list includes `applications-keys`. The `fix-application-key-owner`
-branch (the current working branch) is the latest iteration of this invariant — keep
-`owner` writes consistent with the matching `ownerFilter` reads when touching the management
-endpoint.
+identity-rewrite collection list includes `applications-keys` — keep `owner` writes consistent
+with the matching `ownerFilter` reads when touching the management endpoint.
 
 The `department` clause distinguishes a top-level org owner from a same-org *department* owner —
 critical for organizations that use departments as tenant boundaries.
@@ -222,17 +248,17 @@ setReqUser(req,
 
 `isApplicationKey: true` is a one-way flag that:
 
-- `getOwnerRole(...)` (`permissions.ts:97-100`) treats as anonymous — the pseudo-user gets **no**
+- `getOwnerRole(...)` (`permissions.ts:115-118`) treats as anonymous — the pseudo-user gets **no**
   owner-derived role, even though the synthesized id might collide with a real account id.
-- `matchPermission(...)` (`permissions.ts:120-143`) treats as not matching any user/org permission
+- `matchPermission(...)` (`permissions.ts:138-159`) treats as not matching any user/org permission
   entry, even one with `id: '*'`.
 
 So explicit ACLs on the resource cannot be unlocked by a key — only the `bypassPermissions` route
 can. Conversely, if a *real* logged-in user opens the same URL, their session is preserved
-(`if (!reqUser(req))` guard, `application-key.ts:154`) and they get the union of their normal
-permissions and the bypass.
+(`if (applicationKey && !reqUser(req))` guard, `application-key.ts:246`) and they get the union of
+their normal permissions and the bypass.
 
-## 9. Parent applications — dashboards
+## 9. Parent applications — dashboards and fragments
 
 A dashboard is just an application whose configuration references other applications in
 `configuration.applications` and other datasets in `configuration.datasets`. A key on the
@@ -250,11 +276,27 @@ Embed-page support works the same way: `/data-fair/embed/dataset/<keyId>:<datase
 as a referer from a parent application that has the embedded dataset in its
 `configuration.datasets`.
 
+**The `partOf` edge** ([fragments.md](./fragments.md)) adds a second, narrower way for a calling
+application to be treated as the key's own application, in both enforcement points:
+
+- proxy (HTML): `matchApplicationKey` (`api/src/applications/proxy-service.ts:18`) also accepts a
+  calling application whose `partOf` points at the key's application — a key on a dashboard opens
+  its sub-applications' HTML too;
+- dataset middleware (data): the key branch of `resolveApplicationContextBypass`
+  (`application-key.ts:106-116`) accepts the same edge, but only to reach a dataset that is
+  *itself* a fragment of that same key application (`isFragmentOfKeyApp`) — not any dataset the
+  calling app happens to list in its own `configuration.datasets`. Unlike the pre-existing
+  parent-key check above (which trusts the *parent's* configuration), trusting the *child's*
+  configuration this way would let a fragment attached with nothing more than `readDescription` on
+  the parent redirect the parent's already-distributed key to an unrelated same-owner dataset; see
+  [fragments.md §5](./fragments.md) for the full argument.
+
 ## 10. Anti-spam stack for anonymous writes
 
 When the matched route is a write (anything but `GET`/`HEAD`) — the realistic case is anonymous
 "submit a form" into a `lineOwnership` dataset — three additional checks fire **before** the
-bypass is applied (`application-key.ts:104-131`):
+bypass is applied (`application-key.ts:213-242`), for the key proof only — a session proof (§5) is
+an authenticated user and goes through the normal rate limiter instead:
 
 1. **Same-origin check** (`matchingHost`) — when the request carries an `Origin` header its value
    must equal the `origin` of the configured `publicBaseUrl` (URL-origin compare, not string
@@ -269,7 +311,7 @@ bypass is applied (`application-key.ts:104-131`):
    The token effectively imposes a "the user spent a few seconds on the page before submitting"
    delay — bots that fetch-and-immediately-submit get blocked.
 3. **Per-IP rate limit** — `rateLimiting.consume(req, 'postApplicationKey', tokenId|iat)`. The
-   default config (`api/config/default.cjs:159-162`) is `{ duration: 60, nb: 1 }` — *one* anonymous
+   default config (`api/config/default.cjs:204-207`) is `{ duration: 60, nb: 1 }` — *one* anonymous
    write per 60 s per IP, per anonymous-token. The proxy's `upstream-hash-by: $remote_addr`
    setting (see `load-management.md` §2) is what makes this consistent across replicas.
 
@@ -302,10 +344,12 @@ A failing test in `api-keys.api.spec.ts` lines 440-458 walks the full flow: too-
 |----------------------------------------|------------------------------------------------------|
 | Type & collection                      | `api/types/index.ts`, `api/src/mongo.ts`             |
 | Contract (JSON schema)                 | `api/contract/application-keys.js`                   |
-| Management endpoints + UI              | `api/src/applications/router.js:614-642`, `ui/src/components/application/application-protected-links.vue` |
-| Proxy gate (HTML)                      | `api/src/applications/proxy.js:32-80` and `:191-203` |
-| Dataset API middleware (data)          | `api/src/misc/utils/application-key.ts`              |
-| Permission bypass plumbing             | `api/src/misc/utils/permissions.ts:97-183`           |
+| Management endpoints + UI              | `api/src/applications/router.ts:250-258`, `ui/src/components/application/application-protected-links.vue` |
+| Proxy gate (HTML)                      | `api/src/applications/proxy.ts` (readConfig/key gates at `:45` and `:97`), `api/src/applications/middlewares.ts` (`setProxyResource`), `api/src/applications/proxy-service.ts` (`matchApplicationKey`, incl. the `partOf` edge) |
+| Dataset API middleware (data)          | `api/src/misc/utils/application-key.ts` (`resolveApplicationContextBypass` is the pure core) |
+| Websocket application context (data)   | `api/src/app.js` (`canSubscribe` callback)           |
+| Permission bypass plumbing             | `api/src/misc/utils/permissions.ts:115-159` (owner-role/permission exclusion), `:171-182` (bypass early-return) |
 | Schema for `applicationKeyPermissions` | `api/types/application/.type/index.js`               |
 | Rate-limit config                      | `api/config/default.cjs` (`postApplicationKey`)      |
 | Tests covering the full flow          | `tests/features/auth/api-keys.api.spec.ts` (lines 245-499) |
+| Fragments (`partOf`), the doc extending this one | `docs/architecture/fragments.md`           |
