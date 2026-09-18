@@ -1,11 +1,20 @@
 import mongo from '#mongo'
 import { computeSearchText, type CatalogSearchSettings } from '../operations.ts'
 
-// INVARIANT: `_searchText` is derived from `schema`, `permissions` and `settings.catalogSearch`;
-// any code that writes one of those three must recompute it (via searchTextPatch below) or
-// justify why staleness is safe in its direction. Two writers are known to leave it stale, on
-// purpose, in the safe (under-populated, not leaking) direction — not fixed here, just documented
-// so the next reader isn't surprised:
+// collections.ts reads `mongo.datasets` / `mongo.applications` at module top level (to build its
+// stats providers). Router modules — this one's callers among them — are loaded by app.js via
+// dynamic `import()` BEFORE `mongo.init()` runs, so a static import here would run that read
+// while the db is still disconnected and crash the process on every start. A dynamic import
+// deferred to first call lands well after `mongo.init()`, once a request actually comes in.
+let textSearchPromise: Promise<typeof import('../../misc/utils/text-search/collections.ts')> | undefined
+const loadTextSearch = () => (textSearchPromise ??= import('../../misc/utils/text-search/collections.ts'))
+
+// INVARIANT: the search index fields (`_searchText`, `_terms`, `_pos`, `_len`, `_searchIndex`) are
+// derived from `schema`, `permissions` and `settings.catalogSearch`; any code that writes one of
+// those three must recompute them (via searchIndexPatch below) or justify why staleness is safe
+// in its direction. Two writers are known to leave `_searchText` (and therefore the index built
+// from it) stale, on purpose, in the safe (under-populated, not leaking) direction — not fixed
+// here, just documented so the next reader isn't surprised:
 //   - api/src/identities/service.ts `deleteIdentity`: strips a grantee from `permissions` without
 //     recomputing. Removing a restrictive (list-only) grantee can only loosen guardedParts'
 //     result, so the stale value stays over-restrictive (misses search hits) rather than leaking.
@@ -23,8 +32,18 @@ export const getCatalogSearchSettings = async (owner: { type: string, id: string
   return (settings as { catalogSearch?: CatalogSearchSettings } | null)?.catalogSearch
 }
 
-/** The `_searchText` value to write for a dataset, `null` to unset it. */
-export const searchTextPatch = async (dataset: { owner: { type: string, id: string }, schema?: any[] | null, permissions?: any[] | null }): Promise<{ _searchText: string | null }> => {
+/** Everything derived from a dataset's indexed content. `null` values are `$unset`. */
+export const searchIndexPatch = async (dataset: { owner: { type: string, id: string }, schema?: any[] | null, permissions?: any[] | null }) => {
+  const { datasetsTextSearch } = await loadTextSearch()
   const catalogSearch = await getCatalogSearchSettings(dataset.owner)
-  return { _searchText: computeSearchText(dataset, catalogSearch) ?? null }
+  const _searchText = computeSearchText(dataset, catalogSearch) ?? null
+  // _searchText is one of the indexed fields, so it must be computed BEFORE the index is built
+  const fields = datasetsTextSearch.buildIndexFields({ ...dataset, _searchText })
+  return {
+    _searchText,
+    _terms: fields?._terms ?? null,
+    _pos: fields?._pos ?? null,
+    _len: fields?._len ?? null,
+    _searchIndex: { v: datasetsTextSearch.definition.version, at: new Date().toISOString() }
+  }
 }

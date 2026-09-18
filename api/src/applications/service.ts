@@ -22,6 +22,7 @@ import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
+import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
 // filter (type/id/department) — see api/src/misc/utils/application-key.ts
@@ -30,6 +31,14 @@ const applicationKeyOwner = (owner: { type: string, id: string, department?: str
   if (owner.department) keyOwner.department = owner.department
   return keyOwner
 }
+
+// collections.ts reads `mongo.datasets` / `mongo.applications` at module top level (to build its
+// stats providers). Router modules — this one's callers among them — are loaded by app.js via
+// dynamic `import()` BEFORE `mongo.init()` runs, so a static import here would run that read
+// while the db is still disconnected and crash the process on every start. A dynamic import
+// deferred to first call lands well after `mongo.init()`, once a request actually comes in.
+let textSearchPromise: Promise<typeof import('../misc/utils/text-search/collections.ts')> | undefined
+const loadTextSearch = () => (textSearchPromise ??= import('../misc/utils/text-search/collections.ts'))
 
 const filterFields = {
   url: 'url',
@@ -50,6 +59,17 @@ const fieldsMap = {
   id: 'id',
   status: 'status',
   ...filterFields
+}
+
+export const applicationIndexPatch = async (application: any) => {
+  const { applicationsTextSearch } = await loadTextSearch()
+  const fields = applicationsTextSearch.buildIndexFields(application)
+  return {
+    _terms: fields?._terms ?? null,
+    _pos: fields?._pos ?? null,
+    _len: fields?._len ?? null,
+    _searchIndex: { v: applicationsTextSearch.definition.version, at: new Date().toISOString() }
+  }
 }
 
 export type ApplicationWriteContext = {
@@ -84,7 +104,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 
   const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
-  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft'], reqQuery.raw === 'true')
+  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft', ...INDEX_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
@@ -181,6 +201,9 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   application.slug = baseslug
   setUniqueRefs(application)
   permissions.initResourcePermissions(application)
+  for (const [key, value] of Object.entries(await applicationIndexPatch(application))) {
+    if (value !== null) application[key] = value
+  }
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -269,10 +292,18 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
+  // kept out of `patch` itself: patch's keys are reported to the user/event log as the fields they modified
+  const searchIndex = await applicationIndexPatch({ ...application, ...patch })
+  const applicationUpdate: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { ...patch } }
+  for (const [key, value] of Object.entries(searchIndex)) {
+    if (value === null) (applicationUpdate.$unset ??= {})[key] = true
+    else applicationUpdate.$set[key] = value
+  }
+
   let patchedApplication
   try {
     patchedApplication = await mongo.applications
-      .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: application.id }, applicationUpdate, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
