@@ -73,7 +73,8 @@ export class DfMongo {
         '_readApiKey.renewAt_1': { '_readApiKey.renewAt': 1 },
         _partialRestStatus_1: [{ _partialRestStatus: 1 }, { sparse: true }],
         _needsHistorizing_1: [{ _needsHistorizing: 1 }, { sparse: true }],
-        esWarning_1: { esWarning: 1 }
+        esWarning_1: { esWarning: 1 },
+        'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'remote-services': {
         id_1: [{ id: 1 }, { unique: true }],
@@ -95,7 +96,8 @@ export class DfMongo {
         // get linked applications
         'configuration.datasets.href_1': { 'configuration.datasets.href': 1 },
         'datasets-id': [{ 'configuration.datasets.id': 1 }, { sparse: true }],
-        'child-app-id': [{ 'configuration.applications.id': 1 }, { sparse: true }]
+        'child-app-id': [{ 'configuration.applications.id': 1 }, { sparse: true }],
+        'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'applications-keys': {
         'keys.id_1': { 'keys.id': 1 }

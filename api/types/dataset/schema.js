@@ -868,6 +868,16 @@ const datasetProperties = {
       }
     }
   },
+  partOf: {
+    type: 'object',
+    description: 'Declares this dataset as a fragment of another resource (a virtual dataset or an application). A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.',
+    additionalProperties: false,
+    required: ['type', 'id'],
+    properties: {
+      type: { type: 'string', enum: ['dataset', 'application'] },
+      id: { type: 'string' }
+    }
+  },
   isRest: {
     type: 'boolean',
     default: false,
