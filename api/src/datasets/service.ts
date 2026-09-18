@@ -26,7 +26,7 @@ import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import * as fragmentsService from '../fragments/service.ts'
-import { parsePartOfParam, shouldHideFragments } from '../fragments/operations.ts'
+import { partOfListFilter } from '../fragments/operations.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import type { Db } from 'mongodb'
@@ -103,12 +103,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   }
 
   // fragments are reached from their parent, not from the catalog (spec §4)
-  if (reqQuery.partOf) {
-    const partOf = parsePartOfParam(reqQuery.partOf)
-    extraFilters.push({ 'partOf.type': partOf.type, 'partOf.id': partOf.id })
-  } else if (shouldHideFragments(reqQuery)) {
-    extraFilters.push({ partOf: { $exists: false } })
-  }
+  const partOfFilter = partOfListFilter(reqQuery)
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -434,6 +430,8 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 
   await db.collection('datasets').deleteOne({ id: dataset.id })
+  // a draft view shares the id of its published dataset, which is not being deleted here
+  if (!dataset.draftReason) await virtualDatasetsUtils.detachFromVirtualParents(dataset.id)
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
   // notify catalogs that the dataset has been deleted

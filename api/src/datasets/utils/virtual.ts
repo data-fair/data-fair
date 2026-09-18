@@ -300,3 +300,21 @@ export const descendants = async (dataset: VirtualDataset, extraProperties: stri
     return descendant
   })
 }
+
+/**
+ * A deleted dataset leaves a dangling id behind in every virtual dataset that aggregates it, which
+ * then fails to resolve its children on the next query. $pull it and bump the status so the parents
+ * re-finalize over their remaining members. Account-agnostic on purpose: a dangling reference is
+ * cleaned up whoever owns the parent.
+ *
+ * Raw write on `virtual`, which is integrity-covered metadata (so normally the stamping rule of
+ * `integrity/operations.ts` would apply). Safe here for one structural reason: a virtual dataset is
+ * neither a file nor a rest dataset, so it can never be integrity-enrolled — see
+ * `enableIntegrityUnlocked` in `integrity/service.ts`.
+ */
+export const detachFromVirtualParents = async (datasetId: string) => {
+  await mongo.datasets.updateMany(
+    { 'virtual.children': datasetId },
+    { $pull: { 'virtual.children': datasetId }, $set: { status: 'indexed' } }
+  )
+}
