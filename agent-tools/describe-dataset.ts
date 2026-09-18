@@ -56,6 +56,7 @@ export const schema = {
       spatial: { type: 'string' as const, description: 'Spatial coverage information (free-text description)' },
       temporal: { type: 'object' as const, description: 'Temporal coverage information' },
       frequency: { type: 'string' as const, description: 'Update frequency of the dataset' },
+      editable: { type: 'boolean' as const, description: 'Present and true when the dataset accepts line writes (a REST dataset): rows can be added and corrected through its data-entry page' },
       geolocalized: { type: 'boolean' as const, description: 'Whether the dataset has geographic data' },
       bbox: { type: 'array' as const, items: { type: 'number' as const }, description: 'Geographic bounding box [lonMin, latMin, lonMax, latMax]' },
       temporalDataset: { type: 'boolean' as const, description: 'Whether the dataset has temporal data' },
@@ -112,6 +113,9 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
       ? fetchedData.description.slice(0, 2000) + '… (truncated, see dataset page for full description)'
       : fetchedData.description
   }
+  // Presence is the signal — absent rather than false for a dataset whose rows
+  // come from a file, where line entry is not a thing that exists.
+  if (fetchedData.isRest) dataset.editable = true
   if (fetchedData.keywords) dataset.keywords = fetchedData.keywords
   if (fetchedData.origin) dataset.origin = fetchedData.origin
   // Pick only the declared fields — the raw API license/timePeriod may carry extra keys
@@ -203,6 +207,15 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
   }
   if (link) meta.push(`- **Link:** ${link}`)
+  // Only with a back-office link: /edit-data is a back-office route, and this same
+  // formatter serves the portal and the MCP server, where it means nothing. A judged
+  // run asked for a line to be recorded and a typo corrected in an editable dataset,
+  // was told none of this, concluded it had no tool for either — the line tools live
+  // behind `edit` and only the data-entry page passes it — and sent the person to
+  // support. It reasoned correctly from what it was told; this is what it was not told.
+  if (fetchedData.isRest && options?.datasetLink) {
+    meta.push(`- **Editable:** yes. Rows can be added and corrected on the data-entry page, ${link}/edit-data, which is where the line tools live. Navigate there first; they are not available anywhere else.`)
+  }
 
   const schemaRows = formatSchemaColumns(fetchedData.schema)
   const sections = [...meta]
