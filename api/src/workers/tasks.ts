@@ -292,6 +292,21 @@ const datasetTasks: DatasetTask[] = [{
   name: 'autoUpdateExtension',
   worker: 'shortProcessor',
   mongoFilter: () => ({ status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } })
+}, {
+  name: 'computeDatasetSearchIndex',
+  worker: 'shortProcessor',
+  // Single sparse-indexable predicate on purpose: an $or against a sparse index selects badly.
+  // No eventsPrefix — this is bookkeeping, not user-visible activity, so it writes no journal.
+  mongoFilter: () => ({ _needsSearchIndex: true })
 }]
 
-export const tasks = { datasets: datasetTasks }
+const applicationTasks: DatasetTask[] = [{
+  name: 'computeApplicationSearchIndex',
+  worker: 'shortProcessor',
+  // same rationale as computeDatasetSearchIndex above; kept as a separate named task (rather than
+  // one task shared across collections) so it is only ever selected against the applications
+  // collection — never routed to a dataset by mistake.
+  mongoFilter: () => ({ _needsSearchIndex: true })
+}]
+
+export const tasks = { datasets: datasetTasks, applications: applicationTasks }

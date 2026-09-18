@@ -1,0 +1,45 @@
+import { test } from '@playwright/test'
+import assert from 'node:assert/strict'
+import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl } from '../../support/axios.ts'
+import { callWorkerFunction, getRawDataset } from '../../support/workers.ts'
+
+const u1 = await axiosAuth('test_user1@test.com')
+
+const metaOnly = async (id: string, body: Record<string, any> = {}) => {
+  await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })
+}
+
+test.describe('deferred search-index recompute', () => {
+  test.beforeEach(async () => { await clean() })
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  // NOTE: this does not exercise findability through GET /api/v1/datasets?q= — that endpoint still
+  // matches on mongo's legacy $text index (title/description/_searchText/...), which is unaffected
+  // by _terms/_pos/_len staleness: title itself always carries the query term. The new inverted
+  // index (_terms/_pos/_len) is not yet wired into any query path, only populated on write/recompute.
+  // So this asserts directly on the raw document fields the worker is responsible for.
+  test('a document marked stale is reindexed by the worker and the flag is cleared', async () => {
+    await metaOnly('rc-eolienne', { title: 'Parc eolien de Bretagne' })
+    const indexed = await getRawDataset('rc-eolienne')
+    assert.ok(indexed._terms.length > 0, 'inline indexing should have populated _terms')
+    assert.equal(indexed._needsSearchIndex, undefined)
+
+    // simulate a bulk write that changed indexed content without recomputing: the index is stale
+    // and the document declares it, exactly as markStale() would
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/rc-eolienne`, {
+      _terms: [], _pos: {}, _len: {}, _needsSearchIndex: true
+    })
+    const stale = await getRawDataset('rc-eolienne')
+    assert.equal(stale._terms.length, 0, 'the simulated bulk write must clear the index')
+    assert.equal(stale._needsSearchIndex, true)
+
+    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', stale)
+
+    const drained = await getRawDataset('rc-eolienne')
+    assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared')
+    assert.ok(drained._terms.length > 0, 'the worker must rebuild the index')
+    assert.deepEqual(drained._terms, indexed._terms, 'recompute must reproduce the original inline index')
+  })
+})

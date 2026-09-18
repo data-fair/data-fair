@@ -64,17 +64,17 @@ const getWorkersStatus = () => {
     })
 }
 
-const getFreeTasks = () => {
+const getFreeTasks = (type: ResourceType) => {
   const workersStatus = getWorkersStatus()
-  return tasks.datasets
+  return (tasks[type as keyof typeof tasks] ?? [])
     .filter(task => workersStatus.some(w => w.key === task.worker && w.currentConcurrency < w.maxConcurrency))
     .map(task => ({ task, excludedOwners: workersStatus.find(w => w.key === task.worker)!.excludedOwners }))
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
-  for (const type of ['datasets'] as ResourceType[]) {
+  for (const type of ['datasets', 'applications'] as ResourceType[]) {
     if (_type && _type !== type) continue
-    const freeTasks = getFreeTasks()
+    const freeTasks = getFreeTasks(type)
     const facets: any = {}
     if (!freeTasks.length) continue
     for (const freeTask of freeTasks) {

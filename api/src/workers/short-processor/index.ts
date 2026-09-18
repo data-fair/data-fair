@@ -87,6 +87,30 @@ export const historizeLines = async function (dataset: RestDataset) {
   await relay.historizeLines(dataset)
 }
 
+export const computeDatasetSearchIndex = async function (dataset: Dataset) {
+  await mongo.connect(true)
+  const { searchIndexPatch } = await import('../../datasets/utils/search-text.ts')
+  const searchIndex = await searchIndexPatch(dataset)
+  const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
+  for (const [key, value] of Object.entries(searchIndex)) {
+    if (value === null) update.$unset[key] = ''
+    else update.$set[key] = value
+  }
+  await mongo.datasets.updateOne({ id: dataset.id }, update)
+}
+
+export const computeApplicationSearchIndex = async function (application: any) {
+  await mongo.connect(true)
+  const { applicationIndexPatch } = await import('../../applications/service.ts')
+  const searchIndex = applicationIndexPatch(application)
+  const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
+  for (const [key, value] of Object.entries(searchIndex)) {
+    if (value === null) update.$unset[key] = ''
+    else update.$set[key] = value
+  }
+  await mongo.applications.updateOne({ id: application.id }, update)
+}
+
 if (process.env.NODE_ENV === 'development') {
   const nock = (await import('nock')).default
   // fake catalog
