@@ -584,7 +584,7 @@ const dataEntryContext = computed(() => {
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
     'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first delegate to the dataset_data subagent to search for the line _id, then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select` — then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -673,7 +673,7 @@ if (edit) {
     inputSchema: {
       type: 'object' as const,
       properties: {
-        lineId: { type: 'string' as const, description: 'The _id of the line to edit. Use search_data to find valid line IDs.' }
+        lineId: { type: 'string' as const, description: 'The _id of the line to edit. search_data returns it when `_id` is one of the keys in its `select` parameter.' }
       },
       required: ['lineId'] as const
     },

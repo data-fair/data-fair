@@ -289,6 +289,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `editLine_form` — VJSF-managed form subagent for add/edit line dialogs |
 | **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then delegates form filling to VJSF subagent. User retains Save button control. |
 | **Tools** | `open_add_line_dialog`, `open_edit_line_dialog` |
+| **Addressing a row** | `open_edit_line_dialog` needs a line `_id`, and `cleanRow` stripped `_id` from every read — so the tool its own description named could never supply one, even when the caller passed `select=_id`. A judged run spent four sub-agent dispatches on that impossibility, promised the person it would fetch the id itself, retracted the promise, and asked them to find the row and click its pencil, which the persona had said it would not do. `search_data` now keeps `_id` when the `select` names it (`cleanRowKeepingId`); `_i` and `_rand` stay out whatever the select says, because they address nothing. |
 | **Reachability** | The line tools are registered behind `if (edit)` in `dataset-table.vue`, and only `edit-data.vue` passes `edit` — so on `/dataset/{id}/table` the same component runs read-only and the tools do not exist. A judged run was asked to record a line and correct another, was told nothing about the dataset being editable, guessed its way to `/table`, concluded it had no such tool, and sent the person to support. `describe_dataset` now reports an editable dataset and names its data-entry page (back-office callers only — `/edit-data` is not a portal route). Registering the tools on `/table` was rejected: the dialog is an edit affordance and that page is deliberately read-only for people too. |
 | **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: the columns are declared first with `add_columns`, under Structure > Schéma. A refused dialog never registers `editLine_form`, so the empty-form dead end — a judged run spent two sub-agent round trips in it — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue`, `ui/src/components/dataset/form/dataset-edit-line-form.vue` |
@@ -390,6 +391,18 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `page_guidance` | Page guidance | R | `dataset/agent-page-guidance-tools.ts`, `application/agent-page-guidance-tools.ts` |
 | `list_services_versions` | Service info | R | `agent/releases-tools.ts` |
 | `explore_github` | Service info | R | `agent/releases-tools.ts` |
+
+**Direction: the back-office should mirror the API more directly than the portal does.**
+The same formatters serve three consumers — the back-office assistant, the portal
+and the MCP server — and today they are curated for the last two: internal fields
+stripped, links rewritten to the public page. That curation is right for a reader
+browsing open data and wrong for an assistant operating the product, which needs
+the API's own reality to act on it. Two fixes have already been made one case at a
+time against that grain (`describe_dataset` reporting `editable` and the data-entry
+page for back-office callers only; `search_data` returning `_id` when asked), each
+keyed on a per-call signal rather than on who is asking. The intended shape is a
+consumer-level distinction instead, so back-office tools expose raw identifiers and
+real routes by default and the portal/MCP variants keep their curation. Not built.
 
 All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently the dataset and application detail pages) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The renderer (`buildGuidance` + the `Guided*` types) is shared in `composables/agent/page-guidance.ts`; each page composable supplies its own heading, intro, and `agentDesc`-annotated `sections`. The agent is instructed to call it only when unsure how to help the user on the current page.
 
