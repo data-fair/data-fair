@@ -25,5 +25,8 @@ import { mdiPuzzle } from '@mdi/js'
 
 const { partOf } = defineProps<{ partOf: { type: 'dataset' | 'application', id: string } }>()
 const { t } = useI18n()
-const parentFetch = useFetch<{ title: string }>(`${$apiPath}/${partOf.type}s/${partOf.id}`, { query: { select: 'title' } })
+// notifError: false — a user who can write the fragment does not necessarily hold readDescription
+// on the parent (the derived ACL grants management on the fragment, not read on the parent), so a
+// 403/404 here is an ordinary case: fall back to showing the parent id instead of toasting an error
+const parentFetch = useFetch<{ title: string }>(`${$apiPath}/${partOf.type}s/${partOf.id}`, { query: { select: 'title' }, notifError: false })
 </script>

@@ -78,7 +78,9 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
   await fragmentsService.syncFragmentPermissions('applications', patchedApplication)
   // the application-context session proof memoizes this application's permissions for 30s
   // (findCallingApplication in application-key.ts) — an ACL edit must invalidate it immediately,
-  // same as a key/config edit already does through the other call sites of this function
+  // as a key write (writeApplicationKeys), a PATCH (patchApplication) and an attach/detach
+  // (applyPartOfChange) already do. NB: PUT /config and /configuration-draft do NOT clear these
+  // caches today, so a configuration.datasets edit made that way stays visible for up to 30s
   clearApplicationKeysCaches()
 }))
 

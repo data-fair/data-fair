@@ -83,11 +83,43 @@ data it needs (parent lookup, sibling-fragment count) is fetched by `preparePart
 | Fragment has no fragments of its own | 400 | `validatePartOf`, `operations.ts:93` |
 | Fragment has no `publicationSites` / `requestedPublicationSites` | 400 | `validatePartOf`, `operations.ts:94` |
 | Fragment has no `publications` (external catalogs) | 400 | `validatePartOf`, `operations.ts:95` |
-| A fragment cannot be published (`publicationSites`, `requestedPublicationSites`, `publications` on PATCH) | 400 | `fragmentForbiddenPatchKey`, `operations.ts:100-103`, called from `datasets/routes/metadata.ts:165-166` and `applications/router.ts:112-113` |
+| A fragment cannot be published (`publicationSites`, `requestedPublicationSites`, `publications`), on **any** write route | 400 | `fragmentWriteBodyError` / `fragmentForbiddenPatchKey` (`operations.ts`), applied by `fragments/middlewares.ts` on all four write routes (§3.1) |
 | `PUT /:id/permissions` on a fragment | 403 | `misc/utils/permissions.ts:367` |
 | `PUT /:id/owner` on a fragment | 403 | `datasets/routes/metadata.ts:228`, `applications/router.ts:146` |
 | `PUT /:id/owner` on a resource that still has fragments | 400 | `datasets/routes/metadata.ts:229`, `applications/router.ts:147` |
-| `partOf` cannot be changed by `PUT` (full replace), only by `PATCH` | 400 | `applications/service.ts:253-254` (datasets have no PUT-replace route) |
+| `partOf` cannot be changed by the body-replacing write routes (dataset `POST`/`PUT /:datasetId`, application `PUT /:applicationId`), only by `PATCH` | 400 | `fragmentWriteBodyError`, applied by `fragments/middlewares.ts` (§3.1) |
+
+### 3.1 One guard, four write routes
+
+`api/doc/datasets/patch-req/schema.js` has **two** consumers — the dataset `PATCH /:datasetId` route
+and `updateDatasetRoute` (`POST`/`PUT /:datasetId`) — and the application `patchKeys` likewise serve
+`PATCH` and the body-replacing `PUT /:applicationId`. The PATCH routes route `partOf` through
+`applyPartOfChange`; the two body-replacing routes persist their body as-is (`preparePatch` →
+`applyPatch`'s `$set`, and a raw `replaceOne`). Duplicating the fragment checks per route is what let
+`POST /:datasetId` attach and detach with no `changeOwner` gate, no parent validation, no derived-ACL
+replacement and no publication refusal, and let `PUT /:applicationId` publish a fragment.
+
+There is now **one** implementation: the express-free `fragmentWriteBodyError`
+(`api/src/fragments/operations.ts`), adapted by `api/src/fragments/middlewares.ts` as
+`fragmentWriteGuard(allowPartOfChange)` (a route-chain middleware) and `assertFragmentWriteBody`
+(the same check called directly from a handler). It says two things about any write body:
+
+- `partOf` may not be changed on a route that does not go through `applyPartOfChange` — the dataset
+  `POST`/`PUT /:datasetId` route and the application `PUT /:applicationId` route. An *identical*
+  value is tolerated so a read-then-write round trip of a fragment still works (this is what the
+  application PUT already did, and what the dataset route's equal-value stripping produces).
+- a fragment may never carry `publicationSites` / `requestedPublicationSites` / `publications`, on
+  any of the four routes.
+
+| Route | How the guard is applied |
+|---|---|
+| `PATCH /datasets/:datasetId` | `fragmentWriteGuard(true)`, last in the route chain |
+| `POST` / `PUT /datasets/:datasetId` (update path) | `assertFragmentWriteBody(patch, dataset, false)` inside `updateDatasetRoute` — this route also accepts **multipart** bodies, so `req.body` is only the write body after `getFormBody` has run inside the handler; a chain middleware would see `{}` there and be trivially bypassable |
+| `PATCH /applications/:applicationId` | `fragmentWriteGuard(true)`, last in the route chain |
+| `PUT /applications/:applicationId` | `fragmentWriteGuard(false)`, after `attemptInsert` (which answers 201 and stops the chain on a genuine create, where `partOf` is legitimate) and after the permission middleware, so an unauthorized caller still gets 403 rather than 400 |
+
+The guards are mounted **after** the permission middlewares on purpose: a caller who may not write
+the resource at all must keep getting a 403, not a 400 that leaks the body's shape.
 
 The last two publication refusals are refusals, not silent clean-ups: the user unpublishes first,
 then attaches. All new messages are French, per house convention, and name the blocking element.
@@ -119,9 +151,14 @@ recomputing the *what* from the entry's expanded operation set (`classes` expand
   operations becomes the same class on the fragment. Any operation id still present in the entry's
   set that also belongs to the *fragment* type's `write` or `admin` class is carried over
   individually — this is what keeps the org-contrib default entry meaningful (see the worked
-  example below). If either management class or any such operation ends up present, `list`, `read`
-  and `readAdvanced` are added too: **write implies read**, so someone who can edit the parent can
-  also open, inspect and edit the fragment.
+  example below) — **except** the read-only members of the `admin` class (`READ_ONLY_ADMIN_OPERATIONS`
+  = `getPermissions`, `readIntegrity`, `readIntegrityRevisions`; `getPermissions` likewise for
+  applications). Those are pure reads that happen to live in `admin`, so carrying them would make a
+  read-only parent entry derive full read on the fragment, contradicting §9. An entry that covers the
+  *whole* `admin` class genuinely holds management operations and is unaffected. If either management
+  class or any carried-over operation ends up present, `list`, `read` and `readAdvanced` are added
+  too: **write implies read**, so someone who can edit the parent can also open, inspect and edit the
+  fragment.
 - **B. Read, only application → application.** The `list` / `read` operations of the entry are
   carried over only when both the parent and the fragment are applications. Viewing a dashboard is
   viewing its sub-applications; a public dashboard (an entry granting read with no `type`/`id`) has
@@ -165,9 +202,19 @@ dataset can write, read and delete its dataset fragments, exactly the "write imp
 ### 4.1 Sync points
 
 The derived ACL is recomputed whenever the parent's ACL changes. `syncFragmentPermissions`
-(`api/src/fragments/service.ts:87-95`) does the recompute: at most two `updateMany` calls (one per
-fragment collection), each just `{ $set: { permissions: deriveFragmentPermissions(...), updatedAt
-} }` against the `{ 'partOf.type', 'partOf.id' }` filter.
+(`api/src/fragments/service.ts`) does the recompute against the `{ 'partOf.type', 'partOf.id' }`
+filter: `{ $set: { permissions: deriveFragmentPermissions(...), updatedAt } }`.
+
+The dataset half is **split in two** `updateMany` calls, on `'integrity.active': { $ne: true }` and
+on `'integrity.active': true`, the second merging the outbox stamp through `stampHistorize`.
+`permissions` is integrity-covered metadata, and the invariant in `api/src/integrity/operations.ts`
+is that every writer of a covered field stamps, or an organic write reads as a metadata tamper at
+the next check — enabling integrity on a dataset fragment and then editing the parent's ACL used to
+report a false breach. Splitting (rather than the two-phase `stampHistorizeMany` used by the
+`$pull`/`$unset` propagations, whose filters self-invalidate) keeps the stamp single-document atomic
+with the write it accounts for. The origin is `propagation`, not `user`: the actor edited the
+*parent*'s ACL, this write is its fan-out. Applications have no integrity trail, so their
+`updateMany` is unchanged.
 
 | Writer | Action |
 |---|---|
@@ -281,7 +328,9 @@ Both `findDatasets` (`api/src/datasets/service.ts:105-111`) and `findApplication
    legitimate lookup.
 
 Facets and sums reuse the same `extraFilters`, so they follow the same rule; there is no `partOf`
-facet in this iteration. Single reads by id are untouched — `describe_dataset`, `describe_application`,
+facet in this iteration. (`findApplications` now passes `extraFilters` to `facetsQuery` the way
+`findDatasets` always did — it did not, so fragment sub-applications still counted in the
+applications facets while hidden from the list.) Single reads by id are untouched — `describe_dataset`, `describe_application`,
 data tools, embeds and the proxy all work on a fragment id like on any other resource. The two
 `describe_*` agent tools are the one exception to "the resource as-is": they build a curated field
 whitelist (`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) that
@@ -359,7 +408,9 @@ permission model on the client, it is purely presentational.
 
 - **`fragment-banner.vue`** (`ui/src/components/common/fragment-banner.vue`): shown at the top of a
   fragment's own page ("Cette ressource est un fragment de: *{parent title}*"), linking to the
-  parent.
+  parent. The parent title is fetched with `notifError: false` and falls back to the parent id:
+  holding a derived management entry on the fragment does **not** imply `readDescription` on the
+  parent, so a 403/404 there is an ordinary case, not something to toast on every page load.
 - **Hidden on a fragment's own page** (both `dataset/[id]/index.vue` and
   `application/[id]/index.vue`): the permissions tab, publication-sites / catalog-publications tabs,
   the change-owner row, `readApiKey` / key-management tabs (application). A "Détacher" row appears
@@ -392,7 +443,10 @@ permission model on the client, it is purely presentational.
   management entries — never through a parent's explicit read-only ACL entry.** A read entry on a
   virtual dataset's ACL grants nothing on its dataset fragments (rule B never fires for a
   `datasets` parent); a read entry on an application's ACL only reaches an application fragment
-  (rule B), never a dataset fragment (which needs application context instead, §5).
+  (rule B), never a dataset fragment (which needs application context instead, §5). This holds for
+  read-only entries built from `admin`-class operations too: `getPermissions`, `readIntegrity` and
+  `readIntegrityRevisions` are excluded from the carried-over set (§4, rule A), so a parent entry
+  granting only those derives nothing at all.
 - **A dataset fragment is never publicly cacheable**, even under a public application, because no
   read entry is ever derived for a dataset fragment (§4.2). Sub-applications of a public dashboard
   stay public and publicly cacheable (rule B).
@@ -417,11 +471,15 @@ permission model on the client, it is purely presentational.
 - **No resync endpoint for the derived ACL.** If the sync in §4.1 is ever skipped or fails
   mid-request, there is no admin action to force a full recompute; a future upgrade script could
   resync every fragment's ACL in one pass if this is ever needed in practice.
-- **Detach leaves the memoized calling-application entry live for up to 30 s**, in the fail-open
-  direction: `findCallingApplication` (`application-key.ts:59-61`) is memoized for 30 s like the
-  other application-key lookups, so a just-detached application can still be resolved as a
-  fragment (and its stale `partOf` / derived-ACL-implied reachability honored) by in-flight or
-  near-simultaneous application-context requests for up to that window.
+- **Attach / detach of an application invalidates the memoized calling-application entry
+  immediately** (`applyPartOfChange` calls `clearApplicationKeysCaches()` on the application branch).
+  `findCallingApplication` (`application-key.ts`) caches `{ id, partOf, permissions }` for 30 s and
+  both application-context proofs read `partOf` from it, so without that call a just-detached
+  sub-application kept resolving as a fragment of its ex-parent for up to 30 s — fail-open. The
+  invalidation lives in `applyPartOfChange` rather than at the route because the application PATCH
+  returns early for a `partOf`-only body (exactly what the UI sends on attach and detach) and so
+  never reaches `patchApplication`'s own clear. The residual cross-node staleness of the 30 s TTL is
+  unchanged (`clearApplicationKeysCaches` is same-node only), as for every other key/ACL edit.
 - **One nesting level only** — see §1 and §10.
 
 ## 10. Future gains (drafted, not built)
@@ -449,7 +507,8 @@ work:
 
 | Concern | File |
 |---|---|
-| Pure logic: validation, derivation, listing filter | `api/src/fragments/operations.ts` |
+| Pure logic: validation, derivation, write-guard decision, listing filter | `api/src/fragments/operations.ts` |
+| Write guard mounted on all four write routes (§3.1) | `api/src/fragments/middlewares.ts` |
 | Mongo-backed operations: attach/detach, sync, delete cascade | `api/src/fragments/service.ts` |
 | Schema (`partOf` property) | `api/types/dataset/schema.js`, `api/types/application/schema.js` |
 | `Resource` type pick | `api/types/index.ts` |

@@ -99,7 +99,9 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
   const resultsPromise = size > 0 && mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields)).toArray()
+  // extraFilters passed like findDatasets does: without them the facets counted fragments that the
+  // list itself hides (and ignored the publicationSite owner scoping)
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, extraFilters)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response: any = {}

@@ -13,7 +13,7 @@ import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
-import applicationKey, { clearApplicationKeysCaches } from '../../misc/utils/application-key.ts'
+import applicationKey from '../../misc/utils/application-key.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { can, reqResource } from '../../misc/utils/permissions.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
@@ -98,9 +98,9 @@ export const registerMetadataRoutes = (router: Router) => {
     await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
   }, async (patchedDataset) => {
     await fragmentsService.syncFragmentPermissions('datasets', patchedDataset)
-    // datasets are never a "calling application" for the application-context resolver, but this
-    // stays cheap and keeps both onUpdated hooks consistent with the same cache-freshness contract
-    clearApplicationKeysCaches()
+    // no application-key cache invalidation here on purpose: all five memos in application-key.ts
+    // are keyed on an application id and hold application documents only, so a dataset ACL change
+    // cannot make any of them stale — clearing them would just cold-flush hot memos
   }))
 
   // retrieve a dataset by its id
