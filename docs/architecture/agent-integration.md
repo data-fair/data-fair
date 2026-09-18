@@ -24,6 +24,12 @@ PRIVATE_AGENTS_URL (env var)
           -> Tool registration + Chat drawer rendering
 ```
 
+The `agentChat` setting is **organization-level only**: it lives on the root settings document
+(`department: {$exists: false}`) and is not part of the department settings schema. Departments
+inherit their organization's activation — `getAgentChat` always resolves the root document, even
+when the request path is department scoped (`/settings/organization/org1:dep1/agent-chat`), and the
+settings page hides the toggle when a department is selected. `compatODS` works the same way.
+
 ## 2. Architecture
 
 ### Component diagram

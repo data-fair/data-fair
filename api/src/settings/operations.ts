@@ -89,6 +89,15 @@ export const buildPublicationSiteSubscriptions = (owner: AccountKeys, site: any,
   ]
 }
 
+/**
+ * Filter matching the account's root settings document, whatever department the caller is in.
+ * Org-level settings (agentChat, compatODS, topics, info, datasetsMetadata, privateVocabulary) are
+ * only stored there and departments inherit them, so reading them must never match a department
+ * document. Department-level settings (apiKeys, publicationSites, webhooks) use ownerFilter instead.
+ */
+export const rootSettingsFilter = (owner: { type: string, id: string }) =>
+  ({ type: owner.type, id: owner.id, department: { $exists: false } })
+
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
 
 export const parseOwnerParams = (type: 'user' | 'organization', idParam: string): SettingsParams => {

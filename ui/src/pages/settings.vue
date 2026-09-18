@@ -525,11 +525,14 @@ const sections = computed(() => {
   if (!$uiConfig.disablePublicationSites) {
     result.publicationSites = { title: t('sections.publicationSites.title') }
   }
-  if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
-    result.agentChat = { title: t('sections.agentChat.title') }
-  }
-  if ($uiConfig.compatODS && session.user.value.adminMode) {
-    result.compat = { title: t('sections.compat.title') }
+  // agentChat and compatODS are activated at the organization level only, departments inherit them
+  if (!settingsAccount.value.department) {
+    if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
+      result.agentChat = { title: t('sections.agentChat.title') }
+    }
+    if ($uiConfig.compatODS && session.user.value.adminMode) {
+      result.compat = { title: t('sections.compat.title') }
+    }
   }
   return result
 })

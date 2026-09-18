@@ -79,6 +79,10 @@ router.delete('/', async (req, res, next) => {
 
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
+    if (config.compatODS) {
+      const { memoizedGetCompatODS } = await import('../../api-compat/ods/index.ts')
+      memoizedGetCompatODS.clear()
+    }
     clearApiKeysCache()
     clearApplicationKeysCaches()
     rateLimiting.clear()
