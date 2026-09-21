@@ -49,7 +49,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.3.270",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
-    "@data-fair/lib-agents-sim": "^0.6.0",
+    "@data-fair/lib-agents-sim": "^0.7.0",
     "@data-fair/lib-types-builder": "^1.7.0",
     "@data-fair/lib-utils": "^1.12.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
