@@ -1,8 +1,11 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { clearPublicationSitesCache } from '../../support/workers.ts'
 
 const u1 = await axiosAuth('test_user1@test.com')
+const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const publicUrl2 = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}/data-fair`
 
 const metaOnly = async (id: string, body: Record<string, any> = {}) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })
@@ -50,5 +53,30 @@ test.describe('catalog search behaviour', () => {
     const once = await search({ q: 'consommation annuelle', size: 20 })
     const twice = await search({ q: 'consommation annuelle', size: 20 })
     assert.deepEqual(once.results.map((r: any) => r.id), twice.results.map((r: any) => r.id))
+  })
+
+  // Regression guard for ownerScopeOf over-narrowing (misc/utils/find.ts). Outside catalog mode
+  // findDatasets deliberately keeps OTHER owners' master-data datasets in a publication site's
+  // list. Scoping the corpus statistics to the site owner made a term that only occurs in such a
+  // dataset count df = 0, planQuery dropped it as unknown, and a single-term query fell back to
+  // the "match nothing" filter — zero results for a dataset right there in the list.
+  test('a foreign-owned master-data dataset stays findable from a publication site', async () => {
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` }
+    await u1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await clearPublicationSitesCache()
+
+    // owned by test_user1's personal account, NOT by test_org1 which owns the publication site
+    await u1.post('/api/v1/datasets/sb-master-zz', {
+      isMetaOnly: true,
+      title: 'Referentiel zzcadastre',
+      masterData: { virtualDatasets: { active: true } }
+    })
+
+    // the site owner has datasets of its own, so the owner-scoped corpus is not simply empty
+    await u1Org.post('/api/v1/datasets/sb-site-owned', { isMetaOnly: true, title: 'Consommation du site' })
+
+    const fromSite = (await u1.get(`${publicUrl2}/api/v1/datasets`, { params: { select: 'id', q: 'zzcadastre' } })).data
+    assert.deepEqual(fromSite.results.map((r: any) => r.id), ['sb-master-zz'])
+    assert.equal(fromSite.count, 1)
   })
 })

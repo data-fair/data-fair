@@ -107,9 +107,19 @@ export const query = (reqQuery: Record<string, string>, locale: string, sessionS
  * examines 321 documents instead of 62,360, because the compound {owner.type, owner.id, _terms}
  * index gates by owner first. Returning undefined is always CORRECT, only slower — so anything
  * ambiguous must return undefined rather than guess an owner.
+ *
+ * A publication site is such a scope only when the caller actually restricts the result set to the
+ * site owner — which it must say with `siteOwnerOnly`. `findDatasets` outside catalog mode does
+ * NOT: it deliberately keeps OTHER owners' master-data datasets in the list. Scoping there would
+ * count df = 0 for a term that only occurs in one of those, planQuery would drop it as unknown to
+ * the corpus, and a single-term query would then match nothing at all — a dataset right there in
+ * the list, unfindable by its own title.
+ *
+ * No caller opts in yet, so a publication-site request currently plans against the whole corpus:
+ * correct, only slower. See docs/architecture/catalog-search.md for the wiring that restores it.
  */
-export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?: { owner: { type: string, id: string } }): Record<string, any> | undefined => {
-  if (publicationSite) return { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
+export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?: { owner: { type: string, id: string } }, options: { siteOwnerOnly?: boolean } = {}): Record<string, any> | undefined => {
+  if (publicationSite && options.siteOwnerOnly) return { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
   if (!reqQuery.owner) return undefined
   const owners = reqQuery.owner.split(',')
   // several owners, or a negation like `-organization:x`, is not a single-owner scope
