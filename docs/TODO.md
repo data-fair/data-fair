@@ -66,6 +66,25 @@ value order: (1) parallelize API specs with per-spec resource prefixes — mind 
 `$text` pitfall; (2) rebalance e2e→api→unit now that `operations.ts` surfaces exist (this refactor is the
 enabler); (3) compact redundant API specs.
 
+### PR 9 — Catalog-search follow-ups `P1–P3 · S–M`
+Deferred on purpose when the owned term index replaced `$text` for `datasets` / `applications`
+(see [catalog-search.md](architecture/catalog-search.md)). `9a` is the one with a deadline.
+- `9a` **drop the legacy `fulltext` `$text` index** `P1 · S` — `api/src/mongo.ts` still declares it on
+  both collections although nothing reads it there any more. It is kept only so pods running pre-6.20
+  code keep answering `$text` during a rolling deploy. Until it goes, both collections carry two full
+  text-index structures, and `_searchText` (up to 16 KiB/document) is indexed into the dead one on every
+  write. Trigger: once no pod in the fleet can still be running pre-cutover code. Fix: `fulltext: null`.
+- `9b` **close the backfill window** `P2 · M` — `@data-fair/lib-node/upgrade-scripts` takes a lock but is
+  explicitly not a prerequisite, so in a multi-pod deploy the pods that do not hold it serve `q=` against
+  documents with no `_terms` and return few or no results until the backfill converges. Silent: `count`
+  and `results` agree, nothing is logged. Either a readiness gate (pods wait on the `upgrade` lock before
+  reporting healthy) or a `$text` fallback for documents with no `_terms`. Both were considered and left
+  out of 6.20.0; see the "backfill window" section of catalog-search.md.
+- `9c` **the two 6.20.0 upgrade scripts full-scan on every dev/staging restart** `P3 · S` — neither
+  `{'_searchIndex.v': {$ne: v}}` nor `{_searchText: {$exists: false}}` is index-served, and on a checkout
+  whose `package.json` still matches the folder name both scripts re-run on every boot. Correct (they are
+  idempotent) but it costs a full pass over `datasets` and `applications` each time.
+
 ---
 
 ## Resolved during the series (for the record)
