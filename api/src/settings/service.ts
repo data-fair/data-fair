@@ -20,6 +20,7 @@ import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 import { computeSearchText, type CatalogSearchSettings } from '../datasets/operations.ts'
+import { markStale } from '../misc/utils/text-search/mark-stale.ts'
 import type { AnyBulkWriteOperation } from 'mongodb'
 import type { DatasetInternal } from '#types'
 
@@ -249,6 +250,10 @@ const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: Catalog
     if (ops.length >= 200) await flush()
   }
   await flush()
+  // this bulk write just changed _searchText (one of the indexed fields) directly, bypassing
+  // searchIndexPatch — a bulk writer of indexed content is exactly what markStale is for, so the
+  // computeSearchIndex worker task picks these up and rebuilds _terms/_pos/_len.
+  await markStale(mongo.datasets, { 'owner.type': owner.type, 'owner.id': owner.id })
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {

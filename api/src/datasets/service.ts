@@ -564,13 +564,18 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     patch._modified = computeModified({ ...dataset, ...patch })
   }
 
-  // schema-derived search index: recomputed when the schema is patched (finalize patches it with
-  // the enums stamped; column title/description edits are innocuous props that trigger no
-  // reprocessing, so nothing else would). Skipped for drafts — the fields describe the published
-  // dataset. Kept out of `patch`: the write routes report Object.keys(patch) to the user as the
-  // fields they modified.
+  // _terms/_pos/_len derive from every configured indexed field — far more than the schema that
+  // _searchText derives from. Derive the trigger from the definition itself: a hardcoded list here
+  // would silently go stale the next time a field is added to the definition. Skipped for drafts —
+  // the fields describe the published dataset. Kept out of `patch`: the write routes report
+  // Object.keys(patch) to the user as the fields they modified.
+  const INDEXED_TOP_LEVEL = new Set(
+    Object.keys(datasetsTextSearch.definition.fields).map(path => path.split('.')[0])
+  )
+  const touchesIndexedContent = Object.keys(patch).some(key => INDEXED_TOP_LEVEL.has(key)) ||
+    !!patch.schema || !!patch.permissions
   let searchIndexUpdate: Awaited<ReturnType<typeof searchIndexPatch>> | undefined
-  if (patch.schema && !dataset.draftReason && !patch.draftReason) {
+  if (touchesIndexedContent && !dataset.draftReason && !patch.draftReason) {
     searchIndexUpdate = await searchIndexPatch({ ...dataset, ...patch })
   }
 

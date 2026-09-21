@@ -375,8 +375,19 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   })
   await permissions.initResourcePermissions(patch, preservePermissions)
 
+  // owner.name/owner.departmentName are indexed fields — carrying the old owner's terms across a
+  // transfer would leave the index pointing at the wrong owner (found under the old name, not the
+  // new one). Recompute rather than let this direct $set bypass patchApplication's unconditional
+  // applicationIndexPatch call.
+  const searchIndex = applicationIndexPatch({ ...application, owner: patch.owner })
+  const changeOwnerUpdate: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: patch }
+  for (const [key, value] of Object.entries(searchIndex)) {
+    if (value === null) (changeOwnerUpdate.$unset ??= {})[key] = true
+    else changeOwnerUpdate.$set[key] = value
+  }
+
   const patchedApp = await mongo.applications
-    .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+    .findOneAndUpdate({ id: application.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
   // keep applications-keys.owner in sync — the application-key middleware queries this collection
   // with an ownerFilter built from the dataset's owner, so a stale owner here silently breaks
