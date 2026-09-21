@@ -419,8 +419,15 @@ discipline and is a follow-up if it ever bites.
 
 **Backfill runs inline in an upgrade script, not lazily.** A document without `_terms` is
 invisible to search, so marking everything stale and letting the worker drain would leave search
-substantially broken for the whole drain. Upgrade scripts run before the HTTP server accepts
-traffic, so an inline backfill guarantees correctness from the first request.
+substantially broken for the whole drain.
+
+> **Correction (review of the finished branch).** This section originally claimed that "upgrade
+> scripts run before the HTTP server accepts traffic, so an inline backfill guarantees correctness
+> from the first request". That is false: the runner takes an `upgrade` lock and every pod that
+> fails to get it starts serving right away, so in a multi-pod deploy catalog search is degraded
+> instance-wide for the length of the backfill. Running inline shortens the window, it does not
+> close it. See "The backfill window" in
+> [docs/architecture/catalog-search.md](../architecture/catalog-search.md).
 
 `api/upgrade/6.20.0/02-backfill-search-index.ts` — the numeric prefix orders it after the
 existing `backfill-search-text.ts` in the same folder. Folder `6.20.0` is the last released

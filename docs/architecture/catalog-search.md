@@ -79,12 +79,27 @@ correctly index-served today; a collated index would break those three to fix on
 facets aggregation would risk collapsing `"A"` and `"a"` into one `$group` bucket.
 
 `ownerScopeOf` (`misc/utils/find.ts`) narrows corpus stats and the candidate gate to a single owner
-when the request implies one (a publication site, or an unambiguous single `owner=` filter). This
-is the largest scaling lever in the design: on a 200k-document instance an owner-scoped portal
-query examines ~321 documents instead of ~62,360, because the compound
-`{owner.type, owner.id, _terms}` index gates by owner first. Returning `undefined` is always
-correct, only slower — anything ambiguous (several owners, a negated owner) must return `undefined`
-rather than guess.
+when the request implies one (an unambiguous single `owner=` filter, or a publication site whose
+caller says it restricts the result set to the site owner — `siteOwnerOnly`). This is the largest
+scaling lever in the design: on a 200k-document instance an owner-scoped portal query examines ~321
+documents instead of ~62,360, because the compound `{owner.type, owner.id, _terms}` index gates by
+owner first. Returning `undefined` is always correct, only slower — anything ambiguous (several
+owners, a negated owner) must return `undefined` rather than guess.
+
+A publication site is **not** on its own such a scope. `findDatasets` outside catalog mode
+deliberately keeps OTHER owners' master-data datasets in a site's list (`masterData.*.active`), so
+scoping the statistics to the site owner counted `df = 0` for a term that occurs only in one of
+them; `planQuery` then dropped the term as unknown to the corpus, and a single-term query fell
+through to the `{_id: null}` "match nothing" filter — zero results for a dataset sitting right
+there in the list. Hence `siteOwnerOnly`: only a caller whose own publication-site filter is a
+strict owner equality may ask for the narrowing — the catalog route (`catalogMode`, which filters
+on `publicationSites`) and `findApplications` (which filters on `owner.type`/`owner.id`) qualify;
+`findDatasets` outside catalog mode does not. **Neither qualifying call site passes it yet**, so a
+publication-site request currently plans against the whole corpus: correct, and slower than it
+needs to be. Wiring `{ siteOwnerOnly: options.catalogMode }` in `datasets/service.ts` and
+`{ siteOwnerOnly: true }` in `applications/service.ts` restores the lever. Guarded by
+`search-behaviour.api.spec.ts` ("a foreign-owned master-data dataset stays findable from a
+publication site").
 
 ## Stored index fields, and what writes them
 
@@ -137,7 +152,39 @@ Two ways a document's index gets (re)computed:
 2. **Deferred**, via the worker — a document is stamped `_needsSearchIndex: true` and the
    `computeDatasetSearchIndex`/`computeApplicationSearchIndex` tasks (`api/src/workers/tasks.ts`,
    `api/src/workers/short-processor/index.ts`) pick it up on `mongoFilter: () => ({ _needsSearchIndex: true })`,
-   rebuild `_terms`/`_pos`/`_len`, stamp `_searchIndex`, and `$unset _needsSearchIndex`.
+   rebuild `_terms`/`_pos`/`_len`, stamp `_searchIndex`, and `$unset _needsSearchIndex`. Both go
+   through the shared `drainSearchIndex` helper, which owns the two rulings below.
+
+### The deferred recompute re-reads the stored document
+
+It does NOT index the resource the dispatcher handed it. `../index.ts` merges a pending draft into
+the resource before dispatching ANY task (`Object.assign(dataset, dataset.draft)`), and this index
+describes the **published** dataset — so a draft title, a draft column label or a draft enum value
+would otherwise land in the published `_searchText`/`_terms`, findable by everyone, for a dataset
+whose draft may never be validated. Both tasks therefore re-read with `findOne({ id })` and index
+that. A document deleted between selection and execution reads back as nothing and the task writes
+nothing at all (the flag included — it went with the document). Applications have no drafts; theirs
+re-reads too, to keep the two recomputes symmetrical and to index the stored document rather than a
+snapshot captured at selection time. Guarded by `recompute.api.spec.ts` ("the recompute indexes the
+published dataset, not a draft merged in by the dispatcher").
+
+### A failed recompute clears the flag anyway
+
+Every other worker task filters on `status`, so a failure changes what it matches and it stops
+selecting itself. These two are selected on `_needsSearchIndex: true` **and nothing else**: letting
+the error escape to the generic handler would leave the flag set, `loop()` would re-select the
+document immediately, and a permanently failing document would become a tight loop writing an
+`error` journal entry per round — flagging an otherwise healthy resource `status: 'error'` from a
+task that is bookkeeping and writes no journal by design, and, for applications, stranding it in
+`error` forever because `applicationTasks` has no `errorRetry`.
+
+So `drainSearchIndex` swallows the failure, reports it through
+`internalError('search-index-recompute', …)`, and clears `_needsSearchIndex` regardless. The
+document keeps its PREVIOUS, stale index until its next write recomputes it. That is the same
+failure mode `markStale` already trades in (see below) — staleness, visible in logs, resolved by
+the next real write — chosen over a loop that no operator can stop. Guarded by
+`recompute.api.spec.ts` ("a failing recompute clears the flag instead of erroring the resource and
+looping").
 
 ### `markStale` is the contract for bulk writers
 
@@ -242,6 +289,72 @@ stemming that never actually ran. This shipped once during implementation (plan 
 before being caught. A startup crash on a typo'd config value is the correct trade against that
 kind of invisible degradation.
 
+## The backfill window: catalog search degrades while 6.20.0 rolls out
+
+`api/upgrade/6.20.0/02-backfill-search-index.ts` builds `_terms`/`_pos`/`_len` on every existing
+dataset and application (after `01-backfill-search-text.ts` has stamped `_searchText`, which the
+datasets definition indexes). It runs inline rather than handing the whole corpus to the worker,
+because a document without `_terms` is invisible to search.
+
+**Upgrade scripts are not a pre-requisite for serving traffic.** The runner
+(`@data-fair/lib-node/upgrade-scripts`) acquires an `upgrade` lock; a process that does not get it
+logs `upgrade scripts lock is already acquired, skip them` and continues straight to serving. Its
+own source says so, in as many words: *"this behaviour of running the process when the upgrade
+scripts are still running on another one implies that they cannot be considered a pre-requisite"*.
+So in a multi-pod deploy exactly one pod backfills and every other pod starts answering requests
+immediately, against documents that still have no `_terms`.
+
+**What degrades.** Only `q=` on `datasets` and `applications`. `{_terms: {$in: gate}}` matches
+nothing on a not-yet-backfilled document, so an upgraded pod returns few or no results — `count`
+and `results` agree with each other, there is no error, and nothing appears in the logs. Browsing
+without `q=`, facets, sums, permissions and every other route are unaffected. Pods still running
+the previous release keep answering `$text` correctly (the `fulltext` index is deliberately not
+dropped in this release, see below), so during a rolling deploy the same search gives good results
+on one pod and thin results on another.
+
+**For how long.** Proportional to corpus size: one pass over each collection, bulk-writing every
+200 documents. Seconds for thousands of documents, minutes for hundreds of thousands.
+
+**Why it converges, and why nothing is poisoned afterwards.** The backfill marks everything stale
+before it starts, so any document it has not reached yet is carrying `_needsSearchIndex: true` and
+the worker's `computeDatasetSearchIndex`/`computeApplicationSearchIndex` tasks finish the job even
+if the script dies mid-run. And a `df` of zero is never memoized (see above), so a search issued
+during the window never caches "this term is unknown to the corpus" — results become correct as
+soon as the documents are stamped, with no cache TTL to wait out and no restart or manual action.
+
+**What an operator sees.** With `DEBUG=upgrade,upgrade:*`, the backfilling pod logs
+`stamped the search index on <N> datasets` / `... applications` when it finishes; the other pods
+log the "lock is already acquired" warning at startup. From the product side: result counts for
+`q=` searches that climb back to normal on their own over the window.
+
+**Release note for 6.20.0.** *The first pod to start on 6.20.0 runs a one-time search-index
+backfill whose duration is proportional to corpus size — seconds for thousands of datasets,
+minutes for hundreds of thousands — so expect a longer first start. While it runs, catalog search
+(`q=`) on already-upgraded pods returns incomplete results; it recovers by itself, and the backfill
+is idempotent and resumable (an interrupted run is finished by a re-run or by the background
+worker).*
+
+A readiness gate (pods waiting on the lock before reporting healthy) and a `$text` fallback for
+documents with no `_terms` would both close this window. Both were considered and deliberately left
+out of this release; the runner comment quoted above sketches what the readiness gate would take.
+
+### Why the scripts sit in a folder named after the current version
+
+`api/upgrade/6.20.0/` matches `package.json`'s current `6.20.0`, and that is the house rule, not an
+oversight: an upgrade folder is named after the **last released** version, because the version the
+branch will eventually ship as is unknown while it is being written. Every folder under
+`api/upgrade/` was created that way. The consequence, which `semver.gte(folder, recordedVersion)`
+makes plain:
+
+- **On production** the release bumps `package.json` past `6.20.0`; the first upgraded boot records
+  the new version, and from the next boot on `6.20.0 >= <new version>` is false and neither script
+  runs again.
+- **On a dev or staging checkout**, where `package.json` stays at `6.20.0` until the next release,
+  both scripts re-run on every restart. That is expected — it is exactly why they are written to be
+  idempotent — but it is not free: neither filter is index-served (there is no index on
+  `_searchIndex.v` or on `_searchText`), so each restart pays a full collection scan on `datasets`
+  and `applications` that finds nothing to do.
+
 ## The legacy `fulltext` index is kept on purpose
 
 `api/src/mongo.ts` still declares the `fulltext` `$text` index on `datasets` and `applications`
@@ -258,13 +371,16 @@ release**, once no pod in the fleet can still be running pre-cutover code.
   façade). These run against fake collections that **ignore their own aggregation pipeline** and
   return a canned row, so nothing expressed *inside* an aggregation (`$expr`, `$avg` targets, read
   paths) is exercised by a unit test — only what can be asserted on the *captured* pipeline shape.
-- `tests/features/text-search/recompute.api.spec.ts` — the worker drains `_needsSearchIndex`.
+- `tests/features/text-search/recompute.api.spec.ts` — the worker drains `_needsSearchIndex`,
+  indexes the published document rather than the draft the dispatcher merged in, and clears the
+  flag even when the recompute fails.
 - `tests/features/text-search/response-hygiene.api.spec.ts` — none of the five index fields ever
   reach an API response, on any route, any projection.
 - `tests/features/text-search/search-behaviour.api.spec.ts` — the silent-failure guards against a
   real API and a real MongoDB: a null plan returns nothing, `count` agrees with `results.length`
-  (including for a phrase query), negation excludes and an all-negation query returns nothing, and
-  tied scores are ordered deterministically across repeated identical calls.
+  (including for a phrase query), negation excludes and an all-negation query returns nothing,
+  tied scores are ordered deterministically across repeated identical calls, and a foreign-owned
+  master-data dataset stays findable from a publication site (the `ownerScopeOf` guard).
 - `tests/features/datasets/catalog-search.api.spec.ts` — end-to-end product behaviour: French
   stemming/stopwords, `searchTerms`, schema-label/enum-value indexing and its settings switches,
   permission-gated schema vocabulary, and response hygiene on the draft validate/cancel routes.

@@ -5,8 +5,17 @@ import type { TextSearch } from '../../src/misc/utils/text-search/index.ts'
 import { markStale } from '../../src/misc/utils/text-search/mark-stale.ts'
 
 // Runs inline rather than lazily: a document without `_terms` is invisible to search, so leaving
-// the drain to the worker would break search for the whole drain. Upgrade scripts run before the
-// HTTP server accepts traffic, so finishing here guarantees correctness from the first request.
+// the drain to the worker would break search for the whole drain.
+//
+// This does NOT guarantee correctness from the first request. The runner
+// (`@data-fair/lib-node/upgrade-scripts`) takes an `upgrade` lock, and a process that fails to get
+// it just logs a warning and starts serving — its own source spells the consequence out: "this
+// behaviour ... implies that they cannot be considered a pre-requisite". So in a multi-pod deploy
+// exactly one pod backfills while the others already answer `q=` against documents that still have
+// no `_terms` and therefore match nothing. Catalog search is degraded instance-wide for the length
+// of the backfill, then converges on its own — see the "backfill window" section of
+// docs/architecture/catalog-search.md. Running inline here only makes that window as short as it
+// can be from this side; it does not close it.
 //
 // Must run after 01-backfill-search-text: `_searchText` is itself one of the fields the datasets
 // definition indexes (see collections.ts), so building the index before that script would index
