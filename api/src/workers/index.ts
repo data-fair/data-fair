@@ -1,5 +1,5 @@
 import type { ResourceType } from '#types'
-import { workers, tasks, pendingTasks } from './tasks.ts'
+import { workers, tasks, pendingTasks, nonExclusiveTaskNames } from './tasks.ts'
 import type { Task, WorkerId } from './types.ts'
 import mergeDraft from '../datasets/utils/merge-draft.ts'
 import locks from '@data-fair/lib-node/locks.js'
@@ -124,7 +124,11 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
         }
 
         if (process.env.NODE_ENV === 'development') {
-          const resourceMatchedTasks = freeTasks.map(t => t.task.name).filter(t => results[t]?.some((r: any) => r.id === resource.id))
+          // nonExclusiveTaskNames are excluded on purpose: they select on a bookkeeping flag that is
+          // orthogonal to the pipeline status, so they legitimately match a resource another task
+          // also matches (see the comment next to their definition in ./tasks.ts)
+          const resourceMatchedTasks = freeTasks.map(t => t.task.name)
+            .filter(t => !nonExclusiveTaskNames.has(t) && results[t]?.some((r: any) => r.id === resource.id))
           if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
         }
 

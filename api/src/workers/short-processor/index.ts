@@ -3,6 +3,7 @@ import mongo from '#mongo'
 import es from '#es'
 import debugLib from 'debug'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
@@ -87,28 +88,73 @@ export const historizeLines = async function (dataset: RestDataset) {
   await relay.historizeLines(dataset)
 }
 
+/**
+ * Shared tail of the two deferred search-index recomputes: write the computed fields and clear
+ * the `_needsSearchIndex` flag, whatever happens.
+ *
+ * `computeDatasetSearchIndex`/`computeApplicationSearchIndex` are selected on
+ * `_needsSearchIndex: true` and on nothing else, so — unlike every other worker task, which
+ * filters on `status` — a failure does not change what they match. Letting an error escape to
+ * the generic handler in `../index.ts` would: flag an otherwise healthy resource
+ * `status: 'error'` from a task that is bookkeeping and writes no journal by design; leave the
+ * flag set, so `loop()` re-selects the resource immediately and writes an `error` journal entry
+ * on every round; and, for applications, strand the document in `error` forever, since
+ * `applicationTasks` has no `errorRetry`.
+ *
+ * So the failure is swallowed here and the flag is cleared anyway. Deliberate tradeoff: the
+ * document keeps its PREVIOUS (stale) index until its next write recomputes it, rather than the
+ * worker spinning on it forever — staleness is the failure mode this design already accepts
+ * everywhere else (see `markStale` in docs/architecture/catalog-search.md), a tight error loop is
+ * not. The failure is reported through `internalError` so it stays visible in logs and metrics.
+ */
+const drainSearchIndex = async (
+  type: 'datasets' | 'applications',
+  id: string,
+  computeIndex: () => Promise<Record<string, any> | null>
+) => {
+  const collection = mongo.db.collection(type)
+  try {
+    const searchIndex = await computeIndex()
+    // the resource was deleted while the task waited for its slot: nothing to write, nothing to clear
+    if (!searchIndex) return
+    const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
+    for (const [key, value] of Object.entries(searchIndex)) {
+      if (value === null) update.$unset[key] = ''
+      else update.$set[key] = value
+    }
+    await collection.updateOne({ id }, update)
+  } catch (err: any) {
+    internalError('search-index-recompute', `failed to recompute the search index of ${type}/${id}, it keeps its previous index until its next write - ${err?.stack || err?.message || err}`)
+    // clear the flag anyway, or this task is re-selected in a tight loop forever
+    await collection.updateOne({ id }, { $unset: { _needsSearchIndex: '' } })
+      .catch(clearErr => internalError('search-index-recompute-clear', `failed to clear _needsSearchIndex on ${type}/${id} - ${clearErr?.stack || clearErr?.message || clearErr}`))
+  }
+}
+
 export const computeDatasetSearchIndex = async function (dataset: Dataset) {
   await mongo.connect(true)
   const { searchIndexPatch } = await import('../../datasets/utils/search-text.ts')
-  const searchIndex = await searchIndexPatch(dataset)
-  const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
-  for (const [key, value] of Object.entries(searchIndex)) {
-    if (value === null) update.$unset[key] = ''
-    else update.$set[key] = value
-  }
-  await mongo.datasets.updateOne({ id: dataset.id }, update)
+  await drainSearchIndex('datasets', dataset.id, async () => {
+    // the dispatcher merges a pending draft into the resource it hands to a task (../index.ts), but
+    // this index describes the PUBLISHED dataset: draft titles, draft column labels and draft enum
+    // values must never reach the published _searchText/_terms. So index the raw stored document,
+    // not the (possibly draft-merged) snapshot we were given.
+    const published = await mongo.datasets.findOne({ id: dataset.id })
+    if (!published) return null
+    return await searchIndexPatch(published)
+  })
 }
 
-export const computeApplicationSearchIndex = async function (application: any) {
+export const computeApplicationSearchIndex = async function (application: { id: string }) {
   await mongo.connect(true)
   const { applicationIndexPatch } = await import('../../applications/service.ts')
-  const searchIndex = applicationIndexPatch(application)
-  const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
-  for (const [key, value] of Object.entries(searchIndex)) {
-    if (value === null) update.$unset[key] = ''
-    else update.$set[key] = value
-  }
-  await mongo.applications.updateOne({ id: application.id }, update)
+  await drainSearchIndex('applications', application.id, async () => {
+    // applications have no drafts, but re-reading keeps both recomputes symmetrical and makes the
+    // index describe the stored document rather than the snapshot captured at selection time
+    const stored = await mongo.applications.findOne({ id: application.id })
+    if (!stored) return null
+    return applicationIndexPatch(stored)
+  })
 }
 
 if (process.env.NODE_ENV === 'development') {
