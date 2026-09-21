@@ -71,14 +71,17 @@ test.describe('catalog search', () => {
       isRest: true,
       title: 'Accessibilité des ERP',
       schema: [
-        { key: 'accueil_chambre_nombre_accessibles', type: 'integer', title: 'Nombre de chambres accessibles à une personne en fauteuil roulant' },
+        // the key's own words (accueil, capacite, batiment, identifiant) must not otherwise occur
+        // in the fixture, or a coincidental term overlap would confound the "keys do not feed the
+        // search" assertion below with a real match on the label
+        { key: 'accueil_capacite_batiment_identifiant', type: 'integer', title: 'Nombre de chambres accessibles à une personne en fauteuil roulant' },
         { key: 'nom', type: 'string' }
       ]
     })
     const byLabel = (await u1.get('/api/v1/datasets', { params: { q: 'fauteuil', select: 'id' } })).data
     assert.equal(byLabel.count, 1)
     assert.equal(byLabel.results[0].id, 'cs-erp')
-    const byKey = (await u1.get('/api/v1/datasets', { params: { q: 'accueil_chambre_nombre_accessibles', size: 0 } })).data
+    const byKey = (await u1.get('/api/v1/datasets', { params: { q: 'accueil_capacite_batiment_identifiant', size: 0 } })).data
     assert.equal(byKey.count, 0)
 
     for (const res of [
@@ -91,7 +94,7 @@ test.describe('catalog search', () => {
     // a title edit is an innocuous schema patch (no reprocessing): still recomputed
     await u1.patch('/api/v1/datasets/cs-erp', {
       schema: [
-        { key: 'accueil_chambre_nombre_accessibles', type: 'integer', title: 'Chambres PMR' },
+        { key: 'accueil_capacite_batiment_identifiant', type: 'integer', title: 'Chambres PMR' },
         { key: 'nom', type: 'string' }
       ]
     })

@@ -20,6 +20,7 @@ import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { searchIndexPatch } from './utils/search-text.ts'
 import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
@@ -134,9 +135,14 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
       ]
     }
   }
-  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite)
+  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope) : null
+  // A query whose every term is unknown must return NOTHING, never an unfiltered list.
+  const textFilter = reqQuery.q ? (plan ? datasetsTextSearch.matchFilter(plan) : { _id: null }) : undefined
+
+  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters, textFilter)
   if (statusBreachOr) (query.$and ||= []).push(statusBreachOr)
-  const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
+  const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, datasetsTextSearch.sortSpec())
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
   // Rebuild to preserve key ordering — Mongo applies sort keys in insertion order.
@@ -152,16 +158,29 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     if (explain) explain.countMS = Date.now() - t0
     return res
   })
-  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
+  // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
+  // An explicit ?sort= never reads _score, so keep the plain find() path for it.
+  const relevanceSorted = !!plan && !reqQuery.sort
+  const resultsPromise = size > 0 && (relevanceSorted
+    ? datasets.aggregate([
+      { $match: query },
+      { $addFields: { _score: datasetsTextSearch.scoreExpression(plan) } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: size },
+      { $project: project }
+    ], { collation: { locale: 'en' } }).toArray()
+    : datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+  ).then(res => {
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters)).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters, textFilter)).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = reqQuery.sums && datasets
-    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters)).toArray()
+    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters, textFilter)).toArray()
     .then(sumsResponse => {
       const res = sumsResponse[0] || {}
       for (const field of reqQuery.sums.split(',')) {

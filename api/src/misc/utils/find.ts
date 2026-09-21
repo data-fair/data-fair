@@ -23,15 +23,13 @@ function queryVal (val: string) {
  *
  * @returns
  */
-export const query = (reqQuery: Record<string, string>, locale: string, sessionState: SessionState, resourceType: string, fieldsMap: Record<string, string>, globalMode: boolean, extraFilters: any[] = []) => {
+export const query = (reqQuery: Record<string, string>, locale: string, sessionState: SessionState, resourceType: string, fieldsMap: Record<string, string>, globalMode: boolean, extraFilters: any[] = [], textFilter?: any) => {
   const query: any = {}
   if (!reqQuery) return query
 
-  if (reqQuery.q) {
-    query.$text = {
-      $search: reqQuery.q
-    }
-  }
+  // Collections with their own text engine pass `textFilter`; the rest keep $text.
+  if (textFilter) Object.assign(query, textFilter)
+  else if (reqQuery.q) query.$text = { $search: reqQuery.q }
 
   query.$and = [...extraFilters]
   for (const name of Object.keys(fieldsMap)) {
@@ -102,6 +100,26 @@ export const query = (reqQuery: Record<string, string>, locale: string, sessionS
 }
 
 /**
+ * The single-owner scope of a request, or undefined when it spans owners.
+ *
+ * Corpus statistics and the candidate gate are both scoped to this when it is set, which is the
+ * largest scaling lever in the design: on a 200k-document instance an owner-scoped portal query
+ * examines 321 documents instead of 62,360, because the compound {owner.type, owner.id, _terms}
+ * index gates by owner first. Returning undefined is always CORRECT, only slower — so anything
+ * ambiguous must return undefined rather than guess an owner.
+ */
+export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?: { owner: { type: string, id: string } }): Record<string, any> | undefined => {
+  if (publicationSite) return { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
+  if (!reqQuery.owner) return undefined
+  const owners = reqQuery.owner.split(',')
+  // several owners, or a negation like `-organization:x`, is not a single-owner scope
+  if (owners.length !== 1 || owners[0].startsWith('-')) return undefined
+  const [type, id] = owners[0].split(':')
+  if (!type || !id) return undefined
+  return { 'owner.type': type, 'owner.id': id }
+}
+
+/**
  *
  * @returns {any}
  */
@@ -131,7 +149,7 @@ export const ownerFilters = (reqQuery: Record<string, string>): any => {
  *
  * @returns {any}
  */
-export const sort = (sortStr: string | undefined = '', q: string | undefined = ''): any => {
+export const sort = (sortStr: string | undefined = '', q: string | undefined = '', relevanceSort?: Record<string, number>): any => {
   const sort: any = {}
   for (const s of sortStr.split(',').filter(Boolean)) {
     const toks = s.split(':')
@@ -146,7 +164,7 @@ export const sort = (sortStr: string | undefined = '', q: string | undefined = '
       if (sort[toks[0]] !== 1 && sort[toks[0]] !== -1) throw httpError(400, `bad sort order "${s}"`)
     }
   }
-  if (q) sort._score = { $meta: 'textScore' }
+  if (q) Object.assign(sort, relevanceSort ?? { _score: { $meta: 'textScore' } })
   return sort
 }
 
@@ -247,10 +265,12 @@ export const setResourceLinks = (resource: any, resourceType: string, publicUrl:
  *
  * @returns {any[]}
  */
-const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, extraFilters?: any[]): any[] => {
+const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, extraFilters?: any[], textFilter?: any): any[] => {
   const pipeline: any[] = []
 
-  if (reqQuery.q) {
+  if (textFilter) {
+    pipeline.push({ $match: textFilter })
+  } else if (reqQuery.q) {
     pipeline.push({
       $match: {
         $text: {
@@ -285,10 +305,10 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
  *
  * @returns
  */
-export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[]) => {
+export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[], textFilter?: any) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
-  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters, textFilter)
 
   const fields = (facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
     .filter((f: string) => facetFields[f] || f === 'owner' || f === 'visibility')) || []
@@ -464,8 +484,8 @@ export const parseFacets = (facets: any, nullFacetFields: string[] = []) => {
  *
  * @returns
  */
-export const sumsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, sumFields: Record<string, string> = {}, filterFields: Record<string, string>, extraFilters: any[]) => {
-  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
+export const sumsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, sumFields: Record<string, string> = {}, filterFields: Record<string, string>, extraFilters: any[], textFilter?: any) => {
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters, textFilter)
   for (const name of Object.keys(filterFields)) {
     if (reqQuery[name] !== undefined) {
       pipeline.push({ $match: { [filterFields[name]]: { $in: reqQuery[name].split(',') } } })

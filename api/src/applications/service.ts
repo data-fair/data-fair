@@ -23,7 +23,7 @@ import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
-import { applicationsTextSearch } from '../misc/utils/text-search/collections.ts'
+import { applicationsTextSearch, applicationsStats } from '../misc/utils/text-search/collections.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
 // filter (type/id/department) — see api/src/misc/utils/application-key.ts
@@ -93,15 +93,31 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
-  const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
+  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite)
+  const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope) : null
+  // A query whose every term is unknown must return NOTHING, never an unfiltered list.
+  const textFilter = reqQuery.q ? (plan ? applicationsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 
-  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
+  const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters, textFilter)
+
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, applicationsTextSearch.sortSpec())
   const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft', ...INDEX_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
-  const resultsPromise = size > 0 && mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields)).toArray()
+  // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
+  const relevanceSorted = !!plan && !reqQuery.sort
+  const resultsPromise = size > 0 && (relevanceSorted
+    ? mongo.applications.aggregate([
+      { $match: query },
+      { $addFields: { _score: applicationsTextSearch.scoreExpression(plan) } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: size },
+      { $project: project }
+    ], { collation: { locale: 'en' } }).toArray()
+    : mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray())
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, undefined, textFilter)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response: any = {}
