@@ -30,6 +30,32 @@ test('memoizes — a repeated term is not counted twice', async () => {
   assert.equal(c.calls.filter(x => x[0] === 'count').length, 1)
 })
 
+test('a zero df is never memoized: a term that later exists is found on the very next query', async () => {
+  // planQuery drops any term whose df is 0 as unknown — so unlike a stale non-zero df (which only
+  // shifts ranking a little), a memoized zero would silently remove a term from the query plan
+  // even after documents containing it exist, for the rest of the cache's TTL. A fake collection
+  // whose answer for 'novel' flips from 0 to 1 catches exactly that regression.
+  let novelExists = false
+  const c = {
+    calls: [] as any[],
+    estimatedDocumentCount: async () => 1000,
+    countDocuments: async (filter: any) => {
+      c.calls.push(['count', filter])
+      if (filter._terms === 'novel') return novelExists ? 1 : 0
+      return 7
+    },
+    aggregate: (pipeline: any[]) => ({ toArray: async () => { c.calls.push(['aggregate', pipeline]); return [{ title: 8, description: 40 }] } })
+  }
+  const provider = createStatsProvider(c, def)
+
+  const before = await provider.get(['novel'])
+  assert.equal(before.df.novel, 0, 'the term does not exist yet')
+
+  novelExists = true
+  const after = await provider.get(['novel'])
+  assert.equal(after.df.novel, 1, 'a memoized zero must not hide a term that now exists')
+})
+
 test('an owner scope is part of the count filter AND of the cache key', async () => {
   const c = fakeCollection()
   const provider = createStatsProvider(c, def)

@@ -31,6 +31,17 @@ export const createStatsProvider = (
     async (term: string, key: string) => collection.countDocuments({ ...(key ? JSON.parse(key) : {}), _terms: term }),
     { promise: true, maxAge: options.dfMaxAge ?? 5 * 60 * 1000, max: 5000, primitive: true }
   )
+  // Never memoize a zero: planQuery drops any term whose df is 0 as unknown, so a stale non-zero
+  // df only shifts ranking a little (the module doc's "10% df error" noise), but a stale zero
+  // removes the term from the query plan altogether — a document that gains the term while the
+  // zero is cached stays unfindable by it for the rest of the TTL. Counting an absent term is
+  // also the cheapest possible count (an empty index range), and it is exactly the term most
+  // likely to gain documents soon, so evicting it costs nothing and buys correctness.
+  const countTermChecked = async (term: string, key: string) => {
+    const df = await countTerm(term, key)
+    if (df === 0) countTerm.delete(term, key)
+    return df
+  }
 
   const countAll = memoize(
     async (key: string) => key ? collection.countDocuments(JSON.parse(key)) : collection.estimatedDocumentCount(),
@@ -61,7 +72,7 @@ export const createStatsProvider = (
       const [n, avgLen, counts] = await Promise.all([
         countAll(key),
         averageLengths(key),
-        Promise.all(terms.map(async term => [term, await countTerm(term, key)] as const))
+        Promise.all(terms.map(async term => [term, await countTermChecked(term, key)] as const))
       ])
       return { n, avgLen, df: Object.fromEntries(counts) }
     }
