@@ -8,6 +8,7 @@ import {
   formatMetadataContext,
   SUMMARY_MAX_LENGTH
 } from '../../../ui/src/composables/dataset/agent-metadata-tools-logic.ts'
+import { buildStructuredContent, schema as describeDatasetSchema } from '../../../agent-tools/describe-dataset.ts'
 
 const licenses = [
   { title: 'Licence Ouverte / Open Licence', href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence' },
@@ -138,5 +139,59 @@ test.describe('formatMetadataContext', () => {
   test('says so when the organization configured no licence', () => {
     const out = formatMetadataContext({ title: 'T' }, { ...ctx, licenses: [] })
     assert.ok(out.includes('none configured'))
+  })
+})
+
+test.describe('buildStructuredContent on a freshly created REST dataset', () => {
+  // A dataset created by the wizard has no rows and no public page yet, so
+  // `count` and `page` are absent from the API response. They were assigned
+  // unconditionally while every other field was guarded, leaving keys whose
+  // value is literally `undefined` — which the host rejects with
+  // "Instances of 'undefined' type are not supported", so describe_dataset
+  // threw the moment the assistant looked at a dataset it had just helped
+  // create. A judged simulation caught it; the assistant swallowed the error
+  // and carried on guessing.
+  const freshRest = { id: 'abc', title: 'Demandes de subvention', isRest: true, schema: [] }
+
+  test('emits no key whose value is undefined', () => {
+    const content = buildStructuredContent(freshRest)
+    const undefinedKeys = Object.entries(content).filter(([, v]) => v === undefined).map(([k]) => k)
+    assert.deepEqual(undefinedKeys, [], `undefined-valued keys: ${undefinedKeys.join(', ')}`)
+  })
+
+  test('survives a round trip through JSON, as the wire requires', () => {
+    const content = buildStructuredContent(freshRest)
+    assert.doesNotThrow(() => JSON.parse(JSON.stringify(content)))
+    assert.equal(JSON.parse(JSON.stringify(content)).title, 'Demandes de subvention')
+  })
+
+  test('still reports count and page when the API does supply them', () => {
+    const content = buildStructuredContent({ ...freshRest, count: 12 }, undefined, 'https://example.org/data-fair/dataset/abc')
+    assert.equal(content.count, 12)
+    assert.equal(content.page, 'https://example.org/data-fair/dataset/abc')
+  })
+})
+
+test.describe('describe_dataset output honours its own declared contract', () => {
+  // Both halves of a real failure: first the builder emitted keys valued
+  // `undefined` ("Instances of 'undefined' type are not supported"), then,
+  // once guarded, the declared `required` list still demanded them
+  // ("Instance does not have required property \"count\""). Checking the
+  // built object against the declared schema catches either direction.
+  const required = describeDatasetSchema.outputSchema.required as readonly string[]
+
+  test('a freshly created REST dataset satisfies every required property', () => {
+    const content = buildStructuredContent({ id: 'abc', title: 'Demandes de subvention', isRest: true, schema: [] })
+    const missing = required.filter(k => content[k] === undefined)
+    assert.deepEqual(missing, [], `declared required but absent: ${missing.join(', ')}`)
+  })
+
+  test('a fully populated dataset also satisfies it', () => {
+    const content = buildStructuredContent(
+      { id: 'abc', title: 'Équipements', count: 7, schema: [{ key: 'nom', type: 'string' }] },
+      undefined,
+      'https://example.org/data-fair/dataset/abc'
+    )
+    assert.deepEqual(required.filter(k => content[k] === undefined), [])
   })
 })

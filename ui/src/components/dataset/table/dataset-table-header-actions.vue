@@ -262,7 +262,7 @@ defineProps({
   selectedCols: { type: Array as () => string[], required: true }
 })
 
-const { selectedResults, bulkLines, saveLine, saving, addLineTrigger } = useDatasetEdition()
+const { selectedResults, bulkLines, saveLine, saving, addLineTrigger, lineDialog } = useDatasetEdition()
 
 watch(addLineTrigger, (v) => {
   if (v) {
@@ -322,6 +322,14 @@ const saveLinesPatch = useAsyncAction(async () => {
 
 const addLineDialog = ref(false)
 const addLineValid = ref(false)
+// The add dialog's half of the shared state the table publishes to the assistant.
+watch([addLineDialog, addLineValid], () => {
+  if (!addLineDialog.value) {
+    if (lineDialog.value?.mode === 'add') lineDialog.value = null
+    return
+  }
+  lineDialog.value = { mode: 'add', valid: addLineValid.value }
+}, { immediate: true })
 const addLineForm = ref<VForm>()
 const newLine = ref({})
 const file = ref<File>()
