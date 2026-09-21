@@ -476,7 +476,7 @@ import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronL
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
 import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
-import { useAgentState } from '@data-fair/lib-vue-agents'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
@@ -658,6 +658,17 @@ if (edit) {
     valid: !!lineDialog.value?.valid
   }))
 
+  // The form's subagent registers with the dialog, so it is missing from the tool
+  // list of the request whose call opened it. Telling the model to finish its reply
+  // and pick up next turn deadlocked: nothing prompts a next turn, because the
+  // person is waiting to be told a button is ready. An unkeyed transition does it —
+  // a declared wait resolves on the pending event and the same turn continues, with
+  // the tool list rebuilt and the subagent now in it.
+  watch(() => lineDialog.value?.mode ?? null, (mode, before) => {
+    if (!mode || before) return
+    emitAgentEvent('dataset-line-dialog-opened', { id: datasetId, mode })
+  })
+
   useAgentTool({
     name: 'open_add_line_dialog',
     description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
@@ -672,12 +683,11 @@ if (edit) {
       const refusal = addLineDialogPrecondition(dataset.value?.schema)
       if (refusal) return refusal
       addLineTrigger.value = true
-      // Not "you can now delegate": editLine_form registers with the dialog and is
-      // absent from THIS request's tool list — same one-turn lag `navigate` warns about.
-      // A judged run took the old wording literally, found no such subagent, and burned a
-      // turn on a junk data_quality_checker dispatch to reach the one where it existed,
-      // leaving the person an apology about plumbing and a stray audit chip.
-      return 'Add line dialog opened. Finish your reply now: the editLine_form subagent registers with the dialog and becomes available on the next turn, to fill in the form fields. The user will click Save when ready.'
+      // Neither "you can now delegate" (false for this request — a judged run took it
+      // literally and burned a turn on a junk dispatch to reach one where it was true)
+      // nor "finish your reply and pick it up next turn", which deadlocked three runs:
+      // the person was waiting to be told a button was ready, so no next turn came.
+      return 'Add line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to fill the form. The user clicks Save when ready.'
     }
   })
 
@@ -694,7 +704,7 @@ if (edit) {
     },
     execute: async (params: { lineId: string }) => {
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. Finish your reply now: the editLine_form subagent registers with the dialog and becomes available on the next turn, to modify the form fields. The user will click Save when ready.'
+      return 'Edit line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to modify the form. The user clicks Save when ready.'
     }
   })
 }

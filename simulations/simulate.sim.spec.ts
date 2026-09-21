@@ -182,7 +182,12 @@ for (const simCase of selected) {
         // between turns, so re-open before sending rather than assuming the
         // composer survived whatever it just did.
         await ensureChatOpen()
-        await chat.sendMessage(message)
+        // The composer takes a message only once the assistant is not working —
+        // while it is, the send control is Stop. That is an ordinary wait for a
+        // turn, not a wedged page, so it gets the turn ceiling rather than the
+        // driver's short one: a judged run spent six turns failing to deliver in
+        // 15s slices and read as an assistant gone silent.
+        await chat.sendMessage(message, { readyTimeoutMs: TURN_CEILING_MS })
         // A turn ends two ways. 'ended' is the assistant finished; 'waiting' is it
         // holding the turn open for the person, which is a turn boundary as far as
         // they are concerned — before the driver reported that, every declared
