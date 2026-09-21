@@ -20,7 +20,7 @@ import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 import { computeSearchText, type CatalogSearchSettings } from '../datasets/operations.ts'
-import { markStale } from '../misc/utils/text-search/mark-stale.ts'
+import { datasetsTextSearch } from '../misc/utils/text-search/collections.ts'
 import type { AnyBulkWriteOperation } from 'mongodb'
 import type { DatasetInternal } from '#types'
 
@@ -234,9 +234,15 @@ const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: Catalog
   // nothing. The real non-draft-only effect: a file-new draft's top-level `schema` is `[]` (its
   // real schema sits under `draft.schema`), and computeSearchText returns undefined for an empty
   // schema — a file-updated draft's top-level schema is the still-published one, correctly swept.
+  // the projection (and therefore the document buildIndexFields sees) must carry every field the
+  // index derives from, not just the schema-derived _searchText — derived from the definition
+  // itself rather than hardcoded, for the same reason as the applyPatch trigger above: a
+  // hardcoded list would silently go stale the next time the definition gains a field.
+  const projection: Record<string, 1> = { id: 1, schema: 1, permissions: 1 }
+  for (const path of Object.keys(datasetsTextSearch.definition.fields)) projection[path.split('.')[0]] = 1
   const cursor = mongo.datasets.find(
     { 'owner.type': owner.type, 'owner.id': owner.id },
-    { projection: { id: 1, schema: 1, permissions: 1, _searchText: 1 } }
+    { projection }
   )
   const ops: AnyBulkWriteOperation<DatasetInternal & { _id: string }>[] = []
   const flush = async () => {
@@ -244,16 +250,35 @@ const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: Catalog
     ops.length = 0
   }
   for await (const dataset of cursor) {
-    const _searchText = computeSearchText(dataset, newCatalogSearch)
+    const _searchText = computeSearchText(dataset, newCatalogSearch) ?? null
     if ((_searchText ?? null) === (dataset._searchText ?? null)) continue
-    ops.push({ updateOne: { filter: { id: dataset.id }, update: _searchText ? { $set: { _searchText } } : { $unset: { _searchText: true } } } })
+    // _searchText is itself one of the indexed fields, so the index must be rebuilt from the NEW
+    // value computed above, not the stale one still sitting on `dataset`
+    const fields = datasetsTextSearch.buildIndexFields({ ...dataset, _searchText })
+    const indexPatch: Record<string, any> = {
+      _searchText,
+      _terms: fields?._terms ?? null,
+      _pos: fields?._pos ?? null,
+      _len: fields?._len ?? null,
+      _searchIndex: { v: datasetsTextSearch.definition.version, at: new Date().toISOString() }
+    }
+    const $set: Record<string, any> = {}
+    const $unset: Record<string, any> = {}
+    for (const [key, value] of Object.entries(indexPatch)) {
+      if (value === null) $unset[key] = true
+      else $set[key] = value
+    }
+    const update: Record<string, any> = {}
+    if (Object.keys($set).length) update.$set = $set
+    if (Object.keys($unset).length) update.$unset = $unset
+    ops.push({ updateOne: { filter: { id: dataset.id }, update } })
     if (ops.length >= 200) await flush()
   }
   await flush()
-  // this bulk write just changed _searchText (one of the indexed fields) directly, bypassing
-  // searchIndexPatch — a bulk writer of indexed content is exactly what markStale is for, so the
-  // computeSearchIndex worker task picks these up and rebuilds _terms/_pos/_len.
-  await markStale(mongo.datasets, { 'owner.type': owner.type, 'owner.id': owner.id })
+  // recomputed inline above, not deferred via markStale: this sweep already visits every one of
+  // the owner's datasets to decide whether _searchText changed, so marking them stale for the
+  // worker to revisit would only add a staleness window (and a UX regression against the old
+  // $text behaviour, where a settings toggle took effect immediately) for no saving.
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {
