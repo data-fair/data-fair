@@ -476,7 +476,7 @@ import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronL
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
 import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
-import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
@@ -657,17 +657,6 @@ if (edit) {
     mode: lineDialog.value?.mode ?? null,
     valid: !!lineDialog.value?.valid
   }))
-
-  // The form's subagent registers with the dialog, so it is missing from the tool
-  // list of the request whose call opened it. Telling the model to finish its reply
-  // and pick up next turn deadlocked: nothing prompts a next turn, because the
-  // person is waiting to be told a button is ready. An unkeyed transition does it —
-  // a declared wait resolves on the pending event and the same turn continues, with
-  // the tool list rebuilt and the subagent now in it.
-  watch(() => lineDialog.value?.mode ?? null, (mode, before) => {
-    if (!mode || before) return
-    emitAgentEvent('dataset-line-dialog-opened', { id: datasetId, mode })
-  })
 
   useAgentTool({
     name: 'open_add_line_dialog',
