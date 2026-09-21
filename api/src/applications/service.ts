@@ -22,7 +22,7 @@ import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
-import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
 import { applicationsTextSearch, applicationsStats } from '../misc/utils/text-search/collections.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
@@ -101,10 +101,17 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters, textFilter)
 
   const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, applicationsTextSearch.sortSpec())
-  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft', ...INDEX_FIELD_NAMES], reqQuery.raw === 'true')
+  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
+  // Mongo only uses an index to serve a string predicate when the query's collation matches the
+  // index's, and the `terms` / `owner-terms` indexes are simple-collation: issuing `{_terms: {$in}}`
+  // under `{locale: 'en'}` degrades to a full COLLSCAN. With `q=` the default sort is by the numeric
+  // `_score`, where collation is a no-op, so dropping it there costs nothing; the browse path (no
+  // `q=`, where `sort=title` ordering actually matters) keeps it. countDocuments/facets already run
+  // uncollated for the same reason, so they must not gain a collation either.
+  const resultsOptions = textFilter ? {} : { collation: { locale: 'en' } }
   // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
   const relevanceSorted = !!plan && !reqQuery.sort
   const resultsPromise = size > 0 && (relevanceSorted
@@ -115,8 +122,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
       { $skip: skip },
       { $limit: size },
       { $project: project }
-    ], { collation: { locale: 'en' } }).toArray()
-    : mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray())
+    ], resultsOptions).toArray()
+    : mongo.applications.find(query, resultsOptions).limit(size).skip(skip).sort(sort).project(project).toArray())
   const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, undefined, textFilter)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */

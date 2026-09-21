@@ -18,7 +18,7 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
-import { INDEX_FIELD_NAMES } from '../../misc/utils/text-search/index.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../../misc/utils/text-search/index.ts'
 import type { Db } from 'mongodb'
 import type { Request, Dataset } from '#types'
 
@@ -212,7 +212,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._esIgnoredKeywordFields
   delete dataset._needsHistorizing
   delete dataset._needsHistorizingLines
-  for (const field of INDEX_FIELD_NAMES) delete dataset[field]
+  for (const field of RESPONSE_EXCLUDED_FIELD_NAMES) delete dataset[field]
   // integrity state is readable by the owner's admins and superadmins only (registered
   // 'readIntegrity' operation); everyone else must not see breach verdicts or anchors
   if (dataset.integrity && !permissions.can('datasets', dataset, 'readIntegrity', reqSession(req), reqBypassPermissions(req))) {

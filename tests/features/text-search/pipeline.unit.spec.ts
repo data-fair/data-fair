@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createAnalyzer } from '../../../api/src/misc/utils/text-search/analysis.ts'
 import { validateDefinition } from '../../../api/src/misc/utils/text-search/definition.ts'
 import { parseQuery, planQuery } from '../../../api/src/misc/utils/text-search/query.ts'
-import { matchFilter, scoreExpression, sortSpec, INDEX_FIELD_NAMES } from '../../../api/src/misc/utils/text-search/pipeline.ts'
+import { matchFilter, scoreExpression, sortSpec, INDEX_FIELD_NAMES, RESPONSE_EXCLUDED_FIELD_NAMES } from '../../../api/src/misc/utils/text-search/pipeline.ts'
 
 const analyzer = createAnalyzer('fr')
 const def = validateDefinition({ fields: { title: 3, description: 1 }, language: 'fr', version: 1 })
@@ -47,9 +47,15 @@ test('the sort always carries a deterministic tie-break', () => {
   assert.deepEqual(sortSpec(def), { _score: -1, id: 1 })
 })
 
-test('INDEX_FIELD_NAMES lists exactly the fields that must never reach a response', () => {
-  // this list is the single source of truth for the projection excludes and clean() in Task 7
+test('INDEX_FIELD_NAMES lists exactly the fields stored on a document', () => {
   assert.deepEqual([...INDEX_FIELD_NAMES], ['_terms', '_pos', '_len', '_searchIndex', '_needsSearchIndex'])
+})
+
+test('RESPONSE_EXCLUDED_FIELD_NAMES adds the computed _score to the stored fields', () => {
+  // this list is the single source of truth for the projection excludes and clean(). `_score` is
+  // not stored but $addFields injects it before $project, so it leaks the same way.
+  assert.deepEqual([...RESPONSE_EXCLUDED_FIELD_NAMES], ['_terms', '_pos', '_len', '_searchIndex', '_needsSearchIndex', '_score'])
+  assert.ok(RESPONSE_EXCLUDED_FIELD_NAMES.includes(Object.keys(sortSpec(def))[0] as any), 'the relevance sort key must be excluded from responses')
 })
 
 test('a definition with dotted fields produces paths using sanitised keys', () => {

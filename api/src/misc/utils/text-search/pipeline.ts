@@ -9,6 +9,14 @@ import { fieldKey } from './definition.ts'
  */
 export const INDEX_FIELD_NAMES = ['_terms', '_pos', '_len', '_searchIndex', '_needsSearchIndex'] as const
 
+/**
+ * What API responses must exclude: the stored index fields, plus the `_score` that the relevance
+ * pipeline computes with `$addFields` before `$sort`. `_score` is not stored, but it leaks the same
+ * way — `$project` runs after `$addFields`, so an exclusion projection that does not name it ships a
+ * raw BM25 float on every relevance-sorted row.
+ */
+export const RESPONSE_EXCLUDED_FIELD_NAMES = [...INDEX_FIELD_NAMES, '_score'] as const
+
 const K1 = 1.2
 const B = 0.75
 

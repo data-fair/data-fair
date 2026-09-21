@@ -19,7 +19,7 @@ import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { searchIndexPatch } from './utils/search-text.ts'
-import { INDEX_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
 import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
@@ -150,7 +150,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   for (const [k, v] of Object.entries(rawSort)) {
     sort[k === 'modified' ? '_modified' : k] = v
   }
-  const project = findUtils.project(reqQuery.select, ['_modified', '_searchText', ...INDEX_FIELD_NAMES], reqQuery.raw === 'true')
+  const project = findUtils.project(reqQuery.select, ['_modified', '_searchText', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
@@ -158,6 +158,13 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     if (explain) explain.countMS = Date.now() - t0
     return res
   })
+  // Mongo only uses an index to serve a string predicate when the query's collation matches the
+  // index's, and the `terms` / `owner-terms` indexes are simple-collation: issuing `{_terms: {$in}}`
+  // under `{locale: 'en'}` degrades to a full COLLSCAN. With `q=` the default sort is by the numeric
+  // `_score`, where collation is a no-op, so dropping it there costs nothing; the browse path (no
+  // `q=`, where `sort=title` ordering actually matters) keeps it. countDocuments/facets/sums already
+  // run uncollated for the same reason, so they must not gain a collation either.
+  const resultsOptions = textFilter ? {} : { collation: { locale: 'en' } }
   // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
   // An explicit ?sort= never reads _score, so keep the plain find() path for it.
   const relevanceSorted = !!plan && !reqQuery.sort
@@ -169,8 +176,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
       { $skip: skip },
       { $limit: size },
       { $project: project }
-    ], { collation: { locale: 'en' } }).toArray()
-    : datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+    ], resultsOptions).toArray()
+    : datasets.find(query, resultsOptions).limit(size).skip(skip).sort(sort).project(project).toArray()
   ).then(res => {
     if (explain) explain.resultsMS = Date.now() - t0
     return res

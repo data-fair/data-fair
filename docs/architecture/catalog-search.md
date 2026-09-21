@@ -57,6 +57,27 @@ data-fair-specific stats providers live.
    deterministic secondary key. Guarded by
    `search-behaviour.api.spec.ts` ("tied scores return a stable order across identical calls").
 
+### The results query drops the `en` collation when there is a text filter
+
+MongoDB will only use an index to serve a string predicate when the query's collation matches the
+index's. The `terms` (`{_terms: 1}`) and `owner-terms` (`{owner.type, owner.id, _terms}`) indexes in
+`api/src/mongo.ts` are **simple**-collation, so issuing `{_terms: {$in: [...]}}` under
+`{locale: 'en'}` degrades to a COLLSCAN of the whole collection — measured on the dev instance:
+`IXSCAN keys=201 docs=100` uncollated vs `COLLSCAN keys=0 docs=2000` collated. The old `$text` path
+was exempt because a text index ignores collation.
+
+So both services compute `const resultsOptions = textFilter ? {} : { collation: { locale: 'en' } }`
+and pass it to the aggregate *and* the `find()`. Nothing is lost: with `q=` the default sort is
+`sortSpec()`'s numeric `_score`, where collation is a no-op. The browse path (no `q=`, where
+`sort=title` ordering actually matters) keeps the collation exactly as before. Note the residual
+effect on the *tie-break* key: `sortSpec()`'s secondary key is the string `id`, so score ties now
+order in byte order rather than `en` order — still deterministic, which is all the tie-break is for.
+
+The collation must **not** be added to the indexes instead: `countDocuments(query)`,
+`findUtils.facetsQuery` and `findUtils.sumsQuery` all filter on `_terms` uncollated and are
+correctly index-served today; a collated index would break those three to fix one, and collating the
+facets aggregation would risk collapsing `"A"` and `"a"` into one `$group` bucket.
+
 `ownerScopeOf` (`misc/utils/find.ts`) narrows corpus stats and the candidate gate to a single owner
 when the request implies one (a publication site, or an unambiguous single `owner=` filter). This
 is the largest scaling lever in the design: on a 200k-document instance an owner-scoped portal
@@ -77,10 +98,13 @@ Every document in `datasets`/`applications` carries, when indexed content exists
 | `_searchIndex` | `{ v: <definition version>, at: <ISO timestamp> }`, bumped whenever the index was (re)computed |
 | `_needsSearchIndex` | present and `true` only while a document is waiting for the worker to recompute it |
 
-All five are in `INDEX_FIELD_NAMES` (`pipeline.ts`) and are stripped from every API response —
-`findUtils.project` builds an EXCLUSION projection when `select` is absent, so anything not
-excluded here leaks: kilobytes of position arrays plus corpus-shape statistics. Guarded end-to-end
-by `tests/features/text-search/response-hygiene.api.spec.ts`.
+All five are in `INDEX_FIELD_NAMES` (`pipeline.ts`). What the API actually excludes is
+`RESPONSE_EXCLUDED_FIELD_NAMES` = those five **plus `_score`**: `findUtils.project` builds an
+EXCLUSION projection when `select` is absent, so anything not excluded there leaks — kilobytes of
+position arrays plus corpus-shape statistics, and (because `$addFields` injects `_score` before
+`$project`) a raw BM25 float on every relevance-sorted row. The same list drives the `clean()`
+deletes on both collections. Guarded end-to-end by
+`tests/features/text-search/response-hygiene.api.spec.ts`.
 
 Datasets index `title`, `searchTerms`, `summary`, `description`, `keywords`, `topics.title`,
 `owner.name`, `owner.departmentName` and `_searchText` (the schema-derived text: column
