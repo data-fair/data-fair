@@ -38,20 +38,15 @@ const backfill = async (db: Db, collectionName: string, textSearch: TextSearch, 
   }
   for await (const doc of collection.find({ _needsSearchIndex: true })) {
     const fields = textSearch.buildIndexFields(doc)
-    ops.push({
-      updateOne: {
-        filter: { _id: doc._id },
-        update: {
-          $set: {
-            _terms: fields?._terms ?? null,
-            _pos: fields?._pos ?? null,
-            _len: fields?._len ?? null,
-            _searchIndex: { v: version, at: new Date().toISOString() }
-          },
-          $unset: { _needsSearchIndex: '' }
-        }
-      }
-    })
+    // a document with nothing indexable gets its index fields REMOVED, not set to null — same
+    // contract as searchIndexPatch and the worker, so every writer leaves the same shape behind
+    const $set: Record<string, any> = { _searchIndex: { v: version, at: new Date().toISOString() } }
+    const $unset: Record<string, any> = { _needsSearchIndex: '' }
+    for (const [key, value] of Object.entries({ _terms: fields?._terms, _pos: fields?._pos, _len: fields?._len })) {
+      if (value === undefined) $unset[key] = ''
+      else $set[key] = value
+    }
+    ops.push({ updateOne: { filter: { _id: doc._id }, update: { $set, $unset } } })
     if (ops.length >= 200) await flush()
   }
   await flush()
