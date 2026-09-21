@@ -96,7 +96,9 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
-  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite)
+  // an application publication-site filter is a strict owner equality, so the site owner is
+  // always the full corpus for this request
+  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: true })
   const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? applicationsTextSearch.matchFilter(plan) : { _id: null }) : undefined
