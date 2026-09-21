@@ -10,8 +10,25 @@ export interface StatsCollection {
   aggregate (pipeline: any[]): { toArray (): Promise<any[]> }
 }
 
+/** What answering a query needs: statistics in, nothing else. */
 export interface StatsProvider {
   get (terms: string[], ownerScope?: Record<string, any>): Promise<CorpusStats>
+}
+
+/**
+ * What OWNING the provider adds. Kept off StatsProvider deliberately: the search façade only ever
+ * reads statistics, so requiring a cache control on the query contract would make every caller
+ * and every test double carry a method none of them can meaningfully implement.
+ */
+export interface ClearableStatsProvider extends StatsProvider {
+  /**
+   * Drop every memoized statistic. Ranking depends on corpus-wide values (n, avgLen) that no
+   * document carries, so a corpus replaced wholesale — as the test environment does between
+   * cases — is still scored against the previous one until the TTLs expire, and avgLen's is an
+   * hour. Production never needs this: there the corpus drifts slowly, which is the whole
+   * premise of caching these.
+   */
+  clear (): void
 }
 
 /**
@@ -24,7 +41,7 @@ export const createStatsProvider = (
   collection: StatsCollection,
   def: ResolvedDefinition,
   options: { dfMaxAge?: number, avgLenMaxAge?: number } = {}
-): StatsProvider => {
+): ClearableStatsProvider => {
   const scopeKey = (scope?: Record<string, any>) => scope ? JSON.stringify(scope) : ''
 
   const countTerm = memoize(
@@ -67,6 +84,11 @@ export const createStatsProvider = (
   )
 
   return {
+    clear () {
+      countTerm.clear()
+      countAll.clear()
+      averageLengths.clear()
+    },
     async get (terms, ownerScope) {
       const key = scopeKey(ownerScope)
       const [n, avgLen, counts] = await Promise.all([

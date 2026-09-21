@@ -2,7 +2,7 @@
 // import data-fair modules; everything else must stay extractable to @data-fair/lib.
 import config from '#config'
 import mongo from '#mongo'
-import { defineTextSearch, createStatsProvider, type StatsProvider } from './index.ts'
+import { defineTextSearch, createStatsProvider, type ClearableStatsProvider } from './index.ts'
 
 // config.catalogSearch.language is a MONGO text-index language name ('french'), because the
 // legacy $text index's default_language requires one. The analyzer takes ISO 639-1 codes. A
@@ -48,18 +48,20 @@ export const applicationsTextSearch = defineTextSearch({
 // modules are dynamically imported before mongo.init() runs (see app.js), so touching them at
 // module scope crash-loops the API with "db was not connected". Consumers still write
 // `datasetsStats`/`applicationsStats` as plain values — only the underlying provider is deferred.
-let datasetsStatsInner: StatsProvider | undefined
-export const datasetsStats: StatsProvider = {
+let datasetsStatsInner: ClearableStatsProvider | undefined
+export const datasetsStats: ClearableStatsProvider = {
   get: (terms, ownerScope) => {
     datasetsStatsInner ??= createStatsProvider(mongo.datasets as any, datasetsTextSearch.definition)
     return datasetsStatsInner.get(terms, ownerScope)
-  }
+  },
+  clear: () => datasetsStatsInner?.clear()
 }
 
-let applicationsStatsInner: StatsProvider | undefined
-export const applicationsStats: StatsProvider = {
+let applicationsStatsInner: ClearableStatsProvider | undefined
+export const applicationsStats: ClearableStatsProvider = {
   get: (terms, ownerScope) => {
     applicationsStatsInner ??= createStatsProvider(mongo.applications as any, applicationsTextSearch.definition)
     return applicationsStatsInner.get(terms, ownerScope)
-  }
+  },
+  clear: () => applicationsStatsInner?.clear()
 }

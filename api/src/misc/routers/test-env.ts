@@ -83,6 +83,12 @@ router.delete('/', async (req, res, next) => {
       const { memoizedGetCompatODS } = await import('../../api-compat/ods/index.ts')
       memoizedGetCompatODS.clear()
     }
+    // corpus statistics are memoized for up to an hour and are not derived from any document,
+    // so without this every catalog-search ranking assertion is scored against whatever corpus
+    // the previous suite left behind
+    const { datasetsStats, applicationsStats } = await import('../utils/text-search/collections.ts')
+    datasetsStats.clear()
+    applicationsStats.clear()
     clearApiKeysCache()
     clearApplicationKeysCaches()
     rateLimiting.clear()
