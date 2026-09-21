@@ -60,7 +60,10 @@ export const applicationIndexPatch = (application: any) => {
     _terms: fields?._terms ?? null,
     _pos: fields?._pos ?? null,
     _len: fields?._len ?? null,
-    _searchIndex: { v: applicationsTextSearch.definition.version, at: new Date().toISOString() }
+    _searchIndex: { v: applicationsTextSearch.definition.version, at: new Date().toISOString() },
+    // see the same field in datasets' searchIndexPatch: this patch is the recompute, so it clears
+    // any pending stale flag. Consumers map null to `$unset`, or skip it when inserting.
+    _needsSearchIndex: null
   }
 }
 

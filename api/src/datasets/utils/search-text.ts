@@ -36,6 +36,11 @@ export const searchIndexPatch = async (dataset: { owner: { type: string, id: str
     _terms: fields?._terms ?? null,
     _pos: fields?._pos ?? null,
     _len: fields?._len ?? null,
-    _searchIndex: { v: datasetsTextSearch.definition.version, at: new Date().toISOString() }
+    _searchIndex: { v: datasetsTextSearch.definition.version, at: new Date().toISOString() },
+    // This patch IS the recompute, so any pending stale flag no longer applies. Every consumer
+    // either maps a null to `$unset` (update paths) or skips it (insert paths), so returning it
+    // here clears the flag everywhere without each caller remembering to. Without this, a PATCH
+    // that follows a topic or owner rename leaves the flag set and the worker redoes the work.
+    _needsSearchIndex: null
   }
 }
