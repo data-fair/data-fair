@@ -115,8 +115,9 @@ export const query = (reqQuery: Record<string, string>, locale: string, sessionS
  * the corpus, and a single-term query would then match nothing at all — a dataset right there in
  * the list, unfindable by its own title.
  *
- * No caller opts in yet, so a publication-site request currently plans against the whole corpus:
- * correct, only slower. See docs/architecture/catalog-search.md for the wiring that restores it.
+ * Both callers pass it: `applications/service.ts` unconditionally (an application publication-site
+ * filter is a strict owner equality), `datasets/service.ts` only under `catalogMode`, for the
+ * reason just above. See docs/architecture/catalog-search.md.
  */
 export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?: { owner: { type: string, id: string } }, options: { siteOwnerOnly?: boolean } = {}): Record<string, any> | undefined => {
   if (publicationSite && options.siteOwnerOnly) return { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
@@ -128,6 +129,27 @@ export const ownerScopeOf = (reqQuery: Record<string, string>, publicationSite?:
   if (!type || !id) return undefined
   return { 'owner.type': type, 'owner.id': id }
 }
+
+/**
+ * Driver options for the results query of a find endpoint that may carry a text filter.
+ *
+ * Mongo only uses an index to serve a string predicate when the query's collation matches the
+ * index's, and the owned text-search indexes (`terms`, `owner-terms` in `api/src/mongo.ts`) are
+ * SIMPLE-collation. Issuing `{_terms: {$in: [...]}}` under `{locale: 'en'}` therefore degrades to a
+ * full COLLSCAN — measured on the dev instance: `IXSCAN keys=201 docs=100` uncollated against
+ * `COLLSCAN keys=0 docs=2000` collated. The old `$text` path was exempt because a text index
+ * ignores collation.
+ *
+ * Nothing is lost by dropping it: with `q=` the default sort is the numeric `_score`, where
+ * collation is a no-op. The browse path (no `q=`, where `sort=title` ordering is what a user
+ * actually sees) keeps it. `countDocuments`, facets and sums already run uncollated for the same
+ * reason and must not gain a collation either.
+ *
+ * Guarded by `tests/features/text-search/collation.api.spec.ts`, which pins the observable
+ * consequence — string sort order — on both branches.
+ */
+export const resultsOptions = (textFilter?: any): { collation?: { locale: string } } =>
+  textFilter ? {} : { collation: { locale: 'en' } }
 
 /**
  *

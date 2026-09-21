@@ -110,13 +110,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
-  // Mongo only uses an index to serve a string predicate when the query's collation matches the
-  // index's, and the `terms` / `owner-terms` indexes are simple-collation: issuing `{_terms: {$in}}`
-  // under `{locale: 'en'}` degrades to a full COLLSCAN. With `q=` the default sort is by the numeric
-  // `_score`, where collation is a no-op, so dropping it there costs nothing; the browse path (no
-  // `q=`, where `sort=title` ordering actually matters) keeps it. countDocuments/facets already run
-  // uncollated for the same reason, so they must not gain a collation either.
-  const resultsOptions = textFilter ? {} : { collation: { locale: 'en' } }
+  // a text filter must run uncollated or it COLLSCANs — see findUtils.resultsOptions
+  const resultsOptions = findUtils.resultsOptions(textFilter)
   // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
   const relevanceSorted = !!plan && !reqQuery.sort
   const resultsPromise = size > 0 && (relevanceSorted
