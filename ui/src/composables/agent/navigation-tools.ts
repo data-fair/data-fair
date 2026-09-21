@@ -144,10 +144,15 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         return {
           content: [{
             type: 'text' as const,
-            // The tool set exposed to the LLM is frozen when the turn starts: tools
-            // registered by the destination page are discovered by the chat but only
-            // become callable later. Say so, or the model concludes it is stuck.
-            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: page-specific agent tools register after navigation; if a tool of the destination page is not callable yet, finish your reply and it will be available on the next turn.`
+            // The tool set exposed to the LLM is frozen when the request is built:
+            // tools registered by the destination page are discovered by the chat but
+            // only become callable later. Say so, or the model concludes it is stuck —
+            // and say how to get there, because "finish your reply and pick it up next
+            // turn" deadlocked three judged runs: there is no next turn when the person
+            // is waiting to be told a button is ready. A declared wait resolves on the
+            // arrival (`location` is wait-resolving), so the same turn continues with
+            // the destination's tools in scope.
+            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: page-specific agent tools register after navigation, so a tool of the destination page is not callable in this request. To use one now, declare wait_for_user_action: arriving here resolves it and the same turn continues with that page's tools available.`
           }]
         }
       } catch (error: any) {

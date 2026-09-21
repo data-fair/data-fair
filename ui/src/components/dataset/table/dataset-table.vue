@@ -687,7 +687,7 @@ if (edit) {
       // literally and burned a turn on a junk dispatch to reach one where it was true)
       // nor "finish your reply and pick it up next turn", which deadlocked three runs:
       // the person was waiting to be told a button was ready, so no next turn came.
-      return 'Add line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to fill the form. The user clicks Save when ready.'
+      return 'Add line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to fill the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
     }
   })
 
@@ -704,7 +704,7 @@ if (edit) {
     },
     execute: async (params: { lineId: string }) => {
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to modify the form. The user clicks Save when ready.'
+      return 'Edit line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to modify the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
     }
   })
 }
