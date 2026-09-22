@@ -77,10 +77,8 @@ Deferred on purpose when the owned term index replaced `$text` for `datasets` / 
   **`fulltext: null` alone is NOT the fix**: `api/src/activity/service.ts` still calls `findUtils.query`
   for both collections without a `textFilter`, so `/activity?q=` issues a `$text` query on them and would
   start returning a mongo "text index required" error. Migrate that endpoint to the term index (or drop
-  its `q=` support) in the same change. Cheaper and available now, independently of the fleet condition:
-  shrink the legacy index back to its pre-6.20 field list. `searchTerms` and `_searchText` were added to
-  it during this branch, and the pre-6.20 pods it exists for know about neither, so those two fields cost
-  text-index write amplification for no reader.
+  its `q=` support) in the same change. The index is already back to its pre-6.20 field list, so until
+  then it only costs what it cost before this branch.
 - `9b` **close the backfill window** `P2 · M` — `@data-fair/lib-node/upgrade-scripts` takes a lock but is
   explicitly not a prerequisite, so in a multi-pod deploy the pods that do not hold it serve `q=` against
   documents with no `_terms` and return few or no results until the backfill converges. Silent: `count`

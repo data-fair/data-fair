@@ -20,7 +20,6 @@
     "filesStorage",
     "s3",
     "mongo",
-    "catalogSearch",
     "elasticsearch",
     "indicesPrefix",
     "defaultLimits",
@@ -210,13 +209,6 @@
         "url": { "type": "string" },
         "maxBulkOps": { "type": "number" },
         "options": { "type": "object" }
-      }
-    },
-    "catalogSearch": {
-      "type": "object",
-      "required": ["language"],
-      "properties": {
-        "language": { "type": "string" }
       }
     },
     "map": {

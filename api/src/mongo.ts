@@ -64,10 +64,9 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
-        fulltext: [
-          { title: 'text', searchTerms: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text', _searchText: 'text' },
-          { weights: { title: 3, searchTerms: 3, summary: 2 }, default_language: config.catalogSearch.language }
-        ],
+        // legacy $text index, no longer read by `q=` — kept only so pods running pre-6.20 code keep
+        // answering during a rolling deploy, so it stays in its pre-6.20 shape. See docs/TODO.md 9a.
+        fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { weights: { title: 3, summary: 2 } }],
         // special purpose indexes for workers, etc
         'virtual.children_1': { 'virtual.children': 1 },
         publicationSites_1: { publicationSites: 1 },
@@ -97,7 +96,8 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
-        fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { weights: { title: 3, summary: 2 }, default_language: config.catalogSearch.language }],
+        // legacy $text index, see the datasets one above
+        fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { weights: { title: 3, summary: 2 } }],
         // get linked applications
         'configuration.datasets.href_1': { 'configuration.datasets.href': 1 },
         'datasets-id': [{ 'configuration.datasets.id': 1 }, { sparse: true }],

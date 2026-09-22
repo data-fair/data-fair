@@ -11,11 +11,11 @@ import path from 'node:path'
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 process.env.NODE_ENV ??= 'development'
 
-const { datasetsTextSearch, applicationsTextSearch, analyzerLanguage } = await import('../../../api/src/misc/utils/text-search/collections.ts')
+const { datasetsTextSearch, applicationsTextSearch } = await import('../../../api/src/misc/utils/text-search/collections.ts')
+const config = (await import('../../../api/src/config.ts')).default
 
-// Pins the exact regression that shipped silently: config.catalogSearch.language is a MongoDB
-// text-index language name ('french'), which the analyzer does not understand on its own — feeding
-// it straight through disables stemming AND stopword removal without any error, only a quietly
+// Pins a regression that once shipped silently: an analyzer given a language it does not
+// understand disables stemming AND stopword removal without any error, leaving only a quietly
 // degraded index. Asserting the stemmed value (not just "some terms") is the point: a raw,
 // un-stemmed, stopword-laden token list would also pass a looser assertion.
 test('the shipped datasetsTextSearch analyzer actually stems and strips stopwords', () => {
@@ -28,14 +28,7 @@ test('the shipped applicationsTextSearch analyzer actually stems and strips stop
   assert.deepEqual(fields._terms, ['eolien', 'commun'])
 })
 
-test('analyzerLanguage maps known mongo text-index language names to ISO codes', () => {
-  assert.equal(analyzerLanguage('french'), 'fr')
-  assert.equal(analyzerLanguage('english'), 'en')
-  // 'none' is a deliberate no-stemming/no-stopwords degradation, matching the config doc comment
-  // for catalogSearch.language — not the silent-failure case this whole fix is about.
-  assert.equal(analyzerLanguage('none'), 'none')
-})
-
-test('analyzerLanguage throws on an unsupported language, naming the offending value', () => {
-  assert.throws(() => analyzerLanguage('klingon'), /klingon/)
+test('the catalog search takes its language from the deployment default locale, not a setting of its own', () => {
+  assert.equal(datasetsTextSearch.definition.language, config.i18n.defaultLocale)
+  assert.equal(applicationsTextSearch.definition.language, config.i18n.defaultLocale)
 })

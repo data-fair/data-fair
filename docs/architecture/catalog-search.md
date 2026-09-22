@@ -261,33 +261,28 @@ after two failed code-reading diagnoses (plan ledger, Ruling P25) — `countTerm
 runs whenever `df === 0`, so an absent term is simply recounted on every query (cheap: it is an
 empty index range).
 
-## `config.catalogSearch.language` is a MongoDB name, not ISO
+## The analyzer language is the deployment's default locale
 
-`config.catalogSearch.language` (e.g. `'french'`) is the value plugged into the legacy `fulltext`
-`$text` index's `default_language` (`api/src/mongo.ts`) — it has to be a MongoDB text-index
-language name. The analyzer (`analysis.ts`) takes ISO 639-1 codes (`'fr'`, `'en'`) and is
-deliberately kept ISO-only so it stays extractable to a shared lib with no MongoDB-specific
-vocabulary.
+There is **no search-specific language setting**. `collections.ts` reads `config.i18n.defaultLocale`
+(`'fr'`), which is already required, already has an `I18N_DEFAULT_LOCALE` override and is already
+what the rest of the API treats as "the language this deployment runs in". The analyzer
+(`analysis.ts`) takes ISO 639-1 codes, so the two vocabularies match with nothing in between.
 
-`collections.ts` bridges the two with `analyzerLanguage()`:
+An earlier iteration did have its own `config.catalogSearch.language`, holding a **MongoDB**
+text-index language name (`'french'`) because it also fed the legacy `$text` index's
+`default_language`. That forced a translation table in `collections.ts` and a startup throw to guard
+it, because feeding a Mongo name straight to `createAnalyzer` does not error — it silently returns
+an analyzer with no stemming and no stopword removal, so documents index and searches return
+results, just materially worse ones, with every ranking figure the benchmark established assuming
+stemming that never ran. That shipped once during implementation (plan ledger, Ruling P22).
 
-```ts
-const LANGUAGE_CODES: Record<string, string> = { french: 'fr', english: 'en', none: 'none' }
-export const analyzerLanguage = (mongoLanguage: string): string => {
-  const code = LANGUAGE_CODES[mongoLanguage]
-  if (!code) throw new Error(`text-search: unsupported catalogSearch.language "${mongoLanguage}" — expected one of ${Object.keys(LANGUAGE_CODES).join(', ')}`)
-  return code
-}
-```
-
-It **throws** on anything unmappable, on purpose. Passing the Mongo name straight through
-(`createAnalyzer('french')`) does not error — it silently returns an analyzer with no stemming and
-no stopword removal (`createAnalyzer` only recognises ISO codes, so an unrecognised language falls
-through to a no-op pipeline). Everything still works: documents index, searches return results —
-just materially worse ones, with every ranking figure the design's benchmark established assuming
-stemming that never actually ran. This shipped once during implementation (plan ledger, Ruling P22)
-before being caught. A startup crash on a typo'd config value is the correct trade against that
-kind of invisible degradation.
+Both the setting and its guard are gone. The legacy index no longer carries a `default_language`
+(see below), so nothing needs Mongo's vocabulary, and a single ISO source cannot drift out of the
+analyzer's. A deployment whose default locale has no built-in stemmer still degrades to no stemming
+and no stopword removal — but that is the same degradation it already gets everywhere else in the
+API, not a failure peculiar to search, and it is pinned by
+`tests/features/text-search/collections.unit.spec.ts`, which asserts the **stemmed** output of the
+shipped analyzers rather than merely that some terms came out.
 
 ## The backfill window: catalog search degrades while 6.20.0 rolls out
 
@@ -355,14 +350,24 @@ makes plain:
   `_searchIndex.v` or on `_searchText`), so each restart pays a full collection scan on `datasets`
   and `applications` that finds nothing to do.
 
-## The legacy `fulltext` index is kept on purpose
+## The legacy `fulltext` index is kept on purpose, in its pre-6.20 shape
 
 `api/src/mongo.ts` still declares the `fulltext` `$text` index on `datasets` and `applications`
 (alongside the new `terms`/`owner-terms` indexes) even though `q=` no longer reads it for these two
 collections. This is deliberate, **not** dead weight to clean up: during a rolling deploy, old pods
 running the previous version still issue `$text` queries against the same database, and removing
-the index would break them mid-rollout. Removing `fulltext: null` is a **follow-up for a later
-release**, once no pod in the fleet can still be running pre-cutover code.
+the index would break them mid-rollout.
+
+It is declared **exactly as it was before 6.20.0**. An earlier iteration of this branch grew it —
+adding `searchTerms` and `_searchText` as indexed fields and a `default_language` — which bought
+nothing: the only readers it exists for are pods that predate both fields, and every indexed field
+costs text-index write amplification on every write. `_searchText` in particular is the largest
+field on the document. Reverting is safe to do at any time: `ensureIndex` catches Mongo's index
+conflict (code 85/86) and drops then recreates the index under the same name.
+
+Removing it altogether is a **follow-up for a later release** — see `docs/TODO.md` 9a, and note that
+`fulltext: null` alone is not enough, because `/activity?q=` still issues `$text` on both
+collections.
 
 ## Testing
 

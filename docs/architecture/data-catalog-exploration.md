@@ -30,7 +30,7 @@ Le catalogue n'est pas indexé par l'index texte `$text` de MongoDB, mais par un
 
 Les applications sont indexées de la même façon, sur un ensemble de champs plus restreint (titre, résumé, description, nom du propriétaire), avec les mêmes poids.
 
-L'analyse linguistique est le français — désaccentuation, passage en minuscules, racinisation légère et retrait des mots vides — configurable via `config.catalogSearch.language` (`api/config/default.cjs`), par défaut `'french'`. La valeur est un nom de langue MongoDB (`'french'`, `'english'`, `'none'`), traduit en code ISO pour l'analyseur ; une valeur non reconnue fait échouer le démarrage plutôt que de dégrader la recherche en silence. La racinisation est volontairement *légère* : elle retire les marques de nombre et de genre mais laisse la dérivation intacte, de sorte que "consommation" ne soit pas ramené à "consomm".
+L'analyse linguistique est le français — désaccentuation, passage en minuscules, racinisation légère et retrait des mots vides. La recherche n'a pas de réglage de langue propre : elle suit `config.i18n.defaultLocale` (`api/config/default.cjs`), par défaut `'fr'`, le code ISO 639-1 que l'analyseur attend et que le reste de l'API utilise déjà comme langue du déploiement. La racinisation est volontairement *légère* : elle retire les marques de nombre et de genre mais laisse la dérivation intacte, de sorte que "consommation" ne soit pas ramené à "consomm".
 
 Le score combine trois facteurs, là où un moteur `$text` n'en utilise que deux :
 
