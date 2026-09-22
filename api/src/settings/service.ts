@@ -175,6 +175,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
+
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node

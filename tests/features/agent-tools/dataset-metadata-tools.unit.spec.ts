@@ -120,6 +120,24 @@ test.describe('buildMetadataPatch', () => {
     const { patch } = buildMetadataPatch({ license: null }, { license: { title: 'ODbL' } }, ctx)
     assert.equal(patch.license, null)
   })
+
+  test('searchTerms: trimmed, capped, gated by datasets-metadata like keywords', () => {
+    const { patch, outcomes } = buildMetadataPatch({ searchTerms: '  HLM, logement social\nhabitat social  ' }, { title: 'x' }, ctx)
+    assert.equal(patch.searchTerms, 'HLM, logement social\nhabitat social')
+    assert.deepEqual(outcomes, [{ field: 'searchTerms', status: 'applied' }])
+
+    const tooLong = buildMetadataPatch({ searchTerms: 'x'.repeat(1001) }, {}, ctx)
+    assert.equal(tooLong.patch.searchTerms, undefined)
+    assert.equal(tooLong.outcomes[0].status, 'rejected')
+    assert.match(tooLong.outcomes[0].reason!, /1000/)
+
+    const disabled = buildMetadataPatch({ searchTerms: 'a' }, {}, { ...ctx, datasetsMetadata: { searchTerms: { active: false } } })
+    assert.equal(disabled.outcomes[0].status, 'rejected')
+    assert.ok(disabled.outcomes[0].reason!.includes('disabled'))
+
+    const missingSetting = buildMetadataPatch({ searchTerms: 'a' }, {}, { ...ctx, datasetsMetadata: { keywords: { active: true } } })
+    assert.equal(missingSetting.outcomes[0].status, 'applied', 'a missing searchTerms setting means active')
+  })
 })
 
 test.describe('formatMetadataContext', () => {
@@ -139,6 +157,12 @@ test.describe('formatMetadataContext', () => {
   test('says so when the organization configured no licence', () => {
     const out = formatMetadataContext({ title: 'T' }, { ...ctx, licenses: [] })
     assert.ok(out.includes('none configured'))
+  })
+
+  test('the context reports searchTerms and says it is hidden', () => {
+    const text = formatMetadataContext({ title: 'T', searchTerms: 'élections scrutin' }, ctx)
+    assert.match(text, /searchTerms: élections scrutin/)
+    assert.match(text, /never displayed/)
   })
 })
 

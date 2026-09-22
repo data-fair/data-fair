@@ -449,6 +449,8 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
+  // searchTerms defaults to active TRUE in the schema, unlike its neighbours
+  if (!dm.searchTerms) dm.searchTerms = { active: true }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {

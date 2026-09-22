@@ -57,6 +57,16 @@ export const cases: SimulationCase[] = [
     goal: 'Tu veux confirmer combien de ces grands équipements sont des stades, parce que tu dois citer ce chiffre en réunion cet après-midi.',
     maxTurns: 6
   },
+  // The hidden-search-terms button: a maintainer who does not know what a synonym list is
+  // for, asks for help, and must see the field light up — and nothing saved — before the
+  // assistant claims it is done.
+  {
+    name: 'termes-de-recherche-caches',
+    route: '/data-fair/dataset/sim-equipements-sportifs',
+    persona: 'Tu es chargé de mission dans une petite collectivité, tu publies des données sans être informaticien. On t\'a dit que les usagers ne trouvent pas ce jeu de données quand ils cherchent "gymnase" ou "piscine". Tu ne sais pas ce qu\'est un index ni un synonyme au sens technique. Si on te dit que c\'est fait sans que tu voies un changement à l\'écran, tu le dis.',
+    goal: 'Tu veux que ce jeu de données soit trouvé quand quelqu\'un tape des mots courants comme "gymnase", "piscine" ou "stade" dans la recherche du portail, et tu veux voir ce qui a été ajouté avant que ce soit enregistré.',
+    maxTurns: 8
+  },
   // The handover at the end of a workflow: does the assistant keep working once
   // the wizard is gone?
   //
