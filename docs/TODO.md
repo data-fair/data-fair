@@ -70,10 +70,17 @@ enabler); (3) compact redundant API specs.
 Deferred on purpose when the owned term index replaced `$text` for `datasets` / `applications`
 (see [catalog-search.md](architecture/catalog-search.md)). `9a` is the one with a deadline.
 - `9a` **drop the legacy `fulltext` `$text` index** `P1 · S` — `api/src/mongo.ts` still declares it on
-  both collections although nothing reads it there any more. It is kept only so pods running pre-6.20
-  code keep answering `$text` during a rolling deploy. Until it goes, both collections carry two full
-  text-index structures, and `_searchText` (up to 16 KiB/document) is indexed into the dead one on every
-  write. Trigger: once no pod in the fleet can still be running pre-cutover code. Fix: `fulltext: null`.
+  both collections although `q=` no longer reads it there. It is kept so pods running pre-6.20 code keep
+  answering `$text` during a rolling deploy. Until it goes, both collections carry two full text-index
+  structures, and `_searchText` is indexed into the legacy one on every write. Trigger: once no pod in
+  the fleet can still be running pre-cutover code.
+  **`fulltext: null` alone is NOT the fix**: `api/src/activity/service.ts` still calls `findUtils.query`
+  for both collections without a `textFilter`, so `/activity?q=` issues a `$text` query on them and would
+  start returning a mongo "text index required" error. Migrate that endpoint to the term index (or drop
+  its `q=` support) in the same change. Cheaper and available now, independently of the fleet condition:
+  shrink the legacy index back to its pre-6.20 field list. `searchTerms` and `_searchText` were added to
+  it during this branch, and the pre-6.20 pods it exists for know about neither, so those two fields cost
+  text-index write amplification for no reader.
 - `9b` **close the backfill window** `P2 · M` — `@data-fair/lib-node/upgrade-scripts` takes a lock but is
   explicitly not a prerequisite, so in a multi-pod deploy the pods that do not hold it serve `q=` against
   documents with no `_terms` and return few or no results until the backfill converges. Silent: `count`

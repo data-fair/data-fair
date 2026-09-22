@@ -19,7 +19,7 @@ import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { searchIndexPatch } from './utils/search-text.ts'
-import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
 import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
@@ -400,10 +400,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
-  const searchIndex = await searchIndexPatch(dataset)
-  for (const [key, value] of Object.entries(searchIndex)) {
-    if (value !== null) (dataset as any)[key] = value
-  }
+  assignIndexFields(dataset, searchIndexPatch(dataset))
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -578,10 +575,9 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   )
   const touchesIndexedContent = Object.keys(patch).some(key => INDEXED_TOP_LEVEL.has(key)) ||
     !!patch.schema || !!patch.permissions
-  let searchIndexUpdate: Awaited<ReturnType<typeof searchIndexPatch>> | undefined
-  if (touchesIndexedContent && !dataset.draftReason && !patch.draftReason) {
-    searchIndexUpdate = await searchIndexPatch({ ...dataset, ...patch })
-  }
+  const searchIndexUpdate = touchesIndexedContent && !dataset.draftReason && !patch.draftReason
+    ? searchIndexPatch({ ...dataset, ...patch })
+    : undefined
 
   Object.assign(dataset, patch)
 
@@ -646,11 +642,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     }
   }
   if (searchIndexUpdate) {
-    for (const [key, value] of Object.entries(searchIndexUpdate)) {
-      if (value === null) (mongoPatch.$unset ??= {})[key] = true
-      else (mongoPatch.$set ??= {})[key] = value
-      ;(dataset as any)[key] = value ?? undefined
-    }
+    mergeIndexUpdate(mongoPatch, searchIndexUpdate)
+    assignIndexFields(dataset, searchIndexUpdate)
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 

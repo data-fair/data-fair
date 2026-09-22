@@ -122,9 +122,9 @@ deletes on both collections. Guarded end-to-end by
 `tests/features/text-search/response-hygiene.api.spec.ts`.
 
 Datasets index `title`, `searchTerms`, `summary`, `description`, `keywords`, `topics.title`,
-`owner.name`, `owner.departmentName` and `_searchText` (the schema-derived text: column
-labels/descriptions, enum values when the org opts in — see
-[Dataset Validation](dataset-validation.md) for `_searchText`'s own computation). Applications
+`owner.name`, `owner.departmentName` and `_searchText` (the schema-derived text: column titles and
+the head of their descriptions — see [Dataset Validation](dataset-validation.md) for
+`_searchText`'s own computation). Applications
 index `title`, `summary`, `description`, `owner.name`, `owner.departmentName`. Weights mirror the
 old `fulltext` `$text` index's weights so ranking didn't regress on migration.
 
@@ -159,8 +159,8 @@ Two ways a document's index gets (re)computed:
 
 It does NOT index the resource the dispatcher handed it. `../index.ts` merges a pending draft into
 the resource before dispatching ANY task (`Object.assign(dataset, dataset.draft)`), and this index
-describes the **published** dataset — so a draft title, a draft column label or a draft enum value
-would otherwise land in the published `_searchText`/`_terms`, findable by everyone, for a dataset
+describes the **published** dataset — so a draft title or a draft column label would otherwise
+land in the published `_searchText`/`_terms`, findable by everyone, for a dataset
 whose draft may never be validated. Both tasks therefore re-read with `findOne({ id })` and index
 that. A document deleted between selection and execution reads back as nothing and the task writes
 nothing at all (the flag included — it went with the document). Applications have no drafts; theirs
@@ -382,7 +382,7 @@ release**, once no pod in the fleet can still be running pre-cutover code.
   tied scores are ordered deterministically across repeated identical calls, and a foreign-owned
   master-data dataset stays findable from a publication site (the `ownerScopeOf` guard).
 - `tests/features/datasets/catalog-search.api.spec.ts` — end-to-end product behaviour: French
-  stemming/stopwords, `searchTerms`, schema-label/enum-value indexing and its settings switches,
-  permission-gated schema vocabulary, and response hygiene on the draft validate/cancel routes.
+  stemming/stopwords, `searchTerms`, schema-label indexing, permission-gated schema vocabulary,
+  and response hygiene on the draft validate/cancel routes.
 
 See [Testing](testing.md) for how to run any of these in isolation.

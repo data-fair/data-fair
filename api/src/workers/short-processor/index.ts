@@ -5,6 +5,7 @@ import debugLib from 'debug'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import { indexPatch, mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const renewApiKey = async function (dataset: DatasetInternal) {
@@ -117,12 +118,7 @@ const drainSearchIndex = async (
     const searchIndex = await computeIndex()
     // the resource was deleted while the task waited for its slot: nothing to write, nothing to clear
     if (!searchIndex) return
-    const update: { $set: Record<string, any>, $unset: Record<string, any> } = { $set: {}, $unset: { _needsSearchIndex: '' } }
-    for (const [key, value] of Object.entries(searchIndex)) {
-      if (value === null) update.$unset[key] = ''
-      else update.$set[key] = value
-    }
-    await collection.updateOne({ id }, update)
+    await collection.updateOne({ id }, mergeIndexUpdate({ $unset: { _needsSearchIndex: '' } }, searchIndex))
   } catch (err: any) {
     internalError('search-index-recompute', `failed to recompute the search index of ${type}/${id}, it keeps its previous index until its next write - ${err?.stack || err?.message || err}`)
     // clear the flag anyway, or this task is re-selected in a tight loop forever
@@ -136,24 +132,24 @@ export const computeDatasetSearchIndex = async function (dataset: Dataset) {
   const { searchIndexPatch } = await import('../../datasets/utils/search-text.ts')
   await drainSearchIndex('datasets', dataset.id, async () => {
     // the dispatcher merges a pending draft into the resource it hands to a task (../index.ts), but
-    // this index describes the PUBLISHED dataset: draft titles, draft column labels and draft enum
-    // values must never reach the published _searchText/_terms. So index the raw stored document,
+    // this index describes the PUBLISHED dataset: draft titles and draft column labels
+    // must never reach the published _searchText/_terms. So index the raw stored document,
     // not the (possibly draft-merged) snapshot we were given.
     const published = await mongo.datasets.findOne({ id: dataset.id })
     if (!published) return null
-    return await searchIndexPatch(published)
+    return searchIndexPatch(published)
   })
 }
 
 export const computeApplicationSearchIndex = async function (application: { id: string }) {
   await mongo.connect(true)
-  const { applicationIndexPatch } = await import('../../applications/service.ts')
+  const { applicationsTextSearch } = await import('../../misc/utils/text-search/collections.ts')
   await drainSearchIndex('applications', application.id, async () => {
     // applications have no drafts, but re-reading keeps both recomputes symmetrical and makes the
     // index describe the stored document rather than the snapshot captured at selection time
     const stored = await mongo.applications.findOne({ id: application.id })
     if (!stored) return null
-    return applicationIndexPatch(stored)
+    return indexPatch(applicationsTextSearch, stored)
   })
 }
 

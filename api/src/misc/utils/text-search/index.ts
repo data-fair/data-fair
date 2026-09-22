@@ -10,6 +10,7 @@ export type { IndexFields } from './indexing.ts'
 export type { QueryPlan, CorpusStats } from './query.ts'
 export { createStatsProvider, type StatsProvider, type ClearableStatsProvider, type StatsCollection } from './stats.ts'
 export { INDEX_FIELD_NAMES, RESPONSE_EXCLUDED_FIELD_NAMES } from './pipeline.ts'
+export { indexPatch, assignIndexFields, mergeIndexUpdate } from './patch.ts'
 
 export interface TextSearch {
   definition: ResolvedDefinition

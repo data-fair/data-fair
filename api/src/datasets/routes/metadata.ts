@@ -30,6 +30,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { searchIndexPatch } from '../utils/search-text.ts'
+import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
 import { dir } from '../utils/files.ts'
@@ -264,15 +265,13 @@ export const registerMetadataRoutes = (router: Router) => {
     })
     await permissions.initResourcePermissions(patch, preservePermissions)
 
-    // the new owner's settings.catalogSearch may differ from the previous owner's (e.g. the
-    // previous owner had indexEnumValues on): recompute rather than carry over a stale search index
-    const searchIndex = await searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
-
-    const changeOwnerUpdate: any = { $set: patch }
-    for (const [key, value] of Object.entries(searchIndex)) {
-      if (value === null) (changeOwnerUpdate.$unset ??= {})[key] = true
-      else changeOwnerUpdate.$set[key] = value
-    }
+    // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
+    // rewritten the permissions the search-text guard reads: recompute rather than carry the old
+    // owner's terms across the transfer.
+    const changeOwnerUpdate: any = mergeIndexUpdate(
+      { $set: patch },
+      searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
+    )
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 

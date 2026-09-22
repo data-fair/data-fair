@@ -76,8 +76,6 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   return true
 }
 
-export interface CatalogSearchSettings { indexSchemaLabels?: boolean, indexEnumValues?: boolean }
-
 // the concrete operations a permission entry grants (same expansion as permissions.ts's
 // permissionOperations, kept here so this module stays free of #config / #mongo)
 const grantedOperations = (permission: Permission): Set<string> => {
@@ -91,10 +89,7 @@ const grantedOperations = (permission: Permission): Set<string> => {
 export const SEARCH_TEXT_LIMITS = {
   titleMax: 200,
   descriptionHead: 200,
-  enumValueMax: 100,
-  enumValuesMax: 500,
-  labelsBytes: 8192,
-  enumsBytes: 8192
+  labelsBytes: 8192
 } as const
 
 // first `max` characters, cut back to the last whitespace so no word is split. When the first
@@ -124,63 +119,40 @@ const bounded = (parts: string[], maxBytes: number): string[] => {
   return kept
 }
 
-// which schema-derived parts a viewer allowed to merely list the dataset could otherwise infer
-const guardedParts = (permissions: Permission[] | null | undefined): { labels: boolean, enums: boolean } => {
-  let labels = true
-  let enums = true
+/**
+ * Column labels are hidden from a viewer who may list the dataset but not read its schema, so
+ * indexing them would let a search match reveal that a column exists. Returns false as soon as one
+ * such grantee is present, for the whole dataset.
+ */
+const schemaReadableByEveryLister = (permissions: Permission[] | null | undefined): boolean => {
   for (const permission of permissions ?? []) {
     const ops = grantedOperations(permission)
-    if (!ops.has('list')) continue
-    if (!ops.has('readSchema')) labels = false
-    if (!ops.has('readLines')) enums = false
+    if (ops.has('list') && !ops.has('readSchema')) return false
   }
-  return { labels, enums }
+  return true
 }
 
 /**
- * The calculated `_searchText` of a dataset: column labels (and, when the owner opts in, enum
- * values) so the catalog search sees the vocabulary of the data. Bounded because MongoDB's text
- * score dilutes a field's terms by its length. `undefined` means "unset the field".
+ * The calculated `_searchText` of a dataset: its column titles and descriptions, so the catalog
+ * search sees the vocabulary of the data and not just the prose written about it. Bounded because
+ * a field's terms are diluted by its length. `undefined` means "unset the field".
  */
 export function computeSearchText (
-  dataset: { schema?: any[] | null, permissions?: Permission[] | null },
-  catalogSearch?: CatalogSearchSettings | null
+  dataset: { schema?: any[] | null, permissions?: Permission[] | null }
 ): string | undefined {
-  const columns = (dataset.schema ?? []).filter(p => !p['x-calculated'])
-  const guard = guardedParts(dataset.permissions)
-  const parts: string[] = []
-
-  if (catalogSearch?.indexSchemaLabels !== false && guard.labels) {
-    const seen = new Set<string>()
-    const labels: string[] = []
-    for (const column of columns) {
-      const pieces: string[] = []
-      if (typeof column.title === 'string' && column.title.trim()) pieces.push(column.title.trim().slice(0, SEARCH_TEXT_LIMITS.titleMax))
-      if (typeof column.description === 'string' && column.description.trim()) pieces.push(head(column.description.trim(), SEARCH_TEXT_LIMITS.descriptionHead))
-      const label = pieces.join(' ')
-      if (!label || seen.has(label)) continue
-      seen.add(label)
-      labels.push(label)
-    }
-    parts.push(...bounded(labels, SEARCH_TEXT_LIMITS.labelsBytes))
+  if (!schemaReadableByEveryLister(dataset.permissions)) return undefined
+  const seen = new Set<string>()
+  const labels: string[] = []
+  for (const column of dataset.schema ?? []) {
+    if (column['x-calculated']) continue
+    const pieces: string[] = []
+    if (typeof column.title === 'string' && column.title.trim()) pieces.push(column.title.trim().slice(0, SEARCH_TEXT_LIMITS.titleMax))
+    if (typeof column.description === 'string' && column.description.trim()) pieces.push(head(column.description.trim(), SEARCH_TEXT_LIMITS.descriptionHead))
+    const label = pieces.join(' ')
+    if (!label || seen.has(label)) continue
+    seen.add(label)
+    labels.push(label)
   }
-
-  if (catalogSearch?.indexEnumValues === true && guard.enums) {
-    const seen = new Set<string>()
-    const values: string[] = []
-    for (const column of columns) {
-      for (const value of column.enum ?? []) {
-        if (typeof value !== 'string' || !value.trim()) continue
-        if (value.length > SEARCH_TEXT_LIMITS.enumValueMax) continue
-        if (seen.has(value)) continue
-        seen.add(value)
-        values.push(value.trim())
-        if (values.length >= SEARCH_TEXT_LIMITS.enumValuesMax) break
-      }
-      if (values.length >= SEARCH_TEXT_LIMITS.enumValuesMax) break
-    }
-    parts.push(...bounded(values, SEARCH_TEXT_LIMITS.enumsBytes))
-  }
-
-  return parts.length ? parts.join('\n') : undefined
+  const kept = bounded(labels, SEARCH_TEXT_LIMITS.labelsBytes)
+  return kept.length ? kept.join('\n') : undefined
 }

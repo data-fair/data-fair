@@ -15,7 +15,6 @@ test.describe('computeSearchText', () => {
 
   test('undefined when nothing remains', () => {
     assert.equal(computeSearchText({ schema: [col('a')] }), undefined)
-    assert.equal(computeSearchText({ schema: [col('a', { title: 'A' })] }, { indexSchemaLabels: false }), undefined)
     assert.equal(computeSearchText({}), undefined)
   })
 
@@ -29,15 +28,10 @@ test.describe('computeSearchText', () => {
     assert.equal(text, 'Commune enrichie')
   })
 
-  test('enum values only when enabled, strings only, capped per value', () => {
-    const schema = [col('type_syndic', { title: 'Type de syndic', enum: ['professionnel', 'bénévole', 42, 'x'.repeat(200)] })]
-    assert.doesNotMatch(computeSearchText({ schema })!, /bénévole/)
-    const text = computeSearchText({ schema }, { indexEnumValues: true })!
-    assert.match(text, /bénévole/)
-    assert.doesNotMatch(text, /42/)
-    assert.doesNotMatch(text, /x{101}/)
-    // the over-long value is dropped entirely, not truncated to the cap
-    assert.doesNotMatch(text, /x{100}/)
+  test('column values are never indexed, only the labels', () => {
+    const schema = [col('type_syndic', { title: 'Type de syndic', enum: ['professionnel', 'bénévole'] })]
+    const text = computeSearchText({ schema })!
+    assert.equal(text, 'Type de syndic')
   })
 
   test('description head is cut at a word boundary', () => {
@@ -90,23 +84,23 @@ test.describe('computeSearchText', () => {
     }
   })
 
-  test('guard: a grantee with list but not readSchema drops the labels, not readLines drops the enums', () => {
-    const schema = [col('a', { title: 'Libellé', enum: ['valeur'] })]
-    const settings = { indexEnumValues: true }
-    const full = computeSearchText({ schema, permissions: [{ classes: ['list', 'read'] }] }, settings)!
-    assert.match(full, /Libellé/); assert.match(full, /valeur/)
+  test('guard: a grantee with list but not readSchema drops the labels', () => {
+    const schema = [col('a', { title: 'Libellé' })]
+    const full = computeSearchText({ schema, permissions: [{ classes: ['list', 'read'] }] })!
+    assert.match(full, /Libellé/)
 
-    const listOnly = computeSearchText({ schema, permissions: [{ classes: ['list'] }] }, settings)
+    const listOnly = computeSearchText({ schema, permissions: [{ classes: ['list'] }] })
     assert.equal(listOnly, undefined)
 
-    const noLines = computeSearchText({ schema, permissions: [{ classes: ['list'], operations: ['readSchema'] }] }, settings)!
-    assert.match(noLines, /Libellé/); assert.doesNotMatch(noLines, /valeur/)
+    // list + an explicit readSchema operation is enough, no need for the whole read class
+    const explicitSchema = computeSearchText({ schema, permissions: [{ classes: ['list'], operations: ['readSchema'] }] })!
+    assert.match(explicitSchema, /Libellé/)
 
     // an org entry restricted to a role is still a grantee
-    const orgListOnly = computeSearchText({ schema, permissions: [{ type: 'organization', id: 'o1', roles: ['user'], classes: ['list'] }] }, settings)
+    const orgListOnly = computeSearchText({ schema, permissions: [{ type: 'organization', id: 'o1', roles: ['user'], classes: ['list'] }] })
     assert.equal(orgListOnly, undefined)
     // a grantee without list at all changes nothing
-    const readOnly = computeSearchText({ schema, permissions: [{ classes: ['read'] }] }, settings)!
+    const readOnly = computeSearchText({ schema, permissions: [{ classes: ['read'] }] })!
     assert.match(readOnly, /Libellé/)
   })
 })

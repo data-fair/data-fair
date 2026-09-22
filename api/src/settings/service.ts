@@ -19,10 +19,6 @@ import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
-import { computeSearchText, type CatalogSearchSettings } from '../datasets/operations.ts'
-import { datasetsTextSearch } from '../misc/utils/text-search/collections.ts'
-import type { AnyBulkWriteOperation } from 'mongodb'
-import type { DatasetInternal } from '#types'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -180,19 +176,6 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
 
-  // sweep BEFORE the settings document is replaced: a crash mid-sweep then leaves old settings +
-  // old _searchText (consistent), and a retried save re-detects the same difference and completes.
-  // Sweeping after the replace (as this used to) let an interrupted opt-out become permanent: the
-  // settings document already says the switch is off, so updateCatalogSearch's equal() short-circuit
-  // would skip the sweep on every later save and the unswept half of the catalog would keep
-  // enum-bearing _searchText forever — the exact direction the settings disclaimer promises to honour.
-  // No truthy guard on existingSettings here: it is null on the owner's very first settings write,
-  // but existing datasets may already have been indexed under the implicit default catalogSearch,
-  // so that first write can still be a real change to recompute.
-  if (isMainSettings(settings)) {
-    await updateCatalogSearch(owner, existingSettings && isMainSettings(existingSettings) ? existingSettings.catalogSearch : undefined, settings.catalogSearch)
-  }
-
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
@@ -224,61 +207,6 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
-}
-
-// the schema-derived search text of every dataset of the owner depends on these switches
-const updateCatalogSearch = async (owner: AccountKeys, oldCatalogSearch: CatalogSearchSettings | undefined, newCatalogSearch: CatalogSearchSettings | undefined) => {
-  if (equal(oldCatalogSearch ?? {}, newCatalogSearch ?? {})) return
-  // no draftReason filter here: a stored dataset document never carries a top-level `draftReason`
-  // (it only ever lives at `draft.draftReason`), so that clause would match every document and do
-  // nothing. The real non-draft-only effect: a file-new draft's top-level `schema` is `[]` (its
-  // real schema sits under `draft.schema`), and computeSearchText returns undefined for an empty
-  // schema — a file-updated draft's top-level schema is the still-published one, correctly swept.
-  // the projection (and therefore the document buildIndexFields sees) must carry every field the
-  // index derives from, not just the schema-derived _searchText — derived from the definition
-  // itself rather than hardcoded, for the same reason as the applyPatch trigger above: a
-  // hardcoded list would silently go stale the next time the definition gains a field.
-  const projection: Record<string, 1> = { id: 1, schema: 1, permissions: 1 }
-  for (const path of Object.keys(datasetsTextSearch.definition.fields)) projection[path.split('.')[0]] = 1
-  const cursor = mongo.datasets.find(
-    { 'owner.type': owner.type, 'owner.id': owner.id },
-    { projection }
-  )
-  const ops: AnyBulkWriteOperation<DatasetInternal & { _id: string }>[] = []
-  const flush = async () => {
-    if (ops.length) await mongo.datasets.bulkWrite(ops, { ordered: false })
-    ops.length = 0
-  }
-  for await (const dataset of cursor) {
-    const _searchText = computeSearchText(dataset, newCatalogSearch) ?? null
-    if ((_searchText ?? null) === (dataset._searchText ?? null)) continue
-    // _searchText is itself one of the indexed fields, so the index must be rebuilt from the NEW
-    // value computed above, not the stale one still sitting on `dataset`
-    const fields = datasetsTextSearch.buildIndexFields({ ...dataset, _searchText })
-    const indexPatch: Record<string, any> = {
-      _searchText,
-      _terms: fields?._terms ?? null,
-      _pos: fields?._pos ?? null,
-      _len: fields?._len ?? null,
-      _searchIndex: { v: datasetsTextSearch.definition.version, at: new Date().toISOString() }
-    }
-    const $set: Record<string, any> = {}
-    const $unset: Record<string, any> = {}
-    for (const [key, value] of Object.entries(indexPatch)) {
-      if (value === null) $unset[key] = true
-      else $set[key] = value
-    }
-    const update: Record<string, any> = {}
-    if (Object.keys($set).length) update.$set = $set
-    if (Object.keys($unset).length) update.$unset = $unset
-    ops.push({ updateOne: { filter: { id: dataset.id }, update } })
-    if (ops.length >= 200) await flush()
-  }
-  await flush()
-  // recomputed inline above, not deferred via markStale: this sweep already visits every one of
-  // the owner's datasets to decide whether _searchText changed, so marking them stale for the
-  // worker to revisit would only add a staleness window (and a UX regression against the old
-  // $text behaviour, where a settings toggle took effect immediately) for no saving.
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {

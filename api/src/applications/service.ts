@@ -22,7 +22,7 @@ import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
-import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../misc/utils/text-search/index.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES, indexPatch, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
 import { applicationsTextSearch, applicationsStats } from '../misc/utils/text-search/collections.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
@@ -52,19 +52,6 @@ const fieldsMap = {
   id: 'id',
   status: 'status',
   ...filterFields
-}
-
-export const applicationIndexPatch = (application: any) => {
-  const fields = applicationsTextSearch.buildIndexFields(application)
-  return {
-    _terms: fields?._terms ?? null,
-    _pos: fields?._pos ?? null,
-    _len: fields?._len ?? null,
-    _searchIndex: { v: applicationsTextSearch.definition.version, at: new Date().toISOString() },
-    // see the same field in datasets' searchIndexPatch: this patch is the recompute, so it clears
-    // any pending stale flag. Consumers map null to `$unset`, or skip it when inserting.
-    _needsSearchIndex: null
-  }
 }
 
 export type ApplicationWriteContext = {
@@ -216,9 +203,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   application.slug = baseslug
   setUniqueRefs(application)
   permissions.initResourcePermissions(application)
-  for (const [key, value] of Object.entries(applicationIndexPatch(application))) {
-    if (value !== null) application[key] = value
-  }
+  assignIndexFields(application, indexPatch(applicationsTextSearch, application))
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -242,9 +227,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
 }
 
 export const tryInsertApplication = async (ctx: ApplicationWriteContext, newApplication: any): Promise<boolean> => {
-  for (const [key, value] of Object.entries(applicationIndexPatch(newApplication))) {
-    if (value !== null) newApplication[key] = value
-  }
+  assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
   try {
     await mongo.db.collection('applications').insertOne(newApplication)
 
@@ -271,10 +254,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
 
-  for (const [key, value] of Object.entries(applicationIndexPatch(newApplication))) {
-    if (value !== null) newApplication[key] = value
-    else delete newApplication[key]
-  }
+  assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
 
   if (!isNew) {
     eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
@@ -316,12 +296,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
   // kept out of `patch` itself: patch's keys are reported to the user/event log as the fields they modified
-  const searchIndex = applicationIndexPatch({ ...application, ...patch })
-  const applicationUpdate: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { ...patch } }
-  for (const [key, value] of Object.entries(searchIndex)) {
-    if (value === null) (applicationUpdate.$unset ??= {})[key] = true
-    else applicationUpdate.$set[key] = value
-  }
+  const applicationUpdate = mergeIndexUpdate({ $set: { ...patch } }, indexPatch(applicationsTextSearch, { ...application, ...patch }))
 
   let patchedApplication
   try {
@@ -385,13 +360,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   // owner.name/owner.departmentName are indexed fields — carrying the old owner's terms across a
   // transfer would leave the index pointing at the wrong owner (found under the old name, not the
   // new one). Recompute rather than let this direct $set bypass patchApplication's unconditional
-  // applicationIndexPatch call.
-  const searchIndex = applicationIndexPatch({ ...application, owner: patch.owner })
-  const changeOwnerUpdate: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: patch }
-  for (const [key, value] of Object.entries(searchIndex)) {
-    if (value === null) (changeOwnerUpdate.$unset ??= {})[key] = true
-    else changeOwnerUpdate.$set[key] = value
-  }
+  // index recompute.
+  const changeOwnerUpdate = mergeIndexUpdate({ $set: patch }, indexPatch(applicationsTextSearch, { ...application, owner: patch.owner }))
 
   const patchedApp = await mongo.applications
     .findOneAndUpdate({ id: application.id }, changeOwnerUpdate, { returnDocument: 'after' })

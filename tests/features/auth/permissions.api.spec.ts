@@ -224,32 +224,31 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
-  test('owner transfer recomputes _searchText for the new owner\'s catalogSearch settings', async () => {
+  test('owner transfer recomputes the search index from the permissions it just reset', async () => {
     // test_user5 is admin of both test_org2 and test_org6 (dev/resources/organizations.json)
     const testUser5Org2 = await axiosAuth('test_user5@test.com', 'test_org2')
     const testUser5Org6 = await axiosAuth('test_user5@test.com', 'test_org6')
     const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
 
-    // test_org2 opts into indexing enum values, test_org6 keeps the default (off)
-    await testUser5Org2.put('/api/v1/settings/organization/test_org2', { catalogSearch: { indexEnumValues: true } })
+    const dataset = (await testUser5Org2.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'cs-transfer',
+      schema: [{ key: 'x', type: 'string', title: 'Colonne griffonmarker' }]
+    })).data
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 1, 'column titles reach the search index')
 
-    // collapsable.csv's `roles` column has exactly 2 distinct values across its 10 rows, low
-    // enough cardinality for finalize to stamp an enum on it; "contrib" only ever appears inside
-    // that enum value, never in a title or description
-    const dataset = await sendDataset('datasets/collapsable.csv', testUser5Org2)
-    const enumCol = dataset.schema.find((p: any) => p.key === 'roles')
-    assert.ok(enumCol?.enum?.length, 'the roles column must carry a non-empty enum')
-    assert.equal(await count(testUser5Org2, 'contrib'), 1, 'org2 opted into enum values')
+    // an org partner allowed to list but not to read the schema: the guard drops the column labels
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ type: 'organization', id: 'test_org3', name: 'Test Org 3', classes: ['list'] }])
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 0, 'the guard suppresses the labels while that grantee is present')
 
+    // transferring to another organization drops that org-partner permission, so the guard no
+    // longer applies: the index must be rebuilt from the new permissions, not carried over
     await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'test_org6',
       name: 'Test Org 6'
     })
-
-    // the dataset now belongs to test_org6, which never enabled indexEnumValues: its _searchText
-    // must be recomputed under org6's settings, not carried over from org2's
-    assert.equal(await count(testUser5Org6, 'contrib'), 0, '_searchText must not still match on the previous owner\'s enum values')
+    assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
   })
 
   test('Upload new dataset in org zone then change ownership to department', async () => {
