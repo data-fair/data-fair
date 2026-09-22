@@ -217,6 +217,11 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
+    // data-fair is never indexed, the proxied application HTML included
+    assert.equal(res.headers['x-robots-tag'], 'noindex')
+    res = await ax.get(`/api/v1/applications/${appId}`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['x-robots-tag'], 'noindex')
     res = await ax.get('/app/' + appId)
     assert.equal(res.status, 200)
     assert.ok(res.data.includes('My app body'))

@@ -34,6 +34,12 @@ export const run = async () => {
   // a middleware for performance analysis
   app.use(observe.observeReqMiddleware)
 
+  // data-fair is never indexed: back-office, embeds, proxied applications and API alike
+  app.use((req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex')
+    next()
+  })
+
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   if (config.privateCatalogsUrl) {
     await catalogsPublicationQueue.start({ catalogsUrl: config.privateCatalogsUrl, catalogsSecret: config.secretKeys.catalogs })
