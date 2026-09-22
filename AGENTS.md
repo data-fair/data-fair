@@ -30,6 +30,12 @@ All dev processes write to `dev/logs/`:
 2. Read the relevant log file in `dev/logs/` for error details
 3. Report findings to the user — do not attempt to fix infrastructure issues yourself
 
+If `dev-api` flaps between `UP` and `ERROR (HTTP 502)` every few seconds, tests
+started in that window fail on `ECONNREFUSED` or on stray error toasts, not on
+anything they assert. Wait for three consecutive 200s from the ping endpoint
+before trusting a failure. `dev/run-api.sh` explains the restart loop this used
+to come from.
+
 ### Port assignments
 
 Port numbers are defined in `.env`. Do not modify port assignments.
