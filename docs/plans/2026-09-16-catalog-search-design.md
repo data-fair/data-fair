@@ -1,5 +1,12 @@
 # Catalog search — design (2026-09-16)
 
+> **Superseded in part by [2026-09-18-text-search-util-design.md](2026-09-18-text-search-util-design.md).**
+> This pair still describes the MongoDB `$text` engine and the per-organization `catalogSearch`
+> switches, both of which were replaced before merge — the owned term index took over `q=`, and
+> schema-label indexing became unconditional with no organization setting. Kept as the record of
+> the evidence and the reasoning; see [docs/architecture/catalog-search.md](../architecture/catalog-search.md)
+> for what shipped.
+
 Branch `feat-better-catalog-search`. Spec A of two: this one covers the catalog search itself
 (index, content, settings, assistant); spec B will cover the exposure of the catalog graph to
 agents (`list_datasets` filters and facets, `relatedDatasets` in `describe_dataset`).

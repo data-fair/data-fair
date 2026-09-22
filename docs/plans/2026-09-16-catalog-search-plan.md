@@ -1,5 +1,12 @@
 # Catalog Search Implementation Plan
 
+> **Superseded in part by [2026-09-18-text-search-util-design.md](2026-09-18-text-search-util-design.md).**
+> This pair still describes the MongoDB `$text` engine and the per-organization `catalogSearch`
+> switches, both of which were replaced before merge — the owned term index took over `q=`, and
+> schema-label indexing became unconditional with no organization setting. Kept as the record of
+> the evidence and the reasoning; see [docs/architecture/catalog-search.md](../architecture/catalog-search.md)
+> for what shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the dataset catalog search work for French catalogs and for the way people and agents actually phrase queries: a French text index, a hidden per-dataset `searchTerms` field the assistant helps fill, and a bounded, permission-guarded `_searchText` calculated from the schema.
@@ -12,7 +19,7 @@
 
 ## Global Constraints
 
-- Work on the worktree `/home/alban/data-fair/data-fair_feat-better-catalog-search` (branch `feat-better-catalog-search`). All paths below are relative to it.
+- Work on the `feat-better-catalog-search` worktree. All paths below are relative to its root.
 - Never start, stop or restart dev processes; the user manages them (AGENTS.md). The dev API restarts itself through nodemon when `api/` files change — the Mongo index rebuild happens on that restart (`bash dev/status.sh` to check health).
 - Run only the related tests while iterating (`npx playwright test <file>`); the full suite runs on push.
 - Pure logic goes in `operations.ts` / `*-logic.ts` modules and is unit-tested there; no node config tricks in unit tests.

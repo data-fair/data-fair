@@ -1,6 +1,7 @@
 # Reusable text-search util — design (2026-09-18)
 
-**Status:** approved design, not implemented.
+**Status:** implemented — see [docs/architecture/catalog-search.md](../architecture/catalog-search.md)
+for the shipped behaviour, which is authoritative where the two differ.
 
 Replaces the MongoDB `$text` index behind `q=` on **datasets** and **applications** with an
 owned inverted index and a dis_max BM25 scorer generated into the aggregation pipeline.

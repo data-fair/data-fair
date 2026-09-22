@@ -31,8 +31,7 @@ alongside this plan; every "why" lives there and is not repeated here.
 - Run a single test file with `npx playwright test --project=unit <path>` (or `--project=api`).
   Never run the whole suite while iterating; it is very long.
 - Do not run `git push`, `git merge` or `git rebase`. Commit only.
-- The branch is `feat-better-catalog-search` in the worktree
-  `~/data-fair/data-fair_feat-better-catalog-search`.
+- The branch is `feat-better-catalog-search`, in its own worktree.
 
 ## File Structure
 
