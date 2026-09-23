@@ -91,6 +91,26 @@ test.describe('permissions editor', () => {
         return perms.find((p: any) => !p.type && p.classes?.includes('read'))
       }, { timeout: 5000 }).toBeFalsy()
     })
+
+    // Regression guard: the contrib read permission is created with
+    // department '-' ("no department"); a round-trip through the select used to write it back without
+    // any department, silently granting read to the contributors of every department.
+    test('a round-trip through the select keeps the "no department" scope', async ({ page, goToWithAuth }) => {
+      await goToPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /tout le monde/i }).click()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => !p.type && p.classes?.includes('read'))
+      }, { timeout: 5000 }).toBeTruthy()
+
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /administrateurs et contributeurs/i }).click()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read'))?.department
+      }, { timeout: 5000 }).toBe('-')
+    })
   })
 
   // ===== Test Group 2: Contributor Profiles =====
@@ -151,16 +171,30 @@ test.describe('permissions editor', () => {
     test('enable detailed mode shows add button', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.getByLabel(/Édition détaillée/i).click()
-      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /Ajouter une permission/ })).toBeVisible({ timeout: 10000 })
+    })
+
+    // The owner's admins hold every operation implicitly, without any stored permission. The table
+    // states it as a first, immutable row so the list is not read as the exhaustive set of holders.
+    test('the implicit owner row is always listed and cannot be edited', async ({ page, goToWithAuth }) => {
+      await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [])
+
+      await goToPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      const implicitRow = page.locator('#share table tr').filter({ hasText: /Permission implicite/ })
+      await expect(implicitRow).toBeVisible({ timeout: 10000 })
+      await expect(implicitRow).toContainText('Administrateurs de l\'organisation Test Org 1')
+      await expect(implicitRow).toContainText('Toutes les actions')
+      await expect(implicitRow.locator('button')).toHaveCount(0)
     })
 
     test('add user permission by email', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.getByLabel(/Édition détaillée/i).click()
-      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /Ajouter une permission/ })).toBeVisible({ timeout: 10000 })
 
       // Open dialog
-      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       // Select User scope
@@ -206,10 +240,10 @@ test.describe('permissions editor', () => {
     test('add partner org permission', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.getByLabel(/Édition détaillée/i).click()
-      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /Ajouter une permission/ })).toBeVisible({ timeout: 10000 })
 
       // Open dialog — default scope should be Organization
-      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       // Select partner mode
@@ -248,9 +282,9 @@ test.describe('permissions editor', () => {
 
       await goToPermissions(page, goToWithAuth)
       await page.getByLabel(/Édition détaillée/i).click()
-      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /Ajouter une permission/ })).toBeVisible({ timeout: 10000 })
 
-      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       const orgTypeSelect = page.locator('.v-dialog .v-select').nth(1)
@@ -272,9 +306,9 @@ test.describe('permissions editor', () => {
     test('owner-org permission validates with no role; detailed actions show labels', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.getByLabel(/Édition détaillée/i).click()
-      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /Ajouter une permission/ })).toBeVisible({ timeout: 10000 })
 
-      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       // Default scope is the owner organization with no role checked.
@@ -308,9 +342,11 @@ test.describe('permissions editor', () => {
       await expect(page.locator('#share table')).toBeVisible({ timeout: 10000 })
       await expect(page.locator('#share table')).toContainText(/Test Org 2/)
 
-      // Click the delete button (warning color)
+      // Click the delete button (warning color), then confirm in the popup
       const deleteBtn = page.locator('#share table tr').filter({ hasText: /Test Org 2/ }).locator('button').last()
       await deleteBtn.click()
+      // exact: the trigger button `aria-owns` the menu, so its accessible name absorbs "Confirmer"
+      await page.getByRole('button', { name: 'Confirmer', exact: true }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
         return perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
@@ -334,7 +370,104 @@ test.describe('permissions editor', () => {
     })
   })
 
-  // ===== Test Group 5: Access Control =====
+  // ===== Test Group 5: Department-owned resources =====
+
+  // A department-owned dataset is held by the admins of that department and by the admins of the
+  // organization root — not by the admins of the other departments. The selects must say so, and
+  // must keep writing department-scoped permissions.
+  test.describe('department scoping', () => {
+    let depDatasetId: string
+    let depAx: Awaited<ReturnType<typeof axiosAuth>>
+
+    test.beforeAll(async () => {
+      depAx = await axiosAuth('test_user4@test.com', 'test_org1')
+      depAx.setOrg('test_org1', 'dep1')
+      const dataset = await sendDataset('datasets/dataset1.csv', depAx)
+      depDatasetId = dataset.id
+      expect(dataset.owner.department).toBe('dep1')
+    })
+
+    // Same reason as the access-control tests below: the id_token_dep cookie shortcut in
+    // goToWithAuth does not reliably switch the active account on a first login, so use the
+    // personal menu — otherwise the dataset renders the "wrong active account" error page.
+    async function goToDepPermissions (page: any, goToWithAuth: any) {
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      await goToWithAuth('/data-fair/', 'test_user4')
+      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
+      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+      await page.goto(`${baseUrl}/data-fair/dataset/${depDatasetId}`)
+      await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+      await page.locator('#share').scrollIntoViewIfNeeded()
+      await page.getByRole('tab', { name: /Permissions/i }).click()
+      await expect(page.locator('#share .v-select').first()).toBeVisible({ timeout: 10000 })
+    }
+
+    test('the visibility options name the department', async ({ page, goToWithAuth }) => {
+      await goToDepPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').first().click()
+      const listbox = page.getByRole('listbox')
+      await expect(listbox).toContainText('Uniquement les administrateurs du département department 1 et ceux de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('Les administrateurs et contributeurs du département department 1, et les administrateurs de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('tous départements confondus')
+    })
+
+    test('the implicit owner row names the department and the organization', async ({ page, goToWithAuth }) => {
+      await goToDepPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      const implicitRow = page.locator('#share table tr').filter({ hasText: /Permission implicite/ })
+      await expect(implicitRow).toBeVisible({ timeout: 10000 })
+      await expect(implicitRow).toContainText('Administrateurs du département department 1 et de l\'organisation Test Org 1')
+    })
+
+    test('the contribution options name the department', async ({ page, goToWithAuth }) => {
+      await goToDepPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').nth(1).click()
+      const listbox = page.getByRole('listbox')
+      await expect(listbox).toContainText('Uniquement les administrateurs du département department 1 et ceux de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('Les contributeurs du département department 1 de l\'organisation Test Org 1')
+    })
+
+    // Symmetric to the guard above: on a department-owned dataset the round-trip used to drop
+    // the 'dep1' scope, opening the dataset to the contributors of the whole organization.
+    test('a round-trip through the select keeps the department scope', async ({ page, goToWithAuth }) => {
+      await goToDepPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /tout le monde/i }).click()
+      await expect.poll(async () => {
+        const perms = (await depAx.get(`/api/v1/datasets/${depDatasetId}/permissions`)).data
+        return perms.find((p: any) => !p.type && p.classes?.includes('read'))
+      }, { timeout: 5000 }).toBeTruthy()
+
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /administrateurs et contributeurs/i }).click()
+      await expect.poll(async () => {
+        const perms = (await depAx.get(`/api/v1/datasets/${depDatasetId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read'))?.department
+      }, { timeout: 5000 }).toBe('dep1')
+    })
+
+    // The widened read the labels promise must actually reach a contributor of another department.
+    test('a contributor of another department reads the dataset only once shared org-wide', async ({ page, goToWithAuth }) => {
+      const otherDepAx = await axiosAuth('test_user10@test.com', 'test_org1')
+      otherDepAx.setOrg('test_org1', 'dep2')
+      const readStatus = async () => {
+        try {
+          return (await otherDepAx.get(`/api/v1/datasets/${depDatasetId}`)).status
+        } catch (err: any) {
+          return err.status
+        }
+      }
+      expect(await readStatus()).toBe(403)
+
+      await goToDepPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /tous les utilisateurs/i }).click()
+      await expect.poll(readStatus, { timeout: 5000 }).toBe(200)
+    })
+  })
+
+  // ===== Test Group 6: Access Control =====
 
   test.describe('access control', () => {
     // Uses the UI org-switch (personal-menu click) rather than the cookie shortcut
