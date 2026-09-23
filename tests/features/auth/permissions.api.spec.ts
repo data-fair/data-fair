@@ -224,6 +224,33 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
+  test('owner transfer recomputes the search index from the permissions it just reset', async () => {
+    // test_user5 is admin of both test_org2 and test_org6 (dev/resources/organizations.json)
+    const testUser5Org2 = await axiosAuth('test_user5@test.com', 'test_org2')
+    const testUser5Org6 = await axiosAuth('test_user5@test.com', 'test_org6')
+    const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+
+    const dataset = (await testUser5Org2.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'cs-transfer',
+      schema: [{ key: 'x', type: 'string', title: 'Colonne griffonmarker' }]
+    })).data
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 1, 'column titles reach the search index')
+
+    // an org partner allowed to list but not to read the schema: the guard drops the column labels
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ type: 'organization', id: 'test_org3', name: 'Test Org 3', classes: ['list'] }])
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 0, 'the guard suppresses the labels while that grantee is present')
+
+    // transferring to another organization drops that org-partner permission, so the guard no
+    // longer applies: the index must be rebuilt from the new permissions, not carried over
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/owner`, {
+      type: 'organization',
+      id: 'test_org6',
+      name: 'Test Org 6'
+    })
+    assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
+  })
+
   test('Upload new dataset in org zone then change ownership to department', async () => {
     const ax = testUser1Org
     let dataset = await sendDataset('datasets/dataset1.csv', ax)

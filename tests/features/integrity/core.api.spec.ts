@@ -19,10 +19,10 @@ test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
 
 // ---------------------------------------------------------------------------------------------
-// store: the S3/MinIO WORM primitives, exercised directly (no HTTP layer involved)
+// store: the S3/RustFS WORM primitives, exercised directly (no HTTP layer involved)
 // ---------------------------------------------------------------------------------------------
 
-// MinIO enables versioning on object-lock buckets, so a plain DELETE adds a delete-marker and a plain
+// RustFS enables versioning on object-lock buckets, so a plain DELETE adds a delete-marker and a plain
 // PUT adds a new version rather than throwing. The WORM guarantee under test is that the *locked
 // version's bytes cannot be destroyed within retention*: hard-deleting that specific version is
 // rejected and its bytes remain readable. These helpers read the original locked version directly.
@@ -633,7 +633,7 @@ test('purge deletes a revision whose lock has lapsed and keeps one still locked'
   const prefix = `data-fair/test-purge-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   const body = { hash: { metadata: 'x' }, context, dataset: { id: 'nodataset' } }
-  // MinIO takes retain-until at second granularity; 2s out expires well inside the test
+  // RustFS takes retain-until at second granularity; 2s out expires well inside the test
   await integrityTestStore.writeRevision(`${prefix}000000000`, body, new Date(Date.now() + 2000))
   await integrityTestStore.writeRevision(`${prefix}000000001`, body, new Date(Date.now() + 24 * 3600 * 1000))
   expect(await listIntegrityKeys(prefix)).toHaveLength(2)
@@ -689,7 +689,7 @@ test('purge never deletes the current anchor of an enrolled dataset, even with a
 // T5: `.who` carries its OWN (shorter) retention and must NEVER benefit from the current-anchor
 // protection carve-out above — a lapsed `.who` ages out on schedule even at the current anchor's
 // own index, while the anchor revision itself (and the payload it references) stay protected
-// regardless of their own lock state. MinIO compliance locks can never be shortened once set, so a
+// regardless of their own lock state. RustFS compliance locks can never be shortened once set, so a
 // genuinely lapsed lock is manufactured the same way as the plain-purge tests above: write short
 // from the start and let real time pass.
 // ---------------------------------------------------------------------------------------------

@@ -18,7 +18,7 @@ import { redactS3Config } from './operations.ts'
 const debug = debugModule('s3')
 
 // explicit options instead of #config so the backend can be constructed in the test
-// process against MinIO (same pattern as IntegrityStore)
+// process against the dev S3 (same pattern as IntegrityStore)
 export type S3BackendOptions = ApiConfig['s3'] & { bucket: string, dataDir: string }
 
 export class S3Backend implements FileBackend {

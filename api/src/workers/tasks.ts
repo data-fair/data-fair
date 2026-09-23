@@ -297,6 +297,36 @@ const datasetTasks: DatasetTask[] = [{
   name: 'autoUpdateExtension',
   worker: 'shortProcessor',
   mongoFilter: () => ({ status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } })
+}, {
+  name: 'computeDatasetSearchIndex',
+  worker: 'shortProcessor',
+  // Single sparse-indexable predicate on purpose: an $or against a sparse index selects badly.
+  // No eventsPrefix — this is bookkeeping, not user-visible activity, so it writes no journal.
+  // Because the predicate does not mention `status`, a failure would not stop the resource from
+  // matching: the task clears the flag itself even when the recompute fails, and must never let an
+  // error reach the generic handler (see drainSearchIndex in short-processor/index.ts).
+  mongoFilter: () => ({ _needsSearchIndex: true })
 }]
 
-export const tasks = { datasets: datasetTasks }
+const applicationTasks: DatasetTask[] = [{
+  name: 'computeApplicationSearchIndex',
+  worker: 'shortProcessor',
+  // same rationale as computeDatasetSearchIndex above; kept as a separate named task (rather than
+  // one task shared across collections) so it is only ever selected against the applications
+  // collection — never routed to a dataset by mistake. The swallow-and-clear contract matters even
+  // more here: applicationTasks has no errorRetry, so an application flipped to status 'error' by
+  // the generic handler would never be restored.
+  mongoFilter: () => ({ _needsSearchIndex: true })
+}]
+
+export const tasks = { datasets: datasetTasks, applications: applicationTasks }
+
+// Tasks selected on a bookkeeping flag rather than on the resource's pipeline status. Their
+// predicate is orthogonal to every other task's by design: `_needsSearchIndex` is set by bulk
+// writers (identity rename, topic rename, ...) on whatever documents they touch, no matter what
+// those documents are doing otherwise — so the very same resource legitimately matches one of
+// these AND a pipeline task (or errorRetry) at once. The per-resource lock still serialises them,
+// so this is an overlap in selection only. Narrowing the predicate to restore exclusivity would
+// mean never recomputing the index of a dataset parked in 'error' or mid-pipeline, which is worse
+// than the overlap; instead the dev-only exclusive-selection assertion in ./index.ts ignores them.
+export const nonExclusiveTaskNames = new Set(['computeDatasetSearchIndex', 'computeApplicationSearchIndex'])

@@ -65,7 +65,7 @@ export const schema = {
       description: 'Permettez à vos utilisateurs de récupérer un grand nombre de lignes à partir d\'une règle de correspondance simple. Cette fonctionnalité permet de créer une nouvelle source d\'enrichissement.',
       items: {
         type: 'object',
-        required: ['title'],
+        required: ['title', 'input'],
         properties: {
           id: {
             type: 'string',
@@ -107,6 +107,10 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Propriété comparée',
+                    required: ['key'],
+                    properties: {
+                      key: { type: 'string' }
+                    },
                     layout: {
                       props: {
                         noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
@@ -129,6 +133,7 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Date à renseigner',
+                    required: ['key'],
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
                       key: { type: 'string', const: '_date' },
@@ -142,7 +147,7 @@ export const schema = {
                 }
               }, {
                 title: 'Coordonnée géographique à proximité',
-                required: ['type', 'distance'],
+                required: ['type', 'distance', 'property'],
                 properties: {
                   type: { type: 'string', const: 'geo-distance' },
                   distance: {
@@ -153,6 +158,7 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Point à renseigner',
+                    required: ['key'],
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
                       key: { type: 'string', const: '_geopoint' },

@@ -56,6 +56,30 @@ test.describe('publication sites', () => {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
+  test('deleting a publication site pulls its refs, published and requested alike', async () => {
+    const ax = testUser1Org
+
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+    const requestedDataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'requested dataset', schema: [] })).data
+    await ax.patch(`/api/v1/datasets/${requestedDataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+    await ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+    const requestedApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+    await ax.patch(`/api/v1/applications/${requestedApp.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+
+    await ax.delete('/api/v1/settings/organization/test_org1/publication-sites/data-fair-portals/portal1')
+
+    assert.deepEqual((await ax.get(`/api/v1/datasets/${dataset.id}`)).data.publicationSites, [])
+    assert.deepEqual((await ax.get(`/api/v1/datasets/${requestedDataset.id}`)).data.requestedPublicationSites, [])
+    assert.deepEqual((await ax.get(`/api/v1/applications/${app.id}`)).data.publicationSites, [])
+    assert.deepEqual((await ax.get(`/api/v1/applications/${requestedApp.id}`)).data.requestedPublicationSites, [])
+  })
+
   test('should publish dataset on a org site and access it from re-exposition of data-fair', async () => {
     const ax = testUser1Org
 

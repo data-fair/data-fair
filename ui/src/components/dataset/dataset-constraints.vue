@@ -1,4 +1,10 @@
 <template>
+  <p
+    v-if="!hasDateCoherenceConcepts"
+    class="text-caption text-medium-emphasis mb-2"
+  >
+    Pour activer la contrainte de cohérence des dates, associez d'abord les concepts "Date de début" et "Date de fin" aux colonnes concernées.
+  </p>
   <vjsf
     v-if="editConstraints"
     v-model="editConstraints"
@@ -40,30 +46,44 @@ const eligibleKeys = computed(() =>
     .map(p => p.key)
 )
 
+// the dateCoherence constraint applies to the columns carrying the startDate/endDate
+// concepts; only offer it when both are present on non-derived columns (mirrors
+// checkConstraints), or when an existing dateCoherence constraint must stay editable
+const hasDateCoherenceConcepts = computed(() => {
+  const eligible = (props.datasetSchema || []).filter(p => !p['x-calculated'] && !p['x-extension'])
+  return eligible.some(p => p['x-refersTo'] === 'https://schema.org/startDate') &&
+    eligible.some(p => p['x-refersTo'] === 'https://schema.org/endDate')
+})
+
 // build a self-contained schema for the constraints array, injecting the
 // eligible column keys as the enum of the columns multi-select
 const schema = computed(() => {
   const constraintsSchema = JSON.parse(JSON.stringify(
     (datasetContractSchema as any).properties.constraints
   ))
-  // a single constraint type exists for now: flatten the oneOf so that no type
-  // selector is rendered (the "type" const is auto-filled by vjsf)
-  constraintsSchema.items = { ...constraintsSchema.items, ...constraintsSchema.items.oneOf[0] }
-  delete constraintsSchema.items.oneOf
-  const columnsSchema = constraintsSchema.items.properties.properties
+  const uniqueBranch = constraintsSchema.items.oneOf[0]
+  const columnsSchema = uniqueBranch.properties.properties
   columnsSchema.items.enum = eligibleKeys.value
-  // compact list rendering: one line per constraint, edition in a small menu
-  constraintsSchema.layout = {
-    title: '', // redundant with the tab name
-    listEditMode: 'menu',
-    listActions: ['add', 'edit', 'delete'],
-    itemTitle: "'Unicité : ' + (item.properties || []).join(', ')"
-  }
   // hide the read-only preview of the item fields in the list, the itemTitle line
   // is enough (the "if" must be on the visible case: normalization drops the "if"
   // of a comp:none case)
   const hiddenInSummary = { switch: [{ if: '!summary' }, { comp: 'none' }] }
   columnsSchema.layout = hiddenInSummary
+  const offerDateCoherence = hasDateCoherenceConcepts.value ||
+    (props.modelValue ?? []).some(c => c.type === 'dateCoherence')
+  if (!offerDateCoherence) {
+    // single offered type: flatten so that no type selector is rendered
+    // (the "type" const is auto-filled by vjsf)
+    constraintsSchema.items = { ...constraintsSchema.items, ...uniqueBranch }
+    delete constraintsSchema.items.oneOf
+  }
+  // compact list rendering: one line per constraint, edition in a small menu
+  constraintsSchema.layout = {
+    title: '', // redundant with the tab name
+    listEditMode: 'menu',
+    listActions: ['add', 'edit', 'delete'],
+    itemTitle: "item.type === 'dateCoherence' ? 'Cohérence des dates (début ≤ fin)' : ('Unicité : ' + (item.properties || []).join(', '))"
+  }
   return { type: 'object', properties: { constraints: constraintsSchema } }
 })
 
@@ -73,3 +93,15 @@ function apply () {
   emit('update:modelValue', editConstraints.value?.constraints ?? [])
 }
 </script>
+
+<style scoped>
+/* The constraint-type selector belongs to the edit menu only: in the compact list
+   line the itemTitle already names the constraint. It is hidden here rather than
+   through `oneOfLayout` because json-layout never compiles the `if` expressions of
+   a oneOf layout (skeleton-node.js only pushes getDefaultData/getOptions/getProps/
+   transformData), so a `switch` there throws "expression was not compiled" at
+   runtime and blanks the whole editor. Both classes land on the same node element. */
+.vjsf :deep(.vjsf-node-one-of-select.vjsf-summary) {
+  display: none;
+}
+</style>

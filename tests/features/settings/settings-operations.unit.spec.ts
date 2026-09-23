@@ -1,6 +1,19 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, cleanSettings, fillSettings, buildPublicationSiteSubscriptions } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions } from '../../../api/src/settings/operations.ts'
+
+test.describe('rootSettingsFilter', () => {
+  test('always targets the root document, ignoring the department the caller is in', () => {
+    assert.deepEqual(
+      rootSettingsFilter({ type: 'organization', id: 'org1' }),
+      { type: 'organization', id: 'org1', department: { $exists: false } }
+    )
+    assert.deepEqual(
+      rootSettingsFilter(parseOwnerParams('organization', 'org1:dep1').owner),
+      { type: 'organization', id: 'org1', department: { $exists: false } }
+    )
+  })
+})
 
 test.describe('parseOwnerParams', () => {
   test('org without department — owner has no department, ownerFilter has $exists:false', () => {

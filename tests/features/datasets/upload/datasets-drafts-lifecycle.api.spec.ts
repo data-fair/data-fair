@@ -119,13 +119,16 @@ test.describe('datasets in draft mode - lifecycle', () => {
   test('create a draft when updating the data file', async () => {
     const notifs = await collectNotifs()
 
-    // Send dataset
+    // Send dataset (use a title with apostrophe and accents to detect HTML-encoding regressions in i18n)
+    const titleWithSpecialChars = "test d'apostrophe + àccéent"
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
+    form.append('title', titleWithSpecialChars)
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(dataset.title, titleWithSpecialChars)
 
     // upload a new file with incompatible schema
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
@@ -205,6 +208,13 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.ok(validated, 'expected a draft-validated notification')
     assert.ok(validated.body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${validated.body.fr}"`)
     assert.ok(validated.body.en.includes('manual validation'), `en body should mention the cause, got "${validated.body.en}"`)
+    // notification title and body must not be HTML-encoded (apostrophes, accents must be preserved as-is)
+    const created = captured.find((n: any) => n.topic.key === `data-fair:dataset-dataset-created:${dataset.slug}`)
+    assert.ok(created, 'expected a dataset-created notification')
+    assert.equal(created.title.fr, `Nouveau jeu de données ${titleWithSpecialChars}`)
+    assert.equal(created.title.en, `New dataset ${titleWithSpecialChars}`)
+    assert.ok(created.body.fr.includes(titleWithSpecialChars), 'notification body should contain the raw title')
+    assert.ok(!JSON.stringify(created).includes('&#39;'), 'notification must not contain HTML-encoded apostrophes')
   })
 
   // a compatible schema patch is applied to the index through a partial mapping update instead of

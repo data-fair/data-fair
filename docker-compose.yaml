@@ -26,11 +26,18 @@ services:
     image: ghcr.io/data-fair/elasticsearch:8.19.9
     ports:
       - ${ES_PORT}:9200
+    # dev/test datasets are small, so a 1g heap is plenty. The point of the cap
+    # is that several dev environments run side by side on one laptop: at the
+    # old -Xmx2g each stack reserved 2g of ES heap alone. mem_limit bounds the
+    # off-heap side too, so a runaway ES is killed inside its container instead
+    # of pushing the host into a global OOM (which takes the desktop session
+    # down with it, see docs/architecture/dev-resources.md).
+    mem_limit: 2g
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ingest.geoip.downloader.enabled=false
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
@@ -54,35 +61,40 @@ services:
         hard: 64000
 
   # single S3 backend for dev/test: serves both the files storage (bucketdev)
-  # and the object-lock-capable data-integrity revision store (compliance WORM)
-  minio:
+  # and the object-lock-capable data-integrity revision store (compliance WORM).
+  # RustFS replaced MinIO when its community images left Docker Hub (2026-09).
+  s3:
     profiles:
       - dev
       - test
-    image: minio/minio:latest
-    command: server /data
+    image: rustfs/rustfs:1.0.0-rc.6
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
     ports:
       - ${S3_PORT}:9000
     volumes:
-      - minio-data:/data
+      - s3-data:/data
 
-  # MinIO does not auto-create buckets: this one-shot init creates them.
-  # Only the integrity bucket gets object lock; the files buckets must stay mutable.
-  minio-init:
+  # RustFS does not auto-create buckets: this one-shot init creates them.
+  # Only the integrity bucket gets object lock; the files bucket must stay mutable.
+  s3-init:
     profiles:
       - dev
       - test
-    image: minio/mc:latest
+    image: amazon/aws-cli:2.32.0
     depends_on:
-      - minio
+      - s3
+    environment:
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://s3:9000
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      mc mb --ignore-existing local/bucketdev;
-      mc mb --ignore-existing --with-lock local/data-fair-integrity;
+      until aws s3api list-buckets >/dev/null 2>&1; do sleep 1; done;
+      aws s3api head-bucket --bucket bucketdev 2>/dev/null || aws s3api create-bucket --bucket bucketdev;
+      aws s3api head-bucket --bucket data-fair-integrity 2>/dev/null || aws s3api create-bucket --bucket data-fair-integrity --object-lock-enabled-for-bucket;
       "
 
   sd:
@@ -249,4 +261,4 @@ volumes:
   mongodb-data:
   clamav-data:
   clamav-tmp:
-  minio-data:
+  s3-data:
