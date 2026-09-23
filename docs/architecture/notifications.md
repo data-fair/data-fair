@@ -23,7 +23,7 @@ For most resource changes, Data Fair produces:
                     e-mail, devices)
 ```
 
-- **Journals** (`api/src/misc/utils/journals.ts`) — append-only audit trail kept in MongoDB and pushed to the back-office over websocket via `@data-fair/lib-node/ws-emitter`. Granular and high-volume; consumed by the dataset detail "journal" tab and the WS-driven progress UI. Not user-subscribable. `journals.log` opportunistically calls `sendResourceEvent` for `error` **and** `validation-error` event types (see `journals.ts:33`); both reach the canonical `dataset-error` topic through the **error umbrella fan-out** in `sendResourceEvent` (see §3 and §13) so a single subscription covers every flavour of failure — hard worker crash, soft validation reject, on a regular dataset, on a draft. `error-retry` is intentionally not bridged (transient, would be noisy). Every other notification is emitted explicitly to keep tight control on the topic surface.
+- **Journals** (`api/src/misc/utils/journals.ts`) — append-only audit trail kept in MongoDB and pushed to the back-office over websocket via `@data-fair/lib-node/ws-emitter`. Granular and high-volume; consumed by the dataset detail "journal" tab and the WS-driven progress UI. Not user-subscribable. `journals.log` opportunistically calls `sendResourceEvent` for the `error` event type only; `validation-error` is emitted explicitly by its callers through `sendResourceEvent('validation-error', …)`. Both reach the canonical `dataset-error` topic through the **error umbrella fan-out** in `sendResourceEvent` (see §7) so a single subscription covers every flavour of failure — hard worker crash, soft validation reject, on a regular dataset, on a draft. `error-retry` is intentionally not bridged (transient, would be noisy). Every other notification is emitted explicitly to keep tight control on the topic surface.
 - **Notifications** (`api/src/misc/utils/notifications.ts`) — user-facing alerts. Pushed to the external `events` micro-service via `@data-fair/lib-node/events-queue`, where users (and the data-fair owners themselves) subscribe to topic keys. Delivery channels (in-app device, e-mail, etc.) are owned by the events service. This is the layer this document is about.
 - **Webhooks** (`api/src/misc/utils/webhooks.ts`, configured via `api/types/settings/schema.js`) — owner-configured outbound HTTP. Triggered from the same source events but with a separate event allow-list defined on the settings document. Independent retries and observability.
 
@@ -43,7 +43,7 @@ The three layers are deliberately separate: a journal can be very chatty without
 
 ### `sendResourceEvent(resourceType, resource, originator, key, options?)`
 
-Highest-level helper, used everywhere except the few topics that don't map to a single resource. Located at `notifications.ts:24`. It:
+Highest-level helper, used everywhere except the few topics that don't map to a single resource. Located in `api/src/misc/utils/notifications.ts`. It:
 
 1. Derives the singular resource type (`'datasets'` → `'dataset'`).
 2. Picks a `sender` (defaults to `resource.owner`, can be overridden by `options.sender`).
@@ -58,15 +58,15 @@ Two options are delivery instructions for the events service rather than content
 
 ### `send(event, sessionState?)`
 
-Lower-level helper for events that don't fit the resource pattern (settings events, change-owner). Located at `notifications.ts:63`. **Always go through `send` or `sendResourceEvent` rather than calling `eventsQueue.pushEvent` directly** — see §6.
+Lower-level helper for events that don't fit the resource pattern (settings events, change-owner). Same file. **Always go through `send` or `sendResourceEvent` rather than calling `eventsQueue.pushEvent` directly** — see §6.
 
 ### `subscribe(req, subscription)`
 
-Creates a subscription on the events service on behalf of the current user. Used for implicit subscriptions (publication-sites at `settings/router.ts:401-422`). Posts to `<privateEventsUrl>/api/v1/subscriptions` with the request cookie.
+Creates a subscription on the events service on behalf of the current user. Used for implicit subscriptions (publication-sites, from the publication-site upsert route in `api/src/settings/router.ts`, subscriptions built by `buildPublicationSiteSubscriptions` in `settings/operations.ts`). Posts to `<privateEventsUrl>/api/v1/subscriptions` with the request cookie.
 
 ### `propagateDataUpdatedToVirtualParents(childDataset, originator, options?)`
 
-Mirror helper called at the two commit-time `data-updated` emission points: file `validateDraft` (`service.js:587`) and the REST partial finalize pass (`workers/short-processor/finalize.ts`, webhooks-only, see §10). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. Options such as `channels` / `coalesce` are passed through unchanged, so a REST child's webhooks-only signal stays webhooks-only on its parents. See §10 for why `router.js:559` (file upload entry point) is skipped.
+Mirror helper called at the two commit-time `data-updated` emission points: file `validateDraft` (`api/src/datasets/service.ts`) and the REST partial finalize pass (`workers/short-processor/finalize.ts`, webhooks-only, see §10). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `api/src/mongo.ts`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. Options such as `channels` / `coalesce` are passed through unchanged, so a REST child's webhooks-only signal stays webhooks-only on its parents. See §10 for why the file upload route (`api/src/datasets/routes/write.ts`) is skipped.
 
 ## 4. Topic key conventions
 
@@ -75,10 +75,10 @@ Notification topics live under the `data-fair:` namespace on the events service.
 | Shape | Example | Where |
 |---|---|---|
 | Resource event | `data-fair:<resource>-<event>:<slug>` **and** `data-fair:<resource>-<event>:<id>` | `notifications.ts`. Emitted on both topic shapes with a shared event `_id`; the events service deduplicates. See §3 and §12. |
-| Draft resource event | `data-fair:<resource>-draft-<event>:<id>` | Same, automatically when `resource.draftReason` is truthy (`notifications.ts:43`). |
-| Publication-site event | `data-fair:<resource>-<event>:<siteType>:<siteId>[:<topicId>]` | `publication-sites.ts:57,63,89,102,117,123`. Implicit subscriptions for these topics live at `settings/router.ts:407,415`. |
-| Settings event | `data-fair:settings:<event>` | `settings/router.ts:200,240`. |
-| User-custom | `data-fair:dataset-user-notification:<slug>:<topic>` | `datasets/router.js:1411`. `<topic>` is free text supplied by the caller (typically a portal). |
+| Draft resource event | `data-fair:<resource>-draft-<event>:<id>` | Same, automatically when `resource.draftReason` is truthy (`sendResourceEvent`). |
+| Publication-site event | `data-fair:<resource>-<event>:<siteType>:<siteId>[:<topicId>]` | `api/src/misc/utils/publication-sites.ts`. Implicit subscriptions for these topics are built by `buildPublicationSiteSubscriptions` (`api/src/settings/operations.ts`). |
+| Settings event | `data-fair:settings:<event>` | `api/src/settings/service.ts` (`writeSettings`, API key creation / deletion). |
+| User-custom | `data-fair:dataset-user-notification:<slug>:<topic>` | `api/src/datasets/routes/misc.ts` (`POST /datasets/:id/user-notification`). `<topic>` is free text supplied by the caller (typically a portal). |
 
 See §8 for the topics whose key shape predates these conventions and are kept that way deliberately.
 
@@ -95,17 +95,17 @@ Two consumers read this list directly via the static `import settingsSchema from
 - **Settings webhook form** — `ui/src/components/settings/settings-webhooks.vue` renders the whole settings schema with VJSF; the `oneOf` becomes a multi-select of event types, automatically translated.
 - **Back-office subscription UI** — `ui/src/pages/notifications.vue` (global subscription page) and `ui/src/components/common/event-notifications.vue` (per-resource subscription widget) filter the same `oneOf` by resource prefix (`dataset-*` / `application-*`) and read `x-i18n-title[locale]` for the label. The per-resource widget additionally overrides the label for a handful of keys to switch from the indefinite article ("Un jeu de données…") to the definite article ("Le jeu de données…") since the user is already on the resource page.
 
-To add or remove a subscribable / webhook-triggerable topic, edit the `oneOf` — both UIs pick it up automatically.
+To add or remove a subscribable / webhook-triggerable topic, edit the `oneOf` — both UIs pick it up automatically. Removing an option is not free: the `oneOf` is a closed list, and every write to a settings document re-validates the **whole** document (including the publication-site upsert/delete routes driven by the portals sync), so stored webhooks still listing the removed value make those writes fail until an upgrade script cleans them.
 
 ## 6. Dev / test mode
 
-`notifications.send` (`notifications.ts:63`) is the canonical entry point and **switches its delivery channel based on environment**:
+`notifications.send` is the canonical entry point. Its delivery depends on the thread and the environment:
 
-| Environment | Channel |
+| Context | Channel |
 |---|---|
-| `NODE_ENV=development`, main thread | `testEvents.emit('notification', event)` + push to `capturedNotifications` (in-memory ring buffer) |
-| `NODE_ENV=development`, worker thread | `parentPort.postMessage(event)` (forwarded to the main thread which then captures it) |
-| production | `eventsQueue.pushEvent(event, sessionState)` |
+| worker thread (any environment) | `parentPort.postMessage(event)` only — the main thread's listener in `api/src/workers/tasks.ts` does what the two rows below describe. A worker cannot push to its own events queue: Piscina suspends idle workers, so that queue would never drain. |
+| main thread, `NODE_ENV=development` | `testEvents.emit('notification', event)` + push to `capturedNotifications` (in-memory ring buffer), **then** the queue push below as well |
+| main thread, `config.privateEventsUrl` set | `eventsQueue.pushEvent(event, sessionState)` |
 
 This routing matters: code that calls `eventsQueue.pushEvent` directly **bypasses the test capture buffer** (`capturedNotifications`) and therefore won't be visible to e2e tests subscribed via `/api/v1/test-env/events`. Always use `notifications.send` or `notifications.sendResourceEvent`.
 
@@ -117,14 +117,14 @@ E2e helpers exposed by `api/src/misc/routers/test-env.ts`:
 
 ## 7. Draft prefix logic
 
-`notifications.ts:30,43` automatically prepends `draft-` to **both the i18n lookup and the topic key** when `resource.draftReason` is truthy:
+`sendResourceEvent` automatically prepends `draft-` to **both the i18n lookup and the topic key** when `resource.draftReason` is truthy:
 
 ```
 i18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.title`
 fullKey = `${singularResourceType}-draft-${key}`
 ```
 
-Practical rule for callers: pass the **clean** key name. For dataset draft lifecycle events emit `'validated'` / `'cancelled'`, not `'draft-validated'` / `'draft-cancelled'`. Passing the prefixed form on a draft resource used to produce topic keys like `dataset-draft-draft-validated` and matching i18n misses — the bug was fixed in this refacto by sanitising the call sites in `datasets/router.js` and `workers/batch-processor/validate-file.ts`; the i18n keys were renamed from `draft-draft-*` to `draft-*` accordingly.
+Practical rule for callers: pass the **clean** key name. For dataset draft lifecycle events emit `'validated'` / `'cancelled'`, not `'draft-validated'` / `'draft-cancelled'`. Passing the prefixed form on a draft resource used to produce topic keys like `dataset-draft-draft-validated` and matching i18n misses — the bug was fixed in this refacto by sanitising the call sites in `api/src/datasets/routes/write.ts` and `api/src/workers/batch-processor/process-file.ts`; the i18n keys were renamed from `draft-draft-*` to `draft-*` accordingly.
 
 The same rule applies to `breaking-change`: callers always pass `'breaking-change'`, and the draft prefix is added implicitly when the dataset is in draft.
 
@@ -141,7 +141,7 @@ These topics have shape inconsistencies that would benefit from uniformisation, 
 Both keys repeat the resource type. A consistent shape would be `data-fair:dataset-created:<id>` / `data-fair:application-created:<id>`.
 
 - **Why it is this way**: historical. The i18n key `dataset-created` was already used as a journal entry type long before the notification topic was added, and `sendResourceEvent` builds the topic key by sticking the singular resource type in front of `key`. Calling with `'created'` would have collided with the journal naming; calling with `'dataset-created'` was the path of least resistance.
-- **Cost of changing**: every existing subscription to "new resource created" stops firing silently. Webhook event allow-lists configured on existing settings documents (`api/types/settings/schema.js:93`, `114`) would also need a value migration.
+- **Cost of changing**: every existing subscription to "new resource created" stops firing silently. Webhook event allow-lists configured on existing settings documents (`api/types/settings/schema.js`, the `webhooks.items.properties.events` `oneOf`) would also need a value migration.
 
 ### 8.2 `settings:api-key-created`, `settings:api-key-deleted` — `settings` scope without owner id
 
@@ -152,14 +152,14 @@ Two settings events use `data-fair:settings:<event>` as their full topic key, wi
 
 ### 8.3 `dataset-user-notification:<slug>:<topic>` — slug-based, free-form trailing segment
 
-Emitted at `api/src/datasets/router.js:1411`. The dataset is identified by **slug** (not id), and `<topic>` is a free-text segment supplied by the caller — typically a portal pushing arbitrary thematic notifications via the public user-notification API.
+Emitted in `api/src/datasets/routes/misc.ts` (`POST /datasets/:id/user-notification`). The dataset is identified by **slug** (not id), and `<topic>` is a free-text segment supplied by the caller — typically a portal pushing arbitrary thematic notifications via the public user-notification API.
 
 - **Why it is this way**: backwards-compat with portal apps that subscribe by slug. The slug travels with the user-notification URL the portal generates, the id does not.
 - **Cost of changing**: every external portal that pushes user notifications would have to be migrated, and any user subscribed to `data-fair:dataset-user-notification:<old-slug>:<topic>` would have to re-subscribe.
 
 ### 8.4 `dataset-published:<siteType>:<siteId>` vs `dataset-published-topic:<siteType>:<siteId>:<topicId>` — parallel topics, no hierarchy
 
-Two related topics are emitted by `api/src/misc/utils/publication-sites.ts:63,102,123`: a coarse "published on site X" and a finer "published on site X, thematique Y". The events service does **not** do hierarchical topic matching today, so a user subscribed to `dataset-published:<site>` does **not** receive `dataset-published-topic:<site>:<topicId>` events for the same site.
+Two related topics are emitted by `api/src/misc/utils/publication-sites.ts`: a coarse "published on site X" and a finer "published on site X, thematique Y". The events service does **not** do hierarchical topic matching today, so a user subscribed to `dataset-published:<site>` does **not** receive `dataset-published-topic:<site>:<topicId>` events for the same site.
 
 - **Why it is this way**: designed to let portals offer subscription per thematique without flooding subscribers to the broader "published" topic.
 - **Cost of changing**: either the events service grows hierarchical-subscription support (the cleaner solution), or the topic shape is renamed in a breaking migration. Either way, the back-office subscription UI would need to surface the relationship.
@@ -168,8 +168,7 @@ Two related topics are emitted by `api/src/misc/utils/publication-sites.ts:63,10
 
 Discovered during the refacto but intentionally left for a follow-up:
 
-- **`admin: true` on change-owner emission** — `api/src/datasets/router.js:327` calls `notifications.send` with a `sender` that includes `admin: true`. The events service rejects payloads with extra `sender` properties and returns `400`. Either strip the field at emission, or relax the events service contract.
-- **`notifications.subscribe()` returns `500`** — implicit subscriptions for publication-sites (`api/src/settings/router.ts:401-422`) silently fail against the events service. Root cause is architectural, not a payload issue: data-fair calls `POST ${privateEventsUrl}/api/v1/subscriptions` from the **backend**, forwarding `req.headers.cookie`. The cookie's JWT was issued for the public domain (e.g. `master.localhost`) and `session.reqAuthenticated` on the events side cannot validate it when reached via the internal URL, so the handler throws and returns 500. The error is wrapped in `.catch(err => internalError('subscribe-push', err))` (`notifications.ts:93`) so it never surfaces to the user. The events `senderSubscribe` schema (`events/api/types/partial/schema.js:28-61`) accepts the payload data-fair sends — it is not a validation problem.
+- **`notifications.subscribe()` returns `500`** — implicit subscriptions for publication-sites (publication-site upsert route in `api/src/settings/router.ts`) silently fail against the events service. Root cause is architectural, not a payload issue: data-fair calls `POST ${privateEventsUrl}/api/v1/subscriptions` from the **backend**, forwarding `req.headers.cookie`. The cookie's JWT was issued for the public domain (e.g. `master.localhost`) and `session.reqAuthenticated` on the events side cannot validate it when reached via the internal URL, so the handler throws and returns 500. The error is wrapped in `.catch(err => internalError('subscribe-push', err))` (`subscribe` in `notifications.ts`) so it never surfaces to the user. The events `senderSubscribe` schema (`events/api/types/partial/schema.js:28-61`) accepts the payload data-fair sends — it is not a validation problem.
 
   Reference pattern: `customers` auto-subscribes the ticket creator to comment events from the **frontend** (`customers/ui/src/components/issues/issue-new.vue:74-86`), calling `${window.location.origin}/events/api/subscriptions` so the browser cookie has the correct scope. Any new auto-subscribe in data-fair should follow the same UI-side pattern, or the events service should grow a service-to-service auth path keyed off `config.secretKeys.events`.
 - **Proactive notification for API key expiration is not implemented yet** — API keys expire silently and the first call after `expireAt` returns `403`. A proactive J-3 / post-expiration notification was prototyped during the refacto but reverted because data-fair has no in-process scheduled-task infrastructure today (no `node-cron` / `cron` usage in `api/src/`). Other Koumoul services (`customers/api/src/limits/worker.ts`, `simple-directory/api/src/users/worker.ts`) use `node-cron` + `@data-fair/lib-node/locks` and are the recommended template when the feature is reintroduced.
@@ -190,8 +189,8 @@ Instead, every REST **partial** finalize pass (the pass following line writes, `
 
 | Wired at | Emits `data-updated`? | Propagates to virtual parents? |
 |---|---|---|
-| `service.js:587` (`validateDraft`, file path) | yes | yes |
-| `router.js:559` (file upload entry point) | yes — as `dataset-draft-data-updated:<child>` | **no** — the child enters draft (`patch.draftReason = 'file-updated'`) and virtual parents do not query draft data, so propagating here would fire `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation at `service.js:587` then fires again with the new data once the draft is validated. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
+| `datasets/service.ts` (`validateDraft`, file path) | yes | yes |
+| `datasets/routes/write.ts` (file upload route) | yes — as `dataset-draft-data-updated:<child>` | **no** — the child enters draft (`patch.draftReason = 'file-updated'`) and virtual parents do not query draft data, so propagating here would fire `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation in `validateDraft` then fires again with the new data once the draft is validated. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
 | `finalize.ts` (REST partial pass) | yes — webhooks channel only, coalesced | yes — same channels |
 
 The propagation helper reuses the **same `i18nKey` and `localizedParams` as the child emission**, so a notification on a virtual parent has a body identical to what a subscriber on the underlying child would see. This keeps the topic surface uniform between regular and virtual datasets — portal-side subscribers cannot tell from the notification alone that the resource is virtual.
@@ -237,18 +236,18 @@ Both topic shapes are first-class and stay emitted in parallel:
 
 - The `events` collection stores a single event. Emission order is id-first, so the stored event carries the id-based topic shape.
 - A back-office subscriber matching the id topic and a portal subscriber matching the slug topic each get their own notification record — these go through the per-subscription notifications path which uses fresh `_id`s, so dedup does not apply there.
-- Webhook deliveries fire once per matching webhook subscription, regardless of the dual emission.
+- Webhook deliveries are per matching webhook subscription **and topic key**: a subscription on one resource's id topic (the back-office per-resource webhooks) matches a single push and gets one delivery, but an owner-wide subscription on a topic prefix (e.g. `data-fair:dataset-data-updated`) matches both the id and the slug push and gets **two** deliveries per event, one per topic tail.
 
 The dev-mode test buffer captures **both** pushes verbatim (the shared `_id` is preserved in the `event` object before it reaches the events service), so e2e tests must look for either key or use `expectNotifPair` (`tests/support/notifications.ts`) to assert both with a shared `_id`. The reference test lives in `tests/features/infra/notifications-system.api.spec.ts`.
 
-**One topic is intentionally not dual-emitted**: `dataset-user-notification:<slug>:<topic>` (`api/src/datasets/router.js:1480`) is an inbound API designed for portal-side pushes that already supply a slug. It is not a resource lifecycle event and is documented in §8.3.
+**One topic is intentionally not dual-emitted**: `dataset-user-notification:<slug>:<topic>` (`api/src/datasets/routes/misc.ts`) is an inbound API designed for portal-side pushes that already supply a slug. It is not a resource lifecycle event and is documented in §8.3.
 
 ## 13. Quick map of the relevant files
 
 - `api/src/misc/utils/notifications.ts` — emission entry points and draft-prefix logic.
 - `api/src/misc/utils/publication-sites.ts` — publication-site notifications (`published`, `published-topic`, `publication-requested`).
 - `api/src/misc/routers/test-env.ts` — test SSE + buffer.
-- `api/src/settings/router.ts` — API key lifecycle events.
+- `api/src/settings/service.ts` — API key lifecycle events.
 - `api/types/settings/schema.js` — single source of truth for the subscribable / webhook topic list (the `oneOf` of `webhooks.items.properties.events.items`).
 - `api/i18n/messages/{fr,en}.json` — i18n titles and bodies under `notifications.<resourceType>.*`.
 - `ui/src/pages/notifications.vue`, `ui/src/components/common/event-notifications.vue`, `ui/src/components/settings/settings-webhooks.vue` — consumers of the schema `oneOf`.
