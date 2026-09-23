@@ -22,8 +22,8 @@ module.exports = {
     endpoint: `http://localhost:${process.env.S3_PORT}`,
     bucket: 'bucketdev',
     credentials: {
-      accessKeyId: 'minioadmin',
-      secretAccessKey: 'minioadmin',
+      accessKeyId: 'rustfsadmin',
+      secretAccessKey: 'rustfsadmin',
     },
     forcePathStyle: true
   },
@@ -33,7 +33,7 @@ module.exports = {
       region: 'us-east-1',
       endpoint: `http://localhost:${process.env.S3_PORT}`,
       bucket: 'data-fair-integrity',
-      credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
+      credentials: { accessKeyId: 'rustfsadmin', secretAccessKey: 'rustfsadmin' },
       forcePathStyle: true,
     },
     retention: { days: 2 },

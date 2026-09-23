@@ -56,6 +56,7 @@ export const schema = {
       spatial: { type: 'string' as const, description: 'Spatial coverage information (free-text description)' },
       temporal: { type: 'object' as const, description: 'Temporal coverage information' },
       frequency: { type: 'string' as const, description: 'Update frequency of the dataset' },
+      editable: { type: 'boolean' as const, description: 'Present and true when the dataset accepts line writes (a REST dataset): rows can be added and corrected through its data-entry page' },
       geolocalized: { type: 'boolean' as const, description: 'Whether the dataset has geographic data' },
       bbox: { type: 'array' as const, items: { type: 'number' as const }, description: 'Geographic bounding box [lonMin, latMin, lonMax, latMax]' },
       temporalDataset: { type: 'boolean' as const, description: 'Whether the dataset has temporal data' },
@@ -78,7 +79,11 @@ export const schema = {
         description: 'Array of 3 sample data rows showing real values from the dataset. Use these examples to understand exact formatting, casing, and typical values for _eq and _search filters.'
       }
     },
-    required: ['id', 'title', 'page', 'count'] as const
+    // Only what a dataset always has. `page` and `count` are legitimately absent
+    // for one just created through the wizard — never indexed, no public page —
+    // and requiring them made describe_dataset throw on exactly the dataset the
+    // assistant had helped create, the moment it looked at it.
+    required: ['id', 'title'] as const
   }
 } as const
 
@@ -88,10 +93,18 @@ export const schema = {
 export function buildStructuredContent (fetchedData: any, sampleLines?: any[], link?: string): Record<string, any> {
   const dataset: any = {
     id: fetchedData.id,
-    title: fetchedData.title,
-    page: link ?? fetchedData.page,
-    count: fetchedData.count
+    title: fetchedData.title
   }
+
+  // Guarded like every other field below, and for a concrete reason: a dataset
+  // the wizard has just created has no rows and no public page, so assigning
+  // these unconditionally left keys whose value is literally `undefined`. The
+  // host rejects those ("Instances of 'undefined' type are not supported"), so
+  // describe_dataset threw precisely when the assistant looked at a dataset it
+  // had just helped create.
+  const page = link ?? fetchedData.page
+  if (page !== undefined) dataset.page = page
+  if (fetchedData.count !== undefined) dataset.count = fetchedData.count
 
   if (fetchedData.slug) dataset.slug = fetchedData.slug
   if (fetchedData.summary) dataset.summary = fetchedData.summary
@@ -100,6 +113,9 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
       ? fetchedData.description.slice(0, 2000) + '… (truncated, see dataset page for full description)'
       : fetchedData.description
   }
+  // Presence is the signal — absent rather than false for a dataset whose rows
+  // come from a file, where line entry is not a thing that exists.
+  if (fetchedData.isRest) dataset.editable = true
   if (fetchedData.keywords) dataset.keywords = fetchedData.keywords
   if (fetchedData.origin) dataset.origin = fetchedData.origin
   // Pick only the declared fields — the raw API license/timePeriod may carry extra keys
@@ -191,6 +207,15 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
   }
   if (link) meta.push(`- **Link:** ${link}`)
+  // Only with a back-office link: /edit-data is a back-office route, and this same
+  // formatter serves the portal and the MCP server, where it means nothing. A judged
+  // run asked for a line to be recorded and a typo corrected in an editable dataset,
+  // was told none of this, concluded it had no tool for either — the line tools live
+  // behind `edit` and only the data-entry page passes it — and sent the person to
+  // support. It reasoned correctly from what it was told; this is what it was not told.
+  if (fetchedData.isRest && options?.datasetLink) {
+    meta.push(`- **Editable:** yes. Rows can be added and corrected on the data-entry page, ${link}/edit-data, which is where the line tools live. Navigate there first; they are not available anywhere else.`)
+  }
 
   const schemaRows = formatSchemaColumns(fetchedData.schema)
   const sections = [...meta]

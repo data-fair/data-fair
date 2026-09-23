@@ -1,5 +1,5 @@
 import type { ResourceType } from '#types'
-import { workers, tasks, pendingTasks } from './tasks.ts'
+import { workers, tasks, pendingTasks, nonExclusiveTaskNames } from './tasks.ts'
 import type { Task, WorkerId } from './types.ts'
 import mergeDraft from '../datasets/utils/merge-draft.ts'
 import locks from '@data-fair/lib-node/locks.js'
@@ -64,17 +64,17 @@ const getWorkersStatus = () => {
     })
 }
 
-const getFreeTasks = () => {
+const getFreeTasks = (type: ResourceType) => {
   const workersStatus = getWorkersStatus()
-  return tasks.datasets
+  return (tasks[type as keyof typeof tasks] ?? [])
     .filter(task => workersStatus.some(w => w.key === task.worker && w.currentConcurrency < w.maxConcurrency))
     .map(task => ({ task, excludedOwners: workersStatus.find(w => w.key === task.worker)!.excludedOwners }))
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
-  for (const type of ['datasets'] as ResourceType[]) {
+  for (const type of ['datasets', 'applications'] as ResourceType[]) {
     if (_type && _type !== type) continue
-    const freeTasks = getFreeTasks()
+    const freeTasks = getFreeTasks(type)
     const facets: any = {}
     if (!freeTasks.length) continue
     for (const freeTask of freeTasks) {
@@ -124,7 +124,11 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
         }
 
         if (process.env.NODE_ENV === 'development') {
-          const resourceMatchedTasks = freeTasks.map(t => t.task.name).filter(t => results[t]?.some((r: any) => r.id === resource.id))
+          // nonExclusiveTaskNames are excluded on purpose: they select on a bookkeeping flag that is
+          // orthogonal to the pipeline status, so they legitimately match a resource another task
+          // also matches (see the comment next to their definition in ./tasks.ts)
+          const resourceMatchedTasks = freeTasks.map(t => t.task.name)
+            .filter(t => !nonExclusiveTaskNames.has(t) && results[t]?.some((r: any) => r.id === resource.id))
           if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
         }
 

@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "6.19.1",
+  "version": "6.20.0",
   "description": "",
   "main": "server",
   "scripts": {
@@ -17,6 +17,9 @@
     "dev-api": "MODE=server_worker npm -w api run dev",
     "dev-mock": "mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts 2>&1 | tee dev/logs/dev-mock.log",
     "dev-fixtures": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning dev/fixtures.ts",
+    "dev-bridge": "mkdir -p dev/logs && dotenv -- df-agents-bridge 2>&1 | tee dev/logs/dev-bridge.log",
+    "simulate": "playwright test -c playwright.sim.config.ts --project=simulate",
+    "simulate:report": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning simulations/report.ts",
     "dev-ui": "mkdir -p dev/logs && npm --prefix ui run dev 2>&1 | tee dev/logs/dev-ui.log",
     "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-benchmark-prof": "MODE=server_worker npm -w api run dev-benchmark-prof",
@@ -43,10 +46,13 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "devDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.270",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@data-fair/lib-agents-sim": "^0.7.0",
     "@data-fair/lib-types-builder": "^1.7.0",
     "@data-fair/lib-utils": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "^1.52.0",
     "@reporters/bail": "^2.0.2",
     "@types/content-disposition": "^0.5.8",

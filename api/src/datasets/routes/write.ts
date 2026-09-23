@@ -246,7 +246,7 @@ export const registerWriteRoutes = (router: Router) => {
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
     eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
-    return res.send(dataset)
+    return res.send(clean(req as DfRequest, dataset))
   })
 
   // cancel the draft
@@ -276,6 +276,6 @@ export const registerWriteRoutes = (router: Router) => {
 
     await updateStorage(datasetFull)
 
-    return res.send(datasetFull)
+    return res.send(clean(req as DfRequest, datasetFull))
   })
 }

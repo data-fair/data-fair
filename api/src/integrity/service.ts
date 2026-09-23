@@ -23,6 +23,7 @@ import * as restUtils from '../datasets/utils/rest.ts'
 import { integrityStore } from './store-factory.ts'
 import * as ops from './operations.ts'
 import * as lops from './lines-operations.ts'
+import { rootSettingsFilter } from '../settings/operations.ts'
 import { anchorDataset } from './relay.ts'
 import { historizeLines, anchorLine } from './lines-relay.ts'
 import { checkDataset, compareDatasetLines, type Check } from './checker.ts'
@@ -442,7 +443,7 @@ const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: nu
   if (!fresh) throw httpError(404, 'dataset not found')
   const { $set, $unset } = ops.restoreUpdate(fresh, revision.payload.metadata)
   if ($set.topics) {
-    const settings = await mongo.db.collection('settings').findOne({ type: dataset.owner.type, id: dataset.owner.id })
+    const settings = await mongo.db.collection('settings').findOne(rootSettingsFilter(dataset.owner))
     $set.topics = ops.rehydrateTopics($set.topics, settings?.topics ?? [])
   }
   const restoreContext: HistorizeContextHint = { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }

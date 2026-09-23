@@ -189,7 +189,7 @@ export class IntegrityStore {
     return JSON.parse(text)
   }
 
-  // Push the compliance retain-until date forward in place (S3/MinIO allow increasing only;
+  // Push the compliance retain-until date forward in place (S3 allows increasing only;
   // a shorter date is rejected by the provider). This is architecture §3.4 Option B.
   async extendRetention (key: string, retainUntil: Date): Promise<void> {
     await this.client.send(new PutObjectRetentionCommand({

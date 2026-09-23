@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n'
 import { mdiTextShort, mdiTextLong, mdiFormatLineStyle, mdiCalendar, mdiClockOutline, mdiNumeric, mdiDecimal, mdiCheckboxMarkedCircleOutline, mdiCodeBraces, mdiCodeBrackets } from '@mdi/js'
 
 type LocalizedTitle = { fr: string, en: string }

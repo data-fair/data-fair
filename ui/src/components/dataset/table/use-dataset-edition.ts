@@ -1,5 +1,6 @@
 import { type RestActionsSummary } from '#api/types'
 import { ExtendedResult } from '~/composables/dataset/lines'
+import { emitAgentEvent } from '@data-fair/lib-vue-agents'
 
 export type DatasetEdition = ReturnType<typeof createDatasetEdition>
 const datasetEditionKey = Symbol('dataset-edition')
@@ -13,6 +14,11 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   })
 
   const addLineTrigger = ref(false)
+  // Which line dialog is open and whether its form validates. The two dialogs live
+  // in two components (add in the header actions, edit in the table) but only one
+  // can be open at a time, so the assistant gets one answer — published as keyed
+  // host state by dataset-table.vue, which owns the line tools.
+  const lineDialog = ref<{ mode: 'add' | 'edit', valid: boolean } | null>(null)
   const saving = ref(false)
   // performs a _bulk_lines request and returns the operations summary.
   // per-line failures are reported in the summary (summary.nbErrors / summary.errors), not thrown — it
@@ -56,6 +62,11 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
       formData.append('_body', JSON.stringify(body))
       const res = await $fetch(`datasets/${id}/lines`, { method: 'POST', body: formData })
       indexedAt.value = res._updatedAt
+      // The transition a declared wait_for_user_action resolves on. Emitted here
+      // rather than in either dialog because both go through this one call, and
+      // only a save that really landed reaches this line. Before it, the assistant
+      // had to end its turn asking the person to report their own click back.
+      emitAgentEvent('dataset-line-saved', { id, action: body._action, lineId: res._id ?? body._id })
     } finally {
       saving.value = false
     }
@@ -77,6 +88,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   return {
     selectedResults,
     addLineTrigger,
+    lineDialog,
     saving,
     bulkLines,
     saveLine,

@@ -139,6 +139,38 @@
           @update:search="fetchKeywordsFacets"
         />
 
+        <!-- hidden search vocabulary: indexed, never displayed -->
+        <div
+          v-if="datasetsMetadata?.searchTerms?.active !== false"
+          class="d-flex align-start gap-1 mb-4"
+        >
+          <v-textarea
+            v-model="dataset.searchTerms"
+            :disabled="!can('writeDescription')"
+            :label="datasetsMetadata?.searchTerms?.title || t('searchTerms')"
+            :base-color="fieldColor('searchTerms')"
+            :color="fieldColor('searchTerms')"
+            :counter="1000"
+            :rules="[(val: string) => !val || val.length <= 1000]"
+            rows="3"
+            variant="outlined"
+            density="compact"
+            class="flex-grow-1"
+          >
+            <template #append-inner>
+              <help-tooltip :text="t('searchTermsHelp')" />
+            </template>
+          </v-textarea>
+          <df-agent-chat-action
+            v-if="can('writeDescription')"
+            action-id="suggest-search-terms"
+            :visible-prompt="t('searchTermsPrompt')"
+            :hidden-context="searchTermsContext"
+            :btn-props="{ class: 'ml-1' }"
+            :title="t('searchTermsPrompt')"
+          />
+        </div>
+
         <v-text-field
           v-if="datasetsMetadata?.creator?.active"
           v-model="dataset.creator"
@@ -275,6 +307,9 @@ fr:
   origin: Provenance
   image: Adresse d'une image utilisée comme vignette
   keywords: Mots clés
+  searchTerms: Termes de recherche associés
+  searchTermsHelp: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel."
+  searchTermsPrompt: Aide-moi à trouver des termes de recherche pour ce jeu de données
   projection: Système de coordonnées
   creator: Personne ou organisme créateur
   frequency: Fréquence de mise à jour
@@ -313,6 +348,9 @@ en:
   origin: Origin
   image: URL of an image used as thumbnail
   keywords: Keywords
+  searchTerms: Search terms
+  searchTermsHelp: "Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. Not shown anywhere, but present in the dataset's public API response — do not put anything confidential here."
+  searchTermsPrompt: Help me find search terms for this dataset
   projection: Coordinate reference system
   creator: Creator person or entity
   frequency: Update frequency
@@ -431,6 +469,10 @@ const summarizeContext = computed(() => {
 
 const describeContext = computed(() => {
   return 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (description field). If the user wants changes, adjust accordingly.'
+})
+
+const searchTermsContext = computed(() => {
+  return 'Use the search_terms_writer subagent to propose hidden search terms for this dataset (synonyms, acronyms with their expansion, everyday wording — never displayed, only used by the catalog search). Present the list to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (searchTerms field, one line of terms separated by commas or newlines). If the user wants changes, adjust accordingly.'
 })
 
 // --- Keywords facets (suggestions from other datasets) ---

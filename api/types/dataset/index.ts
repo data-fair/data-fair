@@ -97,6 +97,9 @@ export type DatasetInternal = Dataset & {
   _needsHistorizingLines?: boolean
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
+  // calculated, permission-guarded schema vocabulary (column labels and, when the owner opts in,
+  // enum values) fed to the catalog's text index; internal, stripped from every API response
+  _searchText?: string
 }
 
 export type DatasetLine = {
