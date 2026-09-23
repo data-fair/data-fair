@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
-import { collectNotifs, expectNotif, expectNoNotif } from '../../../support/notifications.ts'
+import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
@@ -611,36 +611,36 @@ test.describe('virtual datasets features', () => {
     ))
     const captured = await notifs.waitFor(1, { keyPrefix: `data-fair:dataset-data-updated:${virtualDataset.slug}` })
 
-    expectNotif(captured, `data-fair:dataset-data-updated:${child.slug}`)
+    // file re-upload keeps the default channels: stored and notified as before
+    assert.equal(expectNotif(captured, `data-fair:dataset-data-updated:${child.slug}`).channels, undefined)
     expectNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
   })
 
-  test('does not emit nor propagate data-updated on a child REST line write', async () => {
+  test('propagates the webhooks-only data-updated signal from a REST child', async () => {
     const ax = testUser1
     const childRes = await ax.post('/api/v1/datasets', {
       isRest: true,
-      title: 'no propagation rest child',
+      title: 'propagation rest child',
       schema: [{ key: 'attr1', type: 'string' }]
     })
     const child = await waitForFinalize(ax, childRes.data.id)
     const virtualRes = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      title: 'no propagation rest virtual',
+      title: 'propagation rest virtual',
       virtual: { children: [child.id] },
       schema: [{ key: 'attr1' }]
     })
     const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
 
     const notifs = await collectNotifs()
-    await ax.post(`/api/v1/datasets/${child.id}/lines`, { attr1: 'v1' })
-    await ax.post(`/api/v1/datasets/${child.id}/_bulk_lines`, [
-      { attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }
-    ])
-    const captured = await notifs.drain()
+    await doAndWaitForFinalize(ax, child.id, () => ax.post(`/api/v1/datasets/${child.id}/_bulk_lines`, [{ attr1: 'a' }, { attr1: 'b' }]))
+    const captured = await notifs.waitFor(1, { keyPrefix: `data-fair:dataset-data-updated:${virtualDataset.id}` })
 
-    expectNoNotif(captured, `data-fair:dataset-data-updated:${child.slug}`)
-    expectNoNotif(captured, `data-fair:dataset-data-updated:${child.id}`)
-    expectNoNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
-    expectNoNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.id}`)
+    const onVirtual = expectNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.id}`)
+    assert.deepEqual(onVirtual.channels, ['webhooks'])
+    assert.equal(onVirtual.coalesce, true)
+    // the child's own signal is webhooks-only too
+    const onChild = expectNotif(captured, `data-fair:dataset-data-updated:${child.id}`)
+    assert.deepEqual(onChild.channels, ['webhooks'])
   })
 })

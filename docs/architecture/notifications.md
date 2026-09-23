@@ -54,6 +54,8 @@ Highest-level helper, used everywhere except the few topics that don't map to a 
 
 Note: `options.i18nKey` only overrides the i18n lookup. The topic key is always derived from `key`. This is what allows the REST vs file wording split without renaming the topic.
 
+Two options are delivery instructions for the events service rather than content: `channels` (`'events' | 'notifications' | 'webhooks'`, absent = all — restrict where the event goes) and `coalesce` (a pending webhook delivery for the same subscription and topic key is replaced instead of queuing another). They are only set for the REST data signal of §10. An events service older than these fields rejects them (400), so it must be deployed first.
+
 ### `send(event, sessionState?)`
 
 Lower-level helper for events that don't fit the resource pattern (settings events, change-owner). Located at `notifications.ts:63`. **Always go through `send` or `sendResourceEvent` rather than calling `eventsQueue.pushEvent` directly** — see §6.
@@ -64,7 +66,7 @@ Creates a subscription on the events service on behalf of the current user. Used
 
 ### `propagateDataUpdatedToVirtualParents(childDataset, originator, options?)`
 
-Mirror helper called at the single commit-time `data-updated` emission point (file `validateDraft` in `service.js:587`). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. See §10 for why REST line operations deliberately do **not** participate in this propagation and why `router.js:559` (file upload entry point) is also skipped.
+Mirror helper called at the two commit-time `data-updated` emission points: file `validateDraft` (`service.js:587`) and the REST partial finalize pass (`workers/short-processor/finalize.ts`, webhooks-only, see §10). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. Options such as `channels` / `coalesce` are passed through unchanged, so a REST child's webhooks-only signal stays webhooks-only on its parents. See §10 for why `router.js:559` (file upload entry point) is skipped.
 
 ## 4. Topic key conventions
 
@@ -172,13 +174,17 @@ Discovered during the refacto but intentionally left for a follow-up:
   Reference pattern: `customers` auto-subscribes the ticket creator to comment events from the **frontend** (`customers/ui/src/components/issues/issue-new.vue:74-86`), calling `${window.location.origin}/events/api/subscriptions` so the browser cookie has the correct scope. Any new auto-subscribe in data-fair should follow the same UI-side pattern, or the events service should grow a service-to-service auth path keyed off `config.secretKeys.events`.
 - **Proactive notification for API key expiration is not implemented yet** — API keys expire silently and the first call after `expireAt` returns `403`. A proactive J-3 / post-expiration notification was prototyped during the refacto but reverted because data-fair has no in-process scheduled-task infrastructure today (no `node-cron` / `cron` usage in `api/src/`). Other Koumoul services (`customers/api/src/limits/worker.ts`, `simple-directory/api/src/users/worker.ts`) use `node-cron` + `@data-fair/lib-node/locks` and are the recommended template when the feature is reintroduced.
 
-## 10. REST line operations: notifications intentionally suppressed
+## 10. REST line operations: a webhooks-only signal
 
-REST/editable datasets do **not** emit `data-updated` on line operations — POST/PUT/PATCH/DELETE on `/lines`, `DELETE /lines`, and `POST /_bulk_lines` are all silent on the notification bus. The handlers in `api/src/datasets/utils/rest.ts` only update storage and respond; no `sendResourceEvent`, no propagation to virtual parents.
+REST/editable datasets do **not** notify subscribers nor store events on line operations — POST/PUT/PATCH/DELETE on `/lines`, `DELETE /lines`, and `POST /_bulk_lines`. The handlers in `api/src/datasets/utils/rest.ts` only update storage and respond.
 
-**Why.** REST writes are designed for high-frequency callers: inline-edit UIs PATCH one cell at a time, integration scripts can run every minute, and `_bulk_lines` is itself often invoked on a tight schedule. Wiring a notification per request would let any well-meaning script silently spam every subscriber of the dataset (and, through propagation, every virtual parent and every portal subscription on those parents). The single legitimate signal — "the data behind this view changed" — has no cheap throttling story today, so the safer default is to emit nothing.
+Instead, every REST **partial** finalize pass (the pass following line writes, `_partialRestStatus` set on entry — `workers/short-processor/finalize.ts`) emits `data-updated` with `channels: ['webhooks']` and `coalesce: true`, and propagates it the same way to virtual parents. On the events service this event is never stored and never reaches subscribers; it only creates webhook deliveries, and a pending delivery for the same webhook subscription and dataset topic is replaced rather than queued. Storage is therefore bounded by the number of webhook subscriptions (at most two delivery documents per subscription × topic), whatever the write rate. The webhook is a signal: the remote service reads the dataset from `topic.key` and pulls the data through the API.
 
-**Consequence for virtual parents.** Since `propagateDataUpdatedToVirtualParents` is only called from `service.js:587` (file `validateDraft`), a virtual dataset whose only child is a REST dataset never receives a `data-updated` notification. A virtual dataset that has at least one file-based child still receives `data-updated` when that child is re-uploaded. This is reflected in the per-dataset subscription UI: `ui/src/components/common/event-notifications.vue` hides the `data-updated` subscribe button when `dataset.isRest === true` so users do not subscribe to a topic that will never fire.
+**Why not a notification.** REST writes are designed for high-frequency callers: inline-edit UIs PATCH one cell at a time, integration scripts can run every minute, and `_bulk_lines` is itself often invoked on a tight schedule. A per-write notification would spam every subscriber of the dataset and of its virtual parents. Writes landing during a finalize pass are folded into the next one, so the signal rate is at most one per pass, and coalescing on the events side absorbs the rest.
+
+**Subscription UIs.** `ui/src/components/common/event-notifications.vue` hides the `data-updated` subscribe button when `dataset.isRest === true`: human subscribers never receive it. `ui/src/components/common/event-webhooks.vue` offers `data-updated` on every dataset; for REST datasets it is fed by the finalize signal.
+
+**Known gap.** A REST dataset stuck in `status: 'error'` does not run `finalize` (`rest.ts` bumps `finalizedAt` directly there), so it sends no signal until it recovers.
 
 **Where the emit points are wired:**
 
@@ -186,7 +192,7 @@ REST/editable datasets do **not** emit `data-updated` on line operations — POS
 |---|---|---|
 | `service.js:587` (`validateDraft`, file path) | yes | yes |
 | `router.js:559` (file upload entry point) | yes — as `dataset-draft-data-updated:<child>` | **no** — the child enters draft (`patch.draftReason = 'file-updated'`) and virtual parents do not query draft data, so propagating here would fire `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation at `service.js:587` then fires again with the new data once the draft is validated. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
-| `rest.ts` (`deleteLine`, `createOrUpdateLine`, `patchLine`, `deleteAllLines`, `bulkLines`) | **no** | **no** — see above. |
+| `finalize.ts` (REST partial pass) | yes — webhooks channel only, coalesced | yes — same channels |
 
 The propagation helper reuses the **same `i18nKey` and `localizedParams` as the child emission**, so a notification on a virtual parent has a body identical to what a subscriber on the underlying child would see. This keeps the topic surface uniform between regular and virtual datasets — portal-side subscribers cannot tell from the notification alone that the resource is virtual.
 
@@ -202,13 +208,11 @@ Helpers (use these, do not roll your own):
 
 Inline coverage:
 
-- `tests/features/datasets/rest/rest-datasets-crud.api.spec.ts` — `data-updated` on POST/PUT/PATCH/DELETE lines, no-emit on 304 idempotent PUT, delete-all body wording.
-- `tests/features/datasets/rest/rest-datasets-bulk.api.spec.ts` — single summarised emission on `_bulk_lines`.
 - `tests/features/datasets/upload/datasets-features.api.spec.ts` — `user-notification`, `structure-updated` (drop + add), `breaking-change`, `change-owner`, `delete`.
 - `tests/features/datasets/upload/datasets-drafts-lifecycle.api.spec.ts` — `dataset-created`, `draft-data-updated`, `draft-validated` (with slug+id pairing).
 - `tests/features/datasets/upload/file-validation.api.spec.ts` — error umbrella fan-out on file validation failure.
-- `tests/features/datasets/rest/rest-datasets-crud.api.spec.ts` — single guard test asserting no `data-updated` notif on REST line operations (see §10).
-- `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate), `data-updated` propagation from child→virtual on file re-upload, single guard test asserting REST writes do not propagate to a virtual parent.
+- `tests/features/datasets/rest/rest-datasets-crud.api.spec.ts` — webhooks-only `data-updated` signal (channels + coalesce) on single, patch, bulk and delete-all writes; none on the creation finalize (see §10).
+- `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate), `data-updated` propagation from child→virtual on file re-upload (default channels), the REST signal propagating to a virtual parent with the same channels.
 - `tests/features/applications/publication-sites.api.spec.ts` — `publication-requested` (org and department scopes).
 - `tests/features/applications/applications.api.spec.ts` — `application-created`.
 
