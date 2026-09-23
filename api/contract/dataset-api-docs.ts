@@ -12,6 +12,7 @@ import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters } from '../src/datasets/es/commons.ts'
 import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
+import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -658,6 +659,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       }
     },
     security: [],
+    'x-agent': xAgentRoot,
     servers,
     paths: {
       '/': {
@@ -665,6 +667,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lire les informations',
           description: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
+          'x-agent': xAgent.readDescription,
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
           responses: {
@@ -685,6 +688,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lire les lignes',
           description: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
+          'x-agent': xAgent.readLines,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
@@ -786,6 +790,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lister les valeurs distinctes',
           description: "Récupérer la liste des valeurs distinctes d'une colonne.",
           operationId: 'getValues',
+          'x-agent': xAgent.getValues,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
@@ -886,6 +891,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Agréger les valeurs',
           description: 'Récupérer des informations agrégées en fonction des valeurs de colonnes.',
           operationId: 'getValuesAgg',
+          'x-agent': xAgent.getValuesAgg,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
@@ -987,6 +993,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Calculer une métrique',
           description: 'Calculer une métrique sur une colonne.',
           operationId: 'getMetricAgg',
+          'x-agent': xAgent.getMetricAgg,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [
