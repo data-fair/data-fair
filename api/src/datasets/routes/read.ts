@@ -40,6 +40,18 @@ import { runAdaptivePreflight } from '../es/adaptive-q.ts'
 const streamEligible = (query: any): boolean =>
   !query.format || query.format === 'json' || query.format === 'csv' || query.format === 'geojson'
 
+// sampling=max tiles page through ES (maxPageSize hits per request) within these bounds
+const maxTilePages = 5
+const maxTileLength = 10000000
+
+// Size of the tile payload carried by a page of hits (the prepared pbf or the source geometries).
+// Measured on the hits because ES >= 8.9 streams _search responses without a content-length header.
+const hitsLength = (hits: any[]): number => {
+  let length = 0
+  for (const hit of hits) length += JSON.stringify(hit._source ?? null).length
+  return length
+}
+
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
   const dataset = reqDataset(req)
@@ -142,9 +154,11 @@ const readLines: RequestHandler = async (req, res) => {
     query.select = select.join(',')
   }
 
+  // an explicit size is a total cap on the tile, only the default size pages beyond maxPageSize (sampling=max)
+  const tileSizeDefaulted = vectorTileRequested && !('size' in query)
   if (vectorTileRequested) {
     // default is smaller (see es/commons) for other format, but we want filled tiles by default
-    if (!('size' in query)) query.size = config.elasticsearch.maxPageSize + ''
+    if (tileSizeDefaulted) query.size = config.elasticsearch.maxPageSize + ''
     // track_total_hits is expensive and not needed for tile rendering, disable by default
     if (query.count !== 'true') query.count = 'false'
   }
@@ -303,12 +317,12 @@ const readLines: RequestHandler = async (req, res) => {
     } catch (err) {
       await manageESError(req, err)
     }
-  } else if (vectorTileRequested && sampling === 'max' && !query.collapse) {
+  } else if (vectorTileRequested && sampling === 'max' && !query.collapse && tileSizeDefaulted) {
     let previousEsResponse
     let totalLength = 0
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < maxTilePages; i++) {
       if (previousEsResponse) {
-        if (size && previousEsResponse.hits.hits.length === size && totalLength < 10000000) {
+        if (size && previousEsResponse.hits.hits.length === size && totalLength < maxTileLength) {
           const lastHit = previousEsResponse.hits.hits[previousEsResponse.hits.hits.length - 1]
           query.after = JSON.stringify(lastHit.sort).slice(1, -1)
         } else {
@@ -321,7 +335,7 @@ const readLines: RequestHandler = async (req, res) => {
         await manageESError(req, err)
         break
       }
-      totalLength += previousEsResponse.contentLength
+      totalLength += hitsLength(previousEsResponse.hits.hits)
 
       if (!esResponse) esResponse = previousEsResponse
       else esResponse.hits.hits = esResponse.hits.hits.concat(previousEsResponse.hits.hits)
