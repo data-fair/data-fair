@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import type { AxiosInstance } from 'axios'
 
@@ -522,6 +522,52 @@ test.describe('permissions editor', () => {
       // Wait a short moment so any pending fetch has had a chance to fire.
       await page.waitForTimeout(500)
       expect(forbiddenRequests, `unexpected readAdvanced requests: ${forbiddenRequests.join(', ')}`).toEqual([])
+    })
+  })
+
+  // The editor is shared with the application page, which had no coverage at all: everything above
+  // exercises it as resourceType="datasets" only. One department-owned application is enough to
+  // catch a regression in the parts that branch on the resource type.
+  test.describe('applications', () => {
+    let appId: string
+    let depAx: Awaited<ReturnType<typeof axiosAuth>>
+
+    test.beforeAll(async () => {
+      depAx = await axiosAuth('test_user4@test.com', 'test_org1')
+      depAx.setOrg('test_org1', 'dep1')
+      const application = (await depAx.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
+      appId = application.id
+      expect(application.owner.department).toBe('dep1')
+    })
+
+    test('the department scope and labels hold on an application too', async ({ page, goToWithAuth }) => {
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      await goToWithAuth('/data-fair/', 'test_user4')
+      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
+      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+      await page.goto(`${baseUrl}/data-fair/application/${appId}`)
+      await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+      await page.locator('#share').scrollIntoViewIfNeeded()
+      await page.getByRole('tab', { name: /Permissions/i }).click()
+      const visibility = page.locator('#share .v-select').first()
+      await expect(visibility).toBeVisible({ timeout: 10000 })
+      await expect(visibility).toContainText('du département department 1')
+
+      // same round-trip as on a dataset: the department scope must survive it
+      await visibility.click()
+      await page.getByRole('option', { name: /tout le monde/i }).click()
+      await expect.poll(async () => {
+        const perms = (await depAx.get(`/api/v1/applications/${appId}/permissions`)).data
+        return perms.find((p: any) => !p.type && p.classes?.includes('read'))
+      }, { timeout: 5000 }).toBeTruthy()
+
+      await visibility.click()
+      await page.getByRole('option', { name: /administrateurs et contributeurs/i }).click()
+      await expect.poll(async () => {
+        const perms = (await depAx.get(`/api/v1/applications/${appId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read'))?.department
+      }, { timeout: 5000 }).toBe('dep1')
     })
   })
 })
