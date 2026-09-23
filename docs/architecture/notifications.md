@@ -54,7 +54,7 @@ Highest-level helper, used everywhere except the few topics that don't map to a 
 
 Note: `options.i18nKey` only overrides the i18n lookup. The topic key is always derived from `key`. This is what allows the REST vs file wording split without renaming the topic.
 
-Two options are delivery instructions for the events service rather than content: `channels` (`'events' | 'notifications' | 'webhooks'`, absent = all — restrict where the event goes) and `coalesce` (a pending webhook delivery for the same subscription and topic key is replaced instead of queuing another). They are only set for the REST data signal of §10. An events service older than these fields rejects them (400), so it must be deployed first.
+Two options are delivery instructions for the events service rather than content: `channels` (`'events' | 'notifications' | 'webhooks'`, absent = all — restrict where the event goes) and `coalesce` (a pending webhook delivery for the same subscription and topic key is replaced instead of queuing another). They are only set for the REST data signal of §10. An events service older than these fields rejects them with a 400, and since the events queue posts every event of its drain window as one batch and only retries on 5xx, that 400 drops **the whole batch** — file `data-updated`, errors, publication requests of every account — not only the REST signal. The events service supporting `channels` / `coalesce` must therefore be deployed before this data-fair version.
 
 ### `send(event, sessionState?)`
 
