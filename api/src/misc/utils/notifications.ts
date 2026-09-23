@@ -25,6 +25,11 @@ type SendResourceEventOptions = {
    * about the resource's security state rather than about its content: on a public dataset the
    * default would make "this dataset was tampered with" readable by anyone. */
   forcePrivate?: boolean
+  /** Delivery channels on the events service (stored events, subscriber notifications, webhooks).
+   * Absent means all of them. See notifications.md §10 for the webhooks-only REST signal. */
+  channels?: PushEvent['channels']
+  /** Replace the pending webhook delivery for the same subscription and topic instead of queuing another. */
+  coalesce?: boolean
 }
 
 export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | string, key: string, options: SendResourceEventOptions = {}) => {
@@ -61,7 +66,9 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
     urlParams: { id: resource.id, slug: slug ?? '' },
     visibility: (!options.forcePrivate && permissions.isPublic(resourceType, resource)) ? 'public' : 'private',
     resource: { type: singularResourceType, id: resource.id, title: resource.title },
-    extra: options.extra
+    extra: options.extra,
+    ...(options.channels && { channels: options.channels }),
+    ...(options.coalesce && { coalesce: true })
   })
 
   // id+specific first wins the events-service _id unique index → stored event keeps the canonical shape
@@ -88,7 +95,7 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 export const propagateDataUpdatedToVirtualParents = async (
   childDataset: Pick<Dataset, 'id'>,
   originator: SessionStateAuthenticated | string,
-  options: Pick<SendResourceEventOptions, 'i18nKey' | 'localizedParams' | 'params' | 'extra'> = {}
+  options: Pick<SendResourceEventOptions, 'i18nKey' | 'localizedParams' | 'params' | 'extra' | 'channels' | 'coalesce'> = {}
 ) => {
   for await (const virtualParent of mongo.datasets.find({ 'virtual.children': childDataset.id })) {
     await sendResourceEvent('datasets', virtualParent, originator, 'data-updated', options)
