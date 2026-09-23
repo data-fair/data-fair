@@ -169,13 +169,11 @@ export const trimDataset = (dataset: Partial<Dataset>) => {
   for (const attachment of attachments) trimFields(attachment, 'title', 'description', 'name', 'url', 'targetUrl')
   for (const prop of dataset.schema ?? []) {
     trimFields(prop, 'title', 'description', 'x-group', 'x-originalName', 'patternErrorMessage')
+    // keys and transform examples are data values: REST datasets store them untrimmed
     if (prop['x-labels']) {
-      prop['x-labels'] = Object.fromEntries(Object.entries(prop['x-labels']).map(([value, label]) => [value.trim(), label.trim()]))
+      prop['x-labels'] = Object.fromEntries(Object.entries(prop['x-labels']).map(([value, label]) => [value, label.trim()]))
     }
-    if (prop['x-transform']) {
-      trimFields(prop['x-transform'], 'expr')
-      if (prop['x-transform'].examples) prop['x-transform'].examples = prop['x-transform'].examples.map(example => example.trim())
-    }
+    if (prop['x-transform']) trimFields(prop['x-transform'], 'expr')
   }
   for (const extension of dataset.extensions ?? []) {
     if (extension.type === 'exprEval') trimFields(extension, 'expr')
@@ -184,10 +182,7 @@ export const trimDataset = (dataset: Partial<Dataset>) => {
       for (const overwrite of Object.values(extension.overwrite ?? {})) trimFields(overwrite, 'title', 'x-originalName')
     }
   }
-  for (const filter of dataset.virtual?.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
-  const searchs: { title?: string, description?: string, filters?: { values: string[] }[] }[] = [...dataset.masterData?.bulkSearchs ?? [], ...dataset.masterData?.singleSearchs ?? []]
-  for (const search of searchs) {
-    trimFields(search, 'title', 'description')
-    for (const filter of search.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
-  }
+  // filter values are data values too, left as typed
+  const searchs: { title?: string, description?: string }[] = [...dataset.masterData?.bulkSearchs ?? [], ...dataset.masterData?.singleSearchs ?? []]
+  for (const search of searchs) trimFields(search, 'title', 'description')
 }
