@@ -322,6 +322,20 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
+  filterParams.push({
+    in: 'query',
+    name: 'date_match',
+    description: `
+  Filtre temporel sur les colonnes portant les concepts de date (date, date de début, date de fin).
+
+  Une date "YYYY-MM-DD" restreint aux lignes couvrant ce jour ; deux dates séparées par une virgule "YYYY-MM-DD,YYYY-MM-DD" restreignent aux lignes dont la période chevauche cet intervalle. Les dates-heures ISO sont acceptées.
+    `,
+    schema: {
+      title: 'Filtre temporel',
+      type: 'string'
+    }
+  })
+
   /** Returns the common pagination/sort/select parameters shared by routes that return hits or aggregations. */
   const hitsParams = (defaultSize = 12, maxSize = 10000, method?: string): any[] => {
     let sortItems: string[] = []
@@ -368,7 +382,9 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
         type: 'array',
         items: {
           type: 'string',
-          enum: sortItems.length ? sortItems : undefined
+          // The list is only complete with the dataset's own column keys appended; on the sample
+          // dataset (merged root document) it would forbid the column keys the description allows.
+          enum: sortItems.length && !isSampleDataset ? sortItems : undefined
         }
       },
       style: 'form',
@@ -674,7 +690,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'after',
-            description: 'Pagination en profondeur.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*',
+            description: "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*",
             schema: {
               title: 'Pagination en profondeur',
               type: 'integer'
@@ -743,7 +759,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       },
                       next: {
                         type: 'string',
-                        description: 'URL pour continuer la pagination.'
+                        description: 'URL complète pour obtenir la page suivante de la même requête (mêmes filtres, tri et colonnes).'
                       }
                     }
                   }
