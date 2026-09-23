@@ -66,6 +66,27 @@ test.describe('catalog search', () => {
     await assert.rejects(u1.patch('/api/v1/datasets/cs-bureaux', { searchTerms: 'x'.repeat(1001) }), { status: 400 })
   })
 
+  test('a searchTerms hit still outranks a description hit when few datasets have searchTerms', async () => {
+    // Every indexed dataset stores a length of 0 for the fields it lacks. If those zeros counted
+    // in avgLen, a field most datasets leave empty - searchTerms, in production - would average a
+    // fraction of a term, and BM25's length normalisation would crush every hit in it: with eight
+    // datasets without searchTerms here, the searchTerms hit scored about 0.6 to the description
+    // hit's 1.35. The fillers' long descriptions make the short description hit as strong as it
+    // can be, so this also catches a partial fix. One term, so idf is a common factor.
+    for (let i = 0; i < 8; i++) {
+      await metaOnly('cs-filler-' + i, {
+        title: 'Jeu de donnees numero ' + i,
+        description: 'Inventaire des equipements sportifs et culturels de la commune numero ' + i + ' avec beaucoup de mots supplementaires pour allonger la description moyenne du corpus'
+      })
+    }
+    await metaOnly('cs-bureaux', { title: 'Contours des bureaux de vote', description: 'Découpage géographique des bureaux' })
+    await metaOnly('cs-legislatives', { title: 'Circonscriptions législatives', description: 'Résultats des élections législatives par circonscription' })
+    await u1.patch('/api/v1/datasets/cs-bureaux', { searchTerms: 'élections scrutin électeurs' })
+
+    const res = (await u1.get('/api/v1/datasets', { params: { q: 'élections', select: 'id' } })).data
+    assert.deepEqual(res.results.map((r: any) => r.id), ['cs-bureaux', 'cs-legislatives'])
+  })
+
   test('column labels feed the search, keys do not, and _searchText never leaves the API', async () => {
     await u1.post('/api/v1/datasets/cs-erp', {
       isRest: true,

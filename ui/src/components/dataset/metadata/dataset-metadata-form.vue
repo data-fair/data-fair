@@ -306,12 +306,12 @@ fr:
   topics: Thématiques
   origin: Provenance
   image: Adresse d'une image utilisée comme vignette
-  keywords: Mots clés
+  keywords: Mots-clés
   searchTerms: Termes de recherche associés
   searchTermsHelp: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel."
   searchTermsPrompt: Aide-moi à trouver des termes de recherche pour ce jeu de données
   projection: Système de coordonnées
-  creator: Personne ou organisme créateur
+  creator: Producteur
   frequency: Fréquence de mise à jour
   frequencyItems:
     triennial: Tous les 3 ans
@@ -331,7 +331,7 @@ fr:
     daily: Tous les jours
     continuous: En continu
     irregular: Irrégulière
-  spatial: Couverture spatiale
+  spatial: Couverture géographique
   temporal: Couverture temporelle
   modified: Date de modification de la source
   attachmentsAsImage: Afficher les pièces jointes de lignes comme des images
@@ -352,7 +352,7 @@ en:
   searchTermsHelp: "Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. Not shown anywhere, but present in the dataset's public API response — do not put anything confidential here."
   searchTermsPrompt: Help me find search terms for this dataset
   projection: Coordinate reference system
-  creator: Creator person or entity
+  creator: Producer
   frequency: Update frequency
   frequencyItems:
     triennial: Every 3 years
@@ -372,7 +372,7 @@ en:
     daily: Every day
     continuous: Continuous
     irregular: Irregular
-  spatial: Spatial coverage
+  spatial: Geographic coverage
   temporal: Temporal coverage
   modified: Source modification date
   attachmentsAsImage: Display row attachments as images

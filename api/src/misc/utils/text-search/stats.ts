@@ -69,8 +69,15 @@ export const createStatsProvider = (
   const averageLengths = memoize(
     async (key: string) => {
       const group: any = { _id: null }
-      // $group output keys cannot contain dots, so we use sanitised keys and translate back at the boundary
-      for (const field of Object.keys(def.fields)) group[fieldKey(field)] = { $avg: `$_len.${fieldKey(field)}` }
+      // $group output keys cannot contain dots, so we use sanitised keys and translate back at the boundary.
+      // Averaged over the documents that HAVE the field (Lucene semantics): every document stores
+      // a 0 for the fields it lacks, and letting those zeros in would make a rarely-filled field
+      // look short on average, so BM25's length normalisation would crush every hit in it. $avg
+      // ignores nulls, hence the $cond.
+      for (const field of Object.keys(def.fields)) {
+        const len = `$_len.${fieldKey(field)}`
+        group[fieldKey(field)] = { $avg: { $cond: [{ $gt: [len, 0] }, len, null] } }
+      }
       const pipeline: any[] = []
       if (key) pipeline.push({ $match: JSON.parse(key) })
       pipeline.push({ $group: group })

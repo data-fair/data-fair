@@ -102,7 +102,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { ...ctx.logCtx, account: owner })
       eventsQueue.pushEvent({
         title: 'Création d\'une clé d\'API',
-        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
@@ -146,7 +146,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       }
       eventsQueue.pushEvent({
         title: 'Suppression d\'une clé d\'API',
-        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },

@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
 import { sendDataset, fileExists, clearDatasetCache } from '../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../support/notifications.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -433,6 +434,16 @@ test.describe('Applications', () => {
     // dataset B is now referenced
     const dsB = (await ax.get('/api/v1/datasets/' + datasetB.id)).data
     assert.equal(dsB.extras.applications.length, 1)
+  })
+
+  test('emits application-created notif on POST', async () => {
+    const ax = testUser1
+    const notifs = await collectNotifs()
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'notif-test-app' })
+    const captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:application-application-created:' })
+
+    expectNotif(captured, `data-fair:application-application-created:${app.slug || app.id}`)
   })
 
   test('Upload a simple attachment on an application', async () => {
