@@ -34,12 +34,6 @@ export const run = async () => {
   // a middleware for performance analysis
   app.use(observe.observeReqMiddleware)
 
-  // data-fair is never indexed: back-office, embeds, proxied applications and API alike
-  app.use((req, res, next) => {
-    res.setHeader('X-Robots-Tag', 'noindex')
-    next()
-  })
-
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   if (config.privateCatalogsUrl) {
     await catalogsPublicationQueue.start({ catalogsUrl: config.privateCatalogsUrl, catalogsSecret: config.secretKeys.catalogs })
@@ -175,7 +169,11 @@ export const run = async () => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
-    app.use('/app', (await import('./applications/proxy.ts')).default)
+    // applications are embedded by portals, never a destination of their own
+    app.use('/app', (req, res, next) => {
+      res.setHeader('X-Robots-Tag', 'noindex')
+      next()
+    }, (await import('./applications/proxy.ts')).default)
 
     // self hosting of streamsaver man in the middle service worker
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183

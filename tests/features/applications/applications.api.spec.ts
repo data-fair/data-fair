@@ -217,11 +217,12 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
-    // data-fair is never indexed, the proxied application HTML included
+    // applications are embedded by portals, never a destination of their own
     assert.equal(res.headers['x-robots-tag'], 'noindex')
     res = await ax.get(`/api/v1/applications/${appId}`)
     assert.equal(res.status, 200)
-    assert.equal(res.headers['x-robots-tag'], 'noindex')
+    // the json api stays indexable, it serves public data
+    assert.equal(res.headers['x-robots-tag'], undefined)
     res = await ax.get('/app/' + appId)
     assert.equal(res.status, 200)
     assert.ok(res.data.includes('My app body'))
