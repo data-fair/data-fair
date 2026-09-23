@@ -6,7 +6,7 @@ export const patchKeys = [
   'image', 'extensions', 'publications', 'publicationSites', 'requestedPublicationSites',
   'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments',
   'topics', 'relatedDatasets', 'thumbnails', 'masterData', 'primaryKey', 'exports', 'spatial',
-  'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo', 'analysis',
+  'temporal', 'frequency', 'creator', 'modified', 'keywords', 'searchTerms', 'conformsTo', 'analysis',
   'readApiKey', 'nonBlockingValidation', 'customMetadata', 'constraints'
 ]
 const body = jsonSchema(datasetSchema)

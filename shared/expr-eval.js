@@ -19,6 +19,10 @@ dayjs.extend(utc)
  * @returns
  */
 export default (defaultTimezone) => {
+  // Without a zone, every date function below silently falls back to the process timezone,
+  // so a mis-wired caller yields wrong-but-plausible dates instead of an error. Refuse it.
+  if (!defaultTimezone) throw new Error('defaultTimezone is required to build the expression parser')
+
   const parser = new Parser({
     //  Useless in our use case
     //  mathematical
@@ -203,6 +207,10 @@ export default (defaultTimezone) => {
     return arg !== undefined && arg !== null
   }
 
+  parser.functions.NO_VALUE = function () {
+    return undefined
+  }
+
   /** @param {any} arg */
   parser.functions.JSON_PARSE = function (arg) {
     if (typeof arg !== 'string') return arg
@@ -267,6 +275,8 @@ export default (defaultTimezone) => {
         }
         if (property.separator && Array.isArray(result)) {
           result = result.map(value => fixValue(value, property))
+            .filter(value => value !== null && value !== undefined)
+          if (result.length === 0) result = null
         } else {
           result = fixValue(result, property)
         }
@@ -298,6 +308,7 @@ export default (defaultTimezone) => {
  */
 const fixValue = (value, property) => {
   if (value === null || value === undefined) return null
+  if (typeof value === 'string' && value.trim() === '') return null
   if (property.type === 'string' && ['boolean', 'number'].includes(typeof value)) {
     return value + ''
   }

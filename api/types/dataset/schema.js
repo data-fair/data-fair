@@ -114,6 +114,11 @@ const datasetProperties = {
       type: 'string'
     }
   },
+  searchTerms: {
+    type: 'string',
+    maxLength: 1000,
+    description: 'Free text used only by the catalog search, never displayed: synonyms, acronyms and their expansion, everyday wording'
+  },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
   frequency: {
     type: 'string',
@@ -1081,6 +1086,7 @@ const dataset = {
         spatial: datasetProperties.spatial,
         temporal: datasetProperties.temporal,
         keywords: datasetProperties.keywords,
+        searchTerms: datasetProperties.searchTerms,
         frequency: datasetProperties.frequency,
         customMetadata: datasetProperties.customMetadata
       }

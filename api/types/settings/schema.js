@@ -347,7 +347,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture spatiale',
+              title: 'Couverture géographique',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -358,7 +358,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture spatiale' }
+                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
               }
             }
           }
@@ -409,7 +409,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Personne ou organisme créateur',
+              title: 'Producteur',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -420,7 +420,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
+                props: { variant: 'outlined', placeholder: 'Producteur' }
               }
             }
           }
@@ -449,7 +449,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Mots clés',
+              title: 'Mots-clés',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -460,7 +460,27 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Mots clés' }
+                props: { variant: 'outlined', placeholder: 'Mots-clés' }
+              }
+            }
+          }
+        },
+        searchTerms: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'Termes de recherche associés',
+              type: 'boolean',
+              default: true,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'Libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
               }
             }
           }

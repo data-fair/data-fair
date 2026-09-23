@@ -30,6 +30,12 @@ All dev processes write to `dev/logs/`:
 2. Read the relevant log file in `dev/logs/` for error details
 3. Report findings to the user — do not attempt to fix infrastructure issues yourself
 
+If `dev-api` flaps between `UP` and `ERROR (HTTP 502)` every few seconds, tests
+started in that window fail on `ECONNREFUSED` or on stray error toasts, not on
+anything they assert. Wait for three consecutive 200s from the ping endpoint
+before trusting a failure. `dev/run-api.sh` explains the restart loop this used
+to come from.
+
 ### Port assignments
 
 Port numbers are defined in `.env`. Do not modify port assignments.
@@ -125,6 +131,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Date management](docs/architecture/date-management.md) — the date / date-time strategy end to end: French-first sniffing, offset-preserving storage, timezone-aware filters & aggregations, and display in the data's own timezone (not the viewer's). **Read before touching date parsing, storage, or display.**
 - [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**
 - [Storage accounting](docs/architecture/storage-accounting.md) — the `store_bytes` / `indexed_bytes` metrics: physical vs CSV-equivalent accounting, the per-line `_bytes` field and sum aggregation, and the organic `_esLineBytes` migration. **Read before touching storage computation or quota enforcement.**
+- [Catalog search](docs/architecture/catalog-search.md) — how `q=` ranks datasets and applications: the owned term index, dis_max BM25 scored in the aggregation, the `markStale` contract for bulk writers. **Read before touching `q=`, `find.ts`, or anything writing dataset/application metadata.**
 
 ## Common Development Tasks
 
