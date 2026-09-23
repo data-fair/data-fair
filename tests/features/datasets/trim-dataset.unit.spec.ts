@@ -69,9 +69,9 @@ test.describe('trimDataset', () => {
     assert.equal(prop['x-group'], 'Group')
     assert.equal(prop['x-originalName'], 'Col')
     assert.equal(prop.patternErrorMessage, 'bad')
-    assert.deepEqual(prop['x-labels'], { ' a ': 'A', b: 'B' })
+    assert.deepEqual(prop['x-labels'], { a: 'A', b: 'B' })
     assert.equal(prop['x-transform'].expr, 'UPPER(value)')
-    assert.deepEqual(prop['x-transform'].examples, [' x '])
+    assert.deepEqual(prop['x-transform'].examples, ['x'])
   })
 
   test('leaves separator, pattern and date formats untouched', () => {
@@ -95,13 +95,13 @@ test.describe('trimDataset', () => {
     assert.deepEqual(dataset.extensions[1].overwrite.out, { title: 'Out', 'x-originalName': 'out' })
   })
 
-  test('leaves virtual filter values untouched', () => {
-    const dataset: any = { virtual: { children: [], filters: [{ key: 'k', values: [' a ', ''] }] } }
+  test('trims virtual filter values and drops empties', () => {
+    const dataset: any = { virtual: { children: [], filters: [{ key: 'k', values: [' a ', '', ' '] }] } }
     trimDataset(dataset)
-    assert.deepEqual(dataset.virtual.filters[0].values, [' a ', ''])
+    assert.deepEqual(dataset.virtual.filters[0].values, ['a'])
   })
 
-  test('trims master data searchs but not their filter values', () => {
+  test('trims master data searchs and their filter values', () => {
     const dataset: any = {
       masterData: {
         bulkSearchs: [{ title: ' Bulk ', description: ' d ', filters: [{ property: { key: 'k' }, values: [' v ', ''] }] }],
@@ -111,7 +111,7 @@ test.describe('trimDataset', () => {
     trimDataset(dataset)
     assert.equal(dataset.masterData.bulkSearchs[0].title, 'Bulk')
     assert.equal(dataset.masterData.bulkSearchs[0].description, 'd')
-    assert.deepEqual(dataset.masterData.bulkSearchs[0].filters[0].values, [' v ', ''])
+    assert.deepEqual(dataset.masterData.bulkSearchs[0].filters[0].values, ['v'])
     assert.equal(dataset.masterData.singleSearchs[0].title, 'Single')
     assert.equal(dataset.masterData.singleSearchs[0].description, 'd')
   })
