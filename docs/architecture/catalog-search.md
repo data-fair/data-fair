@@ -109,7 +109,7 @@ Every document in `datasets`/`applications` carries, when indexed content exists
 |---|---|
 | `_terms` | every distinct stem in the document — the multikey-indexed candidate gate |
 | `_pos` | `field → stem → raw token positions`, sanitised field keys (see below); term frequency is the position array's length |
-| `_len` | `field → number of indexed tokens`, used to normalise BM25 by field length |
+| `_len` | `field → number of indexed tokens`, used to normalise BM25 by field length; `0` for a field the document lacks (see "Average field length" below) |
 | `_searchIndex` | `{ v: <definition version>, at: <ISO timestamp> }`, bumped whenever the index was (re)computed |
 | `_needsSearchIndex` | present and `true` only while a document is waiting for the worker to recompute it |
 
@@ -261,6 +261,28 @@ after two failed code-reading diagnoses (plan ledger, Ruling P25) — `countTerm
 runs whenever `df === 0`, so an absent term is simply recounted on every query (cheap: it is an
 empty index range).
 
+### Average field length counts only the documents that have the field
+
+BM25 normalises a field's term frequency by `l / avgLen(field)`. `createStatsProvider` computes
+`avgLen` in one `$group` pass (memoized for an hour) and **averages each field over the documents
+whose `_len.<field>` is greater than 0** — Lucene's semantics — via
+`{ $avg: { $cond: [{ $gt: [len, 0] }, len, null] } }` (`$avg` skips nulls). A field no document has
+falls back to 1.
+
+Averaging over every document looks equivalent and is not: `buildIndexFields` writes `_len.<field>
+= 0` for each field a document lacks (every document carries it since the 6.20.0 backfill), so a
+rarely-filled field averages a fraction of a term. `searchTerms` (weight 3) is empty on almost every
+production dataset: with one 3-term `searchTerms` among 12 datasets it averaged 0.25, a 3-term field
+looked 12× too long, and its hit scored ≈0.55 against ≈0.77 for a plain weight-1 description hit —
+the boost field lost. A clean two-document test corpus hides this (2.13 vs 0.94), which is why it
+was only visible on a stack holding other data. Guarded by `stats.unit.spec.ts` ("avgLen averages a
+field over the documents that have it") and `catalog-search.api.spec.ts` ("a searchTerms hit still
+outranks a description hit when few datasets have searchTerms").
+
+The same rule constrains `stats-isolation.api.spec.ts`: its "poison" corpus must give *every*
+dataset a one-term `searchTerms` (the smallest reachable average), because datasets without the
+field no longer lower it.
+
 ## The analyzer language is the deployment's default locale
 
 There is **no search-specific language setting**. `collections.ts` reads `config.i18n.defaultLocale`
@@ -376,6 +398,8 @@ collections.
   façade). These run against fake collections that **ignore their own aggregation pipeline** and
   return a canned row, so nothing expressed *inside* an aggregation (`$expr`, `$avg` targets, read
   paths) is exercised by a unit test — only what can be asserted on the *captured* pipeline shape.
+  The exception is `avgLen`: `stats.unit.spec.ts` evaluates the captured `$group` over in-memory
+  documents with a minimal evaluator (`$avg`, `$cond`, `$gt`) that throws on any other operator.
 - `tests/features/text-search/recompute.api.spec.ts` — the worker drains `_needsSearchIndex`,
   indexes the published document rather than the draft the dispatcher merged in, and clears the
   flag even when the recompute fails.
