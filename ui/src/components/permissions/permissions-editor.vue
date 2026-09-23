@@ -132,15 +132,13 @@
             <div v-if="item.type === 'user'">
               {{ t('userName', { name: item.name || item.id || item.email }) }}
             </div>
-            <div v-if="item.type === 'organization' && !item.department">
-              {{ t('organizationName', { name: item.name }) }}
-            </div>
-            <div v-if="item.type === 'organization' && item.department && item.department !== '-'">
-              {{ t('organizationName', { name: item.name + ' / ' + (item.departmentName || item.department) }) }}
-            </div>
-            <div v-if="item.type === 'organization' && item.department && item.department === '-'">
-              {{ t('organizationName', { name: item.name + ' / ' + t('noDep') }) }}
-            </div>
+            <!-- a department permission also matches the members of the organization root, '-' matches them only -->
+            <template v-if="item.type === 'organization'">
+              <div>{{ t('organizationName', { name: item.name }) }}</div>
+              <div class="text-caption text-medium-emphasis">
+                {{ !item.department || item.department === '*' ? t('scopeAll') : item.department === '-' ? t('scopeRoot') : t('scopeDep', { dep: item.departmentName || item.department }) }}
+              </div>
+            </template>
             <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
               {{ t('allRoles') }}
             </div>
@@ -237,9 +235,10 @@ fr:
     privateOrg: Uniquement les administrateurs de l'organisation {org}
     privateOrgDep: Uniquement les administrateurs du département {dep} et ceux de l'organisation {org}
     privateOrgContrib: Les administrateurs et contributeurs de l'organisation {org}
-    privateOrgContribDep: Les administrateurs et contributeurs du département {dep}, et les administrateurs de l'organisation {org}
+    privateOrgContribDep: Les administrateurs et contributeurs du département {dep} et de l'organisation {org}
     privateUser: Uniquement l'utilisateur {user}
     sharedInOrg: Tous les utilisateurs de l'organisation {org}
+    sharedInDep: Tous les utilisateurs du département {dep} et de l'organisation {org}
     sharedInOrgDep: Tous les utilisateurs de l'organisation {org}, tous départements confondus
   contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
@@ -250,7 +249,7 @@ fr:
     contribWriteAll: Les contributeurs {scope} peuvent tout modifier et supprimer la ressource
   contribScope:
     org: de l'organisation {org}
-    dep: du département {dep} de l'organisation {org}
+    dep: du département {dep} et de l'organisation {org}
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter une permission
@@ -272,7 +271,9 @@ fr:
   detailedMode: Édition détaillée des permissions
   actions: Actions
   permissionsUpdated: Les permissions ont été mises à jour
-  noDep: aucun département
+  scopeDep: "Département {dep} et racine de l'organisation"
+  scopeRoot: Racine de l'organisation uniquement
+  scopeAll: Tous les départements
   implicitScopeOrg: Administrateurs de l'organisation {org}
   implicitScopeDep: Administrateurs du département {dep} et de l'organisation {org}
   implicitScopeUser: Utilisateur {org}
@@ -296,9 +297,10 @@ en:
     privateOrg: Only admins of the organization {org}
     privateOrgDep: Only admins of the department {dep} and those of the organization {org}
     privateOrgContrib: Admins and contributors of the organization {org}
-    privateOrgContribDep: Admins and contributors of the department {dep}, and admins of the organization {org}
+    privateOrgContribDep: Admins and contributors of the department {dep} and of the organization {org}
     privateUser: Only yourself
     sharedInOrg: Any user of the organization {org}
+    sharedInDep: Any user of the department {dep} and of the organization {org}
     sharedInOrgDep: Any user of the organization {org}, across all departments
   contribProfileLabel: Who can contribute to this resource ?
   contribProfile:
@@ -309,7 +311,7 @@ en:
     contribWriteAll: Contribs {scope} can update anything and delete the resource
   contribScope:
     org: of the organization {org}
-    dep: of the department {dep} of the organization {org}
+    dep: of the department {dep} and of the organization {org}
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add a permission
@@ -331,7 +333,9 @@ en:
   detailedMode: Detailed edition of permissions
   actions: Actions
   permissionsUpdated: Permissions were updated
-  noDep: no department
+  scopeDep: Department {dep} and organization root
+  scopeRoot: Organization root only
+  scopeAll: All departments
   implicitScopeOrg: Admins of the organization {org}
   implicitScopeDep: Admins of the department {dep} and of the organization {org}
   implicitScopeUser: User {org}
@@ -386,7 +390,7 @@ const ownerDetails = ref<{ type: string, id: string, name?: string, departments?
 const orgName = computed(() => props.resource.owner?.name || props.resource.owner?.id || '')
 
 // the owner's department scopes every org-level permission written here, and the labels say so:
-// admins of the organization root also hold the resource, department admins of other departments do not.
+// members of the organization root keep their role on it, members of other departments get nothing.
 const ownerDepartment = computed(() => props.resource.owner?.department)
 const labelParams = computed(() => ({ org: orgName.value, dep: props.resource.owner?.departmentName || ownerDepartment.value || '' }))
 const contribScope = computed(() => t(ownerDepartment.value ? 'contribScope.dep' : 'contribScope.org', labelParams.value))
@@ -413,6 +417,13 @@ function isSharedInOrgPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && !p.department &&
     !!p.classes?.includes('read') && !!p.classes?.includes('list') && !p.roles
+}
+
+// department-owned resources only: every role of the owner's department, and of the organization root
+function isSharedInDepPermission (p: Permission): boolean {
+  return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
+    p.id === props.resource.owner.id && !!ownerDepartment.value && p.department === ownerDepartment.value &&
+    !!p.classes?.includes('read') && !!p.classes?.includes('list') && !p.roles?.length
 }
 
 function isPrivateOrgContribPermission (p: Permission): boolean {
@@ -470,6 +481,7 @@ function computeVisibility (perms: Permission[] | null | undefined) {
   if (!perms) return undefined
   if (perms.find(isPublicPermission)) return 'public'
   if (perms.find(isSharedInOrgPermission)) return 'sharedInOrg'
+  if (perms.find(isSharedInDepPermission)) return 'sharedInDep'
   if (perms.find(isPrivateOrgContribPermission)) return 'privateOrgContrib'
   if (props.resource.owner?.type === 'organization') return 'privateOrg'
   return 'privateUser'
@@ -482,14 +494,16 @@ const visibility = computed({
   set (v) {
     if (!props.modelValue) return
     const next = props.modelValue
-      .filter((p) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isPrivateOrgContribPermission(p))
+      .filter((p) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isSharedInDepPermission(p) && !isPrivateOrgContribPermission(p))
 
-    if (v === 'sharedInOrg' || v === 'public' || v === 'privateOrgContrib') {
+    if (v === 'sharedInOrg' || v === 'sharedInDep' || v === 'public' || v === 'privateOrgContrib') {
       // keep the contrib permission scoped to the owner's department ('-' for the organization root),
       // as the API does at creation: omitting it silently widens read access to every department
       next.push({ type: 'organization', id: props.resource.owner.id, ...depScope.value, name: orgName.value, roles: ['contrib'], operations: [], classes: ['list', 'read', 'readAdvanced'] })
     }
-    if (v === 'sharedInOrg') {
+    if (v === 'sharedInDep') {
+      next.push({ type: 'organization', id: props.resource.owner.id, ...depScope.value, name: orgName.value, operations: [], classes: ['list', 'read'] })
+    } else if (v === 'sharedInOrg') {
       next.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, operations: [], classes: ['list', 'read'] })
     } else if (v === 'public') {
       next.push({ operations: [], classes: ['list', 'read'] })
@@ -505,6 +519,7 @@ const visibilityItems = computed(() => {
     const dep = ownerDepartment.value ? 'Dep' : ''
     items.push({ value: 'privateOrg', title: t('visibility.privateOrg' + dep, labelParams.value), disabled: privateDisabled })
     items.push({ value: 'privateOrgContrib', title: t('visibility.privateOrgContrib' + dep, labelParams.value), disabled: privateDisabled })
+    if (ownerDepartment.value) items.push({ value: 'sharedInDep', title: t('visibility.sharedInDep', labelParams.value), disabled: privateDisabled })
     items.push({ value: 'sharedInOrg', title: t('visibility.sharedInOrg' + dep, labelParams.value), disabled: privateDisabled })
   } else {
     items.push({ value: 'privateUser', title: t('visibility.privateUser', { user: orgName.value }), disabled: privateDisabled })
@@ -584,6 +599,7 @@ const hasDetailedPermission = computed(() => {
   return !!props.modelValue?.find((p) =>
     !isPublicPermission(p) &&
     !isSharedInOrgPermission(p) &&
+    !isSharedInDepPermission(p) &&
     !isPrivateOrgContribPermission(p) &&
     !isManageOwnLinesPermission(p) &&
     !isContribWriteDataPermission(p) &&

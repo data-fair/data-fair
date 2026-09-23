@@ -372,9 +372,9 @@ test.describe('permissions editor', () => {
 
   // ===== Test Group 5: Department-owned resources =====
 
-  // A department-owned dataset is held by the admins of that department and by the admins of the
-  // organization root — not by the admins of the other departments. The selects must say so, and
-  // must keep writing department-scoped permissions.
+  // Members of the organization root keep their role on a department-owned dataset, members of the
+  // other departments get nothing. The selects must say so, and must keep writing department-scoped
+  // permissions.
   test.describe('department scoping', () => {
     let depDatasetId: string
     let depAx: Awaited<ReturnType<typeof axiosAuth>>
@@ -408,7 +408,8 @@ test.describe('permissions editor', () => {
       await page.locator('#share .v-select').first().click()
       const listbox = page.getByRole('listbox')
       await expect(listbox).toContainText('Uniquement les administrateurs du département department 1 et ceux de l\'organisation Test Org 1')
-      await expect(listbox).toContainText('Les administrateurs et contributeurs du département department 1, et les administrateurs de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('Les administrateurs et contributeurs du département department 1 et de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('Tous les utilisateurs du département department 1 et de l\'organisation Test Org 1')
       await expect(listbox).toContainText('tous départements confondus')
     })
 
@@ -418,6 +419,9 @@ test.describe('permissions editor', () => {
       const implicitRow = page.locator('#share table tr').filter({ hasText: /Permission implicite/ })
       await expect(implicitRow).toBeVisible({ timeout: 10000 })
       await expect(implicitRow).toContainText('Administrateurs du département department 1 et de l\'organisation Test Org 1')
+      // the contributors' permission created with the dataset is scoped to the department, root included
+      await expect(page.locator('#share table tr').filter({ hasText: /Restreint aux rôles : contrib/ }).first())
+        .toContainText('Département department 1 et racine de l\'organisation')
     })
 
     test('the contribution options name the department', async ({ page, goToWithAuth }) => {
@@ -425,7 +429,7 @@ test.describe('permissions editor', () => {
       await page.locator('#share .v-select').nth(1).click()
       const listbox = page.getByRole('listbox')
       await expect(listbox).toContainText('Uniquement les administrateurs du département department 1 et ceux de l\'organisation Test Org 1')
-      await expect(listbox).toContainText('Les contributeurs du département department 1 de l\'organisation Test Org 1')
+      await expect(listbox).toContainText('Les contributeurs du département department 1 et de l\'organisation Test Org 1')
     })
 
     // Symmetric to the guard above: on a department-owned dataset the round-trip used to drop
@@ -462,8 +466,35 @@ test.describe('permissions editor', () => {
 
       await goToDepPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
-      await page.getByRole('option', { name: /tous les utilisateurs/i }).click()
+      await page.getByRole('option', { name: /tous départements confondus/i }).click()
       await expect.poll(readStatus, { timeout: 5000 }).toBe(200)
+    })
+
+    // The department level opens the dataset to every role of dep1 and of the organization root, and
+    // to nobody in the other departments.
+    test('sharing with the department reaches root users but not the other departments', async ({ page, goToWithAuth }) => {
+      const readStatus = (ax: Awaited<ReturnType<typeof axiosAuth>>) => async () => {
+        try {
+          return (await ax.get(`/api/v1/datasets/${depDatasetId}`)).status
+        } catch (err: any) {
+          return err.status
+        }
+      }
+      const rootUserAx = await axiosAuth('test_user8@test.com', 'test_org1')
+      const otherDepAx = await axiosAuth('test_user10@test.com', 'test_org1')
+      otherDepAx.setOrg('test_org1', 'dep2')
+      // the previous test shared the dataset org-wide
+      await depAx.put(`/api/v1/datasets/${depDatasetId}/permissions`, [])
+      expect(await readStatus(rootUserAx)()).toBe(403)
+
+      await goToDepPermissions(page, goToWithAuth)
+      await page.locator('#share .v-select').first().click()
+      await page.getByRole('option', { name: /tous les utilisateurs du département/i }).click()
+      await expect.poll(readStatus(rootUserAx), { timeout: 5000 }).toBe(200)
+      expect(await readStatus(otherDepAx)()).toBe(403)
+      const perms = (await depAx.get(`/api/v1/datasets/${depDatasetId}/permissions`)).data
+      expect(perms.find((p: any) => p.type === 'organization' && !p.roles?.length)?.department).toBe('dep1')
+      await expect(page.locator('#share .v-select').first()).toContainText('Tous les utilisateurs du département department 1')
     })
   })
 
@@ -568,6 +599,18 @@ test.describe('permissions editor', () => {
         const perms = (await depAx.get(`/api/v1/applications/${appId}/permissions`)).data
         return perms.find((p: any) => p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read'))?.department
       }, { timeout: 5000 }).toBe('dep1')
+
+      // the department level, and a root user reading the application through it
+      const rootUserAx = await axiosAuth('test_user8@test.com', 'test_org1')
+      await visibility.click()
+      await page.getByRole('option', { name: /tous les utilisateurs du département/i }).click()
+      await expect.poll(async () => {
+        try {
+          return (await rootUserAx.get(`/api/v1/applications/${appId}`)).status
+        } catch (err: any) {
+          return err.status
+        }
+      }, { timeout: 5000 }).toBe(200)
     })
   })
 })

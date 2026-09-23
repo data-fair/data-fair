@@ -472,6 +472,35 @@ test.describe('permissions', () => {
     await assert.rejects(testUser10Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
   })
 
+  test('members of the organization root keep their role on department-scoped permissions', async () => {
+    const dataset = (await testUser6Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    assert.equal(dataset.owner.department, 'dep1')
+    const canRead = (ax: typeof testUser1) => ax.get(`/api/v1/datasets/${dataset.id}`).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+    const canWrite = (ax: typeof testUser1) => ax.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+
+    // created by a dep1 contrib: the contributors' permissions are scoped to dep1, root contribs included
+    assert.equal(await canRead(testUser5Org), true)
+    assert.equal(await canWrite(testUser5Org), true)
+    assert.equal(await canRead(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+
+    // every role of dep1 and of the root, nobody in dep2
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: 'dep1', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canWrite(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+    assert.equal((await testUser8Org.get('/api/v1/datasets')).data.count, 1)
+
+    // '-' is the organization root only
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: '-', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canRead(testUser6Org), false)
+  })
+
   test('department restriction is automatically applied', async () => {
     const dataset = (await testUser6Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.department, 'dep1')
