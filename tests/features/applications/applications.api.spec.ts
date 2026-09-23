@@ -218,7 +218,7 @@ test.describe('Applications', () => {
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
     // applications are embedded by portals, never a destination of their own
-    assert.equal(res.headers['x-robots-tag'], 'noindex')
+    assert.equal(res.headers['x-robots-tag'], 'noindex, indexifembedded')
     res = await ax.get(`/api/v1/applications/${appId}`)
     assert.equal(res.status, 200)
     // the json api stays indexable, it serves public data

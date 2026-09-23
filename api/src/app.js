@@ -169,9 +169,10 @@ export const run = async () => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
-    // applications are embedded by portals, never a destination of their own
+    // applications are embedded by portals, never a destination of their own,
+    // but their content may be indexed as part of the embedding page
     app.use('/app', (req, res, next) => {
-      res.setHeader('X-Robots-Tag', 'noindex')
+      res.setHeader('X-Robots-Tag', 'noindex, indexifembedded')
       next()
     }, (await import('./applications/proxy.ts')).default)
 
@@ -202,8 +203,13 @@ export const run = async () => {
       res.redirect(reqSiteUrl(req) + '/data-fair' + req.url)
     })
 
-    app.use('/', await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
+    // same for the embeds, the back-office is never indexed
+    app.use('/', (req, res, next) => {
+      res.setHeader('X-Robots-Tag', req.path.startsWith('/embed/') ? 'noindex, indexifembedded' : 'noindex')
+      next()
+    }, await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
       ignoreSitePath: true,
+      noindex: false,
       csp: {
         nonce: true,
         header: (req) => {
