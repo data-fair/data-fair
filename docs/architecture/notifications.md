@@ -107,7 +107,7 @@ To add or remove a subscribable / webhook-triggerable topic, edit the `oneOf` �
 | main thread, `NODE_ENV=development` | `testEvents.emit('notification', event)` + push to `capturedNotifications` (in-memory ring buffer), **then** the queue push below as well |
 | main thread, `config.privateEventsUrl` set | `eventsQueue.pushEvent(event, sessionState)` |
 
-This routing matters: code that calls `eventsQueue.pushEvent` directly **bypasses the test capture buffer** (`capturedNotifications`) and therefore won't be visible to e2e tests subscribed via `/api/v1/test-env/events`. Always use `notifications.send` or `notifications.sendResourceEvent`.
+This routing matters: code that calls `eventsQueue.pushEvent` directly **bypasses the test capture buffer** (`capturedNotifications`) and therefore won't be visible to e2e tests subscribed via `/api/v1/test-env/events`. It also loses the api key attribution: `send` turns an api key session into `originator: { apiKey: { id, title } }`, whereas the events queue alone records the key as a pseudo-user (`user.id = 'apiKey:<id>'`). Always use `notifications.send` or `notifications.sendResourceEvent`. The only direct `pushEvent` left is the worker relay in `api/src/workers/tasks.ts`, which receives events already built by `send` in the worker.
 
 E2e helpers exposed by `api/src/misc/routers/test-env.ts`:
 
@@ -217,12 +217,11 @@ Inline coverage:
 
 Cross-cutting infra:
 
-- `tests/features/infra/notifications-system.api.spec.ts` — dual slug+id emission with shared `_id` (§12). Worker → main thread forwarding (`api/src/workers/tasks.ts`) and umbrella fan-out (§3/§13) are covered incidentally by the file-validation test.
+- `tests/features/infra/notifications-system.api.spec.ts` — dual slug+id emission with shared `_id` (§12), api key originator on `dataset(-draft)-patched-properties` and `application-patched-properties` (§6). Worker → main thread forwarding (`api/src/workers/tasks.ts`) and umbrella fan-out (§3/§13) are covered incidentally by the file-validation test.
 
 Topics still without dedicated coverage (consider adding tests when touched):
 
-- `dataset-patched-properties`
-- `application-patched-properties`, `application-updated`, `application-write-keys`, `application-change-owner`, `application-delete`, `application-error`
+- `application-updated`, `application-write-keys`, `application-change-owner`, `application-delete`, `application-error`
 - `settings:api-key-created`, `settings:api-key-deleted`
 
 ## 12. Dual emission on slug + id

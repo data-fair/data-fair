@@ -1,10 +1,13 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { doAndWaitForFinalize } from '../../support/workers.ts'
-import { collectNotifs, expectNotifPair } from '../../support/notifications.ts'
+import fs from 'node:fs'
+import FormData from 'form-data'
+import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
+import { doAndWaitForFinalize, sendDataset, waitForFinalize } from '../../support/workers.ts'
+import { collectNotifs, expectNotif, expectNotifPair } from '../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
 
 /**
  * Cross-cutting invariants of the notification system (see docs/architecture/notifications.md).
@@ -48,5 +51,50 @@ test.describe('infra - notification system', () => {
 
     expectNotifPair(captured, 'data-fair:dataset-structure-updated', dataset)
     expectNotifPair(captured, 'data-fair:dataset-breaking-change', dataset)
+  })
+
+  // §6 in notifications.md — every event goes through notifications.send, which attributes
+  // an api key session to originator.apiKey instead of a pseudo-user named after the key
+  test('events emitted by an api key are attributed to the api key', async () => {
+    const settings = (await testUser1Org.put('/api/v1/settings/organization/test_org1', {
+      apiKeys: [{ title: 'catalogs', scopes: ['datasets', 'applications'] }]
+    })).data
+    const apiKey = settings.apiKeys[0]
+    const axKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
+    const expectApiKeyOriginator = (notif: any) => {
+      assert.deepEqual(notif.originator, { apiKey: { id: apiKey.id, title: 'catalogs' } }, notif.topic.key)
+    }
+
+    let dataset = await sendDataset('datasets/dataset1.csv', axKey)
+
+    // file update by the api key: the case where the draft patched-properties event lost it
+    let notifs = await collectNotifs()
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    await axKey.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    dataset = await waitForFinalize(axKey, dataset.id)
+    let captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-draft-patched-properties:' })
+    expectApiKeyOriginator(expectNotif(captured, `data-fair:dataset-draft-patched-properties:${dataset.id}`))
+    expectApiKeyOriginator(expectNotifPair(captured, 'data-fair:dataset-draft-data-updated', dataset).id)
+
+    notifs = await collectNotifs()
+    await axKey.patch(`/api/v1/datasets/${dataset.id}`, { title: 'renamed by api key' })
+    captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-patched-properties:' })
+    expectApiKeyOriginator(expectNotif(captured, `data-fair:dataset-patched-properties:${dataset.id}`))
+
+    const application = (await axKey.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+    notifs = await collectNotifs()
+    await axKey.patch(`/api/v1/applications/${application.id}`, { title: 'renamed by api key' })
+    captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:application-patched-properties:' })
+    expectApiKeyOriginator(expectNotif(captured, `data-fair:application-patched-properties:${application.id}`))
+
+    // a human session keeps the originator built by the events queue from the session
+    notifs = await collectNotifs()
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { title: 'renamed by a user' })
+    captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-patched-properties:' })
+    const userNotif = expectNotif(captured, `data-fair:dataset-patched-properties:${dataset.id}`)
+    assert.equal(userNotif.originator.apiKey, undefined)
+    assert.equal(userNotif.originator.user.id, 'test_user1')
+    assert.equal(userNotif.originator.organization.id, 'test_org1')
   })
 })
