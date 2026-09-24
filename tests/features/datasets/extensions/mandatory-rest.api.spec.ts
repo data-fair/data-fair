@@ -195,7 +195,7 @@ test.describe('mandatory remoteService — REST dataset', () => {
       title: 'rest-mandatory-attach',
       schema: [
         { key: 'adr', type: 'string', 'x-refersTo': 'http://schema.org/address' },
-        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ],
       extensions: [{
         active: true,

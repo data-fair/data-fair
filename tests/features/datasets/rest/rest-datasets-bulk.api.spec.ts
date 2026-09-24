@@ -41,7 +41,7 @@ test.describe('REST datasets - Bulk', () => {
         { key: 'device', type: 'string' },
         { key: 'os', type: 'string' },
         { key: 'collection', type: 'string' },
-        { key: 'resource_id', type: 'string' },
+        { key: 'resourceId', type: 'string' },
         { key: 'operation', type: 'string' }
       ]
     })
@@ -266,7 +266,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'teste2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'testé2', type: 'string' }]
     })
 
     // Create a line with an attached file
@@ -281,10 +281,10 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     const lines = (await ax.get('/api/v1/datasets/restcsvfile/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
     assert.equal(lines[0].attr1, 'test1')
-    assert.equal(lines[0].teste2, 'testé1')
+    assert.equal(lines[0]['testé2'], 'testé1')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
-    assert.equal(lines[1].teste2, 'testé1')
+    assert.equal(lines[1]['testé2'], 'testé1')
   })
 
   test('Send bulk as a .csv.gz file', async () => {
@@ -358,7 +358,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let res = await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
       title: 'restcsvzip',
-      schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some_date', type: 'string' }, { key: 'loc', type: 'string' }]
+      schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some date', type: 'string' }, { key: 'loc', type: 'string' }]
     })
 
     // Create a line with an attached file

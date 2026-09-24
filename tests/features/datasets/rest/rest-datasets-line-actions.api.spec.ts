@@ -201,7 +201,7 @@ test.describe('REST datasets - single line _action', () => {
       title: 'restaction6',
       schema: [
         { key: 'attr1', type: 'string' },
-        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
     const form = new FormData()
@@ -211,7 +211,7 @@ test.describe('REST datasets - single line _action', () => {
     form.append('attr1', 'test1')
     let res = await ax.post('/api/v1/datasets/restaction6/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 200)
-    const attachmentPath = res.data.attachment_path
+    const attachmentPath = res.data.attachmentPath
     assert.ok(attachmentPath.startsWith('line1/'))
     await waitForFinalize(ax, 'restaction6')
 
@@ -223,7 +223,7 @@ test.describe('REST datasets - single line _action', () => {
     res = await ax.post('/api/v1/datasets/restaction6/lines', patchForm, { headers: { 'Content-Length': patchForm.getLengthSync(), ...patchForm.getHeaders() } })
     assert.equal(res.status, 200)
     assert.equal(res.data.attr1, 'test2')
-    assert.equal(res.data.attachment_path, attachmentPath)
+    assert.equal(res.data.attachmentPath, attachmentPath)
     await waitForFinalize(ax, 'restaction6')
     const attachments = await lsAttachments('restaction6')
     assert.equal(attachments.length, 1)

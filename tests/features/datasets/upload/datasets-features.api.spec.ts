@@ -26,13 +26,13 @@ test.describe('datasets - features', () => {
       isRest: true,
       title: 'thumbnails1',
       attachmentsAsImage: true,
-      schema: [{ key: 'desc', type: 'string' }, { key: 'image_url', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
+      schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
-      { image_url: `${mockUrl}/image.png`, desc: '1 image' },
-      { image_url: `${mockUrl}/avatar.jpg`, desc: '2 avatar' },
-      { image_url: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' },
-      { image_url: `${mockUrl}/iiif/full/!300,300/0/default.jpg`, desc: '4 iiif comma' }
+      { imageUrl: `${mockUrl}/image.png`, desc: '1 image' },
+      { imageUrl: `${mockUrl}/avatar.jpg`, desc: '2 avatar' },
+      { imageUrl: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' },
+      { imageUrl: `${mockUrl}/iiif/full/!300,300/0/default.jpg`, desc: '4 iiif comma' }
     ])
     await waitForFinalize(ax, 'thumbnails1')
 
@@ -75,11 +75,11 @@ test.describe('datasets - features', () => {
     await ax.post('/api/v1/datasets/thumbnails-fallback', {
       isRest: true,
       title: 'thumbnails-fallback',
-      schema: [{ key: 'image_url', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
+      schema: [{ key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
     await ax.post('/api/v1/datasets/thumbnails-fallback/_bulk_lines', [
-      { image_url: `${mockUrl}/rate-limited.jpg` },
-      { image_url: `${mockUrl}/missing.jpg` }
+      { imageUrl: `${mockUrl}/rate-limited.jpg` },
+      { imageUrl: `${mockUrl}/missing.jpg` }
     ])
     await waitForFinalize(ax, 'thumbnails-fallback')
 
@@ -87,7 +87,7 @@ test.describe('datasets - features', () => {
     await setupMockRoute({ path: '/rate-limited.jpg', status: 429, body: 'too many requests', contentType: 'text/plain' })
     await setupMockRoute({ path: '/missing.jpg', status: 404, body: 'not found', contentType: 'text/plain' })
 
-    const res = await ax.get('/api/v1/datasets/thumbnails-fallback/lines', { params: { thumbnail: true, sort: 'image_url' } })
+    const res = await ax.get('/api/v1/datasets/thumbnails-fallback/lines', { params: { thumbnail: true, sort: 'imageUrl' } })
     // no previous cache entry to serve as stale content -> redirect to the original image instead of failing
     await assert.rejects(ax.get(res.data.results[1]._thumbnail, { maxRedirects: 0 }), (err: any) => {
       assert.equal(err.status, 302)

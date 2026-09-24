@@ -37,12 +37,12 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   if (patch.constraints === null) patch.constraints = []
 
   // before any side effect below (the error-status reset emits a ws event and clears the journal
-  // task progress): a structure change must not be able to introduce an un-normalized key.
-  // `dataset.schema` grandfathers the keys already there; virtual schemas are derived from the
-  // children further down, so what the request carries for them is not the client's to normalize.
-  // the algorithm the patch leaves in place, not the stored one: a request may set
-  // `analysis.escapeKeyAlgorithm` and the schema together (and `analysis: null` resets to the
-  // default). Read before the no-op stripping below, which can drop an unchanged `analysis`.
+  // task progress): a structure change must not be able to introduce a key that corrupts the ES
+  // mapping. `dataset.schema` grandfathers the keys already there; virtual schemas are derived from
+  // the children further down, so what the request carries for them is not the client's to fix.
+  // The suggested replacement follows the algorithm the patch leaves in place, not the stored one:
+  // a request may set `analysis.escapeKeyAlgorithm` and the schema together (and `analysis: null`
+  // resets to the default). Read before the no-op stripping below, which can drop an unchanged `analysis`.
   const patchedEscapeKeyAlgorithm = 'analysis' in patch
     ? patch.analysis?.escapeKeyAlgorithm
     : dataset.analysis?.escapeKeyAlgorithm

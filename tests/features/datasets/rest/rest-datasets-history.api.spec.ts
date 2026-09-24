@@ -207,7 +207,7 @@ test.describe('REST datasets - History', () => {
       schema: [
         { key: 'attr1', type: 'string' },
         { key: 'attr2', type: 'string' },
-        { key: 'attachment_path', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
 
@@ -241,8 +241,8 @@ test.describe('REST datasets - History', () => {
     assert.equal(res.data.results[1].attr2, 'test1')
     assert.equal(res.data.results[2].attr1, 'test1')
     assert.equal(res.data.results[2].attr2, 'test1')
-    assert.equal(res.data.results[2].attachment_path, res.data.results[1].attachment_path)
-    assert.notEqual(res.data.results[1].attachment_path, res.data.results[0].attachment_path)
+    assert.equal(res.data.results[2].attachmentPath, res.data.results[1].attachmentPath)
+    assert.notEqual(res.data.results[1].attachmentPath, res.data.results[0].attachmentPath)
     let attachments = await lsAttachments('resthistattach')
     assert.equal(attachments.length, 2)
 

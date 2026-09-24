@@ -174,24 +174,24 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     const ax = testSuperadmin
     await initMaster(
       ax,
-      [siretProperty, { key: 'sort_key', type: 'integer' }, { key: 'extra', type: 'string' }],
+      [siretProperty, { key: 'sortKey', type: 'integer' }, { key: 'extra', type: 'string' }],
       [{
         id: 'siret-sort-asc',
         title: 'Fetch extra info from siret while sorting by a key',
         input: [{ type: 'equals', property: siretProperty }],
-        sort: 'sort_key'
+        sort: 'sortKey'
       }, {
         id: 'siret-sort-desc',
         title: 'Fetch extra info from siret while sorting by a key',
         input: [{ type: 'equals', property: siretProperty }],
-        sort: '-sort_key'
+        sort: '-sortKey'
       }]
     )
 
     const items = [
-      { siret: '82898347800011', sort_key: 3, extra: 'Extra information 3' },
-      { siret: '82898347800011', sort_key: 1, extra: 'Extra information 1' },
-      { siret: '82898347800011', sort_key: 2, extra: 'Extra information 2' }
+      { siret: '82898347800011', sortKey: 3, extra: 'Extra information 3' },
+      { siret: '82898347800011', sortKey: 1, extra: 'Extra information 1' },
+      { siret: '82898347800011', sortKey: 2, extra: 'Extra information 2' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items)
     await waitForFinalize(ax, 'master')

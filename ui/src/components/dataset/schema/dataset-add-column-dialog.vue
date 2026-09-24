@@ -23,6 +23,8 @@
               v-model="newColumnKey"
               :label="t('columnName')"
               :rules="[v => !!v || t('required'), v => validNewColumnKey(v)]"
+              :hint="newColumnKey && escapeKey(newColumnKey) ? t('keyHint', { key: escapeKey(newColumnKey) }) : undefined"
+              persistent-hint
               hide-details="auto"
               class="mb-4"
               autofocus
@@ -63,6 +65,8 @@ fr:
   columnType: Type
   required: Champ requis
   keyExistsFor: "Cette clé est déjà utilisée par la colonne \"{col}\""
+  keyHint: "Clé de la colonne : {key}"
+  noUsableKey: Le nom doit contenir au moins une lettre ou un chiffre
   cancel: Annuler
   add: Ajouter
 en:
@@ -71,6 +75,8 @@ en:
   columnType: Type
   required: Required field
   keyExistsFor: "This key is already used by column \"{col}\""
+  keyHint: "Column key: {key}"
+  noUsableKey: The name must contain at least one letter or digit
   cancel: Cancel
   add: Add
 </i18n>
@@ -99,6 +105,7 @@ const newColumnType = ref(propertyTypes[0])
 const validNewColumnKey = (name: string): true | string => {
   if (!name) return true
   const key = escapeKey(name)
+  if (!key) return t('noUsableKey')
   const conflict = props.schema.find((p: any) => p.key === key)
   if (!conflict) return true
   return t('keyExistsFor', { col: conflict.title || conflict['x-originalName'] || conflict.key })

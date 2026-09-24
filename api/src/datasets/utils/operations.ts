@@ -187,36 +187,36 @@ export const escapeKey = (key: string, algorithm?: string): string => {
 }
 
 /**
- * List the schema properties whose key is not the normalized form of itself (see escapeKey).
+ * List the schema properties whose key would corrupt the Elasticsearch mapping, with the normalized
+ * form (see escapeKey) to suggest instead.
  *
- * Every place data-fair *derives* a key already normalizes it (analyze-csv, analyze-geojson,
- * extensions, the UI's add-column dialog), but a schema submitted through the API used to land
- * verbatim in the Elasticsearch mapping (buildIndexMappings does `properties[prop.key] = ...`).
- * Elasticsearch expands a dotted key into an object path: the column is silently nested when it
- * stands alone, and index creation fails outright — leaving the dataset stuck in status 'error'
- * with no index — when a scalar column of the same name exists. A leading _ is reserved for
- * data-fair's own calculated columns and would shadow one.
+ * A schema submitted through the API lands verbatim in the mapping (buildIndexMappings does
+ * `properties[prop.key] = ...`), and two kinds of key break it:
+ * - a dot, which Elasticsearch expands into an object path: the column is silently nested when it
+ *   stands alone, and index creation fails outright — leaving the dataset stuck in status 'error'
+ *   with no index — when a scalar column of the same name exists;
+ * - a leading _, reserved for data-fair's own calculated columns, which it would shadow.
  *
- * Offending keys are reported rather than rewritten: silently renaming a column would break the
- * line writes of the client that declared it.
+ * Any other un-normalized key (camelCase, uppercase…) is harmless to the index and widely used by
+ * API clients, so it is accepted. Offending keys are reported rather than rewritten: silently
+ * renaming a column would break the line writes of the client that declared it.
  *
- * Only keys absent from `existingKeys` are checked, so datasets predating this gate — and those
- * whose keys a worker produced with another escapeKey algorithm — keep being patchable.
- * Calculated and extension properties are exempt: they legitimately use _ prefixes and dots.
+ * Only keys absent from `existingKeys` are checked, so datasets predating this gate keep being
+ * patchable. Calculated and extension properties are exempt: they legitimately use _ prefixes and dots.
  */
-export const unnormalizedKeys = (
+export const unsafeKeys = (
   schema: { key: string, 'x-calculated'?: boolean, 'x-extension'?: string }[] | null | undefined,
   existingKeys: Iterable<string>,
   algorithm?: string
 ): { key: string, normalized: string }[] => {
   if (!schema) return []
   const known = new Set(existingKeys)
-  const unnormalized: { key: string, normalized: string }[] = []
+  const unsafe: { key: string, normalized: string }[] = []
   for (const prop of schema) {
     if (!prop?.key || prop['x-calculated'] || prop['x-extension']) continue
     if (known.has(prop.key)) continue
-    const normalized = escapeKey(prop.key, algorithm)
-    if (normalized !== prop.key) unnormalized.push({ key: prop.key, normalized })
+    if (!prop.key.includes('.') && !prop.key.startsWith('_')) continue
+    unsafe.push({ key: prop.key, normalized: escapeKey(prop.key, algorithm) })
   }
-  return unnormalized
+  return unsafe
 }

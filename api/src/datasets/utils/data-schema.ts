@@ -7,7 +7,7 @@ import * as i18nUtils from '../../../i18n/utils.ts'
 import * as settingsUtils from '../../misc/utils/settings.ts'
 import { cleanJsonSchemaProperty } from '@data-fair/data-fair-shared/schema.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
-import { unnormalizedKeys } from './operations.ts'
+import { unsafeKeys } from './operations.ts'
 import type { SchemaProperty, FileDataset } from '#types'
 
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
@@ -99,18 +99,19 @@ export const mergeFileSchema = (dataset: FileDataset) => {
 }
 
 /**
- * Reject a submitted schema that introduces a key which is not its own normalized form (see
- * unnormalizedKeys for why an un-normalized key corrupts the Elasticsearch mapping).
+ * Reject a submitted schema that introduces a key which would corrupt the Elasticsearch mapping (a
+ * dot, or a leading _ — see unsafeKeys).
  *
  * Called on the two paths where a client supplies schema keys — dataset creation and a structure
  * change — and only ever on the keys those paths add, so existing datasets are untouched. Virtual
  * datasets are exempt: their schema is derived from their children, never from the request.
+ * `algorithm` only shapes the normalized form suggested in the error message.
  */
 export const checkSchemaKeys = (schema: any[] | null | undefined, existingSchema: any[] | null | undefined, algorithm?: string) => {
-  const unnormalized = unnormalizedKeys(schema, (existingSchema ?? []).map(p => p.key), algorithm)
-  if (!unnormalized.length) return
-  const details = unnormalized.map(({ key, normalized }) => `"${key}" (utilisez plutôt "${normalized}")`).join(', ')
-  throw httpError(400, `Les clés de colonnes suivantes ne sont pas normalisées : ${details}.`)
+  const unsafe = unsafeKeys(schema, (existingSchema ?? []).map(p => p.key), algorithm)
+  if (!unsafe.length) return
+  const details = unsafe.map(({ key, normalized }) => `"${key}" (utilisez plutôt "${normalized}")`).join(', ')
+  throw httpError(400, `Les clés de colonnes suivantes ne peuvent pas contenir de point ni commencer par "_" : ${details}.`)
 }
 
 export const cleanSchema = (dataset) => {
