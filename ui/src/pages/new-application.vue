@@ -283,6 +283,9 @@ import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentApplicationCreationTools } from '~/composables/application/agent-creation-tools'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { APPLICATION_WIZARD_GUIDANCE, APPLICATION_WIZARD_GUIDANCE_KEY } from '~/composables/application/agent-application-wizard-logic'
+import { buildApplicationWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
 
@@ -459,6 +462,21 @@ const importing = ref(false)
 const createError = ref<string | null>(null)
 
 // ---- Agent tools ----
+// What the wizard currently shows, so the assistant reads it from its context
+// instead of asking, and its own tool calls come back with the resulting screen.
+// Told once on arrival (or on activation if the chat opens later). It used to
+// travel only as the action button's hidden context, a channel no judged run has
+// ever used — they all navigate here themselves.
+useAgentState(APPLICATION_WIZARD_GUIDANCE_KEY, APPLICATION_WIZARD_GUIDANCE)
+
+useAgentState('wizard', () => buildApplicationWizardState({
+  step: step.value,
+  creationType: creationType.value,
+  selected: creationType.value === 'copy' ? copyApp.value?.title : selectedBaseApp.value?.title,
+  title: appTitle.value,
+  ready: !!appTitle.value && !!(creationType.value === 'copy' ? copyApp.value : selectedBaseApp.value)
+}))
+
 useAgentApplicationCreationTools(locale, {
   step,
   creationType,
@@ -470,17 +488,10 @@ useAgentApplicationCreationTools(locale, {
   dataset
 })
 
+// One source with the keyed guidance above, so the button and the arrival say the
+// same thing; the button can add what only it knows.
 const createApplicationContext = computed(() => {
-  const lines = [
-    'Help the user create a new application.',
-    'Start by asking the user what kind of visualization or application they want to create.',
-    '',
-    'Based on their description, use list_base_applications to find matching base application templates, or list_applications if they want to copy an existing one. Present the options and let the user choose.',
-    '',
-    'Once the user has decided, use select_creation_type, then select_base_application or select_copy_application, then optionally set_application_title to fill in the wizard steps.',
-    '',
-    'Do NOT create the application — the user will review and click the save button themselves.'
-  ]
+  const lines = [APPLICATION_WIZARD_GUIDANCE]
   if (datasetId.value && dataset.value) {
     lines.push('', `The application is being created in the context of dataset "${dataset.value.title}" (id: ${datasetId.value}).`)
   }
@@ -515,6 +526,7 @@ async function createApplication () {
     }
 
     const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+    emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
     router.push(`/application/${application.id}`)
   } catch (error: any) {
     createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')

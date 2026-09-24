@@ -13,6 +13,8 @@ import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import { searchIndexPatch } from '../../datasets/utils/search-text.ts'
+import { mergeIndexUpdate } from './text-search/index.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
@@ -383,6 +385,10 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
         }
       }
       const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
+      if (resourceType === 'datasets') {
+        // the permission guard of the schema-derived search index depends on the grantees
+        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(resource as any), permissions }))
+      }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)
         // ACL changes are among the highest-forensic-value writes (design §2.2): attach who

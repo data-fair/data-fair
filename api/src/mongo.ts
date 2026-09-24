@@ -64,6 +64,8 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
+        // legacy $text index, no longer read by `q=` — kept only so pods running pre-6.20 code keep
+        // answering during a rolling deploy, so it stays in its pre-6.20 shape. See docs/TODO.md 9a.
         fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { weights: { title: 3, summary: 2 } }],
         // special purpose indexes for workers, etc
         'virtual.children_1': { 'virtual.children': 1 },
@@ -74,6 +76,9 @@ export class DfMongo {
         _partialRestStatus_1: [{ _partialRestStatus: 1 }, { sparse: true }],
         _needsHistorizing_1: [{ _needsHistorizing: 1 }, { sparse: true }],
         esWarning_1: { esWarning: 1 },
+        terms: { _terms: 1 },
+        'owner-terms': { 'owner.type': 1, 'owner.id': 1, _terms: 1 },
+        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }],
         'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'remote-services': {
@@ -92,11 +97,15 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
+        // legacy $text index, see the datasets one above
         fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { weights: { title: 3, summary: 2 } }],
         // get linked applications
         'configuration.datasets.href_1': { 'configuration.datasets.href': 1 },
         'datasets-id': [{ 'configuration.datasets.id': 1 }, { sparse: true }],
         'child-app-id': [{ 'configuration.applications.id': 1 }, { sparse: true }],
+        terms: { _terms: 1 },
+        'owner-terms': { 'owner.type': 1, 'owner.id': 1, _terms: 1 },
+        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }],
         'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'applications-keys': {

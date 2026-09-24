@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents } from '../../../api/src/settings/operations.ts'
 
 test.describe('rootSettingsFilter', () => {
   test('always targets the root document, ignoring the department the caller is in', () => {
@@ -183,5 +183,33 @@ test.describe('buildPublicationSiteSubscriptions', () => {
     const result = buildPublicationSiteSubscriptions(owner, site, publicUrl)
     assert.equal(result[0].topic.title, 'Un contributeur demande de publier un jeu de données sur https://site')
     assert.equal(result[1].topic.title, 'Un contributeur demande de publier une application sur https://site')
+  })
+})
+
+test.describe('removeWebhookEvents', () => {
+  const removed = ['dataset-publication', 'application-publication']
+  const hook = (title: string, events: string[]) => ({ title, events, target: { type: 'http', params: { url: 'http://x' } } })
+
+  test('returns null when no webhook lists a removed event', () => {
+    assert.equal(removeWebhookEvents([hook('a', ['dataset-error'])], removed), null)
+    assert.equal(removeWebhookEvents(undefined, removed), null)
+  })
+
+  test('strips the removed events and keeps the others', () => {
+    assert.deepEqual(
+      removeWebhookEvents([hook('a', ['dataset-error', 'dataset-publication']), hook('b', ['dataset-data-updated'])], removed),
+      [hook('a', ['dataset-error']), hook('b', ['dataset-data-updated'])]
+    )
+  })
+
+  test('drops a webhook left with no event, as an empty list means every event', () => {
+    assert.deepEqual(
+      removeWebhookEvents([hook('a', ['dataset-publication', 'application-publication']), hook('b', ['dataset-error'])], removed),
+      [hook('b', ['dataset-error'])]
+    )
+  })
+
+  test('leaves a webhook that listens to every event (empty list) alone', () => {
+    assert.equal(removeWebhookEvents([hook('a', [])], removed), null)
   })
 })

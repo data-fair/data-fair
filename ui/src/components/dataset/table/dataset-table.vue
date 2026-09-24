@@ -475,6 +475,9 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
+import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
+import { useAgentState } from '@data-fair/lib-vue-agents'
+import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -583,7 +586,7 @@ const dataEntryContext = computed(() => {
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
     'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first delegate to the dataset_data subagent to search for the line _id, then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id. The editLine_form subagent becomes available on the turn after the dialog opens; end your reply and delegate to it then.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -644,9 +647,17 @@ const nextPage = async () => {
   paginationPage.value++
 }
 const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
-const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
+  // The pair the creation wizard and the schema form already have: what is true
+  // now, and — from saveLine — the transition that ends a declared wait. Inside the
+  // `edit` gate with the tools, because a read-only table has no dialog to report.
+  useAgentState('line-dialog', () => buildLineDialogState({
+    mode: lineDialog.value?.mode ?? null,
+    valid: !!lineDialog.value?.valid
+  }))
+
   useAgentTool({
     name: 'open_add_line_dialog',
     description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
@@ -656,8 +667,16 @@ if (edit) {
       properties: {}
     },
     execute: async () => {
+      // A dataset with nothing to fill gets the reason, not an open dialog and an
+      // invitation to delegate into an empty form (see agent-edit-line-logic.ts).
+      const refusal = addLineDialogPrecondition(dataset.value?.schema)
+      if (refusal) return refusal
       addLineTrigger.value = true
-      return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
+      // Neither "you can now delegate" (false for this request — a judged run took it
+      // literally and burned a turn on a junk dispatch to reach one where it was true)
+      // nor "finish your reply and pick it up next turn", which deadlocked three runs:
+      // the person was waiting to be told a button was ready, so no next turn came.
+      return 'Add line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to fill the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
     }
   })
 
@@ -668,13 +687,13 @@ if (edit) {
     inputSchema: {
       type: 'object' as const,
       properties: {
-        lineId: { type: 'string' as const, description: 'The _id of the line to edit. Use search_data to find valid line IDs.' }
+        lineId: { type: 'string' as const, description: 'The _id of the line to edit. search_data returns it when `_id` is one of the keys in its `select` parameter.' }
       },
       required: ['lineId'] as const
     },
     execute: async (params: { lineId: string }) => {
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. You can now delegate to the editLine_form subagent to modify the form fields. The user will click Save when ready.'
+      return 'Edit line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to modify the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
     }
   })
 }
@@ -755,6 +774,16 @@ const editLineValid = ref(false)
 const editLineForm = ref<VForm>()
 const editedLine = ref<DatasetLine>()
 const file = ref<File>()
+// Keep the shared dialog state in step with this dialog, so the assistant can be
+// told the Save button is live instead of asserting it. `editedLine` rather than
+// `showEditDialog` so it flips only once the row has actually loaded into the form.
+watch([editedLine, editLineValid], () => {
+  if (!editedLine.value) {
+    if (lineDialog.value?.mode === 'edit') lineDialog.value = null
+    return
+  }
+  lineDialog.value = { mode: 'edit', valid: editLineValid.value }
+}, { immediate: true })
 const editLine = useAsyncAction(async () => {
   await editLineForm.value?.validate()
   if (!editLineValid.value) return

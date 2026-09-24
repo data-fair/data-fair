@@ -224,6 +224,33 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
+  test('owner transfer recomputes the search index from the permissions it just reset', async () => {
+    // test_user5 is admin of both test_org2 and test_org6 (dev/resources/organizations.json)
+    const testUser5Org2 = await axiosAuth('test_user5@test.com', 'test_org2')
+    const testUser5Org6 = await axiosAuth('test_user5@test.com', 'test_org6')
+    const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+
+    const dataset = (await testUser5Org2.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'cs-transfer',
+      schema: [{ key: 'x', type: 'string', title: 'Colonne griffonmarker' }]
+    })).data
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 1, 'column titles reach the search index')
+
+    // an org partner allowed to list but not to read the schema: the guard drops the column labels
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ type: 'organization', id: 'test_org3', name: 'Test Org 3', classes: ['list'] }])
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 0, 'the guard suppresses the labels while that grantee is present')
+
+    // transferring to another organization drops that org-partner permission, so the guard no
+    // longer applies: the index must be rebuilt from the new permissions, not carried over
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/owner`, {
+      type: 'organization',
+      id: 'test_org6',
+      name: 'Test Org 6'
+    })
+    assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
+  })
+
   test('Upload new dataset in org zone then change ownership to department', async () => {
     const ax = testUser1Org
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -443,6 +470,35 @@ test.describe('permissions', () => {
     // contrib from wrong department -> ko
     await assert.rejects(testUser10Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
     await assert.rejects(testUser10Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
+  })
+
+  test('members of the organization root keep their role on department-scoped permissions', async () => {
+    const dataset = (await testUser6Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    assert.equal(dataset.owner.department, 'dep1')
+    const canRead = (ax: typeof testUser1) => ax.get(`/api/v1/datasets/${dataset.id}`).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+    const canWrite = (ax: typeof testUser1) => ax.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+
+    // created by a dep1 contrib: the contributors' permissions are scoped to dep1, root contribs included
+    assert.equal(await canRead(testUser5Org), true)
+    assert.equal(await canWrite(testUser5Org), true)
+    assert.equal(await canRead(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+
+    // every role of dep1 and of the root, nobody in dep2
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: 'dep1', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canWrite(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+    assert.equal((await testUser8Org.get('/api/v1/datasets')).data.count, 1)
+
+    // '-' is the organization root only
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: '-', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canRead(testUser6Org), false)
   })
 
   test('department restriction is automatically applied', async () => {

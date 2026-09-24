@@ -58,9 +58,11 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
     // (T7, design §5.1). The resource-scoped `_readApiKey` pseudo-user above never reaches this
     // point (it returns early), so it is correctly excluded.
     if (req) setReqApiKeyRef(req, apiKey.id as string)
-    const sessionState: SessionState & { isApiKey: true } = {
+    // session.user.id is not the key for user level and impersonating keys, notifications need the key id
+    const sessionState: SessionState & { isApiKey: true, apiKeyId: string } = {
       lang: 'fr',
-      isApiKey: true
+      isApiKey: true,
+      apiKeyId: apiKey.id as string
     }
 
     if (!apiKey.scopes.length && apiKey.email) {

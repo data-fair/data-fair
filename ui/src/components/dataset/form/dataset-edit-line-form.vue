@@ -39,6 +39,8 @@
 </i18n>
 
 <script setup lang="ts">
+import { emitAgentEvent } from '@data-fair/lib-vue-agents'
+import useDatasetEdition from '~/components/dataset/table/use-dataset-edition'
 import Vjsf from '@koumoul/vjsf/webmcp'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
@@ -63,6 +65,27 @@ const emits = defineEmits<{ onFileUpload: [file: File] }>()
 const { t } = useI18n()
 
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
+
+// The dialog reports itself from here, not from the watcher that flips the
+// dialog flag, because this is the moment the claim is true: the form exists and
+// its editLine_form subagent registers with it.
+//
+// It also has to be this late. An event emitted while the opening tool is still
+// executing is drained into that tool's own result, and the wait its result tells
+// the model to declare then has nothing pending and blocks for its whole window.
+// That is precisely what happened: `open_edit_line_dialog` awaits a fetch of the
+// row before the dialog flag flips, so its event landed in the wait and the turn
+// continued; `open_add_line_dialog` flips the flag synchronously, so its event
+// went into the tool result and the turn stalled on an empty form until the
+// person described the screen — the one thing that persona refuses to do.
+// Mounting this component is after the drain by construction: it is loaded with
+// defineAsyncComponent.
+if (subAgent) {
+  const { lineDialog } = useDatasetEdition()
+  onMounted(() => {
+    emitAgentEvent('dataset-line-dialog-opened', { id, mode: lineDialog.value?.mode })
+  })
+}
 
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')

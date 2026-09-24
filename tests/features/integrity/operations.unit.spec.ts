@@ -456,7 +456,12 @@ const COVERED_TOP_LEVEL = [
   'publications', 'publicationSites', 'requestedPublicationSites', 'hasFiles',
   'attachmentsAsImage', 'isVirtual', 'virtual', 'isRest', 'rest', 'isMetaOnly', 'topics',
   'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'permissions',
-  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation', 'partOf'
+  'previews', 'readApiKey', 'draftReason', 'nonBlockingValidation', 'partOf',
+  // meaningful metadata (opt-in search synonyms typed by an editor): a tamper should be
+  // detected. No `_` prefix, so coveredPatchKeys already covers it by default; its only writer
+  // is the metadata PATCH route, which goes through applyPatch's coveredPatchKeys gate — no
+  // worker or sweep writes it raw, so covering it creates no false-breach risk.
+  'searchTerms'
 ]
 
 test('every dataset-schema property is consciously classified for integrity coverage', () => {

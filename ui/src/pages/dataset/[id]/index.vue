@@ -70,7 +70,7 @@
           variant="flat"
           :disabled="!masterDataFormValid || hasInvalidExtension"
           :loading="structureEditFetch.save.loading.value"
-          @click="structureEditFetch.save.execute()"
+          @click="saveStructure()"
         >
           {{ t('save') }}
         </v-btn>
@@ -835,7 +835,11 @@ import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-des
 import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metadata-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { buildDatasetStructureState } from '~/composables/agent/host-state'
+import { isEditableColumn } from '~/composables/dataset/agent-schema-annotation-tools-logic'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentAddColumnTools } from '~/composables/dataset/agent-add-column-tools'
 import { useAgentColumnLabelsTools } from '~/composables/dataset/agent-column-labels-tools'
 import { useAgentSchemaOrderTools } from '~/composables/dataset/agent-schema-order-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
@@ -973,6 +977,7 @@ useAgentExpressionTools(locale, structureEditFetch.data, (extensionIndex, expr) 
 })
 useAgentSchemaAnnotationTools(locale, structureEditFetch.data, vocabularyArray.data as any, mutateSchema)
 useAgentColumnLabelsTools(locale, structureEditFetch.data, mutateSchema)
+useAgentAddColumnTools(locale, structureEditFetch.data, mutateSchema)
 useAgentSchemaOrderTools(locale, structureEditFetch.data, (schema) => {
   if (structureEditFetch.data.value) structureEditFetch.data.value.schema = schema
 })
@@ -1153,6 +1158,29 @@ const virtualHasDiff = computed(() => {
 
 const structureHasRealDiff = computed(() => schemaHasDiff.value || constraintsHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
 
+// What the schema form is, told to the assistant the way the creation wizard tells
+// it about the Create button: `ready` means Enregistrer can be pressed now. Before
+// this, an assistant that had just staged columns with add_columns could only
+// assert the button was ready and ask the person to report the save back.
+const structureColumnCount = computed(() =>
+  (structureEditFetch.data.value?.schema ?? []).filter(isEditableColumn).length)
+
+useAgentState('structure', () => buildDatasetStructureState({
+  columns: structureColumnCount.value,
+  unsaved: structureHasRealDiff.value,
+  valid: masterDataFormValid.value && !hasInvalidExtension.value
+}))
+
+/** Save, then report it — the transition a declared wait resolves on. */
+const saveStructure = async () => {
+  await structureEditFetch.save.execute()
+  if (structureHasRealDiff.value) return
+  emitAgentEvent('dataset-structure-saved', {
+    id: structureEditFetch.data.value?.id,
+    columns: structureColumnCount.value
+  })
+}
+
 // Leave guards for unsaved changes
 useLeaveGuard(structureHasRealDiff, { locale })
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
@@ -1242,7 +1270,7 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs: any[] = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
+    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, hidden search terms (searchTerms, never displayed), creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Three in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown); next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' }
   ]
   if (!d.draftReason && !d.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
@@ -1304,8 +1332,10 @@ const sections = computedDeepDiff(() => {
     if (can('readJournal').value) {
       activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
     }
-    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
-    if (can('setPermissions').value) {
+    if (!d.isMetaOnly) {
+      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
+    }
+    if (can('setPermissions').value && !d.isMetaOnly) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
