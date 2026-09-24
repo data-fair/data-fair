@@ -18,7 +18,7 @@
   "dependencies": {
     "@aws-sdk/lib-storage": "^3.995.0",
     "@data-fair/data-fair-shared": "*",
-    "@data-fair/lib-express": "^1.24.0",
+    "@data-fair/lib-express": "^1.27.0",
     "@data-fair/lib-node": "^2.11.0",
     "@data-fair/lib-utils": "^1.12.0",
     "@data-fair/lib-validation": "^1.0.2",
