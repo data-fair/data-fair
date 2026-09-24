@@ -119,6 +119,7 @@
             v-model:source-title="initFromSourceTitle"
             :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
             :initial-dataset="initFromParent"
+            :fragment="!!partOf"
           />
         </v-stepper-window-item>
 

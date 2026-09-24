@@ -6,6 +6,7 @@
     <fragment-banner
       v-if="dataset.partOf"
       :part-of="dataset.partOf"
+      :fragment="{ id: dataset.id, status: dataset.status }"
     />
 
     <!-- Metadata details -->
@@ -34,7 +35,11 @@
           :part-of="{ type: 'dataset', id: dataset.id }"
           :fragments="fragments"
           :has-more="hasMoreFragments"
+          :sources="dataset.isVirtual ? (dataset.virtual?.children ?? []) : null"
+          :can-add-source="can('writeDescriptionBreaking').value && !structureHasRealDiff"
+          :adding-source="addFragmentToSources.loading.value ? addingSourceId : null"
           @load-more="loadMoreFragments"
+          @add-source="(fragmentId: string) => { addingSourceId = fragmentId; addFragmentToSources.execute(fragmentId) }"
         />
       </template>
     </df-section-tabs>
@@ -675,6 +680,7 @@ fr:
   attachments: Pièces jointes
   fragments: Fragments
   fragmentsSubtitle: Ressources rattachées à ce jeu de données. Elles n'apparaissent dans aucune liste, elles sont supprimées avec lui.
+  fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
@@ -745,6 +751,7 @@ en:
   attachments: Attachments
   fragments: Fragments
   fragmentsSubtitle: Resources attached to this dataset. They appear in no listing and are deleted with it.
+  fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
@@ -809,7 +816,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
-import fragmentsSvg from '~/assets/svg/Data organization_Monochromatic.svg?raw'
+import fragmentsSvg from '~/assets/svg/Data Center 1_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
@@ -1028,6 +1035,15 @@ const confirmDetach = useAsyncAction(async () => {
   await detach()
   await store.datasetFetch.refresh()
 }, { success: t('detachSuccess') })
+// a new fragment is not one of the virtual dataset's sources until the user judges it ready
+const addingSourceId = ref<string | null>(null)
+const addFragmentToSources = useAsyncAction(async (fragmentId: string) => {
+  const virtual = dataset.value?.virtual
+  if (!virtual) return
+  await $fetch(`datasets/${dataset.value!.id}`, { method: 'PATCH', body: { virtual: { ...virtual, children: [...(virtual.children ?? []), fragmentId] } } })
+  // the structure form refreshes from this fetch when it has no pending change (the button is disabled otherwise)
+  await store.datasetFetch.refresh()
+}, { success: t('fragmentAddedToSources') })
 const confirmDetachAllAndRemove = useAsyncAction(async () => {
   for (const fragment of fragments.value.datasets) {
     await $fetch(`datasets/${fragment.id}`, { method: 'PATCH', body: { partOf: null } })

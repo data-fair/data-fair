@@ -29,10 +29,6 @@ test.describe('fragments UI', () => {
     ax = await axiosAuth('test_user1@test.com', 'test_org1')
     virtualId = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent' })).data.id
     fragmentId = (await sendDataset('datasets/dataset1.csv', ax, {}, { partOf: { type: 'dataset', id: virtualId } })).id
-    // the fragment joins its parent's children on its own, the parent then re-finalizes
-    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
-    await ax.patch(`/api/v1/datasets/${virtualId}`, { schema: [{ key: 'id' }] })
-    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
   })
 
   test('fragment page shows the banner and hides what the parent covers', async ({ page, goToWithAuth }) => {
@@ -49,6 +45,38 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 
+  test('a fragment becomes a source of its virtual parent only when explicitly added', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.getByText(/fragment de/i))
+    await expect(page.getByText(/pas encore une source/)).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: 'Ajouter aux sources' }).click()
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.virtual.children, { timeout: 10000 }).toEqual([fragmentId])
+    await expect(page.getByText(/pas encore une source/)).toHaveCount(0)
+
+    // the parent's Fragments section tells its sources apart
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.locator('#fragments'))
+    await expect(page.locator('#fragments').getByText('Source du jeu de données')).toBeVisible({ timeout: 15000 })
+
+    // added from the parent's Fragments section, the virtual editor of the structure section follows
+    const second = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'second fragment', partOf: { type: 'dataset', id: virtualId } })
+    await page.reload()
+    await expect(page.locator('#fragments').getByText('Pas encore une source')).toBeVisible({ timeout: 15000 })
+    await page.locator('#fragments').getByRole('button', { name: 'Ajouter aux sources' }).click()
+    await expect(page.locator('#fragments').getByText('Pas encore une source')).toHaveCount(0)
+    await page.locator('#structure').getByRole('tab', { name: 'Jeu de données virtuel' }).click()
+    await expect(page.locator('#structure').getByRole('link', { name: new RegExp(second.id) })).toBeVisible()
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
+    // deleting a dataset also pulls it from the virtual datasets using it
+    await ax.delete(`/api/v1/datasets/${second.id}`)
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
+
+    // expose a column for the creation test below
+    await ax.patch(`/api/v1/datasets/${virtualId}`, { schema: [{ key: 'id' }] })
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
+  })
+
   test('creating a fragment starts from the parent', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/new-dataset?partOf=dataset:${virtualId}`, 'test_user1', { org: 'test_org1' })
     // the parent is read from the active account, which the switch gate fixes when it is not the org yet
@@ -62,6 +90,8 @@ test.describe('fragments UI', () => {
     await expect(stepWindow.getByText('virtual parent')).toBeVisible()
     // copying the parent's rows into its own fragment would duplicate them
     await expect(stepWindow.getByText('Copier la donnée')).toHaveCount(0)
+    // nor its description: a fragment is described by its parent
+    await expect(stepWindow.getByText(/Copier le résumé/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continuer' }).click()
     await page.getByLabel('Titre').fill('my rest fragment')
     await page.getByRole('button', { name: 'Continuer' }).click()

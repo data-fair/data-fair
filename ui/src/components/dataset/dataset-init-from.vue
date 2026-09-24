@@ -43,8 +43,9 @@
       @update:model-value="togglePart('extensions')"
     />
 
+    <!-- a fragment has neither its own attachments nor a description of its own to inherit: it is described by its parent -->
     <v-checkbox
-      v-if="initFromDataset.attachments?.length"
+      v-if="initFromDataset.attachments?.length && !fragment"
       :model-value="modelValue.parts.includes('metadataAttachments')"
       :label="t('initFromAttachments')"
       density="comfortable"
@@ -53,6 +54,7 @@
     />
 
     <v-checkbox
+      v-if="!fragment"
       :model-value="modelValue.parts.includes('description')"
       :label="t('initFromDescription')"
       density="comfortable"
@@ -75,6 +77,8 @@ const props = defineProps<{
   owner?: AccountKeys | null
   // preselected source, e.g. the virtual parent of a new fragment
   initialDataset?: any
+  // the new dataset is a fragment: only the structure (schema, extensions) is worth copying
+  fragment?: boolean
 }>()
 
 const modelValue = defineModel<InitFrom | null>({ default: null })

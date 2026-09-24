@@ -76,9 +76,6 @@ export type DatasetInternal = Dataset & {
   descendants?: QueryableDescendant[]
   initFrom?: (InitFrom & { role: string, department?: string }) | null
   _partialRestStatus?: 'updated' | 'extended' | 'indexed'
-  // set at creation on a fragment of a virtual dataset, consumed by its first non-draft finalization
-  // which appends it to the parent's children (see joinVirtualParent)
-  _joinVirtualParent?: boolean
   validateDraft?: boolean
   _newRestAttachments?: string[]
   _readApiKey?: { current: string, previous: string }

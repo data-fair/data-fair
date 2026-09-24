@@ -236,11 +236,6 @@ export default async function (_dataset: DatasetInternal) {
   if (!dataset.draftReason) {
     await updateStorage(dataset)
 
-    if ((dataset as DatasetInternal)._joinVirtualParent && dataset.partOf) {
-      await virtualDatasetsUtils.joinVirtualParent(dataset.id, dataset.partOf.id)
-      await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { _joinVirtualParent: 1 } })
-    }
-
     // parent virtual datasets have to be re-finalized too
     for await (const virtualDataset of mongo.datasets.find({ 'virtual.children': dataset.id })) {
       await mongo.datasets.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })

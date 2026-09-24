@@ -203,7 +203,6 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
   delete dataset._partialRestStatus
-  delete dataset._joinVirtualParent
   delete dataset._newRestAttachments
   delete dataset._esCopyToSearch
   delete dataset._esLineBytes
