@@ -24,6 +24,7 @@
     "@data-fair/lib-vuetify": "^2.4.0",
     "@data-fair/lib-vuetify-agents": "^0.6.4",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
+    "@json-layout/core": "~2.9.0",
     "@koumoul/vjsf": "^4.6.0",
     "@koumoul/vjsf-markdown": "^0.5.2",
     "@mdi/js": "^7.4.47",
