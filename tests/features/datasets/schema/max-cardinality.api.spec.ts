@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -83,6 +83,61 @@ test.describe('Schema maxCardinality filter', () => {
         assert.ok(err.data.includes('unknown'))
         return true
       }
+    )
+  })
+
+  test('Contextual cardinality filtering uses resource based cache headers', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-card-cache', {
+      isRest: true,
+      title: 'rest-card-cache',
+      schema: [{ key: 'region', type: 'string' }, { key: 'city', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/rest-card-cache/_bulk_lines', [
+      { region: 'R1', city: 'A' },
+      { region: 'R1', city: 'B' },
+      { region: 'R2', city: 'C' },
+      { region: 'R2', city: 'D' }
+    ])
+    const dataset = await waitForFinalize(ax, 'rest-card-cache')
+    const params = { region_eq: 'R1', maxCardinality: '3' }
+
+    // the plain schema read stays uncached
+    let res = await ax.get('/api/v1/datasets/rest-card-cache/schema', { params: { maxCardinality: '3' } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
+    assert.equal(res.headers['last-modified'], undefined)
+
+    // private dataset: validator but no shared cache
+    res = await ax.get('/api/v1/datasets/rest-card-cache/schema', { params })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
+    const lastModified = res.headers['last-modified']
+    assert.ok(lastModified)
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-card-cache/schema', { params, headers: { 'if-modified-since': lastModified } }),
+      (err: any) => err.status === 304
+    )
+    res = await ax.get('/api/v1/datasets/rest-card-cache/schema', { params: { ...params, finalizedAt: dataset.finalizedAt } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=' + config.cache.timestampedPublicMaxAge)
+
+    // a metadata edit of the schema moves updatedAt but not finalizedAt, the validator follows it
+    await new Promise(resolve => setTimeout(resolve, 1100))
+    const schema = dataset.schema.filter((p: any) => !p['x-calculated']).map((p: any) => p.key === 'city' ? { ...p, title: 'Ville' } : p)
+    const patched = (await ax.patch('/api/v1/datasets/rest-card-cache', { schema })).data
+    assert.equal(patched.finalizedAt, dataset.finalizedAt)
+    res = await ax.get('/api/v1/datasets/rest-card-cache/schema', { params, headers: { 'if-modified-since': lastModified } })
+    assert.equal(res.status, 200)
+    assert.notEqual(res.headers['last-modified'], lastModified)
+    assert.equal(res.data.find((p: any) => p.key === 'city').title, 'Ville')
+
+    // public dataset: shared cache
+    await ax.put('/api/v1/datasets/rest-card-cache/permissions', [{ classes: ['read'] }])
+    res = await ax.get('/api/v1/datasets/rest-card-cache/schema', { params })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
+
+    // no agg needed (every field already passes on its stored cardinality), invalid filters are still rejected
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-card-cache/schema', { params: { unknown_eq: 'x', maxCardinality: '10' } }),
+      (err: any) => err.status === 400
     )
   })
 })

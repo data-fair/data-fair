@@ -52,12 +52,19 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
     // within the context of the data filters, instead of the stored whole-dataset cardinality
+    // this path runs an ES query, so unlike the plain schema read it gets the same cache headers
+    // as the data endpoints; the reference date is the latest of updatedAt (schema metadata edits)
+    // and finalizedAt (data changes, refreshed cardinalities)
+    const dataset = reqDataset(req)
+    const cacheTimes = [dataset.updatedAt, dataset.finalizedAt].filter((d): d is string => !!d).map(d => new Date(d).getTime())
+    const cacheDate = new Date(Math.max(...cacheTimes))
+    if (cacheHeaders.applyResourceCacheHeaders(req, res, cacheDate)) return
     const maxCardinality = Number(reqQuery.maxCardinality)
     const schemaQuery: Record<string, string> = { ...reqQuery }
     delete schemaQuery.maxCardinality
     schema = filterSchema(schema, schemaQuery)
     try {
-      schema = await filterByContextualCardinality(reqDataset(req), schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
+      schema = await filterByContextualCardinality(dataset, schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
     } catch (err) {
       await manageESError(req, err)
     }

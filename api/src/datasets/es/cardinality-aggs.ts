@@ -20,18 +20,26 @@ export const cardinalityEligible = (prop: any) => {
   return true
 }
 
+const storedCardinalityPasses = (maxCardinality: number) => (prop: any) =>
+  typeof prop['x-cardinality'] === 'number' && prop['x-cardinality'] <= maxCardinality
+
 // same precision threshold as the finalize worker, so that contextual values stay comparable
 // to the stored `x-cardinality` exposed in the response (exact below the threshold)
 const precisionThreshold = 3000
 
 export const filterByContextualCardinality = async (dataset: any, schema: any[], reqQuery: Record<string, any>, maxCardinality: number, abortContext?: EsAbortContext) => {
-  const candidates = schema.filter(cardinalityEligible)
-  if (!candidates.length) return []
+  const eligible = schema.filter(cardinalityEligible)
+  // filtering lines can only lower the number of distinct values: a field whose stored
+  // whole-dataset cardinality already passes the threshold passes in any context, it needs no agg
+  const passing = new Set(eligible.filter(storedCardinalityPasses(maxCardinality)).map((prop: any) => prop.key))
+  const candidates = eligible.filter((prop: any) => !passing.has(prop.key))
   const query = { ...reqQuery }
   // display/pagination params of the schema read are meaningless here, and a stray "sort"
   // or an unknown "select" field would make prepareQuery throw for nothing
   for (const key of ['sort', 'select', 'highlight', 'thumbnail', 'size', 'page', 'after']) delete query[key]
+  // built even when no agg is needed, so that invalid data filters are rejected consistently
   const esQuery: any = prepareQuery(dataset, query)
+  if (!candidates.length) return eligible
   esQuery.size = 0
   esQuery.track_total_hits = false
   delete esQuery._source
@@ -43,7 +51,8 @@ export const filterByContextualCardinality = async (dataset: any, schema: any[],
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
   }, abortContext))
-  return schema.filter((prop: any) => {
+  return eligible.filter((prop: any) => {
+    if (passing.has(prop.key)) return true
     const cardinality = esResponse.aggregations?.[prop.key]?.value
     return cardinality != null && cardinality <= maxCardinality
   })

@@ -48,7 +48,7 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
 
 | Middleware | Used on | Behaviour |
 |---|---|---|
-| `noCache` | mutable / admin / draft endpoints (`GET /datasets/:id`, `/schema`, `/raw`, `/data-files`, admin & settings routers) | `Cache-Control: must-revalidate, private, max-age=0` + `X-Accel-Buffering: no`. Never stored. |
+| `noCache` | mutable / admin / draft endpoints (`GET /datasets/:id`, `/schema` (see below), `/raw`, `/data-files`, admin & settings routers) | `Cache-Control: must-revalidate, private, max-age=0` + `X-Accel-Buffering: no`. Never stored. |
 | `resourceBased(dateKey = 'updatedAt')` | dataset data-query endpoints (`/lines`, `/values_agg`, `/geo_agg`, `/metric_agg`, `/values/:field`, `/api-docs.json`, …) — most pass `'finalizedAt'` so the cache key tracks the data, not metadata edits | full conditional-GET + max-age logic, below |
 | `listBased` | collection endpoints (`/api/v1/datasets`, `/applications`, `/catalog/datasets`) | public **only** when the caller opts out of per-user data (`select=-userPermissions` **and** `visibility` contains `public`); otherwise `setNoCache`. Public ⇒ `must-revalidate, public, max-age=publicMaxAge` + `X-Accel-Buffering: yes`. |
 
@@ -72,6 +72,14 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
      caller is asking for data that doesn't exist yet — usually a stale memoize cache, see Layer 3).
    - Otherwise: public ⇒ `must-revalidate, public, max-age=publicMaxAge` (5 min); private ⇒
      `setNoCache`.
+
+The same logic is exported as `applyResourceCacheHeaders(req, res, date)` for routes that decide
+per request. `GET /datasets/:id/schema` uses it: it stays `noCache` (a memoized Mongo read that
+the back-office reads right after schema edits), **except** when `maxCardinality` comes with data
+filters. That path runs an ES cardinality aggregation (see `datasets/es/cardinality-aggs.ts`), so it
+gets the full resource-based treatment. Its reference date is `max(updatedAt, finalizedAt)`: a
+metadata edit of the schema (labels…) moves only `updatedAt`, while a finalization (data change,
+refreshed `x-cardinality`) moves only `finalizedAt`. Either date alone would produce stale `304`s.
 
 `setNoCache` always also sets `X-Accel-Buffering: no` to keep the response streaming unbuffered.
 
