@@ -52,6 +52,7 @@
     "@data-fair/lib-agents-sim": "^0.7.0",
     "@data-fair/lib-types-builder": "^1.7.0",
     "@data-fair/lib-utils": "^1.12.0",
+    "@data-fair/openapi-mcp": "^0.2.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "^1.52.0",
     "@reporters/bail": "^2.0.2",
