@@ -122,6 +122,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
 - [Dataset Validation](docs/architecture/dataset-validation.md) — schema validation, mandatory extensions, diagnostic CSV, file vs REST flows
 - [AI Agent Integration](docs/architecture/agent-integration.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant, and the judged simulation suite that exercises them end to end. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
+- [Notifications](docs/architecture/notifications.md) — three-layer event model, topic key conventions, draft-prefix logic, uniformisation gaps
 - [Load Management](docs/architecture/load-management.md) — rate limiting, request timeouts and Elasticsearch query controls across the app and the reverse-proxy layer, plus notes on possible further hardening
 - [Caching & cache headers](docs/architecture/caching.md) — the five caching layers (reverse-proxy cache, HTTP cache headers, `memoizee` in-process caches, MongoDB-backed caches, ad-hoc object caches), how they coordinate freshness, and the config reference
 - [Map base layer & tileserver](docs/architecture/map-tiles.md) — where dataset maps get their MapLibre style (`map.style`, the same-origin `/tileserver` convention) and the 302 redirect keeping legacy `tileserver-koumoul` remote-service URLs alive, with its removal conditions
@@ -131,6 +132,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Date management](docs/architecture/date-management.md) — the date / date-time strategy end to end: French-first sniffing, offset-preserving storage, timezone-aware filters & aggregations, and display in the data's own timezone (not the viewer's). **Read before touching date parsing, storage, or display.**
 - [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**
 - [Storage accounting](docs/architecture/storage-accounting.md) — the `store_bytes` / `indexed_bytes` metrics: physical vs CSV-equivalent accounting, the per-line `_bytes` field and sum aggregation, and the organic `_esLineBytes` migration. **Read before touching storage computation or quota enforcement.**
+- [Catalog search](docs/architecture/catalog-search.md) — how `q=` ranks datasets and applications: the owned term index, dis_max BM25 scored in the aggregation, the `markStale` contract for bulk writers. **Read before touching `q=`, `find.ts`, or anything writing dataset/application metadata.**
 
 ## Common Development Tasks
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -116,6 +117,39 @@ test.describe('REST datasets - CRUD', () => {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), (err: any) => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
+  })
+
+  test('REST line operations signal data-updated to webhooks only', async () => {
+    // Line writes must never reach stored events nor subscribers (script-driven spam, see
+    // notifications.md §10): the signal is restricted to the webhooks channel and coalesced.
+    // The matching test for virtual parents lives in virtual-datasets-features.api.spec.ts.
+    const ax = testUser1
+    // creation's full finalize pass must not signal: collect from before the creation
+    let notifs = await collectNotifs()
+    // PUT on a known id so the finalize-end subscription is open before the creation
+    const dataset = await doAndWaitForFinalize(ax, 'rest-webhook-signal', () => ax.put('/api/v1/datasets/rest-webhook-signal', {
+      isRest: true,
+      title: 'rest-webhook-signal',
+      schema: [{ key: 'attr1', type: 'string' }]
+    }))
+    let captured = await notifs.drain()
+    assert.equal(captured.filter(n => n.topic.key.startsWith('data-fair:dataset-data-updated:')).length, 0)
+
+    for (const write of [
+      () => ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'a' }),
+      () => ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'b' }),
+      () => ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ attr1: 'c' }, { attr1: 'd' }]),
+      () => ax.delete(`/api/v1/datasets/${dataset.id}/lines`)
+    ]) {
+      notifs = await collectNotifs()
+      await doAndWaitForFinalize(ax, dataset.id, write)
+      captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-data-updated:' })
+      const { id, slug } = expectNotifPair(captured, 'data-fair:dataset-data-updated', dataset)
+      for (const n of [id, slug]) {
+        assert.deepEqual(n.channels, ['webhooks'])
+        assert.equal(n.coalesce, true)
+      }
+    }
   })
 
   test('Patch with empty string and null should remove properties', async () => {
