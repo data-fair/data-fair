@@ -304,7 +304,9 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   permissions.initResourcePermissions(dataset)
   if (dataset.partOf) {
     // a fragment carries the ACL derived from its parent, never the creation defaults (spec §3.7)
-    dataset.permissions = (await fragmentsService.preparePartOf('datasets', dataset, dataset.partOf, sessionState)).permissions
+    const { parent, permissions: fragmentPermissions } = await fragmentsService.preparePartOf('datasets', dataset, dataset.partOf, sessionState)
+    dataset.permissions = fragmentPermissions
+    if ((parent as any).isVirtual) dataset._joinVirtualParent = true
   }
 
   if (dataset.initFrom) {

@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/applications"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -352,8 +359,17 @@ const partOf = computed(() => {
 })
 
 // a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
-const partOfParentFetch = useFetch<{ owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,owner' } })
+const partOfParentFetch = useFetch<{ title: string, owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner' }, notifError: false })
 watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
 
 onMounted(async () => {
   if (datasetId.value) {
@@ -509,6 +525,7 @@ async function createApplication () {
 
 <i18n lang="yaml">
 fr:
+  newFragment: Nouveau fragment
   apps: Applications
   breadcrumb: Créer une application
   helpCreatePrompt: Aidez-moi à créer une application
@@ -535,6 +552,7 @@ fr:
   search: Rechercher
   restrictedAccess: Application à accès restreint
 en:
+  newFragment: New fragment
   apps: Applications
   breadcrumb: Create an application
   helpCreatePrompt: Help me create an application

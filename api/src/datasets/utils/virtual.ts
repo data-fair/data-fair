@@ -318,3 +318,17 @@ export const detachFromVirtualParents = async (datasetId: string) => {
     { $pull: { 'virtual.children': datasetId }, $set: { status: 'indexed' } }
   )
 }
+
+/**
+ * A dataset created as a fragment of a virtual dataset exists to feed it: append it to the parent's
+ * children and bump the parent so it re-finalizes over it. Called by the finalize worker through the
+ * `_joinVirtualParent` flag, never at creation: a child without an index (an empty rest dataset
+ * before its first lines, a file still processing) would break the parent's finalization.
+ * Same integrity reasoning as detachFromVirtualParents for the raw write on `virtual`.
+ */
+export const joinVirtualParent = async (datasetId: string, parentId: string) => {
+  await mongo.datasets.updateOne(
+    { id: parentId, isVirtual: true },
+    { $addToSet: { 'virtual.children': datasetId }, $set: { status: 'indexed' } }
+  )
+}

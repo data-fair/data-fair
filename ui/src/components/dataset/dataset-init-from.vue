@@ -73,6 +73,8 @@ interface InitFrom {
 const props = defineProps<{
   allowData?: boolean
   owner?: AccountKeys | null
+  // preselected source, e.g. the virtual parent of a new fragment
+  initialDataset?: any
 }>()
 
 const modelValue = defineModel<InitFrom | null>({ default: null })
@@ -82,7 +84,7 @@ const { t } = useI18n()
 
 const allowData = computed(() => props.allowData ?? true)
 
-const initFromDataset = ref<any>(null)
+const initFromDataset = ref<any>(props.initialDataset ?? null)
 
 // REST/virtual sources with no rows can't produce a usable data file: forbid the data part
 // so the user gets a clear hint instead of a confusing analysis error after submission.
@@ -101,7 +103,7 @@ watch(initFromDataset, (dataset) => {
     modelValue.value = null
     sourceTitle.value = null
   }
-})
+}, { immediate: !!props.initialDataset })
 
 watch(sourceHasNoData, (noData) => {
   if (noData && modelValue.value?.parts.includes('data')) {

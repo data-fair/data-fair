@@ -1,5 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
@@ -10,6 +12,17 @@ const testUser3 = await axiosAuth('test_user3@test.com')                   // ex
 const createVirtual = async (ax = testUser1Org, body: any = {}) => {
   const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', ...body })
   return res.data
+}
+
+// a new fragment joins its virtual parent at its first finalization, which then re-finalizes on its own:
+// wait for that settled state (a journal wait could miss an event that already happened)
+const waitVirtualSettled = async (virtualId: string, children: string[]) => {
+  for (let i = 0; i < 100; i++) {
+    const virtual = (await testUser1Org.get(`/api/v1/datasets/${virtualId}`)).data
+    if (virtual.status === 'finalized' && JSON.stringify(virtual.virtual.children) === JSON.stringify(children)) return virtual
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error(`virtual dataset ${virtualId} did not settle with children ${children.join(',')}`)
 }
 
 test.describe('dataset fragments', () => {
@@ -31,6 +44,43 @@ test.describe('dataset fragments', () => {
     assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
     assert.deepEqual(permissions[0].operations, ['delete'])
     assert.deepEqual(permissions[0].roles, ['contrib'])
+  })
+
+  test('a new fragment of a virtual dataset joins its children once finalized', async () => {
+    const virtual = await createVirtual()
+    // a file fragment is appended by the finalize worker
+    const fileFragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    await waitVirtualSettled(virtual.id, [fileFragment.id])
+    // an empty rest fragment has no index yet: it joins with its first lines
+    const restFragment = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'rest fragment', schema: [{ key: 'id', type: 'string' }], partOf: { type: 'dataset', id: virtual.id } })).data
+    assert.deepEqual((await testUser1Org.get(`/api/v1/datasets/${virtual.id}`)).data.virtual.children, [fileFragment.id])
+    await testUser1Org.post(`/api/v1/datasets/${restFragment.id}/lines`, { id: 'x' })
+    await waitVirtualSettled(virtual.id, [fileFragment.id, restFragment.id])
+    // one shot: removed from the children, a later data update does not bring it back
+    await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { virtual: { children: [restFragment.id] } })
+    await waitVirtualSettled(virtual.id, [restFragment.id])
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    await testUser1Org.post(`/api/v1/datasets/${fileFragment.id}`, form, { headers: form.getHeaders() })
+    await waitForFinalize(testUser1Org, fileFragment.id)
+    assert.deepEqual((await waitVirtualSettled(virtual.id, [restFragment.id])).virtual.children, [restFragment.id])
+  })
+
+  test('a rest fragment initialized from its virtual parent gets its columns and joins it', async () => {
+    const virtual = await createVirtual()
+    const fileFragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    await waitVirtualSettled(virtual.id, [fileFragment.id])
+    await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { schema: [{ key: 'id' }, { key: 'adr' }] })
+    await waitVirtualSettled(virtual.id, [fileFragment.id])
+    const restFragment = (await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest fragment',
+      initFrom: { dataset: virtual.id, parts: ['schema'] },
+      partOf: { type: 'dataset', id: virtual.id }
+    })).data
+    const finalized = await waitForFinalize(testUser1Org, restFragment.id)
+    assert.deepEqual(finalized.schema.filter((p: any) => !p['x-calculated']).map((p: any) => p.key), ['id', 'adr'])
+    await waitVirtualSettled(virtual.id, [fileFragment.id, restFragment.id])
   })
 
   test('a contributor of the parent reads, edits and deletes the fragment', async () => {
@@ -83,7 +133,8 @@ test.describe('dataset fragments', () => {
   test('read-only access to the virtual dataset does not grant direct read on the fragment, data flows through the virtual dataset', async () => {
     const virtual = await createVirtual()
     const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
-    await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { virtual: { children: [fragment.id] }, schema: [{ key: 'id' }] })
+    await waitVirtualSettled(virtual.id, [fragment.id])
+    await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { schema: [{ key: 'id' }] })
     await waitForFinalize(testUser1Org, virtual.id)
     const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
     await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])

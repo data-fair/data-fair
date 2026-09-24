@@ -371,6 +371,17 @@ defaulting: `preparePartOf` validates and the created resource's `permissions` i
 ACL directly, never to the org-contrib creation defaults (`datasets/service.ts:309-312`,
 `applications/service.ts:163-169`).
 
+**Joining a virtual parent.** A dataset created as a fragment of a virtual dataset exists to feed
+it, so it joins the parent's `virtual.children` by itself — but only once it has an index: a child
+without one (a file still processing, an empty rest dataset before its first lines) breaks the
+parent's finalization, whose count queries every descendant index. Creation therefore only sets the
+internal `_joinVirtualParent` flag; the finalize worker consumes it at the fragment's first non-draft
+finalization (`joinVirtualParent` in `datasets/utils/virtual.ts`: `$addToSet` on the parent's
+children, parent bumped to `indexed` to re-finalize over it). One shot: removing the fragment from
+the children afterwards is respected by later finalizations. A file fragment created in draft mode
+(the UI does so when it initializes from a schema) joins when its draft is validated. Attaching an
+existing dataset does not join it — the user adds it in the children editor if they want to.
+
 **Attach / detach**, both through `PATCH .../partOf`, handled by `applyPartOfChange`
 (`api/src/fragments/service.ts:60-84`):
 
@@ -459,7 +470,12 @@ permission model on the client, it is purely presentational.
   more" button so none is out of reach) and "Nouveau fragment" buttons that open
   `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. On those creation pages the owner
   picker is replaced by the fragment banner and the owner is taken from the parent (a fragment has
-  exactly its parent's owner), and a metadata-only dataset is not offered. The section carries an
+  exactly its parent's owner), a metadata-only dataset is not offered, the breadcrumb leads back to
+  the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
+  owner's standalone datasets. For a virtual parent exposing columns, the initialization step starts
+  pre-selected on the parent with its schema (not its data, which would duplicate the parent's
+  rows), so the fragment fits the parent it joins (§7). A parent unreadable from the current active
+  account shows the fetch-error page with its account-switch button. The section carries an
   `agentDesc` for the back-office assistant (§9 of `agent-integration.md`).
 - **Pickers opened from a parent offer its fragments.** `pickerPartOf` (`ui/src/utils/fragments.ts`)
   builds `partOf=false,<parent>` — the resource's own family, or its siblings when it is itself a
@@ -533,9 +549,9 @@ permission model on the client, it is purely presentational.
 Recorded here because they are why the invariant is worth its cost, not because they are planned
 work:
 
-1. **Virtual dataset composition wizard.** "Add a file" on a virtual dataset creates a fragment
-   dataset, uploads into it, and appends it to `virtual.children` once finalized. The children
-   editor lists fragments first. Deleting the virtual dataset cleans everything up — no orphaned
+1. **Virtual dataset composition wizard.** Partly built: a new fragment starts from the parent's
+   columns and joins `virtual.children` once finalized (§7). Left: the children editor could list
+   fragments first. Deleting the virtual dataset cleans everything up — no orphaned
    child datasets in the list.
 2. **Dashboard authoring.** Sub-applications are created from inside the dashboard configuration,
    never clutter the applications list, and share the dashboard's protected links and permissions

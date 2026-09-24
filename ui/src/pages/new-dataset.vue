@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/datasets"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -107,9 +114,11 @@
             class="mb-4"
           />
           <dataset-init-from
+            :key="initFromParent?.id"
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
-            :allow-data="datasetType === 'file' || datasetType === 'rest'"
+            :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
+            :initial-dataset="initFromParent"
           />
         </v-stepper-window-item>
 
@@ -337,6 +346,7 @@
             :title="effectiveTitle"
             :filename="datasetType === 'file' && file ? file.name : undefined"
             :owner="owner"
+            :part-of="partOf"
           />
 
           <df-ui-notif-alert
@@ -602,8 +612,24 @@ const metaOnlyTitle = ref('')
 const owner = ref<AccountKeys | null>(null)
 
 // a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
-const partOfParentFetch = useFetch<{ owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,owner' } })
+const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVirtual?: boolean, schema?: any[] }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner,isVirtual,schema,count' }, notifError: false })
 watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+// a fragment of a virtual dataset starts from the columns the parent exposes, so it fits right in once
+// it joins the parent's children (the data part is not offered: it would duplicate the parent's rows)
+const initFromParent = computed(() => {
+  const parent = partOfParentFetch.data.value
+  if (partOf.value?.type !== 'dataset' || !parent?.isVirtual || !parent.schema?.some(p => !p['x-calculated'])) return null
+  return parent
+})
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
 
 // ---- Conflicts ----
 const conflictsOk = ref(false)
@@ -897,6 +923,7 @@ fr:
   home: Accueil
   datasets: Jeux de données
   newDataset: Créer un jeu de données
+  newFragment: Nouveau fragment
   helpCreatePrompt: Aidez-moi à créer un jeu de données
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   stepType: Type de jeu de données
@@ -947,6 +974,7 @@ en:
   home: Home
   datasets: Datasets
   newDataset: Create a dataset
+  newFragment: New fragment
   helpCreatePrompt: Help me create a dataset
   choseType: Choose the type of dataset you wish to create.
   stepType: Dataset type
