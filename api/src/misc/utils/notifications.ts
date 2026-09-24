@@ -116,9 +116,8 @@ export const send = async (event: PushEvent, sessionState?: SessionState) => {
     capturedNotifications.push(event)
   }
   if (config.privateEventsUrl) {
-    if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
-      event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
-    }
+    const apiKeyId = (sessionState as SessionState & { apiKeyId?: string } | undefined)?.apiKeyId
+    if (apiKeyId && sessionState?.user) event.originator = { apiKey: { id: apiKeyId, title: sessionState.user.name } }
     debug('send event to events queue', event)
     eventsQueue.pushEvent(event, sessionState)
   }

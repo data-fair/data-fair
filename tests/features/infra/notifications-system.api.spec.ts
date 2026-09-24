@@ -88,6 +88,18 @@ test.describe('infra - notification system', () => {
     captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:application-patched-properties:' })
     expectApiKeyOriginator(expectNotif(captured, `data-fair:application-patched-properties:${application.id}`))
 
+    // a user level key: its session user is the owner, the originator keeps the owner name but the key id
+    const userSettings = (await testUser1.put('/api/v1/settings/user/test_user1', {
+      apiKeys: [{ title: 'user key', scopes: ['datasets'] }]
+    })).data
+    const userKey = userSettings.apiKeys[0]
+    const axUserKey = axios({ headers: { 'x-apiKey': userKey.clearKey } })
+    const userDataset = (await axUserKey.post('/api/v1/datasets', { isRest: true, title: 'user key dataset', schema: [{ key: 'str', type: 'string' }] })).data
+    notifs = await collectNotifs()
+    await axUserKey.patch(`/api/v1/datasets/${userDataset.id}`, { title: 'renamed by user key' })
+    captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-patched-properties:' })
+    assert.deepEqual(expectNotif(captured, `data-fair:dataset-patched-properties:${userDataset.id}`).originator, { apiKey: { id: userKey.id, title: 'Test User1 (user key)' } })
+
     // a human session keeps the originator built by the events queue from the session
     notifs = await collectNotifs()
     await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { title: 'renamed by a user' })
