@@ -72,6 +72,12 @@ test.describe('permissions editor', () => {
           p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read')
         )
       }, { timeout: 5000 }).toBeFalsy()
+      // contributors who cannot read cannot write either
+      const contribSelect = page.locator('#share .v-select').nth(1)
+      await expect(contribSelect).toContainText(/uniquement les administrateurs/i)
+      await expect(page.getByRole('combobox', { name: /contribuer/ })).toBeDisabled()
+      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+      expect(perms.find((p: any) => p.type === 'organization' && p.roles?.includes('contrib'))).toBeFalsy()
     })
 
     test('change from public back to privateOrg removes public permission', async ({ page, goToWithAuth }) => {

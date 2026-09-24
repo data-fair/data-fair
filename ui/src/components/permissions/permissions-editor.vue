@@ -50,7 +50,7 @@
     <v-select
       v-if="resource.owner?.type === 'organization'"
       v-model="contribProfile"
-      :disabled="disabled"
+      :disabled="disabled || visibility === 'privateOrg'"
       :items="contribProfileItems"
       :label="t('contribProfileLabel')"
       :base-color="contribProfileModified ? 'accent' : undefined"
@@ -495,6 +495,8 @@ const visibility = computed({
     if (!props.modelValue) return
     const next = props.modelValue
       .filter((p) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isSharedInDepPermission(p) && !isPrivateOrgContribPermission(p))
+      // contributors who cannot read the resource must not be able to write it either
+      .filter((p) => v !== 'privateOrg' || (!isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p)))
 
     if (v === 'sharedInOrg' || v === 'sharedInDep' || v === 'public' || v === 'privateOrgContrib') {
       // keep the contrib permission scoped to the owner's department ('-' for the organization root),
