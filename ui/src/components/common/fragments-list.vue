@@ -43,6 +43,15 @@
     <p v-else>
       {{ t('noFragments') }}
     </p>
+    <v-btn
+      v-if="hasMore"
+      class="mt-4"
+      variant="text"
+      color="primary"
+      @click="emit('loadMore')"
+    >
+      {{ t('loadMore') }}
+    </v-btn>
   </div>
 </template>
 
@@ -51,10 +60,12 @@ fr:
   newDatasetFragment: Nouveau jeu de données fragment
   newApplicationFragment: Nouvelle application fragment
   noFragments: Aucun fragment.
+  loadMore: Voir plus de fragments
 en:
   newDatasetFragment: New dataset fragment
   newApplicationFragment: New application fragment
   noFragments: No fragment.
+  loadMore: Show more fragments
 </i18n>
 
 <script setup lang="ts">
@@ -63,8 +74,10 @@ import { usePermissions } from '~/composables/use-permissions'
 
 defineProps<{
   partOf: { type: 'dataset' | 'application', id: string },
-  fragments: { datasets: any[], applications: any[] }
+  fragments: { datasets: any[], applications: any[] },
+  hasMore?: boolean
 }>()
+const emit = defineEmits<{ loadMore: [] }>()
 const { t } = useI18n()
 const { canContribDep } = usePermissions()
 </script>

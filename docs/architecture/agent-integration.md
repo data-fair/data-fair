@@ -326,8 +326,8 @@ expose. Single-resource lookups are untouched: `describe_dataset` and `describe_
 on a fragment id exactly like on any other resource, but their curated field whitelist
 (`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) does not
 include `partOf`, in either the text summary or `structuredContent` — the assistant cannot
-currently tell a fragment from a standalone resource through these tools. The "Fragments" tab shown
-on a virtual dataset's or
+currently tell a fragment from a standalone resource through these tools. The "Fragments" section
+shown on a virtual dataset's or
 an application's own page carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
 `ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
 fragment" action within it.

@@ -338,8 +338,11 @@ Both `findDatasets` (`api/src/datasets/service.ts`) and `findApplications`
    they are asking for (the virtual-children editor resolves child ids by `ids=`, a dataset page
    lists the applications built on it by `dataset=`), so hiding fragments there would only break a
    legitimate lookup.
+4. A comma-separated list of the above → their `$or` union, applied even when the query pins
+   resources. `partOf=false,<type>:<id>` is what a picker opened from a parent uses: the standalone
+   resources plus that parent's own fragments (see the pickers in §8).
 
-In cases 1 and 2 the standard ACL filter still applies on top — the stored derived ACL makes that
+In cases 1, 2 and 4 the standard ACL filter still applies on top — the stored derived ACL makes that
 correct without any fragment-specific listing logic: listing dataset fragments of a virtual dataset
 or of an application returns them to owner members and to holders of derived management entries;
 listing sub-applications returns them to whoever can read the dashboard.
@@ -356,7 +359,7 @@ cannot currently tell a fragment from a standalone resource through them (§9 of
 [agent-integration.md](./agent-integration.md)).
 
 Consumers that inherit the default hiding with no code change of their own: back-office lists, the
-`dataset-select` picker, vjsf `x-fromUrl` dataset pickers inside application configuration forms, the
+`dataset-select` picker (except the virtual-children picker, §8), the
 storage page, the agent tools `list_datasets` / `list_applications`
 (`docs/architecture/agent-integration.md`), and the portal catalog API (additionally scoped by
 `publicationSites`, always empty on a fragment).
@@ -440,18 +443,30 @@ permission model on the client, it is purely presentational.
   parent. The parent title is fetched with `notifError: false` and falls back to the parent id:
   holding a derived management entry on the fragment does **not** imply `readDescription` on the
   parent, so a 403/404 there is an ordinary case, not something to toast on every page load.
-- **Hidden on a fragment's own page** (both `dataset/[id]/index.vue` and
-  `application/[id]/index.vue`): the permissions tab, publication-sites / catalog-publications tabs,
-  the change-owner row, `readApiKey` / key-management tabs (application). A "Détacher" row appears
-  in the danger zone instead of "Changer de propriétaire" when `dataset.partOf` / `application.partOf`
-  is set.
-- **`fragments-list.vue`**: a "Fragments" tab shown on any resource that either is a virtual dataset
-  or already has at least one fragment (`d.isVirtual || nbFragments.value`, dataset page; any
-  application, since only applications parent other applications). It lists fragment datasets and
-  applications (fetched via two `partOf=` queries in the dataset/application stores) and a "Nouveau
-  fragment" button that opens `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`
-  with the parent pre-filled (`new-dataset.vue:415-416`, `new-application.vue:337-338`). This tab
-  carries an `agentDesc` for the back-office assistant (§9 of `agent-integration.md`).
+- **Hidden on a fragment's own page, to keep it minimal** (both `dataset/[id]/index.vue` and
+  `application/[id]/index.vue`). A "Détacher" row replaces "Changer de propriétaire" in the danger
+  zone. Also hidden: everything that only serves publication
+  or sharing, which a fragment gets through its parent: the whole Share section (permissions, API
+  key / protected links, portals, catalogs, embed snippets), the Attachments tab, the reference-data
+  tab (refused by the API anyway), the dataset's Applications tab, the Fragments section (one level
+  only), and the catalog fields of the metadata form: only title, summary and description remain
+  (plus the functional `attachmentsAsImage` checkbox on datasets).
+- **`fragments-list.vue`**, rendered as a dedicated **Fragments section** right after the
+  informations, with its own entry in the page's table of contents — fragments appear in no listing,
+  so this is the one place they are found from. Shown on any non-fragment application and on a
+  virtual dataset (or any dataset already holding fragments). It lists fragment datasets and
+  applications (two `partOf=` queries in the dataset/application stores, 100 at a time with a "load
+  more" button so none is out of reach) and "Nouveau fragment" buttons that open
+  `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. On those creation pages the owner
+  picker is replaced by the fragment banner and the owner is taken from the parent (a fragment has
+  exactly its parent's owner), and a metadata-only dataset is not offered. The section carries an
+  `agentDesc` for the back-office assistant (§9 of `agent-integration.md`).
+- **Pickers opened from a parent offer its fragments.** `pickerPartOf` (`ui/src/utils/fragments.ts`)
+  builds `partOf=false,<parent>` — the resource's own family, or its siblings when it is itself a
+  fragment. The virtual-children picker (`dataset-virtual.vue`) passes it to `dataset-select`, and
+  `application-config.vue` appends it to every datasets / applications listing `x-fromUrl` of the
+  configuration schema (`addPartOfToFromUrls`), so an application can select its own fragment
+  datasets and a dashboard its sub-applications.
 - **`fragment-attach-dialog.vue`**: on a standalone resource's danger zone, "Rattacher à un parent" —
   a `dataset-select` restricted to `virtual: true` and the same owner for a dataset parent, or an
   autocomplete over `/applications?owner=...` for an application parent. Two alerts: a warning that

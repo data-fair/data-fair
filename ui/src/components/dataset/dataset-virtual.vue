@@ -8,7 +8,7 @@
       <!-- Add child autocomplete -->
       <dataset-select
         v-model="selectedDatasetToAdd"
-        :extra-params="{ queryable: true }"
+        :extra-params="{ queryable: true, partOf: pickerPartOf('dataset', dataset) }"
         :owner="dataset.owner"
         :exclude-ids="[dataset.id, ...(dataset.virtual.children ?? [])]"
         :label="t('addChild')"
@@ -279,6 +279,7 @@ import { mdiDelete, mdiSort } from '@mdi/js'
 import draggable from 'vuedraggable'
 import { withQuery } from 'ufo'
 import { $apiPath, $fetch } from '../../context.js'
+import { pickerPartOf } from '~/utils/fragments'
 
 const dataset = defineModel<any>({ required: true })
 const { t } = useI18n()

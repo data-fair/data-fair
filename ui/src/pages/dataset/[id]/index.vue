@@ -21,6 +21,24 @@
       </template>
     </df-section-tabs>
 
+    <!-- Fragments section: fragments are hidden from every listing, this is where they are found -->
+    <df-section-tabs
+      v-if="sections.fragments"
+      id="fragments"
+      :title="sections.fragments.title"
+      :subtitle="sections.fragments.subtitle"
+      :svg="fragmentsSvg"
+    >
+      <template #windows>
+        <fragments-list
+          :part-of="{ type: 'dataset', id: dataset.id }"
+          :fragments="fragments"
+          :has-more="hasMoreFragments"
+          @load-more="loadMoreFragments"
+        />
+      </template>
+    </df-section-tabs>
+
     <!-- Structure section -->
     <df-section-tabs
       v-if="sections.structure"
@@ -174,13 +192,6 @@
 
         <v-tabs-window-item value="attachments">
           <dataset-metadata-attachments />
-        </v-tabs-window-item>
-
-        <v-tabs-window-item value="fragments">
-          <fragments-list
-            :part-of="{ type: 'dataset', id: dataset.id }"
-            :fragments="fragments"
-          />
         </v-tabs-window-item>
       </template>
     </df-section-tabs>
@@ -663,6 +674,7 @@ fr:
   constraints: Contraintes
   attachments: Pièces jointes
   fragments: Fragments
+  fragmentsSubtitle: Ressources rattachées à ce jeu de données. Elles n'apparaissent dans aucune liste, elles sont supprimées avec lui.
   save: Enregistrer
   cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
@@ -732,6 +744,7 @@ en:
   constraints: Constraints
   attachments: Attachments
   fragments: Fragments
+  fragmentsSubtitle: Resources attached to this dataset. They appear in no listing and are deleted with it.
   save: Save
   cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
@@ -796,6 +809,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
+import fragmentsSvg from '~/assets/svg/Data organization_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
@@ -847,7 +861,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, detach } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
 
@@ -1139,6 +1153,15 @@ const sections = computedDeepDiff(() => {
     agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
+  // Fragments section, right after the informations: the only way to reach resources hidden from every listing
+  if (!d.partOf && (d.isVirtual || nbFragments.value)) {
+    result.fragments = {
+      title: t('fragments'),
+      subtitle: t('fragmentsSubtitle'),
+      agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. A "new fragment" button creates one.'
+    }
+  }
+
   // Structure section (new)
   if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
     const structureTabs: any[] = [{
@@ -1186,7 +1209,8 @@ const sections = computedDeepDiff(() => {
       })
     }
 
-    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    // a fragment cannot be reference data (refused by the API)
+    if (!d.draftReason && !d.isMetaOnly && !d.partOf && accountRole.value === 'admin') {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),
@@ -1204,11 +1228,8 @@ const sections = computedDeepDiff(() => {
   const metadataTabs: any[] = [
     { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
   ]
-  if (!d.draftReason) {
+  if (!d.draftReason && !d.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
-  }
-  if (d.isVirtual || nbFragments.value) {
-    metadataTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): listed only here, deleted with it. A "new fragment" button creates one.' })
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → `dataset_changes_summarizer` subagent (produces a <500 char plain-text summary of the diff).' }
 
@@ -1229,7 +1250,7 @@ const sections = computedDeepDiff(() => {
     if (d.rest?.history) {
       explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory, agentDesc: 'Per-row revision history. Visible only for REST datasets that have history enabled in the Structure → REST config tab.' })
     }
-    if (!d.draftReason || d.draftReason.key === 'file-updated') {
+    if ((!d.draftReason || d.draftReason.key === 'file-updated') && !d.partOf) {
       explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple, agentDesc: 'Visualization applications already configured on top of this dataset, with a "+" button to create a new one.' })
     }
     if (explorationTabs.length) {
@@ -1237,19 +1258,17 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  // Share section
-  if (!d.draftReason || d.draftReason.key === 'file-updated') {
+  // Share section: a fragment is shared through its parent, it has nothing of its own to share
+  if (!d.partOf && (!d.draftReason || d.draftReason.key === 'file-updated')) {
     const shareTabs: any[] = []
-    if (can('getPermissions').value && !d.partOf) {
+    if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / write / admin permissions to specific users, organisations, departments or partners, or open access to "anyone".' })
     }
-    if (can('setReadApiKey').value && !d.partOf) {
+    if (can('setReadApiKey').value) {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey, agentDesc: 'Generate and manage a read-only API key — for embedding or programmatic access without a user session.' })
     }
-    if (!d.partOf) {
-      shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this dataset on the organisation\'s data portals (open or limited audience).' })
-    }
-    if ($uiConfig.catalogsIntegration && accountRole.value === 'admin' && !d.partOf) {
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this dataset on the organisation\'s data portals (open or limited audience).' })
+    if ($uiConfig.catalogsIntegration && accountRole.value === 'admin') {
       shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection, agentDesc: 'Publish this dataset to external catalogs (data.gouv.fr, CKAN, etc.). Rendered as a d-frame from the catalogs service — admin-only.' })
     }
     if (d.finalizedAt) {

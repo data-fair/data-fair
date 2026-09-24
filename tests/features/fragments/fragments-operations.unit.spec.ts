@@ -120,6 +120,16 @@ test.describe('helpers', () => {
     // an explicit false is the default, not a request to reveal them
     assert.deepEqual(partOfListFilter({ partOf: 'false' }), { partOf: { $exists: false } })
   })
+  test('partOfListFilter: a comma-separated list is a union', () => {
+    assert.deepEqual(partOfListFilter({ partOf: 'false,application:abc' }), {
+      $or: [{ partOf: { $exists: false } }, { 'partOf.type': 'application', 'partOf.id': 'abc' }]
+    })
+    // the union is explicit, a pinning key does not drop it
+    assert.deepEqual(partOfListFilter({ partOf: 'false,dataset:abc', ids: 'x' }), {
+      $or: [{ partOf: { $exists: false } }, { 'partOf.type': 'dataset', 'partOf.id': 'abc' }]
+    })
+    assert.throws(() => partOfListFilter({ partOf: 'false,foo:abc' }), { status: 400 })
+  })
   test('partOfListFilter: pinning queries are never filtered', () => {
     for (const key of ['id', 'ids', 'slug', 'slugs', 'children', 'dataset', 'application']) {
       assert.equal(partOfListFilter({ [key]: 'x' }), undefined, key)

@@ -218,7 +218,14 @@
 
         <!-- Step: Info -->
         <v-stepper-window-item value="info">
-          <df-owner-pick v-model="owner" />
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
           <v-text-field
             v-model="appTitle"
             max-width="500"
@@ -341,8 +348,12 @@ const partOf = computed(() => {
   if (i === -1) return undefined
   const type = raw.slice(0, i)
   if (type !== 'dataset' && type !== 'application') return undefined
-  return { type, id: raw.slice(i + 1) }
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
 })
+
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,owner' } })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
 
 onMounted(async () => {
   if (datasetId.value) {

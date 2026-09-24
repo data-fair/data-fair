@@ -145,14 +145,18 @@ const createApplicationStore = (id: string) => {
     watch: false
   })
 
-  const fragmentDatasetsFetch = useFetch<{ results: any[], count: number }>(() => application.value ? `${$apiPath}/datasets` : null, {
-    query: computed(() => ({ partOf: `application:${id}`, size: 100, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
+  // fragments are hidden from every other listing, so these must reach all of them: the size grows on demand
+  const fragmentsSize = ref(100)
+  const fragmentDatasetsFetch = useFetch<{ results: any[], count: number }>(() => application.value && !application.value.partOf ? `${$apiPath}/datasets` : null, {
+    query: computed(() => ({ partOf: `application:${id}`, size: fragmentsSize.value, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
   })
-  const fragmentApplicationsFetch = useFetch<{ results: any[], count: number }>(() => application.value ? `${$apiPath}/applications` : null, {
-    query: computed(() => ({ partOf: `application:${id}`, size: 100, select: 'title,id,status,description,updatedAt,owner,topics,partOf' }))
+  const fragmentApplicationsFetch = useFetch<{ results: any[], count: number }>(() => application.value && !application.value.partOf ? `${$apiPath}/applications` : null, {
+    query: computed(() => ({ partOf: `application:${id}`, size: fragmentsSize.value, select: 'title,id,status,description,updatedAt,owner,topics,partOf' }))
   })
   const fragments = computed(() => ({ datasets: fragmentDatasetsFetch.data.value?.results ?? [], applications: fragmentApplicationsFetch.data.value?.results ?? [] }))
   const nbFragments = computed(() => (fragmentDatasetsFetch.data.value?.count ?? 0) + (fragmentApplicationsFetch.data.value?.count ?? 0))
+  const hasMoreFragments = computed(() => fragments.value.datasets.length + fragments.value.applications.length < nbFragments.value)
+  const loadMoreFragments = () => { fragmentsSize.value += 100 }
   const detach = async () => {
     await patch({ partOf: null } as any)
   }
@@ -226,6 +230,8 @@ const createApplicationStore = (id: string) => {
     fragmentApplicationsFetch,
     fragments,
     nbFragments,
+    hasMoreFragments,
+    loadMoreFragments,
     detach,
     nbParentApps,
     remove,

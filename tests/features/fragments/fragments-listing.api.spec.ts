@@ -29,6 +29,12 @@ test.describe('fragments listing', () => {
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: 'true' } })), [fragment.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: 'false' } })), [virtual.id])
     assert.equal((await testUser1Org.get('/api/v1/datasets', { params: { size: 0 } })).data.count, 1)
+    // a comma-separated list is a union: what a picker opened from the parent uses to also offer its fragments
+    const otherVirtual = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, title: 'other' })).data
+    const otherFragment = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'other fragment', partOf: { type: 'dataset', id: otherVirtual.id } })).data
+    assert.deepEqual(ids(await testUser1Org.get('/api/v1/datasets', { params: { partOf: `false,dataset:${virtual.id}`, sort: 'createdAt:1' } })), [virtual.id, fragment.id, otherVirtual.id])
+    await testUser1Org.delete(`/api/v1/datasets/${otherVirtual.id}`)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${otherFragment.id}`).catch((err: any) => err)).status, 404)
     await assert.rejects(testUser1Org.get('/api/v1/datasets', { params: { partOf: 'nope' } }), { status: 400 })
 
     // a contributor of the parent sees the fragment through the derived ACL, an external reader of the parent does not
@@ -44,5 +50,6 @@ test.describe('fragments listing', () => {
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { partOf: `application:${dashboard.id}` } })), [sub.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { ids: sub.id } })), [sub.id])
     assert.deepEqual(ids(await testUser1Org.get('/api/v1/applications', { params: { partOf: 'true' } })), [sub.id])
+    assert.equal((await testUser1Org.get('/api/v1/applications', { params: { partOf: `false,application:${dashboard.id}` } })).data.count, 2)
   })
 })

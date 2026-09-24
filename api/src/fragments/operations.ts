@@ -166,8 +166,13 @@ const PINNING_QUERY_KEYS = ['id', 'ids', 'slug', 'slugs', 'children', 'dataset',
  * - `partOf=<type>:<id>` — only the fragments of that parent
  * - `partOf=true` — every fragment, whatever its parent
  * - absent, or `partOf=false` — fragments are hidden, unless the query pins resources
+ * - a comma-separated list of the above is their union: `partOf=false,application:<id>` lists the
+ *   standalone resources plus that parent's own fragments, what a picker opened from the parent needs
  */
 export const partOfListFilter = (reqQuery: Record<string, string | undefined>): Record<string, any> | undefined => {
+  if (reqQuery.partOf?.includes(',')) {
+    return { $or: reqQuery.partOf.split(',').map(value => value === 'false' ? { partOf: { $exists: false } } : partOfListFilter({ partOf: value })) }
+  }
   if (reqQuery.partOf === 'true') return { 'partOf.id': { $exists: true } }
   if (reqQuery.partOf && reqQuery.partOf !== 'false') {
     const partOf = parsePartOfParam(reqQuery.partOf)

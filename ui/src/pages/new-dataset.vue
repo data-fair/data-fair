@@ -322,7 +322,14 @@
 
         <!-- Step: Action / Confirmation -->
         <v-stepper-window-item value="action">
-          <df-owner-pick v-model="owner" />
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
 
           <dataset-conflicts
             v-if="step === 'action' && owner"
@@ -419,7 +426,7 @@ const partOf = computed(() => {
   if (i === -1) return undefined
   const type = raw.slice(0, i)
   if (type !== 'dataset' && type !== 'application') return undefined
-  return { type, id: raw.slice(i + 1) }
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
 })
 
 breadcrumbs.receive({
@@ -438,7 +445,12 @@ interface InitFrom {
 
 // ---- Constants ----
 const allDatasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
-const datasetTypes = computed(() => isSimple.value ? allDatasetTypes.filter(dt => dt !== 'virtual') : allDatasetTypes)
+const datasetTypes = computed(() => {
+  if (isSimple.value) return allDatasetTypes.filter(dt => dt !== 'virtual')
+  // a metadata-only dataset holds no data, there is nothing for it to contribute as a fragment
+  if (partOf.value) return allDatasetTypes.filter(dt => dt !== 'metaOnly')
+  return allDatasetTypes
+})
 const datasetTypeIcons: Record<DatasetType, string> = {
   file: mdiFileUpload,
   rest: mdiAllInclusive,
@@ -588,6 +600,10 @@ const metaOnlyTitle = ref('')
 
 // ---- Owner ----
 const owner = ref<AccountKeys | null>(null)
+
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,owner' } })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
 
 // ---- Conflicts ----
 const conflictsOk = ref(false)

@@ -3,8 +3,8 @@
     <!-- Left column: primary fields -->
     <v-col
       cols="12"
-      md="6"
-      lg="7"
+      :md="application.partOf ? 12 : 6"
+      :lg="application.partOf ? 12 : 7"
     >
       <v-text-field
         v-model="application.title"
@@ -61,8 +61,9 @@
       </div>
     </v-col>
 
-    <!-- Right column: secondary fields -->
+    <!-- Right column: secondary fields, catalog metadata that a never published fragment does not need -->
     <v-col
+      v-if="!application.partOf"
       cols="12"
       md="6"
       lg="5"

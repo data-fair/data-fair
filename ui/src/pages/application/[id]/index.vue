@@ -64,6 +64,24 @@
       </template>
     </df-section-tabs>
 
+    <!-- Fragments section: fragments are hidden from every listing, this is where they are found -->
+    <df-section-tabs
+      v-if="sections.fragments"
+      id="fragments"
+      :title="sections.fragments.title"
+      :subtitle="sections.fragments.subtitle"
+      :svg="fragmentsSvg"
+    >
+      <template #windows>
+        <fragments-list
+          :part-of="{ type: 'application', id: application.id }"
+          :fragments="fragments"
+          :has-more="hasMoreFragments"
+          @load-more="loadMoreFragments"
+        />
+      </template>
+    </df-section-tabs>
+
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -106,13 +124,6 @@
 
         <v-tabs-window-item value="attachments">
           <application-metadata-attachments />
-        </v-tabs-window-item>
-
-        <v-tabs-window-item value="fragments">
-          <fragments-list
-            :part-of="{ type: 'application', id: application.id }"
-            :fragments="fragments"
-          />
         </v-tabs-window-item>
 
         <v-tabs-window-item
@@ -487,6 +498,7 @@ fr:
   info: Informations
   attachments: Pièces jointes
   fragments: Fragments
+  fragmentsSubtitle: Ressources rattachées à cette application. Elles n'apparaissent dans aucune liste, elles sont supprimées avec elle.
   datasets: Jeux de données utilisés
   childrenApps: Applications utilisées
   render: Rendu
@@ -537,6 +549,7 @@ en:
   info: Information
   attachments: Attachments
   fragments: Fragments
+  fragmentsSubtitle: Resources attached to this application. They appear in no listing and are deleted with it.
   datasets: Used datasets
   childrenApps: Used applications
   render: Render
@@ -594,6 +607,7 @@ import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
+import fragmentsSvg from '~/assets/svg/Data organization_Monochromatic.svg?raw'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -612,7 +626,7 @@ const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = useApplicationStore()
-const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions, fragments, nbFragments, detach } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const { sendUiNotif } = useUiNotif()
 
@@ -748,18 +762,28 @@ const sections = computedDeepDiff(() => {
     agentDesc: 'Read-only overview of the application: owner, application model (base app) and version, key dates. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
+  // Fragments section, right after the informations: the only way to reach resources hidden from every listing
+  if (!application.value.partOf) {
+    result.fragments = {
+      title: t('fragments'),
+      subtitle: t('fragmentsSubtitle'),
+      agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.'
+    }
+  }
+
   // Metadata section
-  const metadataTabs = [
+  const metadataTabs: any[] = [
     { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → application_summarizer subagent (≤300 char summary); next to the description → application_description_writer subagent (500-2000 char markdown).' },
-    { key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' }
   ]
+  if (!application.value.partOf) {
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' })
+  }
   if (datasets.value.length) {
     metadataTabs.push({ key: 'datasets', title: t('datasets'), icon: mdiDatabase, agentDesc: 'The datasets used by this application (read-only cards).' })
   }
   if (childrenApps.value.length) {
     metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple, agentDesc: 'Other applications used by this application (read-only cards).' })
   }
-  metadataTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): listed only here, deleted with it.' })
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons appear in the section header when there are unsaved changes.' }
 
   // Render section
@@ -769,6 +793,7 @@ const sections = computedDeepDiff(() => {
     agentDesc: 'Rendered application and entry point to its configuration.'
   }
 
+  // Share section: a fragment is shared through its parent, it has nothing of its own to share
   const shareTabs = []
   if (can('getPermissions') && !application.value.partOf) {
     shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / admin permissions to users, organisations, departments or partners, or open access to "anyone".' })
@@ -779,7 +804,7 @@ const sections = computedDeepDiff(() => {
   if (!$uiConfig.disablePublicationSites && !application.value.partOf) {
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this application on the organisation\'s data portals.' })
   }
-  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe / embed snippets to integrate this application into external pages.' })
+  if (!application.value.partOf) shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe / embed snippets to integrate this application into external pages.' })
   if (shareTabs.length) {
     result.share = { title: t('share'), tabs: shareTabs, agentDesc: 'Access control and publication settings for this application.' }
   }

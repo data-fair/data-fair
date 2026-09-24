@@ -31,23 +31,25 @@ test.describe('fragments UI', () => {
     fragmentId = (await sendDataset('datasets/dataset1.csv', ax, {}, { partOf: { type: 'dataset', id: virtualId } })).id
   })
 
-  test('fragment page shows the banner and hides publication and permission tabs', async ({ page, goToWithAuth }) => {
+  test('fragment page shows the banner and hides what the parent covers', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
     await pastActiveAccountGate(page, page.getByText(/fragment de/i))
     await expect(page.getByText(/fragment de/i)).toBeVisible({ timeout: 15000 })
     await expect(page.getByRole('link', { name: 'virtual parent' })).toBeVisible()
-    await expect(page.locator('#share').getByRole('tab', { name: /Portails/ })).not.toBeVisible()
-    await expect(page.locator('#share').getByRole('tab', { name: /^Permissions$/ })).not.toBeVisible()
-    await expect(page.locator('#share').getByRole('tab', { name: /Clé d'API/ })).not.toBeVisible()
+    await expect(page.locator('#metadata').getByLabel('Titre')).toBeVisible()
+    // shared, published and catalogued through its parent only
+    await expect(page.locator('#share')).toHaveCount(0)
+    await expect(page.locator('#fragments')).toHaveCount(0)
+    await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes/ })).toHaveCount(0)
+    await expect(page.locator('#metadata').getByLabel('Licence')).toHaveCount(0)
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
-    await pastActiveAccountGate(page, page.locator('#metadata'))
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    await page.locator('#metadata').getByRole('tab', { name: /Fragments/ }).click()
-    await expect(page.locator('#metadata').getByText('dataset1').first()).toBeVisible()
+    await pastActiveAccountGate(page, page.locator('#fragments'))
+    await expect(page.locator('#fragments')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('#fragments').getByText('dataset1').first()).toBeVisible()
     await page.locator('#danger-zone').getByRole('button', { name: /Supprimer le jeu de données/ }).click()
     await expect(page.getByText(/1 fragment/)).toBeVisible()
     await page.getByRole('button', { name: /Détacher d'abord/ }).click()
