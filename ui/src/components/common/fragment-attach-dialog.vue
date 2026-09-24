@@ -4,32 +4,16 @@
     max-width="800"
   >
     <v-card
-      :title="t('title')"
+      :title="t('title', { parent: parent.title })"
       :loading="attach.loading.value"
     >
       <v-card-text>
-        <dataset-select
-          v-if="resourceType === 'datasets'"
-          v-model="parentDataset"
-          :label="t('virtualParent')"
-          :owner="resource.owner"
-          :extra-params="{ virtual: true }"
-          :exclude-ids="[resource.id]"
-        />
-        <v-autocomplete
-          v-model="parentApplication"
-          :label="t('applicationParent')"
-          :items="applicationsFetch.data.value?.results ?? []"
-          item-title="title"
-          item-value="id"
-          return-object
-          clearable
-          class="mt-2"
-        />
+        <p class="mb-4">
+          {{ t('intro', { parent: parent.title }) }}
+        </p>
         <v-alert
           type="warning"
           variant="outlined"
-          class="mt-4"
         >
           {{ t('warning') }}
         </v-alert>
@@ -52,7 +36,6 @@
         <v-btn
           color="warning"
           variant="flat"
-          :disabled="!partOf"
           :loading="attach.loading.value"
           @click="attach.execute()"
         >
@@ -65,58 +48,39 @@
 
 <i18n lang="yaml">
 fr:
-  title: Rattacher à un parent
-  virtualParent: Jeu de données virtuel parent
-  applicationParent: Application parente
-  warning: "Les permissions propres de la ressource seront définitivement perdues et remplacées par celles dérivées du parent : les détacher ensuite ne les restaurera pas. La ressource ne sera plus listée par défaut et sera supprimée avec son parent."
-  prerequisites: "Une ressource publiée sur un portail ou un catalogue, ou configurée comme donnée de référence, ne peut pas être rattachée : retirez ces éléments au préalable."
+  title: "Rattacher à « {parent} »"
+  intro: "Ce jeu de données deviendra un fragment de « {parent} », le jeu de données virtuel qui l'utilise déjà comme source."
+  warning: "Les permissions propres du jeu de données seront définitivement perdues et remplacées par celles dérivées du parent : le détacher ensuite ne les restaurera pas. Il ne sera plus listé par défaut et sera supprimé avec son parent."
+  prerequisites: "Un jeu de données publié sur un portail ou un catalogue, ou configuré comme donnée de référence, ne peut pas être rattaché : retirez ces éléments au préalable."
   cancel: Annuler
   confirm: Rattacher
-  successMsg: Ressource rattachée
+  successMsg: Jeu de données rattaché
   errorMsg: "Échec du rattachement"
 en:
-  title: Attach to a parent
-  virtualParent: Parent virtual dataset
-  applicationParent: Parent application
-  warning: "The resource's own permissions will be permanently lost and replaced by permissions derived from the parent: detaching it later will not restore them. It will no longer be listed by default and will be deleted with its parent."
-  prerequisites: "A resource published on a portal or a catalog, or configured as reference data, cannot be attached: remove these first."
+  title: "Attach to “{parent}”"
+  intro: "This dataset will become a fragment of “{parent}”, the virtual dataset that already uses it as a source."
+  warning: "The dataset's own permissions will be permanently lost and replaced by permissions derived from the parent: detaching it later will not restore them. It will no longer be listed by default and will be deleted with its parent."
+  prerequisites: "A dataset published on a portal or a catalog, or configured as reference data, cannot be attached: remove these first."
   cancel: Cancel
   confirm: Attach
-  successMsg: Resource attached
+  successMsg: Dataset attached
   errorMsg: Failed to attach
 </i18n>
 
 <script setup lang="ts">
-import type { AccountKeys } from '@data-fair/lib-vue/session'
-
+// Attachment is only ever proposed towards a parent that is already known to use the resource
+// (today: the one virtual dataset having this dataset among its children), never picked freely.
 const props = defineProps<{
-  resource: { id: string, owner: AccountKeys }
-  resourceType: 'datasets' | 'applications'
+  resource: { id: string }
+  parent: { id: string, title: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 const { t } = useI18n()
 
 const showDialog = defineModel<boolean>({ default: false })
-const parentDataset = ref<any>(null)
-const parentApplication = ref<{ id: string, title: string } | null>(null)
-
-const ownerFilter = computed(() => {
-  const o = props.resource.owner
-  return `${o.type}:${o.id}${o.department ? ':' + o.department : ''}`
-})
-const applicationsFetch = useFetch<{ results: { id: string, title: string }[] }>(`${$apiPath}/applications`, {
-  query: computed(() => ({ owner: ownerFilter.value, size: 100, select: 'id,title,-userPermissions,-links' }))
-})
-
-const partOf = computed<{ type: 'dataset' | 'application', id: string } | null>(() => {
-  if (parentApplication.value) return { type: 'application', id: parentApplication.value.id }
-  if (parentDataset.value && props.resourceType === 'datasets') return { type: 'dataset', id: parentDataset.value.id }
-  return null
-})
 
 const attach = useAsyncAction(async () => {
-  if (!partOf.value) return
-  await $fetch(`${props.resourceType}/${props.resource.id}`, { method: 'PATCH', body: { partOf: partOf.value } })
+  await $fetch(`datasets/${props.resource.id}`, { method: 'PATCH', body: { partOf: { type: 'dataset', id: props.parent.id } } })
   showDialog.value = false
   emit('changed')
 }, { success: t('successMsg'), error: t('errorMsg') })

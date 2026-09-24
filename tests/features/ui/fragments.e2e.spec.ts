@@ -99,6 +99,29 @@ test.describe('fragments UI', () => {
     await expect(page.getByText(/fragment de/i)).toBeVisible()
   })
 
+  test('attaching is only proposed towards the single virtual dataset already using the dataset', async ({ page, goToWithAuth }) => {
+    const standalone = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'standalone' })
+    const user = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'the only user', virtual: { children: [standalone.id] } })).data
+    await goToWithAuth(`/data-fair/dataset/${standalone.id}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.locator('#danger-zone'))
+    const dangerZone = page.locator('#danger-zone')
+    await expect(dangerZone.getByText(/n'est utilisé que par « the only user »/)).toBeVisible({ timeout: 15000 })
+    await dangerZone.getByRole('button', { name: 'Rattacher au jeu de données virtuel' }).click()
+    await expect(page.getByText(/deviendra un fragment de « the only user »/)).toBeVisible()
+    await page.getByRole('button', { name: 'Rattacher', exact: true }).click()
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${standalone.id}`)).data.partOf, { timeout: 10000 }).toEqual({ type: 'dataset', id: user.id })
+
+    // used by two virtual datasets, the dataset is shared: nothing is proposed
+    const shared = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'shared' })
+    for (const title of ['first user', 'second user']) {
+      await ax.post('/api/v1/datasets', { isVirtual: true, title, virtual: { children: [shared.id] } })
+    }
+    await goToWithAuth(`/data-fair/dataset/${shared.id}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.locator('#danger-zone'))
+    await expect(page.locator('#danger-zone').getByText(/Supprimer le jeu de données/).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('#danger-zone').getByText(/Rattacher/)).toHaveCount(0)
+  })
+
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
     await pastActiveAccountGate(page, page.locator('#fragments'))

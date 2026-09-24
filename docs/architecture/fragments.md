@@ -487,12 +487,17 @@ permission model on the client, it is purely presentational.
   `application-config.vue` appends it to every datasets / applications listing `x-fromUrl` of the
   configuration schema (`addPartOfToFromUrls`), so an application can select its own fragment
   datasets and a dashboard its sub-applications.
-- **`fragment-attach-dialog.vue`**: on a standalone resource's danger zone, "Rattacher à un parent" —
-  a `dataset-select` restricted to `virtual: true` and the same owner for a dataset parent, or an
-  autocomplete over `/applications?owner=...` for an application parent. Two alerts: a warning that
-  the resource's own permissions are **permanently lost** and replaced by the derived ACL (detaching
-  later does not restore them, §7), and an informational note of the prerequisites the API refuses on
-  — a published resource, or one configured as reference data, cannot be attached.
+- **`fragment-attach-dialog.vue`: attach only towards a known parent, never a free pick.** Use
+  cases are opened one at a time, starting with virtual datasets. A standalone dataset's danger zone
+  proposes "Rattacher au jeu de données virtuel" only when exactly **one** virtual dataset has it
+  among its children (the `children=` listing the page already runs for its "used by N virtual
+  datasets" info), with the same owner, not itself a fragment, and when the dataset has no fragments
+  of its own. Used by several virtual datasets, the dataset is shared: tying its life to one of
+  them (deleted with it, pulled from the others) would be wrong, so nothing is proposed. The dialog
+  names that parent and carries two alerts: the dataset's own permissions are **permanently lost**
+  and replaced by the derived ACL (detaching later does not restore them, §7), and the prerequisites
+  the API refuses on — a published dataset, or one configured as reference data. Attaching an
+  application has no UI for now; the API (`PATCH .../partOf`) still accepts any valid parent.
 - **Parent delete dialog loop**: deleting a resource that has fragments shows a warning ("Ce jeu de
   données a N fragment(s) qui seront supprimés avec lui") with two actions: the default delete
   button (relies on the unconditional API cascade), or "Détacher d'abord"

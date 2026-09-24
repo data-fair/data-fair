@@ -139,13 +139,16 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     watch: false
   })
 
-  const nbVirtualDatasetsFetch = useFetch<{ count: number }>(() => {
+  // the virtual datasets using this one as a child: counted, and the first ones kept so that a single
+  // virtual parent can be offered as the parent to attach this dataset to (see fragment-attach-dialog)
+  const nbVirtualDatasetsFetch = useFetch<{ count: number, results: { id: string, title: string, owner: any, partOf?: any }[] }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/datasets`
   }, {
-    query: computed(() => ({ children: id, size: 0 }))
+    query: computed(() => ({ children: id, size: 2, select: 'id,title,owner,partOf,-userPermissions,-links' }))
   })
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
+  const virtualParents = computed(() => nbVirtualDatasetsFetch.data.value?.results ?? [])
 
   // fragments of this dataset (only a virtual dataset can have some, and only datasets can be fragments of a dataset)
   // fragments are hidden from every other listing, so this one must reach all of them: the size grows on demand
@@ -241,6 +244,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     applicationsFetch,
     nbVirtualDatasetsFetch,
     nbVirtualDatasets,
+    virtualParents,
     fragmentsFetch,
     fragments,
     nbFragments,

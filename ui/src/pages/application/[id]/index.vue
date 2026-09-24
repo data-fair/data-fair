@@ -368,28 +368,6 @@
               </v-btn>
             </template>
           </v-list-item>
-          <v-list-item
-            v-if="!application.partOf && can('delete')"
-            :prepend-icon="mdiPuzzle"
-            class="py-4"
-          >
-            <div class="text-body-1 font-weight-bold">
-              {{ t('attach') }}
-            </div>
-            <div class="text-body-medium text-medium-emphasis">
-              {{ t('attachDesc') }}
-            </div>
-            <template #append>
-              <v-btn
-                variant="outlined"
-                color="error"
-                class="ml-4 align-self-center"
-                @click="showAttachDialog = true"
-              >
-                {{ t('attach') }}
-              </v-btn>
-            </template>
-          </v-list-item>
 
           <v-divider v-if="can('delete')" />
 
@@ -422,14 +400,6 @@
     <owner-change-dialog
       v-if="can('delete') && !application.partOf"
       v-model="showOwnerDialog"
-      :resource="application"
-      resource-type="applications"
-      @changed="store.applicationFetch.refresh()"
-    />
-
-    <fragment-attach-dialog
-      v-if="!application.partOf && can('delete')"
-      v-model="showAttachDialog"
       :resource="application"
       resource-type="applications"
       @changed="store.applicationFetch.refresh()"
@@ -532,8 +502,6 @@ fr:
   detach: Détacher du parent
   detachDesc: Cette ressource redevient une application indépendante, avec les permissions qu'elle porte actuellement.
   detachSuccess: L'application a été détachée.
-  attach: Rattacher à un parent
-  attachDesc: Faire de cette application un fragment d'une autre application.
   deleteFragmentsWarning: "Cette application a {count} fragment(s) qui seront supprimés avec elle."
   detachFirst: Détacher d'abord
   deleteApp: Supprimer l'application
@@ -583,8 +551,6 @@ en:
   detach: Detach from parent
   detachDesc: This resource becomes an independent application again, with the permissions it currently carries.
   detachSuccess: The application was detached.
-  attach: Attach to a parent
-  attachDesc: Make this application a fragment of another application.
   deleteFragmentsWarning: "This application has {count} fragment(s) that will be deleted with it."
   detachFirst: Detach first
   deleteApp: Delete application
@@ -677,7 +643,6 @@ const cancelMetadata = () => {
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
-const showAttachDialog = ref(false)
 const upgrading = ref(false)
 
 // Fetch additional data once application is loaded

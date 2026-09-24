@@ -472,7 +472,7 @@
             </template>
           </v-list-item>
           <v-list-item
-            v-if="!dataset.partOf && can('changeOwner').value"
+            v-if="attachParent && can('changeOwner').value"
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
@@ -480,7 +480,7 @@
               {{ t('attach') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
-              {{ t('attachDesc') }}
+              {{ t('attachDesc', { parent: attachParent.title }) }}
             </div>
             <template #append>
               <v-btn
@@ -558,10 +558,10 @@
     />
 
     <fragment-attach-dialog
-      v-if="!dataset.partOf && can('changeOwner').value"
+      v-if="attachParent && can('changeOwner').value"
       v-model="showAttachDialog"
       :resource="dataset"
-      resource-type="datasets"
+      :parent="attachParent"
       @changed="store.datasetFetch.refresh()"
     />
 
@@ -719,8 +719,8 @@ fr:
   detach: Détacher du parent
   detachDesc: Cette ressource redevient un jeu de données indépendant, avec les permissions qu'elle porte actuellement.
   detachSuccess: Le jeu de données a été détaché.
-  attach: Rattacher à un parent
-  attachDesc: Faire de ce jeu de données un fragment d'un jeu de données virtuel ou d'une application.
+  attach: Rattacher au jeu de données virtuel
+  attachDesc: "Ce jeu de données n'est utilisé que par « {parent} » : en faire un fragment de ce jeu de données virtuel, masqué des listes et supprimé avec lui."
   deleteFragmentsWarning: "Ce jeu de données a {count} fragment(s) qui seront supprimés avec lui."
   detachFirst: Détacher d'abord
   deleteAllLines: Supprimer toutes les lignes
@@ -790,8 +790,8 @@ en:
   detach: Detach from parent
   detachDesc: This resource becomes an independent dataset again, with the permissions it currently carries.
   detachSuccess: The dataset was detached.
-  attach: Attach to a parent
-  attachDesc: Make this dataset a fragment of a virtual dataset or of an application.
+  attach: Attach to the virtual dataset
+  attachDesc: "This dataset is only used by “{parent}”: make it a fragment of this virtual dataset, hidden from listings and deleted with it."
   deleteFragmentsWarning: "This dataset has {count} fragment(s) that will be deleted with it."
   detachFirst: Detach first
   deleteAllLines: Delete all lines
@@ -1036,6 +1036,18 @@ const confirmRemove = useAsyncAction(async () => {
 }, { success: t('deleteDatasetSuccess') })
 
 const showAttachDialog = ref(false)
+// attaching is only proposed towards a parent already known to use this dataset: the single virtual
+// dataset having it among its children, with the same owner (a fragment has exactly its parent's
+// owner) and not itself a fragment (one level only). Used by several virtual datasets, the dataset
+// is shared: making it depend on one of them (deleted with it) would be wrong, nothing is proposed.
+const attachParent = computed(() => {
+  const d = dataset.value
+  if (!d || d.partOf || nbFragments.value || store.nbVirtualDatasets.value !== 1) return null
+  const parent = store.virtualParents.value[0]
+  if (!parent || parent.partOf) return null
+  const sameOwner = parent.owner?.type === d.owner.type && parent.owner?.id === d.owner.id && (parent.owner?.department ?? null) === (d.owner.department ?? null)
+  return sameOwner ? parent : null
+})
 const confirmDetach = useAsyncAction(async () => {
   await detach()
   await store.datasetFetch.refresh()
