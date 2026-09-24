@@ -45,12 +45,50 @@ Opportunistic; touch when already in the area.
 - `7` remaining `.then()` chains → async/await sweep. `S`, repo-wide.
 - `6` sequential independent awaits in middleware chains — measured negligible; skip unless a latency
   budget demands it. (no action)
+- `7c` **typed mongo collections, the remaining ~95 call sites** `P3 · M`. `DfMongo` exposes typed
+  collection accessors, but most code still reaches for `mongo.db.collection('<name>')`, which yields an
+  untyped `WithId<Document>` that then flows into functions expecting a `Dataset`/`Application`/… The five
+  sites that actually produced a type error were migrated during the typing-root-causes pass; the rest is a
+  mechanical sweep with no immediate ratchet payoff, so it wants the API suite running to be worth doing.
+  Collections with no accessor yet (`journals`, `thumbnails-cache`, `cache`, `extensions-cache`, `locks`,
+  the `integrity-*` family) need a type before they get one. Once the sweep lands, a `no-restricted-syntax`
+  lint rule can keep `db.collection(<literal>)` from coming back.
+- `7d` **remote-services router type mismatches** `P3 · S`. Typing `mongo-escape`'s escape/unescape as
+  identity functions surfaced two real mismatches in `remote-services/router.js`: a `RemoteService` is
+  passed to `setReqResource`, which wants a `Resource` (a `Pick` of `Dataset` — a remote service has no
+  `slug` and its `id` is optional), and a `RemoteServicePatch` is used as a `$set` on a `RemoteService`
+  while the handler assigns `updatedAt` / `actions`, neither of which the patch type declares. Both belong
+  with that router's own conversion to TypeScript, not to a cross-cutting typing pass.
 
 ### PR 8 — Test-suite speed `P2 · L` (the planned next big step)
 Current: Playwright `workers: 1`, `fullyParallel: false`, full suite on every push. Levers in likely
 value order: (1) parallelize API specs with per-spec resource prefixes — mind the nanoid leading-`-`
 `$text` pitfall; (2) rebalance e2e→api→unit now that `operations.ts` surfaces exist (this refactor is the
 enabler); (3) compact redundant API specs.
+
+### PR 9 — Catalog-search follow-ups `P1–P3 · S–M`
+Deferred on purpose when the owned term index replaced `$text` for `datasets` / `applications`
+(see [catalog-search.md](architecture/catalog-search.md)). `9a` is the one with a deadline.
+- `9a` **drop the legacy `fulltext` `$text` index** `P1 · S` — `api/src/mongo.ts` still declares it on
+  both collections although `q=` no longer reads it there. It is kept so pods running pre-6.20 code keep
+  answering `$text` during a rolling deploy. Until it goes, both collections carry two full text-index
+  structures, and `_searchText` is indexed into the legacy one on every write. Trigger: once no pod in
+  the fleet can still be running pre-cutover code.
+  **`fulltext: null` alone is NOT the fix**: `api/src/activity/service.ts` still calls `findUtils.query`
+  for both collections without a `textFilter`, so `/activity?q=` issues a `$text` query on them and would
+  start returning a mongo "text index required" error. Migrate that endpoint to the term index (or drop
+  its `q=` support) in the same change. The index is already back to its pre-6.20 field list, so until
+  then it only costs what it cost before this branch.
+- `9b` **close the backfill window** `P2 · M` — `@data-fair/lib-node/upgrade-scripts` takes a lock but is
+  explicitly not a prerequisite, so in a multi-pod deploy the pods that do not hold it serve `q=` against
+  documents with no `_terms` and return few or no results until the backfill converges. Silent: `count`
+  and `results` agree, nothing is logged. Either a readiness gate (pods wait on the `upgrade` lock before
+  reporting healthy) or a `$text` fallback for documents with no `_terms`. Both were considered and left
+  out of 6.20.0; see the "backfill window" section of catalog-search.md.
+- `9c` **the two 6.20.0 upgrade scripts full-scan on every dev/staging restart** `P3 · S` — neither
+  `{'_searchIndex.v': {$ne: v}}` nor `{_searchText: {$exists: false}}` is index-served, and on a checkout
+  whose `package.json` still matches the folder name both scripts re-run on every boot. Correct (they are
+  idempotent) but it costs a full pass over `datasets` and `applications` each time.
 
 ---
 

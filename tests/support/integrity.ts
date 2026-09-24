@@ -1,17 +1,16 @@
 import { S3Client, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { IntegrityStore } from '../../api/src/integrity/store.ts'
 import { getRawDataset } from './workers.ts'
-import { apiUrl } from './axios.ts'
 import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 
 export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
 const endpoint = integrityEndpoint
 const bucket = 'data-fair-integrity'
-const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
+const credentials = { accessKeyId: 'rustfsadmin', secretAccessKey: 'rustfsadmin' }
 
 export const integrityTestClient = new S3Client({ region: 'us-east-1', endpoint, credentials, forcePathStyle: true })
 
-// the real IntegrityStore, constructed with explicit MinIO options (no #config in the test process)
+// the real IntegrityStore, constructed with explicit RustFS options (no #config in the test process)
 export const integrityTestStore = new IntegrityStore({ region: 'us-east-1', endpoint, bucket, credentials, forcePathStyle: true })
 
 export const ensureIntegrityBucket = async (): Promise<void> => {
@@ -40,15 +39,42 @@ export const waitForIntegrityRevisions = async (prefix: string, expected: number
   return keys
 }
 
+/**
+ * The revision JSONs among a prefix's keys: a revision's `.file` payload and its `.who`
+ * attribution sibling are not revisions.
+ */
+export const revisionKeys = (keys: string[]): string[] =>
+  keys.filter((k) => !k.endsWith('.file') && !k.endsWith('.who')).sort()
+
+/**
+ * Wait for `expected` *revisions*, ignoring `.file` and `.who` keys.
+ *
+ * Gate on this rather than on `waitForIntegrityRevisions` whenever the test then reads the
+ * newest revision. The `.who` sibling is written by the async attribution relay, out of band
+ * with the revision itself, so a raw key count can be reached by a `.who` landing before the
+ * revision the test is actually waiting for — leaving `revisionKeys(...).at(-1)` pointing at
+ * the *previous* revision. That race made the restore specs below fail intermittently, on a
+ * different member of the family each run.
+ */
+export const waitForIntegrityRevisionCount = async (prefix: string, expected: number, timeoutMs = 20000): Promise<string[]> => {
+  const start = Date.now()
+  let keys = await listIntegrityKeys(prefix)
+  while (revisionKeys(keys).length < expected && Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    keys = await listIntegrityKeys(prefix)
+  }
+  return keys
+}
+
 export const revisionsPrefix = (dataset: any): string =>
   `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
 
 // The per-line relay is driven by the dataset-level _needsHistorizingLines hint; wait for the
 // hint to clear (all stamped lines shipped) before asserting on line anchors or running a check.
-export const waitForLinesDrained = async (ax: any, datasetId: string, timeout = 15000) => {
+export const waitForLinesDrained = async (datasetId: string, timeout = 15000) => {
   const start = Date.now()
   while (Date.now() - start < timeout) {
-    const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+    const raw = await getRawDataset(datasetId)
     if (!raw._needsHistorizingLines) return
     await new Promise(resolve => setTimeout(resolve, 200))
   }

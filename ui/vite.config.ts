@@ -14,6 +14,10 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/data-fair',
+  // maplibre 6 ships its worker as an ES module and starts it with `new Worker(url, { type: 'module' })`.
+  // Vite's default worker format is iife, which in dev serves that module source as a classic script
+  // ("Cannot use import statement outside a module", and no vector tiles at all).
+  worker: { format: 'es' },
   optimizeDeps: {
     // prevent reloading when auto-discovering deps to optimize, everything must be solved before hand
     noDiscovery: true,

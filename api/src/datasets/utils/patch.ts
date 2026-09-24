@@ -261,32 +261,45 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   }
 
   if (dataset.file && 'constraints' in patch) {
-    // unique constraints changed (added, removed or dropped to null/[]): make sure the
-    // index-lines unicity gate re-runs, no matter what the chain above decided. Applied
-    // as a floor AFTER the chain (rather than as a chain member) so that a combined patch
-    // (e.g. structure tab saving a schema transform/validation-rule change together with a
+    // Constraints changed (added, removed or dropped to null/[]): make sure the phase(s)
+    // that enforce them re-run, no matter what the chain above decided. Applied as a floor
+    // AFTER the chain (rather than as a chain member) so that a combined patch (e.g. the
+    // structure tab saving a schema transform/validation-rule change together with a
     // constraint change) doesn't lose the other status trigger to first-match-wins ordering.
     //
-    // Statuses that already reach batch-processor/index-lines.ts (the unicity gate) on their
-    // own, directly or via the file pipeline (storeFile -> normalizeFile -> analyzeCsv/Geojson
-    // -> validateFile -> indexLines, see tasks.ts): 'loaded' (full file reprocessing), 'stored'
-    // and 'normalized' (set by the error-retry branch above when the previous run failed at the
-    // store/normalize step, see tasks.ts:102-103,144-145), and 'analyzed'/'validated'
-    // (reindexerStatus for file datasets). Those are left as-is.
+    // Which phase enforces what:
+    // - 'unique' → the index-lines unicity gate. Statuses that reach it on their own,
+    //   directly or via the file pipeline (storeFile -> normalizeFile -> analyzeCsv/Geojson
+    //   -> validateFile -> indexLines, see tasks.ts): 'loaded', 'stored', 'normalized',
+    //   'analyzed', 'validated'. 'validation-updated' does NOT (process-file.ts finalizes
+    //   it directly).
+    // - 'dateCoherence' → the process-file validation phase. Statuses that reach it:
+    //   'loaded', 'stored', 'normalized', 'analyzed', 'validation-updated'. 'validated'
+    //   does NOT (validateFile only runs on 'analyzed'/'validation-updated').
     //
-    // 'validation-updated' is the one exception: process-file.ts finalizes it directly
-    // (dataset.status === 'validation-updated' ? 'finalized' : 'validated', see
-    // process-file.ts:103) without ever going through index-lines, so it must be escalated
-    // to 'analyzed' — this re-runs both the validation rules and the constraint gate.
-    //
-    // Anything else (including no status change at all, e.g. a constraints-only patch that
-    // matched no earlier branch) doesn't reach the gate either and gets the reindexerStatus
-    // floor ('validated' for file datasets).
+    // The union of old and new constraints decides which phases are needed: removal needs
+    // the phase to re-run too (that's the "drop the constraint to recover" path).
+    const constraintTypes = new Set([...(dataset.constraints ?? []), ...(patch.constraints ?? [])].map((c: any) => c.type))
+    const needsUnicityGate = constraintTypes.has('unique')
+    const needsValidationPhase = constraintTypes.has('dateCoherence')
     const reachesUnicityGate = ['loaded', 'stored', 'normalized', 'analyzed', 'validated']
-    if (patch.status === 'validation-updated') {
-      patch.status = 'analyzed'
-    } else if (!patch.status || !reachesUnicityGate.includes(patch.status)) {
-      patch.status = reindexerStatus
+    const reachesValidation = ['loaded', 'stored', 'normalized', 'analyzed', 'validation-updated']
+    if (needsUnicityGate && needsValidationPhase) {
+      const reachesBoth = ['loaded', 'stored', 'normalized', 'analyzed']
+      if (!patch.status || !reachesBoth.includes(patch.status)) patch.status = 'analyzed'
+    } else if (needsUnicityGate) {
+      if (patch.status === 'validation-updated') {
+        patch.status = 'analyzed'
+      } else if (!patch.status || !reachesUnicityGate.includes(patch.status)) {
+        patch.status = reindexerStatus
+      }
+    } else if (needsValidationPhase) {
+      if (patch.status === 'validated') {
+        // the chain asked for a reindex: keep it AND add the validation phase
+        patch.status = 'analyzed'
+      } else if (!patch.status || !reachesValidation.includes(patch.status)) {
+        patch.status = 'validation-updated'
+      }
     }
   }
 

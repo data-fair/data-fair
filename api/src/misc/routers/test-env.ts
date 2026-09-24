@@ -79,6 +79,16 @@ router.delete('/', async (req, res, next) => {
 
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
+    if (config.compatODS) {
+      const { memoizedGetCompatODS } = await import('../../api-compat/ods/index.ts')
+      memoizedGetCompatODS.clear()
+    }
+    // corpus statistics are memoized for up to an hour and are not derived from any document,
+    // so without this every catalog-search ranking assertion is scored against whatever corpus
+    // the previous suite left behind
+    const { datasetsStats, applicationsStats } = await import('../utils/text-search/collections.ts')
+    datasetsStats.clear()
+    applicationsStats.clear()
     clearApiKeysCache()
     clearApplicationKeysCaches()
     rateLimiting.clear()
@@ -125,6 +135,33 @@ router.get('/raw-dataset/:id', async (req, res, next) => {
     const dataset = await mongo.datasets.findOne({ id: req.params.id })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })
     res.json(dataset)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Patch an application document directly in MongoDB (test-only). Same shape as
+// patch-dataset above (flat body -> $set, optional `$unset` key -> $unset).
+router.post('/patch-application/:applicationId', async (req, res, next) => {
+  try {
+    const { $unset, ...flatSet } = req.body ?? {}
+    const update: any = {}
+    if (Object.keys(flatSet).length) update.$set = flatSet
+    if ($unset) update.$unset = $unset
+    if (!update.$set && !update.$unset) update.$set = {}
+    await mongo.applications.updateOne({ id: req.params.applicationId }, update)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Return the raw MongoDB document for an application
+router.get('/raw-application/:id', async (req, res, next) => {
+  try {
+    const application = await mongo.applications.findOne({ id: req.params.id })
+    if (!application) return res.status(404).json({ error: 'application not found' })
+    res.json(application)
   } catch (err) {
     next(err)
   }

@@ -176,10 +176,22 @@ test.describe('permissions editor', () => {
       // Enter email
       await page.locator('.v-dialog').getByLabel(/Email/).fill('external@test.com')
 
-      // Select read class in actions
-      const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Actions/ })
+      // When Lister is checked, Lecture is checked and disabled with its explanatory subtitle.
+      // Match on the title element rather than the option's accessible name: "Lecture" and
+      // "Lecture informations avancées" are both options, and the name of the former also
+      // absorbs the subtitle when it is shown, so no name pattern picks it out on its own.
+      const actionsSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Classes d'actions/ })
       await actionsSelect.click()
-      await page.getByRole('option', { name: /^Lecture$/ }).click()
+      const lectureOption = page.getByRole('option')
+        .filter({ has: page.locator('.v-list-item-title', { hasText: /^Lecture$/ }) })
+      // Vuetify greys the option out with a class and no aria-disabled, so toBeDisabled() —
+      // which needs the disabled attribute or aria-disabled — would read it as enabled and
+      // its negation would pass vacuously. Assert on the class that actually carries the state.
+      await expect(lectureOption).toHaveClass(/v-list-item--disabled/)
+      await expect(lectureOption).toContainText(/Toujours autorisé si la permission de lister est activée/)
+      // Uncheck Lister so Lecture becomes enabled and remains the sole selected class
+      await page.getByRole('option', { name: /^Lister$/ }).click()
+      await expect(lectureOption).not.toHaveClass(/v-list-item--disabled/)
       await page.keyboard.press('Escape')
 
       // Validate
@@ -219,6 +231,39 @@ test.describe('permissions editor', () => {
       }, { timeout: 5000 }).toBeTruthy()
     })
 
+    // Regression guard: simple-directory only fills a partner's `id` once the
+    // partnership is accepted. A pending invitation used to be offered in the
+    // partner select and produced a permission with no id, which the API rejects
+    // with "Error in permissions format" (400). It must not be listed at all.
+    test('a pending partner is not offered in the partner select', async ({ page, goToWithAuth }) => {
+      await page.route('**/simple-directory/api/organizations/test_org1', async (route) => {
+        const response = await route.fetch()
+        const org = await response.json()
+        org.partners = [
+          { name: 'Partenaire En Attente', contactEmail: 'pending@test.com', partnerId: 'pending-partner', createdAt: '2026-01-01T00:00:00.000Z' },
+          ...(org.partners ?? [])
+        ]
+        await route.fulfill({ json: org })
+      })
+
+      await goToPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+
+      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
+
+      const orgTypeSelect = page.locator('.v-dialog .v-select').nth(1)
+      await orgTypeSelect.click()
+      await page.getByRole('option', { name: /partenaires/ }).click()
+
+      const partnerSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Partenaire/ })
+      await partnerSelect.click()
+      // the accepted partners are listed, the pending one is not
+      await expect(page.getByRole('option', { name: /Test Org 2/ })).toBeVisible({ timeout: 5000 })
+      await expect(page.getByRole('option', { name: /Partenaire En Attente/ })).toHaveCount(0)
+    })
+
     // Regression guard for two bugs in the edit-permission dialog:
     // 1. The detailed-actions select grouped its entries with `{ header }`
     //    (Vuetify 2 syntax); on Vuetify 4 these rendered as "[object Object]".
@@ -233,9 +278,8 @@ test.describe('permissions editor', () => {
       await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
 
       // Default scope is the owner organization with no role checked.
-      // Expert mode reveals the detailed-actions select; its group subheaders
-      // must render their label, never "[object Object]".
-      await page.locator('.v-dialog').getByLabel(/Mode expert/i).click()
+      // The detailed-actions select is always visible (no expert switch);
+      // its group subheaders must render their label, never "[object Object]".
       const detailedSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Actions détaillées/ })
       await detailedSelect.click()
       const listbox = page.getByRole('listbox')

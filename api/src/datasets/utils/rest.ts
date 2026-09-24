@@ -29,7 +29,7 @@ import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
-import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage, dateCoherenceProps, dateCoherenceViolation } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
@@ -41,7 +41,7 @@ import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
-import { type RequestWithRestDataset } from '#types/dataset/index.ts'
+import { type RequestWithRestDataset, type Unicite } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
@@ -59,7 +59,8 @@ type Operation = {
   fullBody: any,
   filter: { _id: string },
   _status?: number,
-  _error?: string
+  _error?: string,
+  _warning?: string
 }
 
 dayjs.extend(duration)
@@ -211,7 +212,7 @@ const constraintIndexName = (constraint: any) =>
 
 export const configureConstraintIndexes = async (dataset: RestDataset) => {
   const c = collection(dataset)
-  const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
+  const constraints = (dataset.constraints ?? []).filter((ct): ct is Unicite => ct.type === 'unique')
   const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
 
   // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
@@ -593,6 +594,9 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   }
 
   // now that operations were completed perform validation and calculate hash for all operations
+  const dateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    ? dateCoherenceProps(dataset.schema ?? [])
+    : null
   const createUpdatePreviousFilters = []
   let v = 0
   for (const operation of operations) {
@@ -630,6 +634,27 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
           }
         } else {
           operation._error = message
+          operation._status = 400
+          continue
+        }
+      }
+    }
+
+    // dateCoherence constraint: row-local check on the merged row — fullBody covers
+    // patch actions whose previous body was merged above
+    if (dateCoherence) {
+      const coherenceError = dateCoherenceViolation(
+        operation.fullBody[dateCoherence.startProp.key],
+        operation.fullBody[dateCoherence.endProp.key],
+        dateCoherence.startProp,
+        dateCoherence.endProp,
+        config.defaultTimeZone
+      )
+      if (coherenceError) {
+        if (dataset.nonBlockingValidation) {
+          operation._warning = operation._warning ? `${operation._warning}\n${coherenceError}` : coherenceError
+        } else {
+          operation._error = coherenceError
           operation._status = 400
           continue
         }
@@ -737,7 +762,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
             operation._status = 409
             // the errmsg names the violated index (constraint_unique_<hash>), map it back to
             // the constraint so the message can name the columns
-            const failedConstraint = (dataset.constraints ?? []).find(ct => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            const failedConstraint = (dataset.constraints ?? []).find((ct): ct is Unicite => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
             operation._error = failedConstraint
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"

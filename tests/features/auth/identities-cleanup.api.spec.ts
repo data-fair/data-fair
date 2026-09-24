@@ -40,6 +40,21 @@ test.describe('personal information storage cleanup', () => {
     assert.deepEqual(perms.data, [{ type: 'user', id: 'test_user2', name: 'Renamed User2', classes: ['read'] }])
   })
 
+  test('identity report is scoped to the requested identity', async () => {
+    const id = 'identities-cleanup-5'
+    await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id })
+
+    // an unknown identity owns nothing: the report must be empty, not the whole catalog
+    const unknown = await anonymousAx.get(`/api/v1/identities/user/unknown-user/report?key=${config.secretKeys.identities}`)
+    assert.deepEqual(unknown.data.owns.map((s: any) => s.items), [[], [], []])
+    assert.deepEqual(unknown.data.hasPermissions.map((s: any) => s.items), [[], [], []])
+    assert.deepEqual(unknown.data.hasCreated.map((s: any) => s.items), [[], [], []])
+
+    const known = await anonymousAx.get(`/api/v1/identities/user/test_user1/report?key=${config.secretKeys.identities}`)
+    const datasets = known.data.owns.find((s: any) => s.collection === 'Jeux de données')
+    assert.deepEqual(datasets.items.map((i: any) => i.title), [id])
+  })
+
   test('identity delete removes permission entries', async () => {
     const id = 'identities-cleanup-4'
     await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id })

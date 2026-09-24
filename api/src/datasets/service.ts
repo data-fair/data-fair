@@ -11,13 +11,16 @@ import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
 import * as webhooks from '../misc/utils/webhooks.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
-import { checkConstraints } from './utils/constraints.ts'
+import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
+import { searchIndexPatch } from './utils/search-text.ts'
+import { RESPONSE_EXCLUDED_FIELD_NAMES, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
+import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
@@ -132,9 +135,16 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
       ]
     }
   }
-  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  // catalogMode is the only mode whose publication-site filter is a strict owner equality;
+  // otherwise foreign-owned master-data datasets are in the result set and must be counted too.
+  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: options.catalogMode })
+  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope) : null
+  // A query whose every term is unknown must return NOTHING, never an unfiltered list.
+  const textFilter = reqQuery.q ? (plan ? datasetsTextSearch.matchFilter(plan) : { _id: null }) : undefined
+
+  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters, textFilter)
   if (statusBreachOr) (query.$and ||= []).push(statusBreachOr)
-  const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
+  const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, datasetsTextSearch.sortSpec())
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
   // Rebuild to preserve key ordering — Mongo applies sort keys in insertion order.
@@ -142,7 +152,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   for (const [k, v] of Object.entries(rawSort)) {
     sort[k === 'modified' ? '_modified' : k] = v
   }
-  const project = findUtils.project(reqQuery.select, ['_modified'], reqQuery.raw === 'true')
+  const project = findUtils.project(reqQuery.select, ['_modified', '_searchText', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
@@ -150,16 +160,31 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     if (explain) explain.countMS = Date.now() - t0
     return res
   })
-  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
+  // a text filter must run uncollated or it COLLSCANs — see findUtils.resultsOptions
+  const resultsOptions = findUtils.resultsOptions(textFilter)
+  // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
+  // An explicit ?sort= never reads _score, so keep the plain find() path for it.
+  const relevanceSorted = !!plan && !reqQuery.sort
+  const resultsPromise = size > 0 && (relevanceSorted
+    ? datasets.aggregate([
+      { $match: query },
+      { $addFields: { _score: datasetsTextSearch.scoreExpression(plan) } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: size },
+      { $project: project }
+    ], resultsOptions).toArray()
+    : datasets.find(query, resultsOptions).limit(size).skip(skip).sort(sort).project(project).toArray()
+  ).then(res => {
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters)).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters, textFilter)).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = reqQuery.sums && datasets
-    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters)).toArray()
+    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters, textFilter)).toArray()
     .then(sumsResponse => {
       const res = sumsResponse[0] || {}
       for (const field of reqQuery.sums.split(',')) {
@@ -375,6 +400,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
+  assignIndexFields(dataset, searchIndexPatch(dataset))
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -439,6 +465,35 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   const db = mongo.db
 
+  if (isRestDataset(dataset) && 'constraints' in patch) {
+    // a newly-added dateCoherence constraint must never be applied against violating
+    // data (same guarantee as the unique partial index): scan the live rows once,
+    // BEFORE configureConstraintIndexes so a rejection leaves the index set untouched.
+    // This also runs BEFORE the removed-extension $unset below: a combined PATCH that both
+    // removes an extension and adds a violating dateCoherence constraint must reject with
+    // the dataset (and its extension columns) left untouched, not wipe the columns first.
+    const newDateCoherence = (patch.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    const oldDateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    if (newDateCoherence && !oldDateCoherence) {
+      const props = dateCoherenceProps((patch.schema ?? dataset.schema) ?? [])
+      if (props) {
+        const { startProp, endProp } = props
+        const c = restDatasetsUtils.collection(dataset)
+        let n = 0
+        const cursor = c.find({ _deleted: false, [startProp.key]: { $exists: true }, [endProp.key]: { $exists: true } })
+          .project({ [startProp.key]: 1, [endProp.key]: 1 })
+        for await (const line of cursor) {
+          if (++n % 100 === 0) await new Promise(resolve => setImmediate(resolve))
+          const coherenceError = dateCoherenceViolation(line[startProp.key], line[endProp.key], startProp, endProp, config.defaultTimeZone)
+          if (coherenceError) {
+            throw httpError(400, `La contrainte de cohérence des dates ne peut pas être appliquée : au moins une ligne existante ne la respecte pas. ${coherenceError}`)
+          }
+        }
+      }
+    }
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
+  }
+
   if (patch.extensions && dataset.isRest && dataset.extensions) {
     // TODO: check extension type (remoteService or exprEval)
     const removedExtensions = dataset.extensions.filter((e: any) => {
@@ -457,10 +512,6 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         { $unset: unset }
       )
     }
-  }
-
-  if (isRestDataset(dataset) && 'constraints' in patch) {
-    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
   }
 
   if (removedRestProps && removedRestProps.length) {
@@ -513,6 +564,20 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   if ('modified' in patch || 'dataUpdatedAt' in patch || 'updatedAt' in patch) {
     patch._modified = computeModified({ ...dataset, ...patch })
   }
+
+  // _terms/_pos/_len derive from every configured indexed field — far more than the schema that
+  // _searchText derives from. Derive the trigger from the definition itself: a hardcoded list here
+  // would silently go stale the next time a field is added to the definition. Skipped for drafts —
+  // the fields describe the published dataset. Kept out of `patch`: the write routes report
+  // Object.keys(patch) to the user as the fields they modified.
+  const INDEXED_TOP_LEVEL = new Set(
+    Object.keys(datasetsTextSearch.definition.fields).map(path => path.split('.')[0])
+  )
+  const touchesIndexedContent = Object.keys(patch).some(key => INDEXED_TOP_LEVEL.has(key)) ||
+    !!patch.schema || !!patch.permissions
+  const searchIndexUpdate = touchesIndexedContent && !dataset.draftReason && !patch.draftReason
+    ? searchIndexPatch({ ...dataset, ...patch })
+    : undefined
 
   Object.assign(dataset, patch)
 
@@ -575,6 +640,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       mongoPatch.$set = mongoPatch.$set || {}
       mongoPatch.$set[key] = patch[key]
     }
+  }
+  if (searchIndexUpdate) {
+    mergeIndexUpdate(mongoPatch, searchIndexUpdate)
+    assignIndexFields(dataset, searchIndexUpdate)
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 
@@ -645,7 +714,15 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
-    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
+    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', { i18nKey: 'data-updated-file' })
+    await propagateDataUpdatedToVirtualParents(patchedDataset, 'data-fair-worker', { i18nKey: 'data-updated-file' })
+
+    // reuse the canonical compatibility check (strips innocuous props like description/title/enum)
+    // so this path matches the router PATCH behaviour.
+    if (!datasetUtils.schemasFullyCompatible(datasetFull.schema, patchedDataset.schema, true)) {
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'structure-updated', { extra: { patch: 'schema' } })
+    }
+
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
       const breakingChangesDesc = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
@@ -656,11 +733,12 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
         a[locale] = { breakingChanges: msg }
         return a
       }, {})
+      const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
       webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { i18nKey, localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
     }
   }
 

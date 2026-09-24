@@ -17,7 +17,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -102,7 +102,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { ...ctx.logCtx, account: owner })
       eventsQueue.pushEvent({
         title: 'Création d\'une clé d\'API',
-        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
@@ -146,7 +146,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       }
       eventsQueue.pushEvent({
         title: 'Suppression d\'une clé d\'API',
-        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },
@@ -175,6 +175,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
+
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
@@ -255,8 +256,8 @@ export const getDatasetsMetadata = async (params: SettingsParams) => {
 }
 
 export const getAgentChat = async (params: SettingsParams) => {
-  const { ownerFilter } = params
-  const result = await mongo.settings.findOne(ownerFilter, { projection: { _id: 0, agentChat: 1 } })
+  // the AI assistant is activated at the organization level only, departments inherit the activation
+  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1 } })
   return { agentChat: !!(result && isMainSettings(result) && result.agentChat) }
 }
 
@@ -318,10 +319,12 @@ export const deletePublicationSite = async (ctx: SettingsWriteContext, siteType:
   validateSettings(settings)
   await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   const ref = `${siteType}:${siteId}`
-  const publicationSitesFilter = { publicationSites: ref }
+  // a pending publication request points at the site too, it becomes dangling if left behind
+  const publicationSitesFilter = { $or: [{ publicationSites: ref }, { requestedPublicationSites: ref }] }
+  const pullRef = { $pull: { publicationSites: ref, requestedPublicationSites: ref } }
   // stamp BEFORE the $pull: the pull removes the very element this filter matches, so stamping
   // after would match nothing (over-stamping here is harmless, the relay dedupes)
   await stampHistorizeMany(publicationSitesFilter)
-  await mongo.datasets.updateMany(publicationSitesFilter, { $pull: { publicationSites: ref } })
-  await mongo.applications.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
+  await mongo.datasets.updateMany(publicationSitesFilter, pullRef)
+  await mongo.applications.updateMany(publicationSitesFilter, pullRef)
 }

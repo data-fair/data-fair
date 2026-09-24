@@ -7,12 +7,16 @@ const messages: Record<string, Record<string, string>> = {
   fr: {
     readDatasetInfo: 'Lire les informations du jeu de données',
     summarizerSubAgent: 'Résumer un jeu de données',
-    summarizerSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis produire un résumé concis.'
+    summarizerSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis produire un résumé concis.',
+    searchTermsSubAgent: 'Proposer des termes de recherche',
+    searchTermsSubAgentDesc: 'Lire les métadonnées, le schéma et des exemples, puis proposer des synonymes, sigles et formulations courantes pour la recherche du catalogue.'
   },
   en: {
     readDatasetInfo: 'Read dataset info',
     summarizerSubAgent: 'Summarize a dataset',
-    summarizerSubAgentDesc: 'Read the dataset metadata and schema, then produce a concise summary.'
+    summarizerSubAgentDesc: 'Read the dataset metadata and schema, then produce a concise summary.',
+    searchTermsSubAgent: 'Suggest search terms',
+    searchTermsSubAgentDesc: 'Read the metadata, schema and samples, then propose synonyms, acronyms and everyday wording for the catalog search.'
   }
 }
 
@@ -94,6 +98,46 @@ Example of a good summary (French):
     // set_dataset_metadata. Keep it delegated even when the host enables the flatten toggle.
     delegateOnly: true,
     prompt: summarizerPrompts[locale.value] ?? summarizerPrompts.en,
+    tools: ['read_dataset_info']
+  })
+
+  const searchTermsPrompts: Record<string, string> = {
+    fr: `Tu proposes des termes de recherche cachés pour un jeu de données publié sur Data Fair. Ces termes ne sont affichés dans aucune interface : ils servent uniquement à ce que la recherche textuelle du catalogue retrouve le jeu de données quand quelqu'un emploie d'autres mots que ceux du titre ou du résumé. Ils restent toutefois présents dans la réponse API publique du jeu de données : ne propose rien de confidentiel ou de jargon interne.
+
+Tâche :
+1. Appelle read_dataset_info pour obtenir les métadonnées, le schéma (libellés et descriptions de colonnes, valeurs d'énumération) et des exemples.
+2. Renvoie une liste de 10 à 40 termes ou expressions courtes, un par ligne, comme réponse finale.
+
+Règles :
+- Ne répète pas les mots déjà présents dans le titre, le résumé ou les mots-clés : ils sont déjà indexés.
+- Donne les sigles AVEC leur développement (ex. "PLU" et "plan local d'urbanisme").
+- Ajoute les formulations courantes et administratives d'un même concept (ex. "HLM", "logement social", "habitat social").
+- Ajoute les notions voisines qu'une personne taperait pour trouver ce jeu (ex. "élections" pour des bureaux de vote).
+- Des termes ou des expressions de 1 à 4 mots, en français, sans phrase, sans ponctuation finale, sans explication.
+- Pas de valeurs recopiées des données, pas de chiffres, pas de dates.`,
+    en: `You propose hidden search terms for a dataset published on Data Fair. These terms are not shown in any interface: their only purpose is to let the catalog text search find the dataset when someone uses other words than the title or summary. They are still present in the dataset's public API response, though: do not propose anything confidential or internal jargon.
+
+Task:
+1. Call read_dataset_info to get the metadata, the schema (column titles and descriptions, enum values) and samples.
+2. Return a list of 10 to 40 short terms or expressions, one per line, as your final response.
+
+Rules:
+- Do not repeat words already in the title, summary or keywords: they are already indexed.
+- Give acronyms WITH their expansion (e.g. "PLU" and "plan local d'urbanisme").
+- Add everyday and administrative wordings of the same concept (e.g. "HLM", "logement social", "habitat social").
+- Add neighbouring notions a person would type to find this dataset (e.g. "élections" for polling stations).
+- Terms of 1 to 4 words, in the language of the dataset, no sentences, no trailing punctuation, no explanation.
+- No values copied from the data, no numbers, no dates.`
+  }
+
+  useAgentSubAgent({
+    name: 'search_terms_writer',
+    title: t('searchTermsSubAgent'),
+    description: t('searchTermsSubAgentDesc'),
+    model: 'summarizer',
+    // producer: the lead agent shows the list to the user and applies it via set_dataset_metadata
+    delegateOnly: true,
+    prompt: searchTermsPrompts[locale.value] ?? searchTermsPrompts.en,
     tools: ['read_dataset_info']
   })
 }

@@ -382,8 +382,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
-    // single source of truth: every suffix except the any-of _search requires exactly one capability
-    if (filterSuffix !== '_search') requiredCapability(prop, filterSuffix, FILTER_CAPABILITIES[filterSuffix] as string)
+    // single source of truth: the capability-gated suffixes require exactly one capability. The any-of
+    // _search and the mapping-driven _exists/_nexists gate themselves in their own branch below.
+    const requiredCap = FILTER_CAPABILITIES[filterSuffix]
+    if (typeof requiredCap === 'string') requiredCapability(prop, filterSuffix, requiredCap)
 
     if (filterSuffix === '_in') {
       try {
@@ -478,14 +480,15 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
         if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
         must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
       }
-    } else if (filterSuffix === '_exists') {
+    } else if (filterSuffix === '_exists' || filterSuffix === '_nexists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
-      if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
-      else filter.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
-    } else if (filterSuffix === '_nexists') {
-      const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
-      if (fields.length === 1) mustNot.push({ exists: { field: fields[0] } })
-      else mustNot.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
+      // no indexed representation at all: an exists clause would silently match nothing
+      if (!fields.length) throw httpError(400, `Impossible d'appliquer un filtre ${filterSuffix} sur le champ ${prop.key}. Aucune indexation de ce champ ne permet de tester la présence d'une valeur. ${columnOperationsHint(prop)}`)
+      const clause = fields.length === 1
+        ? { exists: { field: fields[0] } }
+        : { bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } }
+      if (filterSuffix === '_exists') filter.push(clause)
+      else mustNot.push(clause)
     }
   }
 
