@@ -13,10 +13,10 @@ import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
 import { type AccountKeys, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
+import * as notifications from '../misc/utils/notifications.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
@@ -100,7 +100,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       }
 
       eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { ...ctx.logCtx, account: owner })
-      eventsQueue.pushEvent({
+      await notifications.send({
         title: 'Création d\'une clé d\'API',
         body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
@@ -144,7 +144,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
         eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { ...ctx.logCtx, account: owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
-      eventsQueue.pushEvent({
+      await notifications.send({
         title: 'Suppression d\'une clé d\'API',
         body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {

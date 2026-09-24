@@ -7,7 +7,6 @@ import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
@@ -242,7 +241,7 @@ export const registerMetadataRoutes = (router: Router) => {
         eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
         const draft = !!dataset.draftReason
-        eventsQueue.pushEvent({
+        await notifications.send({
           title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
           body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
           topic: {

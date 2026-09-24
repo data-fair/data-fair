@@ -9,7 +9,6 @@ import clone from '@data-fair/lib-utils/clone.js'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { reqSession, reqSessionAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { readDataset, reqDataset, reqDatasetOptional, reqDatasetFull, checkStorage, lockDataset, setReqDraft } from '../middlewares.ts'
@@ -198,7 +197,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
       const draft = !!dataset.draftReason
-      eventsQueue.pushEvent({
+      await notifications.send({
         title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
         body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
         topic: {
