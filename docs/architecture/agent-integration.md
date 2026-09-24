@@ -724,3 +724,25 @@ frequently" line. It answered a question the application can simply state, and
 every call cost a full model request carrying the whole history and tool list.
 `navigate` and `list_pages` are unchanged; `ui/src/composables/agent/url-utils.ts`
 still builds the absolute URLs, and the reported `location.url` uses it.
+
+## 11. The API-facing agent surface
+
+Independently of the browser tools above, the served OpenAPI document carries `x-agent`
+annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into the `explore`
+tools — the same six read tools as `agent-tools/`, generated from the document instead of
+hand-written. They are consumed by the stack's MCP server (`data-fair/mcp`), by coding agents
+and by the agents service's autonomous runs; the browser assistant does not use them yet.
+
+`GET /api/v1/agents/index.json` lists the deployment's service-level documents
+(`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
+configured, at the site origin and its conventional mount path. A consumer is configured with
+that one URL.
+
+The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
+loads the generator with `lint: 'error'` and diffs `tests/fixtures/agent-surface.explore.json`.
+Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is what the reviewer reads.
+Admin-only routes carry no annotation, so the surface does not vary with the session.
+
+Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
+a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
+accepts it. The distance sort is described in the `workflow` skill, not in the parameter.
