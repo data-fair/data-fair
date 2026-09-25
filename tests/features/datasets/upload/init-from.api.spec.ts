@@ -400,6 +400,71 @@ test.describe('Datasets with auto-initialization from another one', () => {
     assert.ok(!lines.results.find((l: any) => l.id === 'bidule'))
   })
 
+  test('Create REST and file datasets from a metadata-only dataset', async () => {
+    const ax = testUser1
+    const metadata = {
+      summary: 'A summary',
+      description: 'A description',
+      license: { title: 'Licence Ouverte', href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence' },
+      origin: 'https://example.com/origin',
+      topics: [{ id: 'topic1', title: 'Topic 1' }],
+      keywords: ['kw1', 'kw2'],
+      spatial: 'France',
+      temporal: { start: '2024-01-01', end: '2024-12-31' },
+      frequency: 'monthly',
+      creator: 'Someone',
+      customMetadata: { foo: 'foo value' }
+    }
+    const metaOnly = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta only', ...metadata })).data
+    const parts = ['description', 'license', 'origin', 'topics', 'keywords', 'spatial', 'temporal', 'frequency', 'creator', 'customMetadata']
+
+    const rest = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest from meta', initFrom: { dataset: metaOnly.id, parts } })).data
+    const restDataset = await waitForFinalize(ax, rest.id)
+    for (const [key, value] of Object.entries(metadata)) assert.deepEqual(restDataset[key], value, key)
+
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('body', JSON.stringify({ title: 'file from meta', initFrom: { dataset: metaOnly.id, parts } }))
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const fileDataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(fileDataset.count, 2)
+    for (const [key, value] of Object.entries(metadata)) assert.deepEqual(fileDataset[key], value, key)
+  })
+
+  test('Only copy the topics and custom metadata known to the target account', async () => {
+    const source = (await testUser1.post('/api/v1/datasets', {
+      isMetaOnly: true,
+      title: 'meta only',
+      license: { title: 'Some license', href: 'https://example.com/license' },
+      topics: [{ id: 'topic1', title: 'Topic 1' }, { id: 'topic2', title: 'Topic 2' }],
+      customMetadata: { foo: 'foo value', bar: 'bar value' }
+    })).data
+    await testUser1.put(`/api/v1/datasets/${source.id}/permissions`, [{ classes: ['read'] }])
+    await testUser5.put('/api/v1/settings/user/test_user5', {
+      topics: [{ id: 'topic1', title: 'Topic 1' }],
+      datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] }
+    })
+
+    const res = await testUser5.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest from partner meta',
+      initFrom: { dataset: source.id, parts: ['license', 'topics', 'customMetadata'] }
+    })
+    const dataset = await waitForFinalize(testUser5, res.data.id)
+    assert.deepEqual(dataset.license, { title: 'Some license', href: 'https://example.com/license' })
+    assert.deepEqual(dataset.topics, [{ id: 'topic1', title: 'Topic 1' }])
+    assert.deepEqual(dataset.customMetadata, { foo: 'foo value' })
+  })
+
+  test('Refuse copying data from a metadata-only dataset', async () => {
+    const ax = testUser1
+    const metaOnly = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta only' })).data
+    const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'rest from meta', initFrom: { dataset: metaOnly.id, parts: ['data'] } })
+    await waitForDatasetError(ax, res.data.id)
+    const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
+    assert.ok(journal.find((e: any) => e.type === 'error').data.includes('ne contient que des métadonnées'))
+  })
+
   test('Inherit conformsTo from a public reference dataset across accounts', async () => {
     // user1 publishes a reference dataset and marks it as conforming to an external schema
     const ref = await sendDataset('datasets/dataset1.csv', testUser1)

@@ -14,11 +14,14 @@ import * as virtualDatasetsUtils from '../../datasets/utils/virtual.ts'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
-import type { DatasetInternal, DatasetLineAction } from '#types'
+import type { DatasetInternal, DatasetLineAction, Settings } from '#types'
 import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
+import { rootSettingsFilter } from '../../settings/operations.ts'
 
 export const eventsPrefix = 'initialize'
+
+const copiedMetadataKeys = ['license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata'] as const
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:initializer:${dataset.id}`)
@@ -51,6 +54,9 @@ export default async function (dataset: DatasetInternal) {
     let metadataAttachments: any[] = []
 
     if (dataset.initFrom.parts.includes('data')) {
+      if (parentDataset.isMetaOnly) {
+        throw new Error(`[noretry] le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id}) ne contient que des métadonnées, ses données ne peuvent pas être copiées`)
+      }
       if (!parentDatasetPermissions.includes('readLines')) {
         throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
       }
@@ -109,6 +115,24 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('description')) {
       patch.description = parentDataset.description
       patch.summary = parentDataset.summary
+    }
+    const metadataParts = copiedMetadataKeys.filter(key => dataset.initFrom!.parts.includes(key))
+    if (metadataParts.length) {
+      // topics and custom metadata keys are defined in the owner's settings: from another account keep only the known ones
+      const sameAccount = parentDataset.owner.type === dataset.owner.type && parentDataset.owner.id === dataset.owner.id
+      const settings = sameAccount ? null : await mongo.settings.findOne(rootSettingsFilter(dataset.owner), { projection: { topics: 1, datasetsMetadata: 1 } }) as Settings | null
+      for (const key of metadataParts) {
+        let value: any = parentDataset[key]
+        if (value == null) continue
+        if (!sameAccount && key === 'topics') {
+          value = value.filter((topic: { id: string }) => settings?.topics?.some(t => t.id === topic.id))
+        }
+        if (!sameAccount && key === 'customMetadata') {
+          const customKeys = (settings?.datasetsMetadata?.custom ?? []).map(c => c.key)
+          value = Object.fromEntries(Object.entries(value).filter(([k]) => customKeys.includes(k)))
+        }
+        patch[key] = value
+      }
     }
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
       for (const metadataAttachment of metadataAttachments) {
