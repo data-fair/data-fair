@@ -33,7 +33,7 @@ test.describe('trimDataset', () => {
     assert.deepEqual(dataset.keywords, ['énergie', 'Énergie', 'Aide énergétique'])
   })
 
-  test('trims attachments', () => {
+  test('trims attachments, but not the name of a stored file', () => {
     const dataset: any = {
       attachments: [
         { type: 'file', title: ' Doc ', description: ' d ', name: ' doc.pdf ' },
@@ -43,13 +43,13 @@ test.describe('trimDataset', () => {
     }
     trimDataset(dataset)
     assert.deepEqual(dataset.attachments, [
-      { type: 'file', title: 'Doc', description: 'd', name: 'doc.pdf' },
+      { type: 'file', title: 'Doc', description: 'd', name: ' doc.pdf ' },
       { type: 'url', title: 'Link', url: 'https://link' },
       { type: 'remoteFile', title: 'Remote', name: 'r.csv', targetUrl: 'https://remote' }
     ])
   })
 
-  test('trims schema property texts, labels and transform expression', () => {
+  test('trims schema property texts, labels and transform expression, not the source header', () => {
     const dataset: any = {
       schema: [{
         key: 'col',
@@ -67,7 +67,7 @@ test.describe('trimDataset', () => {
     assert.equal(prop.title, 'Col')
     assert.equal(prop.description, 'desc')
     assert.equal(prop['x-group'], 'Group')
-    assert.equal(prop['x-originalName'], 'Col')
+    assert.equal(prop['x-originalName'], ' Col ')
     assert.equal(prop.patternErrorMessage, 'bad')
     assert.deepEqual(prop['x-labels'], { a: 'A', b: 'B' })
     assert.equal(prop['x-transform'].expr, 'UPPER(value)')
@@ -92,7 +92,7 @@ test.describe('trimDataset', () => {
     trimDataset(dataset)
     assert.equal(dataset.extensions[0].expr, 'CONCAT(a, b)')
     assert.equal(dataset.extensions[1].propertyPrefix, 'pre')
-    assert.deepEqual(dataset.extensions[1].overwrite.out, { title: 'Out', 'x-originalName': 'out' })
+    assert.deepEqual(dataset.extensions[1].overwrite.out, { title: 'Out', 'x-originalName': ' out ' })
   })
 
   test('trims virtual filter values and drops empties', () => {

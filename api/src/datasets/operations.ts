@@ -158,17 +158,21 @@ export function computeSearchText (
 }
 
 // trim leading/trailing whitespace of the free-text fields (explicit list: separators,
-// regex patterns and date formats are syntaxes where whitespace is significant)
+// regex patterns and date formats are syntaxes where whitespace is significant, x-originalName
+// and a file attachment's name reference a source column header and a stored file)
 export const trimDataset = (dataset: Partial<Dataset>) => {
   trimFields(dataset, 'title', 'summary', 'description', 'origin', 'image', 'creator', 'spatial')
   if (dataset.keywords) dataset.keywords = [...new Set(dataset.keywords.map(keyword => keyword.trim()).filter(Boolean))]
   if (dataset.customMetadata) trimFields(dataset.customMetadata, ...Object.keys(dataset.customMetadata))
   if (dataset.conformsTo) trimFields(dataset.conformsTo, 'title', 'version', 'url')
   // the generated attachment types lose the fields shared by the oneOf branches
-  const attachments = (dataset.attachments ?? []) as { title?: string, description?: string, name?: string, url?: string, targetUrl?: string }[]
-  for (const attachment of attachments) trimFields(attachment, 'title', 'description', 'name', 'url', 'targetUrl')
+  const attachments = (dataset.attachments ?? []) as { type?: string, title?: string, description?: string, name?: string, url?: string, targetUrl?: string }[]
+  for (const attachment of attachments) {
+    trimFields(attachment, 'title', 'description', 'url', 'targetUrl')
+    if (attachment.type === 'remoteFile') trimFields(attachment, 'name')
+  }
   for (const prop of dataset.schema ?? []) {
-    trimFields(prop, 'title', 'description', 'x-group', 'x-originalName', 'patternErrorMessage')
+    trimFields(prop, 'title', 'description', 'x-group', 'patternErrorMessage')
     if (prop['x-labels']) {
       prop['x-labels'] = Object.fromEntries(Object.entries(prop['x-labels']).map(([value, label]) => [value.trim(), label.trim()]))
     }
@@ -181,7 +185,7 @@ export const trimDataset = (dataset: Partial<Dataset>) => {
     if (extension.type === 'exprEval') trimFields(extension, 'expr')
     else if (extension.type === 'remoteService') {
       trimFields(extension, 'propertyPrefix')
-      for (const overwrite of Object.values(extension.overwrite ?? {})) trimFields(overwrite, 'title', 'x-originalName')
+      for (const overwrite of Object.values(extension.overwrite ?? {})) trimFields(overwrite, 'title')
     }
   }
   for (const filter of dataset.virtual?.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
