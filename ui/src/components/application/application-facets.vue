@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 const { t } = useI18n()
+const { departmentLabel } = useDisplayOwner()
 
 const props = defineProps<{
   facets: Record<string, { count: number, value: any }[]>
@@ -106,9 +107,7 @@ const ownerItems = computed(() => {
       f.value.type === props.account!.type && f.value.id === props.account!.id
     )
     return orgFacets.map(f => ({
-      title: (f.value.department
-        ? (f.value.departmentName || f.value.department)
-        : t('noDepartment')) + ` (${f.count})`,
+      title: (departmentLabel(f.value.department, f.value.departmentName) ?? t('noDepartment')) + ` (${f.count})`,
       value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
     }))
   }
@@ -139,9 +138,7 @@ const ownerItems = computed(() => {
         value: `${orgKey}:*`
       })
       for (const f of orgFacets) {
-        const label = f.value.department
-          ? `${orgName} - ${f.value.departmentName || f.value.department}`
-          : `${orgName} - ${t('noDepartment')}`
+        const label = `${orgName} - ${departmentLabel(f.value.department, f.value.departmentName) ?? t('noDepartment')}`
         items.push({
           title: `${label} (${f.count})`,
           value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`

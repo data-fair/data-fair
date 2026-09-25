@@ -109,7 +109,8 @@ services:
       - PORT=${SD_PORT}
       - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "test_superadmin@test.com"]
-      - 'IDENTITIES_WEBHOOKS=[{"base": "http://${DEV_HOST}:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
+      # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
+      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${DEV_API_PORT}/api/v1/identities", "key": "identities-test-key"}]'
       - PUBLIC_URL=http://${DEV_HOST}:${NGINX_PORT1}/simple-directory
       - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}
       - MAILDEV_ACTIVE=true
