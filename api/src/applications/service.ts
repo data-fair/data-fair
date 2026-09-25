@@ -16,7 +16,7 @@ import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
-import { setUniqueRefs } from './operations.ts'
+import { setUniqueRefs, trimApplication } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
@@ -128,7 +128,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 }
 
 export const curateApplication = async (application: Application) => {
-  if (application.title) application.title = application.title.trim()
+  trimApplication(application)
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
     application.baseApp = await mongo.baseApplications.findOne({ url: application.url }, { projection }) as any

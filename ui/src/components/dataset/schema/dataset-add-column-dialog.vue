@@ -116,7 +116,7 @@ const addColumn = () => {
   const type = newColumnType.value
   emit('add', {
     key,
-    'x-originalName': newColumnKey.value.trim(),
+    'x-originalName': newColumnKey.value,
     type: type.type,
     ...(type.format ? { format: type.format } : {}),
     ...('x-display' in type ? { 'x-display': (type as any)['x-display'] } : {}),

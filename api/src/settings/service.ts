@@ -17,7 +17,7 @@ import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -40,6 +40,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   const { owner, ownerFilter } = ctx
   const user = ctx.sessionState.user
   fillSettings(owner, user, settings)
+  trimSettings(settings)
   validateSettings(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
