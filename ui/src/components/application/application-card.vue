@@ -46,6 +46,7 @@
           v-if="showCapabilityChip"
           resource-type="applications"
           :user-permissions="cardUserPermissions"
+          :access-sources="cardAccessSources"
           class="ml-2"
         />
         <span
@@ -73,6 +74,7 @@ const props = defineProps<{
 }>()
 
 const cardUserPermissions = computed(() => (props.application as Application & { userPermissions?: string[] }).userPermissions)
+const cardAccessSources = computed(() => (props.application as Application & { accessSources?: AccessSources }).accessSources)
 const showCapabilityChip = computed(() => {
   if (props.showCapability) return true
   const account = session.state.account

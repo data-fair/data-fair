@@ -110,6 +110,7 @@
           v-if="showCapabilityChip"
           resource-type="datasets"
           :user-permissions="cardUserPermissions"
+          :access-sources="cardAccessSources"
           class="ml-2"
         />
         <span
@@ -152,6 +153,7 @@ const props = withDefaults(defineProps<{
 })
 
 const cardUserPermissions = computed(() => (props.dataset as Dataset & { userPermissions?: string[] }).userPermissions)
+const cardAccessSources = computed(() => (props.dataset as Dataset & { accessSources?: AccessSources }).accessSources)
 const showCapabilityChip = computed(() => {
   if (props.showCapability) return true
   const account = session.state.account

@@ -81,7 +81,6 @@
             :application="resource"
             show-capability
           />
-          <access-sources :sources="resource.accessSources" />
         </v-col>
       </v-row>
       <div

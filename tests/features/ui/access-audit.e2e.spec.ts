@@ -46,8 +46,9 @@ test.describe('access audit page', () => {
     await expect(page.getByText('Audit visible dataset')).toBeVisible()
     await expect(page.getByText('Audit hidden dataset')).toBeHidden()
     await expect(page.getByText('Lecture', { exact: true }).first()).toBeVisible()
-    // provenance of the access
-    await expect(page.getByText(/Permission pour l'utilisateur .* : Lister, Lecture/)).toBeVisible()
+    // provenance of the access, in the capability chip's tooltip
+    await page.locator('.v-card').filter({ hasText: 'Audit visible dataset' }).locator('.v-chip').filter({ hasText: 'Lecture' }).hover()
+    await expect(page.getByText(/Permission pour l'utilisateur .* : Listage, Lecture/)).toBeVisible()
     // the capability filter narrows the list
     await page.locator('.v-select').filter({ hasText: 'Capacité' }).click()
     await page.getByRole('option', { name: 'Écriture', exact: true }).click()
@@ -60,6 +61,7 @@ test.describe('access audit page', () => {
     await page.getByRole('option', { name: 'Un visiteur anonyme' }).click()
     await expect(page.getByText('Audit public dataset')).toBeVisible()
     await expect(page.getByText('Audit visible dataset')).toBeHidden()
-    await expect(page.getByText('Permission publique : Lister, Lecture')).toBeVisible()
+    await page.locator('.v-card').filter({ hasText: 'Audit public dataset' }).locator('.v-chip').filter({ hasText: 'Lecture' }).hover()
+    await expect(page.getByText('Permission publique : Listage, Lecture')).toBeVisible()
   })
 })

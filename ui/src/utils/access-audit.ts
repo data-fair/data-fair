@@ -47,3 +47,20 @@ export const asVisitorDescriptor = (visitor: AuditVisitor | null, account: { id:
       return JSON.stringify({ organization: { id: visitor.partner.id, name: visitor.partner.name, role: 'user' } })
   }
 }
+
+/** Why a visitor reaches a resource, as returned on list results in asVisitor mode (see permissions.accessSources). */
+export type AccessSources = {
+  ownerRole?: string
+  ownerClasses: string[]
+  permissions: {
+    type?: 'user' | 'organization' | null
+    id?: string | null
+    name?: string
+    email?: string
+    department?: string | null
+    departmentName?: string
+    roles?: string[]
+    classes?: string[]
+    operations?: string[]
+  }[]
+}
