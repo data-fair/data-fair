@@ -10,14 +10,16 @@ const user3 = await axiosAuth('test_user3@test.com')
 const depAdmin = await axiosAuth('test_user4@test.com', 'test_org1')
 depAdmin.setOrg('test_org1', 'dep1')
 
-const member8 = { id: 'test_user8', email: 'test_user8@test.com', role: 'user' }
-const member5 = { id: 'test_user5', email: 'test_user5@test.com', role: 'contrib' }
-const member6 = { id: 'test_user6', email: 'test_user6@test.com', role: 'contrib', department: 'dep1' }
-const member1 = { id: 'test_user1', email: 'test_user1@test.com', role: 'admin' }
-const asMember = (member: Record<string, string>, extraParams: Record<string, string> = {}) =>
-  ({ params: { asAccountMember: JSON.stringify(member), ...extraParams } })
+const orgMember = (id: string, role: string, department?: string) =>
+  ({ user: { id, email: `${id}@test.com` }, organization: { id: 'test_org1', role, ...(department ? { department } : {}) } })
+const member8 = orgMember('test_user8', 'user')
+const member5 = orgMember('test_user5', 'contrib')
+const member6 = orgMember('test_user6', 'contrib', 'dep1')
+const member1 = orgMember('test_user1', 'admin')
+const asMember = (visitor: Record<string, any>, extraParams: Record<string, string> = {}) =>
+  ({ params: { asVisitor: JSON.stringify(visitor), ...extraParams } })
 
-test.describe('asAccountMember list override', () => {
+test.describe('asVisitor list override', () => {
   test.beforeEach(async () => {
     await clean()
   })
@@ -75,12 +77,12 @@ test.describe('asAccountMember list override', () => {
     assert.equal(res.data.count, 2)
   })
 
-  test('asAccountMember is restricted to org admins', async () => {
+  test('asVisitor is restricted to org admins', async () => {
     await assert.rejects(orgContrib.get('/api/v1/datasets', asMember(member8)), { status: 403 })
     await assert.rejects(user1Personal.get('/api/v1/datasets', asMember(member8)), { status: 403 })
     await assert.rejects(anonymous.get('/api/v1/datasets', asMember(member8)), { status: 401 })
-    await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asAccountMember: 'not-json' } }), { status: 400 })
-    await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asAccountMember: JSON.stringify({ id: 'x', role: 'user' }) } }), { status: 400 })
+    await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asVisitor: 'not-json' } }), { status: 400 })
+    await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asVisitor: JSON.stringify({ organization: { id: 'x' } }) } }), { status: 400 })
   })
 
   test('an org API key is rejected by the gate even though it carries an admin accountRole', async () => {
@@ -146,5 +148,73 @@ test.describe('asAccountMember list override', () => {
 
     // gate applies on applications too
     await assert.rejects(orgContrib.get('/api/v1/applications', asMember(member8)), { status: 403 })
+  })
+  test('org admin lists datasets as hypothetical visitors', async () => {
+    const dsPublic = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor public' })).data
+    await orgAdmin.put(`/api/v1/datasets/${dsPublic.id}/permissions`, [{ classes: ['list', 'read'] }])
+    const dsConnected = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor connected' })).data
+    await orgAdmin.put(`/api/v1/datasets/${dsConnected.id}/permissions`, [{ type: 'user', id: '*', classes: ['list'] }])
+    const dsEmail = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor email' })).data
+    await orgAdmin.put(`/api/v1/datasets/${dsEmail.id}/permissions`, [{ type: 'user', email: 'someone@external.com', classes: ['list', 'read'] }])
+    const dsPartner = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor partner' })).data
+    await orgAdmin.put(`/api/v1/datasets/${dsPartner.id}/permissions`, [{ type: 'organization', id: 'test_org2', classes: ['list', 'read'] }])
+    // default permissions: org contribs can list/read/write
+    const dsContrib = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor contrib' })).data
+    // public noise outside the forced org scope
+    const dsExternal = (await user3.post('/api/v1/datasets', { isRest: true, title: 'visitor external' })).data
+    await user3.put(`/api/v1/datasets/${dsExternal.id}/permissions`, [{ classes: ['list', 'read'] }])
+
+    const listIds = async (visitor: Record<string, any>, extraParams: Record<string, string> = {}) =>
+      (await orgAdmin.get('/api/v1/datasets', asMember(visitor, extraParams))).data.results.map((r: any) => r.id).sort()
+
+    // anonymous
+    assert.deepEqual(await listIds({}), [dsPublic.id])
+    // any authenticated user
+    assert.deepEqual(await listIds({ user: {} }), [dsPublic.id, dsConnected.id].sort())
+    // a user designated by email
+    assert.deepEqual(await listIds({ user: { email: 'someone@external.com' } }), [dsPublic.id, dsConnected.id, dsEmail.id].sort())
+    // a member of a partner organization
+    assert.deepEqual(await listIds({ organization: { id: 'test_org2', role: 'user' } }), [dsPublic.id, dsConnected.id, dsPartner.id].sort())
+    // any member of the org with a role
+    assert.deepEqual(await listIds({ organization: { id: 'test_org1', role: 'contrib' } }), [dsPublic.id, dsConnected.id, dsContrib.id].sort())
+    assert.equal((await listIds({ organization: { id: 'test_org1', role: 'admin' } })).length, 5)
+
+    // can= works for an anonymous visitor too (no user in the synthetic session)
+    assert.deepEqual(await listIds({}, { can: 'read' }), [dsPublic.id])
+    assert.deepEqual(await listIds({ user: {} }, { can: 'read' }), [dsPublic.id])
+    // ...and so it does for a real anonymous caller (filterCan used to return an empty $or)
+    const anonRes = await anonymous.get('/api/v1/datasets', { params: { can: 'read', owner: 'organization:test_org1' } })
+    assert.deepEqual(anonRes.data.results.map((r: any) => r.id), [dsPublic.id])
+  })
+
+  test('each listed resource tells why the visitor reaches it', async () => {
+    const ds = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor sources' })).data
+    await orgAdmin.put(`/api/v1/datasets/${ds.id}/permissions`, [
+      { classes: ['list'] },
+      { type: 'user', id: 'test_user8', classes: ['read'] },
+      { type: 'organization', id: 'test_org1', roles: ['contrib'], classes: ['write'] }
+    ])
+
+    let res = await orgAdmin.get('/api/v1/datasets', asMember(member8))
+    let sources = res.data.results.find((r: any) => r.id === ds.id).accessSources
+    assert.equal(sources.ownerRole, undefined)
+    assert.deepEqual(sources.ownerClasses, [])
+    assert.deepEqual(sources.permissions.map((p: any) => p.classes[0]), ['list', 'read'])
+    // the full permissions array is still not exposed
+    assert.equal(res.data.results[0].permissions, undefined)
+
+    res = await orgAdmin.get('/api/v1/datasets', asMember(member1))
+    sources = res.data.results.find((r: any) => r.id === ds.id).accessSources
+    assert.equal(sources.ownerRole, 'admin')
+    assert.ok(sources.ownerClasses.includes('admin'))
+
+    // absent outside of the audit mode
+    res = await orgAdmin.get('/api/v1/datasets')
+    assert.equal(res.data.results.find((r: any) => r.id === ds.id).accessSources, undefined)
+
+    const app = (await orgAdmin.post('/api/v1/applications', { title: 'visitor app sources', url: mockAppUrl('monapp1') })).data
+    await orgAdmin.put(`/api/v1/applications/${app.id}/permissions`, [{ classes: ['list', 'read'] }])
+    res = await orgAdmin.get('/api/v1/applications', asMember({}))
+    assert.deepEqual(res.data.results[0].accessSources.permissions, [{ classes: ['list', 'read'] }])
   })
 })

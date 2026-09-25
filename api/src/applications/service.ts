@@ -57,7 +57,7 @@ export type ApplicationWriteContext = {
   logCtx: LogContext
 }
 
-export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, extraQueryFilters?: any[]) => {
+export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, asVisitorFilters?: any[]) => {
   if (reqQuery.service &&
       !reqQuery.service.startsWith('http://') &&
       !reqQuery.service.startsWith('https://')) {
@@ -65,7 +65,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   }
 
   const extraFilters = []
-  if (extraQueryFilters) extraFilters.push(...extraQueryFilters)
+  if (asVisitorFilters) extraFilters.push(...asVisitorFilters)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -101,6 +101,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 
   for (const r of response.results) {
     if (reqQuery.raw !== 'true') r.userPermissions = permissions.list('applications', r, sessionState)
+    // asVisitor audit mode: tell the auditing admin why the visitor reaches each resource
+    if (asVisitorFilters) r.accessSources = permissions.accessSources('applications', r, sessionState)
     clean(r, publicBaseUrl, publicationSite, reqQuery)
   }
 

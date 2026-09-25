@@ -24,7 +24,7 @@ import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
-import { getAsAccountMemberContext } from '../misc/utils/as-account-member.ts'
+import { getAsVisitorContext } from '../misc/utils/as-visitor.ts'
 import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
@@ -49,13 +49,13 @@ router.use((req, res, next) => {
 // Get the list of applications
 router.get('', cacheHeaders.listBased, async (req, res) => {
   const reqQuery = req.query as Record<string, string>
-  // an org admin can browse the list as another member of the org (audit view)
+  // an org admin can browse the list as a hypothetical visitor (access audit view)
   let sessionState = reqSession(req)
-  let asMemberFilters: any[] | undefined
-  if (reqQuery.asAccountMember) {
-    const ctx = getAsAccountMemberContext(reqQuery.asAccountMember, sessionState, config.adminRole as string)
+  let asVisitorFilters: any[] | undefined
+  if (reqQuery.asVisitor) {
+    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
     sessionState = ctx.sessionState
-    asMemberFilters = [ctx.ownerFilter]
+    asVisitorFilters = [ctx.ownerFilter]
   }
   const response = await service.findApplications(
     req.getLocale(),
@@ -63,7 +63,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
     reqPublicBaseUrl(req),
     reqQuery,
     sessionState,
-    asMemberFilters
+    asVisitorFilters
   )
   res.json(response)
 })
