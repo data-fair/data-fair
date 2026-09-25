@@ -110,6 +110,7 @@
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
             :allow-data="datasetType === 'file' || datasetType === 'rest'"
+            :owner="owner"
           />
         </v-stepper-window-item>
 
