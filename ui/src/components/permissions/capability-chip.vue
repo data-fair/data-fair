@@ -5,7 +5,7 @@
   >
     <template #activator="{ props: tooltipProps }">
       <v-chip
-        v-bind="tooltipProps"
+        v-bind="{ ...tooltipProps, ...$attrs }"
         :color="tierColors[tier]"
         size="small"
         variant="outlined"
@@ -33,6 +33,9 @@
 import { mdiShieldAccountOutline } from '@mdi/js'
 
 type SourcePermission = AccessSources['permissions'][number]
+
+// the root element is the tooltip: forward class/style (e.g. margins set by the cards) to the chip
+defineOptions({ inheritAttrs: false })
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
