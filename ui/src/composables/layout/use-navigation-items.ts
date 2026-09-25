@@ -100,7 +100,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       })
     }
     if (account.value?.type === 'organization' && org?.role === $uiConfig.adminRole) {
-      management.push({ to: '/members-access', icon: mdiShieldAccountOutline, title: t('membersAccess') })
+      management.push({ to: '/access-audit', icon: mdiShieldAccountOutline, title: t('accessAudit') })
     }
     if (canAdminDep.value) {
       management.push({ to: '/settings', icon: mdiCog, title: t('params') })

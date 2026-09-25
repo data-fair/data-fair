@@ -12,26 +12,18 @@
     v-else
     data-iframe-height
   >
-    <v-row>
-      <v-col
-        cols="12"
-        md="6"
-      >
-        <member-select
-          :model-value="member"
-          :organization="{ id: account!.id, name: account!.name }"
-          :department="account!.department"
-          @update:model-value="setMember"
-        />
-      </v-col>
-    </v-row>
+    <visitor-select
+      :model-value="visitor"
+      :account="{ id: account!.id, name: account!.name, department: account!.department }"
+      @update:model-value="setVisitor"
+    />
     <template v-if="auditReady">
       <v-alert
         type="info"
         density="compact"
         variant="tonal"
         class="mb-4"
-        :text="t('simulationHint', { name: member!.name })"
+        :text="t('hints.' + visitor!.kind, { org: account!.name })"
       />
       <v-tabs
         v-model="resourceType"
@@ -53,9 +45,9 @@
       />
       <v-row class="d-flex align-stretch">
         <!--
-          displayedItems is cleared (see the member/resourceType watcher below) as soon as the
+          displayedItems is cleared (see the visitor/resourceType watcher below) as soon as the
           audited identity changes, so this loading state only ever covers an empty grid — never
-          the previous member's / previous tab's resources rendered under the new label.
+          the previous visitor's / previous tab's resources rendered under the new label.
         -->
         <template v-if="catalog.loading.value && !catalog.displayedItems.value.length">
           <v-col
@@ -89,6 +81,7 @@
             :application="resource"
             show-capability
           />
+          <access-sources :sources="resource.accessSources" />
         </v-col>
       </v-row>
       <div
@@ -136,8 +129,6 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
-type AuditMember = { id: string, name: string, email?: string, role?: string, department?: string }
-
 const { t } = useI18n()
 const session = useSession()
 const account = session.account
@@ -151,29 +142,23 @@ const authorized = computed(() => {
   return !!a && a.type === 'organization' && session.state.accountRole === $uiConfig.adminRole
 })
 
-// the audited member, persisted in the URL as a JSON descriptor (deep-linkable between admins)
-const memberParam = useStringSearchParam('member')
-const member = computed<AuditMember | null>(() => {
-  if (!memberParam.value) return null
+// the simulated visitor, persisted in the URL (deep-linkable between admins)
+const visitorParam = useStringSearchParam('visitor')
+const visitor = computed<AuditVisitor | null>(() => {
+  if (!visitorParam.value) return null
   try {
-    return JSON.parse(memberParam.value)
+    const parsed = JSON.parse(visitorParam.value)
+    return auditVisitorKinds.includes(parsed?.kind) ? parsed : null
   } catch (err) {
     return null
   }
 })
-const setMember = (m: AuditMember | null) => {
-  memberParam.value = m ? JSON.stringify({ id: m.id, name: m.name, email: m.email, role: m.role, department: m.department }) : ''
+const setVisitor = (v: AuditVisitor | null) => {
+  visitorParam.value = v ? JSON.stringify(v) : ''
 }
 
-// the API descriptor requires id/email/role; simple-directory's members endpoint provides them all
-const asAccountMember = computed(() => {
-  const m = member.value
-  if (!m?.id || !m.email || !m.role) return undefined
-  const descriptor: Record<string, string> = { id: m.id, email: m.email, role: m.role }
-  if (m.department) descriptor.department = m.department
-  return JSON.stringify(descriptor)
-})
-const auditReady = computed(() => !!asAccountMember.value)
+const asVisitor = computed(() => authorized.value && account.value ? asVisitorDescriptor(visitor.value, account.value) : undefined)
+const auditReady = computed(() => !!asVisitor.value)
 
 const resourceType = useStringSearchParam('resourceType', 'datasets')
 // capability-filter/useCatalogList's fetchUrl want the narrowed literal union; the URL param itself stays a plain string
@@ -204,7 +189,7 @@ const selectFields: Record<string, string> = {
 
 const auditQuery = computed(() => {
   const params: Record<string, any> = { select: selectFields[resourceType.value] }
-  if (asAccountMember.value) params.asAccountMember = asAccountMember.value
+  if (asVisitor.value) params.asVisitor = asVisitor.value
   if (q.value) params.q = q.value
   else params.sort = 'createdAt:-1'
   if (can.value?.length) params.can = can.value.join(',')
@@ -229,26 +214,38 @@ const catalog = useCatalogList<any>({
 })
 
 // useCatalogList's reset() doesn't clear displayedItems before re-fetching, so without this,
-// switching the audited member (or the datasets/applications tab) would keep showing the
-// PREVIOUS member's/tab's resources — under the newly selected label — until the new request
-// resolves. On a page whose whole purpose is trustworthy per-member access auditing, that
-// wrong-identity flash is a correctness bug, not just a cosmetic one: clear eagerly instead.
-watch([member, resourceType], () => { catalog.displayedItems.value = [] })
+// switching the simulated visitor (or the datasets/applications tab) would keep showing the
+// PREVIOUS visitor's/tab's resources — under the newly selected label — until the new request
+// resolves. On a page whose whole purpose is trustworthy access auditing, that wrong-identity
+// flash is a correctness bug, not just a cosmetic one: clear eagerly instead.
+watch([asVisitor, resourceType], () => { catalog.displayedItems.value = [] })
 </script>
 
 <i18n lang="yaml">
 fr:
-  title: Accès des membres
+  title: Audit des accès
   notAuthorized: Cette page est réservée aux administrateurs de l'organisation.
-  simulationHint: Ressources de l'organisation accessibles à {name}, comme si l'organisation était son compte actif. Ses accès personnels en dehors de l'organisation ne sont pas inclus.
+  hints:
+    member: Ressources de {org} accessibles à ce membre, comme si {org} était son compte actif. Ses accès personnels en dehors de l'organisation ne sont pas inclus.
+    role: Ressources de {org} accessibles à tout membre ayant ce rôle, sans compter les permissions accordées nominativement.
+    partner: Ressources de {org} accessibles aux membres de cette organisation partenaire lorsqu'elle est leur compte actif.
+    email: Ressources de {org} accessibles à cet utilisateur lorsqu'il n'est pas membre de {org}.
+    connected: Ressources de {org} accessibles à n'importe quel utilisateur connecté.
+    anonymous: Ressources de {org} accessibles sans être connecté.
   datasets: Jeux de données
   applications: Applications
-  noResource: Aucune ressource accessible à ce membre avec ces filtres.
+  noResource: Aucune ressource accessible à ce visiteur avec ces filtres.
 en:
-  title: Members access
+  title: Access audit
   notAuthorized: This page is only available to the organization's administrators.
-  simulationHint: Organization resources accessible to {name}, as if the organization were their active account. Their personal access outside the organization is not included.
+  hints:
+    member: Resources of {org} accessible to this member, as if {org} were their active account. Their personal access outside the organization is not included.
+    role: Resources of {org} accessible to any member with this role, not counting permissions granted to named users.
+    partner: Resources of {org} accessible to the members of this partner organization when it is their active account.
+    email: Resources of {org} accessible to this user when they are not a member of {org}.
+    connected: Resources of {org} accessible to any authenticated user.
+    anonymous: Resources of {org} accessible without being logged in.
   datasets: Datasets
   applications: Applications
-  noResource: No resource accessible to this member with these filters.
+  noResource: No resource accessible to this visitor with these filters.
 </i18n>
