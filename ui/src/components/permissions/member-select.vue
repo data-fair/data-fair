@@ -7,6 +7,7 @@
     item-value="id"
     :label="t('member', {org: organization.name})"
     :no-filter="true"
+    :no-data-text="searchInput.length >= 3 ? t('noMember') : t('typeToSearch')"
     required
     return-object
     clearable
@@ -33,8 +34,12 @@
 <i18n lang="yaml">
 fr:
   member: Membre de {org}
+  typeToSearch: Saisissez au moins 3 caractères pour rechercher un membre
+  noMember: Aucun membre trouvé
 en:
   member: Member of {org}
+  typeToSearch: Type at least 3 characters to search for a member
+  noMember: No member found
 </i18n>
 
 <script setup lang="ts">
@@ -65,7 +70,10 @@ const filledMembers = computed(() => {
   return result.concat(members.value)
 })
 
+const searchInput = ref('')
+
 async function onSearch (search: string) {
+  searchInput.value = search ?? ''
   if (search && props.modelValue && search === props.modelValue.name) return
   loading.value = true
   if (search && search.length >= 3) {
