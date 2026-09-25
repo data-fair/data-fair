@@ -207,6 +207,16 @@ test.describe('asVisitor list override', () => {
     sources = res.data.results.find((r: any) => r.id === ds.id).accessSources
     assert.equal(sources.ownerRole, 'admin')
     assert.ok(sources.ownerClasses.includes('admin'))
+    // the permission restricted to contribs is not presented as a reason of an admin's access
+    assert.deepEqual(sources.permissions.map((p: any) => p.classes[0]), ['list'])
+    // the same holds for a role visitor
+    res = await orgAdmin.get('/api/v1/datasets', asMember({ organization: { id: 'test_org1', role: 'admin' } }))
+    sources = res.data.results.find((r: any) => r.id === ds.id).accessSources
+    assert.deepEqual(sources.permissions.map((p: any) => p.classes[0]), ['list'])
+    // ...while a contrib does get it
+    res = await orgAdmin.get('/api/v1/datasets', asMember({ organization: { id: 'test_org1', role: 'contrib' } }))
+    sources = res.data.results.find((r: any) => r.id === ds.id).accessSources
+    assert.deepEqual(sources.permissions.map((p: any) => p.classes[0]), ['list', 'write'])
 
     // absent outside of the audit mode
     res = await orgAdmin.get('/api/v1/datasets')

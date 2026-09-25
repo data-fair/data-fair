@@ -218,6 +218,12 @@ export const accessSources = function (resourceType: ResourceType, resource: Res
   if (ownerClasses.length) {
     const ownerRole = getOwnerRole(resource.owner, sessionState)
     if (ownerRole) sources.ownerRole = ownerRole
+    // matchPermission lets an admin match organization permissions restricted to other roles; as
+    // admin of the owner their implicit rights already include everything, so these entries would
+    // only be a misleading explanation (and dropping them does not change what list() computes)
+    if (ownerRole === config.adminRole) {
+      sources.permissions = sources.permissions.filter(p => p.type !== 'organization' || !p.roles?.length || p.roles.includes(ownerRole))
+    }
   }
   return sources
 }
