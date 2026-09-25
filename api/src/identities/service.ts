@@ -8,6 +8,7 @@ import filesStorage from '#files-storage'
 import * as datasetsService from '../datasets/service.ts'
 import { ownerDir } from '../datasets/utils/files.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
+import { markStale } from '../misc/utils/text-search/mark-stale.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 
 export type Identity = { type: string, id: string, name?: string }
@@ -51,6 +52,11 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
         await collection.updateOne({ id: doc.id }, { $set: { permissions } })
         if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
       }
+    }
+    if (c === 'datasets' || c === 'applications') {
+      // owner.name and owner.departmentName are indexed, so the bulk $set above just staleified
+      // every owner-name token; the worker recomputes them.
+      await markStale(collection, ownerFilter)
     }
 
     // permissions

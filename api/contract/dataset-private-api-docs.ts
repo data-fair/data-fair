@@ -660,6 +660,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         api.paths[targetPath].parameters = [ownerParam, ...(api.paths[targetPath].parameters || [])]
         Object.values(api.paths[targetPath]).forEach((p: any) => {
           if (!p.operationId) return
+          // A different operation: the agent annotation of the original does not carry over.
+          delete p['x-agent']
           p['x-permissionClass'] = 'manageOwnLines'
           p.operationId = p.operationId.replace('Line', 'OwnLine')
           if (p.summary) p.summary += ' (par propriétaire)'

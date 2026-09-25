@@ -220,6 +220,22 @@ test.describe('Extensions (expressions)', () => {
     assert.ok(upperLine.exp.startsWith('UPPER STR 1 - UPPER STR 2'))
   })
 
+  test('An expression returning an empty string produces an undefined value', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'id == "koumoul" ? "" : nb', property: { key: 'calc1', type: 'number' } }]
+    })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, dataset.id)
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(lines.find((l: any) => l.id === 'bidule').calc1, 22.2)
+    assert.equal(lines.find((l: any) => l.id === 'koumoul').calc1, undefined)
+  })
+
   test('Manage cases where extension returns wrong type', async () => {
     const ax = testUser1
     // Initial dataset with addresses

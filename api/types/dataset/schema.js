@@ -114,6 +114,11 @@ const datasetProperties = {
       type: 'string'
     }
   },
+  searchTerms: {
+    type: 'string',
+    maxLength: 1000,
+    description: 'Free text used only by the catalog search, never displayed: synonyms, acronyms and their expansion, everyday wording'
+  },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
   frequency: {
     type: 'string',
@@ -660,7 +665,7 @@ const datasetProperties = {
   },
   constraints: {
     type: 'array',
-    title: "Contraintes d'unicité",
+    title: 'Contraintes',
     description: "Contraintes de validation à l'échelle du jeu de données, au delà des validations par colonne.",
     items: {
       type: 'object',
@@ -678,6 +683,16 @@ const datasetProperties = {
             title: 'Colonnes',
             description: 'La combinaison des valeurs de ces colonnes doit être unique sur chaque ligne du jeu de données.',
             items: { type: 'string' }
+          }
+        }
+      }, {
+        required: ['type'],
+        title: 'Cohérence des dates',
+        description: 'La colonne portant le concept "Date de fin" doit contenir, sur chaque ligne, une date supérieure ou égale à la colonne portant le concept "Date de début".',
+        properties: {
+          type: {
+            type: 'string',
+            const: 'dateCoherence'
           }
         }
       }]
@@ -749,7 +764,7 @@ const datasetProperties = {
               type: 'string'
             }
           },
-          overwriteProperties: {
+          overwrite: {
             type: 'object',
             description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
             additionalProperties: {
@@ -1071,6 +1086,7 @@ const dataset = {
         spatial: datasetProperties.spatial,
         temporal: datasetProperties.temporal,
         keywords: datasetProperties.keywords,
+        searchTerms: datasetProperties.searchTerms,
         frequency: datasetProperties.frequency,
         customMetadata: datasetProperties.customMetadata
       }

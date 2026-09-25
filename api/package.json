@@ -2,8 +2,8 @@
   "name": "@data-fair/data-fair-api",
   "type": "module",
   "scripts": {
-    "dev": "mkdir -p ../dev/logs && NODE_ENV=development EVENTS_LOG_LEVEL=error nodemon --verbose -e js,ts,json --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-api.log",
-    "dev-benchmark": "mkdir -p ../dev/logs && NODE_ENV=benchmark nodemon --verbose -e js,ts,json,cjs --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-benchmark.log",
+    "dev": "mkdir -p ../dev/logs && NODE_ENV=development EVENTS_LOG_LEVEL=error nodemon --verbose -e js,ts,json --exec \"sh ../dev/run-api.sh\" 2>&1 | tee ../dev/logs/dev-api.log",
+    "dev-benchmark": "mkdir -p ../dev/logs && NODE_ENV=benchmark nodemon --verbose -e js,ts,json,cjs --exec \"sh ../dev/run-api.sh\" 2>&1 | tee ../dev/logs/dev-benchmark.log",
     "dev-benchmark-prof": "NODE_ENV=benchmark node --cpu-prof --cpu-prof-dir=../dev/profiles --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
   },
   "imports": {
@@ -18,7 +18,7 @@
   "dependencies": {
     "@aws-sdk/lib-storage": "^3.995.0",
     "@data-fair/data-fair-shared": "*",
-    "@data-fair/lib-express": "^1.26.0",
+    "@data-fair/lib-express": "^1.27.0",
     "@data-fair/lib-node": "^2.11.0",
     "@data-fair/lib-utils": "^1.12.0",
     "@data-fair/lib-validation": "^1.0.2",

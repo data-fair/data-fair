@@ -14,12 +14,13 @@ export const FREQUENCY_VALUES = [
 ] as const
 
 /** Fields the owner can switch off in `settings/…/datasets-metadata`. */
-export const OPTIONAL_FIELDS = ['keywords', 'creator', 'frequency', 'spatial'] as const
+export const OPTIONAL_FIELDS = ['keywords', 'searchTerms', 'creator', 'frequency', 'spatial'] as const
 
 /** Fields always rendered by the metadata form. */
 export const ALWAYS_FIELDS = ['title', 'summary', 'description', 'license', 'topics', 'origin'] as const
 
 export const SUMMARY_MAX_LENGTH = 300
+export const SEARCH_TERMS_MAX_LENGTH = 1000
 
 export type License = { title: string, href: string }
 export type Topic = { id: string, title: string }
@@ -38,6 +39,7 @@ export interface MetadataInput {
   summary?: string
   description?: string
   keywords?: string[]
+  searchTerms?: string
   license?: string | null
   topics?: string[]
   origin?: string
@@ -152,6 +154,15 @@ export function buildMetadataPatch (input: MetadataInput, current: any, ctx: Met
     else apply('keywords', keywords)
   }
 
+  if (input.searchTerms !== undefined && gate('searchTerms')) {
+    const searchTerms = input.searchTerms.trim()
+    if (searchTerms.length > SEARCH_TERMS_MAX_LENGTH) {
+      reject('searchTerms', `the search terms are ${searchTerms.length} characters, max ${SEARCH_TERMS_MAX_LENGTH}. Keep the most useful terms and call the tool again.`)
+    } else {
+      apply('searchTerms', searchTerms)
+    }
+  }
+
   if (input.license !== undefined) {
     if (input.license === null || input.license === '') {
       apply('license', null)
@@ -237,6 +248,7 @@ export function formatMetadataContext (dataset: any, ctx: MetadataContext): stri
   sections.push(`- license: ${val(dataset?.license?.title)}`)
   sections.push(`- topics: ${val((dataset?.topics ?? []).map((t: any) => t.title).join(', '))}`)
   sections.push(`- keywords: ${val((dataset?.keywords ?? []).join(', '))}`)
+  sections.push(`- searchTerms: ${val(dataset?.searchTerms)} (never displayed, only used by the catalog search)`)
   sections.push(`- origin: ${val(dataset?.origin)}`)
   sections.push(`- creator: ${val(dataset?.creator)}`)
   sections.push(`- frequency: ${val(dataset?.frequency)}`)

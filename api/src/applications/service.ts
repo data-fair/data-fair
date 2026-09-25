@@ -6,7 +6,6 @@ import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
@@ -14,14 +13,16 @@ import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import * as notifications from '../misc/utils/notifications.ts'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
-import { setUniqueRefs } from './operations.ts'
+import { setUniqueRefs, trimApplication } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
+import { RESPONSE_EXCLUDED_FIELD_NAMES, indexPatch, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
+import { applicationsTextSearch, applicationsStats } from '../misc/utils/text-search/collections.ts'
 
 // applications-keys only needs the owner parts used by the application-key middleware
 // filter (type/id/department) — see api/src/misc/utils/application-key.ts
@@ -81,15 +82,35 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
-  const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
+  // an application publication-site filter is a strict owner equality, so the site owner is
+  // always the full corpus for this request
+  const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: true })
+  const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope) : null
+  // A query whose every term is unknown must return NOTHING, never an unfiltered list.
+  const textFilter = reqQuery.q ? (plan ? applicationsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 
-  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
-  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft'], reqQuery.raw === 'true')
+  const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters, textFilter)
+
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, applicationsTextSearch.sortSpec())
+  const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
-  const resultsPromise = size > 0 && mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields)).toArray()
+  // a text filter must run uncollated or it COLLSCANs — see findUtils.resultsOptions
+  const resultsOptions = findUtils.resultsOptions(textFilter)
+  // Only pay for $addFields + $sort-by-expression when the score is actually read (relevance sort).
+  const relevanceSorted = !!plan && !reqQuery.sort
+  const resultsPromise = size > 0 && (relevanceSorted
+    ? mongo.applications.aggregate([
+      { $match: query },
+      { $addFields: { _score: applicationsTextSearch.scoreExpression(plan) } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: size },
+      { $project: project }
+    ], resultsOptions).toArray()
+    : mongo.applications.find(query, resultsOptions).limit(size).skip(skip).sort(sort).project(project).toArray())
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, undefined, textFilter)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response: any = {}
@@ -107,7 +128,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 }
 
 export const curateApplication = async (application: Application) => {
-  if (application.title) application.title = application.title.trim()
+  trimApplication(application)
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
     application.baseApp = await mongo.baseApplications.findOne({ url: application.url }, { projection }) as any
@@ -181,6 +202,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   application.slug = baseslug
   setUniqueRefs(application)
   permissions.initResourcePermissions(application)
+  assignIndexFields(application, indexPatch(applicationsTextSearch, application))
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -199,18 +221,19 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id } as Event)
-  await sendResourceEvent('applications', application, ctx.sessionState, 'application-created')
+  await notifications.sendResourceEvent('applications', application, ctx.sessionState, 'application-created')
   return application
 }
 
 export const tryInsertApplication = async (ctx: ApplicationWriteContext, newApplication: any): Promise<boolean> => {
+  assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
   try {
     await mongo.db.collection('applications').insertOne(newApplication)
 
     eventsLog.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
 
     await journals.log('applications', newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id } as Event)
-    await sendResourceEvent('applications', newApplication, ctx.sessionState, 'application-created')
+    await notifications.sendResourceEvent('applications', newApplication, ctx.sessionState, 'application-created')
 
     return true
   } catch (err: any) {
@@ -230,10 +253,12 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
 
+  assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
+
   if (!isNew) {
     eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
     const sessionState = ctx.sessionState
-    eventsQueue.pushEvent({
+    await notifications.send({
       title: 'Application entièrement modifiée',
       body: `${newApplication.title} (${newApplication.slug})`,
       topic: {
@@ -269,10 +294,13 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
+  // kept out of `patch` itself: patch's keys are reported to the user/event log as the fields they modified
+  const applicationUpdate = mergeIndexUpdate({ $set: { ...patch } }, indexPatch(applicationsTextSearch, { ...application, ...patch }))
+
   let patchedApplication
   try {
     patchedApplication = await mongo.applications
-      .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: application.id }, applicationUpdate, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
@@ -283,7 +311,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   eventsLog.info('df.applications.patch', `patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { ...ctx.logCtx, account: patchedApplication!.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: 'Propriétés modifiées sur une application',
     body: `${application.title} (${application.slug}), ${Object.keys(patch)?.join(', ')}`,
     topic: {
@@ -328,8 +356,14 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   })
   await permissions.initResourcePermissions(patch, preservePermissions)
 
+  // owner.name/owner.departmentName are indexed fields — carrying the old owner's terms across a
+  // transfer would leave the index pointing at the wrong owner (found under the old name, not the
+  // new one). Recompute rather than let this direct $set bypass patchApplication's unconditional
+  // index recompute.
+  const changeOwnerUpdate = mergeIndexUpdate({ $set: patch }, indexPatch(applicationsTextSearch, { ...application, owner: patch.owner }))
+
   const patchedApp = await mongo.applications
-    .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+    .findOneAndUpdate({ id: application.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
   // keep applications-keys.owner in sync — the application-key middleware queries this collection
   // with an ownerFilter built from the dataset's owner, so a stale owner here silently breaks
@@ -352,8 +386,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
     resource: { type: 'application', title: application.title, id: application.id },
     sender: { ...application.owner, role: 'admin' }
   }
-  eventsQueue.pushEvent(event, sessionState)
-  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
+  await notifications.send(event, sessionState)
+  await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncDatasets(patchedApp)
   return patchedApp! as Application
@@ -379,7 +413,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: "Suppression d'une application",
     body: `${application.title} (${application.slug})`,
     topic: {
@@ -499,7 +533,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
   eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: "Définition d'une clé de protection d'application",
     body: `${application.title} (${application.slug})`,
     topic: {

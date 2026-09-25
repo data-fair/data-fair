@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "NODE_CONFIG_DIR=../api/config/ vite --port $DEV_UI_PORT",
+    "dev": "NODE_CONFIG_DIR=../api/config/ ../dev/with-memory-cap.sh vite --port $DEV_UI_PORT",
     "build": "vite build",
     "prepare-webfont-css": "",
     "preview": "vite preview",
@@ -20,10 +20,11 @@
   "devDependencies": {
     "@data-fair/frame": "^0.18.0",
     "@data-fair/lib-vue": "^1.31.1",
-    "@data-fair/lib-vue-agents": "^0.4.0",
+    "@data-fair/lib-vue-agents": "^0.6.0",
     "@data-fair/lib-vuetify": "^2.5.1",
-    "@data-fair/lib-vuetify-agents": "^0.6.0",
+    "@data-fair/lib-vuetify-agents": "^0.6.4",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
+    "@json-layout/core": "~2.9.0",
     "@koumoul/vjsf": "^4.6.0",
     "@koumoul/vjsf-markdown": "^0.5.2",
     "@mdi/js": "^7.4.47",

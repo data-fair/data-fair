@@ -26,11 +26,18 @@ services:
     image: ghcr.io/data-fair/elasticsearch:8.19.9
     ports:
       - ${ES_PORT}:9200
+    # dev/test datasets are small, so a 1g heap is plenty. The point of the cap
+    # is that several dev environments run side by side on one laptop: at the
+    # old -Xmx2g each stack reserved 2g of ES heap alone. mem_limit bounds the
+    # off-heap side too, so a runaway ES is killed inside its container instead
+    # of pushing the host into a global OOM (which takes the desktop session
+    # down with it, see docs/architecture/dev-resources.md).
+    mem_limit: 2g
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ingest.geoip.downloader.enabled=false
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
