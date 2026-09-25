@@ -11,11 +11,11 @@ import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
 import * as webhooks from '../misc/utils/webhooks.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
-import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
+import { fixConcepts, getSchemaBreakingChanges, checkSchemaKeys } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { searchIndexPatch } from './utils/search-text.ts'
@@ -306,6 +306,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
+  // a client-supplied schema is the one place a key that corrupts the ES mapping (a dot, a leading
+  // _) can enter data-fair — checked before prepareExtensionsSchema below, which adds the
+  // legitimately dotted extension keys. Virtual schemas are derived from the children.
+  if (!body.isVirtual) checkSchemaKeys(dataset.schema, [], dataset.analysis?.escapeKeyAlgorithm)
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
     await checkExtensions(await datasetUtils.extendedSchema(db, dataset, false), dataset.extensions)
@@ -714,7 +718,15 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
-    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
+    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', { i18nKey: 'data-updated-file' })
+    await propagateDataUpdatedToVirtualParents(patchedDataset, 'data-fair-worker', { i18nKey: 'data-updated-file' })
+
+    // reuse the canonical compatibility check (strips innocuous props like description/title/enum)
+    // so this path matches the router PATCH behaviour.
+    if (!datasetUtils.schemasFullyCompatible(datasetFull.schema, patchedDataset.schema, true)) {
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'structure-updated', { extra: { patch: 'schema' } })
+    }
+
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
       const breakingChangesDesc = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
@@ -725,11 +737,12 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
         a[locale] = { breakingChanges: msg }
         return a
       }, {})
+      const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
       webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { i18nKey, localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
     }
   }
 

@@ -6,7 +6,6 @@ import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
@@ -14,7 +13,7 @@ import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import * as notifications from '../misc/utils/notifications.ts'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs, trimApplication } from './operations.ts'
@@ -222,7 +221,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id } as Event)
-  await sendResourceEvent('applications', application, ctx.sessionState, 'application-created')
+  await notifications.sendResourceEvent('applications', application, ctx.sessionState, 'application-created')
   return application
 }
 
@@ -234,7 +233,7 @@ export const tryInsertApplication = async (ctx: ApplicationWriteContext, newAppl
     eventsLog.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
 
     await journals.log('applications', newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id } as Event)
-    await sendResourceEvent('applications', newApplication, ctx.sessionState, 'application-created')
+    await notifications.sendResourceEvent('applications', newApplication, ctx.sessionState, 'application-created')
 
     return true
   } catch (err: any) {
@@ -259,7 +258,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   if (!isNew) {
     eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
     const sessionState = ctx.sessionState
-    eventsQueue.pushEvent({
+    await notifications.send({
       title: 'Application entièrement modifiée',
       body: `${newApplication.title} (${newApplication.slug})`,
       topic: {
@@ -312,7 +311,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   eventsLog.info('df.applications.patch', `patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { ...ctx.logCtx, account: patchedApplication!.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: 'Propriétés modifiées sur une application',
     body: `${application.title} (${application.slug}), ${Object.keys(patch)?.join(', ')}`,
     topic: {
@@ -387,8 +386,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
     resource: { type: 'application', title: application.title, id: application.id },
     sender: { ...application.owner, role: 'admin' }
   }
-  eventsQueue.pushEvent(event, sessionState)
-  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
+  await notifications.send(event, sessionState)
+  await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncDatasets(patchedApp)
   return patchedApp! as Application
@@ -414,7 +413,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: "Suppression d'une application",
     body: `${application.title} (${application.slug})`,
     topic: {
@@ -534,7 +533,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
   eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: "Définition d'une clé de protection d'application",
     body: `${application.title} (${application.slug})`,
     topic: {

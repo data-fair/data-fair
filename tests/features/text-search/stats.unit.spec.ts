@@ -79,6 +79,73 @@ test('no terms means no counting at all', async () => {
   assert.equal(c.calls.filter(x => x[0] === 'count').length, 0)
 })
 
+// every "$..." field path an $avg expression reads, whatever expression wraps it
+const avgReadPaths = (expr: any): string[] => {
+  if (typeof expr === 'string') return expr.startsWith('$') ? [expr] : []
+  if (Array.isArray(expr)) return [...new Set(expr.flatMap(avgReadPaths))]
+  if (expr && typeof expr === 'object') return [...new Set(Object.values(expr).flatMap(avgReadPaths))]
+  return []
+}
+
+// Evaluates a $group stage over in-memory documents, for the only operators averageLengths may
+// use: $avg of a field path, $cond, $gt and literals. Anything else throws, so a pipeline that
+// grows an operator this does not know fails loudly instead of being evaluated wrong.
+const evalGroup = (group: Record<string, any>, docs: any[]) => {
+  const get = (doc: any, path: string) => path.slice(1).split('.').reduce((v, k) => v?.[k], doc)
+  const evalExpr = (expr: any, doc: any): any => {
+    if (typeof expr === 'string' && expr.startsWith('$')) return get(doc, expr)
+    if (expr === null || typeof expr !== 'object') return expr
+    if ('$cond' in expr) return evalExpr(expr.$cond[0], doc) ? evalExpr(expr.$cond[1], doc) : evalExpr(expr.$cond[2], doc)
+    if ('$gt' in expr) {
+      const [a, b] = expr.$gt.map((e: any) => evalExpr(e, doc))
+      // BSON order: null/missing sort before numbers, so they are never > 0
+      return a !== null && a !== undefined && a > b
+    }
+    throw new Error('unsupported expression ' + JSON.stringify(expr))
+  }
+  const row: Record<string, any> = {}
+  for (const [key, acc] of Object.entries(group)) {
+    if (key === '_id') continue
+    // $avg ignores null and missing values, and averages nothing to null
+    const values = docs.map(d => evalExpr(acc.$avg, d)).filter(v => typeof v === 'number')
+    row[key] = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
+  }
+  return row
+}
+
+test('avgLen averages a field over the documents that have it, not over the whole corpus', async () => {
+  // Every indexed document stores _len.<field> = 0 for the fields it lacks. Counting those zeros
+  // makes a rarely-filled field look short on average, and BM25 then penalises every hit in it
+  // as if the field were far longer than usual: one 3-term searchTerms among 12 datasets averaged
+  // 0.25, and the weight-3 field lost to a weight-1 description.
+  const docs = [
+    { _len: { title: 4, description: 10 } },
+    { _len: { title: 6, description: 0 } },
+    { _len: { title: 2, description: 0 } },
+    { _len: { title: 0, description: 20 } },
+    // a document never indexed at all carries no _len; it must not count either
+    {}
+  ]
+  const c = {
+    estimatedDocumentCount: async () => docs.length,
+    countDocuments: async () => 1,
+    aggregate: (pipeline: any[]) => ({ toArray: async () => [evalGroup(pipeline.find(s => s.$group).$group, docs)] })
+  }
+  const stats = await createStatsProvider(c, def).get(['charg'])
+  assert.deepEqual(stats.avgLen, { title: 4, description: 15 })
+})
+
+test('avgLen falls back to 1 for a field no document has', async () => {
+  const docs = [{ _len: { title: 4, description: 0 } }, { _len: { title: 6, description: 0 } }]
+  const c = {
+    estimatedDocumentCount: async () => docs.length,
+    countDocuments: async () => 1,
+    aggregate: (pipeline: any[]) => ({ toArray: async () => [evalGroup(pipeline.find(s => s.$group).$group, docs)] })
+  }
+  const stats = await createStatsProvider(c, def).get(['charg'])
+  assert.deepEqual(stats.avgLen, { title: 5, description: 1 })
+})
+
 test('aggregation pipeline uses sanitised field keys (no dots in $group output)', async () => {
   const captured: { pipeline: any[] | null } = { pipeline: null }
   const collectionWithCapture = {
@@ -116,10 +183,10 @@ test('aggregation pipeline uses sanitised field keys (no dots in $group output)'
   // Verify $avg read paths are sanitised — this catches regressions in the pipeline builder
   // The fake collection ignores the pipeline, so we must assert on the pipeline itself
   // Non-dotted field: description reads from $_len.description
-  assert.equal(groupStage.$group.description.$avg, '$_len.description', 'non-dotted field read path: $_len.description')
+  assert.deepEqual(avgReadPaths(groupStage.$group.description.$avg), ['$_len.description'], 'non-dotted field read path: $_len.description')
   // Dotted fields read from sanitised paths: topics.title -> $_len.topics_title, owner.name -> $_len.owner_name
-  assert.equal(groupStage.$group.topics_title.$avg, '$_len.topics_title', 'dotted field read path: topics.title -> $_len.topics_title (sanitised)')
-  assert.equal(groupStage.$group.owner_name.$avg, '$_len.owner_name', 'dotted field read path: owner.name -> $_len.owner_name (sanitised)')
+  assert.deepEqual(avgReadPaths(groupStage.$group.topics_title.$avg), ['$_len.topics_title'], 'dotted field read path: topics.title -> $_len.topics_title (sanitised)')
+  assert.deepEqual(avgReadPaths(groupStage.$group.owner_name.$avg), ['$_len.owner_name'], 'dotted field read path: owner.name -> $_len.owner_name (sanitised)')
 
   // Verify the round-trip: sanitised $group output is read back under original dotted keys
   // Non-dotted field: 'description' -> 'description'

@@ -22,6 +22,26 @@ export function isDepartmentSettings (settings: Settings | DepartmentSettings): 
   return !!(settings as DepartmentSettings).department
 }
 
+type WebhookEvents = { events?: string[] }
+
+// Strip event types that were removed from the webhooks `oneOf`: a stored value outside the closed
+// list fails validation on every later write of the whole settings document. A webhook left with
+// no event is dropped rather than kept empty: an empty list means "every event" to webhooks.trigger
+// (and fails minItems). Returns null when nothing changes, so callers can skip the write.
+export function removeWebhookEvents<W extends WebhookEvents> (webhooks: W[] | undefined, removed: string[]): W[] | null {
+  if (!webhooks?.some(w => w.events?.some(e => removed.includes(e)))) return null
+  const result: W[] = []
+  for (const webhook of webhooks) {
+    if (!webhook.events?.some(e => removed.includes(e))) {
+      result.push(webhook)
+      continue
+    }
+    const events = webhook.events.filter(e => !removed.includes(e))
+    if (events.length) result.push({ ...webhook, events })
+  }
+  return result
+}
+
 export function cleanSettings (settings: Settings | DepartmentSettings) {
   if (settings.apiKeys) {
     for (const apiKey of settings.apiKeys) {

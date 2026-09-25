@@ -12,6 +12,7 @@ import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters } from '../src/datasets/es/commons.ts'
 import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
+import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -322,6 +323,20 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
+  filterParams.push({
+    in: 'query',
+    name: 'date_match',
+    description: `
+  Filtre temporel sur les colonnes portant les concepts de date (date, date de début, date de fin).
+
+  Une date "YYYY-MM-DD" restreint aux lignes couvrant ce jour ; deux dates séparées par une virgule "YYYY-MM-DD,YYYY-MM-DD" restreignent aux lignes dont la période chevauche cet intervalle. Les dates-heures ISO sont acceptées.
+    `,
+    schema: {
+      title: 'Filtre temporel',
+      type: 'string'
+    }
+  })
+
   /** Returns the common pagination/sort/select parameters shared by routes that return hits or aggregations. */
   const hitsParams = (defaultSize = 12, maxSize = 10000, method?: string): any[] => {
     let sortItems: string[] = []
@@ -368,7 +383,9 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
         type: 'array',
         items: {
           type: 'string',
-          enum: sortItems.length ? sortItems : undefined
+          // The list is only complete with the dataset's own column keys appended; on the sample
+          // dataset (merged root document) it would forbid the column keys the description allows.
+          enum: sortItems.length && !isSampleDataset ? sortItems : undefined
         }
       },
       style: 'form',
@@ -584,6 +601,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       {
         in: 'query',
+        name: 'maxCardinality',
+        description: 'Restreindre aux colonnes dont le nombre de valeurs distinctes (cardinalité) est inférieur ou égal à la valeur fournie.\n\n' +
+          'Sans filtre sur les données, la cardinalité considérée est celle du jeu de données complet (calculée lors de la finalisation).\n\n' +
+          'Si la requête contient au moins un filtre sur les données (filtres sur colonnes de la forme `ma_colonne_eq`, `ma_colonne_in`, recherche `q` ou `qs`, filtre `bbox`), la cardinalité est recalculée dans le contexte de ces filtres : une colonne dont la cardinalité globale dépasse la limite peut apparaître si elle descend sous la limite une fois les lignes filtrées.\n\n' +
+          '*Non applicable sur `/safe-schema`, qui n\'expose pas la cardinalité.*',
+        required: false,
+        schema: {
+          title: 'Cardinalité maximale',
+          type: 'integer',
+          minimum: 0
+        }
+      },
+      {
+        in: 'query',
         name: 'calculated',
         description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
           'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +
@@ -642,6 +673,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       }
     },
     security: [],
+    'x-agent': xAgentRoot,
     servers,
     paths: {
       '/': {
@@ -649,6 +681,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lire les informations',
           description: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
+          'x-agent': xAgent.readDescription,
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
           responses: {
@@ -669,12 +702,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lire les lignes',
           description: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
+          'x-agent': xAgent.readLines,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'after',
-            description: 'Pagination en profondeur.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*',
+            description: "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*",
             schema: {
               title: 'Pagination en profondeur',
               type: 'integer'
@@ -743,7 +777,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       },
                       next: {
                         type: 'string',
-                        description: 'URL pour continuer la pagination.'
+                        description: 'URL complète pour obtenir la page suivante de la même requête (mêmes filtres, tri et colonnes).'
                       }
                     }
                   }
@@ -770,6 +804,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Lister les valeurs distinctes',
           description: "Récupérer la liste des valeurs distinctes d'une colonne.",
           operationId: 'getValues',
+          'x-agent': xAgent.getValues,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
@@ -870,6 +905,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           summary: 'Agréger les valeurs',
           description: 'Récupérer des informations agrégées en fonction des valeurs de colonnes.',
           operationId: 'getValuesAgg',
+          'x-agent': xAgent.getValuesAgg,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
@@ -971,6 +1007,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Calculer une métrique',
           description: 'Calculer une métrique sur une colonne.',
           operationId: 'getMetricAgg',
+          'x-agent': xAgent.getMetricAgg,
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [
