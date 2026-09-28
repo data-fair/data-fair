@@ -9,7 +9,8 @@
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { fillableColumns, addLineDialogPrecondition } from '../../../ui/src/composables/dataset/agent-edit-line-logic.ts'
+import { untilStable } from '../../../ui/src/composables/agent/utils-logic.ts'
+import { fillableColumns, addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult, describeLine } from '../../../ui/src/composables/dataset/agent-edit-line-logic.ts'
 
 const updatedAt = { 'x-calculated': true, key: '_updatedAt', type: 'string', title: 'Date de mise à jour' }
 const nom = { key: 'nom', type: 'string', title: 'Nom' }
@@ -44,5 +45,74 @@ test.describe('addLineDialogPrecondition', () => {
 
   test('refuses on no schema at all', () => {
     assert.ok(addLineDialogPrecondition(undefined))
+  })
+})
+
+test.describe('line dialog opener results', () => {
+  test('recognise the form subagent in a modelContext tool list', () => {
+    assert.equal(hasLineFormSubAgent([{ name: 'open_add_line_dialog' }, { name: 'subagent_editLine_form' }]), true)
+    assert.equal(hasLineFormSubAgent([{ name: 'open_add_line_dialog' }]), false)
+    // listTools() is synchronous on the frame server; anything else is not ready.
+    assert.equal(hasLineFormSubAgent(undefined), false)
+    assert.equal(hasLineFormSubAgent(Promise.resolve([])), false)
+  })
+
+  test('a ready form sends the model straight to the subagent, not into a wait', () => {
+    // A wait on the dialog's own opening stalled a real session: the event was
+    // delivered inside this very result, leaving the wait nothing to resolve on.
+    for (const mode of ['add', 'edit'] as const) {
+      const text = lineDialogOpenedResult(mode, true)
+      assert.match(text, /delegate to the editLine_form subagent now/)
+      assert.match(text, /declare wait_for_user_action: the save reports itself/)
+      assert.ok(!/not in the tool list|dialog will report itself/.test(text), text)
+    }
+  })
+
+  test('a form still loading says so and offers a re-check', () => {
+    assert.match(lineDialogOpenedResult('add', false), /not available yet\. Call open_add_line_dialog again/)
+    assert.match(lineDialogOpenedResult('edit', false), /open_edit_line_dialog with the same lineId again/)
+    assert.ok(!/delegate/.test(lineDialogOpenedResult('add', false)))
+  })
+})
+
+test.describe('the edit opener names the line it opened', () => {
+  // A judged run opened the edit dialog on the line it had just created — the one
+  // _id in its context — instead of the one to correct, and the result gave no
+  // sign of it. Only the model's own second look saved the wrong record.
+  const schema = [updatedAt, nom, { key: 'montant', type: 'number', title: 'Montant' }]
+
+  test('describes a line by its fillable columns, not the system ones', () => {
+    assert.equal(describeLine(schema, { _id: 'dem-2', _updatedAt: '2026-01-01', nom: 'Club de judo du centre', montant: 12000 }),
+      'nom: Club de judo du centre, montant: 12000')
+  })
+
+  test('shortens long values and skips empty ones', () => {
+    const text = describeLine(schema, { nom: 'x'.repeat(200), montant: null })
+    assert.ok(text.startsWith('nom: xxx'), text)
+    assert.ok(text.length < 100, text)
+    assert.ok(!text.includes('montant'), text)
+  })
+
+  test('the ready edit result carries the description', () => {
+    const text = lineDialogOpenedResult('edit', true, 'nom: Club de judo du centre')
+    assert.match(text, /on the line nom: Club de judo du centre/)
+    assert.match(text, /delegate to the editLine_form subagent now/)
+  })
+})
+
+test.describe('untilStable', () => {
+  test('resolves once the value has stopped changing for the quiet window', async () => {
+    let n = 0
+    const start = Date.now()
+    await untilStable(() => String(n < 3 ? ++n : n), 100, 2000, 20)
+    assert.equal(n, 3)
+    assert.ok(Date.now() - start < 1000)
+  })
+
+  test('gives up at the cap on a value that never settles', async () => {
+    let n = 0
+    const start = Date.now()
+    await untilStable(() => String(++n), 100, 300, 20)
+    assert.ok(Date.now() - start >= 280)
   })
 })

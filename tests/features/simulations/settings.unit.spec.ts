@@ -11,21 +11,26 @@ import { bridgeSettings, MODEL_ROLES, OWNER } from '../../../simulations/runner/
 
 test.describe('bridge provider settings', () => {
   test('declares the provider openai-compatible in compatible mode', () => {
-    const settings = bridgeSettings('sonnet', 'haiku')
-    assert.equal(settings.providers.length, 1)
-    assert.equal(settings.providers[0].type, 'openai-compatible')
+    const { superadmin } = bridgeSettings('sonnet', 'haiku')
+    assert.equal(superadmin.providers.length, 1)
+    assert.equal(superadmin.providers[0].type, 'openai-compatible')
     // Mandatory. In 'default' mode createModel targets /v1/responses, which the
     // bridge does not implement, so every case dies on its first turn.
-    assert.equal(settings.providers[0].compatibility, 'compatible')
+    assert.equal(superadmin.providers[0].compatibility, 'compatible')
   })
 
-  test('fills every model role, so none falls back at the first tool call', () => {
-    const settings = bridgeSettings('sonnet', 'haiku')
-    // A role left unset has no provider, and the run fails at the first tool
-    // call or summarisation rather than at setup, where it would be diagnosable.
+  test('maps every model role, so none falls back to the deployment default', () => {
+    const { superadmin, org } = bridgeSettings('sonnet', 'haiku')
+    // An unmapped role falls back to the global default model, not the bridge,
+    // and the run fails at the first tool call or summarisation rather than at
+    // setup, where it would be diagnosable.
     for (const role of MODEL_ROLES) {
-      assert.ok(settings.models[role].model.id, `role ${role}`)
-      assert.equal(settings.models[role].model.provider.id, 'bridge', `role ${role}`)
+      const ref = org.modelMapping[role]
+      assert.equal(ref.provider, 'bridge', `role ${role}`)
+      // The agents API refuses a mapping to a model its catalog does not offer
+      // for that role.
+      const entry = superadmin.models.find(m => m.model.id === ref.id)
+      assert.ok(entry?.usage.includes(role), `role ${role}`)
     }
   })
 
@@ -34,29 +39,38 @@ test.describe('bridge provider settings', () => {
     // roles a deployment puts on a small model. Running them on the assistant's
     // model costs more per case and hides the failures a real user would hit —
     // a sub-agent prompt only a large model can follow still reads as working.
-    const settings = bridgeSettings('sonnet', 'haiku')
-    assert.equal(settings.models.assistant.model.id, 'sonnet')
-    assert.equal(settings.models.tools.model.id, 'haiku')
-    assert.equal(settings.models.summarizer.model.id, 'haiku')
-    assert.equal(settings.models.moderator.model.id, 'haiku')
+    const { org } = bridgeSettings('sonnet', 'haiku')
+    assert.equal(org.modelMapping.assistant.id, 'sonnet')
+    assert.equal(org.modelMapping.tools.id, 'haiku')
+    assert.equal(org.modelMapping.summarizer.id, 'haiku')
+    assert.equal(org.modelMapping.moderator.id, 'haiku')
   })
 
   test('leaves the evaluator on the assistant model, being a review role and not part of a run', () => {
-    assert.equal(bridgeSettings('sonnet', 'haiku').models.evaluator.model.id, 'sonnet')
+    assert.equal(bridgeSettings('sonnet', 'haiku').org.modelMapping.evaluator.id, 'sonnet')
+  })
+
+  test('lists one catalog entry per model, even when both roles share it', () => {
+    assert.equal(bridgeSettings('sonnet', 'haiku').superadmin.models.length, 2)
+    const [only] = bridgeSettings('sonnet', 'sonnet').superadmin.models
+    assert.equal(bridgeSettings('sonnet', 'sonnet').superadmin.models.length, 1)
+    assert.deepEqual([...only.usage].sort(), [...MODEL_ROLES].sort())
   })
 
   test('prices the run at zero and stores no traces', () => {
-    const settings = bridgeSettings('sonnet', 'haiku')
-    assert.equal(settings.models.assistant.inputPricePerMillion, 0)
-    assert.equal(settings.models.assistant.outputPricePerMillion, 0)
-    assert.equal(settings.storeTraces, false)
+    const { superadmin, org } = bridgeSettings('sonnet', 'haiku')
+    for (const entry of superadmin.models) {
+      assert.equal(entry.inputPricePerMillion, 0)
+      assert.equal(entry.outputPricePerMillion, 0)
+    }
+    assert.equal(org.storeTraces, false)
   })
 
   test('gives the admin role unlimited quota', () => {
     // Simulations run as test_user1, an admin of test_org1. A quota-limited
     // admin role would fail a long case partway through and look like a product
     // failure in the transcript.
-    assert.equal(bridgeSettings('sonnet', 'haiku').quotas.admin.unlimited, true)
+    assert.equal(bridgeSettings('sonnet', 'haiku').org.quotas.admin.unlimited, true)
   })
 
   test('targets a test owner, so clean() can reset it', () => {

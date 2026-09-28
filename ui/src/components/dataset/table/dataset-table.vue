@@ -475,7 +475,9 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import { addLineDialogPrecondition } from '../../../composables/dataset/agent-edit-line-logic'
+import { addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult, describeLine } from '../../../composables/dataset/agent-edit-line-logic'
+import { agentToolError } from '~/composables/agent/utils'
+import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
@@ -586,7 +588,7 @@ const dataEntryContext = computed(() => {
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
     'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id. The editLine_form subagent becomes available on the turn after the dialog opens; end your reply and delegate to it then.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id and delegate to the editLine_form subagent it makes available.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -658,6 +660,12 @@ if (edit) {
     valid: !!lineDialog.value?.valid
   }))
 
+  // The openers return only once the dialog's form subagent is registered: the chat
+  // offers a tool registered while a host tool runs on its very next step, so the
+  // model can delegate straight away (see lineDialogOpenedResult). Registration
+  // waits on the form's schema and layout, hence the bounded poll.
+  const untilLineFormRegistered = () => untilReady(() => hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+
   useAgentTool({
     name: 'open_add_line_dialog',
     description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
@@ -672,11 +680,7 @@ if (edit) {
       const refusal = addLineDialogPrecondition(dataset.value?.schema)
       if (refusal) return refusal
       addLineTrigger.value = true
-      // Neither "you can now delegate" (false for this request — a judged run took it
-      // literally and burned a turn on a junk dispatch to reach one where it was true)
-      // nor "finish your reply and pick it up next turn", which deadlocked three runs:
-      // the person was waiting to be told a button was ready, so no next turn came.
-      return 'Add line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to fill the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
+      return lineDialogOpenedResult('add', await untilLineFormRegistered())
     }
   })
 
@@ -692,8 +696,18 @@ if (edit) {
       required: ['lineId'] as const
     },
     execute: async (params: { lineId: string }) => {
+      // Fetched here, not only by the dialog's watcher, so an unknown _id is refused
+      // instead of reading as a form that is still loading.
+      let line: DatasetLine
+      try {
+        line = await $fetch(`datasets/${datasetId}/lines/${encodeURIComponent(params.lineId)}`)
+      } catch (err: any) {
+        return agentToolError('open_edit_line_dialog', `no line with _id "${params.lineId}" could be read (${err?.statusCode ?? err?.status ?? err?.message}). search_data returns each row's _id when \`_id\` is in its \`select\`.`)
+      }
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. The editLine_form subagent registers with the dialog, so it is not in the tool list of this request yet: declare wait_for_user_action and the dialog will report itself, waking you with the subagent available — then delegate to it to modify the form. When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action again: the save reports itself, so you learn of it without asking them to say so.'
+      // The form may still be registered for a line opened before, so wait for this one.
+      const ready = await untilReady(() => loadedLineId.value === params.lineId && hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+      return lineDialogOpenedResult('edit', ready, describeLine(dataset.value?.schema, line))
     }
   })
 }
@@ -763,10 +777,16 @@ const closeMapPreview = () => {
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 
 const showEditDialog = ref<ExtendedResult>()
+// The line whose data is in the form. Not editedLine._id: the form's v-model
+// rewrites editedLine with the schema's keys only.
+const loadedLineId = ref<string>()
 watch(showEditDialog, async () => {
   editedLine.value = undefined
+  loadedLineId.value = undefined
   if (!showEditDialog.value) return
-  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`, { params: { arrays: true } })
+  const lineId = showEditDialog.value._id
+  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${lineId}`, { params: { arrays: true } })
+  loadedLineId.value = lineId
   // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined
 })

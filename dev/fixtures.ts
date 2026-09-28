@@ -23,19 +23,25 @@ const creds = { email: 'alban.mouton@koumoul.com', password: 'passwd', directory
 
 // Mock-provider settings: the mock model needs no API key, so the dev env can
 // use the back-office AI assistant with zero external configuration.
+// Two bodies since the agents API split settings by author: the provider and its
+// model catalog (superadmin), then which model each role uses and the quotas
+// (org admin, validated against that catalog, so written second).
 const agentSettings = {
   providers: [
     { id: 'mock-provider', type: 'mock', name: 'Mock Provider', enabled: true }
   ],
-  models: {
-    assistant: {
-      model: { id: 'mock-model', name: 'Mock Model', provider: { type: 'mock', name: 'Mock Provider', id: 'mock-provider' } },
-      inputPricePerMillion: 0,
-      outputPricePerMillion: 0
-    }
+  models: [{
+    model: { id: 'mock-model', name: 'Mock Model', provider: { type: 'mock', name: 'Mock Provider', id: 'mock-provider' } },
+    usage: ['assistant'],
+    inputPricePerMillion: 0,
+    outputPricePerMillion: 0
+  }]
+}
+const agentOrgSettings = {
+  modelMapping: {
+    assistant: { provider: 'mock-provider', id: 'mock-model', name: 'Mock Model' }
   },
   quotas: {
-    global: { unlimited: true, monthlyLimit: 0 },
     admin: { unlimited: true, monthlyLimit: 0 },
     contrib: { unlimited: false, monthlyLimit: 100 },
     user: { unlimited: false, monthlyLimit: 50 },
@@ -941,6 +947,7 @@ async function main () {
   dfAdminAx = await axiosAuth({ ...creds, org: 'dev_fixtures', adminMode: true, axiosOpts: { baseURL: dfBaseURL } })
 
   await agentsAx.put('/agents/api/settings/organization/dev_fixtures', agentSettings)
+  await agentsAx.put('/agents/api/settings/organization/dev_fixtures/org', agentOrgSettings)
   console.log('agent settings written (mock provider) for organization/dev_fixtures')
 
   // activate the AI assistant on the data-fair org settings (the agentChat flag

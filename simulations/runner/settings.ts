@@ -28,11 +28,7 @@ const provider = {
   compatibility: 'compatible'
 }
 
-// Defined inline rather than imported from a test helper: a static import of
-// those would authenticate at module load, making the unit suite do network I/O
-// before any test runs.
 const quotas = {
-  global: { unlimited: false, monthlyLimit: 10 },
   admin: { unlimited: true, monthlyLimit: 0 },
   contrib: { unlimited: false, monthlyLimit: 0 },
   user: { unlimited: false, monthlyLimit: 0 },
@@ -51,22 +47,34 @@ const quotas = {
  */
 const BACKGROUND_ROLES = ['tools', 'summarizer', 'moderator'] as const
 
+/**
+ * The two bodies the agents API takes since settings were split by author:
+ * `superadmin` (the provider and the model catalog, each model listing the
+ * roles it may serve) and `org` (which model each role uses, quotas, traces).
+ * The org body is validated against the catalog, so it is written second.
+ */
 export function bridgeSettings (assistantModelId: string, toolsModelId: string) {
   const bridge = { type: 'openai-compatible', id: 'bridge', name: 'Claude Code Bridge' }
-  const asRole = (id: string) => ({
-    model: { id, name: id, provider: bridge },
-    inputPricePerMillion: 0,
-    outputPricePerMillion: 0
-  })
-  const assistant = asRole(assistantModelId)
-  const background = asRole(toolsModelId)
+  const modelFor = (role: typeof MODEL_ROLES[number]) =>
+    (BACKGROUND_ROLES as readonly string[]).includes(role) ? toolsModelId : assistantModelId
+  const ids = [...new Set(MODEL_ROLES.map(modelFor))]
   return {
-    providers: [provider],
-    models: Object.fromEntries(
-      MODEL_ROLES.map(r => [r, (BACKGROUND_ROLES as readonly string[]).includes(r) ? background : assistant])
-    ) as Record<typeof MODEL_ROLES[number], typeof assistant>,
-    quotas,
-    storeTraces: false
+    superadmin: {
+      providers: [provider],
+      models: ids.map(id => ({
+        model: { id, name: id, provider: bridge },
+        usage: MODEL_ROLES.filter(role => modelFor(role) === id),
+        inputPricePerMillion: 0,
+        outputPricePerMillion: 0
+      }))
+    },
+    org: {
+      modelMapping: Object.fromEntries(
+        MODEL_ROLES.map(role => [role, { provider: bridge.id, id: modelFor(role), name: modelFor(role) }])
+      ) as Record<typeof MODEL_ROLES[number], { provider: string, id: string, name: string }>,
+      quotas,
+      storeTraces: false
+    }
   }
 }
 
@@ -82,7 +90,9 @@ export async function seedSettings (assistantModelId: string, toolsModelId: stri
   // authenticating side effect at load, it just isn't needed there.
   const { axiosAuth } = await import('../../tests/support/axios.ts')
   const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
-  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, bridgeSettings(assistantModelId, toolsModelId))
+  const { superadmin, org } = bridgeSettings(assistantModelId, toolsModelId)
+  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, superadmin)
+  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}/org`, org)
   // PATCH merges, so it preserves the owner's other settings.
   await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, { agentChat: true })
 }
