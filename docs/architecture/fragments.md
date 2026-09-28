@@ -457,8 +457,9 @@ permission model on the client, it is purely presentational.
   or sharing, which a fragment gets through its parent: the whole Share section (permissions, API
   key / protected links, portals, catalogs, embed snippets), the Attachments tab, the reference-data
   tab (refused by the API anyway), the dataset's Applications tab, the Fragments tab (one level
-  only), and the catalog fields of the metadata form: only title, summary and description remain
-  (plus the functional `attachmentsAsImage` checkbox on datasets).
+  only), and the catalog fields of the metadata form: only title and summary remain
+  (plus the functional `attachmentsAsImage` checkbox on datasets), a fragment being described by
+  its parent.
 - **`fragments-list.vue`**, rendered as a discreet **Fragments tab** — in the Structure section of a
   dataset, just before the "Jeu de données virtuel" tab, and in the Render section of an application,
   after the configuration tab. Fragments appear in no listing, so this is the one place they are

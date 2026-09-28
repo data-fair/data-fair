@@ -42,6 +42,7 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#structure').getByRole('tab', { name: 'Fragments' })).toHaveCount(0)
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes/ })).toHaveCount(0)
     await expect(page.locator('#metadata').getByLabel('Licence')).toHaveCount(0)
+    await expect(page.locator('#metadata').getByText('Description', { exact: true })).toHaveCount(0)
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 
@@ -131,6 +132,8 @@ test.describe('fragments UI', () => {
     await pastActiveAccountGate(page, fragmentsTab)
     await fragmentsTab.click()
     await expect(page.locator('#structure').getByText('dataset1').first()).toBeVisible({ timeout: 15000 })
+    // unlike its fragments, the parent has a description
+    await expect(page.locator('#metadata').getByText('Description', { exact: true }).first()).toBeVisible()
     await page.locator('#danger-zone').getByRole('button', { name: /Supprimer le jeu de données/ }).click()
     await expect(page.getByText(/1 fragment/)).toBeVisible()
     await page.getByRole('button', { name: /Détacher d'abord/ }).click()
