@@ -22,28 +22,6 @@
       </template>
     </df-section-tabs>
 
-    <!-- Fragments section: fragments are hidden from every listing, this is where they are found -->
-    <df-section-tabs
-      v-if="sections.fragments"
-      id="fragments"
-      :title="sections.fragments.title"
-      :subtitle="sections.fragments.subtitle"
-      :svg="fragmentsSvg"
-    >
-      <template #windows>
-        <fragments-list
-          :part-of="{ type: 'dataset', id: dataset.id }"
-          :fragments="fragments"
-          :has-more="hasMoreFragments"
-          :sources="dataset.isVirtual ? (dataset.virtual?.children ?? []) : null"
-          :can-add-source="can('writeDescriptionBreaking').value && !structureHasRealDiff"
-          :adding-source="addFragmentToSources.loading.value ? addingSourceId : null"
-          @load-more="loadMoreFragments"
-          @add-source="(fragmentId: string) => { addingSourceId = fragmentId; addFragmentToSources.execute(fragmentId) }"
-        />
-      </template>
-    </df-section-tabs>
-
     <!-- Structure section -->
     <df-section-tabs
       v-if="sections.structure"
@@ -127,6 +105,34 @@
             :server-rest="structureEditFetch.serverData.value?.rest"
             :dataset="structureEditFetch.data.value"
             @update:rest="r => { if (structureEditFetch.data.value) structureEditFetch.data.value.rest = r }"
+          />
+        </v-tabs-window-item>
+
+        <!-- fragments are hidden from every listing, this is where they are found -->
+        <v-tabs-window-item value="fragments">
+          <df-tutorial-alert
+            id="dataset-fragments"
+            persistent
+          >
+            <p class="mb-2">
+              {{ t('fragmentsTutorial1') }}
+            </p>
+            <p class="mb-2">
+              {{ t('fragmentsTutorial2') }}
+            </p>
+            <p>
+              {{ t('fragmentsTutorial3') }}
+            </p>
+          </df-tutorial-alert>
+          <fragments-list
+            :part-of="{ type: 'dataset', id: dataset.id }"
+            :fragments="fragments"
+            :has-more="hasMoreFragments"
+            :sources="dataset.isVirtual ? (dataset.virtual?.children ?? []) : null"
+            :can-add-source="can('writeDescriptionBreaking').value && !structureHasRealDiff"
+            :adding-source="addFragmentToSources.loading.value ? addingSourceId : null"
+            @load-more="loadMoreFragments"
+            @add-source="(fragmentId: string) => { addingSourceId = fragmentId; addFragmentToSources.execute(fragmentId) }"
           />
         </v-tabs-window-item>
 
@@ -679,7 +685,9 @@ fr:
   constraints: Contraintes
   attachments: Pièces jointes
   fragments: Fragments
-  fragmentsSubtitle: Ressources rattachées à ce jeu de données. Elles n'apparaissent dans aucune liste, elles sont supprimées avec lui.
+  fragmentsTutorial1: "Un fragment est un jeu de données qui n'existe que pour alimenter ce jeu de données virtuel. Par exemple une source par territoire ou par période, préparée séparément puis rassemblée ici."
+  fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que ce jeu de données virtuel et en héritent les droits de modification, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec lui."
+  fragmentsTutorial3: "Un nouveau fragment n'est pas utilisé tout de suite. Ajoutez-le aux sources quand il est prêt."
   fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
@@ -750,7 +758,9 @@ en:
   constraints: Constraints
   attachments: Attachments
   fragments: Fragments
-  fragmentsSubtitle: Resources attached to this dataset. They appear in no listing and are deleted with it.
+  fragmentsTutorial1: "A fragment is a dataset that only exists to feed this virtual dataset. For example one source per territory or per period, prepared separately then gathered here."
+  fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this virtual dataset and inherit its edit permissions, they are neither shared nor published on their own, and they are deleted with it."
+  fragmentsTutorial3: "A new fragment is not used right away. Add it to the sources when it is ready."
   fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
@@ -816,11 +826,10 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
-import fragmentsSvg from '~/assets/svg/Data Center 1_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFileTree, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -1209,15 +1218,6 @@ const sections = computedDeepDiff(() => {
     agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
-  // Fragments section, right after the informations: the only way to reach resources hidden from every listing
-  if (!d.partOf && (d.isVirtual || nbFragments.value)) {
-    result.fragments = {
-      title: t('fragments'),
-      subtitle: t('fragmentsSubtitle'),
-      agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. A "new fragment" button creates one.'
-    }
-  }
-
   // Structure section (new)
   if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
     const structureTabs: any[] = [{
@@ -1252,6 +1252,16 @@ const sections = computedDeepDiff(() => {
         icon: mdiAllInclusive,
         color: restHasDiff.value ? 'accent' : undefined,
         agentDesc: 'Settings specific to REST datasets: row history (revisions), per-row TTL (auto-deletion after N days), history TTL, and whether to track the user who last updated each row.'
+      })
+    }
+
+    // fragments are hidden from every listing, this tab is where they are found
+    if (!d.partOf && (d.isVirtual || nbFragments.value)) {
+      structureTabs.push({
+        key: 'fragments',
+        title: t('fragments'),
+        icon: mdiFileTree,
+        agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }
 

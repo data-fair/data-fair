@@ -39,7 +39,7 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#metadata').getByRole('textbox', { name: 'Titre' })).toBeVisible()
     // shared, published and catalogued through its parent only
     await expect(page.locator('#share')).toHaveCount(0)
-    await expect(page.locator('#fragments')).toHaveCount(0)
+    await expect(page.locator('#structure').getByRole('tab', { name: 'Fragments' })).toHaveCount(0)
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes/ })).toHaveCount(0)
     await expect(page.locator('#metadata').getByLabel('Licence')).toHaveCount(0)
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
@@ -53,18 +53,21 @@ test.describe('fragments UI', () => {
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.virtual.children, { timeout: 10000 }).toEqual([fragmentId])
     await expect(page.getByText(/pas encore une source/)).toHaveCount(0)
 
-    // the parent's Fragments section tells its sources apart
+    // the parent's Fragments tab tells its sources apart
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
     await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
-    await pastActiveAccountGate(page, page.locator('#fragments'))
-    await expect(page.locator('#fragments').getByText('Source du jeu de données')).toBeVisible({ timeout: 15000 })
+    const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
+    await pastActiveAccountGate(page, fragmentsTab)
+    await fragmentsTab.click()
+    await expect(page.locator('#structure').getByText('Source du jeu de données')).toBeVisible({ timeout: 15000 })
 
-    // added from the parent's Fragments section, the virtual editor of the structure section follows
+    // added from the parent's Fragments tab, the virtual editor of the structure section follows
     const second = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'second fragment', partOf: { type: 'dataset', id: virtualId } })
     await page.reload()
-    await expect(page.locator('#fragments').getByText('Pas encore une source')).toBeVisible({ timeout: 15000 })
-    await page.locator('#fragments').getByRole('button', { name: 'Ajouter aux sources' }).click()
-    await expect(page.locator('#fragments').getByText('Pas encore une source')).toHaveCount(0)
+    await fragmentsTab.click()
+    await expect(page.locator('#structure').getByText('Pas encore une source')).toBeVisible({ timeout: 15000 })
+    await page.locator('#structure').getByRole('button', { name: 'Ajouter aux sources' }).click()
+    await expect(page.locator('#structure').getByText('Pas encore une source')).toHaveCount(0)
     await page.locator('#structure').getByRole('tab', { name: 'Jeu de données virtuel' }).click()
     await expect(page.locator('#structure').getByRole('link', { name: new RegExp(second.id) })).toBeVisible()
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
@@ -124,9 +127,10 @@ test.describe('fragments UI', () => {
 
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
-    await pastActiveAccountGate(page, page.locator('#fragments'))
-    await expect(page.locator('#fragments')).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('#fragments').getByText('dataset1').first()).toBeVisible()
+    const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
+    await pastActiveAccountGate(page, fragmentsTab)
+    await fragmentsTab.click()
+    await expect(page.locator('#structure').getByText('dataset1').first()).toBeVisible({ timeout: 15000 })
     await page.locator('#danger-zone').getByRole('button', { name: /Supprimer le jeu de données/ }).click()
     await expect(page.getByText(/1 fragment/)).toBeVisible()
     await page.getByRole('button', { name: /Détacher d'abord/ }).click()

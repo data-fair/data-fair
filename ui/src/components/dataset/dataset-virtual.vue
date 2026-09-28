@@ -406,7 +406,7 @@ async function addFilter (key: string | null) {
 
 // Initial fetch
 // the children may also change from outside this editor (e.g. a fragment added to the sources from
-// the Fragments section, which refreshes the form): load whichever child is not known yet
+// the Fragments tab, which refreshes the form): load whichever child is not known yet
 watch(() => dataset.value?.virtual?.children?.join(','), () => {
   if ((dataset.value?.virtual?.children ?? []).some((child: string) => !childrenById.value[child])) fetchChildren()
 }, { immediate: true })

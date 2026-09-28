@@ -64,24 +64,6 @@
       </template>
     </df-section-tabs>
 
-    <!-- Fragments section: fragments are hidden from every listing, this is where they are found -->
-    <df-section-tabs
-      v-if="sections.fragments"
-      id="fragments"
-      :title="sections.fragments.title"
-      :subtitle="sections.fragments.subtitle"
-      :svg="fragmentsSvg"
-    >
-      <template #windows>
-        <fragments-list
-          :part-of="{ type: 'application', id: application.id }"
-          :fragments="fragments"
-          :has-more="hasMoreFragments"
-          @load-more="loadMoreFragments"
-        />
-      </template>
-    </df-section-tabs>
-
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -218,6 +200,27 @@
                 sync-params
               />
             </v-card>
+          </v-tabs-window-item>
+
+          <!-- fragments are hidden from every listing, this is where they are found -->
+          <v-tabs-window-item value="fragments">
+            <df-tutorial-alert
+              id="application-fragments"
+              persistent
+            >
+              <p class="mb-2">
+                {{ t('fragmentsTutorial1') }}
+              </p>
+              <p>
+                {{ t('fragmentsTutorial2') }}
+              </p>
+            </df-tutorial-alert>
+            <fragments-list
+              :part-of="{ type: 'application', id: application.id }"
+              :fragments="fragments"
+              :has-more="hasMoreFragments"
+              @load-more="loadMoreFragments"
+            />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -468,7 +471,8 @@ fr:
   info: Informations
   attachments: Pièces jointes
   fragments: Fragments
-  fragmentsSubtitle: Ressources rattachées à cette application. Elles n'apparaissent dans aucune liste, elles sont supprimées avec elle.
+  fragmentsTutorial1: "Un fragment est une ressource qui n'existe que pour servir cette application. Par exemple un jeu de données utilitaire qu'elle affiche, ou une sous-application intégrée dans un tableau de bord."
+  fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que cette application et leurs accès découlent des siens, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec elle."
   datasets: Jeux de données utilisés
   childrenApps: Applications utilisées
   render: Rendu
@@ -517,7 +521,8 @@ en:
   info: Information
   attachments: Attachments
   fragments: Fragments
-  fragmentsSubtitle: Resources attached to this application. They appear in no listing and are deleted with it.
+  fragmentsTutorial1: "A fragment is a resource that only exists to serve this application. For example a utility dataset it displays, or a sub-application embedded in a dashboard."
+  fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this application and their access derives from its own, they are neither shared nor published on their own, and they are deleted with it."
   datasets: Used datasets
   childrenApps: Used applications
   render: Render
@@ -566,14 +571,13 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiFileTree, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import fragmentsSvg from '~/assets/svg/Data Center 1_Monochromatic.svg?raw'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -727,15 +731,6 @@ const sections = computedDeepDiff(() => {
     agentDesc: 'Read-only overview of the application: owner, application model (base app) and version, key dates. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
-  // Fragments section, right after the informations: the only way to reach resources hidden from every listing
-  if (!application.value.partOf) {
-    result.fragments = {
-      title: t('fragments'),
-      subtitle: t('fragmentsSubtitle'),
-      agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.'
-    }
-  }
-
   // Metadata section
   const metadataTabs: any[] = [
     { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → application_summarizer subagent (≤300 char summary); next to the description → application_description_writer subagent (500-2000 char markdown).' },
@@ -752,9 +747,14 @@ const sections = computedDeepDiff(() => {
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons appear in the section header when there are unsaved changes.' }
 
   // Render section
+  const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }]
+  // fragments are hidden from every listing, this tab is where they are found
+  if (!application.value.partOf) {
+    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiFileTree, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })
+  }
   result.render = {
     title: t('render'),
-    tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }],
+    tabs: renderTabs,
     agentDesc: 'Rendered application and entry point to its configuration.'
   }
 
