@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "feat1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [103.5, 0.5]
+      },
+      "properties": {
+        "_id": "prop1",
+        "label": "value1"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "feat2",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [104.5, 1.5]
+      },
+      "properties": {
+        "_id": "prop2",
+        "label": "value2"
+      }
+    }
+  ]
+}

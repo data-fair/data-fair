@@ -1,6 +1,7 @@
 import express from 'express'
 import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.ts'
+import { agentsIndex } from '../../../contract/agents-index.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
@@ -19,6 +20,12 @@ router.get('/api-docs.json', (req, res) => {
   const session = reqSession(req)
   const authenticatedSession = session.user ? (session as Parameters<typeof apiDocs>[1]) : undefined
   res.json(apiDocs(reqPublicBaseUrl(req), authenticatedSession))
+})
+
+// The deployment index agents compose their tool set from; no session, cacheable by anyone.
+router.get('/agents/index.json', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300')
+  res.json(agentsIndex(reqPublicBaseUrl(req), config))
 })
 
 router.get('/vocabulary', async (req, res) => {

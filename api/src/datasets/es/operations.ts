@@ -1,5 +1,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
+import { getCsvSerializer } from '../utils/csv-jit.ts'
+import { getFlattenNoCache, isFlattenIdentity } from '../utils/flatten.ts'
 import capabilities from '../../../contract/capabilities.js'
 
 export interface ExtractedError {
@@ -48,18 +50,38 @@ export const resolveExactKeywordTarget = (prop: any, values: string[]): { field:
   return { impossible: true }
 }
 
-// Existence-check fields. `flagged` = the column actually dropped values (persisted detection). When
-// not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
-// no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
-// sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
+// Whether an `exists` on the column's MAIN field can answer at all. Derived from the emitted mapping
+// (esProperty, defined below) so it cannot drift from it: ES answers `exists` from the inverted index,
+// from doc_values, or from `_field_names` — a field that is neither indexed nor doc-valued (a long-text
+// column with `index` and `values` both off, a geometry-concept column, a disabled object) is in none
+// of them and silently matches nothing. `_id` is the ES metadata field (esProperty returns null).
+const mainFieldAnswersExists = (prop: any): boolean => {
+  const esProp = esProperty(prop, DUMMY_ANALYZERS)
+  if (!esProp) return true
+  if (esProp.enabled === false) return false
+  return esProp.index !== false || esProp.doc_values !== false
+}
+
+// Existence-check fields, empty when nothing in the index can answer (the caller must then refuse the
+// filter). `flagged` = the column actually dropped values over ignore_above (persisted detection).
+// The main keyword field is the fast, exact answer whenever it is queryable AND complete; otherwise we
+// union it with every other length-safe representation, with no reindex: `.wildcard` alone if
+// configured, else the analyzed sub-fields (a > limit value always produces ≥ 1 token). A flagged
+// pure-keyword column has no safe fallback.
 // The analyzed leg is a UNION of both analyzed views (legacy carries `.text_standard`, new-shape
 // only `.text`); ES search clauses silently ignore unmapped fields, so no shape branch is needed.
 export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
-  if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
+  const mainField = mainFieldAnswersExists(prop) ? [prop.key] : []
+  if (mainField.length && !(isLengthLimitedKeyword(prop) && flagged)) return mainField
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
-  const fields = [prop.key]
+  // only plain/uri-reference strings carry the analyzed and case-insensitive sub-fields
+  if (!isLengthLimitedKeyword(prop)) return mainField
+  const fields = [...mainField]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
   if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  // `.keyword_insensitive` is an exact, token-free existence signal, but it carries the same
+  // ignore_above limit as the main field so it can only serve the un-flagged case.
+  if (!flagged && hasCapability(prop, 'insensitive')) fields.push(prop.key + '.keyword_insensitive')
   return fields
 }
 
@@ -84,8 +106,11 @@ export const requiredCapability = (prop: any, filterName: string, capability: st
 /**
  * The single source of truth: maps each filter suffix to the capability it requires.
  * Declared in canonical order (matches OpenAPI doc output). `_search` is any-of (text OR textStandard).
+ * `null` = no capability gate: `_exists`/`_nexists` only need SOME indexed representation of the
+ * column, which is resolveExistsFields' business (a long-text column with the exact-value index
+ * turned off is still existence-filterable through its analyzed sub-field).
  */
-export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
+export const FILTER_CAPABILITIES: Record<string, string | string[] | null> = {
   _eq: 'index',
   _neq: 'index',
   _in: 'index',
@@ -95,8 +120,8 @@ export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
   _gt: 'index',
   _gte: 'index',
   _starts: 'index',
-  _exists: 'index',
-  _nexists: 'index',
+  _exists: null,
+  _nexists: null,
   _contains: 'wildcard',
   _search: ['text', 'textStandard']
 }
@@ -109,7 +134,10 @@ export const getColumnFilters = (prop: any): string[] => {
   const filters: string[] = []
   for (const suffix of Object.keys(FILTER_CAPABILITIES)) {
     const cap = FILTER_CAPABILITIES[suffix]
-    const ok = Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
+    // emptiness of resolveExistsFields does not depend on the flag, only on the mapping
+    const ok = cap === null
+      ? resolveExistsFields(prop, false).length > 0
+      : Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
     if (ok) filters.push(suffix)
   }
   return filters
@@ -203,6 +231,9 @@ export const extractError = (err: any): ExtractedError => {
 export interface IndexShape {
   singleTextField?: boolean
   wordAggField?: boolean
+  // numeric (integer/number) columns carry no `.text_standard` inner field; their `q`
+  // matching goes through the main long/double field (lenient clause, see buildQClauses)
+  noNumericText?: boolean
 }
 
 // The analyzer family is derived from `defaultAnalyzer` by naming convention; all three must be
@@ -219,7 +250,7 @@ export const EXACT_MATCH_BOOST = 0.5
 
 // New shape: one analyzed `.text` per column (indexed original + stem via keyword_repeat, searched
 // on the stem), plus `.words` on textAgg columns.
-export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true })
+export const NEW_INDEX_SHAPE: IndexShape = Object.freeze({ singleTextField: true, wordAggField: true, noNumericText: true })
 // Legacy shape: dual `.text` + `.text_standard`, what every index carries until its next reindex.
 export const LEGACY_INDEX_SHAPE: IndexShape = Object.freeze({})
 
@@ -238,10 +269,12 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const capabilities = prop['x-capabilities'] || {}
   const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
-  // Non-string columns keep `.text_standard` under both shapes; full-text strings lose it under the
-  // new shape, replaced by the single `.text` field emitted below.
+  // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
+  // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
+  // under singleTextField (replaced by the single `.text` field emitted below).
   const innerFields: any = {}
-  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField)) {
+  const isNumeric = prop.type === 'integer' || prop.type === 'number'
+  if (capabilities.textStandard !== false && (!isFullTextString || !shape.singleTextField) && !(isNumeric && shape.noNumericText)) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
     innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
@@ -249,8 +282,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
   const index = capabilities.index !== false
   const values = capabilities.values !== false
   if (prop.type === 'object') esProp = { type: 'object', enabled: index }
-  if (prop.type === 'integer') esProp = { type: 'long', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'number') esProp = { type: 'double', fields: innerFields, index, doc_values: values }
+  const numericFields = Object.keys(innerFields).length ? { fields: innerFields } : {}
+  if (prop.type === 'integer') esProp = { type: 'long', ...numericFields, index, doc_values: values }
+  if (prop.type === 'number') esProp = { type: 'double', ...numericFields, index, doc_values: values }
   if (prop.type === 'boolean') esProp = { type: 'boolean', index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
@@ -326,6 +360,9 @@ export const esProperty = (prop: any, analyzers: { search: string, index: string
 
 export const acceptedMetricAggsByType: Record<string, string[]> = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  // booleans are doc-valued as 0/1, and ES registers them for all these metric aggs:
+  // sum = count of true values, avg = proportion of true (cf Sum/Avg/Min/Max/Stats/PercentilesAggregatorFactory)
+  boolean: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
   string: ['min', 'max', 'cardinality', 'value_count'],
   other: ['value_count']
 }
@@ -337,13 +374,16 @@ for (const metrics of Object.values(acceptedMetricAggsByType)) {
 }
 export const defaultMetricAggsByType: Record<string, string[]> = {
   number: ['min', 'max'],
+  boolean: [],
   string: ['cardinality'],
   other: []
 }
 
-export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+export const getMetricType = (field: any): 'number' | 'string' | 'boolean' | 'other' => {
   if (field.type === 'integer' || field.type === 'number') {
     return 'number'
+  } else if (field.type === 'boolean') {
+    return 'boolean'
   } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
     return 'number'
   } else if (field.type === 'string') {
@@ -473,6 +513,10 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   // left to run on there) — both gated in buildQClauses.
   const qExactFields: string[] = []
   const qWildcardFields: string[] = []
+  // numeric columns: whole-value `q` matching through the main long/double field. Always
+  // computed, but only consumed on noNumericText shapes (buildQClauses) — on older indexes
+  // `.text_standard` covers these columns and a second clause would double-score them.
+  const qLenientFields: string[] = []
   const esFields: string[] = []
 
   // pick the `q` regime (only when no explicit q_fields was requested)
@@ -499,6 +543,12 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     // legacy indexes exist (unmapped `.text_standard` entries are ignored by simple_query_string).
     // Shape-gated consumers branch in buildQClauses instead.
     const esProp = esProperty(f, DUMMY_ANALYZERS, LEGACY_INDEX_SHAPE)
+    // numeric columns: whole-value `q` matching through the main long/double field. Excludes
+    // explicit `x-capabilities: { textStandard: false }` opt-outs — a column deliberately
+    // removed from `q` must stay out of the lenient fallback too.
+    if (isQField && !f['x-calculated'] && (f.type === 'integer' || f.type === 'number') && esProp.index !== false && capabilities.textStandard !== false) {
+      qLenientFields.push(f.key)
+    }
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       // keyword main type: only contributes to `qSearchFields` when the column has no analyzed
       // text inner field (no `.text`, no `.text_standard`) — i.e. a pure-keyword string column
@@ -566,7 +616,7 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     qExactFields.push('_search')
   }
 
-  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qExactFields, qWildcardFields, esFields, copyToSearch, reduced }
+  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, esFields, copyToSearch, reduced }
 }, {
   profileName: 'getFilterableFields',
   primitive: true,
@@ -576,6 +626,22 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
 })
+
+// Whether numeric columns' `q` / `col_search` matching should use the lenient main-field fallback
+// (see `qLenientFields`): the dataset's own index carries no numeric `.text_standard`
+// (`_indexShape.noNumericText`), OR — for virtual datasets — any fetched descendant's index
+// doesn't either. This is ROUTING, not a change to finalize.ts's bubble-up (which still only
+// stamps the virtual parent's own `noNumericText` when ALL descendants have it, so mapping-time
+// decisions like the exact-match analyzer stay conservative). Over a mixed fleet {legacy child,
+// rebuilt child} the parent's own flag is false (bubble-up requires unanimity), but a rebuilt
+// child's numeric columns carry no `.text_standard` any more — without this routing their rows
+// would silently stop matching numeric `q`/`col_search` until every sibling rebuilds. On an
+// all-legacy virtual (no descendant flagged) this reduces to exactly `!!dataset._indexShape?.
+// noNumericText`, so clauses stay byte-identical to a dataset with no `descendants` field.
+// Non-virtual (or queried-without-fillDescendants) datasets have no `descendants` array, so the
+// `some` is skipped and behavior is unchanged.
+export const hasNumericLenientRouting = (dataset: any): boolean =>
+  !!dataset._indexShape?.noNumericText || !!dataset.descendants?.some((d: any) => d._indexShape?.noNumericText)
 
 // Builds the `q`-side `should`/`minimum_should_match` bool clause used inside `prepareQuery`.
 // Pure: caller resolves `q` (already trimmed) and supplies `qMode` / `sqsOptions`.
@@ -592,7 +658,8 @@ export const buildQClauses = (
   exactMatch?: { analyzer: string, boost: number },
   filterAnalyzer?: string
 ): any => {
-  const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, reduced } = getFilterableFields(dataset, q, qFields)
+  const { qSearchFields, qStandardFields, qExactFields, qWildcardFields, qLenientFields, reduced } = getFilterableFields(dataset, q, qFields)
+  const noNumericText = hasNumericLenientRouting(dataset)
 
   // Readings of an AND requirement. The per-field-analyzed reading alone zeroes out on a
   // new-shape index whenever the query carries a stopword: the only fields whose analyzer
@@ -603,9 +670,12 @@ export const buildQClauses = (
   // matches if EITHER reading satisfies every word. The field-analyzed reading stays because
   // it is the only one matching a pure-keyword column's whole value (e.g. "cat-alpha" —
   // the language analyzer would tokenize it apart).
-  const andReadings = (query: string, fields: string[]): any[] => {
-    const readings: any[] = [{ simple_query_string: { query, fields, ...sqsOptions, default_operator: 'and' } }]
-    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
+  // Callers may union numeric main fields (qLenientFields) into `fields`; `lenient` then keeps
+  // ES from erroring when a non-numeric word is evaluated against a long/double field.
+  const andReadings = (query: string, fields: string[], lenient = false): any[] => {
+    const lenientOpt = lenient ? { lenient: true } : {}
+    const readings: any[] = [{ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, default_operator: 'and' } }]
+    if (filterAnalyzer) readings.push({ simple_query_string: { query, fields, ...lenientOpt, ...sqsOptions, analyzer: filterAnalyzer, default_operator: 'and' } })
     return readings
   }
   const anyReading = (readings: any[]): any => readings.length === 1 ? readings[0] : { bool: { should: readings, minimum_should_match: 1 } }
@@ -637,6 +707,9 @@ export const buildQClauses = (
     if (qSearchFields.length) {
       should.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
     }
+    if (noNumericText && qLenientFields.length) {
+      should.push({ simple_query_string: { query: q, fields: qLenientFields, lenient: true, ...sqsOptions } })
+    }
   } else {
     // default "simple" mode uses ES simple query string directly
     // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
@@ -647,6 +720,9 @@ export const buildQClauses = (
     // (qStandardFields is still populated but only meant for the complete-mode prefix query)
     if (qStandardFields.length && !reduced) {
       should.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
+    }
+    if (noNumericText && qLenientFields.length) {
+      should.push({ simple_query_string: { query: q, fields: qLenientFields, lenient: true, ...sqsOptions } })
     }
     // scoring-only exact-match boost: same fields, analyzed without stemming so a literal match
     // outranks a merely stem-equal one. Not added in complete mode, whose clauses have their own
@@ -666,15 +742,21 @@ export const buildQClauses = (
   // q_mode=and and q_ignored never compose with `complete`, which gets its own filter below.
   if (qMode !== 'complete') {
     const matchFields = reduced ? qSearchFields : [...qSearchFields, ...qStandardFields]
-    if (qMode === 'and' && matchFields.length) {
-      return { bool: { must: [scored], filter: [anyReading(andReadings(q, matchFields))] } }
+    // numeric main fields are unioned into the filter set (not the scored `should`) so q_mode=and
+    // and q_ignored's requirement stage still catches a whole-value numeric match; `lenient: true`
+    // keeps ES from erroring when a non-numeric word in the same query is evaluated against them.
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = withLenient ? [...matchFields, ...qLenientFields] : matchFields
+    const filterLenient = withLenient ? { lenient: true } : {}
+    if (qMode === 'and' && filterFields.length) {
+      return { bool: { must: [scored], filter: [anyReading(andReadings(q, filterFields, withLenient))] } }
     }
-    if (ignoredWords?.length && matchFields.length) {
+    if (ignoredWords?.length && filterFields.length) {
       const retained = [...new Set(q.split(/\s+/))].filter(word => !ignoredWords.includes(word))
       return {
         bool: {
           must: [scored],
-          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: matchFields } })), minimum_should_match: 1 } }]
+          filter: [{ bool: { should: retained.map(word => ({ multi_match: { query: word, fields: filterFields, ...filterLenient } })), minimum_should_match: 1 } }]
         }
       }
     }
@@ -690,9 +772,14 @@ export const buildQClauses = (
   // totals/aggregations/pagination see the narrowed set.
   if (qMode === 'complete' && /\s/.test(q)) {
     const userWildcards = q.includes('*') || q.includes('?')
-    const filterFields = [...new Set([...prefixFields, ...qSearchFields])]
+    // numeric mains join the narrowing filter so a doc whose word matched whole-value on a
+    // numeric column (scored via the lenient clause above) isn't dropped by the every-word
+    // requirement. The LAST word, read as a prefix, can never match a numeric field (`lenient`
+    // skips prefix-on-long) — consistent with numerics being excluded from the prefix ladder.
+    const withLenient = noNumericText && qLenientFields.length > 0
+    const filterFields = [...new Set([...prefixFields, ...qSearchFields, ...(withLenient ? qLenientFields : [])])]
     if (filterFields.length) {
-      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields)
+      const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
         readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
       }
@@ -757,34 +844,29 @@ export const buildIndexMappings = (
 }
 
 // CSV-equivalent size accounting for the indexed_bytes metric.
-// Counted columns are exactly the ones the CSV export emits (outputs.ts): schema
-// properties without x-calculated. Extension columns are nested objects in the
-// indexed item, so counting walks the top-level key segment of each property.
-export const lineBytesSpec = (schema: any[]): { prefixes: Set<string>, nbCols: number } => {
-  const counted = (schema ?? []).filter(p => !p['x-calculated'])
-  return {
-    prefixes: new Set(counted.map(p => p.key.split('.')[0])),
-    nbCols: counted.length
-  }
+// `_bytes` is defined as the byte length of the row the default CSV export (`/lines?format=csv`,
+// no select, ',' delimiter — compileForRequest in outputs.ts) emits for the line, header and BOM
+// excluded. It is computed with the export's own serializer + flatten so the two cannot drift:
+// strings quoted (embedded quotes doubled), booleans as 1/0, separator arrays joined, extension
+// sub-objects flattened, calculated columns excluded. Compiled without the memo caches: the stamp
+// runs on the schema being indexed, which may differ from the one cached under the same
+// (id, finalizedAt) key by a previous read or reindex.
+// flatten is null when the schema has no nested extension key and no separator column: the export's flatten
+// would be the identity, so the line is serialized as-is without the defensive copy it would otherwise need
+export interface LineBytesSpec { row: (line: Record<string, any>) => string, flatten: ((line: Record<string, any>) => Record<string, any>) | null }
+
+export const lineBytesSpec = (dataset: { id: string, finalizedAt?: string, schema?: any[] }): LineBytesSpec => {
+  const schema = dataset.schema ?? []
+  const selectKeys = schema.filter(p => !p['x-calculated']).map(p => p.key)
+  const { row } = getCsvSerializer({ dataset: { ...dataset, schema }, selectKeys, header: false, bom: false, cache: false })
+  const fullDataset = { ...dataset, schema }
+  return { row, flatten: isFlattenIdentity(fullDataset) ? null : getFlattenNoCache(fullDataset) }
 }
 
-const valueBytes = (value: any): number => {
-  if (value === null || value === undefined) return 0
-  if (typeof value === 'string') return Buffer.byteLength(value)
-  if (typeof value === 'object') {
-    let sum = 0
-    for (const v of Object.values(value)) sum += valueBytes(v)
-    return sum
-  }
-  return Buffer.byteLength(String(value))
-}
-
-// per line: value bytes + 1 byte per counted column (separator / newline),
-// mirroring the size of a CSV export of the same data
-export const lineBytes = (item: Record<string, any>, spec: { prefixes: Set<string>, nbCols: number }): number => {
-  let sum = spec.nbCols
-  for (const prefix of spec.prefixes) sum += valueBytes(item[prefix])
-  return sum
+// the flatten helper mutates its input (moves nested extension values to flat keys, joins separator
+// arrays), so it runs on a shallow copy and the indexed line is left untouched
+export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): number => {
+  return Buffer.byteLength(spec.row(spec.flatten ? spec.flatten({ ...item }) : item))
 }
 
 /**
@@ -1152,4 +1234,155 @@ export const chooseStrictestCandidate = <T extends { sampledCount: number }> (
   floorSample: number
 ): T => {
   return candidates.find(candidate => candidate.sampledCount >= floorSample) ?? candidates[candidates.length - 1]
+}
+
+// ---- value-level narrowing for multi-valued (separator) columns ----
+
+// A `terms` aggregation is document-scoped: it emits every value a matching document holds in the
+// field. On a single-valued column document and value are 1:1 so this is invisible, but on a
+// multi-valued (`separator`) column the sibling values of a matching row ride along — a `q` meant
+// to narrow an autocomplete list cannot narrow it, and since `size` truncates AFTER that, the real
+// matches can be pushed out of the page entirely.
+//
+// The narrowing is done with the aggregation's `include`, the only value-level filter ES offers
+// that stays on the term dictionary (a runtime field would work too, but it runs a script per
+// matching document and loses global ordinals). `include` matches the RAW keyword bytes: no
+// analyzer, so case and diacritics folding — what `insensitive_normalizer` does at index time —
+// has to be carried by the pattern itself, each letter expanded into a class of its variants.
+
+const luceneRegexpSpecials = '.?+*|{}[]()"\\#@&<>~'
+
+// base letter -> every Latin code point that folds to it (both cases). Built once from the same
+// decomposition `asciifolding` applies, so the pattern accepts exactly what the index normalizes
+// together.
+const foldingVariants = (() => {
+  const variants = new Map<string, string[]>()
+  for (let codePoint = 0x41; codePoint <= 0x24f; codePoint++) {
+    const char = String.fromCodePoint(codePoint)
+    const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    if (base.length !== 1 || !/[a-z]/.test(base)) continue
+    const entry = variants.get(base)
+    if (entry) entry.push(char)
+    else variants.set(base, [char])
+  }
+  return variants
+})()
+
+// `q` is read literally here, so a query using simple_query_string operators (OR, negation,
+// phrases, fuzziness) has no faithful literal reading — narrowing on it would empty the list.
+// `*` and `?` are absent on purpose: those are translated, not declined.
+const nonLiteralQ = /[|"()~]|(^|\s)[+-]/
+
+/**
+ * Ceiling on the user wildcards translated into the pattern. `.*` segments are what makes
+ * determinization expensive — `.*a.*b.*c.*…` is the textbook subset-construction blow-up, roughly
+ * doubling the state count per segment — and the length cap alone does not bound them (200
+ * characters of `a*b*c*…` is 100 of them). Three keeps the automaton trivial while covering every
+ * realistic query; past it the values are simply left un-narrowed.
+ */
+const MAX_PATTERN_WILDCARDS = 3
+
+const foldedChar = (char: string) => {
+  const base = char.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  const variants = foldingVariants.get(base)
+  if (variants) return `[${variants.join('')}]`
+  if (char === '*') return '.*'
+  if (char === '?') return '.'
+  return luceneRegexpSpecials.includes(char) ? `\\${char}` : char
+}
+
+/**
+ * The `include` regexp narrowing a multi-valued column's values to those matching `q`, or
+ * `undefined` when `q` has no literal reading and the values must be left alone.
+ *
+ * A `prefix` query keeps the values starting with it, a `contains` one the values holding it
+ * anywhere. The query is always read as a SINGLE contiguous string, never split into per-word
+ * alternatives: lucene's `&` intersection would express "every word, in any order" and is the
+ * more forgiving semantics, but intersecting N `.*word.*` automata is exponential in N and
+ * determinization runs uninterruptibly inside ES — a crafted multi-word `q` exhausted a node's
+ * whole heap in testing. The pattern this builds is a plain concatenation, linear in the query
+ * length, and that length is capped: a pattern longer than the longest indexable keyword cannot
+ * match any value anyway.
+ */
+export const valuesIncludePattern = (q: string, mode: 'prefix' | 'contains'): string | undefined => {
+  const trimmed = q.trim()
+  if (!trimmed || trimmed.length > KEYWORD_IGNORE_ABOVE || nonLiteralQ.test(trimmed)) return undefined
+  if ((trimmed.match(/\*/g)?.length ?? 0) > MAX_PATTERN_WILDCARDS) return undefined
+  const pattern = [...trimmed].map(foldedChar).join('')
+  if (mode === 'contains') return `.*${pattern}.*`
+  return pattern.endsWith('.*') ? pattern : `${pattern}.*`
+}
+
+// The narrowing filters, in the order they win. A value the caller named explicitly (`_in`/`_eq`)
+// is never narrowed away by a looser predicate, and `q` — the least specific instruction — comes
+// last. A terms agg accepts a single `include`, hence a precedence rather than a conjunction.
+const EXACT_VALUE_SUFFIXES = ['_in', '_eq'] as const
+const PREDICATE_SUFFIXES = { _starts: 'prefix', _contains: 'contains', _search: 'contains' } as const
+
+// `a,b` — or `"a,b",c` when a value holds a comma. Mirrors the parsing in commons.ts's filter
+// loop, minus its throwing: a malformed value is rejected there, on the row-filtering path.
+const parseFilterValues = (raw: string): string[] => {
+  if (!raw) return []
+  try {
+    if (raw.startsWith('"')) return JSON.parse(`[${raw}]`)
+  } catch { return [] }
+  return raw.split(',').filter(Boolean)
+}
+
+// A column is addressable by key (`tags_in`) or, for dashboards applying a filter across
+// datasets, by the concept it carries (`_c_topic_in`) — the same two forms commons.ts resolves.
+const sameColumnParam = (prop: any, query: Record<string, any>, suffix: string): string | undefined => {
+  const byKey = query[`${prop.key}${suffix}`]
+  if (byKey) return byKey
+  const conceptId = prop['x-concept']?.primary ? prop['x-concept'].id : undefined
+  return conceptId ? query[`_c_${conceptId}${suffix}`] : undefined
+}
+
+/**
+ * The values an `_in`/`_eq` filter on THIS column names explicitly, or `undefined` when none does.
+ * Shared with the `x-labelsRestricted` shortcut, which answers without going to Elasticsearch at
+ * all and must narrow the same way.
+ */
+export const sameColumnExactValues = (prop: any, query: Record<string, any>): string[] | undefined => {
+  for (const suffix of EXACT_VALUE_SUFFIXES) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (!raw) continue
+    const values = parseFilterValues(raw)
+    if (values.length) return values
+  }
+  return undefined
+}
+
+/**
+ * The `include` narrowing the listed values of a multi-valued column, or `undefined` to leave the
+ * buckets alone.
+ *
+ * A filter on ANOTHER column selects rows and must not touch the value list — `city_eq=Paris`
+ * still lists every tag the Paris rows carry. A filter on the column being listed is a statement
+ * about the values themselves, so it narrows them; negative filters need nothing, having already
+ * removed every row holding the value.
+ */
+export const valuesIncludeClause = (
+  prop: any,
+  query: Record<string, any>,
+  qMode: string
+): string | string[] | undefined => {
+  // single-valued columns need no narrowing: document and value are 1:1, and a literal pattern
+  // would only lose the analyzed (stemmed) matches the query legitimately made
+  if (!prop?.separator) return undefined
+
+  const exactValues = sameColumnExactValues(prop, query)
+  if (exactValues) return exactValues
+
+  for (const [suffix, mode] of Object.entries(PREDICATE_SUFFIXES)) {
+    const raw = sameColumnParam(prop, query, suffix)
+    if (raw) return valuesIncludePattern(raw, mode)
+  }
+
+  const q = (query.q ?? query._c_q)?.trim()
+  if (!q) return undefined
+  // complete mode reads `q` as a prefix, unless the column opted into the wildcard capability —
+  // its doc-level clause then also matches `*q*`, and the narrowing must not undo that
+  const prefix = qMode === 'complete' && !prop['x-capabilities']?.wildcard
+  return valuesIncludePattern(q, prefix ? 'prefix' : 'contains')
 }

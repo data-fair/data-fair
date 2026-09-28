@@ -584,17 +584,21 @@ tamper-proof but time-bounded answer to *who* wrote it.
 
 ### 4.1 Local dev / test environment
 
-In dev and test a **single MinIO** container (`minio` in `docker-compose.yaml`, profiles
+In dev and test a **single RustFS** container (`s3` in `docker-compose.yaml`, profiles
 `dev`/`test`) backs *both* the files storage and the integrity revision store — it is a
-faithful enough S3 implementation to exercise object-lock locally, which `adobe/s3mock`
-is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` sidecar
-(`minio/mc`) provisions them on startup:
+faithful enough S3 implementation to exercise object-lock locally (compliance refusals on
+delete / shorten / downgrade, per-version retention, delete markers), which `adobe/s3mock`
+is not, and Garage (no object lock, no versioning) cannot be. It replaced MinIO in
+September 2026 when the archived community edition's images were pulled from Docker Hub.
+Like MinIO, it refuses keys containing a `..` segment (400 `InvalidArgument`). Because
+RustFS does not auto-create buckets, a one-shot `s3-init`
+sidecar (`amazon/aws-cli`) provisions them on startup:
 
 - `bucketdev` — files storage, mutable
-- `data-fair-integrity` — created with `--with-lock` (compliance WORM), the integrity store
+- `data-fair-integrity` — created with `--object-lock-enabled-for-bucket` (compliance WORM), the integrity store
 
-`api/config/development.cjs` points `s3` and `integrity.s3` at the same MinIO (`S3_PORT`,
-`minioadmin`/`minioadmin`; MinIO enforces credentials, unlike s3mock). `integrity.active`
+`api/config/development.cjs` points `s3` and `integrity.s3` at the same RustFS (`S3_PORT`,
+`rustfsadmin`/`rustfsadmin`; RustFS enforces credentials, unlike s3mock). `integrity.active`
 is `true` with a 2-day revision retention and a 1-day attribution retention (deliberately
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
 but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).

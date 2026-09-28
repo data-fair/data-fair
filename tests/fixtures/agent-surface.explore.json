@@ -1,0 +1,427 @@
+{
+  "profiles": [
+    "explore"
+  ],
+  "tools": [
+    {
+      "name": "datafair_list_datasets",
+      "description": "List datasets accessible to the current user with optional text search. Returns id, title, status, row count, and last update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "French keywords for full-text search (simple terms, not sentences). Examples: \"élus\", \"DPE\", \"entreprises\""
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "min": 1,
+            "description": "Taille de la page",
+            "maximum": 50
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, count, status, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_describe_dataset",
+      "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, schema. detailed: every field."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_search_data",
+      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the \"after\" value returned as next.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "after": {
+            "type": "integer",
+            "description": "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*"
+          },
+          "size": {
+            "default": 12,
+            "type": "integer",
+            "maximum": 100,
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of column keys to sort by, one per element. Prefix a key with - for descending."
+          },
+          "select": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "default": "all"
+            },
+            "description": "Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned."
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search across all columns. Prefer filters for structured criteria."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_get_field_values",
+      "description": "List distinct values of a column. Useful to discover values before filtering with _eq or _in.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "fieldKey": {
+            "type": "string",
+            "description": "The column key (use keys from describe_dataset)"
+          },
+          "size": {
+            "default": 10,
+            "type": "integer",
+            "maximum": 1000,
+            "description": "Le nombre de résultats à retourner (taille de la pagination). 10 par défaut."
+          },
+          "sort": {
+            "type": "string",
+            "default": "asc",
+            "oneOf": [
+              {
+                "const": "asc",
+                "title": "Ascendant"
+              },
+              {
+                "const": "desc",
+                "title": "Descendant"
+              }
+            ],
+            "description": "Tri des valeurs (\"**asc**\" ou \"**desc**\")."
+          },
+          "q": {
+            "type": "string",
+            "description": "Optional text to filter values (prefix/substring match within this column)"
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "fieldKey"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_aggregate_data",
+      "description": "Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use calculate_metric.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "groupByColumns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from describe_dataset. NOT the column to compute the metric on."
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "avg",
+              "sum",
+              "min",
+              "max",
+              "cardinality",
+              "value_count"
+            ],
+            "description": "Metric computed ON EACH GROUP. Omit to count rows per group."
+          },
+          "metricColumn": {
+            "type": "string",
+            "description": "The column to compute the metric on, for the average or sum of that column. Requires metric."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array with one sort key per aggregation level: \"count\"/\"-count\" (group size), \"key\"/\"-key\" (group value), \"metric\"/\"-metric\" (metric value). Example: [\"-count\"]."
+          },
+          "q": {
+            "type": "string",
+            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "groupByColumns"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_calculate_metric",
+      "description": "Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use aggregate_data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "avg",
+              "sum",
+              "min",
+              "max",
+              "stats",
+              "value_count",
+              "percentiles",
+              "cardinality"
+            ],
+            "description": "avg, sum, min, max (numbers); min, max, cardinality, value_count (strings); stats returns count/min/max/avg/sum; percentiles returns a distribution."
+          },
+          "fieldKey": {
+            "type": "string",
+            "description": "The column key to calculate the metric on (use keys from describe_dataset)"
+          },
+          "percents": {
+            "type": "string",
+            "default": "1,5,25,50,75,95,99",
+            "description": "Comma-separated percentages for the percentiles metric (default \"1,5,25,50,75,95,99\")."
+          },
+          "q": {
+            "type": "string",
+            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "metric",
+          "fieldKey"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    }
+  ],
+  "skills": [
+    {
+      "id": "workflow",
+      "name": "workflow",
+      "description": "You are querying French open data through Data Fair. 1. **list_datasets** — find datasets with French keywords (simple terms, not sentences). If 0 results try synonyms or broader terms. 2. **describe_dataset** — schema and metadata of a dataset. Then call **search_data** with size=3 to see sample rows before filtering. 3. Choose the tool: rows → search_data (never for statistics); breakdown per category → aggregate_data; single total/avg/min/max → calculate_metric; values of a column → get_field_values. Filters: Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_. Geo filters (bbox, geoDistance) only on geolocalized datasets; sort by di"
+    }
+  ]
+}

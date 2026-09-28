@@ -137,7 +137,7 @@ export default async function (dataset: FileDataset) {
       }
     }
 
-    if (datasetUtils.jsonTypes.has(dataset.originalFile.mimetype)) {
+    if (datasetUtils.isJsonType(dataset.originalFile.mimetype)) {
       const { stringify: csvStrStream } = await import('csv-stringify')
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       const readStream = compose(

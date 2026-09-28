@@ -1,5 +1,10 @@
 <template>
   <v-container v-if="application">
+    <fragment-banner
+      v-if="application.partOf"
+      :part-of="application.partOf"
+    />
+
     <v-alert
       v-if="upgradeAvailable && can('writeConfig')"
       type="info"
@@ -189,12 +194,33 @@
               class="pa-0"
             >
               <d-frame
-                :src="`${applicationLink}?d-frame=true&primary=${theme.current.value.colors.primary}`"
+                :src="`${applicationLink}?d-frame=true&primary=${encodeURIComponent(theme.current.value.colors.primary as string)}`"
                 resize="no"
                 aspect-ratio
                 sync-params
               />
             </v-card>
+          </v-tabs-window-item>
+
+          <!-- fragments are hidden from every listing, this is where they are found -->
+          <v-tabs-window-item value="fragments">
+            <df-tutorial-alert
+              id="application-fragments"
+              persistent
+            >
+              <p class="mb-2">
+                {{ t('fragmentsTutorial1') }}
+              </p>
+              <p>
+                {{ t('fragmentsTutorial2') }}
+              </p>
+            </df-tutorial-alert>
+            <fragments-list
+              :part-of="{ type: 'application', id: application.id }"
+              :fragments="fragments"
+              :has-more="hasMoreFragments"
+              @load-more="loadMoreFragments"
+            />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -300,7 +326,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('delete')"
+            v-if="can('delete') && !application.partOf"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -318,6 +344,30 @@
                 @click="showOwnerDialog = true"
               >
                 {{ t('changeOwner') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
+          <v-list-item
+            v-if="application.partOf && can('delete')"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('detach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('detachDesc') }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                :loading="confirmDetach.loading.value"
+                @click="confirmDetach.execute()"
+              >
+                {{ t('detach') }}
               </v-btn>
             </template>
           </v-list-item>
@@ -351,7 +401,7 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('delete')"
+      v-if="can('delete') && !application.partOf"
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
@@ -366,7 +416,17 @@
         :title="t('deleteApp')"
         :loading="confirmRemove.loading.value ? 'warning' : undefined"
       >
-        <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
+        <v-card-text>
+          {{ t('deleteMsg', { title: application?.title }) }}
+          <v-alert
+            v-if="nbFragments"
+            type="warning"
+            variant="tonal"
+            class="mt-4"
+          >
+            {{ t('deleteFragmentsWarning', { count: nbFragments }) }}
+          </v-alert>
+        </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
@@ -374,6 +434,15 @@
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
+          </v-btn>
+          <v-btn
+            v-if="nbFragments"
+            color="warning"
+            variant="outlined"
+            :loading="confirmDetachAllAndRemove.loading.value"
+            @click="confirmDetachAllAndRemove.execute()"
+          >
+            {{ t('detachFirst') }}
           </v-btn>
           <v-btn
             color="warning"
@@ -401,6 +470,9 @@ fr:
   metadata: Métadonnées
   info: Informations
   attachments: Pièces jointes
+  fragments: Fragments
+  fragmentsTutorial1: "Un fragment est une ressource qui n'existe que pour servir cette application. Par exemple un jeu de données utilitaire qu'elle affiche, ou une sous-application intégrée dans un tableau de bord."
+  fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que cette application et leurs accès découlent des siens, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec elle."
   datasets: Jeux de données utilisés
   childrenApps: Applications utilisées
   render: Rendu
@@ -431,6 +503,11 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
+  detach: Détacher du parent
+  detachDesc: Cette ressource redevient une application indépendante, avec les permissions qu'elle porte actuellement.
+  detachSuccess: L'application a été détachée.
+  deleteFragmentsWarning: "Cette application a {count} fragment(s) qui seront supprimés avec elle."
+  detachFirst: Détacher d'abord
   deleteApp: Supprimer l'application
   deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
@@ -443,6 +520,9 @@ en:
   metadata: Metadata
   info: Information
   attachments: Attachments
+  fragments: Fragments
+  fragmentsTutorial1: "A fragment is a resource that only exists to serve this application. For example a utility dataset it displays, or a sub-application embedded in a dashboard."
+  fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this application and their access derives from its own, they are neither shared nor published on their own, and they are deleted with it."
   datasets: Used datasets
   childrenApps: Used applications
   render: Render
@@ -473,6 +553,11 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
+  detach: Detach from parent
+  detachDesc: This resource becomes an independent application again, with the permissions it currently carries.
+  detachSuccess: The application was detached.
+  deleteFragmentsWarning: "This application has {count} fragment(s) that will be deleted with it."
+  detachFirst: Detach first
   deleteApp: Delete application
   deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
@@ -486,7 +571,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiFileTree, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
@@ -511,7 +596,7 @@ const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = useApplicationStore()
-const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const { sendUiNotif } = useUiNotif()
 
@@ -618,6 +703,22 @@ const confirmRemove = useAsyncAction(async () => {
   await router.push('/applications')
 }, { success: t('deleteAppSuccess') })
 
+const confirmDetach = useAsyncAction(async () => {
+  await detach()
+  await store.applicationFetch.refresh()
+}, { success: t('detachSuccess') })
+
+const confirmDetachAllAndRemove = useAsyncAction(async () => {
+  for (const fragment of fragments.value.datasets) {
+    await $fetch(`datasets/${fragment.id}`, { method: 'PATCH', body: { partOf: null } })
+  }
+  for (const fragment of fragments.value.applications) {
+    await $fetch(`applications/${fragment.id}`, { method: 'PATCH', body: { partOf: null } })
+  }
+  await remove()
+  await router.push('/applications')
+}, { success: t('deleteAppSuccess') })
+
 const sections = computedDeepDiff(() => {
   if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[], agentDesc?: string }>
 
@@ -631,10 +732,12 @@ const sections = computedDeepDiff(() => {
   }
 
   // Metadata section
-  const metadataTabs = [
+  const metadataTabs: any[] = [
     { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → application_summarizer subagent (≤300 char summary); next to the description → application_description_writer subagent (500-2000 char markdown).' },
-    { key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' }
   ]
+  if (!application.value.partOf) {
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' })
+  }
   if (datasets.value.length) {
     metadataTabs.push({ key: 'datasets', title: t('datasets'), icon: mdiDatabase, agentDesc: 'The datasets used by this application (read-only cards).' })
   }
@@ -644,23 +747,29 @@ const sections = computedDeepDiff(() => {
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons appear in the section header when there are unsaved changes.' }
 
   // Render section
+  const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }]
+  // fragments are hidden from every listing, this tab is where they are found
+  if (!application.value.partOf) {
+    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiFileTree, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })
+  }
   result.render = {
     title: t('render'),
-    tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }],
+    tabs: renderTabs,
     agentDesc: 'Rendered application and entry point to its configuration.'
   }
 
+  // Share section: a fragment is shared through its parent, it has nothing of its own to share
   const shareTabs = []
-  if (can('getPermissions')) {
+  if (can('getPermissions') && !application.value.partOf) {
     shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / admin permissions to users, organisations, departments or partners, or open access to "anyone".' })
   }
-  if (can('getKeys')) {
+  if (can('getKeys') && !application.value.partOf) {
     shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey, agentDesc: 'Manage protected links — unconnected access to the application via signed URLs.' })
   }
-  if (!$uiConfig.disablePublicationSites) {
+  if (!$uiConfig.disablePublicationSites && !application.value.partOf) {
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this application on the organisation\'s data portals.' })
   }
-  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe / embed snippets to integrate this application into external pages.' })
+  if (!application.value.partOf) shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe / embed snippets to integrate this application into external pages.' })
   if (shareTabs.length) {
     result.share = { title: t('share'), tabs: shareTabs, agentDesc: 'Access control and publication settings for this application.' }
   }

@@ -22,14 +22,17 @@ test.describe('REST datasets with owner specific lines', () => {
       isRest: true,
       title: 'a rest dataset',
       rest: { lineOwnership: true, history: true },
-      schema: [{ key: 'col1', type: 'string' }]
+      schema: [
+        { key: 'col1', type: 'string' },
+        { key: 'col_multi', type: 'string', separator: ',', 'x-group': 'Group A' }
+      ]
     })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
     let dataset = res.data
     assert.ok(dataset.schema.find((p: any) => p.key === '_owner'))
     assert.ok(dataset.schema.find((p: any) => p.key === '_ownerName'))
-    assert.equal(dataset.schema.length, 7)
+    assert.equal(dataset.schema.length, 8)
 
     res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 0)
@@ -37,7 +40,7 @@ test.describe('REST datasets with owner specific lines', () => {
     // owner's admin can use routes to manage his own lines
     await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { _id: 'dmeadusline', col1: 'value 1' })
     dataset = await waitForFinalize(testUser1Org, dataset.id)
-    assert.equal(dataset.schema.length, 7)
+    assert.equal(dataset.schema.length, 8)
     res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 1)
     res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -119,9 +122,14 @@ test.describe('REST datasets with owner specific lines', () => {
     // safe schema for external users is purged of indices about the data
     res = await testUser3.get(`/api/v1/datasets/${dataset.id}/safe-schema`)
     assert.equal(res.data.find((p: any) => p.key === 'col1')['x-cardinality'], undefined)
+    assert.equal(res.data.find((p: any) => p.key === 'col_multi')['x-group'], 'Group A')
     res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/schema`)
     assert.equal(res.data.find((p: any) => p.key === 'col1')['x-cardinality'], 2)
+    assert.equal(res.data.find((p: any) => p.key === 'col_multi')['x-group'], 'Group A')
     await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/schema`), (err: any) => err.status === 403)
+
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/safe-schema?mimeType=application/schema%2Bjson`)
+    assert.equal(res.data.properties.col_multi['x-group'], 'Group A')
   })
 
   test('Handle a dataset with line ownership and a primary key that includes _owner', async () => {

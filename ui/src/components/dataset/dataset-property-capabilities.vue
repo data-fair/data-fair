@@ -87,10 +87,8 @@ const editCapabilities = ref<Record<string, unknown> | null>(null)
 
 const relevantCapabilities = computed(() => {
   const type = props.property.type
-  if (type === 'number' || type === 'integer') {
-    return ['index', 'textStandard', 'values']
-  } else if (type === 'boolean') {
-    return ['index', 'textStandard', 'values']
+  if (type === 'number' || type === 'integer' || type === 'boolean') {
+    return ['index', 'values']
   } else if (type === 'string' && (props.property.format === 'date' || props.property.format === 'date-time')) {
     return ['index', 'textStandard', 'values']
   } else if (props.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {

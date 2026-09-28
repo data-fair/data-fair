@@ -81,7 +81,9 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
         const [lat, lon] = line[input.property.key].split(',')
         params.geo_distance = `${lon},${lat},${input.distance}`
       } else {
-        throw httpError(400, `input type ${input.type} is not supported`)
+        // the contract's three matching methods are exhausted here, so `input` is `never`:
+        // the guard survives for documents stored before a method was added or removed
+        throw httpError(400, `input type ${(input as { type?: string }).type} is not supported`)
       }
     }
     if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')

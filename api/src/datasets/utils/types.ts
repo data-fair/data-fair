@@ -27,6 +27,9 @@ export const jsonTypes = new Set([
   'application/json',
   'application/x-ndjson'
 ])
+/** Narrowing form of `jsonTypes.has` — both members are mime types `mime-type-stream` handles. */
+export const isJsonType = (mimeType: string): mimeType is 'application/json' | 'application/x-ndjson' =>
+  jsonTypes.has(mimeType)
 export const basicTypes = [
   ...csvTypes,
   'application/geo+json'

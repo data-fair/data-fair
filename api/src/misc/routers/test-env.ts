@@ -79,6 +79,16 @@ router.delete('/', async (req, res, next) => {
 
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
+    if (config.compatODS) {
+      const { memoizedGetCompatODS } = await import('../../api-compat/ods/index.ts')
+      memoizedGetCompatODS.clear()
+    }
+    // corpus statistics are memoized for up to an hour and are not derived from any document,
+    // so without this every catalog-search ranking assertion is scored against whatever corpus
+    // the previous suite left behind
+    const { datasetsStats, applicationsStats } = await import('../utils/text-search/collections.ts')
+    datasetsStats.clear()
+    applicationsStats.clear()
     clearApiKeysCache()
     clearApplicationKeysCaches()
     rateLimiting.clear()
@@ -125,6 +135,33 @@ router.get('/raw-dataset/:id', async (req, res, next) => {
     const dataset = await mongo.datasets.findOne({ id: req.params.id })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })
     res.json(dataset)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Patch an application document directly in MongoDB (test-only). Same shape as
+// patch-dataset above (flat body -> $set, optional `$unset` key -> $unset).
+router.post('/patch-application/:applicationId', async (req, res, next) => {
+  try {
+    const { $unset, ...flatSet } = req.body ?? {}
+    const update: any = {}
+    if (Object.keys(flatSet).length) update.$set = flatSet
+    if ($unset) update.$unset = $unset
+    if (!update.$set && !update.$unset) update.$set = {}
+    await mongo.applications.updateOne({ id: req.params.applicationId }, update)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Return the raw MongoDB document for an application
+router.get('/raw-application/:id', async (req, res, next) => {
+  try {
+    const application = await mongo.applications.findOne({ id: req.params.id })
+    if (!application) return res.status(404).json({ error: 'application not found' })
+    res.json(application)
   } catch (err) {
     next(err)
   }
@@ -346,6 +383,38 @@ router.post('/es-divert-alias/:datasetId', async (req, res, next) => {
   }
 })
 
+// Rebuild a dataset's index WITHOUT one of its mapped fields and point the alias at it: models
+// an index created by an older release, before that field was added to buildIndexMappings
+// (strict mapping -> a bulk item carrying the field is rejected). The orphan copy is cleaned by
+// nothing: test-env only.
+router.post('/es-strip-mapping-field/:datasetId', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).send()
+    const field: string = req.body.field
+    const { aliasName } = await import('../../datasets/es/commons.ts')
+    const alias = aliasName(dataset)
+    const current = Object.keys(await es.client.indices.getAlias({ name: alias }))[0]
+    const definition = (await es.client.indices.get({ index: current }))[current]
+    const settings = { ...definition.settings }
+    settings.index = { ...settings.index }
+    for (const key of ['uuid', 'provided_name', 'creation_date', 'version']) delete settings.index[key]
+    const mappings = definition.mappings ?? {}
+    delete mappings.properties?.[field]
+    const stripped = `${current}-stripped-${Date.now()}`
+    await es.client.indices.create({ index: stripped, body: { settings, mappings } })
+    await es.client.reindex({
+      body: { source: { index: current }, dest: { index: stripped }, script: { source: 'ctx._source.remove(params.field)', params: { field } } },
+      refresh: true,
+      wait_for_completion: true
+    })
+    await es.client.indices.updateAliases({ body: { actions: [{ remove: { alias, index: current } }, { add: { alias, index: stripped } }] } })
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.
@@ -506,6 +575,18 @@ router.post('/set-env', (req, res, next) => {
 })
 
 // Set a config value (for testing)
+// Drop the memoized integrity store so a set-config change to `integrity.s3` is picked up on the
+// next use (the client is built once per process). Test-only.
+router.post('/reset-integrity-store', async (req, res, next) => {
+  try {
+    const { resetIntegrityStore } = await import('../../integrity/store-factory.ts')
+    resetIntegrityStore()
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.post('/set-config', (req, res, next) => {
   try {
     const { path, value } = req.body

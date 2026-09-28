@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, waitForJournalEvent } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -116,15 +117,18 @@ test.describe('datasets in draft mode - lifecycle', () => {
   })
 
   test('create a draft when updating the data file', async () => {
-    const notifCollector = await collectNotifications()
+    const notifs = await collectNotifs()
 
-    // Send dataset
+    // Send dataset (use a title with apostrophe and accents to detect HTML-encoding regressions in i18n)
+    const titleWithSpecialChars = "test d'apostrophe + àccéent"
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
+    form.append('title', titleWithSpecialChars)
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(dataset.title, titleWithSpecialChars)
 
     // upload a new file with incompatible schema
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
@@ -190,17 +194,27 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    // TODO: notification assertions disabled - worker-thread notifications are not reliably
-    // captured in the dev environment due to module re-evaluation issues with piscina.
-    // The journal assertions above verify the same event flow.
-    const notifications = await notifCollector.waitForCount(3)
-    await notifCollector.close()
-    assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
-    assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    // dual slug+id emission per event (see notifications.md §12) → 3 events * 2 = 6
+    const captured = await notifs.waitFor(6)
+    for (const base of [
+      'data-fair:dataset-dataset-created',
+      'data-fair:dataset-draft-data-updated',
+      'data-fair:dataset-draft-validated'
+    ]) {
+      expectNotifPair(captured, base, dataset)
+    }
     // the localized "cause" param must be interpolated into the notification body
-    assert.ok(notifications[2].body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${notifications[2].body.fr}"`)
-    assert.ok(notifications[2].body.en.includes('manual validation'), `en body should mention the cause, got "${notifications[2].body.en}"`)
+    const validated = captured.find((n: any) => n.topic.key === `data-fair:dataset-draft-validated:${dataset.slug}`)
+    assert.ok(validated, 'expected a draft-validated notification')
+    assert.ok(validated.body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${validated.body.fr}"`)
+    assert.ok(validated.body.en.includes('manual validation'), `en body should mention the cause, got "${validated.body.en}"`)
+    // notification title and body must not be HTML-encoded (apostrophes, accents must be preserved as-is)
+    const created = captured.find((n: any) => n.topic.key === `data-fair:dataset-dataset-created:${dataset.slug}`)
+    assert.ok(created, 'expected a dataset-created notification')
+    assert.equal(created.title.fr, `Nouveau jeu de données ${titleWithSpecialChars}`)
+    assert.equal(created.title.en, `New dataset ${titleWithSpecialChars}`)
+    assert.ok(created.body.fr.includes(titleWithSpecialChars), 'notification body should contain the raw title')
+    assert.ok(!JSON.stringify(created).includes('&#39;'), 'notification must not contain HTML-encoded apostrophes')
   })
 
   // a compatible schema patch is applied to the index through a partial mapping update instead of

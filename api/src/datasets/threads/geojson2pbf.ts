@@ -1,6 +1,6 @@
 // this is run in a thread as it is quite cpu and memory intensive
 
-import geojsonvt from 'geojson-vt'
+import GeoJSONVT from 'geojson-vt'
 import vtpbf from 'vt-pbf'
 import _config from 'config'
 import { VectorTile } from '@mapbox/vector-tile'
@@ -18,7 +18,7 @@ export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }: Params) => {
   // plain result object so the wrapper can reuse the ES count/total for headers + cache.
   if (rawBuffer) {
     const { esResponse, geojson: geojsonFC } = rawEsBuffer2geojson(rawBuffer, dataset)
-    const tile = geojsonvt(geojsonFC, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
+    const tile = new GeoJSONVT(geojsonFC, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
       .getTile(xyz[2], xyz[0], xyz[1])
     const layers: Record<string, any> = {}
     if (tile) layers.results = tile
@@ -36,7 +36,7 @@ export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }: Params) => {
     pbf = vtpbf.fromVectorTileJs(tile)
   } else {
     // indexMaxZoom=0 -> do not pre-render tiles
-    const tile = geojsonvt(geojson, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
+    const tile = new GeoJSONVT(geojson, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
       .getTile(xyz[2], xyz[0], xyz[1])
     const layers: Record<string, any> = {}
     if (tile) layers.results = tile

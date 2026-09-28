@@ -2,6 +2,7 @@ import slug from 'slugify'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User } from '@data-fair/lib-express'
+import trimFields from '../misc/utils/trim-fields.ts'
 
 export function validateSettings (settings: any): asserts settings is Settings | DepartmentSettings {
   if ((settings as DepartmentSettings).department) {
@@ -19,6 +20,26 @@ export function isUserSettings (settings: Settings | DepartmentSettings): settin
 }
 export function isDepartmentSettings (settings: Settings | DepartmentSettings): settings is DepartmentSettings {
   return !!(settings as DepartmentSettings).department
+}
+
+type WebhookEvents = { events?: string[] }
+
+// Strip event types that were removed from the webhooks `oneOf`: a stored value outside the closed
+// list fails validation on every later write of the whole settings document. A webhook left with
+// no event is dropped rather than kept empty: an empty list means "every event" to webhooks.trigger
+// (and fails minItems). Returns null when nothing changes, so callers can skip the write.
+export function removeWebhookEvents<W extends WebhookEvents> (webhooks: W[] | undefined, removed: string[]): W[] | null {
+  if (!webhooks?.some(w => w.events?.some(e => removed.includes(e)))) return null
+  const result: W[] = []
+  for (const webhook of webhooks) {
+    if (!webhook.events?.some(e => removed.includes(e))) {
+      result.push(webhook)
+      continue
+    }
+    const events = webhook.events.filter(e => !removed.includes(e))
+    if (events.length) result.push({ ...webhook, events })
+  }
+  return result
 }
 
 export function cleanSettings (settings: Settings | DepartmentSettings) {
@@ -89,6 +110,15 @@ export const buildPublicationSiteSubscriptions = (owner: AccountKeys, site: any,
   ]
 }
 
+/**
+ * Filter matching the account's root settings document, whatever department the caller is in.
+ * Org-level settings (agentChat, compatODS, topics, info, datasetsMetadata, privateVocabulary) are
+ * only stored there and departments inherit them, so reading them must never match a department
+ * document. Department-level settings (apiKeys, publicationSites, webhooks) use ownerFilter instead.
+ */
+export const rootSettingsFilter = (owner: { type: string, id: string }) =>
+  ({ type: owner.type, id: owner.id, department: { $exists: false } })
+
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
 
 export const parseOwnerParams = (type: 'user' | 'organization', idParam: string): SettingsParams => {
@@ -102,4 +132,24 @@ export const parseOwnerParams = (type: 'user' | 'organization', idParam: string)
   params.ownerFilter = { ...owner }
   if (!department) params.ownerFilter.department = { $exists: false }
   return params
+}
+
+// trim leading/trailing whitespace of the free-text fields
+export const trimSettings = (settings: Partial<Settings>) => {
+  for (const topic of settings.topics ?? []) trimFields(topic, 'title')
+  for (const license of settings.licenses ?? []) trimFields(license, 'title', 'href')
+  for (const concept of settings.privateVocabulary ?? []) trimFields(concept, 'title', 'description', 'tag')
+  for (const apiKey of settings.apiKeys ?? []) trimFields(apiKey, 'title')
+  for (const webhook of settings.webhooks ?? []) {
+    trimFields(webhook, 'title')
+    if (webhook.target?.params) trimFields(webhook.target.params, 'url')
+  }
+  if (settings.datasetsMetadata) {
+    const { spatial, temporal, frequency, creator, modified, keywords, conformsTo } = settings.datasetsMetadata
+    for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
+      if (option) trimFields(option, 'title')
+    }
+    for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title')
+  }
+  if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
 }

@@ -22,7 +22,9 @@ dev/logs/
 dev/profiles/
 test-results/
 /benchmark/results/*.json
-/docs/**/*.pdf
+/benchmark/capabilities-defaults/data/
+/benchmark/capabilities-defaults/results.json
 .playwright-mcp
 /superpowers/**/*.md
 /docs/superpowers/
+/simulations/tmp/

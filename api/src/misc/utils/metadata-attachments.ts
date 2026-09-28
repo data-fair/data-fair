@@ -50,6 +50,7 @@ const metadataStorage = {
 }
 
 const metadataUploadMulter = multer({
+  defParamCharset: 'utf8',
   storage: metadataStorage,
   fileFilter: async function fileFilter (req, file, cb) {
     try {

@@ -212,6 +212,13 @@ const functions: Record<string, { description: string, params: string, examples?
       ['TRUTHY("Hello world")', 'true'],
       ['TRUTHY("")', 'false']
     ]
+  },
+  NO_VALUE: {
+    description: 'produit une valeur indéfinie : la colonne calculée est laissée vide pour cette ligne. Équivalent à une chaîne vide. Pour tester si une valeur est indéfinie, utilisez <code>not DEFINED(valeur)</code>.',
+    params: '',
+    examples: [
+      ['TRUTHY(NO_VALUE())', 'false']
+    ]
   }
 }
 

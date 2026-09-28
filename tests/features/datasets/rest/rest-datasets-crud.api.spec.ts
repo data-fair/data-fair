@@ -2,7 +2,8 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -16,6 +17,39 @@ test.describe('REST datasets - CRUD', () => {
 
   test.afterEach(async ({}, testInfo) => {
     if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('a line edit moves finalizedAt even on a dataset the finalize task cannot select', async () => {
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'finalizedAt bump', schema: [{ key: 'attr1', type: 'string' }] })
+    const datasetId = res.data.id
+    await ax.post(`/api/v1/datasets/${datasetId}/lines`, { _id: 'line0', attr1: 'a' })
+    await waitForFinalize(ax, datasetId)
+    const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(before)
+
+    // GET /lines revalidates against finalizedAt and only the finalize task writes it. On the
+    // healthy path that is fine (finalize runs within seconds, and the writer escapes via
+    // ?indexedAt=) — but 'error' accepts line writes (readWritableDataset) while matching NO
+    // finalize filter, so finalizedAt never moved again and the edit stayed behind a 304 until
+    // someone reindexed by hand. commitLines covers exactly this case.
+    await patchRawDataset(datasetId, { status: 'error' })
+    await clearDatasetCache()
+
+    // the bump is the current second TRUNCATED (never a future value — see commitLines): wait out
+    // the second `before` was stamped in, or there is legitimately nothing to advance to
+    const nextSecond = Math.floor(Date.parse(before) / 1000) * 1000 + 1000
+    if (Date.now() < nextSecond) await new Promise(resolve => setTimeout(resolve, nextSecond - Date.now()))
+
+    await ax.put(`/api/v1/datasets/${datasetId}/lines/line0`, { attr1: 'b' })
+    const after = (await ax.get(`/api/v1/datasets/${datasetId}`)).data.finalizedAt
+    assert.ok(
+      new Date(after).getTime() > new Date(before).getTime(),
+      `finalizedAt should have moved past ${before}, got ${after}`
+    )
+    // and never into the future, which finalize would rewind and turn into a 400 on the UI's
+    // `?finalizedAt=` queries
+    assert.ok(new Date(after).getTime() <= Date.now(), `finalizedAt must not be in the future, got ${after}`)
   })
 
   test('Create empty REST datasets', async () => {
@@ -83,6 +117,39 @@ test.describe('REST datasets - CRUD', () => {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), (err: any) => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
+  })
+
+  test('REST line operations signal data-updated to webhooks only', async () => {
+    // Line writes must never reach stored events nor subscribers (script-driven spam, see
+    // notifications.md §10): the signal is restricted to the webhooks channel and coalesced.
+    // The matching test for virtual parents lives in virtual-datasets-features.api.spec.ts.
+    const ax = testUser1
+    // creation's full finalize pass must not signal: collect from before the creation
+    let notifs = await collectNotifs()
+    // PUT on a known id so the finalize-end subscription is open before the creation
+    const dataset = await doAndWaitForFinalize(ax, 'rest-webhook-signal', () => ax.put('/api/v1/datasets/rest-webhook-signal', {
+      isRest: true,
+      title: 'rest-webhook-signal',
+      schema: [{ key: 'attr1', type: 'string' }]
+    }))
+    let captured = await notifs.drain()
+    assert.equal(captured.filter(n => n.topic.key.startsWith('data-fair:dataset-data-updated:')).length, 0)
+
+    for (const write of [
+      () => ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'a' }),
+      () => ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'b' }),
+      () => ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ attr1: 'c' }, { attr1: 'd' }]),
+      () => ax.delete(`/api/v1/datasets/${dataset.id}/lines`)
+    ]) {
+      notifs = await collectNotifs()
+      await doAndWaitForFinalize(ax, dataset.id, write)
+      captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-data-updated:' })
+      const { id, slug } = expectNotifPair(captured, 'data-fair:dataset-data-updated', dataset)
+      for (const n of [id, slug]) {
+        assert.deepEqual(n.channels, ['webhooks'])
+        assert.equal(n.coalesce, true)
+      }
+    }
   })
 
   test('Patch with empty string and null should remove properties', async () => {
@@ -400,6 +467,11 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
     const resPost = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' })
     assert.equal(resPost.data._warning, 'ne doit pas contenir de propriétés additionnelles (attr3)')
+    // the extra property is dropped (the strict index would reject the whole line), the line is indexed
+    assert.equal(resPost.data.attr3, undefined)
+    const resLines = await ax.get('/api/v1/datasets/rest4/lines')
+    assert.equal(resLines.data.total, 1)
+    assert.equal(resLines.data.results[0].attr1, 'test')
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },

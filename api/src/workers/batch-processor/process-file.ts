@@ -7,6 +7,7 @@ import { valueAtPointer } from '@data-fair/data-fair-shared/ajv.js'
 import pump from '../../misc/utils/pipe.ts'
 import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
+import { dateCoherenceProps, dateCoherenceViolation } from '../../datasets/utils/constraints.ts'
 import * as datasetsService from '../../datasets/service.ts'
 import * as schemaUtils from '../../datasets/utils/data-schema.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
@@ -16,7 +17,6 @@ import filesStorage from '#files-storage'
 import { validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as extensionsUtils from '../../datasets/utils/extensions.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
@@ -26,49 +26,63 @@ import type { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 // extensions, accumulating every row error into a single DiagnosticWriter. Throws
 // [validation-error] at the end if any error was collected.
 
-const inlineErrorsLimit = 3
-
 class ValidateStream extends Writable {
   validate: CustomAjvValidate
-  inlineErrors: string[] = []
   nbErrors = 0
   i = 0
   writer: DiagnosticWriter
+  dateCoherence: { startProp: any, endProp: any } | null = null
 
   constructor (options: { dataset: DatasetInternal, writer: DiagnosticWriter }) {
     super({ objectMode: true })
     const schema = jsonSchema((options.dataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
     this.writer = options.writer
+    if ((options.dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')) {
+      this.dateCoherence = dateCoherenceProps(options.dataset.schema ?? [])
+    }
   }
 
   _write (chunk: any, encoding: string, callback: (err?: Error | null) => void) {
     this.i++
     let rawErrors: any[] = []
     const valid = this.validate(chunk, 'fr', errs => { rawErrors = errs ?? [] })
-    if (valid) {
+    let coherenceError: string | null = null
+    if (this.dateCoherence) {
+      coherenceError = dateCoherenceViolation(
+        chunk[this.dateCoherence.startProp.key],
+        chunk[this.dateCoherence.endProp.key],
+        this.dateCoherence.startProp,
+        this.dateCoherence.endProp,
+        config.defaultTimeZone
+      )
+    }
+    if (valid && !coherenceError) {
       callback()
       return
     }
     this.nbErrors++
-    if (this.nbErrors <= inlineErrorsLimit) {
-      this.inlineErrors.push(`Ligne ${this.i}: ${this.validate.errors}`)
-    }
     const lineNumber = this.i
-    const writerErrors = rawErrors.length
-      ? rawErrors.map(err => {
-        const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
-        // resolve the actual rejected value via the JSON-pointer so nested/array
-        // paths (e.g. /attr3/1) are handled, not just top-level fields.
-        const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
-        const rawValue = resolved === undefined ? '' : String(resolved)
-        return {
-          field,
-          message: err?.message ?? JSON.stringify(err),
-          rawValue
+    const writerErrors: { field: string, message: string, rawValue: string }[] = []
+    if (!valid) {
+      if (rawErrors.length) {
+        for (const err of rawErrors) {
+          const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
+          // resolve the actual rejected value via the JSON-pointer so nested/array
+          // paths (e.g. /attr3/1) are handled, not just top-level fields.
+          const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
+          const rawValue = resolved === undefined ? '' : String(resolved)
+          writerErrors.push({ field, message: err?.message ?? JSON.stringify(err), rawValue })
         }
-      })
-      : [{ field: '', message: this.validate.errors ?? 'invalid row', rawValue: '' }]
+      } else {
+        writerErrors.push({ field: '', message: this.validate.errors ?? 'invalid row', rawValue: '' })
+      }
+    }
+    if (coherenceError) {
+      const endKey = this.dateCoherence!.endProp.key
+      const endValue = chunk[endKey]
+      writerErrors.push({ field: endKey, message: coherenceError, rawValue: endValue === undefined ? '' : String(endValue) })
+    }
     ;(async () => {
       for (const e of writerErrors) {
         await this.writer.addError({
@@ -82,13 +96,11 @@ class ValidateStream extends Writable {
     })().then(() => callback(), callback)
   }
 
+  // no error sample here on purpose: the exhaustive list is in the diagnostic CSV
+  // downloadable from the journal event
   errorsSummary () {
     if (!this.nbErrors) return null
-    const leftOut = this.nbErrors - inlineErrorsLimit
-    let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n`
-    msg += this.inlineErrors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n')
-    if (leftOut > 0) msg += `\n${leftOut} autres erreurs...`
-    return msg
+    return `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation (${this.nbErrors} ligne${this.nbErrors > 1 ? 's' : ''}).`
   }
 }
 
@@ -149,7 +161,9 @@ export default async function (dataset: DatasetInternal) {
 
   // ----- Phase A: schema validation (if any rules) -----
   let validationStream: ValidateStream | null = null
-  if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
+  const hasDateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence') &&
+    !!dateCoherenceProps(dataset.schema ?? [])
+  if (datasetUtils.schemaHasValidationRules(dataset.schema) || hasDateCoherence) {
     debug('phase A: validate')
     const progress = taskProgress(dataset.id, 'validate', 100)
     await progress.inc(0)
@@ -197,11 +211,11 @@ export default async function (dataset: DatasetInternal) {
   if (writer.errorCount > 0) {
     const summaryParts: string[] = []
     if (nbValidationErrors > 0) {
-      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne(s) en erreur de validation`
+      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne${nbValidationErrors > 1 ? 's' : ''} en erreur de validation`
       summaryParts.push(validationSummary)
     }
     if (blockingExtensionErrors > 0) {
-      summaryParts.push(`${blockingExtensionErrors} ligne(s) en échec d'enrichissement obligatoire`)
+      summaryParts.push(`${blockingExtensionErrors} ligne${blockingExtensionErrors > 1 ? 's' : ''} en échec d'enrichissement obligatoire`)
     }
     const summary = summaryParts.join('\n')
 
@@ -271,7 +285,7 @@ export default async function (dataset: DatasetInternal) {
 
   if (patch.validateDraft) {
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' } as any)
-    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', {
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validated', {
       localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } }
     })
   }

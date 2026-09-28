@@ -26,8 +26,8 @@ const s3Config = {
   endpoint: `http://localhost:${s3Port}`,
   bucket: 'bucketdev',
   credentials: {
-    accessKeyId: 'minioadmin',
-    secretAccessKey: 'minioadmin'
+    accessKeyId: 'rustfsadmin',
+    secretAccessKey: 'rustfsadmin'
   },
   forcePathStyle: true
 }
@@ -50,11 +50,11 @@ class TestS3Storage {
     })
   }
 
+  // same mapping as the real backend: callers pass dataDir-prefixed paths, prefixing a relative
+  // dataDir twice yields `../` keys that S3 backends refuse (which silently skipped these tests)
   private bucketPath (path: string) {
-    const resolved = path.startsWith('/') ? path : `${this.dataDir}/${path}`
-    const prefix = this.dataDir + '/'
-    if (resolved === this.dataDir) return ''
-    return resolved.replace(prefix, '')
+    if (path === this.dataDir) return ''
+    return path.replace(this.dataDir + '/', '')
   }
 
   async writeStream (readStream: Readable, path: string) {

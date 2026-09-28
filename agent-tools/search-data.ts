@@ -1,4 +1,4 @@
-import { normalizeSort, cleanRow, toCsv, datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
+import { normalizeSort, cleanRow, cleanRowKeepingId, selectsLineId, toCsv, datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Rechercher des lignes de données' },
@@ -14,7 +14,7 @@ export const schema = {
       datasetId: datasetIdProperty,
       q: { type: 'string' as const, description: 'French keywords for full-text search across all dataset columns (simple keywords, not sentences). Can be combined with filters, but prefer filters alone when criteria target specific columns. Use query for broad keyword matching across all columns. Examples: "Jean Dupont", "Paris", "2025"' },
       ...filterProperties,
-      select: { type: 'string' as const, description: 'Optional comma-separated list of column keys to include in the results. Useful when the dataset has many columns to reduce output size. If not provided, all columns are returned. Use column keys from describe_dataset. Format: column1,column2,column3 (No spaces after commas). Example: "nom,age,ville"' },
+      select: { type: 'string' as const, description: 'Optional comma-separated list of column keys to include in the results. Useful when the dataset has many columns to reduce output size. If not provided, all columns are returned. Use column keys from describe_dataset. Format: column1,column2,column3 (No spaces after commas). Example: "nom,age,ville". Add `_id` to also get each row\'s internal identifier, which is what the line-editing tools need to address a row; it is left out otherwise.' },
       sort: { type: 'string' as const, description: 'Sort order for results. Comma-separated list of column keys. Prefix with - for descending order. Special keys: _score (relevance), _i (index order), _updatedAt, _rand (random), _geo_distance:lon:lat (distance from point, for geolocalized datasets — longitude first, then latitude). Examples: "population" (ascending), "-population" (descending), "_geo_distance:2.35:48.85" (closest to lon=2.35, lat=48.85)' },
       size: { type: 'number' as const, description: 'Number of rows to return per page (default: 10, max: 50). Increase when you know you need more results upfront to avoid multiple pagination round-trips.' },
       page: { type: 'number' as const, description: 'Page number (default 1)' },
@@ -73,7 +73,10 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
 }
 
 export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
-  const rows = (data.results ?? []).map(cleanRow)
+  // Naming `_id` in the select is a caller addressing a row rather than browsing
+  // it — that is the only way to reach open_edit_line_dialog, which needs one.
+  const clean = selectsLineId(params.select) ? cleanRowKeepingId : cleanRow
+  const rows = (data.results ?? []).map(clean)
   const filterQueryString = buildFilterQueryString(params)
   const totalLabel = data.meta?.totalMarginPct ? `**~${data.total}** rows found (±${data.meta.totalMarginPct}% sampled estimate)` : `**${data.total}** rows found`
   const lines = [

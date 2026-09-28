@@ -59,15 +59,40 @@ declare module '@terraformer/wkt' {
   export const wktToGeoJSON: (wkt: string) => any
 }
 
-declare module 'geojson-vt' {
-  const geojsonvt: (geojson: any, options?: any) => { getTile: (z: number, x: number, y: number) => any }
-  export default geojsonvt
-}
-
 declare module 'vt-pbf' {
   const vtpbf: {
     fromGeojsonVt: (layers: any, options?: any) => Uint8Array
     fromVectorTileJs: (tile: any) => Uint8Array
   }
   export default vtpbf
+}
+
+declare module 'JSONStream' {
+  import type { Transform } from 'node:stream'
+  const JSONStream: {
+    parse: (path: string | any[], map?: (data: any) => any) => Transform
+    stringify: (open?: string | false, sep?: string, close?: string, indent?: number) => Transform
+  }
+  export default JSONStream
+}
+
+declare module 'mime-type-stream' {
+  import type { Transform } from 'node:stream'
+  /** The three mime types the module actually handles; anything else yields undefined. */
+  type MimeTypeStreamType = 'text/csv' | 'application/json' | 'application/x-ndjson'
+  interface MimeTypeStreams { parser: () => Transform, serializer: () => Transform }
+  const mimeTypeStream: {
+    (mimeType: MimeTypeStreamType): MimeTypeStreams
+    (mimeType?: string): MimeTypeStreams | undefined
+  }
+  export default mimeTypeStream
+}
+
+declare module 'mongo-escape' {
+  const mongoEscape: {
+    /** `$` and `.` in keys become their fullwidth forms; `recurse` also escapes nested objects. */
+    escape: <T>(input: T, recurse?: boolean) => T
+    unescape: <T>(input: T, recurse?: boolean) => T
+  }
+  export default mongoEscape
 }

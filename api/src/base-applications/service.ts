@@ -1,13 +1,13 @@
 import config from '#config'
 import mongo from '#mongo'
 import axios from '../misc/utils/axios.ts'
-import jsonRefs from 'json-refs'
 import i18n from 'i18n'
 import * as parse5 from 'parse5'
 import slug from 'slugify'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { clean, prepareQuery, getFragmentFetchUrl } from './operations.ts'
+import { resolveLocalRefs } from '../misc/utils/json-refs.ts'
 import type { BaseApp } from '#types'
 
 // Meta field names that may appear multiple times with a lang attribute.
@@ -110,7 +110,7 @@ export async function initBaseApp (app, locale?: string) {
   try {
     const res = (await axios.get(app.url + 'config-schema.json'))
     if (typeof res.data !== 'object') throw new Error('Invalid json')
-    const configSchema: any = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
+    const configSchema: any = resolveLocalRefs(res.data)
 
     patch.hasConfigSchema = true
 

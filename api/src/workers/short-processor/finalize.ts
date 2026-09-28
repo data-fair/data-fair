@@ -15,6 +15,7 @@ import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
 import mongo from '#mongo'
 import * as journals from '../../misc/utils/journals.ts'
+import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../../misc/utils/notifications.ts'
 
 import debugLib from 'debug'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
@@ -26,6 +27,8 @@ export const eventsPrefix = 'finalize'
 
 export default async function (_dataset: DatasetInternal) {
   let dataset = _dataset
+  // read before applyPatch, which writes the pass's result (including _partialRestStatus: null) into this object
+  const isPartialRestPass = !!dataset._partialRestStatus && isRestDataset(dataset)
 
   const debug = debugLib(`worker:finalizer:${dataset.id}`)
 
@@ -204,7 +207,8 @@ export default async function (_dataset: DatasetInternal) {
     // clause's analyzer reference would 400 on it).
     result._indexShape = {
       singleTextField: descendants.length > 0 && descendants.every(d => d._indexShape?.singleTextField === true),
-      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true)
+      wordAggField: descendants.length > 0 && descendants.every(d => d._indexShape?.wordAggField === true),
+      noNumericText: descendants.length > 0 && descendants.every(d => d._indexShape?.noNumericText === true)
     }
     result.count = dataset.count = await esUtils.count(queryableDataset, {})
   }
@@ -234,6 +238,14 @@ export default async function (_dataset: DatasetInternal) {
 
   if (!dataset.draftReason) {
     await updateStorage(dataset)
+
+    // a partial pass follows line writes: signal them to webhook subscribers only, coalesced,
+    // never to stored events nor subscribers (per-write notifications are spam, notifications.md §10)
+    if (isPartialRestPass) {
+      const options = { i18nKey: 'data-updated-rest', channels: ['webhooks' as const], coalesce: true }
+      await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'data-updated', options)
+      await propagateDataUpdatedToVirtualParents(dataset, 'data-fair-worker', options)
+    }
 
     // parent virtual datasets have to be re-finalized too
     for await (const virtualDataset of mongo.datasets.find({ 'virtual.children': dataset.id })) {

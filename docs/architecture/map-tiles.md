@@ -47,6 +47,33 @@ when legacy map applications have been updated to target `/tileserver`
 directly and their deployed configs re-saved, or when traffic logs show the
 redirect is no longer hit.
 
+## The MapLibre worker (build coupling)
+
+From MapLibre 6 the library no longer inlines its web worker. It resolves the
+worker from its own `import.meta.url`, expecting `maplibre-gl-worker.mjs` as a
+sibling — under a bundler that resolves next to *our* chunk, where the file is
+not, so the URL must be set explicitly. Two pieces make that work, and both are
+load-bearing:
+
+- `ui/src/components/dataset/map/maplibre-worker.ts` calls `setWorkerUrl()` with
+  a `?worker&url` import. The `worker` part (not a plain `?url`) is what makes
+  Vite bundle the worker together with the `maplibre-gl-shared` chunk it
+  imports. Import this module for its side effect wherever a `Map` is
+  constructed — currently `use-map.ts` and `dataset-map-bounds.vue`.
+- `worker: { format: 'es' }` in `ui/vite.config.ts`. Vite's default worker
+  format is iife, which serves MapLibre's ESM worker as a classic script;
+  MapLibre starts it with `new Worker(url, { type: 'module' })`, and the
+  mismatch fails with `Cannot use import statement outside a module`.
+
+The failure mode in both cases is the same and easy to misread: the map canvas
+appears, the base style renders, and **no vector tiles ever load** — tile
+parsing happens in the worker. Check the browser console, not the network tab.
+
+The CSP allows this via `worker-src 'self' blob:` (from
+`@data-fair/lib-express`). The worker URL is same-origin, so the `blob:` part is
+no longer needed by data-fair itself; MapLibre 5 needed it for the inline worker
+blob it used to create, which is also why `config.CSP_NONCE` used to be set.
+
 ## Category coloring & legend (`?category=`)
 
 The map previews (`/dataset/{id}/map` and `/embed/dataset/{id}/map`) accept a

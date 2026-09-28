@@ -14,7 +14,7 @@ import {
   type SectionError,
   type DatasetRef
 } from './elasticsearch-diagnose.ts'
-import { listDatasetsWithEsWarnings } from './service.ts'
+import { listDatasetsWithEsWarnings, listRestDatasetsWithoutLineBytes } from './service.ts'
 
 // Watermarks rarely change; refresh once a minute.
 const DEFAULT_LOW = 85
@@ -106,7 +106,7 @@ export const getElasticsearchDiagnose = async () => {
   const [
     health, pendingTasks, allocSettings,
     nodesStats, catShards, catIndices, tasksResponse,
-    datasetsWithEsWarnings, nbDatasetsInMongo
+    datasetsWithEsWarnings, restDatasetsWithoutLineBytes, nbDatasetsInMongo
   ] = await Promise.all([
     safeSection('cluster.health', () => es.client.cluster.health(), errors, null as any),
     safeSection('cluster.pendingTasks', async () => (await es.client.cluster.pendingTasks()).tasks ?? [], errors, [] as any[]),
@@ -128,6 +128,7 @@ export const getElasticsearchDiagnose = async () => {
     // — that's the shape both collectReferencedDatasetIds and mapLongTasks consume.
     safeSection('tasks.list', () => es.client.tasks.list({ detailed: true }), errors, { nodes: {} } as any),
     safeSection('datasetsWithEsWarnings', () => listDatasetsWithEsWarnings(1000), errors, { count: 0, results: [] }),
+    safeSection('restDatasetsWithoutLineBytes', () => listRestDatasetsWithoutLineBytes(1000), errors, { count: 0, results: [] }),
     safeSection('mongo.countDatasets', () => mongo.db.collection('datasets').countDocuments({
       isVirtual: { $ne: true },
       isMetaOnly: { $ne: true }
@@ -173,6 +174,7 @@ export const getElasticsearchDiagnose = async () => {
     unassignedShards: mapUnassignedShards(catShards as any[], explainByKey, indicesPrefix, datasetsById),
     indicesSummary: mapIndicesSummary(catIndices as any[], indicesPrefix, nbDatasetsInMongo as number, mongoIdsPresent),
     datasetsWithEsWarnings,
+    restDatasetsWithoutLineBytes,
     errors
   }
 }

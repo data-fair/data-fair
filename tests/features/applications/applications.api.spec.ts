@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
 import { sendDataset, fileExists, clearDatasetCache } from '../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../support/notifications.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -199,6 +200,7 @@ test.describe('Applications', () => {
 
     let res = await ax.post('/api/v1/applications', {
       url: mockAppUrl('monapp1'),
+      title: 'Répartition des équipements sportifs',
       configuration: {
         datasets: [
           { id: dataset.id, href: datasetRefInit.href },
@@ -216,6 +218,12 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
+    // applications are embedded by portals, never a destination of their own
+    assert.equal(res.headers['x-robots-tag'], 'noindex, indexifembedded')
+    res = await ax.get(`/api/v1/applications/${appId}`)
+    assert.equal(res.status, 200)
+    // the json api stays indexable, it serves public data
+    assert.equal(res.headers['x-robots-tag'], undefined)
     res = await ax.get('/app/' + appId)
     assert.equal(res.status, 200)
     assert.ok(res.data.includes('My app body'))
@@ -231,6 +239,22 @@ test.describe('Applications', () => {
     assert.deepEqual(Object.keys(application.configuration.datasets[0]).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
     assert.deepEqual(Object.keys(application.configuration.datasets[1]).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 
+    // The language of the served document is set from the request locale and replaces
+    // whatever the application declares (the mock serves lang="zz"): a document without a
+    // language, or with a wrong one, fails WCAG 3.1.1 / RGAA 8.3-8.4
+    assert.ok(/<html[^>]*\slang="(fr|en)"/.test(res.data), 'the html element carries the served locale')
+    assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
+
+    // Same for the title: the ones declared by the application name its model in the catalog,
+    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6).
+    // The mock declares two of them (one per language) and none must survive.
+    assert.ok(res.data.includes('<title>Répartition des équipements sportifs</title>'), 'the document is titled after the application')
+    assert.equal((res.data.match(/<title[ >]/g) || []).length, 1, 'the document declares a single title')
+    assert.ok(!res.data.includes('<title>Base app model name</title>'), 'the title declared by the application is replaced')
+    assert.ok(!res.data.includes('<title lang="fr">'), 'the other language variant is dropped too')
+    // The model keeps naming itself in the base app metadata, which the proxy does not touch
+    assert.equal(application.baseApp.meta.title, 'Nom du modèle', 'the base app metadata still names the model')
+
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker
@@ -242,6 +266,15 @@ test.describe('Applications', () => {
     await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
     assert.equal(res.data.includes('<div>application embed</div>'), false)
+  })
+
+  test('Title a proxied application that declares no title', async () => {
+    const ax = testUser1
+    // monapp3 serves an index.html without any title element
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp3'), title: 'Consommation énergétique' })
+    res = await ax.get(`/app/${res.data.id}`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('<title>Consommation énergétique</title>'), 'the title element is inserted')
   })
 
   test('Read base app info of an application', async () => {
@@ -407,6 +440,16 @@ test.describe('Applications', () => {
     // dataset B is now referenced
     const dsB = (await ax.get('/api/v1/datasets/' + datasetB.id)).data
     assert.equal(dsB.extras.applications.length, 1)
+  })
+
+  test('emits application-created notif on POST', async () => {
+    const ax = testUser1
+    const notifs = await collectNotifs()
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'notif-test-app' })
+    const captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:application-application-created:' })
+
+    expectNotif(captured, `data-fair:application-application-created:${app.slug || app.id}`)
   })
 
   test('Upload a simple attachment on an application', async () => {

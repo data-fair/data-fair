@@ -361,10 +361,22 @@ test.describe('topics facet display', () => {
     const navRight = page.locator('#navigation-right-local')
     const topicsFacet = navRight.getByRole('combobox', { name: 'Thématiques' })
     await expect(topicsFacet).toBeVisible({ timeout: 5000 })
-    await topicsFacet.click()
-
-    // Select the first topic option
-    await page.getByRole('listbox', { name: 'Thématiques' }).getByRole('option').first().click()
+    // the menu can close on its own about 150ms after opening while the page is still settling
+    // (observed: listbox gone, options detached, combobox still mounted and focused). clicking
+    // straight into the freshly opened menu then races that transient and times out, so open and
+    // select as one retried unit rather than assuming the menu stays up.
+    // retry towards the selected state rather than towards a dispatched click: the facet is
+    // multiple, so a retry that re-clicked an option whose click had already landed would toggle
+    // the selection back off.
+    const topicsListbox = page.getByRole('listbox', { name: 'Thématiques' })
+    await expect(async () => {
+      if (await topicsListbox.count() === 0) await topicsFacet.click()
+      const firstOption = topicsListbox.getByRole('option').first()
+      if (await firstOption.getAttribute('aria-selected') !== 'true') {
+        await firstOption.click({ timeout: 2000 })
+      }
+      await expect(firstOption).toHaveAttribute('aria-selected', 'true', { timeout: 2000 })
+    }).toPass({ timeout: 15000 })
     await page.keyboard.press('Escape')
 
     // Should filter to 1 dataset

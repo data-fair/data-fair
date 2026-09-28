@@ -27,14 +27,21 @@ export const setNoCache = (req: Request, res: Response) => {
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
 export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'): RequestHandler => (req, res, next) => {
+  const resource = reqResource(req)
+  if (applyResourceCacheHeaders(req, res, new Date(resource[dateKey] || resource.updatedAt))) return
+  next()
+}
+
+// same logic as the resourceBased middleware, for routes that decide per request whether the
+// response is cacheable and what its reference date is
+// returns true when a 304 was sent and the caller must stop there
+export const applyResourceCacheHeaders = (req: Request, res: Response, date: Date): boolean => {
   if (reqNoCache(req)) {
     setNoCache(req, res)
-    return next()
+    return false
   }
 
   const resource = reqResource(req)
-  const dateStr = resource[dateKey] || resource.updatedAt
-  const date = new Date(dateStr)
   const dateUTC = date.toUTCString()
   const cacheVisibility = reqPublicOperation(req) ? 'public' : 'private'
   debug(`dateUTC=${dateUTC}, visibility=${cacheVisibility}`)
@@ -43,7 +50,8 @@ export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'
     const ifModifiedSince = req.get('if-modified-since')
     if (ifModifiedSince && dateUTC === ifModifiedSince) {
       debug('if-modified-since matches local date, return 304')
-      return res.status(304).send()
+      res.status(304).send()
+      return true
     }
     res.setHeader('Last-Modified', dateUTC)
   }
@@ -74,7 +82,7 @@ export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'
     }
   }
 
-  next()
+  return false
 }
 
 // adapt headers for a request listing the content of a collection

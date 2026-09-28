@@ -50,7 +50,16 @@ rollout (`0bc454fb4`) and load-management.md §6.
 | `.keyword_insensitive` | `x-capabilities.insensitive !== false` | `insensitive_normalizer` | Diacritic/case-insensitive sort, not search |
 | `.wildcard` | `x-capabilities.wildcard === true` (opt-in) | (wildcard type) | `*q*` contains queries |
 
-Numeric and date columns get a single `.text_standard` inner field so they can be matched textually.
+Date columns get a single `.text_standard` inner field so they can be matched textually.
+
+> **Note (2026-08-07).** Numeric (`integer`/`number`) columns no longer get a `.text_standard`
+> inner field on freshly built indexes (the `noNumericText` shape flag) — `q` now matches
+> them whole-value via the main `long`/`double` field instead. Boolean columns never had a
+> mapped `.text_standard` either (the old per-type capability toggle was a no-op for them).
+> The `textStandard` capability itself stays in the contract (dates and strings still use
+> it) and an explicit `x-capabilities: { textStandard: false }` set via the API on a numeric
+> column is still honored — only the *offered* per-type capability lists (UI schema editor,
+> agent property-config tools) dropped `textStandard` for `number`/`integer`/`boolean`.
 
 **`q` regimes** (`getFilterableFields`). Three coexisting paths chosen by dataset state, no
 explicit `q_fields`:
@@ -638,6 +647,12 @@ For numeric / date columns:
 _search catch-all:
   Single analyzed field with the dataset's language analyzer.
 ```
+
+> Note (2026-08-07): the "numeric / date columns keep `.text_standard`" premise below predates the
+> default-capabilities change (`docs/superpowers/specs/2026-08-07-default-capabilities-design.md`),
+> which retired `.text_standard` for `integer`/`number` columns (`noNumericText` index shape,
+> whole-value `q` matching now goes through the main field via a `lenient: true` clause). Dates are
+> unaffected and still keep it. Revisit this section's numeric assumptions if R6 is picked up.
 
 **Why each piece**:
 - Halving the analyzed sub-field count per column shrinks `_search`, the catch-all index

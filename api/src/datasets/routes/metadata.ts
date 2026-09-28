@@ -7,7 +7,6 @@ import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
@@ -23,6 +22,9 @@ import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
+import * as webhooks from '../../misc/utils/webhooks.ts'
+import i18n from 'i18n'
+import { type Locale } from '../../../i18n/utils.ts'
 import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
@@ -30,9 +32,16 @@ import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import * as fragmentsService from '../../fragments/service.ts'
+import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
+import { searchIndexPatch } from '../utils/search-text.ts'
+import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import * as datasetUtils from '../utils/index.ts'
-import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
+import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
+import { filterByContextualCardinality, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
+import { manageESError } from './_es-error.ts'
 import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 
@@ -41,9 +50,32 @@ const debugLimits = debugModule('limits')
 const debugBreakingChanges = debugModule('breaking-changes')
 
 // retrieve only the schema.. Mostly useful for easy select fields
-const sendSchema = (req: Request, res: Response, schema: any) => {
-  schema = filterSchema(schema, req.query as Record<string, string>)
-  if (req.query.mimeType === 'application/tableschema+json') {
+const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
+  const reqQuery = req.query as Record<string, string>
+  if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+    // contextual cardinality: the schema filters are applied first (without maxCardinality) to
+    // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
+    // within the context of the data filters, instead of the stored whole-dataset cardinality
+    // this path runs an ES query, so unlike the plain schema read it gets the same cache headers
+    // as the data endpoints; the reference date is the latest of updatedAt (schema metadata edits)
+    // and finalizedAt (data changes, refreshed cardinalities)
+    const dataset = reqDataset(req)
+    const cacheTimes = [dataset.updatedAt, dataset.finalizedAt].filter((d): d is string => !!d).map(d => new Date(d).getTime())
+    const cacheDate = new Date(Math.max(...cacheTimes))
+    if (cacheHeaders.applyResourceCacheHeaders(req, res, cacheDate)) return
+    const maxCardinality = Number(reqQuery.maxCardinality)
+    const schemaQuery: Record<string, string> = { ...reqQuery }
+    delete schemaQuery.maxCardinality
+    schema = filterSchema(schema, schemaQuery)
+    try {
+      schema = await filterByContextualCardinality(dataset, schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else {
+    schema = filterSchema(schema, reqQuery)
+  }
+  if (reqQuery.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', contentDisposition(reqDataset(req).slug + '-tableschema.json'))
     schema = tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
@@ -106,6 +138,11 @@ export const registerMetadataRoutes = (router: Router) => {
   router.use('/:datasetId/permissions', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
     // this callback function is called when the resource becomes public
     await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
+  }, async (patchedDataset) => {
+    await fragmentsService.syncFragmentPermissions('datasets', patchedDataset)
+    // no application-key cache invalidation here on purpose: all five memos in application-key.ts
+    // are keyed on an application id and hold application documents only, so a dataset ACL change
+    // cannot make any of them stale — clearing them would just cold-flush hot memos
   }))
 
   // retrieve a dataset by its id
@@ -114,17 +151,19 @@ export const registerMetadataRoutes = (router: Router) => {
     res.status(200).send(clean(req as DfRequest, dataset))
   })
 
-  router.get('/:datasetId/schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-    sendSchema(req, res, clone(reqDataset(req).schema))
+  // fillDescendants is required by prepareQuery when the contextual maxCardinality filter
+  // runs on a virtual dataset (data filters are then resolved against the descendants)
+  router.get('/:datasetId/schema', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, async (req, res) => {
+    await sendSchema(req, res, clone(reqDataset(req).schema), true)
   })
   // alternate read schema route that does not return clues about the data (cardinality and enums)
-  router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+  router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, async (req, res) => {
     const schema = clone(reqDataset(req).schema ?? [])
     for (const p of schema) {
       delete p['x-cardinality']
       delete p.enum
     }
-    sendSchema(req, res, schema)
+    await sendSchema(req, res, schema)
   })
 
   // Update a dataset's metadata
@@ -157,6 +196,8 @@ export const registerMetadataRoutes = (router: Router) => {
     (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    // fragments are never publishable — shared with the other three write routes (spec §5)
+    fragmentWriteGuard(true),
     async (req, res) => {
       // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
       const dataset: any = clone(reqDataset(req))
@@ -165,6 +206,18 @@ export const registerMetadataRoutes = (router: Router) => {
       const sessionState = reqSessionAuthenticated(req)
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+
+      // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
+      // the fragmentWriteGuard mounted above, shared with every other write route
+      if ('partOf' in patch) {
+        const updated = await fragmentsService.applyPartOfChange('datasets', dataset, patch.partOf, sessionState, whoFromReq(req))
+        delete patch.partOf
+        if (updated.partOf) dataset.partOf = updated.partOf
+        else delete dataset.partOf
+        dataset.permissions = updated.permissions
+        dataset.updatedAt = updated.updatedAt
+        eventsLog.info('df.datasets.partOf', `changed dataset parentage ${dataset.slug} (${dataset.id}) -> ${JSON.stringify(dataset.partOf ?? null)}`, { req, account: dataset.owner })
+      }
 
       // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
       // attachments and line ownership are outside the integrity snapshot, so acquiring them
@@ -179,6 +232,9 @@ export const registerMetadataRoutes = (router: Router) => {
         }
       }
 
+      // applyPatch does Object.assign(dataset, patch), so the pre-patch schema has to be kept aside
+      // to diff it below
+      const previousSchema = dataset.schema
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
       if (!isEmpty) {
@@ -189,15 +245,38 @@ export const registerMetadataRoutes = (router: Router) => {
             throw httpError(400, req.__('errors.dupSlug'))
           })
 
-        if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
+        // applyPatch may overwrite patch.status to 'indexed' when ES accepts the new mapping
+        // in place (REST column added), so check the schema diff directly.
+        const schemaChanged = !!patch.schema && !schemasFullyCompatible(patch.schema, previousSchema, true)
+        const reprocessingTriggered = patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated'
+        if (schemaChanged || reprocessingTriggered) {
           await journals.log('datasets', dataset, { type: 'structure-updated' } as Event)
           await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
+        }
+
+        // REST and virtual datasets skip the draft-validation flow that emits breaking-change
+        // in service.ts; emit it inline here on backward-incompatible PATCHes.
+        if ((dataset.isRest || dataset.isVirtual) && patch.schema) {
+          const breakingChanges = getSchemaBreakingChanges(previousSchema, patch.schema, false, false)
+          if (breakingChanges.length) {
+            const localizedParams = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
+              let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: dataset.title })
+              for (const breakingChange of breakingChanges) {
+                msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+              }
+              a[locale] = { breakingChanges: msg }
+              return a
+            }, {})
+            const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
+            webhooks.trigger('datasets', dataset, { type: 'breaking-change', body: localizedParams } as any, null)
+            await notifications.sendResourceEvent('datasets', dataset, sessionState, 'breaking-change', { i18nKey, localizedParams: localizedParams as Record<Locale, Record<string, string>> })
+          }
         }
 
         eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
         const draft = !!dataset.draftReason
-        eventsQueue.pushEvent({
+        await notifications.send({
           title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
           body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
           topic: {
@@ -217,6 +296,9 @@ export const registerMetadataRoutes = (router: Router) => {
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
 
+    if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+    if (await fragmentsService.countFragments('dataset', dataset.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
+
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
     if (dataset.integrity?.active) {
@@ -226,14 +308,8 @@ export const registerMetadataRoutes = (router: Router) => {
     const sessionState = reqSessionAuthenticated(req)
 
     // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
-    if (!sessionState.user.adminMode) {
-      if (req.body.type === 'user' && req.body.id !== sessionState.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-      if (req.body.type === 'organization') {
-        const userOrg = sessionState.user.organizations.find(o => o.id === req.body.id)
-        if (!userOrg) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-        if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-      }
-    }
+    // (checked against all the user's memberships, the new owner is rarely the active account)
+    if (!permissions.canDoForOwner(req.body, 'datasets', 'post', sessionState, true)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
 
     if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
       const remaining = await limits.remaining(req.body)
@@ -282,7 +358,13 @@ export const registerMetadataRoutes = (router: Router) => {
     })
     await permissions.initResourcePermissions(patch, preservePermissions)
 
-    const changeOwnerUpdate: any = { $set: patch }
+    // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
+    // rewritten the permissions the search-text guard reads: recompute rather than carry the old
+    // owner's terms across the transfer.
+    const changeOwnerUpdate: any = mergeIndexUpdate(
+      { $set: patch },
+      searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
+    )
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -309,8 +391,8 @@ export const registerMetadataRoutes = (router: Router) => {
       resource: { type: 'dataset', title: dataset.title, id: dataset.id },
       sender: { ...dataset.owner, role: 'admin' }
     }
-    eventsQueue.pushEvent(event, sessionState)
-    eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+    await notifications.send(event, sessionState)
+    await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
     await syncRemoteService(patchedDataset)
 
@@ -325,6 +407,9 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
 
+    // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
+
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {
       await deleteDataset(req.app, datasetFull)
@@ -332,7 +417,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
     eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
     const sessionState = await session.req(req)
-    eventsQueue.pushEvent({
+    await notifications.send({
       title: 'Jeu de données supprimé',
       body: `${dataset.title} (${dataset.slug})`,
       topic: {

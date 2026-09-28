@@ -3,7 +3,7 @@
 // itself was not altered. Attacks simulated with raw store credentials (shadow versions, delete
 // markers): object-lock preserves the original versions, and the verdict reads that evidence.
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 import {
   ensureIntegrityBucket, listIntegrityKeys, revisionsPrefix, waitForFlagCleared,
@@ -65,7 +65,7 @@ test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says 
   await admin.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'a' }])
   await waitForFinalize(admin, dataset.id)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(admin, dataset.id)
+  await waitForLinesDrained(dataset.id)
   await waitForFlagCleared(dataset.id)
 
   // hide the line's anchor behind a delete marker: a current-view check would misread the line
@@ -148,7 +148,7 @@ test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a k
   await integrityTestStore.writeWho(whoKey1, { date: new Date().toISOString(), user: { id: 'someone' } }, new Date(Date.now() + 2000))
   await new Promise(resolve => setTimeout(resolve, 3500)) // let the `.who` lock genuinely lapse
 
-  await admin.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
     { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })
   const remaining = await listIntegrityKeys(prefix)
   expect(remaining).toContain(key1) // the anchor survives (protection carve-out, and its own lock is long anyway)
@@ -200,17 +200,17 @@ test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', 
 
   // the attack: a raw Mongo write flips protection off — no disable revision, sweep worklist
   // and purge carve-out would silently stand down
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': false })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': false })
 
-  const audit = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  const audit = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
   const incoherent = audit.incoherent.find((s: any) => s.datasetId === dataset.id)
   expect(incoherent).toBeTruthy()
 
   // a legitimate disable through the API is NOT incoherent: re-enable then disable properly
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
-  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
-  const audit2 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  const audit2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
   expect(audit2.incoherent.find((s: any) => s.datasetId === dataset.id)).toBeFalsy()
 })
 
@@ -251,21 +251,21 @@ test('breach alert dedup lives in integrity.alerts and clears on recovery', asyn
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
 
-  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
   const first = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(first.status).toBe('breach')
-  let raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  let raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const alertDate = raw.integrity.alerts?.['integrity-breach']
   expect(alertDate).toBeTruthy()
 
   // still breached, within the realert window: the dedup date does not move (no spam)
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
-  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.alerts['integrity-breach']).toBe(alertDate)
 
   // recovery clears the dedup state so a future breach alerts immediately again
   await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
-  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.alerts?.['integrity-breach']).toBeUndefined()
 })
 
@@ -275,23 +275,23 @@ test('a dataset stuck without a definitive verdict fires integrity-check-stale',
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
   // enable seeded the definitive-check clock
-  let raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  let raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.lastDefinitiveCheck).toBeTruthy()
 
   // simulate 8 silent days (default maxUnknownDays = 7)
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveCheck': eightDaysAgo })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveCheck': eightDaysAgo })
 
-  const run1 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
   expect(run1.alerted).toContain(dataset.id)
   // dedup: a second run within the realert window stays silent
-  const run2 = (await admin.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
   expect(run2.alerted).not.toContain(dataset.id)
 
   // a definitive verdict resets the clock and clears the alert
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
-  raw = (await admin.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(new Date(raw.integrity.lastDefinitiveCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
   expect(raw.integrity.alerts?.['integrity-check-stale']).toBeUndefined()
 })
@@ -345,7 +345,7 @@ const restLinesDataset = async (admin: any) => {
   await admin.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line0', attr1: 'a' }, { _id: 'line1', attr1: 'b' }])
   await waitForFinalize(admin, dataset.id)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(admin, dataset.id)
+  await waitForLinesDrained(dataset.id)
   await waitForFlagCleared(dataset.id)
   return dataset
 }
@@ -357,15 +357,15 @@ test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)'
   // step 1 — the attacker launders a forged write: content + inflated _i + stamp + hint, which
   // the relay anchors at the forged index (in padding range, far above any time-derived value)
   const forgedI = 9e15
-  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' },
     update: { $set: { attr1: 'forged', _i: forgedI, _needsHistorizing: {} } }
   })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
-  await waitForLinesDrained(admin, dataset.id)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(dataset.id)
 
   // step 2 — a plain out-of-band edit diverges from that forged anchor
-  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' },
     update: { $set: { attr1: 'tampered' } }
   })
@@ -377,7 +377,7 @@ test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)'
   // _fix would report a breach forever — with it, _fix must converge to ok
   const fixed = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).data
   expect(fixed.status).toBe('ok')
-  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  const line = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
   expect(line._i).toBeGreaterThan(forgedI)
 })
 
@@ -388,17 +388,17 @@ test('the relay refuses an _i that overflows the key padding (trail ordering sta
 
   // 10^16 does not fit the 16-digit padding: a wider number would break the lexical==numeric
   // ordering of the line's whole sequence — the relay must refuse rather than corrupt the trail
-  await admin.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' },
     update: { $set: { attr1: 'overflow', _i: 1e16, _needsHistorizing: {} } }
   })
-  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
-  await waitForLinesDrained(admin, dataset.id)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizingLines: true })
+  await waitForLinesDrained(dataset.id)
 
   // no revision was written for the overflow value, and the stamp is deliberately left pending
   // (the dataset stays 'unknown' until remediation; check-stale surfaces it if forgotten)
   expect((await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).length).toBe(before)
-  const line = (await admin.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
+  const line = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${dataset.id}`, { params: { filter: JSON.stringify({ _id: 'line0' }) } })).data
   expect(line._needsHistorizing).toBeTruthy()
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('unknown')

@@ -24,6 +24,13 @@ layout {
         command "bash"
         args "-ic" "nvm use && npm run dev-api"
       }
+      // Optional: only the simulations (/agents-sim) need it. Idle it costs
+      // nothing, and having it already up is what keeps the skill's bridge
+      // check from being the thing that stops a run.
+      pane name="bridge" {
+        command "bash"
+        args "-ic" "nvm use && npm run dev-bridge"
+      }
     }
     pane size=1 borderless=true {
         command "bash"

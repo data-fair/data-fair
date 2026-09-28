@@ -2,7 +2,7 @@
 // A1: index-consistency verdict — the ES projection users read (through the alias) is compared
 // against the verified source. REST datasets here; file datasets in the same file, Task 5.
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForLinesDrained, waitForFlagCleared, aimSeedAt, aimSeedAway } from '../../support/integrity.ts'
 
@@ -26,15 +26,15 @@ const enrolledRestDataset = async (ax: any) => {
   ])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
-  await waitForLinesDrained(ax, dataset.id)
+  await waitForLinesDrained(dataset.id)
   await waitForFlagCleared(dataset.id)
   await waitForFinalize(ax, dataset.id).catch(() => {}) // backfill may re-run indexing
-  await ax.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
   return dataset
 }
 
 const lineI = async (ax: any, datasetId: string, lineId: string): Promise<number> => {
-  const line = (await ax.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`,
+  const line = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`,
     { params: { filter: JSON.stringify({ _id: lineId }) } })).data
   return line._i
 }
@@ -57,7 +57,7 @@ test('clean REST dataset gets an ok index verdict with matching counts', async (
 test('an out-of-band ES edit inside a sampled window is a breach with evidence', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'es-tampered'"
   })
   const target = await lineI(ax, dataset.id, 'line0')
@@ -79,7 +79,7 @@ test('an out-of-band ES edit inside a sampled window is a breach with evidence',
 test('an ES delete outside every sampled window is still caught by the count check', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, delete: true
   })
   const target = await lineI(ax, dataset.id, 'line0')
@@ -95,7 +95,7 @@ test('a surplus ES doc is flagged (count + window intersection)', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   const { max } = await lineIBounds(ax, dataset.id, ['line0', 'line1', 'line2'])
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     insert: { _i: max + 1000, attr1: 'ghost', attr2: 99 }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -107,7 +107,7 @@ test('pending indexing downgrades the index verdict to unknown, other verdicts u
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   // simulate a line awaiting the index task (out-of-band flag: no relay hint, no real write)
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { _needsIndexing: true } }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -120,7 +120,7 @@ const enrolledFileDataset = async (ax: any) => {
   const dataset = await sendDataset('datasets/dataset1.csv', ax)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
   return (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
 }
 
@@ -138,7 +138,7 @@ test('an out-of-band ES edit on a file dataset row is a breach (window aimed by 
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledFileDataset(ax)
   // tamper the first row (_i is the join key for file datasets)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _i: 1 } }, script: "ctx._source.id = 'es-tampered'"
   })
   const seed = aimSeedAt(1, 1, dataset.count, WINDOWS) // pivot ≤ 1 ⇒ covers row 1
@@ -152,7 +152,7 @@ test('an out-of-band ES edit on a file dataset row is a breach (window aimed by 
 test('deep=true catches a tamper the sampled windows miss', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'deep-tampered'"
   })
   const target = await lineI(ax, dataset.id, 'line0')
@@ -176,7 +176,7 @@ test('deep=true on a file dataset walks every row without deadlocking (fileItera
   test.setTimeout(30000)
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledFileDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _i: 1 } }, script: "ctx._source.id = 'es-tampered'"
   })
   const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
@@ -194,7 +194,7 @@ test('an ES doc with no _i is surfaced as a divergence in the sample (malformed 
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   // insert straight into the alias with no `_i` field (ES auto-assigns the _id)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     insert: { attr1: 'ghost-no-i', attr2: 99 }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
@@ -211,10 +211,10 @@ test('an ES doc with no _i is surfaced as a divergence in the sample (malformed 
 test('deep=true reports a malformed _i-less doc AND still compares the real rows around it', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     insert: { attr1: 'ghost-no-i', attr2: 99 }
   })
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line2' } }, script: "ctx._source.attr1 = 'deep-edited'"
   })
   const deep = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
@@ -228,7 +228,7 @@ test('deep=true reports a malformed _i-less doc AND still compares the real rows
 test('a diverted alias pointing at a doctored index copy is a breach', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-divert-alias/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-divert-alias/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'diverted'"
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check?deep=true`)).data
@@ -238,7 +238,7 @@ test('a diverted alias pointing at a doctored index copy is a breach', async () 
 test('index reindex action journals the evidence, repairs, and the next check is ok', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'repair-me'"
   })
   const target = await lineI(ax, dataset.id, 'line0')
@@ -260,7 +260,7 @@ test('index reindex action journals the evidence, repairs, and the next check is
   // outbox); the async historize task must drain it before a check reads a converged verdict
   // instead of the pending 'unknown'
   await waitForFlagCleared(dataset.id)
-  await ax.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
   const recheck = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`, { seed })).data
   expect(recheck.index?.status).toBe('ok')
   expect(recheck.status).toBe('ok')
@@ -277,41 +277,41 @@ test('a pinned-unknown index verdict fires integrity-check-stale despite a fresh
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   // enable seeded the index clock alongside the overall one
-  let raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  let raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.lastDefinitiveIndexCheck).toBeTruthy()
 
   // the adversary shape: an orphaned _needsIndexing line (no relay hint, no real write) pins the
   // index verdict to 'unknown' while the overall check stays definitive
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $set: { _needsIndexing: true } }
   })
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
   expect(check.index?.status).toBe('unknown')
-  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   // the overall clock advanced (definitive check) but the index clock did not
   expect(new Date(raw.integrity.lastDefinitiveCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
   expect(new Date(raw.integrity.lastDefinitiveIndexCheck).getTime()).toBeLessThan(new Date(raw.integrity.lastDefinitiveCheck).getTime())
 
   // simulate 8 pinned days (default maxUnknownDays = 7): index clock stale, overall clock fresh
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveIndexCheck': eightDaysAgo })
-  const run1 = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveIndexCheck': eightDaysAgo })
+  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
   expect(run1.alerted).toContain(dataset.id)
   // dedup: a second run within the realert window stays silent
-  const run2 = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
   expect(run2.alerted).not.toContain(dataset.id)
-  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.alerts?.['index-check-stale']).toBeTruthy()
 
   // remediation: clear the orphaned flag; a definitive index pass advances the clock and clears
   // the dedup so a future relapse alerts immediately
-  await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
     filter: { _id: 'line0' }, update: { $unset: { _needsIndexing: '' } }
   })
   const recheck = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(recheck.index?.status).toBe('ok')
-  raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(new Date(raw.integrity.lastDefinitiveIndexCheck).getTime()).toBeGreaterThan(Date.now() - 60000)
   expect(raw.integrity.alerts?.['index-check-stale']).toBeUndefined()
 })
@@ -321,13 +321,13 @@ test('a dataset stale on the overall clock is not double-alerted by the index cl
   const dataset = await enrolledRestDataset(ax)
   // both clocks stale (the overall-stale case: index clock is never ahead of the overall one)
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
     'integrity.lastDefinitiveCheck': eightDaysAgo,
     'integrity.lastDefinitiveIndexCheck': eightDaysAgo
   })
-  const run = (await ax.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
   expect(run.alerted).toContain(dataset.id)
-  const raw = (await ax.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
+  const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   // only the overall dedup key fired: the index loop excludes datasets the overall loop caught
   expect(raw.integrity.alerts?.['integrity-check-stale']).toBeTruthy()
   expect(raw.integrity.alerts?.['index-check-stale']).toBeUndefined()

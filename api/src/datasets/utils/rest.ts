@@ -13,7 +13,6 @@ import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
 import moment from 'moment'
 import crc from 'crc'
-import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
 import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
@@ -30,25 +29,27 @@ import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
-import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage, dateCoherenceProps, dateCoherenceViolation } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetInternal, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
-import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
-import { type RequestWithRestDataset } from '#types/dataset/index.ts'
+import { type RequestWithRestDataset, type Unicite } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
-import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional, reqResource, reqResourceType, reqBypassPermissions } from '../../misc/utils/req-context.ts'
+import { can } from '../../misc/utils/permissions.ts'
+import * as journals from '../../misc/utils/journals.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
@@ -58,7 +59,8 @@ type Operation = {
   fullBody: any,
   filter: { _id: string },
   _status?: number,
-  _error?: string
+  _error?: string,
+  _warning?: string
 }
 
 dayjs.extend(duration)
@@ -115,7 +117,14 @@ const padI = (i: number, padSize = padISize) => {
   return new Array((padSize - str.length) + 1).join('0') + str
 }
 
+const md5File = async (filePath: string) => {
+  const hash = crypto.createHash('md5')
+  for await (const chunk of fs.createReadStream(filePath)) hash.update(chunk)
+  return hash.digest('hex')
+}
+
 export const uploadAttachment = multer({
+  defParamCharset: 'utf8',
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
@@ -168,6 +177,7 @@ const tmpSharedStorage = {
 }
 
 export const uploadBulk = multer({
+  defParamCharset: 'utf8',
   storage: tmpSharedStorage
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
@@ -202,7 +212,7 @@ const constraintIndexName = (constraint: any) =>
 
 export const configureConstraintIndexes = async (dataset: RestDataset) => {
   const c = collection(dataset)
-  const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
+  const constraints = (dataset.constraints ?? []).filter((ct): ct is Unicite => ct.type === 'unique')
   const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
 
   // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
@@ -476,13 +486,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
     if (historizeLines) {
-      operation.fullBody._needsHistorizing = {
-        context: historizeContext ?? {
-          operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
-          origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
-          ...(who ? { who } : {})
-        }
+      const context = historizeContext ?? {
+        operation: _action === 'delete' ? 'delete' : _action === 'create' ? 'create' : 'update',
+        origin: sessionState?.user?.adminMode ? 'superadmin' : sessionState ? 'user' : 'worker',
+        ...(who ? { who } : {})
       }
+      // stamp the date HERE, not in the relay: a retried anchor must reproduce a byte-identical
+      // body or its same-key re-PUT reads as a rewrite to the trail check (see HistorizeContextHint)
+      operation.fullBody._needsHistorizing = { context: { ...context, date: context.date ?? updatedAt.toISOString() } }
     }
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
@@ -583,6 +594,9 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   }
 
   // now that operations were completed perform validation and calculate hash for all operations
+  const dateCoherence = (dataset.constraints ?? []).some((c: any) => c.type === 'dateCoherence')
+    ? dateCoherenceProps(dataset.schema ?? [])
+    : null
   const createUpdatePreviousFilters = []
   let v = 0
   for (const operation of operations) {
@@ -607,8 +621,40 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         const message = errorsText(validate.errors, '', operation.body)
         if (dataset.nonBlockingValidation) {
           operation._warning = message
+          // the index mapping is strict: a property outside the schema would get the whole line
+          // rejected by elasticsearch, drop it (the warning above names it) and keep the line
+          let additional = validate.errors?.filter(e => e.keyword === 'additionalProperties') ?? []
+          while (additional.length) {
+            for (const e of additional) {
+              delete operation.body[e.params.additionalProperty]
+              delete operation.fullBody[e.params.additionalProperty]
+            }
+            if (validate(operation.body)) break
+            additional = validate.errors?.filter(e => e.keyword === 'additionalProperties') ?? []
+          }
         } else {
           operation._error = message
+          operation._status = 400
+          continue
+        }
+      }
+    }
+
+    // dateCoherence constraint: row-local check on the merged row — fullBody covers
+    // patch actions whose previous body was merged above
+    if (dateCoherence) {
+      const coherenceError = dateCoherenceViolation(
+        operation.fullBody[dateCoherence.startProp.key],
+        operation.fullBody[dateCoherence.endProp.key],
+        dateCoherence.startProp,
+        dateCoherence.endProp,
+        config.defaultTimeZone
+      )
+      if (coherenceError) {
+        if (dataset.nonBlockingValidation) {
+          operation._warning = operation._warning ? `${operation._warning}\n${coherenceError}` : coherenceError
+        } else {
+          operation._error = coherenceError
           operation._status = 400
           continue
         }
@@ -716,7 +762,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
             operation._status = 409
             // the errmsg names the violated index (constraint_unique_<hash>), map it back to
             // the constraint so the message can name the columns
-            const failedConstraint = (dataset.constraints ?? []).find(ct => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            const failedConstraint = (dataset.constraints ?? []).find((ct): ct is Unicite => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
             operation._error = failedConstraint
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"
@@ -1011,11 +1057,23 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexName = aliasName(dataset)
+  // the dataset comes from mongo with its internal flags, RestDataset just does not type them
+  const stream = indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh, stampBytes: !!(dataset as DatasetInternal)._esLineBytes })
   await pump(
     ...await readStreams(dataset, { _id: { $in: lineIds } }),
-    indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    stream,
     markIndexedStream(dataset)
   )
+  if (stream.nbRejectedItems) {
+    // the line is stored in mongo but elasticsearch rejected it (e.g. a field the index does not
+    // map): it kept its _needsIndexing flag so the next worker pass over the dataset retries it.
+    // Report it (journal + owner notification, like the worker does) and do not answer 200 to a
+    // client expecting read-after-write.
+    const message = `indexation refusée par elasticsearch pour ${stream.nbRejectedItems} ligne(s) : ${stream.firstRejectionReason}`
+    await journals.log('datasets', dataset, { type: 'error', data: message } as any)
+    internalError('rest-line-index-rejected', `dataset ${dataset.id}: ${message}`)
+    throw httpError(500, `la ligne est enregistrée mais son ${message}`)
+  }
 
   await mongo.datasets.updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
     $set: {
@@ -1023,6 +1081,36 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
       count: await count(dataset)
     }
   })
+
+  // `/lines` revalidates against `finalizedAt` (cacheHeaders.resourceBased) and only `finalize`
+  // writes that field, so a freshly edited line is briefly behind a 304. That window is DELIBERATE
+  // and already covered on both sides: the write above sets `_partialRestStatus: 'indexed'`, which
+  // is exactly what the finalize task selects on (workers/tasks.ts) — it bumps `finalizedAt` within
+  // seconds — and a client that just wrote asks for its own data by a different cache key
+  // (`?indexedAt=`, set from this response in ui table/use-dataset-edition.ts, sent by
+  // composables/dataset/lines.ts instead of `?finalizedAt=`). Do NOT bump on that healthy path:
+  // it would only duplicate the pipeline's own bump and churn the public validator for nothing.
+  //
+  // The uncovered case is a dataset that accepts line writes but that the finalize task cannot
+  // select at all. readWritableDataset admits 'finalized' | 'indexed' | 'error'; finalize selects
+  // `{status:'indexed'}` and `{isRest, status:'finalized', _partialRestStatus:'indexed'}` — so
+  // 'error' is the hole, and there `finalizedAt` NEVER moves again: the edit stays invisible behind
+  // a 304 until someone reindexes by hand, and a reloaded page has no `?indexedAt=` to escape with.
+  //
+  // Written as the current second TRUNCATED, via $max. Never a future value, unlike the slug bump
+  // in utils/patch.ts which rounds UP to the next whole second: that one can afford to (a slug patch
+  // does not wake finalize), whereas a value rounded past `now` here would be rewound by a later
+  // finalize's plain-`now` $set — and a client still holding the future value sends it back as
+  // `?finalizedAt=`, tripping the hard 400 in cacheHeaders.resourceBased. $max keeps it monotonic
+  // against concurrent writers; values are always toISOString() strings, which compare
+  // lexicographically == chronologically. `finalizedAt` is in EXCLUDED_TOP_LEVEL, so this is not a
+  // covered change: no integrity stamp, no false breach. Only for an already finalized dataset —
+  // the field's presence doubles as a "has been finalized" flag (datasets/service.ts).
+  const finalizeWillRun = dataset.status === 'finalized' || dataset.status === 'indexed'
+  if (dataset.finalizedAt && !finalizeWillRun) {
+    await mongo.datasets.updateOne({ id: dataset.id },
+      { $max: { finalizedAt: new Date(Math.floor(Date.now() / 1000) * 1000).toISOString() } })
+  }
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1058,15 +1146,55 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
+// the write routes are gated by their default operation (createLine / updateLine and Own
+// variants). A body _action requesting different semantics through POST must also hold the
+// matching permission — checked here rather than in a middleware because for multipart
+// requests the body is not parsed yet when the permissions middleware runs.
+const alternateActionOperations: Record<string, { operationId: string, ownOperationId: string }> = {
+  update: { operationId: 'updateLine', ownOperationId: 'updateOwnLine' },
+  patch: { operationId: 'patchLine', ownOperationId: 'patchOwnLine' },
+  delete: { operationId: 'deleteLine', ownOperationId: 'deleteOwnLine' }
+}
+const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
+  if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
+  const actionOperation = alternateActionOperations[_action]
+  if (!actionOperation) return // create / createOrUpdate are covered by the route's createLine gate
+  const operationId = reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
+  if (!can(reqResourceType(req), reqResource(req), operationId, reqSession(req), reqBypassPermissions(req))) {
+    throw httpError(403, `Permission manquante pour l'opération "${operationId}".`)
+  }
+}
+
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   const linesOwner = reqLinesOwnerOptional(req)
   if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
-  req.body._id = definedId || nanoid()
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
-  const fullLine = { _action: 'createOrUpdate', ...req.body }
+  const _action: string = req.body._action ?? 'createOrUpdate'
+  // this duplicates a check inside applyTransactions, but it is load-bearing here: without it an
+  // unknown action would run manageAttachment below, then applyTransactions would throw (not set
+  // operation._error), skipping rollbackUploadedAttachment and orphaning a stored attachment.
+  if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+  // PUT .../lines/:lineId means "replace the line at this id", patch/delete only make sense through POST .../lines
+  if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
+    throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
+  }
+  checkAlternateActionPermission(req, _action)
+
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
+  if (!definedId && _action !== 'create' && _action !== 'createOrUpdate') {
+    throw httpError(400, 'failed to determine required _id from primary key')
+  }
+  req.body._id = definedId || nanoid()
+
+  let rawBody: Record<string, any> | undefined
+  let uploadedAttachmentPath: string | undefined
+  if (_action !== 'delete') {
+    // patch keeps the existing attachment unless a new one is uploaded (parity with patchLine)
+    ({ rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, _action === 'patch'))
+  }
+
+  const fullLine = { ...req.body, _action }
   formatLine(fullLine, dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
@@ -1076,16 +1204,27 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   }
   await commitLines(dataset, [fullLine._id])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
-
-  const line = getLineFromOperation(operation, rawBody ?? req.body)
-  res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
+  if (_action === 'delete') {
+    eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    res.status(204).send()
+  } else {
+    if (_action === 'patch') {
+      eventsLog.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    } else {
+      eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    }
+    const line = getLineFromOperation(operation, rawBody ?? req.body)
+    res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
+  }
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
+  if (req.body._action != null && req.body._action !== 'patch') {
+    throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
+  }
   const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)
@@ -1119,7 +1258,8 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
 
   // initDatasetIndex above replaced the index -> re-stamp, else a legacy stamp survives over a
   // new-shape index
-  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE } })
+  // the fresh empty index is trivially fully stamped with _bytes (same reasoning as routes/write.ts)
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE, _esLineBytes: true } })
 
   res.status(204).send()
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))

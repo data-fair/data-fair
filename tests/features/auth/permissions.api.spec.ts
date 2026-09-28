@@ -229,6 +229,33 @@ test.describe('permissions', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
+  test('owner transfer recomputes the search index from the permissions it just reset', async () => {
+    // test_user5 is admin of both test_org2 and test_org6 (dev/resources/organizations.json)
+    const testUser5Org2 = await axiosAuth('test_user5@test.com', 'test_org2')
+    const testUser5Org6 = await axiosAuth('test_user5@test.com', 'test_org6')
+    const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count
+
+    const dataset = (await testUser5Org2.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'cs-transfer',
+      schema: [{ key: 'x', type: 'string', title: 'Colonne griffonmarker' }]
+    })).data
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 1, 'column titles reach the search index')
+
+    // an org partner allowed to list but not to read the schema: the guard drops the column labels
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ type: 'organization', id: 'test_org3', name: 'Test Org 3', classes: ['list'] }])
+    assert.equal(await count(testUser5Org2, 'griffonmarker'), 0, 'the guard suppresses the labels while that grantee is present')
+
+    // transferring to another organization drops that org-partner permission, so the guard no
+    // longer applies: the index must be rebuilt from the new permissions, not carried over
+    await testUser5Org2.put(`/api/v1/datasets/${dataset.id}/owner`, {
+      type: 'organization',
+      id: 'test_org6',
+      name: 'Test Org 6'
+    })
+    assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
+  })
+
   test('Upload new dataset in org zone then change ownership to department', async () => {
     const ax = testUser1Org
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -249,6 +276,71 @@ test.describe('permissions', () => {
     assert.deepEqual(dataset.publicationSites, ['data-fair-portals:portal1'])
     const newPermissions = (await ax.get('/api/v1/datasets/' + dataset.id + '/permissions')).data
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
+  })
+
+  test('Department admin can transfer a dataset to another department but not to the organization root', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep2 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep2.setOrg('test_org1', 'dep2')
+
+    let dataset = (await testUser4Dep1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    assert.equal(dataset.owner.department, 'dep1')
+
+    // test_user4 is admin of dep1 and dep2 but not of the organization root
+    await assert.rejects(
+      testUser4Dep1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }),
+      (err: any) => err.status === 403
+    )
+    await testUser4Dep1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
+    dataset = (await testUser4Dep2.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.deepEqual(dataset.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
+  })
+
+  test('Change application ownership to an organization that is not the active account', async () => {
+    // from the personal account to an organization where the user is admin
+    let application = (await testUser1.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
+    await testUser1.put(`/api/v1/applications/${application.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    application = (await testUser1Org.get(`/api/v1/applications/${application.id}`)).data
+    assert.deepEqual(application.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+
+    // from an organization to another one where the user is only a simple user
+    application = (await testUser1Org.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
+    await assert.rejects(
+      testUser1Org.put(`/api/v1/applications/${application.id}/owner`, { type: 'organization', id: 'test_org3', name: 'Test Org 3' }),
+      (err: any) => err.status === 403
+    )
+    // to an organization the user is not a member of
+    await assert.rejects(
+      testUser1Org.put(`/api/v1/applications/${application.id}/owner`, { type: 'organization', id: 'test_org4', name: 'Test Org 4' }),
+      (err: any) => err.status === 403
+    )
+    // to another user
+    await assert.rejects(
+      testUser1Org.put(`/api/v1/applications/${application.id}/owner`, { type: 'user', id: 'test_user3', name: 'Test User3' }),
+      (err: any) => err.status === 403
+    )
+    application = (await testUser1Org.get(`/api/v1/applications/${application.id}`)).data
+    assert.deepEqual(application.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+  })
+
+  test('Department admin can transfer an application to another department but not to the organization root', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep2 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep2.setOrg('test_org1', 'dep2')
+
+    let application = (await testUser4Dep1.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
+    assert.equal(application.owner.department, 'dep1')
+
+    // test_user4 is admin of dep1 and dep2 but not of the organization root
+    await assert.rejects(
+      testUser4Dep1.put(`/api/v1/applications/${application.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }),
+      (err: any) => err.status === 403
+    )
+    await testUser4Dep1.put(`/api/v1/applications/${application.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
+    application = (await testUser4Dep2.get(`/api/v1/applications/${application.id}`)).data
+    assert.deepEqual(application.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
   })
 
   test('user can do everything in his own account', async () => {
@@ -383,6 +475,35 @@ test.describe('permissions', () => {
     // contrib from wrong department -> ko
     await assert.rejects(testUser10Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
     await assert.rejects(testUser10Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
+  })
+
+  test('members of the organization root keep their role on department-scoped permissions', async () => {
+    const dataset = (await testUser6Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    assert.equal(dataset.owner.department, 'dep1')
+    const canRead = (ax: typeof testUser1) => ax.get(`/api/v1/datasets/${dataset.id}`).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+    const canWrite = (ax: typeof testUser1) => ax.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }).then(() => true, (err: any) => { if (err.status === 403) return false; throw err })
+
+    // created by a dep1 contrib: the contributors' permissions are scoped to dep1, root contribs included
+    assert.equal(await canRead(testUser5Org), true)
+    assert.equal(await canWrite(testUser5Org), true)
+    assert.equal(await canRead(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+
+    // every role of dep1 and of the root, nobody in dep2
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: 'dep1', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canWrite(testUser8Org), false)
+    assert.equal(await canRead(testUser10Org), false)
+    assert.equal((await testUser8Org.get('/api/v1/datasets')).data.count, 1)
+
+    // '-' is the organization root only
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'organization', id: 'test_org1', department: '-', classes: ['list', 'read'] }
+    ])
+    assert.equal(await canRead(testUser8Org), true)
+    assert.equal(await canRead(testUser6Org), false)
   })
 
   test('department restriction is automatically applied', async () => {

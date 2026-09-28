@@ -43,8 +43,9 @@
       @update:model-value="togglePart('extensions')"
     />
 
+    <!-- a fragment has neither its own attachments nor a description of its own to inherit: it is described by its parent -->
     <v-checkbox
-      v-if="initFromDataset.attachments?.length"
+      v-if="initFromDataset.attachments?.length && !fragment"
       :model-value="modelValue.parts.includes('metadataAttachments')"
       :label="t('initFromAttachments')"
       density="comfortable"
@@ -53,6 +54,7 @@
     />
 
     <v-checkbox
+      v-if="!fragment"
       :model-value="modelValue.parts.includes('description')"
       :label="t('initFromDescription')"
       density="comfortable"
@@ -73,6 +75,10 @@ interface InitFrom {
 const props = defineProps<{
   allowData?: boolean
   owner?: AccountKeys | null
+  // preselected source, e.g. the virtual parent of a new fragment
+  initialDataset?: any
+  // the new dataset is a fragment: only the structure (schema, extensions) is worth copying
+  fragment?: boolean
 }>()
 
 const modelValue = defineModel<InitFrom | null>({ default: null })
@@ -82,7 +88,7 @@ const { t } = useI18n()
 
 const allowData = computed(() => props.allowData ?? true)
 
-const initFromDataset = ref<any>(null)
+const initFromDataset = ref<any>(props.initialDataset ?? null)
 
 // REST/virtual sources with no rows can't produce a usable data file: forbid the data part
 // so the user gets a clear hint instead of a confusing analysis error after submission.
@@ -101,7 +107,7 @@ watch(initFromDataset, (dataset) => {
     modelValue.value = null
     sourceTitle.value = null
   }
-})
+}, { immediate: !!props.initialDataset })
 
 watch(sourceHasNoData, (noData) => {
   if (noData && modelValue.value?.parts.includes('data')) {

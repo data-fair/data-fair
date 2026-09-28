@@ -3,7 +3,7 @@ import csv from 'csv-parser'
 import escapeStringRegexp from 'escape-string-regexp'
 import pump from '../utils/pipe.ts'
 import debugModule from 'debug'
-import intoStream from 'into-stream'
+import { Readable } from 'node:stream'
 
 const debug = debugModule('csv-sniffer')
 
@@ -91,7 +91,7 @@ export const sniff = async (sample: any) => {
         const fullSepRegexp = new RegExp(escapeStringRegexp(qc + fd + qc), 'g')
         scoreParts.fullSepCount += ((sample || '').match(fullSepRegexp) || []).length * 2
 
-        await pump(intoStream(sample), parser, new Writable({
+        await pump(Readable.from([sample], { objectMode: false }), parser, new Writable({
           objectMode: true,
           write (chunk, encoding, callback) {
             i++

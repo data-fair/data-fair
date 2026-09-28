@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/datasets"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -107,9 +114,12 @@
             class="mb-4"
           />
           <dataset-init-from
+            :key="initFromParent?.id"
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
-            :allow-data="datasetType === 'file' || datasetType === 'rest'"
+            :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
+            :initial-dataset="initFromParent"
+            :fragment="!!partOf"
           />
         </v-stepper-window-item>
 
@@ -322,7 +332,39 @@
 
         <!-- Step: Action / Confirmation -->
         <v-stepper-window-item value="action">
-          <df-owner-pick v-model="owner" />
+          <!--
+            Recap of what is about to be created. Without it this step shows only
+            an owner picker, so someone told "your dataset is configured, just
+            click Create" has nothing on screen to check that against — the gap
+            a judged simulation caught, where the person answered "you say it is
+            done but I see nothing".
+          -->
+          <v-card
+            variant="tonal"
+            class="mb-4"
+            max-width="500"
+            data-testid="dataset-recap"
+          >
+            <v-card-text>
+              <div
+                v-for="line of recapLines"
+                :key="line.label"
+                class="d-flex"
+              >
+                <span class="text-medium-emphasis mr-2">{{ line.label }}</span>
+                <span class="font-weight-medium">{{ line.value }}</span>
+              </div>
+            </v-card-text>
+          </v-card>
+
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
 
           <dataset-conflicts
             v-if="step === 'action' && owner"
@@ -330,6 +372,7 @@
             :title="effectiveTitle"
             :filename="datasetType === 'file' && file ? file.name : undefined"
             :owner="owner"
+            :part-of="partOf"
           />
 
           <df-ui-notif-alert
@@ -399,6 +442,9 @@ import axios, { type CancelTokenSource } from 'axios'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
+import { DATASET_WIZARD_GUIDANCE, DATASET_WIZARD_GUIDANCE_KEY } from '~/composables/dataset/agent-dataset-wizard-logic'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { buildDatasetWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
@@ -412,6 +458,15 @@ const breadcrumbs = useBreadcrumbs()
 
 const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
+})
 
 breadcrumbs.receive({
   breadcrumbs: isSimple.value
@@ -429,7 +484,12 @@ interface InitFrom {
 
 // ---- Constants ----
 const allDatasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
-const datasetTypes = computed(() => isSimple.value ? allDatasetTypes.filter(dt => dt !== 'virtual') : allDatasetTypes)
+const datasetTypes = computed(() => {
+  if (isSimple.value) return allDatasetTypes.filter(dt => dt !== 'virtual')
+  // a metadata-only dataset holds no data, there is nothing for it to contribute as a fragment
+  if (partOf.value) return allDatasetTypes.filter(dt => dt !== 'metaOnly')
+  return allDatasetTypes
+})
 const datasetTypeIcons: Record<DatasetType, string> = {
   file: mdiFileUpload,
   rest: mdiAllInclusive,
@@ -580,6 +640,26 @@ const metaOnlyTitle = ref('')
 // ---- Owner ----
 const owner = ref<AccountKeys | null>(null)
 
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVirtual?: boolean, schema?: any[] }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner,isVirtual,schema,count' }, notifError: false })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+// a fragment of a virtual dataset starts from the columns the parent exposes, so it fits right in once
+// it joins the parent's children (the data part is not offered: it would duplicate the parent's rows)
+const initFromParent = computed(() => {
+  const parent = partOfParentFetch.data.value
+  if (partOf.value?.type !== 'dataset' || !parent?.isVirtual || !parent.schema?.some(p => !p['x-calculated'])) return null
+  return parent
+})
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
+
 // ---- Conflicts ----
 const conflictsOk = ref(false)
 
@@ -618,13 +698,67 @@ const paramsValid = computed(() => {
   return false
 })
 
+/**
+ * Every creation path ends here: tell the assistant the dataset exists BEFORE
+ * navigating, so a `wait_for_user_action` it declared resolves on the creation
+ * rather than on the route change that follows it. The wizard then unmounts and
+ * withdraws its `wizard` state, which is why this is the last chance to report.
+ */
+async function goToCreated (dataset: { id: string, title?: string }) {
+  emitAgentEvent('dataset-created', { id: dataset.id, title: dataset.title ?? effectiveTitle.value, type: datasetType.value })
+  await router.push(`/dataset/${dataset.id}`)
+}
+
+// What the confirmation step shows back to the person, and the only place they
+// can check the assistant's claims about what it configured.
+const recapLines = computed(() => {
+  const lines: { label: string, value: string }[] = []
+  if (datasetType.value) lines.push({ label: t('recapType'), value: t('type_' + datasetType.value) })
+  if (effectiveTitle.value) lines.push({ label: t('recapTitle'), value: effectiveTitle.value })
+  if (datasetType.value === 'file' && file.value) lines.push({ label: t('recapFile'), value: file.value.name })
+  if (datasetType.value === 'rest') {
+    if (restHistory.value) lines.push({ label: t('recapHistory'), value: t('recapEnabled') })
+    if (restAttachments.value) lines.push({ label: t('recapAttachments'), value: t('recapEnabled') })
+  }
+  if (datasetType.value === 'virtual' && virtualChildren.value.length) {
+    lines.push({ label: t('recapChildren'), value: String(virtualChildren.value.length) })
+  }
+  return lines
+})
+
 const canCreate = computed(() => {
   return !createAction.loading.value && conflictsOk.value && !!owner.value
 })
 
 // ---- Agent tools ----
+// What the wizard currently shows. Keyed state, so the assistant reads it from
+// its context instead of asking, and a tool call it makes comes back with the
+// resulting screen attached.
+// Told once on arrival (or on activation if the chat opens later), never on
+// step changes — see agent-dataset-wizard-logic.ts for why it stopped living
+// only behind the action button.
+// Complete and submittable from here — deliberately not `canCreate`, which also
+// folds in `!createAction.loading` (see agent-integration.md §10, "What ready means").
+// One definition, read by the host state and by advance_to_confirmation.
+const wizardReady = computed(() => paramsValid.value && conflictsOk.value && !!owner.value)
+
+useAgentState(DATASET_WIZARD_GUIDANCE_KEY, DATASET_WIZARD_GUIDANCE)
+
+useAgentState('wizard', () => buildDatasetWizardState({
+  step: step.value,
+  type: datasetType.value,
+  title: effectiveTitle.value,
+  ready: wizardReady.value,
+  fileName: file.value?.name,
+  history: restHistory.value,
+  attachments: restAttachments.value,
+  childrenCount: virtualChildren.value.length
+}))
+
 useAgentDatasetCreationTools(locale, {
   step,
+  ready: wizardReady,
+  actionLabel: nextButtonText,
   datasetType,
   hasInitFromStep,
   paramsValid,
@@ -637,25 +771,8 @@ useAgentDatasetCreationTools(locale, {
   fileTitle
 })
 
-const createDatasetContext = computed(() => {
-  const lines = [
-    'Help the user create a new dataset.',
-    'Start by asking what kind of data they have and what they want to do with it.',
-    '',
-    'Based on their answer, recommend the right dataset type:',
-    '- "file" for uploading CSV, Excel, GeoJSON, or other file formats',
-    '- "rest" (Editable) for data that will be entered manually through forms, or via API',
-    '- "virtual" for creating a combined view over existing datasets',
-    '- "metaOnly" for a metadata-only record with no actual data',
-    '',
-    'Use select_dataset_type to set the type, then set_dataset_title and other configuration tools (set_rest_options, skip_init_from_step, advance_to_confirmation) to fill in the wizard steps.',
-    '',
-    'For "file" type datasets, you cannot upload the file — the user will do that manually. Focus on helping them choose the right type and set a title.',
-    '',
-    'Do NOT create the dataset — the user will review and click the create/import button themselves.'
-  ]
-  return lines.join('\n')
-})
+// The action button sends the same text as its hidden context: one source.
+const createDatasetContext = computed(() => DATASET_WIZARD_GUIDANCE)
 
 // ---- Upload progress ----
 const uploading = ref(false)
@@ -712,6 +829,7 @@ async function createFileDataset () {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
+  if (partOf.value) body.partOf = partOf.value
   if (attachments.value && attachmentsAsImage.value) {
     body.attachmentsAsImage = true
   }
@@ -751,7 +869,7 @@ async function createFileDataset () {
 
   const dataset = res.data
   if (dataset.error) throw new Error(dataset.error)
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createRestDataset () {
@@ -764,6 +882,7 @@ async function createRestDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (initFrom.value) {
     body.initFrom = initFrom.value
@@ -793,7 +912,7 @@ async function createRestDataset () {
     body,
     query: params
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createVirtualDataset () {
@@ -805,6 +924,7 @@ async function createVirtualDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value
@@ -842,7 +962,7 @@ async function createVirtualDataset () {
     method: 'POST',
     body
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 
 async function createMetaOnlyDataset () {
@@ -850,6 +970,7 @@ async function createMetaOnlyDataset () {
     isMetaOnly: true,
     title: metaOnlyTitle.value
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value
@@ -859,7 +980,7 @@ async function createMetaOnlyDataset () {
     method: 'POST',
     body
   })
-  await router.push(`/dataset/${dataset.id}`)
+  await goToCreated(dataset)
 }
 </script>
 
@@ -868,6 +989,7 @@ fr:
   home: Accueil
   datasets: Jeux de données
   newDataset: Créer un jeu de données
+  newFragment: Nouveau fragment
   helpCreatePrompt: Aidez-moi à créer un jeu de données
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   stepType: Type de jeu de données
@@ -887,6 +1009,13 @@ fr:
   selectFile: Sélectionnez ou glissez/déposez un fichier
   selectAttachments: Pièces jointes (archive zip, optionnel)
   title: Titre du jeu de données
+  recapType: "Type :"
+  recapTitle: "Titre :"
+  recapFile: "Fichier :"
+  recapHistory: "Historique des révisions :"
+  recapAttachments: "Pièces jointes :"
+  recapChildren: "Jeux de données sources :"
+  recapEnabled: activé
   titleTooShort: Le titre doit contenir au moins 4 caractères
   attachmentsAsImage: Traiter les pièces jointes comme des images
   formats: Formats supportés
@@ -918,6 +1047,7 @@ en:
   home: Home
   datasets: Datasets
   newDataset: Create a dataset
+  newFragment: New fragment
   helpCreatePrompt: Help me create a dataset
   choseType: Choose the type of dataset you wish to create.
   stepType: Dataset type
@@ -937,6 +1067,13 @@ en:
   selectFile: Select or drag and drop a file
   selectAttachments: Attachments (zip archive, optional)
   title: Dataset title
+  recapType: "Type:"
+  recapTitle: "Title:"
+  recapFile: "File:"
+  recapHistory: "Revision history:"
+  recapAttachments: "Attachments:"
+  recapChildren: "Source datasets:"
+  recapEnabled: enabled
   titleTooShort: Title must be at least 4 characters
   attachmentsAsImage: Process the attachments as images
   formats: Supported formats

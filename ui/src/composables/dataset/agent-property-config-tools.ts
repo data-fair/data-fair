@@ -88,24 +88,29 @@ export function useAgentPropertyConfigTools (
 
 Tâche :
 1. Appelle read_property_config pour obtenir le schéma actuel, les capacités et des exemples de données.
-2. Analyse le type détecté de chaque colonne vs. le contenu réel. Cherche :
-   - Des dates stockées comme texte (suggère un override de type vers date ou date-time)
-   - Des nombres stockés comme texte (suggère un override vers number ou integer)
-   - Des booléens stockés comme texte (suggère un override vers boolean)
-   - Des entiers détectés comme nombres (suggère un override vers integer)
-3. Analyse les capacités pour des opportunités d'optimisation :
-   - Colonnes de texte long : désactiver \`index\` et \`values\` (le filtrage exact et le tri n'ont pas de sens pour du texte long)
-   - Texte non français : désactiver \`text\` (l'analyse spécifique au français est inutile)
-   - Colonnes où un nuage de mots pourrait être utile : suggérer d'activer \`textAgg\`
-   - Codes à faible cardinalité : \`wildcard\` est généralement inutile
-   - IDs uniques à haute cardinalité : le tri \`insensitive\` peut être inutile
+2. Analyse le type détecté de chaque colonne. **Le type détecté fait autorité** : il vient d'un balayage du fichier entier, alors que tu ne vois que cinq lignes prises en tête.
+   - Tu peux **élargir** un type mal deviné : du texte qui est en réalité une date (override vers date ou date-time), du texte qui est en réalité un nombre ou un booléen.
+   - **N'essaie JAMAIS de rétrécir un type détecté.** Une colonne détectée \`number\` contient au moins une valeur non entière quelque part dans le fichier, même si tes cinq lignes d'exemple sont entières — la forcer en \`integer\` tronque silencieusement les valeurs indexées et fausse toutes les agrégations, sans erreur ni avertissement. « Un effectif est forcément entier » est un raisonnement sur le monde, pas sur la donnée : il ne suffit pas.
+3. Analyse les capacités. **Le principe : on retire ce qui coûte sans servir, jamais ce qui sert.**
+
+   Ce qui se retire sans rien casser — c'est là qu'est l'essentiel de l'économie :
+   - Colonnes de code (identifiants, codes INSEE, codes postaux, nomenclatures) : désactiver \`text\` et \`textStandard\` (chercher des mots dans un code n'a pas de sens) et \`insensitive\` (un code n'a ni accent ni casse).
+   - Texte non français : désactiver \`text\`.
+   - Texte long à très forte cardinalité (noms, adresses, commentaires) : désactiver \`index\` et \`values\`, en gardant la recherche plein texte.
+
+   Ce qui ne se retire **pas** :
+   - \`index\` et \`values\` sur une colonne numérique. \`values\` porte les doc values : sans elles, plus de somme, plus de moyenne, plus de statistiques, et le tri renvoie l'ordre du fichier. Une mesure sert précisément à être agrégée.
+   - \`index\` et \`values\` sur une colonne catégorielle à faible cardinalité (codes, indicateurs oui/non, zonages, tranches) : elles coûtent très peu et ce sont exactement les colonnes sur lesquelles on filtre et on facette.
+   - \`index\` et \`values\` sur les coordonnées et les colonnes géographiques : c'est ce qui permet les filtres cartographiques.
+
+   À activer seulement si l'utilisateur en exprime le besoin : \`textAgg\` (nuage de mots), \`wildcard\` (filtre sur suite de caractères), \`vtPrepare\` (tuiles vectorielles).
 4. Présente tes suggestions avec de brèves explications pour chacune.
-5. Appelle set_property_config avec toutes les suggestions en une fois.
+5. Applique tes suggestions avec set_property_config. **Au-delà de 20 colonnes à régler, découpe en plusieurs appels de 20 au maximum** : un appel qui règle cent colonnes d'un coup produit un pavé de JSON que personne ne relit, et pousse à appliquer une règle uniforme au lieu de juger colonne par colonne.
 6. Renvoie un résumé des changements effectués.
 
 Consignes :
 - Les overrides de type ne sont disponibles que pour les jeux de type fichier. Ignore les suggestions de type si ce n'est pas un fichier.
-- Pour les capacités, ne suggère que les changements avec un bénéfice clair. Ne modifie pas ce qui est déjà bien configuré.
+- Pour les capacités, ne suggère que les changements avec un bénéfice clair. Ne modifie pas ce qui est déjà bien configuré. En cas de doute sur une colonne, ne la touche pas : une capacité inutile coûte un peu d'index, une capacité retirée à tort casse un usage.
 - Ne passe que les valeurs de capacités qui diffèrent des défauts. Les défauts sont : index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
 - N'écris PAS d'expressions de transformation. Si un override de type nécessite une expression (ex: reformater des dates), mentionne-le et indique à l'utilisateur d'utiliser l'assistant d'expressions.
 - Rédige dans la même langue que le titre du jeu et les annotations existantes.`,
@@ -113,24 +118,29 @@ Consignes :
 
 Task:
 1. Call read_property_config to get the current schema, capabilities, and sample data.
-2. Analyze each column's detected type vs. actual data content. Look for:
-   - Dates stored as plain strings (suggest type override to date or date-time)
-   - Numbers stored as strings (suggest type override to number or integer)
-   - Booleans stored as strings (suggest type override to boolean)
-   - Integers detected as numbers (suggest type override to integer)
-3. Analyze capabilities for optimization opportunities:
-   - Long text columns: disable \`index\` and \`values\` (exact match filtering and sorting are meaningless for long text)
-   - Non-French text: disable \`text\` (French-specific analysis is wasteful)
-   - Columns where word cloud/word stats may be useful: suggest enabling \`textAgg\`
-   - Low-cardinality codes: \`wildcard\` is usually unnecessary
-   - High-cardinality unique IDs: \`insensitive\` sort may be unnecessary
+2. Analyze each column's detected type. **The detected type is authoritative**: it comes from a scan of the whole file, while you only see five rows taken from the top.
+   - You may **widen** a mis-guessed type: text that is really a date (override to date or date-time), text that is really a number or a boolean.
+   - **NEVER try to narrow a detected type.** A column detected as \`number\` holds at least one non-integer value somewhere in the file, even if your five sample rows are whole — forcing it to \`integer\` silently truncates the indexed values and skews every aggregation, with no error and no warning. "A headcount is necessarily an integer" is reasoning about the world, not about the data: it is not enough.
+3. Analyze capabilities. **The principle: remove what costs without serving, never what serves.**
+
+   What can be removed without breaking anything — this is where the saving is:
+   - Code columns (identifiers, INSEE codes, postcodes, nomenclatures): disable \`text\` and \`textStandard\` (word search in a code is meaningless) and \`insensitive\` (a code has no case or accent).
+   - Non-French text: disable \`text\`.
+   - Long, very-high-cardinality text (names, addresses, comments): disable \`index\` and \`values\`, keeping full-text search.
+
+   What must **not** be removed:
+   - \`index\` and \`values\` on a numeric column. \`values\` carries the doc values: without them there is no sum, no average, no statistics, and sorting returns the file order. A measure exists to be aggregated.
+   - \`index\` and \`values\` on a low-cardinality categorical column (codes, yes/no indicators, zonings, brackets): they cost very little and they are exactly the columns people filter and facet on.
+   - \`index\` and \`values\` on coordinates and geographic columns: they are what makes map filters work.
+
+   Enable only when the user asks for it: \`textAgg\` (word cloud), \`wildcard\` (substring filter), \`vtPrepare\` (vector tiles).
 4. Present your suggestions with brief explanations for each.
-5. Call set_property_config with all suggestions at once.
+5. Apply your suggestions with set_property_config. **Beyond 20 columns, split into several calls of at most 20**: one call configuring a hundred columns produces a wall of JSON nobody reviews, and pushes toward one blanket rule instead of judging column by column.
 6. Return a summary of changes made.
 
 Guidelines:
 - Type overrides are only available for file datasets. Skip type suggestions if the dataset is not a file.
-- For capabilities, only suggest changes that provide clear benefits. Don't change things that are already well configured.
+- For capabilities, only suggest changes that provide clear benefits. Don't change things that are already well configured. When in doubt about a column, leave it alone: a useless capability costs a little index, a wrongly removed one breaks a use.
 - Only pass capabilities values that differ from defaults. The defaults are: index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
 - Do NOT write transform expressions. If a type override needs an expression (e.g., reformatting dates), mention it and tell the user to use the expression helper.
 - Write in the same language as the dataset title and existing annotations.`

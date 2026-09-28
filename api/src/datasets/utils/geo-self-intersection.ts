@@ -1,5 +1,8 @@
 import type { Geometry } from 'geojson'
-import findIntersections from 'sweepline-intersections'
+import sweeplineIntersections from 'sweepline-intersections'
+
+// 1.5.x ships an ESM-style d.ts (export default) for a UMD build whose module.exports IS the function
+const findIntersections = sweeplineIntersections as unknown as typeof sweeplineIntersections.default
 
 // Detect whether a polygon geometry self-intersects (a "kink"), so it can be
 // repaired before indexing as an Elasticsearch geo_shape.

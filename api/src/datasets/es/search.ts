@@ -36,7 +36,6 @@ export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, ab
   // belt-and-suspenders: with allow_partial_search_results=false ES errors on timeout, but if a
   // timed_out response ever slips through, surface it as the same 504 rather than a silent partial
   if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
-  esResponse.contentLength = Number(res.headers['content-length'])
 
   for (const hit of esResponse.hits.hits) {
     if (hit._source && hit._source._attachment_url) {

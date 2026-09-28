@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import geojsonvt from 'geojson-vt'
+import GeoJSONVT from 'geojson-vt'
 import vtpbf from 'vt-pbf'
 import { result2geojson } from '../../../api/src/datasets/utils/geo-features.ts'
 import { getFlatten } from '../../../api/src/datasets/utils/flatten.ts'
@@ -41,7 +41,7 @@ const makeEsResponse = () => ({
 
 const render = (esResponse: any, flatten: any, xyz: number[]): Buffer => {
   const fc = result2geojson(esResponse, flatten)
-  const tile = geojsonvt(fc as any, { indexMaxZoom: 0, tolerance: 3, maxZoom: xyz[2] })
+  const tile = new GeoJSONVT(fc as any, { indexMaxZoom: 0, tolerance: 3, maxZoom: xyz[2] })
     .getTile(xyz[2], xyz[0], xyz[1])
   const layers: any = {}
   if (tile) layers.results = tile

@@ -68,7 +68,7 @@ defineProps({
 
 const emit = defineEmits(['edit', 'delete'])
 
-const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
+const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: () => [] })
 
 const { can } = useDatasetStore()
 const { t } = useI18n()

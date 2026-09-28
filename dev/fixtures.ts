@@ -186,7 +186,8 @@ const fixtureTopics = [
   { id: 'demo-geo', title: 'Géographique', color: '#2E7D32' },
   { id: 'demo-dates', title: 'Dates et fuseaux', color: '#6A1B9A' },
   { id: 'demo-unicite', title: 'Unicité', color: '#E65100' },
-  { id: 'demo-recherche', title: 'Recherche et filtres', color: '#00838F' }
+  { id: 'demo-recherche', title: 'Recherche et filtres', color: '#00838F' },
+  { id: 'demo-fragments', title: 'Fragments', color: '#5D4037' }
 ]
 
 const datasetTopics: Record<string, string[]> = {
@@ -199,7 +200,10 @@ const datasetTopics: Record<string, string[]> = {
   'fixtures-horaires-fuseaux': ['demo-dates'],
   'fixtures-ignore-above': ['demo-recherche'],
   'fixtures-unicite-rest': ['demo-unicite', 'demo-editable'],
-  'fixtures-unicite-fichier': ['demo-unicite', 'demo-fichier']
+  'fixtures-unicite-fichier': ['demo-unicite', 'demo-fichier'],
+  'fixtures-date-coherence-rest': ['demo-dates', 'demo-editable'],
+  'fixtures-date-coherence-fichier': ['demo-dates', 'demo-fichier'],
+  'fixtures-fragments-virtuel': ['demo-fragments']
 }
 
 /** Upsert the demo topics into the org settings — merge by id so manually
@@ -357,6 +361,58 @@ async function seedSuiviDemandes () {
   // lines one by one leaves dataset.count stale due to debounced finalizes)
   await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
   console.log(`${id}: seeded (${lines.length} lines)`)
+}
+
+/** Fragments demo: a virtual dataset fed by yearly CSV files uploaded as its fragments (partOf).
+ * The fragments are hidden from the datasets list and only reachable from the parent's Fragments
+ * section. Adding a fragment to the parent's sources is an explicit step: 2023 and 2024 are added
+ * here, 2025 is left out to show a fragment still being prepared ("Ajouter aux sources").
+ * Skip-if-exists per dataset, so a partial run completes. */
+async function seedFragments () {
+  const id = 'fixtures-fragments-virtuel'
+  const partOf = { type: 'dataset', id }
+  if (!await datasetExists(id)) {
+    await dfAx.post(`/api/v1/datasets/${id}`, {
+      isVirtual: true,
+      title: 'Consommations électriques mensuelles (agrégées)',
+      description: 'Jeu de données virtuel alimenté par un fichier par année, chacun déposé comme **fragment** : ' +
+        'les fichiers annuels n\'apparaissent pas dans la liste des jeux de données, ils se retrouvent dans la section ' +
+        '« Fragments » de ce jeu de données et seront supprimés avec lui. Pour ajouter une année, utiliser le bouton ' +
+        '« Nouveau jeu de données fragment » : le fichier reprend les colonnes du parent, puis une fois vérifié, ' +
+        '« Ajouter aux sources » l\'intègre au jeu de données. L\'année 2025 est déposée mais pas encore ajoutée.'
+    })
+    console.log(`${id}: seeded (virtual)`)
+  } else {
+    console.log(`${id}: skipped (exists)`)
+  }
+
+  const communes: [string, number][] = [['Rennes', 180], ['Brest', 110], ['Vannes', 55]]
+  const years = [2023, 2024, 2025]
+  for (const year of years) {
+    const fragmentId = `fixtures-fragments-${year}`
+    if (await datasetExists(fragmentId)) { console.log(`${fragmentId}: skipped (exists)`); continue }
+    const rows = ['commune,mois,consommation_mwh']
+    for (const [commune, base] of communes) {
+      for (let month = 1; month <= 12; month++) {
+        // winter peak, slight yearly decrease: deterministic so re-seeds are identical
+        const seasonal = 1 + 0.35 * Math.cos((month - 1) / 12 * 2 * Math.PI)
+        rows.push(`${commune},${year}-${String(month).padStart(2, '0')},${(base * seasonal * (1 - (year - 2023) * 0.02)).toFixed(1)}`)
+      }
+    }
+    await uploadCsv(fragmentId, `consommations-${year}.csv`, { title: `Consommations ${year}`, partOf }, rows.join('\n') + '\n')
+    console.log(`${fragmentId}: seeded (CSV fragment of ${id})`)
+  }
+
+  const sources = ['fixtures-fragments-2023', 'fixtures-fragments-2024']
+  const { data: virtual } = await dfAx.get(`/api/v1/datasets/${id}`)
+  if ((virtual.virtual?.children ?? []).length) return
+  // a child must be finalized (indexed) before the virtual dataset can use it
+  for (const source of sources) await waitForFinalized(source)
+  await dfAx.patch(`/api/v1/datasets/${id}`, {
+    virtual: { ...virtual.virtual, children: sources },
+    schema: [{ key: 'commune' }, { key: 'mois' }, { key: 'consommation_mwh' }]
+  })
+  console.log(`${id}: ${sources.join(', ')} added to its sources`)
 }
 
 /** Integrity demo — healthy: a file dataset with integrity on, a real version
@@ -673,6 +729,125 @@ async function seedUniciteFichier () {
   console.log(`${id}: seeded (file with a duplicate email → error + unicity diagnostic)`)
 }
 
+/** REST dataset illustrating the dataset-wide DATE-COHERENCE CONSTRAINT on
+ * editable data (see docs/architecture/dataset-validation.md § Dataset-wide
+ * constraints). `{ type: 'dateCoherence' }` carries no column list: the columns
+ * are resolved from the concepts — `debut` is tagged "Date de début"
+ * (https://schema.org/startDate) and `fin` "Date de fin"
+ * (https://schema.org/endDate) — and every row must satisfy fin >= debut.
+ *
+ * The seed data is coherent (so the dataset finalizes normally) and deliberately
+ * covers the two rules that surprise people: a réunion whose début equals its fin
+ * (equality passes) and a réservation with no fin at all (an open-ended period
+ * passes). Both columns are date-time in Europe/Paris, so the comparison is made
+ * on instants, offsets included.
+ *
+ * Things to try once it is finalized (browse "Modifier les lignes" or call the API):
+ *   - POST an incoherent line
+ *       POST .../datasets/fixtures-date-coherence-rest/lines
+ *       { "salle": "B12", "objet": "Test", "debut": "2026-09-14T11:00:00+02:00",
+ *         "fin": "2026-09-14T09:00:00+02:00" }
+ *     → 400 "Incohérence de dates : la date de fin (Fin : …) est antérieure à la
+ *       date de début (Début : …)."
+ *   - POST the same line with fin == debut → accepted: the rule is fin >= debut.
+ *   - POST a line with no `fin` → accepted (open-ended period).
+ *   - PATCH the dataset { "nonBlockingValidation": true }, then POST the incoherent
+ *     line again → accepted, with the same message returned as a warning instead of
+ *     an error (bulk writes report it under summary.nbWarnings). Set it back to
+ *     false afterwards to restore the rejection.
+ *   - Demonstrate the PATCH-time scan: PATCH { "constraints": null } to drop the
+ *     constraint, POST an incoherent line (now accepted), then PATCH
+ *     { "constraints": [{ "type": "dateCoherence" }] } to put it back
+ *     → 400: the existing data violates it, so the constraint is never applied.
+ *     Delete the offending line and re-PATCH → accepted.
+ *   - In the UI, the "Contraintes" tab of the Structure section offers
+ *     « Cohérence des dates » only because both concepts are tagged; untag one
+ *     (Structure → the column's concept) and the option disappears.
+ */
+async function seedDateCoherenceRest () {
+  const id = 'fixtures-date-coherence-rest'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Réservations de salles (cohérence des dates)',
+    description: 'Jeu de données éditable avec une contrainte de cohérence des dates : la colonne ' +
+      'portant le concept "Date de fin" doit contenir, sur chaque ligne, une date supérieure ou égale ' +
+      'à celle portant le concept "Date de début". Une ligne incohérente est rejetée (400). Une fin ' +
+      'égale au début (réunion d’une journée) ou absente (période ouverte) reste acceptée. ' +
+      'Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'salle', type: 'string', title: 'Salle' },
+      { key: 'objet', type: 'string', title: 'Objet' },
+      { key: 'debut', type: 'string', format: 'date-time', timeZone: 'Europe/Paris', title: 'Début', 'x-refersTo': 'https://schema.org/startDate' },
+      { key: 'fin', type: 'string', format: 'date-time', timeZone: 'Europe/Paris', title: 'Fin', 'x-refersTo': 'https://schema.org/endDate' }
+    ],
+    constraints: [{ type: 'dateCoherence' }]
+  })
+  const lines = [
+    { salle: 'A01', objet: 'Comité de pilotage', debut: '2026-09-14T09:00:00+02:00', fin: '2026-09-14T11:30:00+02:00' },
+    { salle: 'A01', objet: 'Séminaire annuel', debut: '2026-09-15T08:30:00+02:00', fin: '2026-09-17T17:00:00+02:00' },
+    // equality passes: a slot booked as an instant (fin == debut)
+    { salle: 'B12', objet: 'Point flash', debut: '2026-09-14T14:00:00+02:00', fin: '2026-09-14T14:00:00+02:00' },
+    // open-ended period: no `fin` at all, so the row is not compared
+    { salle: 'B12', objet: 'Occupation temporaire (fin non connue)', debut: '2026-09-21T08:00:00+02:00' }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines, dateCoherence sur début/fin)`)
+}
+
+/** File dataset deliberately left in ERROR to illustrate the DATE-COHERENCE
+ * rejection + diagnostic on file-backed data. The CSV carries the
+ * `{ type: 'dateCoherence' }` constraint (columns resolved from the startDate /
+ * endDate concepts) and one row whose fin precedes its debut, so the per-row check
+ * in the validation phase blocks finalization and writes the offending row to the
+ * validation-diagnostic CSV. Like `fixtures-unicite-fichier`, it is meant to be red.
+ *
+ * Both columns are plain `date` here (no time, no timezone), which is the common
+ * shape for this kind of open data — the comparison is then a pure calendar-date
+ * one. The three coherent rows cover the same rules as the REST fixture: a normal
+ * period, a single-day chantier (fin == debut) and one with no fin.
+ *
+ * Things to try:
+ *   - GET .../datasets/fixtures-date-coherence-fichier/journal
+ *       → a `validation-error` event with `validationErrorCount > 0` and
+ *         `hasDiagnosticFile: true` (coherence errors are counted and typed as
+ *         ordinary validation errors — there is no separate error type).
+ *   - GET .../datasets/fixtures-date-coherence-fichier/validation-diagnostic.csv
+ *       → header `line,error_type,field,message,raw_value`; ONE row, with
+ *         `error_type = validation`, `field = fin` and the « Incohérence de dates »
+ *         message naming both columns and both values (line = 1-based data-row index).
+ *   - Fix it either way: re-upload the file with the row corrected, or
+ *     PATCH { "constraints": null } to drop the constraint → the dataset
+ *     re-validates and finalizes, and the diagnostic is cleared. Dropping the
+ *     constraint only re-runs the validation phase (status 'validation-updated'),
+ *     not a full re-index.
+ */
+async function seedDateCoherenceFichier () {
+  const id = 'fixtures-date-coherence-fichier'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = [
+    'chantier,debut,fin',
+    'Réfection rue des Lilas,2026-03-02,2026-04-17',
+    'Enfouissement réseaux avenue Jaurès,2026-05-11,2026-03-30', // fin < debut → incohérence
+    'Marquage au sol place du Marché,2026-06-08,2026-06-08', // fin == debut → accepté
+    'Élagage boulevard Nord,2026-09-01,' // pas de fin → accepté
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'chantiers.csv', {
+    title: 'Chantiers de voirie (dates incohérentes — démonstration)',
+    description: 'Jeu de données fichier volontairement en erreur : une contrainte de cohérence des ' +
+      'dates et un chantier dont la date de fin précède la date de début. Le contrôle ligne à ligne de ' +
+      'la phase de validation bloque la finalisation et liste la ligne fautive dans le diagnostic de ' +
+      'validation (error_type = validation). Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'chantier', type: 'string', title: 'Chantier' },
+      { key: 'debut', type: 'string', format: 'date', title: 'Début', 'x-refersTo': 'https://schema.org/startDate' },
+      { key: 'fin', type: 'string', format: 'date', title: 'Fin', 'x-refersTo': 'https://schema.org/endDate' }
+    ],
+    constraints: [{ type: 'dateCoherence' }]
+  }, csv)
+  console.log(`${id}: seeded (file with an incoherent period → error + validation diagnostic)`)
+}
+
 /** File-new DRAFT dataset deliberately left in ERROR status. The draft carries a
  * geocoder extension whose remote service (the dev mock server) is set to answer
  * 500 while the draft reprocesses; with `errorRetryDelay: 0` the automatic retry
@@ -785,14 +960,17 @@ async function main () {
   await seedIgnoreAbove()
   await seedUniciteRest()
   await seedUniciteFichier()
+  await seedDateCoherenceRest()
+  await seedDateCoherenceFichier()
   await seedBrouillonErreur()
+  await seedFragments()
 
   // after seeding so it also upgrades datasets skipped by earlier runs
   await ensureDatasetTopics()
   await ensureBreachState()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-date-coherence-rest', 'fixtures-date-coherence-fichier', 'fixtures-brouillon-erreur', 'fixtures-fragments-virtuel']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')

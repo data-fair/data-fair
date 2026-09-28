@@ -17,37 +17,32 @@
       {{ t('draft') }}
     </v-list-subheader>
     <v-list-item
-      v-for="(event,j) in group.events"
-      :key="`${i}-${j}`"
+      v-for="event in group.events"
+      :key="`${event.date}-${event.type}`"
       :prepend-icon="mdiIcons[getEventType(event).icon]"
       :base-color="getEventType(event).color || 'default'"
     >
-      <v-list-item-title>
-        <span
-          v-if="event.type === 'error'"
-          class="text-error"
-        >
-          {{ event.data || eventLabel(event) }}
-        </span>
-        <span v-else>
-          {{ eventLabel(event) }}
-          {{ event.type === 'draft-validated' ? `(${event.data})` : '' }}
-        </span>
+      <!-- an error carries its message in place of the event label, the other types keep both -->
+      <journal-message
+        v-if="event.type === 'error' && event.data"
+        :data="event.data"
+        class="text-error"
+        :color="getEventType(event).color || undefined"
+      />
+      <v-list-item-title v-else>
+        {{ eventLabel(event) }}
+        {{ event.type === 'draft-validated' ? `(${event.data})` : '' }}
       </v-list-item-title>
-      <v-list-item-subtitle v-if="event.type === 'validation-error' && event.data">
-        <p
-          class="text-error"
-          style="white-space: pre-line"
-        >
-          {{ event.data }}
-        </p>
-      </v-list-item-subtitle>
-      <v-list-item-subtitle v-else-if="event.data && !['draft-validated', 'error'].includes(event.type)">
-        <p v-safe-html="event.data" />
-      </v-list-item-subtitle>
+      <journal-message
+        v-if="event.data && !['draft-validated', 'error'].includes(event.type)"
+        subtitle
+        :data="event.data"
+        :class="{ 'text-error': event.type === 'validation-error' }"
+        :color="getEventType(event).color || undefined"
+      />
       <template #append>
         <div class="d-flex flex-column align-end">
-          <span class="text-body-small default">
+          <span class="text-body-small default text-no-wrap">
             {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
           </span>
           <v-btn
@@ -55,6 +50,7 @@
             variant="text"
             size="small"
             color="error"
+            :prepend-icon="mdiFileDownload"
             :href="diagnosticDownloadHref(event)"
             target="_blank"
           >
@@ -174,3 +170,28 @@ const mdiIcons: Record<string, string> = {
 }
 
 </script>
+
+<style scoped>
+/* override vuetify's single-line ellipsis: journal messages may be long and must stay readable */
+:deep(.v-list-item-title),
+:deep(.v-list-item-subtitle) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+/* vuetify's 1rem subtitle line-height is meant for a single line: too tight for a message
+   spread over several lines, and its sub-pixel overflow shows a scrollbar for nothing */
+:deep(.v-list-item-subtitle) {
+  line-height: 1.25rem;
+}
+/* align the event icon and the date with the first line of the message rather than with
+   the middle of the item */
+:deep(.v-list-item__prepend),
+:deep(.v-list-item__append) {
+  align-self: flex-start;
+}
+/* keep the date off the message it sits next to */
+:deep(.v-list-item__append) {
+  padding-inline-start: 16px;
+}
+</style>

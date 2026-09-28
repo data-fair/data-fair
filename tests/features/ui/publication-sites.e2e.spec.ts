@@ -171,7 +171,7 @@ test.describe('dataset publication sites', () => {
 
     await goToWithAuth('/data-fair/', 'test_user4')
     await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'dep1' }).click()
+    await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
     await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
     await page.goto(`${baseUrl}/data-fair/dataset/${dataset.id}`)
     await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
