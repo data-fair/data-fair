@@ -3,6 +3,12 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
+    <fragment-banner
+      v-if="dataset.partOf"
+      :part-of="dataset.partOf"
+      :fragment="{ id: dataset.id, status: dataset.status }"
+    />
+
     <!-- Metadata details -->
     <df-section-tabs
       v-if="sections.informations"
@@ -99,6 +105,34 @@
             :server-rest="structureEditFetch.serverData.value?.rest"
             :dataset="structureEditFetch.data.value"
             @update:rest="r => { if (structureEditFetch.data.value) structureEditFetch.data.value.rest = r }"
+          />
+        </v-tabs-window-item>
+
+        <!-- fragments are hidden from every listing, this is where they are found -->
+        <v-tabs-window-item value="fragments">
+          <df-tutorial-alert
+            id="dataset-fragments"
+            persistent
+          >
+            <p class="mb-2">
+              {{ t('fragmentsTutorial1') }}
+            </p>
+            <p class="mb-2">
+              {{ t('fragmentsTutorial2') }}
+            </p>
+            <p>
+              {{ t('fragmentsTutorial3') }}
+            </p>
+          </df-tutorial-alert>
+          <fragments-list
+            :part-of="{ type: 'dataset', id: dataset.id }"
+            :fragments="fragments"
+            :has-more="hasMoreFragments"
+            :sources="dataset.isVirtual ? (dataset.virtual?.children ?? []) : null"
+            :can-add-source="can('writeDescriptionBreaking').value && !structureHasRealDiff"
+            :adding-source="addFragmentToSources.loading.value ? addingSourceId : null"
+            @load-more="loadMoreFragments"
+            @add-source="(fragmentId: string) => { addingSourceId = fragmentId; addFragmentToSources.execute(fragmentId) }"
           />
         </v-tabs-window-item>
 
@@ -398,7 +432,7 @@
       <template #content>
         <v-list class="py-0">
           <v-list-item
-            v-if="can('changeOwner').value"
+            v-if="can('changeOwner').value && !dataset.partOf"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
@@ -416,6 +450,52 @@
                 @click="showOwnerDialog = true"
               >
                 {{ t('changeOwner') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
+          <v-list-item
+            v-if="dataset.partOf && can('changeOwner').value"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('detach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('detachDesc') }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                :loading="confirmDetach.loading.value"
+                @click="confirmDetach.execute()"
+              >
+                {{ t('detach') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+          <v-list-item
+            v-if="attachParent && can('changeOwner').value"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('attach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('attachDesc', { parent: attachParent.title }) }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showAttachDialog = true"
+              >
+                {{ t('attach') }}
               </v-btn>
             </template>
           </v-list-item>
@@ -476,10 +556,18 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('changeOwner').value"
+      v-if="can('changeOwner').value && !dataset.partOf"
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
+      @changed="store.datasetFetch.refresh()"
+    />
+
+    <fragment-attach-dialog
+      v-if="attachParent && can('changeOwner').value"
+      v-model="showAttachDialog"
+      :resource="dataset"
+      :parent="attachParent"
       @changed="store.datasetFetch.refresh()"
     />
 
@@ -493,6 +581,14 @@
       >
         <v-card-text class="pb-0">
           {{ t('deleteMsg', { title: dataset?.title }) }}
+          <v-alert
+            v-if="nbFragments"
+            type="warning"
+            variant="tonal"
+            class="mt-4"
+          >
+            {{ t('deleteFragmentsWarning', { count: nbFragments }) }}
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -501,6 +597,15 @@
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
+          </v-btn>
+          <v-btn
+            v-if="nbFragments"
+            color="warning"
+            variant="outlined"
+            :loading="confirmDetachAllAndRemove.loading.value"
+            @click="confirmDetachAllAndRemove.execute()"
+          >
+            {{ t('detachFirst') }}
           </v-btn>
           <v-btn
             color="warning"
@@ -579,6 +684,11 @@ fr:
   schema: Schéma
   constraints: Contraintes
   attachments: Pièces jointes
+  fragments: Fragments
+  fragmentsTutorial1: "Un fragment est un jeu de données qui n'existe que pour alimenter ce jeu de données virtuel. Par exemple une source par territoire ou par période, préparée séparément puis rassemblée ici."
+  fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que ce jeu de données virtuel et en héritent les droits de modification, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec lui."
+  fragmentsTutorial3: "Un nouveau fragment n'est pas utilisé tout de suite. Ajoutez-le aux sources quand il est prêt."
+  fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
@@ -614,6 +724,13 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
+  detach: Détacher du parent
+  detachDesc: Cette ressource redevient un jeu de données indépendant, avec les permissions qu'elle porte actuellement.
+  detachSuccess: Le jeu de données a été détaché.
+  attach: Rattacher au jeu de données virtuel
+  attachDesc: "Ce jeu de données n'est utilisé que par « {parent} » : en faire un fragment de ce jeu de données virtuel, masqué des listes et supprimé avec lui."
+  deleteFragmentsWarning: "Ce jeu de données a {count} fragment(s) qui seront supprimés avec lui."
+  detachFirst: Détacher d'abord
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
   deleteAllLinesTitle: Suppression des lignes du jeu de données
@@ -640,6 +757,11 @@ en:
   schema: Schema
   constraints: Constraints
   attachments: Attachments
+  fragments: Fragments
+  fragmentsTutorial1: "A fragment is a dataset that only exists to feed this virtual dataset. For example one source per territory or per period, prepared separately then gathered here."
+  fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this virtual dataset and inherit its edit permissions, they are neither shared nor published on their own, and they are deleted with it."
+  fragmentsTutorial3: "A new fragment is not used right away. Add it to the sources when it is ready."
+  fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
@@ -675,6 +797,13 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
+  detach: Detach from parent
+  detachDesc: This resource becomes an independent dataset again, with the permissions it currently carries.
+  detachSuccess: The dataset was detached.
+  attach: Attach to the virtual dataset
+  attachDesc: "This dataset is only used by “{parent}”: make it a fragment of this virtual dataset, hidden from listings and deleted with it."
+  deleteFragmentsWarning: "This dataset has {count} fragment(s) that will be deleted with it."
+  detachFirst: Detach first
   deleteAllLines: Delete all lines
   deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
   deleteAllLinesTitle: Delete all the lines of the dataset
@@ -700,7 +829,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFileTree, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -752,7 +881,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
 
@@ -911,6 +1040,40 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
 const confirmRemove = useAsyncAction(async () => {
+  await remove()
+  await router.push('/datasets')
+}, { success: t('deleteDatasetSuccess') })
+
+const showAttachDialog = ref(false)
+// attaching is only proposed towards a parent already known to use this dataset: the single virtual
+// dataset having it among its children, with the same owner (a fragment has exactly its parent's
+// owner) and not itself a fragment (one level only). Used by several virtual datasets, the dataset
+// is shared: making it depend on one of them (deleted with it) would be wrong, nothing is proposed.
+const attachParent = computed(() => {
+  const d = dataset.value
+  if (!d || d.partOf || nbFragments.value || store.nbVirtualDatasets.value !== 1) return null
+  const parent = store.virtualParents.value[0]
+  if (!parent || parent.partOf) return null
+  const sameOwner = parent.owner?.type === d.owner.type && parent.owner?.id === d.owner.id && (parent.owner?.department ?? null) === (d.owner.department ?? null)
+  return sameOwner ? parent : null
+})
+const confirmDetach = useAsyncAction(async () => {
+  await detach()
+  await store.datasetFetch.refresh()
+}, { success: t('detachSuccess') })
+// a new fragment is not one of the virtual dataset's sources until the user judges it ready
+const addingSourceId = ref<string | null>(null)
+const addFragmentToSources = useAsyncAction(async (fragmentId: string) => {
+  const virtual = dataset.value?.virtual
+  if (!virtual) return
+  await $fetch(`datasets/${dataset.value!.id}`, { method: 'PATCH', body: { virtual: { ...virtual, children: [...(virtual.children ?? []), fragmentId] } } })
+  // the structure form refreshes from this fetch when it has no pending change (the button is disabled otherwise)
+  await store.datasetFetch.refresh()
+}, { success: t('fragmentAddedToSources') })
+const confirmDetachAllAndRemove = useAsyncAction(async () => {
+  for (const fragment of fragments.value.datasets) {
+    await $fetch(`datasets/${fragment.id}`, { method: 'PATCH', body: { partOf: null } })
+  }
   await remove()
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
@@ -1092,6 +1255,16 @@ const sections = computedDeepDiff(() => {
       })
     }
 
+    // fragments are hidden from every listing, this tab is where they are found
+    if (!d.partOf && (d.isVirtual || nbFragments.value)) {
+      structureTabs.push({
+        key: 'fragments',
+        title: t('fragments'),
+        icon: mdiFileTree,
+        agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
+      })
+    }
+
     if (d.isVirtual) {
       structureTabs.push({
         key: 'virtual',
@@ -1102,7 +1275,8 @@ const sections = computedDeepDiff(() => {
       })
     }
 
-    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    // a fragment cannot be reference data (refused by the API)
+    if (!d.draftReason && !d.isMetaOnly && !d.partOf && accountRole.value === 'admin') {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),
@@ -1120,7 +1294,7 @@ const sections = computedDeepDiff(() => {
   const metadataTabs: any[] = [
     { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, hidden search terms (searchTerms, never displayed), creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Three in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown); next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' }
   ]
-  if (!d.draftReason) {
+  if (!d.draftReason && !d.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → `dataset_changes_summarizer` subagent (produces a <500 char plain-text summary of the diff).' }
@@ -1142,7 +1316,7 @@ const sections = computedDeepDiff(() => {
     if (d.rest?.history) {
       explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory, agentDesc: 'Per-row revision history. Visible only for REST datasets that have history enabled in the Structure → REST config tab.' })
     }
-    if (!d.draftReason || d.draftReason.key === 'file-updated') {
+    if ((!d.draftReason || d.draftReason.key === 'file-updated') && !d.partOf) {
       explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple, agentDesc: 'Visualization applications already configured on top of this dataset, with a "+" button to create a new one.' })
     }
     if (explorationTabs.length) {
@@ -1150,8 +1324,8 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  // Share section
-  if (!d.draftReason || d.draftReason.key === 'file-updated') {
+  // Share section: a fragment is shared through its parent, it has nothing of its own to share
+  if (!d.partOf && (!d.draftReason || d.draftReason.key === 'file-updated')) {
     const shareTabs: any[] = []
     if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / write / admin permissions to specific users, organisations, departments or partners, or open access to "anyone".' })

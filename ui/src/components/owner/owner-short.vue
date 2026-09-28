@@ -31,9 +31,11 @@ const { owner, ignoreDepartment } = defineProps({
   ignoreDepartment: { type: Boolean, default: false }
 })
 
+const { departmentLabel } = useDisplayOwner()
+
 const label = computed(() => {
   let label = owner.name
-  if (owner.department && !ignoreDepartment) label += ' - ' + (owner.departmentName || owner.department)
+  if (owner.department && !ignoreDepartment) label += ' - ' + departmentLabel(owner.department, owner.departmentName)
   return label
 })
 </script>

@@ -19,6 +19,7 @@ import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../../misc/utils/text-search/index.ts'
+import { trimDataset } from '../operations.ts'
 import type { Db } from 'mongodb'
 import type { Request, Dataset } from '#types'
 
@@ -238,7 +239,7 @@ export const setUniqueRefs = (resource: { id: string, slug?: string, _uniqueRefs
 }
 
 export const curateDataset = (dataset: any, existingDataset?: any) => {
-  if (dataset.title) dataset.title = dataset.title.trim()
+  trimDataset(dataset)
 
   if (dataset.masterData?.bulkSearchs?.length) {
     for (const bulkSearch of dataset.masterData.bulkSearchs) {

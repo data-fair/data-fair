@@ -148,7 +148,7 @@ export const run = async () => {
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
     app.use('/api/v1/admin', (await import('./admin/router.ts')).default)
-    app.use('/api/v1/identities', (await import('./identities/router.ts')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.ts')).default(app))
     app.use('/api/v1/activity', (await import('./activity/router.ts')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
@@ -293,7 +293,7 @@ export const run = async () => {
 
     const permissions = await import('./misc/utils/permissions.ts')
     const { readApiKey } = await import('./misc/utils/api-key.ts')
-    const { resolveApplicationKeyBypass } = await import('./misc/utils/application-key.ts')
+    const { resolveApplicationContextBypass } = await import('./misc/utils/application-key.ts')
     await Promise.all([
       (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
@@ -310,11 +310,11 @@ export const run = async () => {
         // browsers send no Referer on a websocket handshake, so the HTTP application-key path
         // cannot apply here; resolve the same bypass from the key passed in the subscribe message
         let bypassPermissions
-        if (type === 'datasets' && message.applicationKey) {
+        if (type === 'datasets' && (message.applicationKey || message.appId)) {
           // re-read through the typed collection (db.collection(type) above yields an untyped doc)
           const dataset = await mongo.datasets.findOne({ id })
           if (dataset) {
-            const match = await resolveApplicationKeyBypass(message.applicationKey, dataset, message.appId)
+            const match = await resolveApplicationContextBypass(message.applicationKey ?? null, dataset, message.appId, sessionState)
             bypassPermissions = match?.bypassPermissions
           }
         }

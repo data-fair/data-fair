@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/applications"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -218,7 +225,14 @@
 
         <!-- Step: Info -->
         <v-stepper-window-item value="info">
-          <df-owner-pick v-model="owner" />
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
           <v-text-field
             v-model="appTitle"
             max-width="500"
@@ -336,6 +350,29 @@ const ownerFilter = computed(() => {
 // ---- Dataset context (?dataset=ID) ----
 const datasetId = computed(() => route.query.dataset as string | undefined)
 const dataset = ref<any>(null)
+
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
+})
+
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ title: string, owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner' }, notifError: false })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
 
 onMounted(async () => {
   if (datasetId.value) {
@@ -470,6 +507,7 @@ async function createApplication () {
       title: appTitle.value
     }
     if (owner.value) body.owner = owner.value
+    if (partOf.value) body.partOf = partOf.value
 
     if (creationType.value === 'copy' && copyApp.value) {
       body.url = copyApp.value.url
@@ -499,6 +537,7 @@ async function createApplication () {
 
 <i18n lang="yaml">
 fr:
+  newFragment: Nouveau fragment
   apps: Applications
   breadcrumb: Créer une application
   helpCreatePrompt: Aidez-moi à créer une application
@@ -525,6 +564,7 @@ fr:
   search: Rechercher
   restrictedAccess: Application à accès restreint
 en:
+  newFragment: New fragment
   apps: Applications
   breadcrumb: Create an application
   helpCreatePrompt: Help me create an application

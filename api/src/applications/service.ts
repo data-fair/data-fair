@@ -5,6 +5,8 @@ import slug from 'slugify'
 import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import * as fragmentsService from '../fragments/service.ts'
+import { partOfListFilter } from '../fragments/operations.ts'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import * as findUtils from '../misc/utils/find.ts'
@@ -16,7 +18,7 @@ import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
-import { setUniqueRefs } from './operations.ts'
+import { setUniqueRefs, trimApplication } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
@@ -82,6 +84,10 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
+  // fragments are reached from their parent, not from the catalog (spec §4)
+  const partOfFilter = partOfListFilter(reqQuery)
+  if (partOfFilter) extraFilters.push(partOfFilter)
+
   // an application publication-site filter is a strict owner equality, so the site owner is
   // always the full corpus for this request
   const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: true })
@@ -110,7 +116,9 @@ export const findApplications = async (locale: string, publicationSite: any, pub
       { $project: project }
     ], resultsOptions).toArray()
     : mongo.applications.find(query, resultsOptions).limit(size).skip(skip).sort(sort).project(project).toArray())
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, undefined, textFilter)).toArray()
+  // extraFilters passed like findDatasets does: without them the facets counted fragments that the
+  // list itself hides (and ignored the publicationSite owner scoping)
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields, extraFilters, textFilter)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response: any = {}
@@ -128,7 +136,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 }
 
 export const curateApplication = async (application: Application) => {
-  if (application.title) application.title = application.title.trim()
+  trimApplication(application)
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
     application.baseApp = await mongo.baseApplications.findOne({ url: application.url }, { projection }) as any
@@ -170,6 +178,15 @@ export const initNewApplication = async (body: any, owner: AccountKeys, user: { 
   return application
 }
 
+/** creation defaults, or the ACL derived from the parent for a fragment (spec §3.7) */
+export const initApplicationPermissions = async (sessionState: SessionState, application: any) => {
+  if (application.partOf) {
+    application.permissions = (await fragmentsService.preparePartOf('applications', application, application.partOf, sessionState)).permissions
+  } else {
+    permissions.initResourcePermissions(application)
+  }
+}
+
 export const createApplication = async (ctx: ApplicationWriteContext, application: any) => {
   application.id = nanoid()
 
@@ -201,7 +218,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   const baseslug = application.slug || slug(application.title, { lower: true, strict: true })
   application.slug = baseslug
   setUniqueRefs(application)
-  permissions.initResourcePermissions(application)
+  await initApplicationPermissions(ctx.sessionState, application)
   assignIndexFields(application, indexPatch(applicationsTextSearch, application))
   let insertOk = false
   let i = 1
@@ -252,6 +269,11 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id }
   newApplication.created = true
+
+  // parentage is changed through PATCH only; PUT preserves it. A divergent value is refused
+  // upstream by the shared fragmentWriteGuard mounted on the route (fragments/middlewares.ts),
+  // which also refuses the publication keys on a fragment
+  if (existingApplication.partOf) newApplication.partOf = existingApplication.partOf
 
   assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
 

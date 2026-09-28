@@ -298,10 +298,7 @@ onMounted(() => {
 })
 
 const addApiKey = () => {
-  apiKeys.value = [...(apiKeys.value ?? []), {
-    ...newApiKey.value,
-    title: newApiKey.value.title.trim()
-  }]
+  apiKeys.value = [...(apiKeys.value ?? []), newApiKey.value]
   createToggle.value = false
   newApiKey.value = createNewApiKey()
 }

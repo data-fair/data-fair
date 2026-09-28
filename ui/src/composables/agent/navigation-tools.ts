@@ -2,7 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 import type { Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { unwrapFilterQuery } from '@data-fair/agent-tools-data-fair/_utils'
-import { createAgentTranslator } from './utils'
+import { createAgentTranslator, untilStable } from './utils'
 import { toAbsoluteUrl, toRoutePath, suggestRoutes } from './url-utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
 
@@ -139,20 +139,24 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         }
 
         await router.push(query ? { path, query } : path)
+        // Return once the destination has registered its tools: the chat offers a
+        // tool registered while a host tool runs on its very next step. This used to
+        // sleep 500ms and then call those tools "not callable in this request",
+        // sending the model into a wait on the arrival — whose `location` event had
+        // already been delivered inside this very result, so nothing woke the wait.
+        const toolNames = () => {
+          const tools = (navigator as any).modelContext?.listTools?.()
+          return Array.isArray(tools) ? tools.map((t: { name: string }) => t.name).sort().join(',') : ''
+        }
+        // The floor covers a destination whose chunk is still loading: its list has
+        // not started changing yet, and a quiet window alone would read that as done.
         await new Promise(resolve => setTimeout(resolve, 500))
+        await untilStable(toolNames, 300, 3000)
         const currentRoute = router.currentRoute.value
         return {
           content: [{
             type: 'text' as const,
-            // The tool set exposed to the LLM is frozen when the request is built:
-            // tools registered by the destination page are discovered by the chat but
-            // only become callable later. Say so, or the model concludes it is stuck —
-            // and say how to get there, because "finish your reply and pick it up next
-            // turn" deadlocked three judged runs: there is no next turn when the person
-            // is waiting to be told a button is ready. A declared wait resolves on the
-            // arrival (`location` is wait-resolving), so the same turn continues with
-            // the destination's tools in scope.
-            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: page-specific agent tools register after navigation, so a tool of the destination page is not callable in this request. To use one now, declare wait_for_user_action: arriving here resolves it and the same turn continues with that page's tools available.`
+            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: this page's agent tools are registered and callable from your next step.`
           }]
         }
       } catch (error: any) {

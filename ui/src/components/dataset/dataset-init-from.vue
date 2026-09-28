@@ -43,8 +43,9 @@
       @update:model-value="togglePart('extensions')"
     />
 
+    <!-- a fragment has neither its own attachments nor a description of its own to inherit: it is described by its parent -->
     <v-checkbox
-      v-if="initFromDataset.attachments?.length"
+      v-if="initFromDataset.attachments?.length && !fragment"
       :model-value="modelValue.parts.includes('metadataAttachments')"
       :label="t('initFromAttachments')"
       density="comfortable"
@@ -52,7 +53,7 @@
       @update:model-value="togglePart('metadataAttachments')"
     />
 
-    <template v-if="availableMetadata.length">
+    <template v-if="availableMetadata.length && !fragment">
       <v-checkbox
         :model-value="!!copyableMetadata.length && selectedMetadata.length === copyableMetadata.length"
         :indeterminate="!!selectedMetadata.length && selectedMetadata.length < copyableMetadata.length"
@@ -99,6 +100,10 @@ interface InitFrom {
 const props = defineProps<{
   allowData?: boolean
   owner?: AccountKeys | null
+  // preselected source, e.g. the virtual parent of a new fragment
+  initialDataset?: any
+  // the new dataset is a fragment: only the structure (schema, extensions) is worth copying
+  fragment?: boolean
 }>()
 
 const modelValue = defineModel<InitFrom | null>({ default: null })
@@ -110,7 +115,7 @@ const { account } = useSessionAuthenticated()
 const allowData = computed(() => props.allowData ?? true)
 const owner = computed(() => props.owner ?? account.value)
 
-const initFromDataset = ref<any>(null)
+const initFromDataset = ref<any>(props.initialDataset ?? null)
 
 // 'description' covers both summary and description
 const metadataParts = ['description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata']
@@ -161,7 +166,7 @@ watch(initFromDataset, (dataset) => {
     modelValue.value = null
     sourceTitle.value = null
   }
-})
+}, { immediate: !!props.initialDataset })
 
 // topics / custom metadata selected by default can turn out not copyable once the owner settings are loaded
 watch(copyableMetadata, (copyable) => {

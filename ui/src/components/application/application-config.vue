@@ -23,7 +23,7 @@
           ref="frame"
           :height="`${windowHeight - 48}px`"
           resize="no"
-          :src="`${applicationLink}?d-frame=true&draft=true&primary=${theme.current.value.colors.primary}`"
+          :src="`${applicationLink}?d-frame=true&draft=true&primary=${encodeURIComponent(theme.current.value.colors.primary as string)}`"
           :reload="draftPreviewInc"
         />
       </v-col>
@@ -152,6 +152,7 @@ import { type AppConfig } from '#api/types'
 import { setProperty } from 'dot-prop'
 import equal from 'fast-deep-equal'
 import Debug from 'debug'
+import { addPartOfToFromUrls, pickerPartOf } from '~/utils/fragments'
 
 const debug = Debug('application-config')
 
@@ -240,6 +241,8 @@ const completeSchema = (schema: any) => {
       }
     }
   }
+  // fragments are hidden from listings: the pickers must still offer the ones of this application's family
+  if (application.value) addPartOfToFromUrls(schema, pickerPartOf('application', application.value))
   if (!schema.layout?.comp) schema.layout = 'expansion-panels'
   if (baseAppDraft.value?.meta?.['df:vjsf'] === '3') {
     return schema

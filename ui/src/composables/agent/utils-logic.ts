@@ -61,3 +61,22 @@ export function buildPaginatedQuery (params: { q?: string, page?: number, size?:
   if (params.q) query.q = params.q
   return { query, page, size }
 }
+
+/**
+ * Resolves once `read()` has returned the same value for `quietMs`, or after
+ * `maxMs` whatever it returns. Used to let a page finish registering its agent
+ * tools: there is no "done" signal, only the list ceasing to change.
+ */
+export function untilStable (read: () => string, quietMs: number, maxMs: number, tickMs = 50): Promise<void> {
+  const deadline = Date.now() + maxMs
+  let last = read()
+  let since = Date.now()
+  return new Promise(resolve => {
+    const timer = setInterval(() => {
+      const now = Date.now()
+      const current = read()
+      if (current !== last) { last = current; since = now }
+      if (now - since >= quietMs || now >= deadline) { clearInterval(timer); resolve() }
+    }, tickMs)
+  })
+}

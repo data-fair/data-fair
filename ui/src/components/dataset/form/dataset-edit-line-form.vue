@@ -67,19 +67,12 @@ const { t } = useI18n()
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 
 // The dialog reports itself from here, not from the watcher that flips the
-// dialog flag, because this is the moment the claim is true: the form exists and
-// its editLine_form subagent registers with it.
-//
-// It also has to be this late. An event emitted while the opening tool is still
-// executing is drained into that tool's own result, and the wait its result tells
-// the model to declare then has nothing pending and blocks for its whole window.
-// That is precisely what happened: `open_edit_line_dialog` awaits a fetch of the
-// row before the dialog flag flips, so its event landed in the wait and the turn
-// continued; `open_add_line_dialog` flips the flag synchronously, so its event
-// went into the tool result and the turn stalled on an empty form until the
-// person described the screen — the one thing that persona refuses to do.
-// Mounting this component is after the drain by construction: it is loaded with
-// defineAsyncComponent.
+// dialog flag, because this is the moment the form exists. It is context, not a
+// wake-up signal: the openers wait for this form's editLine_form subagent before
+// returning, so the event of a dialog the assistant opened lands in the opener's
+// own result. It was once the thing the assistant waited on, which only worked
+// when the event happened to arrive after that result — never for the add
+// dialog, whose form is bundled with it rather than loaded asynchronously.
 if (subAgent) {
   const { lineDialog } = useDatasetEdition()
   onMounted(() => {

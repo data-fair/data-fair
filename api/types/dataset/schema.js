@@ -764,7 +764,7 @@ const datasetProperties = {
               type: 'string'
             }
           },
-          overwriteProperties: {
+          overwrite: {
             type: 'object',
             description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
             additionalProperties: {
@@ -871,6 +871,16 @@ const datasetProperties = {
       filterActiveAccount: {
         type: 'boolean'
       }
+    }
+  },
+  partOf: {
+    type: 'object',
+    description: 'Declares this dataset as a fragment of another resource (a virtual dataset or an application). A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.',
+    additionalProperties: false,
+    required: ['type', 'id'],
+    properties: {
+      type: { type: 'string', enum: ['dataset', 'application'] },
+      id: { type: 'string' }
     }
   },
   isRest: {

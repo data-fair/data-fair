@@ -9,12 +9,14 @@ import * as datasetsService from '../datasets/service.ts'
 import { ownerDir } from '../datasets/utils/files.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 import { markStale } from '../misc/utils/text-search/mark-stale.ts'
+import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 
 export type Identity = { type: string, id: string, name?: string }
 type Department = { id: string, name: string }
+type Partner = { id: string, name: string }
 
 // resources displayed with their owner name and carrying user permissions
-const resourceCollectionNames = ['applications', 'datasets', 'catalogs']
+const resourceCollectionNames = ['applications', 'datasets']
 // all collections holding owned documents (deleted along with the identity);
 // applications-keys and journals only store the owner type/id(/department) for filtering, no names
 const ownedCollectionNames = [...resourceCollectionNames, 'applications-keys', 'journals']
@@ -22,7 +24,7 @@ const ownedCollectionNames = [...resourceCollectionNames, 'applications-keys', '
 const privateAccessCollectionNames = ['remote-services', 'base-applications']
 
 // notify a name change across all resources owned by, shared with or authored by an identity
-export const renameIdentity = async (identity: Identity, departments?: Department[]) => {
+export const renameIdentity = async (identity: Identity, departments?: Department[], partners?: Partner[]) => {
   for (const c of resourceCollectionNames) {
     const collection = mongo.db.collection(c)
     const ownerFilter = { 'owner.type': identity.type, 'owner.id': identity.id }
@@ -31,6 +33,24 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       for (const department of departments) {
         const departmentFilter = { 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }
         await collection.updateMany(departmentFilter, { $set: { 'owner.departmentName': department.name } })
+      }
+      // the directory sends the complete list of departments: a department missing from it was
+      // deleted, its resources keep the id (still reachable by the organization admins) but not the name
+      await collection.updateMany(
+        { ...ownerFilter, 'owner.department': { $exists: true, $nin: departments.map(d => d.id) } },
+        { $unset: { 'owner.departmentName': 1 } }
+      )
+    }
+
+    // permissions granted to other organizations are only meaningful inside a partnership:
+    // the directory sends the complete list of partners, what is not in it was withdrawn
+    if (identity.type === 'organization' && partners) {
+      const partnerIds = partners.map(p => p.id)
+      const cursor = collection.find({ ...ownerFilter, permissions: { $elemMatch: { type: 'organization', id: { $nin: [identity.id, ...partnerIds] } } } })
+      for await (const doc of cursor) {
+        const permissions = doc.permissions.filter((permission: any) => permission.type !== 'organization' || permission.id === identity.id || partnerIds.includes(permission.id))
+        await collection.updateOne({ id: doc.id }, { $set: { permissions } })
+        if (c === 'datasets') await stampHistorizeMany({ id: doc.id })
       }
     }
     if (c === 'datasets' || c === 'applications') {
@@ -80,10 +100,24 @@ export const renameIdentity = async (identity: Identity, departments?: Departmen
       }
       await mongo.datasets.updateOne({ id: dataset.id }, { $set: { masterData: dataset.masterData } })
     }
+    // master data is shared with partners, a share to a former partner is withdrawn
+    if (partners) {
+      const partnerIds = partners.map(p => p.id)
+      const filter = { 'owner.type': 'organization', 'owner.id': identity.id, 'masterData.shareOrgs': { $elemMatch: { id: { $nin: partnerIds } } } }
+      const sharedDatasetIds = await mongo.datasets.distinct('id', filter)
+      // shareOrgs ids are covered by the integrity hash, stamp before the $pull invalidates the filter
+      await stampHistorizeMany(filter)
+      await mongo.datasets.updateMany(filter, { $pull: { 'masterData.shareOrgs': { id: { $nin: partnerIds } } } } as any)
+      // the shares are mirrored in the privateAccess of the master data remote service
+      for (const datasetId of sharedDatasetIds) {
+        const dataset = await mongo.datasets.findOne({ id: datasetId })
+        if (dataset) await syncRemoteService(dataset)
+      }
+    }
   }
 }
 
-// remove resources owned, permissions, and anonymize created/updated events + the whole data directory
+// remove resources owned, permissions and the whole data directory (created/updated only hold the user id)
 export const deleteIdentity = async (app: Application, identity: Identity) => {
   const datasetsCursor = mongo.db.collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
@@ -121,6 +155,14 @@ export const deleteIdentity = async (app: Application, identity: Identity) => {
   // settings and limits
   await mongo.db.collection('settings').deleteMany({ type: identity.type, id: identity.id })
   await mongo.db.collection('limits').deleteOne({ type: identity.type, id: identity.id })
+
+  // dataset.masterData.shareOrgs (the remote service privateAccess mirror was pulled above)
+  if (identity.type === 'organization') {
+    const filter = { 'masterData.shareOrgs': { $elemMatch: { id: identity.id } } }
+    // shareOrgs ids are covered by the integrity hash, stamp before the $pull invalidates the filter
+    await stampHistorizeMany(filter)
+    await mongo.datasets.updateMany(filter, { $pull: { 'masterData.shareOrgs': { id: identity.id } } } as any)
+  }
 
   // whole data directory
   await filesStorage.removeDir(ownerDir(identity))
