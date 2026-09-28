@@ -9,7 +9,7 @@
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { fillableColumns, addLineDialogPrecondition } from '../../../ui/src/composables/dataset/agent-edit-line-logic.ts'
+import { fillableColumns, addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult } from '../../../ui/src/composables/dataset/agent-edit-line-logic.ts'
 
 const updatedAt = { 'x-calculated': true, key: '_updatedAt', type: 'string', title: 'Date de mise à jour' }
 const nom = { key: 'nom', type: 'string', title: 'Nom' }
@@ -44,5 +44,32 @@ test.describe('addLineDialogPrecondition', () => {
 
   test('refuses on no schema at all', () => {
     assert.ok(addLineDialogPrecondition(undefined))
+  })
+})
+
+test.describe('line dialog opener results', () => {
+  test('recognise the form subagent in a modelContext tool list', () => {
+    assert.equal(hasLineFormSubAgent([{ name: 'open_add_line_dialog' }, { name: 'subagent_editLine_form' }]), true)
+    assert.equal(hasLineFormSubAgent([{ name: 'open_add_line_dialog' }]), false)
+    // listTools() is synchronous on the frame server; anything else is not ready.
+    assert.equal(hasLineFormSubAgent(undefined), false)
+    assert.equal(hasLineFormSubAgent(Promise.resolve([])), false)
+  })
+
+  test('a ready form sends the model straight to the subagent, not into a wait', () => {
+    // A wait on the dialog's own opening stalled a real session: the event was
+    // delivered inside this very result, leaving the wait nothing to resolve on.
+    for (const mode of ['add', 'edit'] as const) {
+      const text = lineDialogOpenedResult(mode, true)
+      assert.match(text, /delegate to the editLine_form subagent now/)
+      assert.match(text, /declare wait_for_user_action: the save reports itself/)
+      assert.ok(!/not in the tool list|dialog will report itself/.test(text), text)
+    }
+  })
+
+  test('a form still loading says so and offers a re-check', () => {
+    assert.match(lineDialogOpenedResult('add', false), /not available yet\. Call open_add_line_dialog again/)
+    assert.match(lineDialogOpenedResult('edit', false), /open_edit_line_dialog with the same lineId again/)
+    assert.ok(!/delegate/.test(lineDialogOpenedResult('add', false)))
   })
 })

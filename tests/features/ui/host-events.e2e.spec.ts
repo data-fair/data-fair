@@ -183,12 +183,10 @@ test.describe('host events published to the assistant', () => {
     await page.getByRole('button', { name: /Ajouter une ligne/ }).click()
     await expect.poll(async () => lastKeyed(await readEvents(page), 'line-dialog')?.mode, { timeout: 15000 }).toBe('add')
 
-    // The dialog also announces itself as a transition. The form's subagent
-    // registers with the dialog, so it is missing from the tool list of the very
-    // request that opened it; telling the model to pick it up "next turn"
-    // deadlocked three judged runs, because the person was waiting to be told a
-    // button was ready and no next turn ever came. A declared wait resolves on
-    // this, and the same turn continues with the subagent in scope.
+    // The dialog also announces itself as a transition, so an assistant waiting
+    // on the person learns when they open it themselves. (A dialog the assistant
+    // opens needs no wait: the opener returns once the form's subagent is
+    // registered — line-dialog-tools.e2e.spec.ts.)
     const opened = (await readEvents(page)).find(e => e.name === 'dataset-line-dialog-opened')
     expect(opened, 'the dialog opened without saying so').toBeTruthy()
     expect(opened!.key, 'a keyed event would not resolve a wait').toBeFalsy()

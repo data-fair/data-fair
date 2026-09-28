@@ -12,10 +12,12 @@
  * cap. In the run after that, `navigate` still carried the second phrasing two
  * calls before an opener carrying the fix, and the model followed the older one.
  *
- * The answer that works is a declared wait: the arrival or the dialog reports
- * itself, the pending transition resolves the wait, and the same turn continues
- * with the tools in scope. Source-level, because these strings are built inline
- * in each tool's execute and nothing else would notice them drifting apart.
+ * The answer that works is a declared wait: the arrival reports itself, the
+ * pending transition resolves the wait, and the same turn continues with the
+ * tools in scope. The line dialogs no longer have the lag at all — their openers
+ * return once the form subagent is registered (line-dialog-tools.e2e.spec.ts) —
+ * and keep a wait only for the save. Source-level, because these strings are
+ * built inline and nothing else would notice them drifting apart.
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
@@ -23,7 +25,7 @@ import { readFileSync } from 'node:fs'
 
 const sources = {
   navigate: 'ui/src/composables/agent/navigation-tools.ts',
-  lineDialogs: 'ui/src/components/dataset/table/dataset-table.vue'
+  lineDialogs: 'ui/src/composables/dataset/agent-edit-line-logic.ts'
 }
 
 /** Only the strings the model reads — comments explain this history at length. */
