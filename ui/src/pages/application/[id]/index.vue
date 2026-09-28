@@ -189,7 +189,7 @@
               class="pa-0"
             >
               <d-frame
-                :src="`${applicationLink}?d-frame=true&primary=${theme.current.value.colors.primary}`"
+                :src="`${applicationLink}?d-frame=true&primary=${encodeURIComponent(theme.current.value.colors.primary as string)}`"
                 resize="no"
                 aspect-ratio
                 sync-params
