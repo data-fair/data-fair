@@ -42,12 +42,30 @@ export function hasLineFormSubAgent (tools: unknown): boolean {
  * on. Not ready is the bounded wait running out (a slow schema fetch); calling
  * the opener again re-checks without reopening anything.
  */
-export function lineDialogOpenedResult (mode: 'add' | 'edit', formReady: boolean): string {
-  const dialog = mode === 'add' ? 'Add line dialog' : 'Edit line dialog'
+export function lineDialogOpenedResult (mode: 'add' | 'edit', formReady: boolean, line?: string): string {
+  const dialog = (mode === 'add' ? 'Add line dialog' : 'Edit line dialog') + (line ? ` (on the line ${line})` : '')
   if (!formReady) {
     const retry = mode === 'add' ? 'open_add_line_dialog' : 'open_edit_line_dialog with the same lineId'
     return `${dialog} opened, but its form is still loading, so the editLine_form subagent is not available yet. Call ${retry} again to check.`
   }
   return `${dialog} opened and its form is ready: delegate to the editLine_form subagent now to ${mode === 'add' ? 'fill' : 'modify'} it. ` +
     'When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action: the save reports itself, so you learn of it without asking them to say so.'
+}
+
+/**
+ * The line an edit dialog opened, by its fillable values, for the opener's result.
+ *
+ * A judged run opened the edit dialog on the line it had just created — the one
+ * _id in its context — rather than the one it meant to correct, and the result
+ * said nothing about which line was open. Naming it makes a wrong _id visible
+ * before anything is written into the form.
+ */
+export function describeLine (schema: Array<Record<string, any>> | undefined, line: Record<string, any>): string {
+  return fillableColumns(schema)
+    .filter(f => line[f.key] !== null && line[f.key] !== undefined && line[f.key] !== '')
+    .map(f => {
+      const value = String(line[f.key])
+      return `${f.key}: ${value.length > 60 ? value.slice(0, 60) + '…' : value}`
+    })
+    .join(', ')
 }

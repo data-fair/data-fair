@@ -1,23 +1,17 @@
 /**
- * Page-scoped tools are not callable in the request that caused the page (or the
- * dialog) to appear. Every tool result that mentions this must send the model to
- * the same place, because they land in the same request and the model obeys one
- * of them.
+ * Tools that make new page tools appear (navigate, the line dialog openers) now
+ * return once those tools are registered, and the chat offers a tool registered
+ * while a host tool runs on its very next step. There is no lag left to explain.
  *
- * Both obvious phrasings have now failed in judged runs. "You can now delegate"
- * is false for that request: a run took it literally, found no subagent, and
- * burned a turn on a junk dispatch. "Finish your reply and it will be available
- * on the next turn" is true but deadlocks — there is no next turn when the person
- * is waiting to be told a button is ready — and it drained three runs to the turn
- * cap. In the run after that, `navigate` still carried the second phrasing two
- * calls before an opener carrying the fix, and the model followed the older one.
- *
- * The answer that works is a declared wait: the arrival reports itself, the
- * pending transition resolves the wait, and the same turn continues with the
- * tools in scope. The line dialogs no longer have the lag at all — their openers
- * return once the form subagent is registered (line-dialog-tools.e2e.spec.ts) —
- * and keep a wait only for the save. Source-level, because these strings are
- * built inline and nothing else would notice them drifting apart.
+ * Every earlier explanation failed in judged or real runs. "Finish your reply and
+ * it will be available on the next turn" deadlocked: there is no next turn when
+ * the person is waiting to be told a button is ready. "Declare wait_for_user_action,
+ * the arrival resolves it" stalled: the arrival's event was delivered inside the
+ * opener's own result, so nothing was left to wake the wait — a real session sat
+ * on « En attente : Ouverture du formulaire d'ajout de ligne » over an open form.
+ * Source-level, because these strings are built inline and nothing else would
+ * notice one of them coming back. The registration itself is pinned end to end by
+ * tests/features/ui/line-dialog-tools.e2e.spec.ts.
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
@@ -34,31 +28,23 @@ const codeOf = (path: string) => readFileSync(path, 'utf8')
   .filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
   .join('\n')
 
-test.describe('what a tool result says about the one-turn lag', () => {
+test.describe('what a tool result says about newly registered tools', () => {
   for (const [name, path] of Object.entries(sources)) {
     test(`${name} does not tell the model to wait for a turn that may never come`, () => {
-      assert.ok(
-        !/finish your reply/i.test(codeOf(path)),
-        `${path}: "finish your reply … next turn" deadlocks when the person is waiting to be told a button is ready`
-      )
+      assert.ok(!/finish your reply/i.test(codeOf(path)), path)
     })
 
-    test(`${name} points at the wait that actually resolves`, () => {
-      assert.match(codeOf(path), /declare wait_for_user_action/)
+    test(`${name} does not call the new tools uncallable or send the model into a wait for them`, () => {
+      const code = codeOf(path)
+      assert.ok(!/not callable in this request|not in the tool list of this request|arriving here resolves it|dialog will report itself/i.test(code), path)
     })
   }
 
-  test('navigate names what resolves the wait, so the advice is checkable', () => {
-    // `resolvesWait` in the chat is `!event.key || event.key === LOCATION_KEY`,
-    // so arriving somewhere is one of the two things that ends a wait.
-    assert.match(codeOf(sources.navigate), /arriving here resolves it/i)
-  })
-
-  test('the line dialogs ask for a wait on the save too, not for a report', () => {
+  test('the line dialogs ask for a wait on the save, not for a report', () => {
     // dataset-line-saved exists precisely so the person is not asked to say
     // "c'est fait" — which two of four user messages were spent on.
     const code = codeOf(sources.lineDialogs)
-    assert.match(code, /the save reports itself/)
+    assert.match(code, /declare wait_for_user_action: the save reports itself/)
     assert.ok(!/Dites-moi quand/i.test(code), 'nothing should instruct the model to ask for a click report')
   })
 })

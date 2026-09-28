@@ -475,7 +475,8 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import { addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult } from '../../../composables/dataset/agent-edit-line-logic'
+import { addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult, describeLine } from '../../../composables/dataset/agent-edit-line-logic'
+import { agentToolError } from '~/composables/agent/utils'
 import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
@@ -695,8 +696,18 @@ if (edit) {
       required: ['lineId'] as const
     },
     execute: async (params: { lineId: string }) => {
+      // Fetched here, not only by the dialog's watcher, so an unknown _id is refused
+      // instead of reading as a form that is still loading.
+      let line: DatasetLine
+      try {
+        line = await $fetch(`datasets/${datasetId}/lines/${encodeURIComponent(params.lineId)}`)
+      } catch (err: any) {
+        return agentToolError('open_edit_line_dialog', `no line with _id "${params.lineId}" could be read (${err?.statusCode ?? err?.status ?? err?.message}). search_data returns each row's _id when \`_id\` is in its \`select\`.`)
+      }
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return lineDialogOpenedResult('edit', await untilLineFormRegistered())
+      // The form may still be registered for a line opened before, so wait for this one.
+      const ready = await untilReady(() => loadedLineId.value === params.lineId && hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+      return lineDialogOpenedResult('edit', ready, describeLine(dataset.value?.schema, line))
     }
   })
 }
@@ -766,10 +777,16 @@ const closeMapPreview = () => {
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 
 const showEditDialog = ref<ExtendedResult>()
+// The line whose data is in the form. Not editedLine._id: the form's v-model
+// rewrites editedLine with the schema's keys only.
+const loadedLineId = ref<string>()
 watch(showEditDialog, async () => {
   editedLine.value = undefined
+  loadedLineId.value = undefined
   if (!showEditDialog.value) return
-  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`, { params: { arrays: true } })
+  const lineId = showEditDialog.value._id
+  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${lineId}`, { params: { arrays: true } })
+  loadedLineId.value = lineId
   // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined
 })
