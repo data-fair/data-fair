@@ -23,7 +23,7 @@
           ref="frame"
           :height="`${windowHeight - 48}px`"
           resize="no"
-          :src="`${applicationLink}?d-frame=true&draft=true&primary=${theme.current.value.colors.primary}`"
+          :src="`${applicationLink}?d-frame=true&draft=true&primary=${encodeURIComponent(theme.current.value.colors.primary as string)}`"
           :reload="draftPreviewInc"
         />
       </v-col>
