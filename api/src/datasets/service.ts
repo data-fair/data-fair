@@ -28,6 +28,8 @@ import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } 
 import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
+import * as fragmentsService from '../fragments/service.ts'
+import { partOfListFilter } from '../fragments/operations.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import type { Db } from 'mongodb'
@@ -36,6 +38,10 @@ import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-exp
 import type { VirtualDataset } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
+
+// thin re-export: fragments/service.ts targets this module rather than datasets/utils/index.ts
+// directly (cross-module imports target service.ts/operations.ts/types.ts, see code-conventions.md §2)
+export { mergeDraft } from './utils/index.ts'
 
 const debugMasterData = debugLib('master-data')
 
@@ -98,6 +104,10 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     }
     if (typeFilters.length) extraFilters.push({ $or: typeFilters })
   }
+
+  // fragments are reached from their parent, not from the catalog (spec §4)
+  const partOfFilter = partOfListFilter(reqQuery)
+  if (partOfFilter) extraFilters.push(partOfFilter)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -321,6 +331,10 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
+  if (dataset.partOf) {
+    // a fragment carries the ACL derived from its parent, never the creation defaults (spec §3.7)
+    dataset.permissions = (await fragmentsService.preparePartOf('datasets', dataset, dataset.partOf, sessionState)).permissions
+  }
 
   if (dataset.initFrom) {
     dataset.initFrom.role = permissions.getOwnerRole(dataset.owner, sessionState)
@@ -446,6 +460,8 @@ export const deleteDataset = async (app: any, dataset: any) => {
   }
 
   await db.collection('datasets').deleteOne({ id: dataset.id })
+  // a draft view shares the id of its published dataset, which is not being deleted here
+  if (!dataset.draftReason) await virtualDatasetsUtils.detachFromVirtualParents(dataset.id)
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
   // notify catalogs that the dataset has been deleted

@@ -190,7 +190,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   }
 
   // Re-publish publications (with catalogs service)
-  catalogsPublicationQueue.updatePublication(dataset.id)
+  if (!dataset.partOf) catalogsPublicationQueue.updatePublication(dataset.id)
 
   if (patch.rest) {
     // be extra sure that primaryKeyMode is preserved

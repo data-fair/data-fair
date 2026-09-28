@@ -78,7 +78,8 @@ export class DfMongo {
         esWarning_1: { esWarning: 1 },
         terms: { _terms: 1 },
         'owner-terms': { 'owner.type': 1, 'owner.id': 1, _terms: 1 },
-        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }]
+        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }],
+        'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'remote-services': {
         id_1: [{ id: 1 }, { unique: true }],
@@ -104,7 +105,8 @@ export class DfMongo {
         'child-app-id': [{ 'configuration.applications.id': 1 }, { sparse: true }],
         terms: { _terms: 1 },
         'owner-terms': { 'owner.type': 1, 'owner.id': 1, _terms: 1 },
-        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }]
+        _needsSearchIndex_1: [{ _needsSearchIndex: 1 }, { sparse: true }],
+        'partOf.id_1': [{ 'partOf.id': 1 }, { sparse: true }]
       },
       'applications-keys': {
         'keys.id_1': { 'keys.id': 1 }

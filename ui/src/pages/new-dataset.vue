@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/datasets"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -107,9 +114,12 @@
             class="mb-4"
           />
           <dataset-init-from
+            :key="initFromParent?.id"
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
-            :allow-data="datasetType === 'file' || datasetType === 'rest'"
+            :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
+            :initial-dataset="initFromParent"
+            :fragment="!!partOf"
           />
         </v-stepper-window-item>
 
@@ -347,7 +357,14 @@
             </v-card-text>
           </v-card>
 
-          <df-owner-pick v-model="owner" />
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
 
           <dataset-conflicts
             v-if="step === 'action' && owner"
@@ -355,6 +372,7 @@
             :title="effectiveTitle"
             :filename="datasetType === 'file' && file ? file.name : undefined"
             :owner="owner"
+            :part-of="partOf"
           />
 
           <df-ui-notif-alert
@@ -440,6 +458,15 @@ const breadcrumbs = useBreadcrumbs()
 
 const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
+})
 
 breadcrumbs.receive({
   breadcrumbs: isSimple.value
@@ -457,7 +484,12 @@ interface InitFrom {
 
 // ---- Constants ----
 const allDatasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
-const datasetTypes = computed(() => isSimple.value ? allDatasetTypes.filter(dt => dt !== 'virtual') : allDatasetTypes)
+const datasetTypes = computed(() => {
+  if (isSimple.value) return allDatasetTypes.filter(dt => dt !== 'virtual')
+  // a metadata-only dataset holds no data, there is nothing for it to contribute as a fragment
+  if (partOf.value) return allDatasetTypes.filter(dt => dt !== 'metaOnly')
+  return allDatasetTypes
+})
 const datasetTypeIcons: Record<DatasetType, string> = {
   file: mdiFileUpload,
   rest: mdiAllInclusive,
@@ -607,6 +639,26 @@ const metaOnlyTitle = ref('')
 
 // ---- Owner ----
 const owner = ref<AccountKeys | null>(null)
+
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVirtual?: boolean, schema?: any[] }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner,isVirtual,schema,count' }, notifError: false })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+// a fragment of a virtual dataset starts from the columns the parent exposes, so it fits right in once
+// it joins the parent's children (the data part is not offered: it would duplicate the parent's rows)
+const initFromParent = computed(() => {
+  const parent = partOfParentFetch.data.value
+  if (partOf.value?.type !== 'dataset' || !parent?.isVirtual || !parent.schema?.some(p => !p['x-calculated'])) return null
+  return parent
+})
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
 
 // ---- Conflicts ----
 const conflictsOk = ref(false)
@@ -777,6 +829,7 @@ async function createFileDataset () {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
+  if (partOf.value) body.partOf = partOf.value
   if (attachments.value && attachmentsAsImage.value) {
     body.attachmentsAsImage = true
   }
@@ -829,6 +882,7 @@ async function createRestDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (initFrom.value) {
     body.initFrom = initFrom.value
@@ -870,6 +924,7 @@ async function createVirtualDataset () {
     },
     schema: [] as any[]
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value
@@ -915,6 +970,7 @@ async function createMetaOnlyDataset () {
     isMetaOnly: true,
     title: metaOnlyTitle.value
   }
+  if (partOf.value) body.partOf = partOf.value
 
   if (owner.value) {
     body.owner = owner.value
@@ -933,6 +989,7 @@ fr:
   home: Accueil
   datasets: Jeux de données
   newDataset: Créer un jeu de données
+  newFragment: Nouveau fragment
   helpCreatePrompt: Aidez-moi à créer un jeu de données
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   stepType: Type de jeu de données
@@ -990,6 +1047,7 @@ en:
   home: Home
   datasets: Datasets
   newDataset: Create a dataset
+  newFragment: New fragment
   helpCreatePrompt: Help me create a dataset
   choseType: Choose the type of dataset you wish to create.
   stepType: Dataset type

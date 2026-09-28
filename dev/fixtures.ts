@@ -186,7 +186,8 @@ const fixtureTopics = [
   { id: 'demo-geo', title: 'Géographique', color: '#2E7D32' },
   { id: 'demo-dates', title: 'Dates et fuseaux', color: '#6A1B9A' },
   { id: 'demo-unicite', title: 'Unicité', color: '#E65100' },
-  { id: 'demo-recherche', title: 'Recherche et filtres', color: '#00838F' }
+  { id: 'demo-recherche', title: 'Recherche et filtres', color: '#00838F' },
+  { id: 'demo-fragments', title: 'Fragments', color: '#5D4037' }
 ]
 
 const datasetTopics: Record<string, string[]> = {
@@ -201,7 +202,8 @@ const datasetTopics: Record<string, string[]> = {
   'fixtures-unicite-rest': ['demo-unicite', 'demo-editable'],
   'fixtures-unicite-fichier': ['demo-unicite', 'demo-fichier'],
   'fixtures-date-coherence-rest': ['demo-dates', 'demo-editable'],
-  'fixtures-date-coherence-fichier': ['demo-dates', 'demo-fichier']
+  'fixtures-date-coherence-fichier': ['demo-dates', 'demo-fichier'],
+  'fixtures-fragments-virtuel': ['demo-fragments']
 }
 
 /** Upsert the demo topics into the org settings — merge by id so manually
@@ -359,6 +361,58 @@ async function seedSuiviDemandes () {
   // lines one by one leaves dataset.count stale due to debounced finalizes)
   await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
   console.log(`${id}: seeded (${lines.length} lines)`)
+}
+
+/** Fragments demo: a virtual dataset fed by yearly CSV files uploaded as its fragments (partOf).
+ * The fragments are hidden from the datasets list and only reachable from the parent's Fragments
+ * section. Adding a fragment to the parent's sources is an explicit step: 2023 and 2024 are added
+ * here, 2025 is left out to show a fragment still being prepared ("Ajouter aux sources").
+ * Skip-if-exists per dataset, so a partial run completes. */
+async function seedFragments () {
+  const id = 'fixtures-fragments-virtuel'
+  const partOf = { type: 'dataset', id }
+  if (!await datasetExists(id)) {
+    await dfAx.post(`/api/v1/datasets/${id}`, {
+      isVirtual: true,
+      title: 'Consommations électriques mensuelles (agrégées)',
+      description: 'Jeu de données virtuel alimenté par un fichier par année, chacun déposé comme **fragment** : ' +
+        'les fichiers annuels n\'apparaissent pas dans la liste des jeux de données, ils se retrouvent dans la section ' +
+        '« Fragments » de ce jeu de données et seront supprimés avec lui. Pour ajouter une année, utiliser le bouton ' +
+        '« Nouveau jeu de données fragment » : le fichier reprend les colonnes du parent, puis une fois vérifié, ' +
+        '« Ajouter aux sources » l\'intègre au jeu de données. L\'année 2025 est déposée mais pas encore ajoutée.'
+    })
+    console.log(`${id}: seeded (virtual)`)
+  } else {
+    console.log(`${id}: skipped (exists)`)
+  }
+
+  const communes: [string, number][] = [['Rennes', 180], ['Brest', 110], ['Vannes', 55]]
+  const years = [2023, 2024, 2025]
+  for (const year of years) {
+    const fragmentId = `fixtures-fragments-${year}`
+    if (await datasetExists(fragmentId)) { console.log(`${fragmentId}: skipped (exists)`); continue }
+    const rows = ['commune,mois,consommation_mwh']
+    for (const [commune, base] of communes) {
+      for (let month = 1; month <= 12; month++) {
+        // winter peak, slight yearly decrease: deterministic so re-seeds are identical
+        const seasonal = 1 + 0.35 * Math.cos((month - 1) / 12 * 2 * Math.PI)
+        rows.push(`${commune},${year}-${String(month).padStart(2, '0')},${(base * seasonal * (1 - (year - 2023) * 0.02)).toFixed(1)}`)
+      }
+    }
+    await uploadCsv(fragmentId, `consommations-${year}.csv`, { title: `Consommations ${year}`, partOf }, rows.join('\n') + '\n')
+    console.log(`${fragmentId}: seeded (CSV fragment of ${id})`)
+  }
+
+  const sources = ['fixtures-fragments-2023', 'fixtures-fragments-2024']
+  const { data: virtual } = await dfAx.get(`/api/v1/datasets/${id}`)
+  if ((virtual.virtual?.children ?? []).length) return
+  // a child must be finalized (indexed) before the virtual dataset can use it
+  for (const source of sources) await waitForFinalized(source)
+  await dfAx.patch(`/api/v1/datasets/${id}`, {
+    virtual: { ...virtual.virtual, children: sources },
+    schema: [{ key: 'commune' }, { key: 'mois' }, { key: 'consommation_mwh' }]
+  })
+  console.log(`${id}: ${sources.join(', ')} added to its sources`)
 }
 
 /** Integrity demo — healthy: a file dataset with integrity on, a real version
@@ -909,13 +963,14 @@ async function main () {
   await seedDateCoherenceRest()
   await seedDateCoherenceFichier()
   await seedBrouillonErreur()
+  await seedFragments()
 
   // after seeding so it also upgrades datasets skipped by earlier runs
   await ensureDatasetTopics()
   await ensureBreachState()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-date-coherence-rest', 'fixtures-date-coherence-fichier', 'fixtures-brouillon-erreur']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-date-coherence-rest', 'fixtures-date-coherence-fichier', 'fixtures-brouillon-erreur', 'fixtures-fragments-virtuel']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')

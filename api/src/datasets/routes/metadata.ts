@@ -30,6 +30,9 @@ import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
+import * as fragmentsService from '../../fragments/service.ts'
+import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
+import { reqEventLogContext } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { searchIndexPatch } from '../utils/search-text.ts'
 import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
@@ -122,6 +125,11 @@ export const registerMetadataRoutes = (router: Router) => {
   router.use('/:datasetId/permissions', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
     // this callback function is called when the resource becomes public
     await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
+  }, async (patchedDataset) => {
+    await fragmentsService.syncFragmentPermissions('datasets', patchedDataset)
+    // no application-key cache invalidation here on purpose: all five memos in application-key.ts
+    // are keyed on an application id and hold application documents only, so a dataset ACL change
+    // cannot make any of them stale — clearing them would just cold-flush hot memos
   }))
 
   // retrieve a dataset by its id
@@ -175,6 +183,8 @@ export const registerMetadataRoutes = (router: Router) => {
     (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    // fragments are never publishable — shared with the other three write routes (spec §5)
+    fragmentWriteGuard(true),
     async (req, res) => {
       // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
       const dataset: any = clone(reqDataset(req))
@@ -183,6 +193,18 @@ export const registerMetadataRoutes = (router: Router) => {
       const sessionState = reqSessionAuthenticated(req)
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+
+      // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
+      // the fragmentWriteGuard mounted above, shared with every other write route
+      if ('partOf' in patch) {
+        const updated = await fragmentsService.applyPartOfChange('datasets', dataset, patch.partOf, sessionState, whoFromReq(req))
+        delete patch.partOf
+        if (updated.partOf) dataset.partOf = updated.partOf
+        else delete dataset.partOf
+        dataset.permissions = updated.permissions
+        dataset.updatedAt = updated.updatedAt
+        eventsLog.info('df.datasets.partOf', `changed dataset parentage ${dataset.slug} (${dataset.id}) -> ${JSON.stringify(dataset.partOf ?? null)}`, { req, account: dataset.owner })
+      }
 
       // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
       // attachments and line ownership are outside the integrity snapshot, so acquiring them
@@ -260,6 +282,9 @@ export const registerMetadataRoutes = (router: Router) => {
   // Change ownership of a dataset
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
+
+    if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+    if (await fragmentsService.countFragments('dataset', dataset.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
 
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
@@ -368,6 +393,9 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
+
+    // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

@@ -352,6 +352,23 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
+### Fragments and the listing tools
+
+`list_datasets` and `list_applications` call the same `findDatasets` / `findApplications` service
+functions as every other listing consumer, so they inherit the default hiding of
+[fragments](./fragments.md) (`partOf`) with no fragment-specific code: a dataset or application
+that is a fragment of another resource simply does not appear unless the query pins it (by `id`,
+`slug`, `dataset`, `application`, …) or explicitly filters `partOf=`, neither of which these tools
+expose. Single-resource lookups are untouched: `describe_dataset` and `describe_application` work
+on a fragment id exactly like on any other resource, but their curated field whitelist
+(`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) does not
+include `partOf`, in either the text summary or `structuredContent` — the assistant cannot
+currently tell a fragment from a standalone resource through these tools. The "Fragments" tab
+shown on a virtual dataset's page (Structure section) or
+an application's own page (Render section) carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
+`ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
+fragment" action within it.
+
 ## 5. Tool Reference
 
 | Tool | Category | R/W | Source |

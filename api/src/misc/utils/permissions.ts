@@ -5,6 +5,7 @@ import type { RequestWithResource, ResourceType, Permission, Resource, BypassPer
 import config from '#config'
 import mongo from '#mongo'
 import { Router } from 'express'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
@@ -344,7 +345,7 @@ export const initResourcePermissions = async (resource: Resource, extraPermissio
 }
 
 /** Builds the Express sub-router exposing GET /permissions, PUT /permissions and lookup helpers, mounted under each resource. */
-export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void)) => {
+export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void), onUpdated?: (resource: Resource) => Promise<void>) => {
   const router = Router()
 
   router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
@@ -365,6 +366,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     const resources = mongo.db.collection(resourceType)
     try {
       const resource = await reqResource(req)
+      if (resource.partOf) throw httpError(403, 'Les permissions d\'un fragment sont dérivées de celles de son parent et ne peuvent pas être modifiées directement')
       const wasPublic = isPublic(resourceType, resource)
       const willBePublic = isPublic(resourceType, { ...resource, permissions })
 
@@ -394,6 +396,8 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
         stampHistorize(permissionsUpdate, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
       }
       await resources.updateOne({ id: resource.id }, permissionsUpdate)
+
+      if (onUpdated) await onUpdated({ ...resource, permissions })
 
       if (!wasPublic && willBePublic && onPublicCallback) {
         await onPublicCallback(req, { ...resource, permissions: req.body })
