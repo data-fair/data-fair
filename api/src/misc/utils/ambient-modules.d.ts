@@ -76,16 +76,10 @@ declare module 'JSONStream' {
   export default JSONStream
 }
 
-declare module 'mime-type-stream' {
+declare module 'ndjson' {
   import type { Transform } from 'node:stream'
-  /** The three mime types the module actually handles; anything else yields undefined. */
-  type MimeTypeStreamType = 'text/csv' | 'application/json' | 'application/x-ndjson'
-  interface MimeTypeStreams { parser: () => Transform, serializer: () => Transform }
-  const mimeTypeStream: {
-    (mimeType: MimeTypeStreamType): MimeTypeStreams
-    (mimeType?: string): MimeTypeStreams | undefined
-  }
-  export default mimeTypeStream
+  const ndjson: { parse: (opts?: { strict?: boolean }) => Transform, serialize: () => Transform }
+  export default ndjson
 }
 
 declare module 'mongo-escape' {

@@ -1,7 +1,7 @@
 import es from '#es'
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import mimeTypeStream from 'mime-type-stream'
+import { mimeTypeStream } from './mime-type-stream.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import batchStream from '../../misc/utils/batch-stream.ts'
 import * as esUtils from '../es/index.ts'
@@ -91,7 +91,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
     return params
   }
 
-  const ioStream = mimeTypeStream(contentType) || mimeTypeStream('application/json')
+  const ioStream = mimeTypeStream(contentType) ?? mimeTypeStream('application/json')
 
   let lineIndex = 0
   return [
