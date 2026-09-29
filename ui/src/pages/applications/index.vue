@@ -137,6 +137,13 @@
         </template>
       </v-tooltip>
 
+      <!-- Capability filter -->
+      <capability-filter
+        v-model="can"
+        resource-type="applications"
+        class="mt-4 mx-4"
+      />
+
       <!-- Super admin toggle -->
       <v-switch
         v-if="session.state.user?.adminMode"
@@ -222,6 +229,7 @@ const facetVisibility = useStringsArraySearchParam('visibility')
 const facetTopics = useStringsArraySearchParam('topics')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
+const can = useStringsArraySearchParam('can')
 
 // Parent applications filter (applications using a specific application)
 const parentApp = useStringSearchParam('application')
@@ -259,6 +267,7 @@ const applicationsQuery = computed(() => {
   if (facetTopics.value?.length) params.topics = facetTopics.value.join(',')
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
+  if (can.value?.length) params.can = can.value.join(',')
   if (parentApp.value) params.application = parentApp.value
   if (shared.value) params.shared = shared.value
   else if (showAll.value !== 'true') params.shared = 'false'

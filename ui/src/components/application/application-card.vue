@@ -42,6 +42,13 @@
           :visibility="application.visibility"
           size="small"
         />
+        <capability-chip
+          v-if="showCapabilityChip"
+          resource-type="applications"
+          :user-permissions="cardUserPermissions"
+          :access-sources="cardAccessSources"
+          class="ml-2"
+        />
         <span
           v-if="application.updatedAt"
           class="ml-2"
@@ -63,7 +70,17 @@ const showAll = useBooleanSearchParam('showAll')
 
 const props = defineProps<{
   application: Partial<Application> & Pick<Application, 'id' | 'title' | 'updatedAt' | 'owner'> & { visibility?: 'public' | 'private' | 'protected', thumbnail?: string }
+  showCapability?: boolean
 }>()
+
+const cardUserPermissions = computed(() => (props.application as Application & { userPermissions?: string[] }).userPermissions)
+const cardAccessSources = computed(() => (props.application as Application & { accessSources?: AccessSources }).accessSources)
+const showCapabilityChip = computed(() => {
+  if (props.showCapability) return true
+  const account = session.state.account
+  if (!account) return false
+  return !(props.application.owner.type === account.type && props.application.owner.id === account.id && (props.application.owner.department || null) === (account.department || null))
+})
 
 const captureUrl = computed(() => {
   return props.application.thumbnail || props.application.image || `${props.application.href}/capture?updatedAt=${props.application.updatedAt}`

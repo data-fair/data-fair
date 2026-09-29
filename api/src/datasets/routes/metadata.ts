@@ -8,11 +8,13 @@ import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
+import { getAsVisitorContext } from '../../misc/utils/as-visitor.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { can, reqResource } from '../../misc/utils/permissions.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
@@ -115,9 +117,20 @@ export const registerMetadataRoutes = (router: Router) => {
     const publicBaseUrl = reqPublicBaseUrl(req)
     const reqQuery = req.query as Record<string, string>
 
-    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
+    // an org admin can browse the list as a hypothetical visitor (access audit view)
+    let sessionState = reqSession(req)
+    let asVisitorFilters: any[] | undefined
+    if (reqQuery.asVisitor) {
+      const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+      sessionState = ctx.sessionState
+      asVisitorFilters = [ctx.ownerFilter]
+    }
+
+    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, sessionState, { extraFilters: asVisitorFilters })
     for (const r of response.results) {
-      datasetUtils.clean(req as DfRequest, r)
+      // tell the auditing admin why the visitor reaches each resource (computed before clean drops permissions)
+      if (asVisitorFilters) r.accessSources = permissions.accessSources('datasets', r, sessionState)
+      datasetUtils.clean(req as DfRequest, r, false, sessionState)
     }
     res.json(response)
   })

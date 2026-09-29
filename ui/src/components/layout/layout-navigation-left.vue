@@ -124,6 +124,7 @@ fr:
   applications: Applications
   org: Gestion de l'organisation
   dep: Gestion du département
+  accessAudit: Audit des accès
   params: Paramètres
   catalogs: Catalogues distants
   processings: Traitements périodiques
@@ -161,6 +162,7 @@ en:
   applications: Applications
   org: Manage organization
   dep: Manage department
+  accessAudit: Access audit
   params: Parameters
   catalogs: Remote catalogs
   processings: Periodic processings

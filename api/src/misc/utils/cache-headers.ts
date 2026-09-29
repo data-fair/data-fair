@@ -90,6 +90,8 @@ export const listBased: RequestHandler = (req, res, next) => {
   const select = req.query.select ? req.query.select.split(',') : []
   let cacheVisibility = 'private'
   if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
+  // an asVisitor audit response carries access provenance of the caller's org, never share it
+  if (req.query.asVisitor) cacheVisibility = 'private'
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'yes')
