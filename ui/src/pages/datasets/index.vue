@@ -137,13 +137,6 @@
         </template>
       </v-tooltip>
 
-      <!-- Capability filter -->
-      <capability-filter
-        v-model="can"
-        resource-type="datasets"
-        class="mt-4 mx-4"
-      />
-
       <!-- Super admin toggle -->
       <v-switch
         v-if="session.state.user?.adminMode"
@@ -239,7 +232,6 @@ const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPubl
 const facetServices = useStringsArraySearchParam('services')
 const facetConcepts = useStringsArraySearchParam('concepts')
 const facetType = useStringsArraySearchParam('type')
-const can = useStringsArraySearchParam('can')
 
 // Virtual datasets filter (children of a specific dataset)
 const children = useStringSearchParam('children')
@@ -282,7 +274,6 @@ const datasetsQuery = computed(() => {
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
   if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
   if (facetType.value?.length) params.type = facetType.value.join(',')
-  if (can.value?.length) params.can = can.value.join(',')
   if (children.value) params.children = children.value
   if (shared.value) params.shared = shared.value
   else if (showAll.value !== 'true') params.shared = 'false'
