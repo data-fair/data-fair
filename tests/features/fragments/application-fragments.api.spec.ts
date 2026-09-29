@@ -58,6 +58,22 @@ test.describe('application fragments', () => {
     assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data.partOf, { type: 'application', id: dashboard.id })
   })
 
+  // an orphan (left by a race or an integrity restore) still points to its dead parent's id, and
+  // application ids can be chosen through PUT: another owner claiming that id must not reach it
+  test('a resource re-using a dead parent\'s id cannot re-ACL nor delete its orphaned fragments', async () => {
+    const dashboard = await createApp()
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    // orphan the fragment out of band
+    await anonymous.post(`/api/v1/test-env/patch-application/${dashboard.id}`, { id: dashboard.id + '-gone' })
+
+    await testUser3.put(`/api/v1/applications/${dashboard.id}`, { url: mockAppUrl('monapp1'), title: 'claimed id' })
+    await testUser3.put(`/api/v1/applications/${dashboard.id}/permissions`, [{ classes: ['list', 'read'] }])
+    const permissions = (await testUser1Org.get(`/api/v1/applications/${sub.id}/permissions`)).data
+    assert.ok(!permissions.some((p: any) => !p.type), 'the orphan must not inherit the claimed parent\'s public entry')
+    await testUser3.delete(`/api/v1/applications/${dashboard.id}`)
+    assert.equal((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).status, 200)
+  })
+
   test('refusals: an application cannot be a fragment of a dataset', async () => {
     const virtual = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, title: 'v' })).data
     await assert.rejects(createApp(testUser1Org, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })

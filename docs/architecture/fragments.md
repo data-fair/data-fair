@@ -403,6 +403,13 @@ parent's finalization, whose count queries every descendant index.
 - Both writes stamp integrity history on datasets with `integrity.active` (`stampHistorize`,
   `service.ts:74-77`), the same forensic posture as `PUT /permissions`.
 
+**Parent-driven writes are owner-scoped.** `syncFragmentPermissions` and `deleteFragments` only
+reach fragments of the parent's own owner (`ownedFragmentsFilter`). A fragment orphaned by a race
+or an integrity restore still points to its dead parent's id, and ids can be chosen through `PUT`:
+without the owner in the filter, another owner creating a resource under that id adopted the orphan
+— its ACL rewritten from their resource, deleted with it. `countFragments` stays unscoped, since it
+only ever blocks.
+
 **Delete cascade.** `deleteDataset` / `deleteApplication` routes call `deleteFragments`
 (`api/src/fragments/service.ts:101-130`) **before** deleting the parent
 (`datasets/routes/metadata.ts:334`, `applications/router.ts:162`): it lists every fragment of the

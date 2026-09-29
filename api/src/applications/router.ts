@@ -165,7 +165,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-  await fragmentsService.deleteFragments(req.app, ctx, 'application', reqApplication(req).id)
+  await fragmentsService.deleteFragments(req.app, ctx, 'application', reqApplication(req).id, reqApplication(req).owner)
   await service.deleteApplication(ctx, reqApplication(req))
   res.sendStatus(204)
 })

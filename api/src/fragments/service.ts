@@ -21,6 +21,17 @@ export const getParent = async (partOf: PartOf) => {
 
 const fragmentsFilter = (type: PartOf['type'], id: string) => ({ 'partOf.type': type, 'partOf.id': id })
 
+type OwnerLike = { type: string, id: string, department?: string }
+// the fragments a parent may WRITE to (ACL sync, delete cascade) are those of its own owner. A fragment
+// orphaned by a race or an integrity restore still points to its dead parent's id, and ids can be
+// chosen (PUT): another owner creating a resource under that id must not adopt, re-ACL or delete it.
+const ownedFragmentsFilter = (type: PartOf['type'], id: string, owner: OwnerLike) => ({
+  ...fragmentsFilter(type, id),
+  'owner.type': owner.type,
+  'owner.id': owner.id,
+  'owner.department': owner.department ?? null
+})
+
 export const countFragments = async (type: PartOf['type'], id: string): Promise<number> => {
   const [nbDatasets, nbApplications] = await Promise.all([
     mongo.datasets.countDocuments(fragmentsFilter(type, id)),
@@ -29,10 +40,10 @@ export const countFragments = async (type: PartOf['type'], id: string): Promise<
   return nbDatasets + nbApplications
 }
 
-export const findFragments = async (type: PartOf['type'], id: string) => {
+export const findFragments = async (type: PartOf['type'], id: string, owner: OwnerLike) => {
   const [datasets, applications] = await Promise.all([
-    mongo.datasets.find(fragmentsFilter(type, id)).toArray(),
-    mongo.applications.find(fragmentsFilter(type, id)).toArray()
+    mongo.datasets.find(ownedFragmentsFilter(type, id, owner)).toArray(),
+    mongo.applications.find(ownedFragmentsFilter(type, id, owner)).toArray()
   ])
   return { datasets, applications }
 }
@@ -125,9 +136,9 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
 }
 
 /** Recompute the derived ACL of every fragment of `parent` (spec §3.7). At most three updateMany. */
-export const syncFragmentPermissions = async (parentType: FragmentResourceType, parent: { id: string, permissions?: Permission[] }) => {
+export const syncFragmentPermissions = async (parentType: FragmentResourceType, parent: { id: string, owner: OwnerLike, permissions?: Permission[] }) => {
   const type = resourceTypeToPartOfType(parentType)
-  const filter = fragmentsFilter(type, parent.id)
+  const filter = ownedFragmentsFilter(type, parent.id, parent.owner)
   const updatedAt = new Date().toISOString()
   const $set = { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'datasets'), updatedAt }
   // `permissions` is integrity-covered metadata: an unstamped writer makes the fragment's next
@@ -151,8 +162,8 @@ export const syncFragmentPermissions = async (parentType: FragmentResourceType, 
  * Delete every fragment of a parent through the full service deletes (journal, index, files, keys).
  * Dynamic imports: datasets/service and applications/service both import this module.
  */
-export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: PartOf['type'], parentId: string) => {
-  const { datasets, applications } = await findFragments(parentType, parentId)
+export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: PartOf['type'], parentId: string, parentOwner: OwnerLike) => {
+  const { datasets, applications } = await findFragments(parentType, parentId, parentOwner)
   if (datasets.length) {
     const { deleteDataset, mergeDraft } = await import('../datasets/service.ts')
     const { syncDataset: syncRemoteService } = await import('../remote-services/service.ts')

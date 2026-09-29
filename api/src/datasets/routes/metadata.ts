@@ -400,7 +400,7 @@ export const registerMetadataRoutes = (router: Router) => {
     const datasetFull: any = reqDatasetFull(req)
 
     // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, dataset.owner)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {
