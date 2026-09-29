@@ -85,11 +85,21 @@ export const applyResourceCacheHeaders = (req: Request, res: Response, date: Dat
   return false
 }
 
+// The reverse-proxy cache is keyed on the URL, not on the session: a list response can only be
+// shared when nothing in it depends on the caller. Only public items (visibility=public and no
+// private/protected flag, see visibility.filters), no user-scoped filter, no count of private items.
+const callerDependentListParams = ['private', 'protected', 'can', 'mine', 'shared', 'privateAccess', 'showAll']
+export const isPublicList = (query: Record<string, any>) => {
+  if (query.visibility !== 'public') return false
+  if (typeof query.select !== 'string' || !query.select.split(',').includes('-userPermissions')) return false
+  if (callerDependentListParams.some(p => query[p] !== undefined)) return false
+  if (query.facets !== undefined && (typeof query.facets !== 'string' || query.facets.split(',').includes('visibility'))) return false
+  return true
+}
+
 // adapt headers for a request listing the content of a collection
 export const listBased: RequestHandler = (req, res, next) => {
-  const select = req.query.select ? req.query.select.split(',') : []
-  let cacheVisibility = 'private'
-  if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
+  const cacheVisibility = isPublicList(req.query) ? 'public' : 'private'
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'yes')
