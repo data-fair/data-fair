@@ -1,5 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
@@ -130,6 +132,39 @@ test.describe('REST datasets with owner specific lines', () => {
 
     res = await testUser3.get(`/api/v1/datasets/${dataset.id}/safe-schema?mimeType=application/schema%2Bjson`)
     assert.equal(res.data.properties.col_multi['x-group'], 'Group A')
+  })
+
+  test('Own-lines bulk requests cannot replace or overwrite other users\' data', async () => {
+    const dataset = (await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'own lines bulk',
+      rest: { lineOwnership: true },
+      schema: [
+        { key: 'col1', type: 'string' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })).data
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { _id: 'otherline', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+
+    // drop mode would swap the whole collection for the caller's lines only
+    await assert.rejects(
+      testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/_bulk_lines`, [{ _id: 'myline', col1: 'mine' }], { params: { drop: 'true' } }),
+      (err: any) => err.status === 400
+    )
+    // an attachments archive is extracted over the whole dataset's attachments folder
+    const form = new FormData()
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+    form.append('actions', Buffer.from(JSON.stringify([{ _id: 'myline', col1: 'mine', attachmentPath: 'test.odt' }]), 'utf8'), 'actions.json')
+    await assert.rejects(
+      testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/_bulk_lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }),
+      (err: any) => err.status === 400
+    )
+    const res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.deepEqual(res.data.results.map((l: any) => l._id), ['otherline'])
   })
 
   test('Handle a dataset with line ownership and a primary key that includes _owner', async () => {

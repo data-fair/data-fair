@@ -1326,12 +1326,22 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
     // locked anchors still vouch for — bulk deletions must go through the transaction path
     if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
+    // drop swaps the whole collection for one holding only this request's lines: on the own-lines
+    // routes that would delete every other user's lines
+    if (drop && reqLinesOwnerOptional(req)) throw httpError(400, 'le mode drop est refusé sur les routes de gestion de ses propres lignes')
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
 
     // If attachments are sent, add them to the existing ones
     const attachmentsFile = req.files?.attachments?.[0]
+    // an archive is extracted into the whole dataset's attachments folder and every line referencing
+    // one of its file names is reindexed, whoever owns it: a contributor limited to their own lines
+    // would overwrite other users' files. Their attachments go through the single-line routes.
+    if (attachmentsFile && reqLinesOwnerOptional(req)) {
+      await filesStorage.removeFile(attachmentsFile.path).catch((err) => console.warn('failed to clean up refused attachments archive', attachmentsFile.path, err))
+      throw httpError(400, 'Une archive de pièces jointes ne peut pas être envoyée sur les routes de gestion de ses propres lignes')
+    }
     if (attachmentsFile) {
       await mongo.datasets.updateOne({ id: dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
     }
