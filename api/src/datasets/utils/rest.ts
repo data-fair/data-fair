@@ -17,6 +17,7 @@ import stableStringify from 'fast-json-stable-stringify'
 import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
+import resolvePath from 'resolve-path'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
@@ -25,7 +26,7 @@ import { extensionOwnedKeys } from '../../integrity/lines-operations.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
-import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
+import { attachmentPath, dataDir, isSafeLineAttachmentId, lsAttachments, tmpDir } from './files.ts'
 import { stripTransientLineFlags } from './line-flags.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
@@ -750,6 +751,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
   let bulkOpResult
+  const conflictedUpserts: Operation[] = []
   if (bulkOpMatchingOperations.length) {
     try {
       bulkOpResult = await bulkOp.execute()
@@ -778,12 +780,27 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
             if (operation._action === 'createOrUpdate') {
             // this conflict means that the hash was unchanged
               operation._status = 304
+              conflictedUpserts.push(operation)
             }
           }
         } else {
           operation._status = 500
           operation._error = writeError.err.errmsg
         }
+      }
+    }
+  }
+
+  // with an owner filter the conflict can also mean that the _id belongs to another user's line
+  if (linesOwner && conflictedUpserts.length) {
+    const owned = new Set<string>()
+    for await (const line of c.find({ _id: { $in: conflictedUpserts.map(op => op._id) }, ...linesOwnerFilter(linesOwner) }).project({ _id: 1 })) {
+      owned.add(line._id)
+    }
+    for (const operation of conflictedUpserts) {
+      if (!owned.has(operation._id)) {
+        operation._status = 403
+        operation._error = 'cet identifiant de ligne est utilisé par une ligne d\'un autre utilisateur'
       }
     }
   }
@@ -810,7 +827,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   } else {
     for (const operation of operations) {
-      if (operation._action === 'delete' && !operation._error && (!operation._status || operation._status < 300)) {
+      if (operation._action === 'delete' && !operation._error && (!operation._status || operation._status < 300) && isSafeLineAttachmentId(operation._id)) {
         const dir = attachmentPath(dataset, operation._id)
         await filesStorage.removeDir(dir)
       }
@@ -994,7 +1011,13 @@ type ManageAttachmentContext = {
   lineId?: string | string[]
 }
 
-async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boolean): Promise<{ rawBody?: Record<string, any>, uploadedAttachmentPath?: string }> {
+// Files of a line's previous attachment that must go once the write is known to have succeeded.
+// Removing them before the transaction ran let any caller able to post a line wipe another line's
+// attachment by sending its _id: the write itself was then refused (ownership, validation) or
+// ended as a silent 304, but the files were already gone.
+type StaleAttachments = { dir: string, keep?: string }
+
+async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boolean): Promise<{ rawBody?: Record<string, any>, uploadedAttachmentPath?: string, staleAttachments?: StaleAttachments }> {
   let rawBody: Record<string, any> | undefined
   if (ctx.isMultipart && !ctx.fixedFormBody) {
     rawBody = { ...ctx.body }
@@ -1010,30 +1033,46 @@ async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boo
     }
   }
   const lineId = ctx.lineId || ctx.body._id
-  const dir = attachmentPath(ctx.dataset, lineId)
 
   const pathField = ctx.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (!ctx.file && (keepExisting || !pathField)) return { rawBody }
+  if (!isSafeLineAttachmentId(lineId)) {
+    // such a line cannot have an attachment folder of its own, there is nothing to clean up
+    if (ctx.file) throw httpError(400, 'identifiant de ligne invalide pour une pièce jointe')
+    return { rawBody }
+  }
+  const dir = attachmentPath(ctx.dataset, lineId)
 
   let uploadedAttachmentPath: string | undefined
+  let staleAttachments: StaleAttachments | undefined
   if (ctx.file) {
     // An attachment was uploaded
-    if (!ctx.dataset.rest?.history) await filesStorage.removeDir(dir)
-    const fileMd5 = await md5File(ctx.file.path)
-    const relativePath = path.join(lineId, fileMd5, ctx.file.originalname)
-    await filesStorage.moveFromFs(ctx.file.path, attachmentPath(ctx.dataset, relativePath))
     if (!pathField) {
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
+    const fileMd5 = await md5File(ctx.file.path)
+    const relativePath = path.join(lineId, fileMd5, ctx.file.originalname)
+    const targetPath = attachmentPath(ctx.dataset, relativePath)
+    // same line, same content, same name: the file is already there and may be referenced
+    const alreadyStored = await filesStorage.fileExists(targetPath)
+    await filesStorage.moveFromFs(ctx.file.path, targetPath)
+    if (!ctx.dataset.rest?.history) staleAttachments = { dir, keep: path.join(fileMd5, ctx.file.originalname) }
     ctx.body[pathField.key] = relativePath
     // remember the new attachment path so the caller can roll it back if the
     // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
-    uploadedAttachmentPath = attachmentPath(ctx.dataset, relativePath)
-  } else if (!keepExisting && pathField) {
-    if (!await checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
-      await filesStorage.removeDir(dir)
-    }
+    if (!alreadyStored) uploadedAttachmentPath = targetPath
+  } else if (pathField && !await checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
+    staleAttachments = { dir }
   }
-  return { rawBody, uploadedAttachmentPath }
+  return { rawBody, uploadedAttachmentPath, staleAttachments }
+}
+
+const removeStaleAttachments = async (stale?: StaleAttachments) => {
+  if (!stale) return
+  if (!stale.keep) return await filesStorage.removeDir(stale.dir)
+  for (const file of await filesStorage.lsr(stale.dir)) {
+    if (file !== stale.keep) await filesStorage.removeFile(resolvePath(stale.dir, file))
+  }
 }
 
 // Remove an attachment that was just uploaded by manageAttachment when the
@@ -1189,9 +1228,10 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
 
   let rawBody: Record<string, any> | undefined
   let uploadedAttachmentPath: string | undefined
+  let staleAttachments: StaleAttachments | undefined
   if (_action !== 'delete') {
     // patch keeps the existing attachment unless a new one is uploaded (parity with patchLine)
-    ({ rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, _action === 'patch'))
+    ({ rawBody, uploadedAttachmentPath, staleAttachments } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, _action === 'patch'))
   }
 
   const fullLine = { ...req.body, _action }
@@ -1202,6 +1242,8 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
+  // 304: the line hash, which includes the attachment path, did not change
+  if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
   const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
@@ -1225,7 +1267,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   if (req.body._action != null && req.body._action !== 'patch') {
     throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
   }
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
+  const { rawBody, uploadedAttachmentPath, staleAttachments } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)
 
@@ -1234,6 +1276,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
     await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
+  if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
