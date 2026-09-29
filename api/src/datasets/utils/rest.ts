@@ -137,6 +137,14 @@ export const fixFormBody: RequestHandler = (req, res, next) => {
   next()
 }
 
+// a unique name, never the client's file name: these directories are shared by every request, so
+// two uploads of "attachments.zip" overwrote each other (possibly across datasets and owners), and
+// the worker extracted whichever came last. The client's name stays in file.originalname.
+const tmpUploadName = (originalname: string) => {
+  const ext = path.extname(originalname ?? '')
+  return nanoid() + (/^\.[a-z0-9]{1,10}$/i.test(ext) ? ext : '')
+}
+
 // store tmp files but in the shared files storage, not tmp directory because they will be accessed by workers later on
 const tmpSharedStorage = {
   async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
@@ -144,14 +152,14 @@ const tmpSharedStorage = {
       // attachments are stored in the shared files storage as they will be extracted from
       if (file.fieldname === 'attachments') {
         const destination = path.join(dataDir, 'shared-tmp')
-        const filename = file.originalname
+        const filename = tmpUploadName(file.originalname)
         const finalPath = path.join(destination, filename)
         await filesStorage.writeStream(file.stream, finalPath)
         const stats = await filesStorage.fileStats(finalPath)
         cb(null, { destination, filename, path: finalPath, size: stats.size })
       } else {
         const destination = tmpDir
-        const filename = file.originalname
+        const filename = tmpUploadName(file.originalname)
         const finalPath = path.join(destination, filename)
         await pipeline(file.stream, fs.createWriteStream(finalPath))
         const stats = await fs.stat(finalPath)
