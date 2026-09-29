@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { createAnalyzer } from '../../../api/src/misc/utils/text-search/analysis.ts'
 import { validateDefinition } from '../../../api/src/misc/utils/text-search/definition.ts'
-import { parseQuery, planQuery, queryTerms } from '../../../api/src/misc/utils/text-search/query.ts'
+import { parseQuery, planQuery, queryTerms, MAX_QUERY_TERMS, MAX_QUERY_PHRASES } from '../../../api/src/misc/utils/text-search/query.ts'
 
 const analyzer = createAnalyzer('fr')
 const def = validateDefinition({ fields: { title: 3 }, language: 'fr', version: 1 })
@@ -11,6 +11,16 @@ const stats = (df: Record<string, number>, n = 1000) => ({ n, df, avgLen: { titl
 test.describe('parseQuery', () => {
   test('plain words are positive terms', () => {
     assert.deepEqual(parseQuery('charges communes', analyzer).positive, ['charg', 'commun'])
+  })
+
+  test('the number of terms and phrases is bounded', () => {
+    const words = Array.from({ length: 100 }, (_, i) => 'zz' + i.toString(36) + 'x')
+    const parsed = parseQuery(words.join(' ') + ' ' + words.map(w => '-n' + w).join(' '), analyzer)
+    assert.equal(parsed.positive.length, MAX_QUERY_TERMS)
+    assert.equal(parsed.negated.length, 0)
+    assert.equal(queryTerms(parsed).length, MAX_QUERY_TERMS)
+    const phrases = parseQuery(Array.from({ length: 10 }, (_, i) => `"aa${i}x bb${i}x"`).join(' '), analyzer)
+    assert.equal(phrases.phrases.length, MAX_QUERY_PHRASES)
   })
 
   test('a leading dash negates', () => {
