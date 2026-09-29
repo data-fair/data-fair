@@ -22,6 +22,7 @@ import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../../misc/utils/text-search/inde
 import { trimDataset } from '../operations.ts'
 import type { Db } from 'mongodb'
 import type { Request, Dataset } from '#types'
+import type { SessionState } from '@data-fair/lib-express'
 
 export { default as mergeDraft } from './merge-draft.ts'
 export * from './types.ts'
@@ -149,14 +150,15 @@ export const previews = (dataset: Dataset, publicUrl = config.publicUrl) => {
   return previews
 }
 
-export const clean = (req: Request, dataset: any, draft = false) => {
+export const clean = (req: Request, dataset: any, draft = false, sessionState?: SessionState) => {
+  const effectiveSession = sessionState ?? reqSession(req)
   const query = req.query
   const publicationSite = reqPublicationSite(req)
   const publicUrl = reqPublicBaseUrl(req)
 
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
-    dataset.userPermissions = permissions.list('datasets', dataset, reqSession(req), reqBypassPermissions(req))
+    dataset.userPermissions = permissions.list('datasets', dataset, effectiveSession, reqBypassPermissions(req))
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
@@ -216,7 +218,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   for (const field of RESPONSE_EXCLUDED_FIELD_NAMES) delete dataset[field]
   // integrity state is readable by the owner's admins and superadmins only (registered
   // 'readIntegrity' operation); everyone else must not see breach verdicts or anchors
-  if (dataset.integrity && !permissions.can('datasets', dataset, 'readIntegrity', reqSession(req), reqBypassPermissions(req))) {
+  if (dataset.integrity && !permissions.can('datasets', dataset, 'readIntegrity', effectiveSession, reqBypassPermissions(req))) {
     delete dataset.integrity
   }
 
