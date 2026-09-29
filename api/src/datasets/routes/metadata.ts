@@ -34,7 +34,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
-import { reqEventLogContext } from '../../misc/utils/req-context.ts'
+import { reqEventLogContext, reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { searchIndexPatch } from '../utils/search-text.ts'
 import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
@@ -53,6 +53,11 @@ const debugBreakingChanges = debugModule('breaking-changes')
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
   if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+    // which columns survive tells whether some line matches the filters, e.g. maxCardinality=0
+    // keeps a column iff no line does: that is a read of the lines, not of the schema
+    if (!can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
+      throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
+    }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
     // within the context of the data filters, instead of the stored whole-dataset cardinality
@@ -361,10 +366,9 @@ export const registerMetadataRoutes = (router: Router) => {
     // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
     // rewritten the permissions the search-text guard reads: recompute rather than carry the old
     // owner's terms across the transfer.
-    const changeOwnerUpdate: any = mergeIndexUpdate(
-      { $set: patch },
-      searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
-    )
+    // the stored document, not the draft-merged one (?draft=true)
+    const indexedDataset = { ...reqDatasetFull(req), owner: patch.owner, permissions: patch.permissions }
+    const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -408,7 +412,7 @@ export const registerMetadataRoutes = (router: Router) => {
     const datasetFull: any = reqDatasetFull(req)
 
     // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, dataset.owner)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

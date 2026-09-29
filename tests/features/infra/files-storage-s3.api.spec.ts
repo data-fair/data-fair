@@ -75,6 +75,23 @@ test.describe('S3 files-storage backend', () => {
     assert.equal(await backend.pathExists(`${base}/nowhere`), false)
   })
 
+  test('directory operations do not reach sibling keys sharing the prefix', async () => {
+    const siblingKey = 'test-files-storage-s3/attachments/03kp0009-sibling/file.txt'
+    const dirKey = 'test-files-storage-s3/attachments/03kp/file.txt'
+    await rawClient.send(new PutObjectCommand({ Bucket: s3Options.bucket, Key: siblingKey, Body: 'sibling' }))
+    await rawClient.send(new PutObjectCommand({ Bucket: s3Options.bucket, Key: dirKey, Body: 'own' }))
+    try {
+      assert.deepEqual(await backend.lsr(`${base}/attachments/03kp`), ['file.txt'])
+      await backend.removeDir(`${base}/attachments/03kp`)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp/file.txt`), false)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp0009-sibling/file.txt`), true)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp0009.jpg`), true)
+    } finally {
+      await rawClient.send(new DeleteObjectCommand({ Bucket: s3Options.bucket, Key: siblingKey }))
+      await rawClient.send(new DeleteObjectCommand({ Bucket: s3Options.bucket, Key: dirKey }))
+    }
+  })
+
   test('fileStats on a missing key throws a mapped 404, not "UnknownError"', async () => {
     await assert.rejects(backend.fileStats(`${base}/attachments/03kp0009`), (err: any) => {
       assert.equal(err.status, 404)

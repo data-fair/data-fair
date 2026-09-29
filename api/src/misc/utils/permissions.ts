@@ -283,14 +283,17 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
   const operationFilter = []
   for (const op of operation.split(',')) {
-    const operationClass = permissionsClasses.classByOperation[resourceType][op]
+    // own keys only: `can=constructor` read Object's constructor from these plain objects
+    const operationClass = Object.hasOwn(permissionsClasses.classByOperation[resourceType], op) && permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (permissionsClasses.operationsClasses[resourceType][op]) {
+    } else if (Object.hasOwn(permissionsClasses.operationsClasses[resourceType], op)) {
       operationFilter.push({ classes: op })
     }
   }
+  // an unknown operation matches no permission entry (an empty $or is rejected by mongo)
+  if (!operationFilter.length) operationFilter.push({ operations: { $in: [] } })
   const or = []
 
   if (!sessionState.user) {
@@ -418,8 +421,11 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
       }
       const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
       if (resourceType === 'datasets') {
-        // the permission guard of the schema-derived search index depends on the grantees
-        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(resource as any), permissions }))
+        // the permission guard of the schema-derived search index depends on the grantees.
+        // Computed from the stored document: with ?draft=true reqResource has the draft merged in,
+        // and its titles/labels would land in the published document's search fields
+        const stored = await resources.findOne({ id: resource.id })
+        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(stored as any), permissions }))
       }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)

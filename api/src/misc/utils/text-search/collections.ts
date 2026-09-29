@@ -46,18 +46,18 @@ export const applicationsTextSearch = defineTextSearch({
 // `datasetsStats`/`applicationsStats` as plain values — only the underlying provider is deferred.
 let datasetsStatsInner: ClearableStatsProvider | undefined
 export const datasetsStats: ClearableStatsProvider = {
-  get: (terms, ownerScope) => {
+  get: (terms, ownerScope, visibleFilter) => {
     datasetsStatsInner ??= createStatsProvider(mongo.datasets as any, datasetsTextSearch.definition)
-    return datasetsStatsInner.get(terms, ownerScope)
+    return datasetsStatsInner.get(terms, ownerScope, visibleFilter)
   },
   clear: () => datasetsStatsInner?.clear()
 }
 
 let applicationsStatsInner: ClearableStatsProvider | undefined
 export const applicationsStats: ClearableStatsProvider = {
-  get: (terms, ownerScope) => {
+  get: (terms, ownerScope, visibleFilter) => {
     applicationsStatsInner ??= createStatsProvider(mongo.applications as any, applicationsTextSearch.definition)
-    return applicationsStatsInner.get(terms, ownerScope)
+    return applicationsStatsInner.get(terms, ownerScope, visibleFilter)
   },
   clear: () => applicationsStatsInner?.clear()
 }

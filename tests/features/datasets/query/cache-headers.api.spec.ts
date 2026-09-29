@@ -151,6 +151,24 @@ test.describe('Cache headers', () => {
     // no userPermissions and only public resources means we can use a public cache
     assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
     assert.equal(res.data.count, 1)
+
+    // anything that brings back the caller's private items, or depends on the caller, must stay private
+    // (the reverse-proxy cache key does not include the session)
+    for (const params of [
+      { visibility: 'public,private,protected' },
+      { visibility: 'publicX' },
+      { visibility: 'public', private: 'true' },
+      { visibility: 'public', protected: 'true' },
+      { visibility: 'public', facets: 'visibility' },
+      { visibility: 'public', mine: 'true' },
+      { visibility: 'public', can: 'writeData' }
+    ]) {
+      res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions', ...params } })
+      assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0', JSON.stringify(params))
+      assert.equal(res.headers['x-accel-buffering'], 'no', JSON.stringify(params))
+    }
+    res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions', visibility: 'public', facets: 'owner' } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
   })
 
   // a slug change moves which dataset a slug-addressed URL designates, while proxies and browsers keep

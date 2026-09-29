@@ -64,7 +64,6 @@
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
     "@data-fair/lib-vuetify-events": "^0.3.0",
-    "tinycolor2": "^1.6.0",
-    "zod-to-json-schema": "^3.25.1"
+    "tinycolor2": "^1.6.0"
   }
 }

@@ -218,6 +218,7 @@
             <fragments-list
               :part-of="{ type: 'application', id: application.id }"
               :fragments="fragments"
+              :can-write-parent-config="can('writeConfig')"
               :has-more="hasMoreFragments"
               @load-more="loadMoreFragments"
             />
@@ -349,7 +350,7 @@
           </v-list-item>
 
           <v-list-item
-            v-if="application.partOf && can('delete')"
+            v-if="application.partOf && can('delete') && can('setPermissions')"
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >

@@ -82,6 +82,15 @@ test.describe('permissions', () => {
     assert.equal(res.data.count, 1)
     res = await testUser8.get('/api/v1/datasets?can=write')
     assert.equal(res.data.count, 0)
+    // an unknown operation, including an Object.prototype key, matches no permission entry
+    res = await testUser8.get('/api/v1/datasets?can=constructor')
+    assert.equal(res.data.count, 0)
+    // public permissions apply to anonymous sessions (this used to be an invalid empty $or)
+    res = await anonymous.get('/api/v1/datasets?can=list')
+    assert.equal(res.data.count, 1)
+    // the public entry grants readDescription and list, not the read class
+    res = await anonymous.get('/api/v1/datasets?can=read')
+    assert.equal(res.data.count, 0)
 
     // Read with public and private filters
     res = await anonymous.get('/api/v1/datasets')

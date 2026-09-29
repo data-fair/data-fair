@@ -475,16 +475,24 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
-      { _id: 'line1', attr1: 111 }
+      { _id: 'line2', attr1: 'test', attr2: 'nope' },
+      { _id: 'line3', attr1: 111 },
+      { _id: 'line4', attr2: 'test1' }
     ])
 
-    assert.equal(res.data.nbOk, 2)
-    assert.equal(res.data.nbWarnings, 1)
-    assert.equal(res.data.warnings.length, 1)
-    assert.equal(res.data.warnings[0].line, 1)
-    assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string (valeur : 111)')
+    // the dataset's optional rules (pattern, required…) are warnings, the line is stored
+    assert.equal(res.data.nbOk, 3)
+    assert.equal(res.data.nbWarnings, 2)
+    assert.deepEqual(res.data.warnings.map((w: any) => w.line), [1, 3])
+    assert.match(res.data.warnings[0].warning, /attr2/)
+    // but not the column type: a number in a string column could not be indexed, the line is refused
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors[0].line, 2)
+    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string (valeur : 111)')
 
     await waitForFinalize(ax, 'rest4')
+    const lines = (await ax.get('/api/v1/datasets/rest4/lines', { params: { sort: '_id' } })).data
+    assert.deepEqual(lines.results.map((l: any) => l._id).filter((id: string) => id.startsWith('line')), ['line1', 'line2', 'line4'])
   })
 
   test('The size of the mongodb collection is part of storage consumption', async () => {

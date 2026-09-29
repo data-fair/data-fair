@@ -195,3 +195,15 @@ export const trimDataset = (dataset: Partial<Dataset>) => {
     for (const filter of search.filters ?? []) filter.values = filter.values.map(value => value.trim()).filter(Boolean)
   }
 }
+
+/**
+ * Under `nonBlockingValidation`, the schema-validation errors that still reject a line. The flag
+ * makes the dataset's optional rules (required, restricted labels, pattern, min/max, lengths) warnings, but the
+ * column type is not such a rule: a value of the wrong type is stored as-is in mongo, then cannot
+ * be indexed (a string in an integer column, a malformed date in a column the index maps as a date,
+ * a number where the per-line byte count serializes a string), so the line stays pending forever.
+ * Only date and date-time formats are hard: every other format maps to a plain keyword.
+ */
+export const blockingValidationErrors = <E extends { keyword: string, params?: Record<string, any> }>(errors: E[] | null | undefined): E[] => {
+  return (errors ?? []).filter(e => e.keyword === 'type' || (e.keyword === 'format' && (e.params?.format === 'date' || e.params?.format === 'date-time')))
+}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import type { Permission } from '../../../api/types/index.ts'
 import {
   deriveFragmentPermissions, validatePartOf, partOfListFilter,
-  fragmentForbiddenPatchKey, fragmentWriteBodyError, PART_OF_CHANGE_OPERATION,
+  fragmentForbiddenPatchKey, fragmentWriteBodyError, PART_OF_CHANGE_OPERATIONS,
   partOfCollectionName, resourceTypeToPartOfType
 } from '../../../api/src/fragments/operations.ts'
 
@@ -171,7 +171,7 @@ test.describe('helpers', () => {
     assert.equal(fragmentWriteBodyError({ masterData: { bulkSearchs: [{ id: 'b' }] } }, {}, { allowPartOfChange: true }), null)
   })
   test('constants', () => {
-    assert.deepEqual(PART_OF_CHANGE_OPERATION, { datasets: 'changeOwner', applications: 'delete' })
+    assert.deepEqual(PART_OF_CHANGE_OPERATIONS, { datasets: ['changeOwner', 'setPermissions'], applications: ['delete', 'setPermissions'] })
     assert.equal(partOfCollectionName('dataset'), 'datasets')
     assert.equal(partOfCollectionName('application'), 'applications')
     assert.equal(resourceTypeToPartOfType('datasets'), 'dataset')
