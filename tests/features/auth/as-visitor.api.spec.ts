@@ -83,6 +83,14 @@ test.describe('asVisitor list override', () => {
     await assert.rejects(anonymous.get('/api/v1/datasets', asMember(member8)), { status: 401 })
     await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asVisitor: 'unknown' } }), { status: 400 })
     await assert.rejects(orgAdmin.get('/api/v1/datasets', { params: { asVisitor: 'member:x' } }), { status: 400 })
+    await assert.rejects(orgAdmin.get('/api/v1/datasets?asVisitor=anonymous&asVisitor=connected'), { status: 400 })
+  })
+
+  test('asVisitor responses are never publicly cacheable', async () => {
+    // select=-userPermissions + visibility=public would otherwise mark the list public for the reverse proxy
+    const res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { select: '-userPermissions', visibility: 'public' }))
+    assert.ok(!res.headers['cache-control']?.includes('public'), res.headers['cache-control'])
+    assert.notEqual(res.headers['x-accel-buffering'], 'yes')
   })
 
   test('an org API key is rejected by the gate even though it carries an admin accountRole', async () => {

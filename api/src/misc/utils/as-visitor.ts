@@ -29,6 +29,8 @@ const invalid = (raw: string) => httpError(400, `paramètre asVisitor invalide "
 
 /** Parses the asVisitor param, the audited account giving the organization of member and role visitors. */
 export const parseAsVisitor = (raw: string, accountId: string): AsVisitor => {
+  // the simple query parser turns a repeated param into an array
+  if (typeof raw !== 'string') throw invalid(String(raw))
   const [kind, ...parts] = raw.split(':')
   if (parts.some(part => !part)) throw invalid(raw)
   const arity = (min: number, max = min) => { if (parts.length < min || parts.length > max) throw invalid(raw) }
