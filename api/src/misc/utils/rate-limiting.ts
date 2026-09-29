@@ -4,7 +4,7 @@ import requestIp from 'request-ip'
 import debug from 'debug'
 import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
-import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
+import { reqUser, reqSession, secretKeyMatches, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
 import { TokenBucket } from './token-bucket.ts'
 import { SweptStore } from './swept-store.ts'
@@ -186,7 +186,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
   const user = rateLimitUser(req)
   const limitType = _limitType || (user ? 'user' : 'anonymous')
 
-  const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
+  const ignoreRateLimiting = secretKeyMatches(req.get('x-ignore-rate-limiting'), config.secretKeys.ignoreRateLimiting)
   if (!ignoreRateLimiting && !consume(req, limitType)) {
     debugLimits('exceedRateLimiting', limitType, user, requestIp.getClientIp(req))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
