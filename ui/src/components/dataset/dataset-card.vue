@@ -154,12 +154,8 @@ const props = withDefaults(defineProps<{
 
 const cardUserPermissions = computed(() => (props.dataset as Dataset & { userPermissions?: string[] }).userPermissions)
 const cardAccessSources = computed(() => (props.dataset as Dataset & { accessSources?: AccessSources }).accessSources)
-const showCapabilityChip = computed(() => {
-  if (props.showCapability) return true
-  const account = session.state.account
-  if (!account) return false
-  return !(props.dataset.owner.type === account.type && props.dataset.owner.id === account.id && (props.dataset.owner.department || null) === (account.department || null))
-})
+// temporarily limited to the access audit page, hidden in the regular resource lists
+const showCapabilityChip = computed(() => props.showCapability)
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||

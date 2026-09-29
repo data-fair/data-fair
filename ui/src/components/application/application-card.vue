@@ -75,12 +75,8 @@ const props = defineProps<{
 
 const cardUserPermissions = computed(() => (props.application as Application & { userPermissions?: string[] }).userPermissions)
 const cardAccessSources = computed(() => (props.application as Application & { accessSources?: AccessSources }).accessSources)
-const showCapabilityChip = computed(() => {
-  if (props.showCapability) return true
-  const account = session.state.account
-  if (!account) return false
-  return !(props.application.owner.type === account.type && props.application.owner.id === account.id && (props.application.owner.department || null) === (account.department || null))
-})
+// temporarily limited to the access audit page, hidden in the regular resource lists
+const showCapabilityChip = computed(() => props.showCapability)
 
 const captureUrl = computed(() => {
   return props.application.thumbnail || props.application.image || `${props.application.href}/capture?updatedAt=${props.application.updatedAt}`
