@@ -353,10 +353,9 @@ export const registerMetadataRoutes = (router: Router) => {
     // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
     // rewritten the permissions the search-text guard reads: recompute rather than carry the old
     // owner's terms across the transfer.
-    const changeOwnerUpdate: any = mergeIndexUpdate(
-      { $set: patch },
-      searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
-    )
+    // the stored document, not the draft-merged one (?draft=true)
+    const indexedDataset = { ...reqDatasetFull(req), owner: patch.owner, permissions: patch.permissions }
+    const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 

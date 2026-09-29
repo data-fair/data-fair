@@ -391,8 +391,11 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
       }
       const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
       if (resourceType === 'datasets') {
-        // the permission guard of the schema-derived search index depends on the grantees
-        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(resource as any), permissions }))
+        // the permission guard of the schema-derived search index depends on the grantees.
+        // Computed from the stored document: with ?draft=true reqResource has the draft merged in,
+        // and its titles/labels would land in the published document's search fields
+        const stored = await resources.findOne({ id: resource.id })
+        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(stored as any), permissions }))
       }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)
