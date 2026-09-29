@@ -89,7 +89,8 @@ test.describe('asVisitor list override', () => {
   test('asVisitor responses are never publicly cacheable', async () => {
     // select=-userPermissions + visibility=public would otherwise mark the list public for the reverse proxy
     const res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { select: '-userPermissions', visibility: 'public' }))
-    assert.ok(!res.headers['cache-control']?.includes('public'), res.headers['cache-control'])
+    const cacheControl = String(res.headers['cache-control'] ?? '')
+    assert.ok(!cacheControl.includes('public'), cacheControl)
     assert.notEqual(res.headers['x-accel-buffering'], 'yes')
   })
 
