@@ -261,21 +261,29 @@ after two failed code-reading diagnoses (plan ledger, Ruling P25) — `countTerm
 runs whenever `df === 0`, so an absent term is simply recounted on every query (cheap: it is an
 empty index range).
 
-### Document frequencies are counted over what the caller may list
+### A term only hidden documents contain is unknown to the caller
 
-`df` does more than weight scores: a term whose `df` is 0 is dropped from the plan, a phrase whose
-terms are not all live is dropped, and the gate keeps the rarest terms only. Counted over the whole
-corpus, each of these answered a yes/no question about documents the caller cannot see —
-`q="<word of a public dataset> <secret>"` returned that public dataset iff no dataset anywhere
-contained `<secret>`, and a 4+ term query compared hidden frequencies through the gate choice.
+`df` does more than weight scores: a term whose `df` is 0 is dropped from the plan, and so is any
+phrase using it. Computed over the whole corpus, that answered a yes/no question about documents the
+caller cannot see: `q="<word of a public dataset> <secret>"` returned that public dataset iff no
+dataset anywhere, hidden ones included, contained `<secret>`.
 
 So both services pass `{ $or: permissions.filter(sessionState, resourceType) }` as
-`StatsProvider.get`'s `visibleFilter`, and `df` is counted (and memoized) under
-`ownerScope + visibleFilter`. Anonymous callers share one cache key; each signed-in account has its
-own, which is why the counts are costlier than before for a common term (the `_terms` index range
-is fetched and filtered on permissions). `n` and `avgLen` stay on the owner scope alone: they only
-weight scores, never which documents match, and `avgLen`'s full pass per account would be much
-worse. The remaining channel is ranking order through those two, which exposes no single document.
+`StatsProvider.get`'s `visibleFilter`, and a term that no visible document contains gets `df = 0`.
+That decision is an existence check, `countDocuments({ ...ownerScope, ...visibleFilter, _terms }, { limit: 1 })`,
+which stops at the first visible document: ~1 ms for a common term on a 50k-document corpus, a few
+ms in the worst case (a term only in hidden documents). Only a positive answer is memoized, per
+permission filter, like a zero df. The `df` values themselves, `n` and `avgLen` stay counted over
+the owner scope: an index-only `COUNT_SCAN` with one cache shared by every caller.
+
+A count *under* the permission filter was tried first and rejected: it turns the index-only count
+into an `IXSCAN` + `FETCH` of every document containing the term (74-92 ms instead of 23 ms for a
+term in all 50k documents), memoized per account, so back-office searches mostly missed the cache.
+
+Residual channel, accepted: with more live terms than `gateSize`, which ones gate the candidates
+depends on `df` values that include hidden documents, so a caller comparing results can learn
+whether hidden occurrences make one visible word rarer than another. It never reveals whether a
+hidden document contains a word the caller cannot find otherwise.
 Guarded by `search-behaviour.api.spec.ts` ("a word only present in datasets the caller cannot see
 does not change what it finds") and `stats.unit.spec.ts`.
 

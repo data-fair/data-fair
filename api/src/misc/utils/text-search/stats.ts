@@ -6,18 +6,21 @@ import type { CorpusStats } from './query.ts'
 /** The subset of a mongo Collection this module uses — so it never imports the driver. */
 export interface StatsCollection {
   estimatedDocumentCount (): Promise<number>
-  countDocuments (filter: any): Promise<number>
+  countDocuments (filter: any, options?: { limit?: number }): Promise<number>
   aggregate (pipeline: any[]): { toArray (): Promise<any[]> }
 }
 
 /** What answering a query needs: statistics in, nothing else. */
 export interface StatsProvider {
   /**
-   * `visibleFilter` is what the caller may see. Document frequencies are counted under it: they
-   * decide which terms are dropped as unknown and which ones gate the candidates, so counted over
-   * the whole corpus they told anyone whether some hidden document contains a word (a known public
-   * document is returned iff the probed word counts 0). `n` and `avgLen` stay on the owner scope:
-   * they only weight scores, never which documents match.
+   * `visibleFilter` is what the caller may see. A term no visible document contains gets a df of 0,
+   * whatever its count over the corpus: planQuery drops a df-0 term as unknown (and any phrase using
+   * it), so without this a known public document came back for `"<its word> <probed word>"` iff no
+   * document anywhere, hidden ones included, contained the probed word. Only that decision is
+   * made over the visible set, with an existence check that stops at the first visible document;
+   * the df values themselves, `n` and `avgLen` stay counted over the owner scope (an index-only
+   * count, one cache for every caller). The residual channel: with more terms than the gate size,
+   * which live terms gate the candidates depends on df values that include hidden documents.
    */
   get (terms: string[], ownerScope?: Record<string, any>, visibleFilter?: Record<string, any>): Promise<CorpusStats>
 }
@@ -67,6 +70,19 @@ export const createStatsProvider = (
     return df
   }
 
+  // does any document the caller may see contain the term: `limit: 1` stops at the first one, where
+  // a count under the permission filter would fetch every document containing the term. Only a
+  // positive answer is memoized, for the same reason as a zero df above.
+  const visibleExists = memoize(
+    async (term: string, key: string) => (await collection.countDocuments({ ...JSON.parse(key), _terms: term }, { limit: 1 })) > 0,
+    { promise: true, maxAge: options.dfMaxAge ?? 5 * 60 * 1000, max: 5000, primitive: true }
+  )
+  const visibleExistsChecked = async (term: string, key: string) => {
+    const exists = await visibleExists(term, key)
+    if (!exists) visibleExists.delete(term, key)
+    return exists
+  }
+
   const countAll = memoize(
     async (key: string) => key ? collection.countDocuments(JSON.parse(key)) : collection.estimatedDocumentCount(),
     { promise: true, maxAge: options.dfMaxAge ?? 5 * 60 * 1000, max: 500, primitive: true }
@@ -100,16 +116,21 @@ export const createStatsProvider = (
   return {
     clear () {
       countTerm.clear()
+      visibleExists.clear()
       countAll.clear()
       averageLengths.clear()
     },
     async get (terms, ownerScope, visibleFilter) {
       const key = scopeKey(ownerScope)
-      const dfKey = visibleFilter ? scopeKey({ ...ownerScope, ...visibleFilter }) : key
+      const visibleKey = visibleFilter && scopeKey({ ...ownerScope, ...visibleFilter })
       const [n, avgLen, counts] = await Promise.all([
         countAll(key),
         averageLengths(key),
-        Promise.all(terms.map(async term => [term, await countTermChecked(term, dfKey)] as const))
+        Promise.all(terms.map(async term => {
+          const df = await countTermChecked(term, key)
+          if (!df || !visibleKey) return [term, df] as const
+          return [term, await visibleExistsChecked(term, visibleKey) ? df : 0] as const
+        }))
       ])
       return { n, avgLen, df: Object.fromEntries(counts) }
     }

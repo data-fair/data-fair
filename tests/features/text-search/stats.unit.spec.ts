@@ -66,19 +66,34 @@ test('an owner scope is part of the count filter AND of the cache key', async ()
   assert.equal(dfCounts[0][1]['owner.id'], 'a')
 })
 
-test('a visible filter narrows df and its cache key, not n or avgLen', async () => {
-  const c = fakeCollection()
+test('a visible filter only decides whether a term is known, df stays counted over the owner scope', async () => {
+  const calls: any[] = []
+  // 'charg' is in visible documents, 'hidden' only in documents the caller cannot see
+  const c = {
+    estimatedDocumentCount: async () => 1000,
+    countDocuments: async (filter: any, options?: { limit?: number }) => {
+      calls.push([filter, options])
+      if (filter.$or) return filter._terms === 'charg' ? 1 : 0
+      return filter._terms === 'charg' ? 400 : filter._terms === 'hidden' ? 3 : 1000
+    },
+    aggregate: () => ({ toArray: async () => [{ title: 8, description: 40 }] })
+  }
   const provider = createStatsProvider(c, def)
   const owner = { 'owner.id': 'a' }
-  await provider.get(['charg'], owner, { $or: [{ public: true }] })
-  await provider.get(['charg'], owner, { $or: [{ 'owner.id': 'me' }] })
-  const dfCounts = c.calls.filter(x => x[0] === 'count' && x[1]._terms)
-  assert.equal(dfCounts.length, 2, 'different visible sets must not share a cached df')
-  assert.deepEqual(dfCounts[0][1], { 'owner.id': 'a', $or: [{ public: true }], _terms: 'charg' })
-  const nCounts = c.calls.filter(x => x[0] === 'count' && !x[1]._terms)
-  assert.deepEqual(nCounts.map(x => x[1]), [owner])
-  assert.equal(c.calls.filter(x => x[0] === 'aggregate').length, 1)
-  assert.deepEqual(c.calls.find(x => x[0] === 'aggregate')[1][0], { $match: owner })
+  const stats = await provider.get(['charg', 'hidden'], owner, { $or: [{ public: true }] })
+  // the df of a visible term is its count over the owner scope, a term with no visible document is unknown
+  assert.deepEqual(stats.df, { charg: 400, hidden: 0 })
+  await provider.get(['charg', 'hidden'], owner, { $or: [{ 'owner.id': 'me' }] })
+
+  const globalCounts = calls.filter(([f]) => f._terms && !f.$or)
+  assert.equal(globalCounts.filter(([f]) => f._terms === 'charg').length, 1, 'one df cache for every caller')
+  assert.ok(globalCounts.every(([f, o]) => f['owner.id'] === 'a' && !o?.limit), 'df is an unlimited count over the owner scope')
+  const existence = calls.filter(([f]) => f.$or)
+  assert.ok(existence.every(([f, o]) => f['owner.id'] === 'a' && o?.limit === 1), 'existence checks stop at the first visible document')
+  // one check per visible set for 'charg'; 'hidden' is checked every time, a negative answer is never cached
+  assert.equal(existence.filter(([f]) => f._terms === 'charg').length, 2)
+  await provider.get(['hidden'], owner, { $or: [{ public: true }] })
+  assert.equal(calls.filter(([f]) => f.$or && f._terms === 'hidden').length, 3)
 })
 
 test('n is counted rather than estimated when owner-scoped', async () => {

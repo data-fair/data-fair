@@ -92,7 +92,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   // an application publication-site filter is a strict owner equality, so the site owner is
   // always the full corpus for this request
   const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: true })
-  // document frequencies are counted over what the caller may list, see StatsProvider.get
+  // a term no document the caller may list contains counts as unknown, see StatsProvider.get
   const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope, { $or: permissions.filter(sessionState, 'applications') }) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? applicationsTextSearch.matchFilter(plan) : { _id: null }) : undefined
