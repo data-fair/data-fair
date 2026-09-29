@@ -383,9 +383,17 @@ parent's finalization, whose count queries every descendant index.
 (`api/src/fragments/service.ts:60-84`):
 
 - Gated by the operation that gates the resource's own owner-change route — `changeOwner` for
-  datasets, `delete` for applications (`PART_OF_CHANGE_OPERATION`, `operations.ts:13`). Attaching
-  hands control of the resource to the parent's ACL; detaching takes it back — the same authority as
-  an owner transfer.
+  datasets, `delete` for applications — **and** by `setPermissions` (`PART_OF_CHANGE_OPERATIONS`,
+  `operations.ts`). Attaching hands control of the resource to the parent's ACL; detaching takes it
+  back — the same authority as an owner transfer. `setPermissions` is there because both writes
+  change the ACL: an application contributor holds `delete` by default, and without it could attach
+  their application to a public parent and detach it again, ending with a public standalone
+  application that never went through `PUT /permissions` or its `onPublic` hook.
+- The attach write pins the fragment's owner and the absence of `partOf` in its filter (409 when
+  they changed since validation), then re-reads the parent and re-validates: a parent that changed
+  owner or became a fragment in between gets the attach undone (409). The owner-change routes still
+  check `countFragments` before writing, without a re-check after: an attach landing exactly between
+  that count and the owner write is not caught, and needs the same admin rights on both sides.
 - **Attach** (`null → value`): replaces `permissions` with the freshly derived ACL, in the same
   update that sets `partOf`. A resource that is already a fragment cannot be re-parented directly
   (400 — "détachez-la avant de la rattacher à un autre parent"); detach, then attach.

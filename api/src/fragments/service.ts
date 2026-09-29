@@ -9,7 +9,7 @@ import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { stampHistorize } from '../integrity/operations.ts'
 import {
   type PartOf, type FragmentResourceType, type FragmentLike,
-  partOfCollectionName, resourceTypeToPartOfType, PART_OF_CHANGE_OPERATION,
+  partOfCollectionName, resourceTypeToPartOfType, PART_OF_CHANGE_OPERATIONS,
   deriveFragmentPermissions, validatePartOf
 } from './operations.ts'
 
@@ -58,17 +58,21 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
 export type FragmentResource = { id: string, owner: { type: string, id: string, department?: string }, partOf?: PartOf, permissions?: Permission[], integrity?: { active?: boolean } }
 
 /**
- * Attach (partOf set) or detach (partOf null) an existing resource. Gated by the operation that gates
- * the owner-change route (spec §3.5). Detach keeps the stored ACL as it is (spec §3.6).
+ * Attach (partOf set) or detach (partOf null) an existing resource. Gated by PART_OF_CHANGE_OPERATIONS
+ * (spec §3.5). Detach keeps the stored ACL as it is (spec §3.6).
  */
 export const applyPartOfChange = async <T extends FragmentResource> (resourceType: FragmentResourceType, resource: T, partOf: PartOf | null, sessionState: SessionState, who?: WhoHint): Promise<T> => {
-  if (!permissions.can(resourceType, resource as any, PART_OF_CHANGE_OPERATION[resourceType], sessionState)) {
+  if (!PART_OF_CHANGE_OPERATIONS[resourceType].every(op => permissions.can(resourceType, resource as any, op, sessionState))) {
     throw httpError(403, 'Vous n\'avez pas la permission de rattacher ou détacher cette ressource')
   }
   const update: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { updatedAt: new Date().toISOString() } }
+  // the attach was validated against this owner and this absence of parent: pin both in the write,
+  // so a concurrent owner change or attach in between makes it fail instead of landing unchecked
+  const filter: Record<string, any> = { id: resource.id }
   if (partOf) {
     if (resource.partOf) throw httpError(400, 'La ressource est déjà un fragment, détachez-la avant de la rattacher à un autre parent')
     const prepared = await preparePartOf(resourceType, resource, partOf, sessionState)
+    Object.assign(filter, { 'owner.type': resource.owner.type, 'owner.id': resource.owner.id, 'owner.department': resource.owner.department ?? null, partOf: { $exists: false } })
     update.$set.partOf = partOf
     update.$set.permissions = prepared.permissions
   } else {
@@ -82,11 +86,33 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
   // (branched rather than resolving a shared collection variable: a Collection<Dataset> | Collection<Application>
   // union is not callable, findOneAndUpdate's overloads don't unify across the two document types)
   const updated = resourceType === 'datasets'
-    ? await mongo.datasets.findOneAndUpdate({ id: resource.id }, update as any, { returnDocument: 'after' })
-    : await mongo.applications.findOneAndUpdate({ id: resource.id }, update as any, { returnDocument: 'after' })
+    ? await mongo.datasets.findOneAndUpdate(filter, update as any, { returnDocument: 'after' })
+    : await mongo.applications.findOneAndUpdate(filter, update as any, { returnDocument: 'after' })
   // racing delete (the parent's cascade, or a concurrent DELETE): the document is gone, so is the
   // parentage change. 404 rather than letting both call sites dereference null and 500
-  if (!updated) throw httpError(404, 'La ressource a été supprimée pendant la modification de son rattachement')
+  if (!updated) {
+    if (partOf && await collection(resourceTypeToPartOfType(resourceType)).countDocuments({ id: resource.id })) {
+      throw httpError(409, 'La ressource a été modifiée pendant son rattachement, veuillez réessayer')
+    }
+    throw httpError(404, 'La ressource a été supprimée pendant la modification de son rattachement')
+  }
+  if (partOf) {
+    // the parent may have changed owner (or become a fragment) between preparePartOf's read and the
+    // write above: re-validate against its current state and undo the attach if it no longer holds
+    const parent = await getParent(partOf)
+    const error = parent
+      ? validatePartOf({ fragmentType: resourceType, fragment: resource, partOf, parent: parent as any, nbFragments: 0 })
+      : 'Ressource parente supprimée'
+    if (error) {
+      const revert = { $unset: { partOf: true }, $set: { permissions: resource.permissions ?? [], updatedAt: new Date().toISOString() } }
+      if (resourceType === 'datasets' && resource.integrity?.active) {
+        stampHistorize(revert as any, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
+      }
+      if (resourceType === 'datasets') await mongo.datasets.updateOne({ id: resource.id }, revert as any)
+      else await mongo.applications.updateOne({ id: resource.id }, revert as any)
+      throw httpError(409, `Le parent a été modifié pendant le rattachement : ${error}`)
+    }
+  }
   if (resourceType === 'applications') {
     // findCallingApplication memoizes { id, partOf, permissions } for 30s and both application-context
     // proofs read partOf from it. Without this, a detached sub-application still resolves as a fragment

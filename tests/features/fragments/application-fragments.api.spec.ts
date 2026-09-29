@@ -29,9 +29,13 @@ test.describe('application fragments', () => {
     assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
     assert.deepEqual(permissions[1].classes, ['list', 'read'])
 
-    // contributor can read and edit, cannot attach/detach (delete gate is admin-class on applications? no: contribs hold `delete` by default -> they CAN)
+    // contributor can read and edit, but cannot attach/detach: it replaces the ACL, so on top of
+    // `delete` (which contribs hold by default) it requires setPermissions
     const res = await testUser5Org.get(`/api/v1/applications/${sub.id}`)
     assert.ok(res.data.userPermissions.includes('writeDescription'))
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${sub.id}`, { partOf: null }), { status: 403 })
+    const contribApp = await createApp(testUser5Org, { title: 'contrib app' })
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${contribApp.id}`, { partOf: { type: 'application', id: dashboard.id } }), { status: 403 })
 
     // PUT replace keeps partOf
     await testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), title: 'sub renamed' })

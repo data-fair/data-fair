@@ -10,8 +10,14 @@ export type FragmentResourceType = 'datasets' | 'applications'
 export const partOfCollectionName = (type: PartOf['type']): FragmentResourceType => type === 'dataset' ? 'datasets' : 'applications'
 export const resourceTypeToPartOfType = (resourceType: ResourceType): PartOf['type'] => resourceType === 'datasets' ? 'dataset' : 'application'
 
-/** the operation that gates the owner-change route of each resource type: attaching / detaching hands control over, like a transfer */
-export const PART_OF_CHANGE_OPERATION: Record<FragmentResourceType, string> = { datasets: 'changeOwner', applications: 'delete' }
+/**
+ * the operations that gate attach / detach: the one gating the owner-change route of each resource
+ * type (attaching hands control over, like a transfer) and setPermissions, since attaching replaces
+ * the ACL with the derived one and detaching keeps that derived ACL as the resource's own. Without
+ * it an application contributor (who holds `delete`) could make their application public by
+ * attaching it to a public parent and detaching it again.
+ */
+export const PART_OF_CHANGE_OPERATIONS: Record<FragmentResourceType, string[]> = { datasets: ['changeOwner', 'setPermissions'], applications: ['delete', 'setPermissions'] }
 
 /** keys a fragment can never carry: a fragment is not publishable */
 export const FRAGMENT_ONLY_FORBIDDEN_KEYS = ['publicationSites', 'requestedPublicationSites', 'publications']

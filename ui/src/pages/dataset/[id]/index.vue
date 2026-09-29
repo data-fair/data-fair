@@ -455,7 +455,7 @@
           </v-list-item>
 
           <v-list-item
-            v-if="dataset.partOf && can('changeOwner').value"
+            v-if="dataset.partOf && can('changeOwner').value && can('setPermissions').value"
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
@@ -478,7 +478,7 @@
             </template>
           </v-list-item>
           <v-list-item
-            v-if="attachParent && can('changeOwner').value"
+            v-if="attachParent && can('changeOwner').value && can('setPermissions').value"
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
@@ -564,7 +564,7 @@
     />
 
     <fragment-attach-dialog
-      v-if="attachParent && can('changeOwner').value"
+      v-if="attachParent && can('changeOwner').value && can('setPermissions').value"
       v-model="showAttachDialog"
       :resource="dataset"
       :parent="attachParent"
