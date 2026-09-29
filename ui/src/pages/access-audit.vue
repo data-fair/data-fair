@@ -143,20 +143,12 @@ const authorized = computed(() => {
 
 // the simulated visitor, persisted in the URL (deep-linkable between admins)
 const visitorParam = useStringSearchParam('visitor')
-const visitor = computed<AuditVisitor | null>(() => {
-  if (!visitorParam.value) return null
-  try {
-    const parsed = JSON.parse(visitorParam.value)
-    return auditVisitorKinds.includes(parsed?.kind) ? parsed : null
-  } catch (err) {
-    return null
-  }
-})
+const visitor = computed(() => visitorParam.value ? parseVisitor(visitorParam.value) : null)
 const setVisitor = (v: AuditVisitor | null) => {
-  visitorParam.value = v ? JSON.stringify(v) : ''
+  visitorParam.value = v ? serializeVisitor(v) : ''
 }
 
-const asVisitor = computed(() => authorized.value && account.value ? asVisitorDescriptor(visitor.value, account.value) : undefined)
+const asVisitor = computed(() => authorized.value && account.value ? asVisitorParam(visitor.value, account.value) : undefined)
 const auditReady = computed(() => !!asVisitor.value)
 
 const resourceType = useStringSearchParam('resourceType', 'datasets')

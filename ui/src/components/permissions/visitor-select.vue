@@ -54,7 +54,7 @@
       md="6"
     >
       <v-select
-        :model-value="modelValue.partner ?? null"
+        :model-value="partner"
         :items="orgDetails?.partners ?? []"
         item-title="name"
         item-value="id"
@@ -113,13 +113,20 @@ watch(() => props.account.id, async (id) => {
   if (res.ok) orgDetails.value = await res.json()
 }, { immediate: true })
 
-// a department admin only audits their own department, the choice is forced (see asVisitorDescriptor)
+// a department admin only audits their own department, the choice is forced (see asVisitorParam)
 const departmentItems = computed(() => {
   if (props.account.department || !orgDetails.value?.departments?.length) return []
   return [
     { value: null, title: t('mainOrg') },
     ...orgDetails.value.departments.map(d => ({ value: d.id, title: d.name }))
   ]
+})
+
+// the URL only carries the partner id, its name comes from the organization's partners
+const partner = computed(() => {
+  const id = props.modelValue?.partner?.id
+  if (!id) return null
+  return orgDetails.value?.partners?.find(p => p.id === id) ?? props.modelValue!.partner!
 })
 
 const emailInput = ref(props.modelValue?.email ?? '')

@@ -10,7 +10,7 @@ const orgAdminSession: SessionState = {
   account: { type: 'organization', id: 'org1', name: 'Org 1' },
   accountRole: 'admin'
 }
-const memberParam = JSON.stringify({ user: { id: 'u8', email: 'u8@test.com' }, organization: { id: 'org1', role: 'user' } })
+const memberParam = 'member:u8:u8@test.com:user'
 
 test('builds a synthetic session and owner filter for a member', () => {
   const ctx = getAsVisitorContext(memberParam, orgAdminSession, 'admin')
@@ -25,42 +25,44 @@ test('builds a synthetic session and owner filter for a member', () => {
 })
 
 test('member department lands on the synthetic account and membership', () => {
-  const raw = JSON.stringify({ user: { id: 'u6', email: 'u6@test.com' }, organization: { id: 'org1', role: 'contrib', department: 'dep1' } })
-  const ctx = getAsVisitorContext(raw, orgAdminSession, 'admin')
+  const ctx = getAsVisitorContext('member:u6:u6@test.com:contrib:dep1', orgAdminSession, 'admin')
   assert.equal(ctx.sessionState.account?.department, 'dep1')
   assert.equal(ctx.sessionState.organization?.department, 'dep1')
   // the owner filter scope comes from the CALLER's department, not the visitor's
   assert.deepEqual(ctx.ownerFilter, { 'owner.type': 'organization', 'owner.id': 'org1' })
 })
 
-test('an empty descriptor is an anonymous visitor', () => {
-  const ctx = getAsVisitorContext('{}', orgAdminSession, 'admin')
+test('an anonymous visitor has no user', () => {
+  const ctx = getAsVisitorContext('anonymous', orgAdminSession, 'admin')
   assert.deepEqual(ctx.sessionState, { lang: 'fr' })
   assert.deepEqual(ctx.ownerFilter, { 'owner.type': 'organization', 'owner.id': 'org1' })
 })
 
 test('a user without organization is active on a personal account', () => {
-  const ctx = getAsVisitorContext(JSON.stringify({ user: { email: 'ext@test.com' } }), orgAdminSession, 'admin')
+  const ctx = getAsVisitorContext('email:ext@test.com', orgAdminSession, 'admin')
   assert.equal(ctx.sessionState.user?.id, unknownUserId)
   assert.equal(ctx.sessionState.user?.email, 'ext@test.com')
   assert.deepEqual(ctx.sessionState.user?.organizations, [])
   assert.equal(ctx.sessionState.account?.type, 'user')
   assert.equal(ctx.sessionState.organization, undefined)
 
-  const connected = getAsVisitorContext(JSON.stringify({ user: {} }), orgAdminSession, 'admin')
+  const connected = getAsVisitorContext('connected', orgAdminSession, 'admin')
   assert.equal(connected.sessionState.user?.id, unknownUserId)
   assert.equal(connected.sessionState.user?.email, '')
 })
 
-test('an organization without user is any member with that role, partner organizations included', () => {
-  const group = getAsVisitorContext(JSON.stringify({ organization: { id: 'org1', role: 'contrib' } }), orgAdminSession, 'admin')
+test('role and partner visitors are any member of an organization', () => {
+  const group = getAsVisitorContext('role:contrib', orgAdminSession, 'admin')
   assert.equal(group.sessionState.user?.id, unknownUserId)
   assert.equal(group.sessionState.account?.id, 'org1')
   assert.equal(group.sessionState.accountRole, 'contrib')
 
-  const partner = getAsVisitorContext(JSON.stringify({ organization: { id: 'org2', name: 'Org 2', role: 'user' } }), orgAdminSession, 'admin')
+  const groupDep = getAsVisitorContext('role:user:dep1', orgAdminSession, 'admin')
+  assert.equal(groupDep.sessionState.account?.department, 'dep1')
+
+  const partner = getAsVisitorContext('partner:org2', orgAdminSession, 'admin')
   assert.equal(partner.sessionState.account?.id, 'org2')
-  assert.equal(partner.sessionState.account?.name, 'Org 2')
+  assert.equal(partner.sessionState.accountRole, 'user')
   // the audited perimeter stays the caller's organization
   assert.deepEqual(partner.ownerFilter, { 'owner.type': 'organization', 'owner.id': 'org1' })
 })
@@ -94,11 +96,7 @@ test('rejects an org API-key session even when it carries an admin accountRole',
 })
 
 test('rejects malformed descriptors', () => {
-  assert.throws(() => getAsVisitorContext('not json', orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext('[]', orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext(JSON.stringify({ user: 'x' }), orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext(JSON.stringify({ user: { id: 42 } }), orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext(JSON.stringify({ organization: { id: 'org1' } }), orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext(JSON.stringify({ organization: { role: 'user' } }), orgAdminSession, 'admin'), { status: 400 })
-  assert.throws(() => getAsVisitorContext(JSON.stringify({ organization: { id: 'org1', role: 'user', department: 42 } }), orgAdminSession, 'admin'), { status: 400 })
+  for (const raw of ['', '{}', 'foo', 'anonymous:x', 'connected:x', 'email', 'email:a:b', 'member:u8:u8@test.com', 'member:u8:u8@test.com:user:dep1:x', 'member::u8@test.com:user', 'role', 'role:user:', 'partner', 'partner:org2:x']) {
+    assert.throws(() => getAsVisitorContext(raw, orgAdminSession, 'admin'), { status: 400 }, raw)
+  }
 })

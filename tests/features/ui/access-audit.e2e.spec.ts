@@ -41,7 +41,7 @@ test.describe('access audit page', () => {
     // pick the member (member-select queries simple-directory from 3 typed chars)
     await page.getByRole('combobox').filter({ hasText: /Membre de/ }).locator('input').fill('user8')
     await page.getByRole('option', { name: /user8/i }).click()
-    await page.waitForURL(/visitor=/)
+    await page.waitForURL(/visitor=member(:|%3A)test_user8(:|%3A)/)
     // only the explicitly shared dataset is listed, with its capability chip
     await expect(page.getByText('Audit visible dataset')).toBeVisible()
     await expect(page.getByText('Audit hidden dataset')).toBeHidden()

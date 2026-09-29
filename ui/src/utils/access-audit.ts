@@ -2,7 +2,7 @@ export type AuditVisitorKind = 'member' | 'role' | 'partner' | 'email' | 'connec
 
 export const auditVisitorKinds: AuditVisitorKind[] = ['member', 'role', 'partner', 'email', 'connected', 'anonymous']
 
-/** The visitor chosen on the access audit page, as persisted in the URL (with display names). */
+/** The visitor chosen on the access audit page (names are only there for display). */
 export type AuditVisitor = {
   kind: AuditVisitorKind
   member?: { id: string, name: string, email?: string, role?: string, department?: string }
@@ -12,40 +12,51 @@ export type AuditVisitor = {
   email?: string
 }
 
+// colon-separated segments per kind, the same as the asVisitor API param (see api/src/misc/utils/as-visitor.ts)
+const segments = (visitor: AuditVisitor): (string | undefined)[] => {
+  switch (visitor.kind) {
+    case 'email': return [visitor.email]
+    case 'member': return visitor.member ? [visitor.member.id, visitor.member.email, visitor.member.role, visitor.member.department] : []
+    case 'role': return [visitor.role, visitor.department]
+    case 'partner': return [visitor.partner?.id]
+    default: return []
+  }
+}
+
+/** Serializes a visitor, possibly not fully described yet (the page persists it in its URL while it is being chosen). */
+export const serializeVisitor = (visitor: AuditVisitor): string => {
+  const parts = segments(visitor).map(part => part ?? '')
+  while (parts.length && !parts[parts.length - 1]) parts.pop()
+  return [visitor.kind, ...parts].join(':')
+}
+
+/** Parses a serialized visitor; display names fall back to ids until they are chosen again. */
+export const parseVisitor = (raw: string): AuditVisitor | null => {
+  const [kind, ...parts] = raw.split(':')
+  const [a, b, c, d] = parts.map(part => part || undefined)
+  switch (kind) {
+    case 'email': return { kind, email: a }
+    case 'member': return { kind, member: a ? { id: a, name: b ?? a, email: b, role: c, department: d } : undefined }
+    case 'role': return { kind, role: a, department: b }
+    case 'partner': return { kind, partner: a ? { id: a, name: a } : undefined }
+    case 'connected':
+    case 'anonymous': return { kind }
+    default: return null
+  }
+}
+
 /**
- * The asVisitor API descriptor for a visitor, or undefined while the visitor is not fully described.
+ * The asVisitor API param for a visitor, or undefined while the visitor is not fully described.
  * `account` is the audited organization; a department admin's department is forced on role visitors
  * (member visitors carry their own department, and member-select only offers the admin's department).
  */
-export const asVisitorDescriptor = (visitor: AuditVisitor | null, account: { id: string, department?: string }): string | undefined => {
+export const asVisitorParam = (visitor: AuditVisitor | null, account: { department?: string }): string | undefined => {
   if (!visitor) return undefined
-  switch (visitor.kind) {
-    case 'anonymous':
-      return JSON.stringify({})
-    case 'connected':
-      return JSON.stringify({ user: {} })
-    case 'email':
-      if (!visitor.email) return undefined
-      return JSON.stringify({ user: { email: visitor.email } })
-    case 'member': {
-      const m = visitor.member
-      if (!m?.id || !m.email || !m.role) return undefined
-      const organization: Record<string, string> = { id: account.id, role: m.role }
-      if (m.department) organization.department = m.department
-      return JSON.stringify({ user: { id: m.id, email: m.email }, organization })
-    }
-    case 'role': {
-      if (!visitor.role) return undefined
-      const organization: Record<string, string> = { id: account.id, role: visitor.role }
-      const department = account.department ?? visitor.department
-      if (department) organization.department = department
-      return JSON.stringify({ organization })
-    }
-    case 'partner':
-      if (!visitor.partner) return undefined
-      // the permissions editor never restricts a partner permission by role, any role gives the same result
-      return JSON.stringify({ organization: { id: visitor.partner.id, name: visitor.partner.name, role: 'user' } })
-  }
+  if (visitor.kind === 'role' && account.department) visitor = { ...visitor, department: account.department }
+  const required = { email: 1, member: 3, role: 1, partner: 1, connected: 0, anonymous: 0 }[visitor.kind]
+  const parts = segments(visitor)
+  for (let i = 0; i < required; i++) if (!parts[i]) return undefined
+  return serializeVisitor(visitor)
 }
 
 /** Why a visitor reaches a resource, as returned on list results in asVisitor mode (see permissions.accessSources). */
