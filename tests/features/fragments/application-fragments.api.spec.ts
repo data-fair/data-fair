@@ -74,6 +74,21 @@ test.describe('application fragments', () => {
     assert.equal((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).status, 200)
   })
 
+  // a sub-application's configuration declares what it grants, in application context, on the
+  // parent's dataset fragments: only someone who already manages the parent may write one
+  test('creating a sub-application requires writeConfig on the parent', async () => {
+    const dashboard = await createApp()
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    // the admin locks the dashboard down: contributors keep read, lose the default write entry
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, parentPermissions.filter((p: any) => !p.classes?.includes('write')))
+    assert.ok(!(await testUser5Org.get(`/api/v1/applications/${dashboard.id}`)).data.userPermissions.includes('writeConfig'))
+    await assert.rejects(createApp(testUser5Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } }), { status: 403 })
+
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, parentPermissions)
+    const sub = await createApp(testUser5Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    assert.deepEqual(sub.partOf, { type: 'application', id: dashboard.id })
+  })
+
   test('refusals: an application cannot be a fragment of a dataset', async () => {
     const virtual = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, title: 'v' })).data
     await assert.rejects(createApp(testUser1Org, { partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })

@@ -59,6 +59,14 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
   if (!parent || !permissions.can(parentType, parent as any, 'readDescription', sessionState)) {
     throw httpError(404, `Ressource parente inconnue (${partOf.type} ${partOf.id})`)
   }
+  // An application fragment's configuration declares the operations it grants, in application
+  // context, on the parent's dataset fragments (applicationKeyPermissions, honoured by both the key
+  // and the session proofs of application-key.ts). Whoever writes it must already manage the parent,
+  // whose management the dataset fragments inherit: a mere reader of the parent could otherwise
+  // declare read/write on them for themselves or for every holder of the parent's key.
+  if (resourceType === 'applications' && partOf.type === 'application' && !permissions.can(parentType, parent as any, 'writeConfig', sessionState)) {
+    throw httpError(403, 'Il faut pouvoir modifier la configuration de l\'application parente pour lui ajouter une sous-application')
+  }
   const nbFragments = fragment.id ? await countFragments(resourceTypeToPartOfType(resourceType), fragment.id) : 0
   const error = validatePartOf({ fragmentType: resourceType, fragment, partOf, parent: parent as any, nbFragments })
   if (error) throw httpError(400, error)

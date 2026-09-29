@@ -74,7 +74,8 @@ data it needs (parent lookup, sibling-fragment count) is fetched by `preparePart
 
 | Rule | Error | Enforced in |
 |---|---|---|
-| Parent exists and is readable by the caller (`readDescription`) | 404 | `preparePartOf`, `api/src/fragments/service.ts:47-49` |
+| Parent exists and is readable by the caller (`readDescription`) | 404 | `preparePartOf`, `api/src/fragments/service.ts` |
+| For an application fragment of an application: the caller can write the parent's configuration (`writeConfig`) | 403 | `preparePartOf`, `api/src/fragments/service.ts` |
 | Fragment is not the parent (same id and type) | 400 | `validatePartOf`, `operations.ts:88` |
 | Parent is not itself a fragment | 400 | `validatePartOf`, `operations.ts:89` |
 | `parent.owner` equals `fragment.owner` (type, id, department) | 400 | `validatePartOf`, `operations.ts:90` |
@@ -291,15 +292,16 @@ message instead):
 branch, a calling application `B` that is a fragment of the key's application `A` only extends the
 key's reach to a dataset that is *itself* a fragment of that **same** `A`
 (`isFragmentOfKeyApp`, lines 106-116 — both `callingApp.partOf.id === applicationKey._id` and
-`parentAppId === applicationKey._id` are required). Attaching a fragment only needs
-`readDescription` on the parent (deliberately, not a write operation) — if the edge instead unlocked
+`parentAppId === applicationKey._id` are required). Attaching a dataset fragment only needs
+`readDescription` on the parent — if the edge instead unlocked
 *any* same-owner dataset that `B` merely lists in its own `configuration.datasets`, an org member who
 can read a dashboard `A` and create applications could attach a fresh app `B` as a fragment of `A`,
 point `B`'s configuration at an unrelated same-owner dataset, and read that dataset through `A`'s
 already-distributed key — without ever having write access to that dataset. Requiring the dataset to
 be a fragment of the *same* parent closes this: reassigning someone else's dataset to your own parent
-still needs `changeOwner` on that dataset, which the `partOf` edge never grants (see also the
-residual-privilege note in §9).
+still needs `changeOwner` on that dataset, which the `partOf` edge never grants. The parent's own
+dataset fragments are protected differently: a sub-application declaring operations on them needs
+`writeConfig` on the parent (§9).
 
 **Granted operations**: the calling application's declared `applicationKeyPermissions` for that
 dataset entry in `configuration.datasets`, default `{ classes: ['read'] }`
@@ -546,14 +548,20 @@ permission model on the client, it is purely presentational.
   application that needs to write to a utility fragment dataset must declare the write operations
   explicitly in `configuration.datasets[i].applicationKeyPermissions`, or writes break for
   *everyone* going through that application context, owner included.
-- **Residual privilege consideration.** Whoever attaches a fragment application to a parent also
-  chooses that entry's `applicationKeyPermissions`, so an org member holding `readDescription` on
-  the parent plus application-create rights can expose the parent's *own* fragment datasets to that
-  parent's key holders, with whatever operations they declare. Deviation 3 (§5) narrows this from
-  "any same-owner dataset" down to "the parent's own fragments", but does not eliminate it — it is
-  the same trust boundary the rest of the application-key model already accepts (the owner decides
-  what an application exposes through its key). The anonymous-write anti-spam stack (§10 of
-  `application-keys.md`) still applies to any resulting anonymous write.
+- **Creating or attaching a sub-application requires `writeConfig` on the parent application.**
+  Whoever writes a sub-application's configuration chooses the `applicationKeyPermissions` it
+  declares on the parent's dataset fragments, and both application-context proofs (§5) honour them
+  without any cap: through the parent's key for every key holder, and through the session proof for
+  anyone who can read the sub-application's config — its own author first. With only
+  `readDescription` required, as first shipped, a contributor an admin had restricted to reading a
+  dashboard could create a sub-application declaring `read`/`write` on the dashboard's dataset
+  fragments and read, rewrite or delete their lines. Requiring `writeConfig` means the author
+  already holds management on the parent, which the dataset fragments inherit (§4): they cannot
+  declare more than they have. It keeps holding afterwards, since the sub-application's own ACL is
+  derived from the parent's management entries. Dataset fragments keep the `readDescription`
+  requirement: creating one grants its author nothing beyond what the parent's ACL derives. The
+  anonymous-write anti-spam stack (§10 of `application-keys.md`) still applies to any anonymous write
+  through a key.
 - **Fragments count toward the owner's `nb_datasets` and storage quotas** (`store_bytes`,
   `indexed_bytes`) exactly like standalone resources. This is a deliberate, revisable product
   decision — not a technical constraint (§10).
