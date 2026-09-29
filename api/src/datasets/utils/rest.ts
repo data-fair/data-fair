@@ -28,6 +28,7 @@ import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, isSafeLineAttachmentId, lsAttachments, tmpDir } from './files.ts'
 import { stripTransientLineFlags } from './line-flags.ts'
+import { blockingValidationErrors } from '../operations.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
 import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage, dateCoherenceProps, dateCoherenceViolation } from './constraints.ts'
@@ -628,7 +629,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         // is visible even to a caller that only logs the returned validation errors.
         localize.fr(validate.errors)
         const message = errorsText(validate.errors, '', operation.body)
-        if (dataset.nonBlockingValidation) {
+        const blockingErrors = dataset.nonBlockingValidation ? blockingValidationErrors(validate.errors) : []
+        if (dataset.nonBlockingValidation && !blockingErrors.length) {
           operation._warning = message
           // the index mapping is strict: a property outside the schema would get the whole line
           // rejected by elasticsearch, drop it (the warning above names it) and keep the line
@@ -642,7 +644,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
             additional = validate.errors?.filter(e => e.keyword === 'additionalProperties') ?? []
           }
         } else {
-          operation._error = message
+          // with nonBlockingValidation, only the errors that make the line unstorable are reported
+          operation._error = blockingErrors.length ? errorsText(blockingErrors, '', operation.body) : message
           operation._status = 400
           continue
         }
