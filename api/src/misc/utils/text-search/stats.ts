@@ -12,7 +12,14 @@ export interface StatsCollection {
 
 /** What answering a query needs: statistics in, nothing else. */
 export interface StatsProvider {
-  get (terms: string[], ownerScope?: Record<string, any>): Promise<CorpusStats>
+  /**
+   * `visibleFilter` is what the caller may see. Document frequencies are counted under it: they
+   * decide which terms are dropped as unknown and which ones gate the candidates, so counted over
+   * the whole corpus they told anyone whether some hidden document contains a word (a known public
+   * document is returned iff the probed word counts 0). `n` and `avgLen` stay on the owner scope:
+   * they only weight scores, never which documents match.
+   */
+  get (terms: string[], ownerScope?: Record<string, any>, visibleFilter?: Record<string, any>): Promise<CorpusStats>
 }
 
 /**
@@ -96,12 +103,13 @@ export const createStatsProvider = (
       countAll.clear()
       averageLengths.clear()
     },
-    async get (terms, ownerScope) {
+    async get (terms, ownerScope, visibleFilter) {
       const key = scopeKey(ownerScope)
+      const dfKey = visibleFilter ? scopeKey({ ...ownerScope, ...visibleFilter }) : key
       const [n, avgLen, counts] = await Promise.all([
         countAll(key),
         averageLengths(key),
-        Promise.all(terms.map(async term => [term, await countTermChecked(term, key)] as const))
+        Promise.all(terms.map(async term => [term, await countTermChecked(term, dfKey)] as const))
       ])
       return { n, avgLen, df: Object.fromEntries(counts) }
     }

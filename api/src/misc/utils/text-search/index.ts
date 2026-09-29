@@ -16,7 +16,7 @@ export interface TextSearch {
   definition: ResolvedDefinition
   buildIndexFields (doc: any): IndexFields | null
   /** null when no positive term survives — the caller MUST return no results */
-  plan (q: string, statsProvider: StatsProvider, ownerScope?: Record<string, any>): Promise<QueryPlan | null>
+  plan (q: string, statsProvider: StatsProvider, ownerScope?: Record<string, any>, visibleFilter?: Record<string, any>): Promise<QueryPlan | null>
   matchFilter (plan: QueryPlan): any
   scoreExpression (plan: QueryPlan): any
   sortSpec (): Record<string, number>
@@ -29,11 +29,11 @@ export const defineTextSearch = (def: TextSearchDefinition): TextSearch => {
   return {
     definition,
     buildIndexFields: (doc) => buildIndexFields(doc, definition, analyzer),
-    async plan (q, statsProvider, ownerScope) {
+    async plan (q, statsProvider, ownerScope, visibleFilter) {
       const parsed = parseQuery(q, analyzer)
       const terms = queryTerms(parsed)
       if (!terms.length) return null
-      const stats = await statsProvider.get(terms, ownerScope)
+      const stats = await statsProvider.get(terms, ownerScope, visibleFilter)
       return planQuery(parsed, stats, definition)
     },
     matchFilter: (plan) => matchFilter(plan, definition),

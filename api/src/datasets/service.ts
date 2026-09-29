@@ -148,7 +148,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   // catalogMode is the only mode whose publication-site filter is a strict owner equality;
   // otherwise foreign-owned master-data datasets are in the result set and must be counted too.
   const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: options.catalogMode })
-  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope) : null
+  // document frequencies are counted over what the caller may list, see StatsProvider.get
+  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope, { $or: permissions.filter(sessionState, 'datasets') }) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? datasetsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 

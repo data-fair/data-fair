@@ -66,6 +66,21 @@ test('an owner scope is part of the count filter AND of the cache key', async ()
   assert.equal(dfCounts[0][1]['owner.id'], 'a')
 })
 
+test('a visible filter narrows df and its cache key, not n or avgLen', async () => {
+  const c = fakeCollection()
+  const provider = createStatsProvider(c, def)
+  const owner = { 'owner.id': 'a' }
+  await provider.get(['charg'], owner, { $or: [{ public: true }] })
+  await provider.get(['charg'], owner, { $or: [{ 'owner.id': 'me' }] })
+  const dfCounts = c.calls.filter(x => x[0] === 'count' && x[1]._terms)
+  assert.equal(dfCounts.length, 2, 'different visible sets must not share a cached df')
+  assert.deepEqual(dfCounts[0][1], { 'owner.id': 'a', $or: [{ public: true }], _terms: 'charg' })
+  const nCounts = c.calls.filter(x => x[0] === 'count' && !x[1]._terms)
+  assert.deepEqual(nCounts.map(x => x[1]), [owner])
+  assert.equal(c.calls.filter(x => x[0] === 'aggregate').length, 1)
+  assert.deepEqual(c.calls.find(x => x[0] === 'aggregate')[1][0], { $match: owner })
+})
+
 test('n is counted rather than estimated when owner-scoped', async () => {
   const c = fakeCollection()
   await createStatsProvider(c, def).get(['charg'], { 'owner.id': 'a' })
