@@ -32,7 +32,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
-import { reqEventLogContext } from '../../misc/utils/req-context.ts'
+import { reqEventLogContext, reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { searchIndexPatch } from '../utils/search-text.ts'
 import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
@@ -51,6 +51,11 @@ const debugBreakingChanges = debugModule('breaking-changes')
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
   if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+    // which columns survive tells whether some line matches the filters, e.g. maxCardinality=0
+    // keeps a column iff no line does: that is a read of the lines, not of the schema
+    if (!can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
+      throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
+    }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
     // within the context of the data filters, instead of the stored whole-dataset cardinality
