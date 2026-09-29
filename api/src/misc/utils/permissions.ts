@@ -254,14 +254,17 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
   const operationFilter = []
   for (const op of operation.split(',')) {
-    const operationClass = permissionsClasses.classByOperation[resourceType][op]
+    // own keys only: `can=constructor` read Object's constructor from these plain objects
+    const operationClass = Object.hasOwn(permissionsClasses.classByOperation[resourceType], op) && permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (permissionsClasses.operationsClasses[resourceType][operation]) {
+    } else if (Object.hasOwn(permissionsClasses.operationsClasses[resourceType], op)) {
       operationFilter.push({ classes: op })
     }
   }
+  // an unknown operation matches no permission entry (an empty $or is rejected by mongo)
+  if (!operationFilter.length) operationFilter.push({ operations: { $in: [] } })
   const or = []
 
   if (sessionState.user) {
@@ -307,6 +310,8 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
       }
     }
   }
+  // public permissions apply to anonymous sessions too
+  if (!sessionState.user) or.push({ permissions: { $elemMatch: { $or: operationFilter, type: null, id: null } } })
   return or
 }
 
