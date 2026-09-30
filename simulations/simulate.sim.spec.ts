@@ -42,6 +42,8 @@ const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
 // sonnet and this sidecar recorded haiku, which defeats the one thing the field
 // is for — never comparing verdicts from different tiers silently.
 const USER_MODEL = resolveUserModel()
+// The agents chat drawer's frame, whose src is /agents/<type>/<id>/chat?…
+const CHAT_FRAME = 'iframe[src*="/agents/"][src*="/chat"]'
 const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
 
 for (const simCase of selected) {
@@ -102,7 +104,9 @@ for (const simCase of selected) {
 
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
-      const root = page.frameLocator('iframe')
+      // Not a bare 'iframe': an application page embeds its own render and activity
+      // frames beside the chat, and a strict-mode match on three frames voids the run.
+      const root = page.frameLocator(CHAT_FRAME)
       // Single source of truth for the composer's locale-dependent strings: the
       // chat driver and the perception's off-limits list must agree on exactly
       // what "the composer" is called, or the guard could miss it.
@@ -145,7 +149,7 @@ for (const simCase of selected) {
       // produce. Ordinary controls stay reachable — including the drawer toggle,
       // which a real user can and does click.
       perception = createPagePerception(
-        [{ label: 'page', root: page }, { label: 'chat panel', root: page.frameLocator('iframe') }],
+        [{ label: 'page', root: page }, { label: 'chat panel', root: page.frameLocator(CHAT_FRAME) }],
         { offLimits: [strings.input, strings.send, strings.stop, strings.reset] }
       )
 
