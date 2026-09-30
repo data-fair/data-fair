@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import type { AxiosInstance } from 'axios'
 import type { Page, Locator } from '@playwright/test'
@@ -139,5 +139,30 @@ test.describe('fragments UI', () => {
     await page.getByRole('button', { name: /Détacher d'abord/ }).click()
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${fragmentId}`)).data.partOf, { timeout: 10000 }).toBeUndefined()
     await expect.poll(async () => ax.get(`/api/v1/datasets/${virtualId}`).then(() => 200, (err: any) => err.status), { timeout: 10000 }).toBe(404)
+  })
+
+  test('the application config pickers offer the application\'s own fragment datasets', async ({ page, goToWithAuth }) => {
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'fragments app' })).data
+    const otherApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other app' })).data
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'own fragment', partOf: { type: 'application', id: app.id } })
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'foreign fragment', partOf: { type: 'application', id: otherApp.id } })
+
+    const listing = page.waitForRequest(req => {
+      const url = decodeURIComponent(req.url())
+      return url.includes('/api/v1/datasets?') && url.includes(`partOf=false,application:${app.id}`)
+    }, { timeout: 20000 })
+    // the mock app server sends no CORS header, the config form could not read the schema
+    await page.route('**/monapp1/config-schema.json', async route => {
+      const response = await route.fetch()
+      await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })
+    })
+    await goToWithAuth(`/data-fair/application/${app.id}/config`, 'test_user1', { org: 'test_org1' })
+    const panel = page.locator('.v-expansion-panel-title').first()
+    await pastActiveAccountGate(page, panel)
+    await panel.click()
+    await page.getByRole('combobox', { name: 'Jeu de données', exact: true }).click()
+    await listing
+    await expect(page.getByRole('option', { name: 'own fragment' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('option', { name: 'foreign fragment' })).toHaveCount(0)
   })
 })

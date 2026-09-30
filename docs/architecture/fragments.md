@@ -504,9 +504,10 @@ permission model on the client, it is purely presentational.
 - **Pickers opened from a parent offer its fragments.** `pickerPartOf` (`ui/src/utils/fragments.ts`)
   builds `partOf=false,<parent>` — the resource's own family, or its siblings when it is itself a
   fragment. The virtual-children picker (`dataset-virtual.vue`) passes it to `dataset-select`, and
-  `application-config.vue` appends it to every datasets / applications listing `x-fromUrl` of the
-  configuration schema (`addPartOfToFromUrls`), so an application can select its own fragment
-  datasets and a dashboard its sub-applications.
+  `application-config.vue` puts it in the `datasetFilter` of the configuration form context, which
+  base apps already use in every datasets / applications listing URL of their schema, so an
+  application can select its own fragment datasets and a dashboard its sub-applications. A base app
+  building a listing URL without `datasetFilter` does not offer fragments.
 - **`fragment-attach-dialog.vue`: attach only towards a known parent, never a free pick.** Use
   cases are opened one at a time, starting with virtual datasets. A standalone dataset's danger zone
   proposes "Rattacher au jeu de données virtuel" only when exactly **one** virtual dataset has it
