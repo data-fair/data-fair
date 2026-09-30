@@ -668,6 +668,7 @@ ever starts a model turn.
 | `dataset-line-dialog-opened` | `ui/src/components/dataset/form/dataset-edit-line-form.vue` | `id`, `mode` (`add` / `edit`) — emitted when a line dialog's form mounts; context (a dialog the person opened themselves), not what the openers rely on |
 | `dataset-line-saved` | `ui/src/components/dataset/table/use-dataset-edition.ts` (`saveLine`) | `id`, `action` (`create` / `update`), `lineId` — emitted from the one call both dialogs go through, and only on a save that landed |
 | `structure` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `columns` (the ones a person put there), `unsaved`, `ready` — `ready` is `unsaved && valid`, i.e. Enregistrer can be pressed right now |
+| `metadata` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `unsaved` — the metadata card holds edits (a person's or `set_dataset_metadata`'s) that Enregistrer would save |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
 | `dataset-structure-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id`, `columns` — emitted after a save that really landed, so a declared wait resolves on it |
 | `application-created` | `ui/src/pages/new-application.vue` | `id`, `title` — emitted before the redirect |
