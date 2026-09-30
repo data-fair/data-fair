@@ -93,7 +93,7 @@ There is no separate catalog file. The single source of truth is the webhook eve
 Two consumers read this list directly via the static `import settingsSchema from 'api/types/settings/schema.js'` (no API round-trip):
 
 - **Settings webhook form** — `ui/src/components/settings/settings-webhooks.vue` renders the whole settings schema with VJSF; the `oneOf` becomes a multi-select of event types, automatically translated.
-- **Back-office subscription UI** — `ui/src/pages/notifications.vue` (global subscription page) and `ui/src/components/common/event-notifications.vue` (per-resource subscription widget) filter the same `oneOf` by resource prefix (`dataset-*` / `application-*`) and read `x-i18n-title[locale]` for the label. The per-resource widget additionally overrides the label for a handful of keys to switch from the indefinite article ("Un jeu de données…") to the definite article ("Le jeu de données…") since the user is already on the resource page.
+- **Back-office subscription UI** — `ui/src/pages/notifications.vue` (global subscription page) and `ui/src/components/common/resource-topics.ts` (topic list shared by the per-resource notification and webhook widgets) filter the same `oneOf` by resource prefix (`dataset-*` / `application-*`) and read `x-i18n-title[locale]` for the label. The per-resource widget additionally overrides the label for a handful of keys to switch from the indefinite article ("Un jeu de données…") to the definite article ("Le jeu de données…") since the user is already on the resource page.
 
 To add or remove a subscribable / webhook-triggerable topic, edit the `oneOf` — both UIs pick it up automatically. Removing an option is not free: the `oneOf` is a closed list, and every write to a settings document re-validates the **whole** document (including the publication-site upsert/delete routes driven by the portals sync), so stored webhooks still listing the removed value make those writes fail until an upgrade script cleans them — see `api/upgrade/6.20.0/03-remove-publication-webhook-events.ts` (built on `removeWebhookEvents` in `settings/operations.ts`) for the removal of `dataset-publication` / `application-publication`.
 
@@ -181,7 +181,7 @@ Instead, every REST **partial** finalize pass (the pass following line writes, `
 
 **Why not a notification.** REST writes are designed for high-frequency callers: inline-edit UIs PATCH one cell at a time, integration scripts can run every minute, and `_bulk_lines` is itself often invoked on a tight schedule. A per-write notification would spam every subscriber of the dataset and of its virtual parents. Writes landing during a finalize pass are folded into the next one, so the signal rate is at most one per pass, and coalescing on the events side absorbs the rest.
 
-**Subscription UIs.** `ui/src/components/common/event-notifications.vue` hides the `data-updated` subscribe button when `dataset.isRest === true`: human subscribers never receive it. `ui/src/components/common/event-webhooks.vue` offers `data-updated` on every dataset; for REST datasets it is fed by the finalize signal.
+**Subscription UIs.** `ui/src/components/common/resource-topics.ts` drops `data-updated` from the notifications channel when `dataset.isRest === true`: human subscribers never receive it. The webhooks channel offers `data-updated` on every dataset; for REST datasets it is fed by the finalize signal.
 
 **Known gap.** A REST dataset stuck in `status: 'error'` does not run `finalize` (`rest.ts` bumps `finalizedAt` directly there), so it sends no signal until it recovers.
 
@@ -249,4 +249,4 @@ The dev-mode test buffer captures **both** pushes verbatim (the shared `_id` is 
 - `api/src/settings/service.ts` — API key lifecycle events.
 - `api/types/settings/schema.js` — single source of truth for the subscribable / webhook topic list (the `oneOf` of `webhooks.items.properties.events.items`).
 - `api/i18n/messages/{fr,en}.json` — i18n titles and bodies under `notifications.<resourceType>.*`.
-- `ui/src/pages/notifications.vue`, `ui/src/components/common/event-notifications.vue`, `ui/src/components/settings/settings-webhooks.vue` — consumers of the schema `oneOf`.
+- `ui/src/pages/notifications.vue`, `ui/src/components/common/resource-topics.ts`, `ui/src/components/settings/settings-webhooks.vue` — consumers of the schema `oneOf`.
