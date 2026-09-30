@@ -1,61 +1,62 @@
 # Simulations de l'assistant IA — état des lieux QA
 
-État au 30/09/2026 (v6.21.0).
+État au 30/09/2026, référence mesurée sur la branche `chore-more-agent-sims` (pas encore livrée), avec les dépendances publiées : image `agents:main` (a0f401f), `@data-fair/lib-agents-sim` 0.8.0, `@koumoul/vjsf` 4.6.1.
 
 ## En bref
 
-Six parcours de l'assistant IA sont couverts par des simulations jugées, et les six étaient satisfaisants à leur dernier run. Ce vert est à prendre avec prudence :
+Avec l'assistant sur Sonnet, 13 runs sur 14 sont satisfaisants. Avec l'assistant sur Haiku, 5 sur 7. Le matin même, avant les corrections, Sonnet n'en réussissait que 6 sur 12.
 
-- **Pas de vérification sur la version livrée.** Aucun de ces runs n'a tourné sur la v6.21.0 exacte.
-- **Un seul run par verdict.** Deux cas sont fragiles : `chiffres-de-l-utilisateur` et `creation-guidee-jeu-de-donnees`.
-- **Couverture partielle.** 6 des 17 parcours documentés sont couverts, aucun ne concerne les applications.
+- **Les parcours de consultation sont solides** : lien filtré, question sur les données, chiffres erronés de l'utilisateur. Ils réussissent avec les deux modèles.
+- **Les parcours de saisie tiennent avec Sonnet** : création guidée, saisie et correction de lignes, question avant enregistrement.
+- **Avec Haiku, ils restent fragiles.** Haiku oublie de reprendre l'attente après une interruption, invente parfois un chiffre et se trompe de page.
+- **Un cas échoue par construction** : `creation-guidee-jeu-de-donnees` demande un seul clic, alors qu'un jeu éditable en exige deux.
 
-La suite date de la v6.21.0. En deux semaines, elle a déjà fait corriger le prompt, plusieurs outils et un défaut d'enregistrement de ligne que les tests classiques n'avaient pas vus.
+La journée a produit une quinzaine de corrections dans data-fair, l'assistant, le harnais de simulation, vjsf et portals. Elles sont détaillées plus bas.
 
-## Cas couverts
+## Résultats de la référence
 
-Sept cas ; les six premiers étaient « satisfaisant » à leur dernier run avant la v6.21.0. Aucun de ces runs n'a tourné sur le code exact de la v6.21.0. Toutes les personas sont des agents de petite collectivité, non techniques, en français.
+Deux passes avec l'assistant sur Sonnet, une passe sur Haiku. La persona tourne toujours sur Sonnet. Entre parenthèses : le nombre de frictions relevées par le juge.
 
-| Cas | Ce que la personne veut | Ce qui est vérifié | Dernier verdict | Solidité |
+| Cas | Ce que la personne veut | Sonnet 1 | Sonnet 2 | Haiku |
 | --- | --- | --- | --- | --- |
-| `lien-ouvert-par-l-utilisateur` | Un lien vers les équipements de plus de 500 places, ouvert elle-même | Lien filtré correct ; le chat reste utilisable après la navigation | Satisfaisant, 0 friction (17/09) | Stable : satisfaisant à chaque run valide depuis le 14/09 |
-| `question-sur-les-donnees` | Les équipements de plus de 500 places, affichés à l'écran | L'assistant navigue lui-même vers une vue filtrée | Satisfaisant, 0 friction (17/09) | Stable ; un run à 5 frictions le 16/09 |
-| `chiffres-de-l-utilisateur` | Confirmer un nombre de stades en avançant des chiffres faux | L'assistant revérifie dans les données au lieu de calculer sur les chiffres de l'utilisateur | Satisfaisant « de justesse », 2 frictions (17/09) | Fragile : insatisfaisant le 16/09 (« 8 stades » au lieu de 3) |
-| `termes-de-recherche-caches` | Être trouvée sur « gymnase », « piscine » dans le portail | Termes proposés dans le formulaire, rien d'enregistré sans elle | Satisfaisant (16/09) | Un seul run, avant la fusion de la recherche catalogue |
-| `creation-guidee-jeu-de-donnees` | Un registre neuf (campagne 2027) de demandes de subvention, éditable avec historique — objectif resserré le 30/09 sur ce que les outils savent faire | L'assistant prépare l'assistant de création, la personne clique, puis il enchaîne seul | Satisfaisant, 2 frictions (18/09) | Le plus instable : environ 8 runs insatisfaisants entre le 14 et le 17/09 |
-| `saisie-et-correction-d-une-demande` | Saisir une demande et corriger un montant à 12 000 € au lieu de 1 200 € | Ouverture des formulaires de ligne, pré-remplissage, la personne enregistre | Satisfaisant, 0 friction (28/09) | Le plus récent ; un run du 28/09 avait ouvert la mauvaise ligne |
-| `question-avant-enregistrement` | Enregistrer une demande, mais poser une question avant d'appuyer sur Enregistrer | L'assistant répond à partir de ce qu'il a déjà fait, sans tout refaire, et rend le même formulaire | Pas encore exécuté (ajouté le 30/09) | — |
+| `lien-ouvert-par-l-utilisateur` | Un lien vers les équipements de plus de 500 places, qu'elle ouvre elle-même | ✓ (1) | ✓ (2) | ✓ (1) |
+| `question-sur-les-donnees` | Les équipements de plus de 500 places, affichés à l'écran | ✓ (0) | ✓ (5) | ✓ (0) |
+| `chiffres-de-l-utilisateur` | Confirmer un nombre de stades en avançant des chiffres faux | ✓ (2) | ✓ (2) | ✓ (2) |
+| `termes-de-recherche-caches` | Être trouvée sur « gymnase », « piscine » dans le portail | ✓ (0) | ✓ (0) | ✓ (6) |
+| `creation-guidee-jeu-de-donnees` | Un registre neuf (campagne 2027), éditable, avec historique | ✗ | ✓ (0) | ✗ |
+| `saisie-et-correction-d-une-demande` | Saisir une demande et corriger un montant de 12 000 € en 1 200 € | ✓ (2) | ✓ (2) | ✗ |
+| `question-avant-enregistrement` | Poser une question avant d'appuyer sur Enregistrer | ✓ (0) | ✓ (1) | ✓ (1) |
 
-Les frictions encore ouvertes au dernier run : une route `edit-schema` inexistante proposée après la création, un bug de schéma de sortie de `calculate_metric` (percentiles), et un tableau recopié dans le chat alors qu'il est déjà à l'écran.
+Pourquoi les trois échecs :
 
-## Évolution de la couverture
+- **`creation`, Sonnet 1 et Haiku.** Après « Créer », un jeu éditable demande un second clic, sur « Enregistrer », pour valider ses colonnes. L'objectif du cas ne l'accepte pas, et l'assistant ne l'annonce pas avant la création. Haiku a en plus affirmé à tort que l'historique note qui a modifié quoi : aucun outil ne sait activer ce suivi.
+- **`saisie`, Haiku.** L'assistant est allé sur le tableau en lecture seule au lieu de la page de saisie, puis a déclaré la saisie impossible. Corrigé depuis : `list_datasets` signale désormais les jeux éditables et leur page de saisie. Avec cette correction, Haiku a réussi ce cas 2 fois sur 2.
 
-Toute la suite est arrivée dans la v6.21.0. Il n'y avait aucune simulation en v6.20 ni avant. Elle est passée de 3 à 6 cas en deux semaines, et chaque ajout accompagnait une fonctionnalité de l'assistant.
+## Ce que la référence a fait corriger
 
-| Date | PR | Cas | Ce que la simulation a fait changer |
-| --- | --- | --- | --- |
-| 28/09 | #594 ouverture des dialogues | `saisie-et-correction` ajusté | L'assistant attend que les outils du formulaire soient prêts avant de continuer ; il ouvrait parfois la mauvaise ligne |
-| 22/09 | #582 recherche catalogue | +1 : `termes-de-recherche-caches` | Le bouton de termes cachés est validé par un cas qui peut échouer |
-| 21/09 | #580 parcours guidés | +2 : `creation-guidee`, `saisie-et-correction` | Événements envoyés par l'application à l'assistant, outil `add_columns`, `_id` conservé dans la saisie de ligne |
-| 14/09 | #574 suite initiale | 3 : `lien-ouvert`, `question-sur-les-donnees`, `chiffres-de-l-utilisateur` | Consigne ajoutée : l'assistant revérifie les chiffres donnés par l'utilisateur. Correction d'un nom d'outil erroné dans le prompt |
+Une référence prise le matin sur la même base a échoué sur trois cas. Chaque échec venait d'une cause précise, corrigée dans la journée puis vérifiée par une nouvelle simulation.
 
-Le 16/09, une persona sur Haiku abandonnait parfois sa prémisse, et le cas ne testait alors plus rien. La persona tourne désormais sur Sonnet.
+| Constat | Correction | Où |
+| --- | --- | --- |
+| Quand la personne écrivait pendant une attente, l'assistant oubliait tout ce qu'il venait de faire et recommençait | Le tour interrompu est conservé dans l'historique | agents |
+| L'assistant passait la main sans rien dire : seule l'étiquette « En attente » s'affichait | L'attente porte un message pour la personne, affiché dans le chat | agents |
+| Le récapitulatif des modifications ignorait les termes de recherche | Champ ajouté, avec un test qui détecte tout nouvel oubli | data-fair |
+| Le 29–31 du mois, une date de février s'affichait en mars dans le formulaire de ligne, et pouvait être enregistrée ainsi | Construction des dates corrigée | vjsf 4.6.1 |
+| Les liens promettaient des colonnes que le tableau ne masquait pas | Paramètre `cols=` au lieu de `select=` | data-fair, portals |
+| Les nombres s'affichaient à l'anglaise (« 1,987 ») | Format de la langue de l'interface ; années non groupées | data-fair |
+| L'assistant déduisait à tort qu'un registre n'avait pas d'historique | `describe_dataset` indique l'historique, le suivi des modifications et la provenance | data-fair |
+| Les colonnes créées semblaient sans libellé | `describe_dataset` montre le libellé affiché par l'interface | data-fair |
+| La persona lisait une page tronquée au milieu d'un champ, ou relue avant la fin d'une navigation | Page élaguée et coupée en fin de ligne ; lecture stabilisée après un clic | harnais |
+| La persona écrivait avant d'avoir lu la réponse à son propre clic, ou son message n'était jamais envoyé | Message périmé écarté ; envoi vérifié | harnais |
 
 ## Limites et prochaines étapes
 
-La priorité est de mesurer la v6.21.0 telle qu'elle est livrée. Viennent ensuite les applications, qui n'ont aucun cas.
-
-1. **Établir une référence v6.21.0.** Aucun verdict actuel n'a tourné sur la version livrée, et un run isolé ne prouve rien pour un assistant non déterministe. Il faut lancer chaque cas plusieurs fois (3, par exemple) avec l'assistant sur Sonnet, puis autant avec l'assistant sur Haiku. On note ensuite un taux de réussite par cas et par modèle.
-2. **Relancer `termes-de-recherche-caches`.** Ce cas n'a jamais tourné sur le code fusionné de la recherche catalogue.
-3. **Corriger les frictions ouvertes** : la route `edit-schema` inexistante et les percentiles de `calculate_metric`.
-4. **Couvrir les parcours manquants** (11 sur 17), en commençant par la création et la configuration d'application, puis la description d'un jeu de données et l'annotation de son schéma. Restent ensuite :
-   - l'expression calculée ;
-   - l'optimisation des colonnes ;
-   - le contrôle qualité ;
-   - le résumé des changements ;
-   - les notes de version.
-5. **Varier les profils.** Tous les cas mettent en scène un agent de collectivité non technique, francophone et administrateur. Il faut ajouter un cas en anglais et un cas sans droit d'écriture.
-6. **Fixer un rythme.** On relance la suite avant chaque version qui touche l'assistant. Chaque run consomme du quota Claude et réinitialise les données de test du poste.
+1. **Reprise de l'attente avec Haiku.** Après une interruption, Sonnet reprend l'attente dans tous les cas observés, Haiku seulement 1 fois sur 5. Un rappel placé dans le tour suivant, en cours de validation, ne suffit pas pour Haiku. Il reste à faire surveiller l'action attendue par le chat lui-même, sans dépendre du modèle.
+2. **Cas `creation`.** Il faut soit accepter le second clic dans l'objectif, soit permettre d'initialiser le jeu depuis un jeu existant. Il manque aussi un outil pour activer le suivi « qui a modifié quoi ».
+3. **Sous-agent de données.** Il invente parfois un lien incomplet, un titre, ou un filtre mal formé.
+4. **Modèle cible.** Le modèle envisagé en production est DeepSeek V4.1 Flash. Ses benchmarks agentiques le placent plutôt au niveau de Sonnet, mais seule une passe de simulation dira s'il reprend l'attente comme Sonnet ou l'oublie comme Haiku.
+5. **Couverture.** 7 cas couvrent 6 des 17 parcours documentés, et aucun ne concerne les applications. Il faut aussi un cas en anglais et un cas sans droit d'écriture.
+6. **Rythme.** On relance la suite avant chaque version qui touche l'assistant : deux passes Sonnet et une passe sur le modèle cible. Chaque run consomme du quota et réinitialise les données de test du poste.
 
 ## Fonctionnement
 
@@ -64,6 +65,6 @@ Un utilisateur simulé (la persona) poursuit un objectif avec le vrai assistant,
 - **Un cas = une page, une persona, un objectif**, sans résultat attendu écrit à l'avance.
 - **La persona tourne sur Sonnet**, pour simuler un utilisateur crédible. Elle regarde l'écran, clique et saisit.
 - **L'assistant tourne sur Sonnet par défaut, et doit aussi être validé sur Haiku.** Un parcours que seul un grand modèle réussit n'est pas assez guidé. Les sous-agents et la modération tournent sur Haiku.
-- **Un run invalide n'est pas un échec produit.** Une limite de débit ou une panne du pont vers le modèle rend le run invalide, et il n'est pas jugé.
+- **Un run invalide n'est pas un échec produit.** Une limite de débit, un refus du service ou une panne du pont vers le modèle rend le run invalide, et il n'est pas jugé.
 
 La suite se lance avec le skill `/agents-sim`. Elle reste hors de `npm test` et de la CI, à cause de son coût en quota.
