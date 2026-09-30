@@ -176,10 +176,11 @@ for (const simCase of selected) {
           const changed = resumed.length !== conversation.length
           conversation.length = 0
           conversation.push(...resumed)
-          // A person who acted and then stopped has not seen the reply their action
-          // caused: an agents-repo run ended on the click, and whether the assistant
-          // noticed the creation was never on record. Let them read it first.
-          if (changed && isDone(message)) continue
+          // Whatever the person wrote in that pass, they wrote it before the reply their
+          // action caused: judged runs sent "qu'est-ce qui vient d'être créé ?" under the
+          // very message that said so, interrupting the next wait, and an agents-repo run
+          // ended on the click unseen. Drop it and let them read the reply first.
+          if (changed) continue
         }
         if (isDone(message)) break
         if (message === '') {
