@@ -162,6 +162,22 @@ for (const simCase of selected) {
       for (let i = 0; i < simCase.maxTurns; i++) {
         perception.setTurn(i + 1)
         const message = await nextUserMessage(simCase, conversation, simCase.maxTurns - i, { perception })
+        if (handedOver) {
+          // The pass above was the person's chance to act on the wait. If they took it,
+          // the wait resolved and the assistant is finishing the turn it paused — let it,
+          // rather than speaking over its reply or ending the run under it. If they
+          // ignored it, the wait is still armed and this returns 'waiting' at once, so
+          // nothing is spent waiting for something that will not happen.
+          handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
+          const resumed = await chat.readConversation()
+          const changed = resumed.length !== conversation.length
+          conversation.length = 0
+          conversation.push(...resumed)
+          // A person who acted and then stopped has not seen the reply their action
+          // caused: an agents-repo run ended on the click, and whether the assistant
+          // noticed the creation was never on record. Let them read it first.
+          if (changed && isDone(message)) continue
+        }
         if (isDone(message)) break
         if (message === '') {
           // Distinct from a real stop: the persona subprocess produced no text
@@ -170,17 +186,6 @@ for (const simCase of selected) {
           // satisfied" when nothing of the sort happened.
           error = `simulated user returned no message (empty completion) on turn ${i + 1}`
           break
-        }
-        if (handedOver) {
-          // The pass above was the person's chance to act on the wait. If they
-          // took it, the wait resolved and the assistant is finishing the turn it
-          // paused — let it, rather than speaking over its reply. If they ignored
-          // it, the wait is still armed and this returns 'waiting' at once, so
-          // nothing is spent waiting for something that will not happen.
-          handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
-          const resumed = await chat.readConversation()
-          conversation.length = 0
-          conversation.push(...resumed)
         }
         // The persona may have navigated the page — or closed the drawer itself —
         // between turns, so re-open before sending rather than assuming the
