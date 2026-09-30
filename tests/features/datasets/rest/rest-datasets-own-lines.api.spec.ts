@@ -2,8 +2,10 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize } from '../../../support/workers.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl } from '../../../support/axios.ts'
+import { waitForFinalize, clearRateLimiting } from '../../../support/workers.ts'
+
+const anonymous = axios()
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
 const testUser3 = await axiosAuth('test_user3@test.com')
@@ -440,5 +442,40 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.equal(dataset.schema.find((p: any) => p.key === '_owner'), undefined)
     res = await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'col1', type: 'string', title: 'Column 1' }] })
     assert.equal(res.status, 200)
+  })
+
+  test('Ignore the ownership columns sent through an application key', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    const dataset = res.data
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_alone', classes: ['manageOwnLines'] }
+    ])
+
+    res = await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const appId = res.data.id
+    await testUser1Org.put('/api/v1/applications/' + appId + '/config', {
+      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}`, applicationKeyPermissions: { operations: ['createLine'] } }]
+    })
+    res = await testUser1Org.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
+    const key = res.data[0].id
+    const anonymousToken = (await anonymous.get(directoryUrl + '/api/auth/anonymous-action')).data
+    await clearRateLimiting()
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    const headers = { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
+
+    // an anonymous contributor cannot post a line in someone else's name
+    await anonymous.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'anonline', col1: 'spoofed', _owner: 'user:test_alone', _ownerName: 'Alone' }, { headers })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/anonline`)
+    assert.equal(res.data.col1, 'spoofed')
+    assert.equal(res.data._owner, undefined)
+    assert.equal(res.data._ownerName, undefined)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`)
+    assert.equal(res.data.total, 0)
   })
 })

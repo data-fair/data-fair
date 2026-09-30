@@ -619,7 +619,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   // restore the ownership of the lines being replaced. _owner/_ownerName are x-calculated, so a client
   // never sends them back, and update/createOrUpdate persist the line with replaceOne(fullBody): without
   // this pass the owner would be silently dropped. It also feeds getLineId below when the owner is part
-  // of the primary key. A caller that does send _owner is re-assigning the line and keeps precedence.
+  // of the primary key. A caller that does send _owner is re-assigning the line and keeps precedence
+  // (except under an application key bypass, where createOrUpdateLine drops it).
   if (ownerPreviousFilters.length) {
     let op = 0
     for await (const ownerPrevious of c.find({ $or: ownerPreviousFilters }).project({ _id: 1, _deleted: 1, _owner: 1, _ownerName: 1 })) {
@@ -1261,7 +1262,15 @@ const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: st
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   const linesOwner = reqLinesOwnerOptional(req)
-  if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
+  if (linesOwner) {
+    Object.assign(req.body, linesOwnerCols(linesOwner))
+  } else if (reqBypassPermissions(req)) {
+    // a caller under an application key bypass (share link, crowd-sourcing) acts for no account of the
+    // dataset: a body _owner would let it post a line in someone else's name. This is the only line write
+    // route outside own/ that accepts the bypass.
+    delete req.body._owner
+    delete req.body._ownerName
+  }
 
   const _action: string = req.body._action ?? 'createOrUpdate'
   // this duplicates a check inside applyTransactions, but it is load-bearing here: without it an
