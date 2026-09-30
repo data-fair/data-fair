@@ -520,16 +520,21 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 Unit and e2e tests answer "does this mechanism work". They cannot answer whether
 the assistant served a person, because that depends on what a real model says to
 a real question. The simulation suite answers it by having a simulated person try.
+Where the cases stand, for the QA team (in French):
+[docs/qa/simulations-assistant-ia.md](../qa/simulations-assistant-ia.md).
 
 One case is a page, a persona and a goal — deliberately with no expected result.
-A simulated user (Claude, `SIM_USER_MODEL`, default `haiku`) types into the real
+A simulated user (Claude, `SIM_USER_MODEL`, default `sonnet` — a weaker persona
+drops its premise and the case stops testing anything) types into the real
 chat drawer in a real browser; the assistant under test runs on
 `SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
 configured as an `openai-compatible` provider on the agents service. The
 background roles — sub-agents, compaction, the moderation guard — run on
 `SIM_TOOLS_MODEL` (default `haiku`) instead, matching where a deployment puts a
 small model: a sub-agent prompt only a large model can follow reads as working
-until the cheap tier runs it. The run is
+until the cheap tier runs it. A baseline also runs the cases with
+`SIM_ASSISTANT_MODEL=haiku`: a scenario only a large assistant gets through is
+not covered well enough for a small one. The run is
 captured as a transcript — what was said, every gateway request with its tool
 definitions and tool calls, any console errors, and what the persona looked at
 and did on screen — and a `simulation-judge` subagent reads it and returns a
