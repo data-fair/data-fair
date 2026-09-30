@@ -169,6 +169,9 @@ export function formatSchemaColumns (schema: any[]): string[] | undefined {
         const shown = entries.slice(0, 10).map(([k, v]) => `${k}=${v}`).join(', ')
         notes.push(entries.length > 10 ? `labels: ${shown}… (${entries.length} total)` : `labels: ${shown}`)
       }
-      return `| \`${col.key}\` | ${col.type} | ${col.title || ''} | ${notes.join(' — ')} |`
+      // The label the UI shows: a column declared by hand keeps its name in x-originalName
+      // with an empty title, and printing only `title` had the assistant tell a person their
+      // freshly declared columns had no readable labels.
+      return `| \`${col.key}\` | ${col.type} | ${col.title || col['x-originalName'] || ''} | ${notes.join(' — ')} |`
     })
 }

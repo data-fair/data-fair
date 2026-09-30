@@ -74,6 +74,11 @@ test.describe('formatSchemaColumns', () => {
     assert.ok(rows[1].includes('lon,lat'), '_geocorners row should mention the reverse lon,lat order')
   })
 
+  test('shows a hand-declared column under the name the UI shows', () => {
+    const rows = formatSchemaColumns([{ key: 'montant_demande_euro', type: 'number', title: '', 'x-originalName': 'Montant demandé (€)' }])
+    assert.ok(rows?.[0].includes('| Montant demandé (€) |'), rows?.[0])
+  })
+
   test('does not add the geo warning to ordinary columns', () => {
     const rows = formatSchemaColumns([{ key: 'ville', type: 'string', title: 'Ville' }])
     assert.ok(rows)
