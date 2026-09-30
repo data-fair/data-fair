@@ -8,6 +8,7 @@ export {
   toCsv,
   cleanRow,
   buildPaginatedQuery,
+  activeAccountScope,
   untilStable
 } from './utils-logic'
 
