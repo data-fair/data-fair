@@ -148,5 +148,19 @@ export const cases: SimulationCase[] = [
     persona: 'Tu travailles au service vie associative d\'une petite collectivité. Tu tiens le registre des demandes de subvention : tu connais les dossiers par cœur, mais pas l\'outil informatique. Tu n\'emploies jamais de vocabulaire technique (ni schéma, ni colonne, ni ligne, ni enregistrement) et tu ne vas pas chercher toi-même où cliquer : tu ne veux pas explorer l\'écran ni le décrire à quelqu\'un. La seule chose que tu fais à l\'écran, c\'est presser toi-même le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Tu donnes les informations d\'un dossier quand on te les demande, une réponse par question si on te les demande une par une.',
     goal: 'Deux choses à régler dans le registre des demandes de subvention. D\'abord enregistrer une nouvelle demande qui vient d\'arriver : l\'association « Les Amis du Vieux Moulin » demande 4 500 € pour refaire la toiture du moulin, dossier déposé le 3 mars 2026, suivi par le service vie associative. Ensuite corriger une erreur que tu as repérée : la demande du club de judo du centre est inscrite à 12 000 € alors qu\'ils demandaient 1 200 € — il y a un zéro de trop. Tu veux que l\'assistant fasse la saisie et la correction à ta place ; tu presseras toi-même le bouton quand il te dira que c\'est prêt.',
     maxTurns: 9
+  },
+  // Speaking during a wait. The data-entry cases hand the Enregistrer button over through
+  // a declared wait, and a person who writes instead of pressing takes the turn back. For
+  // a while that dropped the whole interrupted turn from the model's history: the next
+  // request held two user messages and nothing between, and the assistant denied having
+  // filled the form and rebuilt it from scratch. The persona here always asks before
+  // pressing, so every run crosses that path; what is under test is the assistant
+  // answering from what it already did, and handing the same form back.
+  {
+    name: 'question-avant-enregistrement',
+    route: '/data-fair/datasets',
+    persona: 'Tu travailles au service vie associative d\'une petite collectivité et tu tiens le registre des demandes de subvention. Tu ne connais pas l\'outil et tu n\'emploies aucun vocabulaire technique. Tu ne cherches pas toi-même où cliquer. Tu es prudent : avant d\'appuyer sur un bouton qui enregistre quelque chose, tu poses toujours d\'abord une question par écrit pour vérifier, et tu n\'appuies qu\'une fois la réponse obtenue. Tu ne prétends jamais avoir appuyé sur un bouton sans l\'avoir fait.',
+    goal: 'Tu veux enregistrer une nouvelle demande : l\'association « Les Jardins Partagés » demande 2 300 € pour des bacs de culture, dossier déposé le 12 mars 2026, suivi par le service vie associative. Quand l\'assistant te dit que c\'est prêt, tu lui demandes d\'abord par écrit quel montant il a saisi, parce que tu as un doute ; une fois la réponse obtenue, tu appuies toi-même sur le bouton d\'enregistrement.',
+    maxTurns: 7
   }
 ]

@@ -14,7 +14,7 @@ La suite date de la v6.21.0. En deux semaines, elle a déjà fait corriger le pr
 
 ## Cas couverts
 
-Six cas, tous « satisfaisant » à leur dernier run. Aucun de ces runs n'a tourné sur le code exact de la v6.21.0. Toutes les personas sont des agents de petite collectivité, non techniques, en français.
+Sept cas ; les six premiers étaient « satisfaisant » à leur dernier run avant la v6.21.0. Aucun de ces runs n'a tourné sur le code exact de la v6.21.0. Toutes les personas sont des agents de petite collectivité, non techniques, en français.
 
 | Cas | Ce que la personne veut | Ce qui est vérifié | Dernier verdict | Solidité |
 | --- | --- | --- | --- | --- |
@@ -22,8 +22,9 @@ Six cas, tous « satisfaisant » à leur dernier run. Aucun de ces runs n'a tour
 | `question-sur-les-donnees` | Les équipements de plus de 500 places, affichés à l'écran | L'assistant navigue lui-même vers une vue filtrée | Satisfaisant, 0 friction (17/09) | Stable ; un run à 5 frictions le 16/09 |
 | `chiffres-de-l-utilisateur` | Confirmer un nombre de stades en avançant des chiffres faux | L'assistant revérifie dans les données au lieu de calculer sur les chiffres de l'utilisateur | Satisfaisant « de justesse », 2 frictions (17/09) | Fragile : insatisfaisant le 16/09 (« 8 stades » au lieu de 3) |
 | `termes-de-recherche-caches` | Être trouvée sur « gymnase », « piscine » dans le portail | Termes proposés dans le formulaire, rien d'enregistré sans elle | Satisfaisant (16/09) | Un seul run, avant la fusion de la recherche catalogue |
-| `creation-guidee-jeu-de-donnees` | Un registre de demandes de subvention éditable avec historique | L'assistant prépare l'assistant de création, la personne clique, puis il enchaîne seul | Satisfaisant, 2 frictions (18/09) | Le plus instable : environ 8 runs insatisfaisants entre le 14 et le 17/09 |
+| `creation-guidee-jeu-de-donnees` | Un registre neuf (campagne 2027) de demandes de subvention, éditable avec historique — objectif resserré le 30/09 sur ce que les outils savent faire | L'assistant prépare l'assistant de création, la personne clique, puis il enchaîne seul | Satisfaisant, 2 frictions (18/09) | Le plus instable : environ 8 runs insatisfaisants entre le 14 et le 17/09 |
 | `saisie-et-correction-d-une-demande` | Saisir une demande et corriger un montant à 12 000 € au lieu de 1 200 € | Ouverture des formulaires de ligne, pré-remplissage, la personne enregistre | Satisfaisant, 0 friction (28/09) | Le plus récent ; un run du 28/09 avait ouvert la mauvaise ligne |
+| `question-avant-enregistrement` | Enregistrer une demande, mais poser une question avant d'appuyer sur Enregistrer | L'assistant répond à partir de ce qu'il a déjà fait, sans tout refaire, et rend le même formulaire | Pas encore exécuté (ajouté le 30/09) | — |
 
 Les frictions encore ouvertes au dernier run : une route `edit-schema` inexistante proposée après la création, un bug de schéma de sortie de `calculate_metric` (percentiles), et un tableau recopié dans le chat alors qu'il est déjà à l'écran.
 
