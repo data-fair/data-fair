@@ -48,6 +48,14 @@ export function cleanRow (row: any): any {
 }
 
 /**
+ * Scope a back-office listing tool to the active account, as the datasets and
+ * applications pages do. Without it the API also lists the public resources of
+ * every other account, and the assistant explores a catalog the user never sees
+ * on those pages. The API reads the account and department from the session.
+ */
+export const activeAccountScope = { shared: 'false' } as const
+
+/**
  * Build a paginated query object from common list tool parameters.
  */
 export function buildPaginatedQuery (params: { q?: string, page?: number, size?: number }, extra?: Record<string, string>): { query: Record<string, string>, page: number, size: number } {

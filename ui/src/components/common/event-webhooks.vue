@@ -3,19 +3,23 @@
 </template>
 
 <script setup lang="ts">
+import { getResourceTopics, getResourceSender, type TopicResource } from './resource-topics'
+
 const props = defineProps<{
-  resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string } }
+  resource: TopicResource
   resourceType: 'dataset' | 'application'
 }>()
 
-const eventsUrl = window.location.origin + '/events'
+const { locale } = useI18n()
 
 const iframeUrl = computed(() => {
-  // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.
-  const keys = `data-fair:${props.resourceType}-data-updated:${props.resource.id}`
-  const titles = props.resource.title.replace(/,/g, ' ')
-  let sender = `${props.resource.owner.type}:${props.resource.owner.id}`
-  if (props.resource.owner.department) sender += ':' + props.resource.owner.department
-  return `${eventsUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keys)}&title=${encodeURIComponent(titles)}&sender=${encodeURIComponent(sender)}`
+  const topics = getResourceTopics(props.resource, props.resourceType, 'webhooks', locale.value)
+  const searchParams = new URLSearchParams({
+    key: topics.map(topic => topic.key).join(','),
+    title: topics.map(topic => topic.title.replace(/,/g, ' ')).join(','),
+    sender: getResourceSender(props.resource)
+  }).toString()
+
+  return `${window.location.origin}/events/embed/subscribe-webhooks?${searchParams}`
 })
 </script>

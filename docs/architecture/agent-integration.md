@@ -352,6 +352,16 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
+### Active-account scope of the listing tools
+
+The back-office `list_datasets` and `list_applications` send `shared=false`
+(`activeAccountScope` in `ui/src/composables/agent/utils-logic.ts`), the same scoping as the
+datasets and applications pages: only the active account's resources (restricted to its
+department when it has one), never the public resources of other accounts. The portal assistant
+is scoped the same way to its portal's catalog (`catalog/datasets` and `publicationSites`). The
+single-resource tools (`describe_dataset`, `search_data`, …) take an id and are not scoped: they
+keep working on any dataset the user can read, e.g. one whose id the user pasted.
+
 ### Fragments and the listing tools
 
 `list_datasets` and `list_applications` call the same `findDatasets` / `findApplications` service

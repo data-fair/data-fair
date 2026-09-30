@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch, $sitePath } from '~/context'
 import { toAbsoluteUrl } from '~/composables/agent/url-utils'
+import { activeAccountScope } from '~/composables/agent/utils'
 import * as listDatasets from '@data-fair/agent-tools-data-fair/list-datasets'
 import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset'
 
@@ -18,10 +19,11 @@ export function serializeDatasetInfo (dataset: any, options?: { includeOwner?: b
 export function useAgentDatasetTools (locale: Ref<string>) {
   useAgentTool({
     ...listDatasets.schema,
+    description: 'List the datasets of the active account with optional text search. Returns id, title, status, row count, and last update.',
     annotations: { title: (listDatasets.annotations as any)[locale.value]?.title ?? listDatasets.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
       const { path, query } = listDatasets.buildQuery(params)
-      const data = await $fetch<any>(path, { query })
+      const data = await $fetch<any>(path, { query: { ...query, ...activeAccountScope } })
       const page = Math.max(params.page || 1, 1)
       const size = Math.min(Math.max(params.size || 10, 1), 50)
       const result = listDatasets.formatResult(data, page, size, { datasetLink: datasetBackOfficeLink })

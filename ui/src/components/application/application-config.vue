@@ -152,7 +152,7 @@ import { type AppConfig } from '#api/types'
 import { setProperty } from 'dot-prop'
 import equal from 'fast-deep-equal'
 import Debug from 'debug'
-import { addPartOfToFromUrls, pickerPartOf } from '~/utils/fragments'
+import { pickerPartOf } from '~/utils/fragments'
 
 const debug = Debug('application-config')
 
@@ -241,8 +241,6 @@ const completeSchema = (schema: any) => {
       }
     }
   }
-  // fragments are hidden from listings: the pickers must still offer the ones of this application's family
-  if (application.value) addPartOfToFromUrls(schema, pickerPartOf('application', application.value))
   if (!schema.layout?.comp) schema.layout = 'expansion-panels'
   if (baseAppDraft.value?.meta?.['df:vjsf'] === '3') {
     return schema
@@ -273,7 +271,8 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
   const owner = application.value.owner
   let ownerFilter = `${owner.type}:${owner.id}`
   if (owner.department && !showFullOrg.value) ownerFilter += ':' + owner.department
-  const datasetFilter = `owner=${ownerFilter}`
+  // fragments are hidden from listings: the pickers must still offer the ones of this application's family
+  const datasetFilter = `owner=${ownerFilter}&partOf=${pickerPartOf('application', application.value)}`
   const remoteServiceFilter = `privateAccess=${ownerFilter}`
   debug('compute vjsf options')
   return {
