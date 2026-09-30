@@ -26,13 +26,16 @@ export class DfEs {
       options.tls.ca = config.elasticsearch.ca
     }
     const client = new elasticsearch.Client(options)
-    try {
-      await client.ping()
-    } catch (err) {
-      // 1 retry after 2s
-      // solve the quite common case in docker compose of the service starting at the same time as the elasticsearh node
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      await client.ping()
+    // retry for about 30s
+    // solve the quite common case in docker compose of the service starting at the same time as the elasticsearh node
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await client.ping()
+        break
+      } catch (err) {
+        if (attempt === 15) throw err
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
     }
     const clusterSettings = await client.cluster.getSettings({ flat_settings: true })
     if (!clusterSettings.persistent['indices.id_field_data.enabled'] || clusterSettings.persistent['action.destructive_requires_name'] !== 'false') {
