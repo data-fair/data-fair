@@ -54,9 +54,14 @@ export function toCsv (rows: Record<string, any>[]): string {
  * LLMs sometimes write sort: "_geo_distance" redundantly when a geoDistance filter is already present.
  * The API already auto-sorts by distance when a geo_distance filter is set.
  */
+/** Models copy the quotes of a quoted example ('"-count"'), which the API rejects as an unknown field. */
+export function unquoteSortKey (key: string): string {
+  return key.trim().replace(/^["'`]+|["'`]+$/g, '')
+}
+
 export function normalizeSort (sort: string): string {
   return sort.split(',').map(part => {
-    const trimmed = part.trim()
+    const trimmed = unquoteSortKey(part)
     if (/^-?_geo_distance$/.test(trimmed)) return null
     return trimmed
   }).filter(Boolean).join(',')

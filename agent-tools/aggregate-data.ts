@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
+import { datasetIdProperty, filterProperties, buildFilterQueryString, unquoteSortKey } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Agréger des données' },
@@ -76,8 +76,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
     query.metric = params.metric.type
     if (params.metric.column) query.metric_field = params.metric.column
   }
-  // Models copy the quotes of a quoted example ('"-count"'), which the API rejects.
-  if (params.sort) query.sort = params.sort.trim().replace(/^["']+|["']+$/g, '')
+  if (params.sort) query.sort = unquoteSortKey(params.sort)
   if (params.filters) { for (const [key, value] of Object.entries(params.filters)) query[key] = String(value) }
   if (params.bbox) query.bbox = params.bbox
   if (params.geoDistance) query.geo_distance = params.geoDistance

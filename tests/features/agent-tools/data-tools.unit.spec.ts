@@ -175,6 +175,13 @@ test.describe('search_data formatResult', () => {
 
 // --- aggregate_data ---
 
+test.describe('search_data buildQuery sort', () => {
+  test('strips the quotes a model copies around a sort key', () => {
+    assert.equal(searchData.buildQuery({ datasetId: 'ds1', sort: '"-capacite"' }).query.sort, '-capacite')
+    assert.equal(searchData.buildQuery({ datasetId: 'ds1', sort: "'nom', \"-age\"" }).query.sort, 'nom,-age')
+  })
+})
+
 test.describe('aggregate_data buildQuery', () => {
   test('strips the quotes a model copies from the quoted sort example', () => {
     assert.equal(aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['type'], sort: '"-count"' }).query.sort, '-count')
