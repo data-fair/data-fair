@@ -413,10 +413,11 @@ test.describe('Datasets with auto-initialization from another one', () => {
       temporal: { start: '2024-01-01', end: '2024-12-31' },
       frequency: 'monthly',
       creator: 'Someone',
-      customMetadata: { foo: 'foo value' }
+      customMetadata: { foo: 'foo value' },
+      relatedDatasets: [{ id: 'related1', title: 'Related 1' }]
     }
     const metaOnly = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta only', ...metadata })).data
-    const parts = ['description', 'license', 'origin', 'topics', 'keywords', 'spatial', 'temporal', 'frequency', 'creator', 'customMetadata']
+    const parts = ['summary', 'description', 'license', 'origin', 'topics', 'keywords', 'spatial', 'temporal', 'frequency', 'creator', 'customMetadata', 'relatedDatasets']
 
     const rest = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest from meta', initFrom: { dataset: metaOnly.id, parts } })).data
     const restDataset = await waitForFinalize(ax, rest.id)

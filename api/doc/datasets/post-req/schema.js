@@ -47,8 +47,7 @@ export default {
           type: 'array',
           items: {
             type: 'string',
-            // 'description' copies both summary and description
-            enum: ['data', 'schema', 'metadataAttachments', 'primaryKey', 'extensions', 'description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata']
+            enum: ['data', 'schema', 'metadataAttachments', 'primaryKey', 'extensions', 'summary', 'description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata', 'relatedDatasets']
           }
         }
       }

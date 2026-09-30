@@ -7,10 +7,7 @@
     class="mt-2"
   />
 
-  <div
-    v-if="initFromDataset && modelValue"
-    class="ml-2"
-  >
+  <div v-if="initFromDataset && modelValue">
     <div
       v-if="allowData && !initFromDataset.isMetaOnly"
       class="d-flex align-center"
@@ -53,39 +50,50 @@
       @update:model-value="togglePart('metadataAttachments')"
     />
 
-    <template v-if="availableMetadata.length && !fragment">
-      <v-checkbox
-        :model-value="!!copyableMetadata.length && selectedMetadata.length === copyableMetadata.length"
-        :indeterminate="!!selectedMetadata.length && selectedMetadata.length < copyableMetadata.length"
-        :disabled="!copyableMetadata.length"
-        :label="t('initFromMetadata')"
-        color="primary"
-        density="comfortable"
-        hide-details
-        @update:model-value="toggleAllMetadata"
-      />
-      <div class="ml-8">
-        <v-checkbox
-          v-for="part of availableMetadata"
-          :key="part"
-          :model-value="modelValue.parts.includes(part)"
-          :disabled="!isCopyable(part)"
-          :label="t('metadata.' + part)"
-          density="compact"
-          hide-details
-          @update:model-value="togglePart(part)"
+    <!-- like class-implied operations in the permission dialog: "copy all" ticks and locks every item -->
+    <v-select
+      v-if="availableMetadata.length && !fragment"
+      v-model="metadataModel"
+      :items="metadataItems"
+      :label="t('initFromMetadata')"
+      multiple
+      chips
+      clearable
+      variant="outlined"
+      density="compact"
+      max-width="800"
+      class="mt-2"
+    >
+      <!-- custom chip: a locked item's chip must stay closable, closing it leaves "copy all" -->
+      <template #chip="{ item }">
+        <v-chip
+          :text="item.title"
+          size="small"
+          closable
+          @click:close="metadataModel = metadataModel.filter(p => p !== item.value)"
+        />
+      </template>
+      <template #prepend-item>
+        <v-list-item
+          :title="t('initFromAllMetadata')"
+          :disabled="!copyableMetadata.length"
+          role="option"
+          :aria-selected="copyAllMetadata"
+          @click="setCopyAllMetadata(!copyAllMetadata)"
         >
-          <template
-            v-if="!isCopyable(part)"
-            #append
-          >
-            <span class="text-warning font-italic">
-              {{ t('notCopyable.' + part) }}
-            </span>
+          <template #prepend>
+            <v-checkbox-btn
+              :model-value="copyAllMetadata"
+              :ripple="false"
+              tabindex="-1"
+              aria-hidden="true"
+              @click.prevent
+            />
           </template>
-        </v-checkbox>
-      </div>
-    </template>
+        </v-list-item>
+        <v-divider />
+      </template>
+    </v-select>
   </div>
 </template>
 
@@ -117,15 +125,14 @@ const owner = computed(() => props.owner ?? account.value)
 
 const initFromDataset = ref<any>(props.initialDataset ?? null)
 
-// 'description' covers both summary and description
-const metadataParts = ['description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata']
+const metadataParts = ['summary', 'description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata', 'relatedDatasets']
 
 const isEmpty = (value: any) => value == null || value === '' || (typeof value === 'object' && !Object.keys(value).length)
 
 const availableMetadata = computed(() => {
   const ds = initFromDataset.value
   if (!ds) return []
-  return metadataParts.filter(part => part === 'description' ? !isEmpty(ds.summary) || !isEmpty(ds.description) : !isEmpty(ds[part]))
+  return metadataParts.filter(part => !isEmpty(ds[part]))
 })
 
 // topics and custom metadata keys are defined by each account, from another account only the known ones are copied
@@ -146,7 +153,31 @@ const isCopyable = (part: string) => {
 }
 
 const copyableMetadata = computed(() => availableMetadata.value.filter(isCopyable))
-const selectedMetadata = computed(() => copyableMetadata.value.filter(part => modelValue.value?.parts.includes(part)))
+const copyAllMetadata = ref(false)
+
+const metadataItems = computed(() => availableMetadata.value.map(part => ({
+  value: part,
+  title: t('metadata.' + part),
+  props: {
+    disabled: copyAllMetadata.value || !isCopyable(part),
+    subtitle: isCopyable(part) ? undefined : t('notCopyable.' + part)
+  }
+})))
+
+const metadataModel = computed({
+  get: () => availableMetadata.value.filter(part => modelValue.value?.parts.includes(part)),
+  set (selected: string[] | null) {
+    if (!modelValue.value) return
+    selected ??= []
+    if (selected.length < copyableMetadata.value.length) copyAllMetadata.value = false
+    modelValue.value = { ...modelValue.value, parts: [...modelValue.value.parts.filter(p => !metadataParts.includes(p)), ...selected] }
+  }
+})
+
+const setCopyAllMetadata = (value: boolean) => {
+  copyAllMetadata.value = value
+  metadataModel.value = value ? copyableMetadata.value : []
+}
 
 const noDataReason = computed(() => {
   const ds = initFromDataset.value
@@ -162,6 +193,7 @@ watch(initFromDataset, (dataset) => {
     // a metadata-only dataset is a draft sheet waiting for its data: copy all its metadata by default
     modelValue.value = { dataset: dataset.id, parts: dataset.isMetaOnly ? [...availableMetadata.value, ...(dataset.attachments?.length ? ['metadataAttachments'] : [])] : ['schema'] }
     sourceTitle.value = dataset.title ?? null
+    copyAllMetadata.value = !!dataset.isMetaOnly
   } else {
     modelValue.value = null
     sourceTitle.value = null
@@ -170,9 +202,8 @@ watch(initFromDataset, (dataset) => {
 
 // topics / custom metadata selected by default can turn out not copyable once the owner settings are loaded
 watch(copyableMetadata, (copyable) => {
-  if (!modelValue.value) return
-  const parts = modelValue.value.parts.filter(p => !metadataParts.includes(p) || copyable.includes(p))
-  if (parts.length !== modelValue.value.parts.length) modelValue.value = { ...modelValue.value, parts }
+  if (copyAllMetadata.value) metadataModel.value = copyable
+  else metadataModel.value = metadataModel.value.filter(p => copyable.includes(p))
 })
 
 watch(noDataReason, (reason) => {
@@ -186,14 +217,6 @@ const togglePart = (part: string) => {
   const parts = modelValue.value.parts
   modelValue.value = { ...modelValue.value, parts: parts.includes(part) ? parts.filter(p => p !== part) : [...parts, part] }
 }
-
-// a partial selection selects all
-const toggleAllMetadata = () => {
-  if (!modelValue.value) return
-  const allSelected = selectedMetadata.value.length === copyableMetadata.value.length
-  const parts = modelValue.value.parts.filter(p => !metadataParts.includes(p))
-  modelValue.value = { ...modelValue.value, parts: allSelected ? parts : [...parts, ...copyableMetadata.value] }
-}
 </script>
 
 <i18n lang="yaml">
@@ -202,9 +225,11 @@ fr:
   initFromData: Copier la donnée
   initFromExtensions: Copier les extensions
   initFromAttachments: Copier les pièces jointes
-  initFromMetadata: Copier les métadonnées
+  initFromAllMetadata: Copier toutes les métadonnées
+  initFromMetadata: Métadonnées à copier
   metadata:
-    description: Résumé et description
+    summary: Résumé
+    description: Description
     license: Licence
     origin: Provenance
     image: Image
@@ -217,6 +242,7 @@ fr:
     creator: Producteur
     modified: Date de modification de la source
     customMetadata: Métadonnées spécifiques
+    relatedDatasets: Jeux de données liés
   notCopyable:
     topics: Aucune de ces thématiques n'existe dans votre compte
     customMetadata: Aucune de ces métadonnées spécifiques n'existe dans votre compte
@@ -227,9 +253,11 @@ en:
   initFromData: Copy data
   initFromExtensions: Copy extensions
   initFromAttachments: Copy attachments
-  initFromMetadata: Copy metadata
+  initFromAllMetadata: Copy all metadata
+  initFromMetadata: Metadata to copy
   metadata:
-    description: Summary and description
+    summary: Summary
+    description: Description
     license: License
     origin: Origin
     image: Image
@@ -242,6 +270,7 @@ en:
     creator: Producer
     modified: Date of modification of the source
     customMetadata: Custom metadata
+    relatedDatasets: Related datasets
   notCopyable:
     topics: None of these topics exist in your account
     customMetadata: None of these custom metadata exist in your account

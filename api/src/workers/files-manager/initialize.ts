@@ -21,7 +21,7 @@ import { rootSettingsFilter } from '../../settings/operations.ts'
 
 export const eventsPrefix = 'initialize'
 
-const copiedMetadataKeys = ['license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata'] as const
+const copiedMetadataKeys = ['summary', 'description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata', 'relatedDatasets'] as const
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:initializer:${dataset.id}`)
@@ -111,10 +111,6 @@ export default async function (dataset: DatasetInternal) {
 
     if (dataset.initFrom.parts.includes('extensions')) {
       patch.extensions = parentDataset.extensions
-    }
-    if (dataset.initFrom.parts.includes('description')) {
-      patch.description = parentDataset.description
-      patch.summary = parentDataset.summary
     }
     const metadataParts = copiedMetadataKeys.filter(key => dataset.initFrom!.parts.includes(key))
     if (metadataParts.length) {
