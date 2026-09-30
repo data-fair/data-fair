@@ -604,7 +604,10 @@ turn "finishes" and nothing throws. Left alone, that run records as valid and a
 judge blames the assistant for never replying. `simulations/runner/gateway-errors.ts`
 reads the gateway's own `error` chunk — a JSON field the service emits, not the
 prose it renders, so it survives translation and restyling — and invalidates the
-run. Rate limits are the practical ceiling here: three Claude roles per case on
+run. A request the agents service refuses before streaming (its account credit
+cap answers 429 with a JSON body) invalidates the run the same way; the seeding
+lifts that cap for the simulation owner, since a production-mode agents image
+defaults it to 0 credits. Rate limits are the practical ceiling here: three Claude roles per case on
 one subscription. An invalid run must never be judged, and
 `sim-<case>.run.json` is what tells the two apart.
 
