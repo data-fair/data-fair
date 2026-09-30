@@ -80,11 +80,12 @@ const fieldsMap = {
   ...filterFields
 }
 
-export const findDatasets = async (db: Db, locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, options: { catalogMode?: boolean } = {}) => {
+export const findDatasets = async (db: Db, locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, options: { catalogMode?: boolean, extraFilters?: any[] } = {}) => {
   const explain: Record<string, number> | false | undefined = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
   const extraFilters: any[] = []
+  if (options.extraFilters) extraFilters.push(...options.extraFilters)
   if (reqQuery.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
   }
@@ -148,7 +149,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   // catalogMode is the only mode whose publication-site filter is a strict owner equality;
   // otherwise foreign-owned master-data datasets are in the result set and must be counted too.
   const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: options.catalogMode })
-  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope) : null
+  // a term no document the caller may list contains counts as unknown, see StatsProvider.get
+  const plan = reqQuery.q ? await datasetsTextSearch.plan(reqQuery.q, datasetsStats, ownerScope, { $or: permissions.filter(sessionState, 'datasets') }) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? datasetsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 

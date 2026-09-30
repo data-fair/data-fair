@@ -58,6 +58,14 @@ export class S3Backend implements FileBackend {
     return path.replace(this.dataDir + '/', '')
   }
 
+  // S3 has no directories, only key prefixes: without the trailing "/" a directory "a" would also
+  // match the siblings "ab", "a-draft"…
+  private bucketDirPrefix (path: string) {
+    const prefix = this.bucketPath(path)
+    if (!prefix || prefix.endsWith('/')) return prefix
+    return prefix + '/'
+  }
+
   async checkAccess () {
     debug('check access')
     const command = new PutObjectCommand({ Bucket: this.bucket, Key: 'check-access.txt', Body: 'ok' })
@@ -74,7 +82,7 @@ export class S3Backend implements FileBackend {
 
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
     debug('lrsWithStats', targetPath, this.bucketPath(targetPath))
-    const command = new ListObjectsV2Command({ Bucket: this.bucket, Prefix: this.bucketPath(targetPath) })
+    const command = new ListObjectsV2Command({ Bucket: this.bucket, Prefix: this.bucketDirPrefix(targetPath) })
     const response = await this.metadataClient.send(command)
     const filesStats = (response.Contents || []).map((obj) => ({
       path: relativePath(targetPath, joinPath(this.dataDir, obj.Key!)),
@@ -107,7 +115,7 @@ export class S3Backend implements FileBackend {
     // the page size cannot be too large as it is also the number of parallel deletes
     const pages = paginateListObjectsV2(
       { client: this.metadataClient, pageSize: 100 },
-      { Bucket: this.bucket, Prefix: this.bucketPath(path) }
+      { Bucket: this.bucket, Prefix: this.bucketDirPrefix(path) }
     )
 
     for await (const page of pages) {
@@ -293,7 +301,7 @@ export class S3Backend implements FileBackend {
     // the page size cannot be too large as it is also the number of parallel copies
     const pages = paginateListObjectsV2(
       { client: this.dataClient, pageSize: 100 },
-      { Bucket: this.bucket, Prefix: this.bucketPath(srcPath) }
+      { Bucket: this.bucket, Prefix: this.bucketDirPrefix(srcPath) }
     )
 
     for await (const page of pages) {
@@ -302,7 +310,7 @@ export class S3Backend implements FileBackend {
       // Map each object in the current page to a Copy promise
       const copyPromises = page.Contents.map((obj) => {
         const sourceKey = obj.Key!
-        const destKey = sourceKey.replace(this.bucketPath(srcPath), this.bucketPath(dstPath))
+        const destKey = this.bucketDirPrefix(dstPath) + sourceKey.slice(this.bucketDirPrefix(srcPath).length)
         return this.copyFile(
           joinPath(this.dataDir, sourceKey),
           joinPath(this.dataDir, destKey)

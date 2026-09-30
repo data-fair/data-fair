@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { clearPublicationSitesCache } from '../../support/workers.ts'
 
 const u1 = await axiosAuth('test_user1@test.com')
@@ -46,6 +46,22 @@ test.describe('catalog search behaviour', () => {
     const negated = await search({ q: 'consommation -gaz', size: 100 })
     assert.deepEqual(negated.results.map((r: any) => r.id), ['sb-conso-elec'])
     assert.equal((await search({ q: '-consommation' })).count, 0)
+  })
+
+  // Document frequencies decide which terms are dropped as unknown and which ones gate the
+  // candidates. Counted over the whole corpus they answered "does some dataset I cannot see contain
+  // this word": a known public dataset came back for a phrase with the probed word iff it counted 0.
+  test('a word only present in datasets the caller cannot see does not change what it finds', async () => {
+    await u1.put('/api/v1/datasets/sb-conso-gaz/permissions', [{ classes: ['list', 'read'] }])
+    const anonymous = axios()
+    const probe = async (q: string) =>
+      (await anonymous.get('/api/v1/datasets', { params: { select: 'id', q } })).data.results.map((r: any) => r.id)
+    assert.deepEqual(await probe('"consommation zzqxunknown"'), ['sb-conso-gaz'])
+    await metaOnly('sb-secret', { title: 'Dossier zzqxsecret' })
+    assert.deepEqual(await probe('"consommation zzqxsecret"'), ['sb-conso-gaz'])
+    // the owner sees their private dataset, so for them the word is live and the phrase applies
+    assert.equal((await search({ q: '"consommation zzqxsecret"' })).count, 0)
+    assert.deepEqual((await search({ q: 'zzqxsecret' })).results.map((r: any) => r.id), ['sb-secret'])
   })
 
   test('tied scores return a stable order across identical calls', async () => {

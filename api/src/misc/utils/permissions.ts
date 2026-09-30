@@ -183,23 +183,52 @@ export const list = function (resourceType: ResourceType, resource: Resource, se
     return [...operations]
   }
 
+  const sources = accessSources(resourceType, resource, sessionState)
+
   // apply implicit permissions based on user being a member of the owner of this resource
-  const ownerClasses = getOwnerClasses(resource.owner, sessionState, resourceType)
-  if (ownerClasses) {
-    for (const cl of ownerClasses) {
-      for (const operation of operationsClasses[cl] || []) operations.add(operation)
-    }
+  for (const cl of sources.ownerClasses) {
+    for (const operation of operationsClasses[cl]) operations.add(operation)
   }
 
   // apply explicit permissions set on the resource for this user
-  const permissions = (resource.permissions || []).filter(p => matchPermission(resource.owner, p, sessionState))
-  for (const permission of permissions) {
+  for (const permission of sources.permissions) {
     for (const operation of permission.operations || []) operations.add(operation)
     for (const cl of permission.classes || []) {
       for (const operation of operationsClasses[cl] || []) operations.add(operation)
     }
   }
   return [...operations]
+}
+
+export type AccessSources = {
+  /** role in the owner account granting implicit rights (absent if none) */
+  ownerRole?: string
+  /** operation classes granted by ownerRole */
+  ownerClasses: string[]
+  /** the permission entries of the resource matching the session */
+  permissions: Permission[]
+}
+
+/** Why a session reaches a resource: its implicit rights as member of the owner, and the matching explicit permission entries. */
+export const accessSources = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState): AccessSources {
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
+  // keep only the classes that grant operations on the resource itself (contribs' "post" class does not)
+  const ownerClasses = (getOwnerClasses(resource.owner, sessionState, resourceType) ?? []).filter(cl => operationsClasses[cl]?.length)
+  const sources: AccessSources = {
+    ownerClasses,
+    permissions: (resource.permissions || []).filter(p => matchPermission(resource.owner, p, sessionState))
+  }
+  if (ownerClasses.length) {
+    const ownerRole = getOwnerRole(resource.owner, sessionState)
+    if (ownerRole) sources.ownerRole = ownerRole
+    // matchPermission lets an admin match organization permissions restricted to other roles; as
+    // admin of the owner their implicit rights already include everything, so these entries would
+    // only be a misleading explanation (and dropping them does not change what list() computes)
+    if (ownerRole === config.adminRole) {
+      sources.permissions = sources.permissions.filter(p => p.type !== 'organization' || !p.roles?.length || p.roles.includes(ownerRole))
+    }
+  }
+  return sources
 }
 
 /** Expands a permission entry into the concrete set of operationIds it grants (resolving permission classes). */
@@ -254,17 +283,23 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
   const operationFilter = []
   for (const op of operation.split(',')) {
-    const operationClass = permissionsClasses.classByOperation[resourceType][op]
+    // own keys only: `can=constructor` read Object's constructor from these plain objects
+    const operationClass = Object.hasOwn(permissionsClasses.classByOperation[resourceType], op) && permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (permissionsClasses.operationsClasses[resourceType][operation]) {
+    } else if (Object.hasOwn(permissionsClasses.operationsClasses[resourceType], op)) {
       operationFilter.push({ classes: op })
     }
   }
+  // an unknown operation matches no permission entry (an empty $or is rejected by mongo)
+  if (!operationFilter.length) operationFilter.push({ operations: { $in: [] } })
   const or = []
 
-  if (sessionState.user) {
+  if (!sessionState.user) {
+    // public permissions apply to anyone, anonymous included
+    or.push({ permissions: { $elemMatch: { $or: operationFilter, type: null, id: null } } })
+  } else {
     // user is in super admin mode, show all
     if (sessionState.user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
@@ -386,8 +421,11 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
       }
       const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
       if (resourceType === 'datasets') {
-        // the permission guard of the schema-derived search index depends on the grantees
-        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(resource as any), permissions }))
+        // the permission guard of the schema-derived search index depends on the grantees.
+        // Computed from the stored document: with ?draft=true reqResource has the draft merged in,
+        // and its titles/labels would land in the published document's search fields
+        const stored = await resources.findOne({ id: resource.id })
+        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(stored as any), permissions }))
       }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)

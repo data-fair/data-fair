@@ -8,11 +8,13 @@ import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
+import { getAsVisitorContext } from '../../misc/utils/as-visitor.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { can, reqResource } from '../../misc/utils/permissions.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
@@ -32,7 +34,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
-import { reqEventLogContext } from '../../misc/utils/req-context.ts'
+import { reqEventLogContext, reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import { searchIndexPatch } from '../utils/search-text.ts'
 import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
@@ -51,6 +53,11 @@ const debugBreakingChanges = debugModule('breaking-changes')
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
   if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+    // which columns survive tells whether some line matches the filters, e.g. maxCardinality=0
+    // keeps a column iff no line does: that is a read of the lines, not of the schema
+    if (!can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
+      throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
+    }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
     // within the context of the data filters, instead of the stored whole-dataset cardinality
@@ -115,9 +122,20 @@ export const registerMetadataRoutes = (router: Router) => {
     const publicBaseUrl = reqPublicBaseUrl(req)
     const reqQuery = req.query as Record<string, string>
 
-    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
+    // an org admin can browse the list as a hypothetical visitor (access audit view)
+    let sessionState = reqSession(req)
+    let asVisitorFilters: any[] | undefined
+    if (reqQuery.asVisitor) {
+      const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+      sessionState = ctx.sessionState
+      asVisitorFilters = [ctx.ownerFilter]
+    }
+
+    const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, sessionState, { extraFilters: asVisitorFilters })
     for (const r of response.results) {
-      datasetUtils.clean(req as DfRequest, r)
+      // tell the auditing admin why the visitor reaches each resource (computed before clean drops permissions)
+      if (asVisitorFilters) r.accessSources = permissions.accessSources('datasets', r, sessionState)
+      datasetUtils.clean(req as DfRequest, r, false, sessionState)
     }
     res.json(response)
   })
@@ -348,10 +366,9 @@ export const registerMetadataRoutes = (router: Router) => {
     // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
     // rewritten the permissions the search-text guard reads: recompute rather than carry the old
     // owner's terms across the transfer.
-    const changeOwnerUpdate: any = mergeIndexUpdate(
-      { $set: patch },
-      searchIndexPatch({ ...dataset, owner: patch.owner, permissions: patch.permissions })
-    )
+    // the stored document, not the draft-merged one (?draft=true)
+    const indexedDataset = { ...reqDatasetFull(req), owner: patch.owner, permissions: patch.permissions }
+    const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
     const patchedDataset: any = await mongo.db.collection('datasets')
       .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -395,7 +412,7 @@ export const registerMetadataRoutes = (router: Router) => {
     const datasetFull: any = reqDatasetFull(req)
 
     // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, dataset.owner)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {

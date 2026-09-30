@@ -106,6 +106,13 @@
           :visibility="dataset.visibility"
           size="small"
         />
+        <capability-chip
+          v-if="showCapabilityChip"
+          resource-type="datasets"
+          :user-permissions="cardUserPermissions"
+          :access-sources="cardAccessSources"
+          class="ml-2"
+        />
         <span
           v-if="dataset.updatedAt"
           class="ml-2"
@@ -139,9 +146,16 @@ const showAll = useBooleanSearchParam('showAll')
 const props = withDefaults(defineProps<{
   dataset: Dataset
   noLink?: boolean
+  showCapability?: boolean
 }>(), {
-  noLink: false
+  noLink: false,
+  showCapability: false
 })
+
+const cardUserPermissions = computed(() => (props.dataset as Dataset & { userPermissions?: string[] }).userPermissions)
+const cardAccessSources = computed(() => (props.dataset as Dataset & { accessSources?: AccessSources }).accessSources)
+// temporarily limited to the access audit page, hidden in the regular resource lists
+const showCapabilityChip = computed(() => props.showCapability)
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||

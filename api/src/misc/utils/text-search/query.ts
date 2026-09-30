@@ -29,6 +29,12 @@ export interface QueryPlan {
 
 const PHRASE_RE = /"([^"]+)"/g
 
+// Every distinct term costs a df count and a clause in the score expression, every phrase an $expr
+// evaluated per candidate: without a bound one request could ask for thousands of each. Far above
+// anything typed in a search box.
+export const MAX_QUERY_TERMS = 32
+export const MAX_QUERY_PHRASES = 4
+
 export const parseQuery = (q: string, analyzer: Analyzer): ParsedQuery => {
   const positive: string[] = []
   const negated: string[] = []
@@ -75,7 +81,11 @@ export const parseQuery = (q: string, analyzer: Analyzer): ParsedQuery => {
       (isNegated ? negated : positive).push(t.term)
     }
   }
-  return { positive: [...new Set(positive)], negated: [...new Set(negated)], phrases }
+  const uniquePositive = [...new Set(positive)].slice(0, MAX_QUERY_TERMS)
+  const uniqueNegated = [...new Set(negated)].slice(0, Math.max(0, MAX_QUERY_TERMS - uniquePositive.length))
+  // a phrase whose terms were cut would be dropped by planQuery anyway
+  const keptPhrases = phrases.filter(p => p.every(pt => uniquePositive.includes(pt.term))).slice(0, MAX_QUERY_PHRASES)
+  return { positive: uniquePositive, negated: uniqueNegated, phrases: keptPhrases }
 }
 
 /** Every term the caller must fetch a df for before planning. */

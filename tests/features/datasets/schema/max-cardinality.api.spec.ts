@@ -4,6 +4,7 @@ import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/ax
 import { waitForFinalize } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser3 = await axiosAuth('test_user3@test.com')
 
 test.describe('Schema maxCardinality filter', () => {
   test.beforeEach(async () => {
@@ -84,6 +85,27 @@ test.describe('Schema maxCardinality filter', () => {
         return true
       }
     )
+  })
+
+  test('Contextual cardinality filtering requires the permission to read lines', async () => {
+    await testUser1.post('/api/v1/datasets/rest-card-perm', {
+      isRest: true,
+      title: 'rest-card-perm',
+      schema: [{ key: 'email', type: 'string' }, { key: 'city', type: 'string' }]
+    })
+    await testUser1.post('/api/v1/datasets/rest-card-perm/_bulk_lines', [{ email: 'secret@test.com', city: 'A' }])
+    await waitForFinalize(testUser1, 'rest-card-perm')
+    await testUser1.put('/api/v1/datasets/rest-card-perm/permissions', [
+      { type: 'user', id: 'test_user3', operations: ['readDescription', 'readSchema'] }
+    ])
+    // maxCardinality=0 keeps a column iff no line matches: a line-existence oracle
+    await assert.rejects(
+      testUser3.get('/api/v1/datasets/rest-card-perm/schema', { params: { email_starts: 'secret', maxCardinality: '0' } }),
+      (err: any) => err.status === 403
+    )
+    // the plain schema read, stored cardinality included, is still allowed
+    const keys = (await testUser3.get('/api/v1/datasets/rest-card-perm/schema', { params: { maxCardinality: '1' } })).data.map((p: any) => p.key)
+    assert.deepEqual(keys.sort(), ['city', 'email'])
   })
 
   test('Contextual cardinality filtering uses resource based cache headers', async () => {

@@ -60,7 +60,7 @@ export type ApplicationWriteContext = {
   logCtx: LogContext
 }
 
-export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState) => {
+export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, asVisitorFilters?: any[]) => {
   if (reqQuery.service &&
       !reqQuery.service.startsWith('http://') &&
       !reqQuery.service.startsWith('https://')) {
@@ -68,6 +68,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   }
 
   const extraFilters = []
+  if (asVisitorFilters) extraFilters.push(...asVisitorFilters)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -91,7 +92,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
   // an application publication-site filter is a strict owner equality, so the site owner is
   // always the full corpus for this request
   const ownerScope = findUtils.ownerScopeOf(reqQuery, publicationSite, { siteOwnerOnly: true })
-  const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope) : null
+  // a term no document the caller may list contains counts as unknown, see StatsProvider.get
+  const plan = reqQuery.q ? await applicationsTextSearch.plan(reqQuery.q, applicationsStats, ownerScope, { $or: permissions.filter(sessionState, 'applications') }) : null
   // A query whose every term is unknown must return NOTHING, never an unfiltered list.
   const textFilter = reqQuery.q ? (plan ? applicationsTextSearch.matchFilter(plan) : { _id: null }) : undefined
 
@@ -129,6 +131,8 @@ export const findApplications = async (locale: string, publicationSite: any, pub
 
   for (const r of response.results) {
     if (reqQuery.raw !== 'true') r.userPermissions = permissions.list('applications', r, sessionState)
+    // asVisitor audit mode: tell the auditing admin why the visitor reaches each resource
+    if (asVisitorFilters) r.accessSources = permissions.accessSources('applications', r, sessionState)
     clean(r, publicBaseUrl, publicationSite, reqQuery)
   }
 

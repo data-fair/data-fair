@@ -287,9 +287,11 @@ application to be treated as the key's own application, in both enforcement poin
   *itself* a fragment of that same key application (`isFragmentOfKeyApp`) — not any dataset the
   calling app happens to list in its own `configuration.datasets`. Unlike the pre-existing
   parent-key check above (which trusts the *parent's* configuration), trusting the *child's*
-  configuration this way would let a fragment attached with nothing more than `readDescription` on
-  the parent redirect the parent's already-distributed key to an unrelated same-owner dataset; see
-  [fragments.md §5](./fragments.md) for the full argument.
+  configuration this way would let a fragment attach redirect the parent's already-distributed key
+  to an unrelated same-owner dataset; see [fragments.md §5](./fragments.md) for the full argument.
+  Creating or attaching such a sub-application requires `writeConfig` on the parent, because its
+  configuration declares the operations granted on the parent's own dataset fragments
+  ([fragments.md §9](./fragments.md)).
 
 ## 10. Anti-spam stack for anonymous writes
 

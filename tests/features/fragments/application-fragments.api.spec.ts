@@ -29,9 +29,13 @@ test.describe('application fragments', () => {
     assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
     assert.deepEqual(permissions[1].classes, ['list', 'read'])
 
-    // contributor can read and edit, cannot attach/detach (delete gate is admin-class on applications? no: contribs hold `delete` by default -> they CAN)
+    // contributor can read and edit, but cannot attach/detach: it replaces the ACL, so on top of
+    // `delete` (which contribs hold by default) it requires setPermissions
     const res = await testUser5Org.get(`/api/v1/applications/${sub.id}`)
     assert.ok(res.data.userPermissions.includes('writeDescription'))
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${sub.id}`, { partOf: null }), { status: 403 })
+    const contribApp = await createApp(testUser5Org, { title: 'contrib app' })
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${contribApp.id}`, { partOf: { type: 'application', id: dashboard.id } }), { status: 403 })
 
     // PUT replace keeps partOf
     await testUser1Org.put(`/api/v1/applications/${sub.id}`, { url: mockAppUrl('monapp1'), title: 'sub renamed' })
@@ -52,6 +56,37 @@ test.describe('application fragments', () => {
     // attach an existing app
     await testUser1Org.patch(`/api/v1/applications/${sub.id}`, { partOf: { type: 'application', id: dashboard.id } })
     assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).data.partOf, { type: 'application', id: dashboard.id })
+  })
+
+  // an orphan (left by a race or an integrity restore) still points to its dead parent's id, and
+  // application ids can be chosen through PUT: another owner claiming that id must not reach it
+  test('a resource re-using a dead parent\'s id cannot re-ACL nor delete its orphaned fragments', async () => {
+    const dashboard = await createApp()
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    // orphan the fragment out of band
+    await anonymous.post(`/api/v1/test-env/patch-application/${dashboard.id}`, { id: dashboard.id + '-gone' })
+
+    await testUser3.put(`/api/v1/applications/${dashboard.id}`, { url: mockAppUrl('monapp1'), title: 'claimed id' })
+    await testUser3.put(`/api/v1/applications/${dashboard.id}/permissions`, [{ classes: ['list', 'read'] }])
+    const permissions = (await testUser1Org.get(`/api/v1/applications/${sub.id}/permissions`)).data
+    assert.ok(!permissions.some((p: any) => !p.type), 'the orphan must not inherit the claimed parent\'s public entry')
+    await testUser3.delete(`/api/v1/applications/${dashboard.id}`)
+    assert.equal((await testUser1Org.get(`/api/v1/applications/${sub.id}`)).status, 200)
+  })
+
+  // a sub-application's configuration declares what it grants, in application context, on the
+  // parent's dataset fragments: only someone who already manages the parent may write one
+  test('creating a sub-application requires writeConfig on the parent', async () => {
+    const dashboard = await createApp()
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    // the admin locks the dashboard down: contributors keep read, lose the default write entry
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, parentPermissions.filter((p: any) => !p.classes?.includes('write')))
+    assert.ok(!(await testUser5Org.get(`/api/v1/applications/${dashboard.id}`)).data.userPermissions.includes('writeConfig'))
+    await assert.rejects(createApp(testUser5Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } }), { status: 403 })
+
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, parentPermissions)
+    const sub = await createApp(testUser5Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    assert.deepEqual(sub.partOf, { type: 'application', id: dashboard.id })
   })
 
   test('refusals: an application cannot be a fragment of a dataset', async () => {

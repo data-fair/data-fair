@@ -21,6 +21,23 @@ test.describe('datasets in draft mode - lifecycle', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
+  test('PUT /permissions?draft=true does not index the draft into the published search fields', async () => {
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset.csv')
+    const ax = testUser1
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
+    await waitForFinalize(ax, res.data.id)
+    const draft = (await ax.get(`/api/v1/datasets/${res.data.id}`, { params: { draft: true } })).data
+    draft.schema.find((p: any) => p.key === 'adr').title = 'zzqxdraftcolumn'
+    await ax.patch('/api/v1/datasets/' + draft.id, { schema: draft.schema }, { params: { draft: true } })
+
+    res = await ax.put(`/api/v1/datasets/${draft.id}/permissions`, [{ classes: ['list', 'read'] }], { params: { draft: true } })
+    assert.equal(res.status, 200)
+    const raw = await getRawDataset(draft.id)
+    assert.ok(!(raw._searchText ?? '').includes('zzqxdraftcolumn'), raw._searchText)
+    assert.ok(!(raw._terms ?? []).some((t: string) => t.startsWith('zzqxdraft')))
+  })
+
   test('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
