@@ -49,7 +49,7 @@ export function lineDialogOpenedResult (mode: 'add' | 'edit', formReady: boolean
     return `${dialog} opened, but its form is still loading, so the editLine_form subagent is not available yet. Call ${retry} again to check.`
   }
   return `${dialog} opened and its form is ready: delegate to the editLine_form subagent now to ${mode === 'add' ? 'fill' : 'modify'} it. ` +
-    'When the form is ready, tell the user the Enregistrer button is ready and declare wait_for_user_action: the save reports itself, so you learn of it without asking them to say so.'
+    'When the form is ready, declare wait_for_user_action, its message telling the user to press Enregistrer: the save reports itself, so you learn of it without asking them to say so.'
 }
 
 /**
