@@ -51,6 +51,27 @@ test.describe('application context for dataset fragments', () => {
     assert.equal(res.status, 200)
   })
 
+  // portals embed applications by slug (/data-fair/app/{slug}), the referer then names the slug
+  test('the calling application is resolved from a slug referer too', async () => {
+    const dashboard = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Tableau de bord' })).data
+    assert.ok(dashboard.slug && dashboard.slug !== dashboard.id)
+    const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
+    const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await clearDatasetCache()
+
+    // session proof
+    let res = await testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${dashboard.slug}/` } })
+    assert.equal(res.status, 200)
+    // application key
+    const key = (await testUser1Org.post(`/api/v1/applications/${dashboard.id}/keys`, [{ title: 'k' }])).data[0].id
+    res = await anonymous.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${dashboard.slug}/?key=${key}` } })
+    assert.equal(res.status, 200)
+    res = await anonymous.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${key}:${dashboard.slug}/` } })
+    assert.equal(res.status, 200)
+  })
+
   test('non-fragment datasets keep the key-only behaviour', async () => {
     const app = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
     const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
