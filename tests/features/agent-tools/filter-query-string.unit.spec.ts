@@ -39,11 +39,13 @@ test.describe('buildFilterQueryString', () => {
     assert.equal(qs, undefined)
   })
 
-  test('keeps sort/select unchanged', () => {
-    const qs = buildFilterQueryString({ sort: 'name,-age', select: 'a,b' })
+  test('keeps sort, and turns select into the cols a page reads', () => {
+    const qs = buildFilterQueryString({ sort: 'name,-age', select: 'a, b,_id' })
     const params = new URLSearchParams(qs)
     assert.equal(params.get('sort'), 'name,-age')
-    assert.equal(params.get('select'), 'a,b')
+    assert.equal(params.get('select'), null)
+    assert.equal(params.get('cols'), 'a,b')
+    assert.equal(buildFilterQueryString({ select: '_id' }), undefined)
   })
 
   test('combines everything into a URL-safe string', () => {

@@ -121,7 +121,11 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
     const normalized = normalizeSort(params.sort)
     if (normalized) searchParams.set('sort', normalized)
   }
-  if (params.select) searchParams.set('select', params.select)
+  // A filterQuery is pasted into table/map page links, and pages choose their columns
+  // with `cols`; `select` is the API's and the table page ignored it, so links promised
+  // columns the page did not hide. `_id` is not a column a page can show.
+  const cols = params.select?.split(',').map(s => s.trim()).filter(k => k && k !== '_id')
+  if (cols?.length) searchParams.set('cols', cols.join(','))
   if (params.bbox) searchParams.set('_c_bbox', params.bbox)
   if (params.geoDistance) searchParams.set('_c_geo_distance', params.geoDistance)
   if (params.dateMatch) searchParams.set('_c_date_match', params.dateMatch)
