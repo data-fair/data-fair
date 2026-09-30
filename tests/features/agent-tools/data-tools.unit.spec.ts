@@ -176,6 +176,11 @@ test.describe('search_data formatResult', () => {
 // --- aggregate_data ---
 
 test.describe('aggregate_data buildQuery', () => {
+  test('strips the quotes a model copies from the quoted sort example', () => {
+    assert.equal(aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['type'], sort: '"-count"' }).query.sort, '-count')
+    assert.equal(aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['type'], sort: '-key' }).query.sort, '-key')
+  })
+
   test('builds correct field param for simple group-by', () => {
     const { path, query } = aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['status'] })
     assert.equal(path, 'datasets/ds1/values_agg')

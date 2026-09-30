@@ -26,7 +26,7 @@ export const schema = {
         description: 'Optional metric to compute ON EACH GROUP. If not provided, defaults to counting rows per group.'
       },
       ...filterProperties,
-      sort: { type: 'string' as const, description: 'Sort order for aggregation results. Use special keys: "count" or "-count" (by row count asc/desc), "key" or "-key" (by column value asc/desc), "metric" or "-metric" (by metric value asc/desc). Default: sorts by metric desc (if metric specified), then count desc. Example: "-count" to sort by most frequent values first' }
+      sort: { type: 'string' as const, description: 'Sort order for aggregation results. Use special keys: "count" or "-count" (by row count asc/desc), "key" or "-key" (by column value asc/desc), "metric" or "-metric" (by metric value asc/desc). Default: sorts by metric desc (if metric specified), then count desc. Example: -count to sort by most frequent values first (the bare key, no quotes)' }
     },
     required: ['datasetId', 'groupByColumns'] as const
   },
@@ -76,7 +76,8 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
     query.metric = params.metric.type
     if (params.metric.column) query.metric_field = params.metric.column
   }
-  if (params.sort) query.sort = params.sort
+  // Models copy the quotes of a quoted example ('"-count"'), which the API rejects.
+  if (params.sort) query.sort = params.sort.trim().replace(/^["']+|["']+$/g, '')
   if (params.filters) { for (const [key, value] of Object.entries(params.filters)) query[key] = String(value) }
   if (params.bbox) query.bbox = params.bbox
   if (params.geoDistance) query.geo_distance = params.geoDistance
