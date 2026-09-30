@@ -149,7 +149,10 @@ for (const simCase of selected) {
       // produce. Ordinary controls stay reachable — including the drawer toggle,
       // which a real user can and does click.
       perception = createPagePerception(
-        [{ label: 'page', root: page }, { label: 'chat panel', root: page.frameLocator(CHAT_FRAME) }],
+        // The back-office page gets more room than the chat panel: a dataset page's
+        // metadata form alone fills the default budget, and the persona has the
+        // conversation as text anyway.
+        [{ label: 'page', root: page, cap: 6000 }, { label: 'chat panel', root: page.frameLocator(CHAT_FRAME) }],
         { offLimits: [strings.input, strings.send, strings.stop, strings.reset] }
       )
 
