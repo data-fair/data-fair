@@ -297,6 +297,12 @@ test.describe('datasets - features', () => {
     assert.ok(captured[0].topic.key.endsWith(':topic1'))
     assert.equal(captured[0].visibility, 'private')
 
+    // a recipient is passed to the events service as the subscribed recipient (its schema knows no "recipient")
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', recipient: { id: 'test_user5', name: 'Test User5' } })
+    const [withRecipient] = (await notifs.waitFor(2)).slice(1)
+    assert.deepEqual(withRecipient.subscribedRecipient, { id: 'test_user5', name: 'Test User5' })
+    assert.equal(withRecipient.recipient, undefined)
+
     await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
     await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
       { type: 'user', id: 'test_user5', operations: ['sendUserNotification'] }

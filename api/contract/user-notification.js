@@ -10,6 +10,7 @@ export default {
     recipient: {
       type: 'object',
       additionalProperties: false,
+      required: ['id'],
       properties: { id: { type: 'string' }, name: { type: 'string' } }
     },
     visibility: { type: 'string' }
