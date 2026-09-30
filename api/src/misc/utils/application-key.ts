@@ -56,8 +56,14 @@ const findMatchingApplication = memoize(async (appId: string, datasetHref: strin
   }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
 }, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
 
-const findCallingApplication = memoize(async (appId: string, ownerType: string, ownerId: string, ownerDep: string) => {
-  return mongo.applications.findOne({ id: appId, ...ownerFilterFromParts(ownerType, ownerId, ownerDep) }, { projection: { id: 1, partOf: 1, permissions: 1, owner: 1 } })
+// the calling application is named by the referer path, which is its slug when embedded in a portal
+// (_uniqueRefs is only set on applications with a slug, hence the id fallback); an id match wins
+const findCallingApplication = memoize(async (appRef: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  const applications = await mongo.applications.find(
+    { $or: [{ id: appRef }, { _uniqueRefs: appRef }], ...ownerFilterFromParts(ownerType, ownerId, ownerDep) },
+    { projection: { id: 1, slug: 1, partOf: 1, permissions: 1, owner: 1 } }
+  ).toArray()
+  return applications.find(a => a.id === appRef) ?? applications.find(a => a.slug === appRef) ?? null
 }, { ...memoOpts, profileName: 'applicationContextCallingApp' })
 
 // called on applications-keys writes: same-node key changes apply immediately
@@ -93,6 +99,12 @@ export const resolveApplicationContextBypass = async (applicationKeyId: string |
 
   let applicationKey: ApplicationKey | null = null
   let resolvedAppId = appId
+  // normalize the calling application ref (id or slug) to its id, every lookup below is by id
+  const callingApp = appId === undefined ? null : await findCallingApplication(appId, ownerType, ownerId, ownerDep)
+  if (appId !== undefined) {
+    if (!callingApp) return null
+    resolvedAppId = callingApp.id
+  }
   if (applicationKeyId) {
     applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
     if (!applicationKey) return null
@@ -102,7 +114,6 @@ export const resolveApplicationContextBypass = async (applicationKeyId: string |
       if (!await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)) return null
     } else if (applicationKey._id !== resolvedAppId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
-      const callingApp = await findCallingApplication(resolvedAppId, ownerType, ownerId, ownerDep)
       // the partOf edge only extends the key's reach within its own fragment family: a calling
       // application that is a fragment of the key's application may be used to read a dataset that
       // is itself a fragment of that SAME application. Attaching a fragment only needs readDescription
@@ -117,9 +128,7 @@ export const resolveApplicationContextBypass = async (applicationKeyId: string |
     }
   } else {
     // session proof, only for a dataset fragment of an application
-    if (!parentAppId || !resolvedAppId || !sessionState?.user) return null
-    const callingApp = await findCallingApplication(resolvedAppId, ownerType, ownerId, ownerDep)
-    if (!callingApp) return null
+    if (!parentAppId || !resolvedAppId || !callingApp || !sessionState?.user) return null
     const reachable = resolvedAppId === parentAppId ||
       (callingApp.partOf?.type === 'application' && callingApp.partOf.id === parentAppId) ||
       !!await countParentApplicationOfApp(parentAppId, resolvedAppId, ownerType, ownerId, ownerDep)
