@@ -12,19 +12,21 @@ export const pickerPartOf = (type: PartOf['type'], resource: { id: string, partO
 
 const listingUrlRegexp = /api\/v1\/(datasets|applications)\?/
 
+const withPartOf = (url: unknown, partOf: string) =>
+  typeof url === 'string' && listingUrlRegexp.test(url) && !url.includes('partOf=') ? `${url}&partOf=${partOf}` : url
+
 /**
- * Append a `partOf` param to every datasets or applications listing `x-fromUrl` of an application
- * configuration schema, so that the pickers of the form also offer the application's fragments.
+ * Append a `partOf` param to every datasets or applications listing URL of an application
+ * configuration schema (`x-fromUrl`, and `layout.getItems.url` of VJSF 3), so that the pickers of
+ * the form also offer the application's fragments.
  * Mutates the schema. A URL that already filters on `partOf` is left alone.
  */
 export const addPartOfToFromUrls = (schema: any, partOf: string) => {
   if (Array.isArray(schema)) {
     for (const item of schema) addPartOfToFromUrls(item, partOf)
   } else if (schema && typeof schema === 'object') {
-    const fromUrl = schema['x-fromUrl']
-    if (typeof fromUrl === 'string' && listingUrlRegexp.test(fromUrl) && !fromUrl.includes('partOf=')) {
-      schema['x-fromUrl'] = `${fromUrl}&partOf=${partOf}`
-    }
+    if ('x-fromUrl' in schema) schema['x-fromUrl'] = withPartOf(schema['x-fromUrl'], partOf)
+    if (schema.getItems && typeof schema.getItems === 'object') schema.getItems.url = withPartOf(schema.getItems.url, partOf)
     for (const key of Object.keys(schema)) addPartOfToFromUrls(schema[key], partOf)
   }
   return schema
