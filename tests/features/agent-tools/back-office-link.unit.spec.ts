@@ -57,3 +57,21 @@ test.describe('describe_dataset states what inference got wrong', () => {
     assert.ok(text.includes('**Producer:** INSEE'))
   })
 })
+
+test.describe('list_datasets points editable datasets at their data-entry page', () => {
+  const data = { count: 2, results: [{ id: 'reg', title: 'Registre', isRest: true }, { id: 'file', title: 'Fichier' }] }
+
+  test('in the back office', () => {
+    const { text } = listDatasets.formatResult(data, 1, 10, { datasetLink: backOfficeLink })
+    assert.ok(text.includes('Editable: rows are entered and corrected on https://secondary.example.com/data-fair/dataset/reg/edit-data'), text)
+    assert.equal((text.match(/Editable:/g) ?? []).length, 1, 'only the editable dataset')
+  })
+
+  test('never for portal or MCP callers, where /edit-data is no route', () => {
+    assert.ok(!listDatasets.formatResult(data, 1, 10).text.includes('Editable'))
+  })
+
+  test('asks the API for isRest', () => {
+    assert.ok(listDatasets.buildQuery({}).query.select.split(',').includes('isRest'))
+  })
+})
