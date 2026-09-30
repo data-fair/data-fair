@@ -63,6 +63,12 @@ test.describe('buildIndexFields', () => {
     assert.equal(new Set(r._terms).size, r._terms.length, '_terms must be unique')
   })
 
+  test('a stem named like an Object.prototype member is indexed like any other', () => {
+    const r = build({ title: 'Constructor constructor' })!
+    assert.deepEqual(r._terms, ['constructor'])
+    assert.deepEqual(r._pos.title.constructor, [0, 1])
+  })
+
   test('_pos holds raw positions per field per stem, and _len the kept token count', () => {
     const r = build({ title: 'courbe de charge' })!
     assert.deepEqual(r._pos.title.courb, [0])
