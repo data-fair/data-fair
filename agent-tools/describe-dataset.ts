@@ -197,6 +197,8 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   if (fetchedData.topics?.length) meta.push(`- **Topics:** ${fetchedData.topics.map((t: any) => t.title).join(', ')}`)
   if (fetchedData.keywords?.length) meta.push(`- **Keywords:** ${fetchedData.keywords.join(', ')}`)
   if (fetchedData.license) meta.push(`- **License:** ${fetchedData.license.title}`)
+  if (fetchedData.origin) meta.push(`- **Origin:** ${fetchedData.origin}`)
+  if (fetchedData.creator) meta.push(`- **Producer:** ${fetchedData.creator}`)
   if (fetchedData.frequency) meta.push(`- **Frequency:** ${fetchedData.frequency}`)
   if (fetchedData.spatial) meta.push(`- **Spatial:** ${typeof fetchedData.spatial === 'string' ? fetchedData.spatial : JSON.stringify(fetchedData.spatial)}`)
   if (fetchedData.temporal) meta.push(`- **Temporal:** ${JSON.stringify(fetchedData.temporal)}`)
@@ -205,6 +207,12 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   }
   if (fetchedData.timePeriod) {
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
+  }
+  // Stated rather than left to inference: a judged run concluded history was off on a
+  // register that had it, from a 400 on selecting _updatedBy (which exists only with
+  // updater tracking), and talked the person into creating a duplicate.
+  if (fetchedData.isRest) {
+    meta.push(`- **Row history:** ${fetchedData.rest?.history ? 'on' : 'off'}; **updater tracking** (who last changed each row, _updatedBy): ${fetchedData.rest?.storeUpdatedBy ? 'on' : 'off'}`)
   }
   if (link) meta.push(`- **Link:** ${link}`)
   // Only with a back-office link: /edit-data is a back-office route, and this same

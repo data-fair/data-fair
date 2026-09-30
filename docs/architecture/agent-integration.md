@@ -376,7 +376,7 @@ fragment" action within it.
 | `list_pages` | Navigation | R | `agent/navigation-tools.ts` |
 | `navigate` | Navigation | **W** | `agent/navigation-tools.ts` |
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
-| `describe_dataset` | Dataset metadata | R | `dataset/agent-tools.ts` |
+| `describe_dataset` | Dataset metadata, incl. provenance (origin, producer) and, for an editable dataset, row history and updater tracking | R | `dataset/agent-tools.ts` |
 | `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
 | `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
 | `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |

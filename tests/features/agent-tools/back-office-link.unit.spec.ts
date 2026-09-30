@@ -42,3 +42,18 @@ test.describe('describe_dataset datasetLink option', () => {
     assert.equal(structuredContent.page, 'https://secondary.example.com/data-fair/dataset/abc123')
   })
 })
+
+test.describe('describe_dataset states what inference got wrong', () => {
+  test('reports row history and updater tracking of an editable dataset', () => {
+    const { text } = describeDataset.formatResult({ id: 'r', title: 'R', isRest: true, rest: { history: true } })
+    assert.ok(text.includes('**Row history:** on; **updater tracking**'), text)
+    assert.ok(text.includes('_updatedBy): off'), text)
+    assert.ok(!describeDataset.formatResult({ id: 'f', title: 'F' }).text.includes('Row history'))
+  })
+
+  test('reports provenance', () => {
+    const { text } = describeDataset.formatResult({ id: 'd', title: 'D', origin: 'https://insee.fr', creator: 'INSEE' })
+    assert.ok(text.includes('**Origin:** https://insee.fr'))
+    assert.ok(text.includes('**Producer:** INSEE'))
+  })
+})
