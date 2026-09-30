@@ -13,11 +13,11 @@ import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
 import { type AccountKeys, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
+import * as notifications from '../misc/utils/notifications.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -40,6 +40,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   const { owner, ownerFilter } = ctx
   const user = ctx.sessionState.user
   fillSettings(owner, user, settings)
+  trimSettings(settings)
   validateSettings(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
@@ -100,9 +101,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       }
 
       eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { ...ctx.logCtx, account: owner })
-      eventsQueue.pushEvent({
+      await notifications.send({
         title: 'Création d\'une clé d\'API',
-        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
@@ -144,9 +145,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
         eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { ...ctx.logCtx, account: owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
-      eventsQueue.pushEvent({
+      await notifications.send({
         title: 'Suppression d\'une clé d\'API',
-        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },
@@ -175,6 +176,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
+
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   // api key creation/revocation must apply immediately on this node
@@ -255,8 +257,8 @@ export const getDatasetsMetadata = async (params: SettingsParams) => {
 }
 
 export const getAgentChat = async (params: SettingsParams) => {
-  const { ownerFilter } = params
-  const result = await mongo.settings.findOne(ownerFilter, { projection: { _id: 0, agentChat: 1 } })
+  // the AI assistant is activated at the organization level only, departments inherit the activation
+  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1 } })
   return { agentChat: !!(result && isMainSettings(result) && result.agentChat) }
 }
 

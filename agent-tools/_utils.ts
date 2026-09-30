@@ -4,6 +4,27 @@ export function cleanRow (row: any): any {
 }
 
 /**
+ * Like cleanRow, but keeps `_id` — the only internal field that addresses a row.
+ *
+ * `open_edit_line_dialog` takes a line `_id` and its description says to find one
+ * with search_data; cleanRow meant that could never work, even when the caller
+ * passed `select=_id`. A judged run spent four sub-agent dispatches on that
+ * impossibility and ended up asking the person to find the row and click it.
+ *
+ * `_i` and `_rand` stay out whatever the select says: they address nothing, and a
+ * model that sees them will eventually try to use them as identifiers.
+ */
+export function cleanRowKeepingId (row: any): any {
+  const { _i, _rand, ...clean } = row
+  return clean
+}
+
+/** Whether a `select` string names the row id, tolerating the spacing a model writes. */
+export function selectsLineId (select?: string): boolean {
+  return !!select && select.split(',').map(s => s.trim()).includes('_id')
+}
+
+/**
  * Copy only the listed keys (that are defined) from an object. Used to keep
  * structuredContent in sync with output schemas declared with additionalProperties:false:
  * raw API sub-objects (e.g. license, timePeriod) may carry extra keys that MCP hosts reject.

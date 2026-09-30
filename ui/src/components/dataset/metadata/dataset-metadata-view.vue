@@ -170,11 +170,11 @@ fr:
   summary: Résumé
   thumbnail: Vignette
   description: Description
-  creator: Personne ou organisme créateur
+  creator: Producteur
   license: Licence
   origin: Provenance
   temporal: Couverture temporelle
-  spatial: Couverture spatiale
+  spatial: Couverture géographique
   frequency: Fréquence de mise à jour
   frequencyItems:
     triennial: Tous les 3 ans
@@ -199,11 +199,11 @@ en:
   summary: Summary
   thumbnail: Thumbnail
   description: Description
-  creator: Creator person or entity
+  creator: Producer
   license: License
   origin: Origin
   temporal: Temporal coverage
-  spatial: Spatial coverage
+  spatial: Geographic coverage
   frequency: Update frequency
   frequencyItems:
     triennial: Every 3 years

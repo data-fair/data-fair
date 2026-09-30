@@ -14,9 +14,9 @@ const METADATA_FIELDS: { key: string, label: string }[] = [
   { key: 'topics', label: 'thématiques' },
   { key: 'keywords', label: 'mots-clés' },
   { key: 'origin', label: 'provenance' },
-  { key: 'creator', label: 'créateur' },
+  { key: 'creator', label: 'producteur' },
   { key: 'frequency', label: 'fréquence' },
-  { key: 'spatial', label: 'couverture spatiale' },
+  { key: 'spatial', label: 'couverture géographique' },
   { key: 'temporal', label: 'couverture temporelle' },
   { key: 'image', label: 'vignette' }
 ]

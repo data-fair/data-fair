@@ -74,7 +74,7 @@ REST datasets cannot use the file-dataset worker because writes are interactive.
 
 In `api/src/datasets/utils/rest.ts → applyTransactions`:
 
-1. Standard AJV schema validation runs first; rows that fail are flagged with `_status=400, _error='...'`. The message is built with the **value-aware `errorsText`** from `shared/ajv.js`: each error is suffixed with ` (valeur : …)` — the rejected value resolved at the error's `instancePath` (JSON-pointer, so nested/array paths like `/attr3/1` work), truncated to 200 chars. This is the same debugging context the diagnostic CSV's `raw_value` column carries, and it matters for callers (e.g. a processing posting `_bulk_lines`) that log the returned validation errors but never the raw input. Errors are localized in place via the shared `localize` Proxy first, so a user-provided `errorMessage` is preserved (the previously-used `@data-fair/lib-validation` `errorsText` re-localized with the raw `ajv-i18n` localizer and dropped custom messages). `nonBlockingValidation` rows get the same enriched text in `_warning`.
+1. Standard AJV schema validation runs first; rows that fail are flagged with `_status=400, _error='...'`. The message is built with the **value-aware `errorsText`** from `shared/ajv.js`: each error is suffixed with ` (valeur : …)` — the rejected value resolved at the error's `instancePath` (JSON-pointer, so nested/array paths like `/attr3/1` work), truncated to 200 chars. This is the same debugging context the diagnostic CSV's `raw_value` column carries, and it matters for callers (e.g. a processing posting `_bulk_lines`) that log the returned validation errors but never the raw input. Errors are localized in place via the shared `localize` Proxy first, so a user-provided `errorMessage` is preserved (the previously-used `@data-fair/lib-validation` `errorsText` re-localized with the raw `ajv-i18n` localizer and dropped custom messages). `nonBlockingValidation` rows get the same enriched text in `_warning`, and are still written — **except** when an error is a column-type error (AJV keyword `type`, including an item of a multi-valued column) or a `date` / `date-time` `format` error (`blockingValidationErrors` in `api/src/datasets/operations.ts`). The flag makes the dataset's optional rules non-blocking (`x-required`, restricted labels, `pattern`, `minimum`/`maximum`, `minLength`/`maxLength`); the column type is not one of them. Before this distinction a number posted into a string column was stored as-is in MongoDB and then failed indexing forever (the per-line `_bytes` serializer, `csv-jit`, calls string methods on string columns; Elasticsearch rejects a non-number in a numeric field or an unparsable date in a `date`-mapped one), leaving the line flagged `_needsIndexing` and invisible to `/lines`. Such a line is now refused with `_status=400`, and its `_error` lists only the blocking errors. Other `format`s map to plain keywords and stay warnings.
 2. If the dataset has at least one `mandatory && active` extension, the surviving operations are passed through `extensionsUtils.extendBatchSync(dataset, mandatoryExtensions, lines, { onLineError })`.
 3. Lines whose mandatory extension fails get `_status=400` and are excluded from the bulk write. Lines that pass have their enriched fields copied back into `operation.fullBody` for persistence.
 4. The MongoDB bulk write proceeds with the survivors.
@@ -334,6 +334,25 @@ This is a correctness concern that surfaces at finalize time alongside schema va
 - The `esWarning` field on the dataset is set to `IgnoredKeywordValues` (ranked above `ShardingRecommended`) so superadmins see it in the triage list.
 - Per-request: exact-match filters with a >200-char operand return `400`; existence/range/prefix filters on flagged columns are routed to length-safe alternatives (`.wildcard` sub-field or union with an analyzed sub-field) where available; where no safe alternative exists, a `queryAdviceUncertainFilter` correctness hint is attached to the response.
 - A one-time backfill upgrade script (`api/upgrade/6.12.0/ignored-keyword-fields.ts`) populates `_esIgnoredKeywordFields` for pre-existing finalized datasets; it calls `es.connect()` itself because upgrade scripts run before `es.init()`.
+
+## Schema key normalization
+
+Column keys are expected to be *normalized*: `escapeKey` (`datasets/utils/operations.ts`) is the single definition, `slugify(key, { lower: true, strict: true, replacement: '_' })` by default, with `legacy` and `compat-ods` variants selected per dataset via `analysis.escapeKeyAlgorithm`.
+
+Every place data-fair *derives* a key already applies it — `analyze-csv.ts` and `analyze-geojson.ts` for file columns, `extensions.ts` for enriched columns, the UI's add-column dialog and the AI assistant's add-column tool (`ui/src/utils/escape-key.ts`, same default algorithm; its output is also a fixed point of `legacy` and `compat-ods`). A schema submitted through the API bypasses all of them, and the key lands verbatim in the ES mapping (`buildIndexMappings` does `properties[prop.key] = esProp`).
+
+The API does **not** require normalized keys: API clients (processing plugins, scripts) widely declare camelCase or uppercase keys, which are harmless to the index. It only refuses the two kinds of key that corrupt it:
+
+- **A dot** is expanded by Elasticsearch into an object path. A lone `foo.bar` column silently becomes a nested `foo: { bar }` mapping; add a scalar `foo` column and index creation fails with `can't merge a non object mapping [foo] with an object mapping`. On the PATCH path this leaves the dataset in status `error` / `errorStatus: 'analyzed'` with **no index at all**, which no retry can clear.
+- **A leading `_`** is reserved for data-fair's calculated columns (`_id`, `_i`, `_rand`, `_geopoint`, `_updatedAt`, `_file.content`…) and shadows one.
+
+`checkSchemaKeys` (`datasets/utils/data-schema.ts`) refuses them with a `400` suggesting the normalized form, on the two places a client supplies keys: dataset creation (`service.ts`) and a structure change (`preparePatch`, before any side effect). Keys are rejected rather than rewritten — silently renaming a column would break the line writes of the client that declared it.
+
+Scope, deliberately narrow:
+
+- Only keys **absent from the dataset's current schema** are checked, so datasets predating the gate stay patchable.
+- `x-calculated` and `x-extension` properties are exempt: they legitimately use `_` prefixes and dots (an extension key is `propertyPrefix.field`, and `buildIndexMappings` maps it to a real nested object).
+- **Virtual datasets are exempt**: their schema is derived from their children by `prepareVirtualDatasetPatch`, never from the request.
 
 ## Related design specs
 

@@ -40,7 +40,7 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await expect(metadata.getByRole('combobox', { name: /Couverture spatiale/ })).toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Couverture géographique/ })).toBeVisible()
     await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Couverture temporelle/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Date de modification de la source/ })).toBeVisible()

@@ -50,18 +50,38 @@ export const resolveExactKeywordTarget = (prop: any, values: string[]): { field:
   return { impossible: true }
 }
 
-// Existence-check fields. `flagged` = the column actually dropped values (persisted detection). When
-// not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
-// no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
-// sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
+// Whether an `exists` on the column's MAIN field can answer at all. Derived from the emitted mapping
+// (esProperty, defined below) so it cannot drift from it: ES answers `exists` from the inverted index,
+// from doc_values, or from `_field_names` — a field that is neither indexed nor doc-valued (a long-text
+// column with `index` and `values` both off, a geometry-concept column, a disabled object) is in none
+// of them and silently matches nothing. `_id` is the ES metadata field (esProperty returns null).
+const mainFieldAnswersExists = (prop: any): boolean => {
+  const esProp = esProperty(prop, DUMMY_ANALYZERS)
+  if (!esProp) return true
+  if (esProp.enabled === false) return false
+  return esProp.index !== false || esProp.doc_values !== false
+}
+
+// Existence-check fields, empty when nothing in the index can answer (the caller must then refuse the
+// filter). `flagged` = the column actually dropped values over ignore_above (persisted detection).
+// The main keyword field is the fast, exact answer whenever it is queryable AND complete; otherwise we
+// union it with every other length-safe representation, with no reindex: `.wildcard` alone if
+// configured, else the analyzed sub-fields (a > limit value always produces ≥ 1 token). A flagged
+// pure-keyword column has no safe fallback.
 // The analyzed leg is a UNION of both analyzed views (legacy carries `.text_standard`, new-shape
 // only `.text`); ES search clauses silently ignore unmapped fields, so no shape branch is needed.
 export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
-  if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
+  const mainField = mainFieldAnswersExists(prop) ? [prop.key] : []
+  if (mainField.length && !(isLengthLimitedKeyword(prop) && flagged)) return mainField
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
-  const fields = [prop.key]
+  // only plain/uri-reference strings carry the analyzed and case-insensitive sub-fields
+  if (!isLengthLimitedKeyword(prop)) return mainField
+  const fields = [...mainField]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
   if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  // `.keyword_insensitive` is an exact, token-free existence signal, but it carries the same
+  // ignore_above limit as the main field so it can only serve the un-flagged case.
+  if (!flagged && hasCapability(prop, 'insensitive')) fields.push(prop.key + '.keyword_insensitive')
   return fields
 }
 
@@ -86,8 +106,11 @@ export const requiredCapability = (prop: any, filterName: string, capability: st
 /**
  * The single source of truth: maps each filter suffix to the capability it requires.
  * Declared in canonical order (matches OpenAPI doc output). `_search` is any-of (text OR textStandard).
+ * `null` = no capability gate: `_exists`/`_nexists` only need SOME indexed representation of the
+ * column, which is resolveExistsFields' business (a long-text column with the exact-value index
+ * turned off is still existence-filterable through its analyzed sub-field).
  */
-export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
+export const FILTER_CAPABILITIES: Record<string, string | string[] | null> = {
   _eq: 'index',
   _neq: 'index',
   _in: 'index',
@@ -97,8 +120,8 @@ export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
   _gt: 'index',
   _gte: 'index',
   _starts: 'index',
-  _exists: 'index',
-  _nexists: 'index',
+  _exists: null,
+  _nexists: null,
   _contains: 'wildcard',
   _search: ['text', 'textStandard']
 }
@@ -111,7 +134,10 @@ export const getColumnFilters = (prop: any): string[] => {
   const filters: string[] = []
   for (const suffix of Object.keys(FILTER_CAPABILITIES)) {
     const cap = FILTER_CAPABILITIES[suffix]
-    const ok = Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
+    // emptiness of resolveExistsFields does not depend on the flag, only on the mapping
+    const ok = cap === null
+      ? resolveExistsFields(prop, false).length > 0
+      : Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
     if (ok) filters.push(suffix)
   }
   return filters

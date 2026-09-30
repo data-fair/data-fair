@@ -476,7 +476,9 @@ test('breach notification fires once per transition, not on every re-check', asy
   expect(check.status).toBe('breach')
   await new Promise(resolve => setTimeout(resolve, 1500)) // settle: allow a stray event to arrive
   const all = await notif.getAll()
-  expect(all.filter((e: any) => e.topic?.key?.includes('integrity-breach')).length).toBe(1)
+  // dual slug+id emission (notifications.md §12): one transition = one event _id, two topic keys
+  const breachEventIds = new Set(all.filter((e: any) => e.topic?.key?.includes('integrity-breach')).map((e: any) => e._id))
+  expect(breachEventIds.size).toBe(1)
 })
 
 // ---------------------------------------------------------------------------------------------

@@ -449,6 +449,8 @@ function normalizeSettings (s: any) {
   for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
     if (!dm[key]) dm[key] = { active: false }
   }
+  // searchTerms defaults to active TRUE in the schema, unlike its neighbours
+  if (!dm.searchTerms) dm.searchTerms = { active: true }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {
@@ -525,11 +527,14 @@ const sections = computed(() => {
   if (!$uiConfig.disablePublicationSites) {
     result.publicationSites = { title: t('sections.publicationSites.title') }
   }
-  if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
-    result.agentChat = { title: t('sections.agentChat.title') }
-  }
-  if ($uiConfig.compatODS && session.user.value.adminMode) {
-    result.compat = { title: t('sections.compat.title') }
+  // agentChat and compatODS are activated at the organization level only, departments inherit them
+  if (!settingsAccount.value.department) {
+    if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
+      result.agentChat = { title: t('sections.agentChat.title') }
+    }
+    if ($uiConfig.compatODS && session.user.value.adminMode) {
+      result.compat = { title: t('sections.compat.title') }
+    }
   }
   return result
 })

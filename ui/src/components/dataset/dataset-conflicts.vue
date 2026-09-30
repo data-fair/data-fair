@@ -49,6 +49,9 @@ const props = defineProps<{
   title?: string
   filename?: string
   owner: AccountKeys
+  // a fragment only conflicts with its siblings: other datasets are unrelated to it (and fragments are
+  // hidden from the default listing anyway)
+  partOf?: { type: 'dataset' | 'application', id: string }
 }>()
 
 const conflictsOk = defineModel<boolean>({ default: false })
@@ -64,6 +67,8 @@ const ownerStr = computed(() => {
   return str
 })
 
+const scopeQuery = computed(() => props.partOf ? { partOf: `${props.partOf.type}:${props.partOf.id}` } : { owner: ownerStr.value })
+
 const updateConflictsOk = () => {
   conflictsOk.value = ignoreConflicts.value || (conflicts.value !== null && conflicts.value.length === 0)
 }
@@ -78,7 +83,7 @@ const getConflicts = async () => {
   if (props.filename) {
     const res = await $fetch<{ results: Array<{ id: string, title: string }> }>(
       `${$apiPath}/datasets`,
-      { query: { filename: props.filename, owner: ownerStr.value, select: 'id,title', size: 5 } }
+      { query: { filename: props.filename, ...scopeQuery.value, select: 'id,title', size: 5 } }
     )
     for (const dataset of res.results) {
       if (!seenIds.has(dataset.id)) {
@@ -91,7 +96,7 @@ const getConflicts = async () => {
   if (props.title) {
     const res = await $fetch<{ results: Array<{ id: string, title: string }> }>(
       `${$apiPath}/datasets`,
-      { query: { title: props.title, owner: ownerStr.value, select: 'id,title', size: 5 } }
+      { query: { title: props.title, ...scopeQuery.value, select: 'id,title', size: 5 } }
     )
     for (const dataset of res.results) {
       if (!seenIds.has(dataset.id)) {

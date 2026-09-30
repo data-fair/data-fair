@@ -6,7 +6,7 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, getRawDataset, patchRawDataset, collectNotifications } from '../../support/workers.ts'
-import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared, waitForLinesDrained, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForIntegrityRevisionCount, revisionKeys, waitForFlagCleared, waitForLinesDrained, revisionsPrefix, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
@@ -543,11 +543,11 @@ test('restore re-ingests a tampered file through the pipeline and anchors with r
   expect(res.status).toBe('restoring')
 
   // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
-  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const keys = await waitForIntegrityRevisionCount(prefix, 2) // rev 0, plus the restore revision
   const raw = await waitForFlagCleared(dataset.id)
   expect(raw.originalFile.md5).toBe(originalMd5)
 
-  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
+  const revKeys = revisionKeys(keys)
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')
@@ -579,14 +579,14 @@ test('restore re-ingests a tampered non-basic-format (xlsx) file through the pip
   expect(res.status).toBe('restoring')
 
   // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
-  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const keys = await waitForIntegrityRevisionCount(prefix, 2) // rev 0, plus the restore revision
   const raw = await waitForFlagCleared(dataset.id)
   expect(raw.originalFile.md5).toBe(originalMd5)
   // proves normalization actually ran on the restored xlsx bytes instead of erroring the draft out
   expect(raw.originalFile.mimetype).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   expect(raw.status).toBe('finalized')
 
-  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
+  const revKeys = revisionKeys(keys)
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')
@@ -617,12 +617,12 @@ test('restore heals a tampered doc whose `file` field was unset out-of-band (sta
   expect(res.status).toBe('restoring') // NOT a 400 — the pipeline must be fed the post-restore doc
 
   // the pipeline reprocesses the restored bytes; finalize re-anchors with the restore context
-  const keys = await waitForIntegrityRevisions(prefix, 4) // rev 0 + .file, plus the new pair
+  const keys = await waitForIntegrityRevisionCount(prefix, 2) // rev 0, plus the restore revision
   const raw = await waitForFlagCleared(dataset.id)
   expect(raw.originalFile.md5).toBe(originalMd5)
   expect(raw.file).toBeTruthy()
 
-  const revKeys = keys.filter(k => !k.endsWith('.file') && !k.endsWith('.who')).sort()
+  const revKeys = revisionKeys(keys)
   const latest = await integrityTestStore.getRevision(revKeys.at(-1)!)
   expect(latest.context.operation).toBe('restore')
   expect(latest.context.origin).toBe('superadmin')

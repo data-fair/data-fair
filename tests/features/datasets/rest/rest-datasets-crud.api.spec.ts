@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -116,6 +117,39 @@ test.describe('REST datasets - CRUD', () => {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), (err: any) => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
+  })
+
+  test('REST line operations signal data-updated to webhooks only', async () => {
+    // Line writes must never reach stored events nor subscribers (script-driven spam, see
+    // notifications.md §10): the signal is restricted to the webhooks channel and coalesced.
+    // The matching test for virtual parents lives in virtual-datasets-features.api.spec.ts.
+    const ax = testUser1
+    // creation's full finalize pass must not signal: collect from before the creation
+    let notifs = await collectNotifs()
+    // PUT on a known id so the finalize-end subscription is open before the creation
+    const dataset = await doAndWaitForFinalize(ax, 'rest-webhook-signal', () => ax.put('/api/v1/datasets/rest-webhook-signal', {
+      isRest: true,
+      title: 'rest-webhook-signal',
+      schema: [{ key: 'attr1', type: 'string' }]
+    }))
+    let captured = await notifs.drain()
+    assert.equal(captured.filter(n => n.topic.key.startsWith('data-fair:dataset-data-updated:')).length, 0)
+
+    for (const write of [
+      () => ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'l1', attr1: 'a' }),
+      () => ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'b' }),
+      () => ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ attr1: 'c' }, { attr1: 'd' }]),
+      () => ax.delete(`/api/v1/datasets/${dataset.id}/lines`)
+    ]) {
+      notifs = await collectNotifs()
+      await doAndWaitForFinalize(ax, dataset.id, write)
+      captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-data-updated:' })
+      const { id, slug } = expectNotifPair(captured, 'data-fair:dataset-data-updated', dataset)
+      for (const n of [id, slug]) {
+        assert.deepEqual(n.channels, ['webhooks'])
+        assert.equal(n.coalesce, true)
+      }
+    }
   })
 
   test('Patch with empty string and null should remove properties', async () => {
@@ -441,16 +475,24 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
-      { _id: 'line1', attr1: 111 }
+      { _id: 'line2', attr1: 'test', attr2: 'nope' },
+      { _id: 'line3', attr1: 111 },
+      { _id: 'line4', attr2: 'test1' }
     ])
 
-    assert.equal(res.data.nbOk, 2)
-    assert.equal(res.data.nbWarnings, 1)
-    assert.equal(res.data.warnings.length, 1)
-    assert.equal(res.data.warnings[0].line, 1)
-    assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string (valeur : 111)')
+    // the dataset's optional rules (pattern, required…) are warnings, the line is stored
+    assert.equal(res.data.nbOk, 3)
+    assert.equal(res.data.nbWarnings, 2)
+    assert.deepEqual(res.data.warnings.map((w: any) => w.line), [1, 3])
+    assert.match(res.data.warnings[0].warning, /attr2/)
+    // but not the column type: a number in a string column could not be indexed, the line is refused
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors[0].line, 2)
+    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string (valeur : 111)')
 
     await waitForFinalize(ax, 'rest4')
+    const lines = (await ax.get('/api/v1/datasets/rest4/lines', { params: { sort: '_id' } })).data
+    assert.deepEqual(lines.results.map((l: any) => l._id).filter((id: string) => id.startsWith('line')), ['line1', 'line2', 'line4'])
   })
 
   test('The size of the mongodb collection is part of storage consumption', async () => {

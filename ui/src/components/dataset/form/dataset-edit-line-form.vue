@@ -39,6 +39,8 @@
 </i18n>
 
 <script setup lang="ts">
+import { emitAgentEvent } from '@data-fair/lib-vue-agents'
+import useDatasetEdition from '~/components/dataset/table/use-dataset-edition'
 import Vjsf from '@koumoul/vjsf/webmcp'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
@@ -62,6 +64,20 @@ const emits = defineEmits<{ onFileUpload: [file: File] }>()
 const { t } = useI18n()
 
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
+
+// The dialog reports itself from here, not from the watcher that flips the
+// dialog flag, because this is the moment the form exists. It is context, not a
+// wake-up signal: the openers wait for this form's editLine_form subagent before
+// returning, so the event of a dialog the assistant opened lands in the opener's
+// own result. It was once the thing the assistant waited on, which only worked
+// when the event happened to arrive after that result — never for the add
+// dialog, whose form is bundled with it rather than loaded asynchronously.
+if (subAgent) {
+  const { lineDialog } = useDatasetEdition()
+  onMounted(() => {
+    emitAgentEvent('dataset-line-dialog-opened', { id, mode: lineDialog.value?.mode })
+  })
+}
 
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')

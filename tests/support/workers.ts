@@ -208,6 +208,14 @@ export const getRawDataset = async (datasetId: string): Promise<any> => {
 }
 
 /**
+ * Get the raw MongoDB document for an application.
+ */
+export const getRawApplication = async (applicationId: string): Promise<any> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-application/${applicationId}`)
+  return res.data
+}
+
+/**
  * Clear rate limiting without full data cleanup.
  */
 export const clearRateLimiting = async () => {

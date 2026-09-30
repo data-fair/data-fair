@@ -15,18 +15,33 @@ import {
   createChatDriver,
   chatDriverStrings,
   captureGateway,
-  nextUserMessage, isDone,
+  nextUserMessage, isDone, resolveUserModel,
   writeEvidence, type Transcript,
   selectCases,
   createPagePerception
 } from '@data-fair/lib-agents-sim'
 
+// Needs @data-fair/lib-agents-sim with a waitForTurn that reports an armed wait
+// ('ended' | 'waiting'). Against an older one it returns undefined, `handedOver`
+// stays false, and this loop behaves exactly as it did before — inert, not broken.
+//
+// Explicit ceiling, not the driver's own 10-minute default: 8 turns × 5 minutes
+// stays inside the 45-minute test budget (see playwright.sim.config.ts), so a
+// wedged turn surfaces as a recorded invalid run rather than an unrecorded
+// test-timeout abort. A declared wait no longer eats into it: the driver reports
+// an armed wait instead of sitting through it.
+const TURN_CEILING_MS = 5 * 60 * 1000
+
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
-// This default must track nextUserMessage's own (persona.ts reads
-// process.env.SIM_USER_MODEL ?? 'haiku' itself) — there is no shared export,
-// so if upstream changes its default this sidecar value silently goes stale.
-// Deliberate duplication, not an oversight.
-const USER_MODEL = process.env.SIM_USER_MODEL ?? 'haiku'
+// The sub-agent, compaction and moderation roles, pinned separately and lower:
+// that is where a deployment puts a small model, so that is where the product
+// has to work. See BACKGROUND_ROLES in runner/settings.ts.
+const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
+// Asked of the package rather than re-derived here. The duplicated literal this
+// replaces went stale the moment lib-agents-sim changed its default: a run used
+// sonnet and this sidecar recorded haiku, which defeats the one thing the field
+// is for — never comparing verdicts from different tiers silently.
+const USER_MODEL = resolveUserModel()
 const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
 
 for (const simCase of selected) {
@@ -68,6 +83,7 @@ for (const simCase of selected) {
       valid: false,
       error: 'run did not complete (timed out or was killed)',
       assistantModel: ASSISTANT_MODEL,
+      toolsModel: TOOLS_MODEL,
       userModel: USER_MODEL,
       turns: 0,
       durationMs: 0,
@@ -82,7 +98,7 @@ for (const simCase of selected) {
       await assertBridgeUp()
       await clean()
       const ownerAx = await seedDatasets()
-      await seedSettings(ASSISTANT_MODEL, ownerAx)
+      await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
@@ -133,6 +149,12 @@ for (const simCase of selected) {
         { offLimits: [strings.input, strings.send, strings.stop, strings.reset] }
       )
 
+      // Set when the assistant ended a turn by declaring wait_for_user_action
+      // rather than by finishing. It has handed control to the person, and the
+      // person only exists inside nextUserMessage — so the next pass is where
+      // they act on it.
+      let handedOver = false
+
       for (let i = 0; i < simCase.maxTurns; i++) {
         perception.setTurn(i + 1)
         const message = await nextUserMessage(simCase, conversation, simCase.maxTurns - i, { perception })
@@ -145,16 +167,32 @@ for (const simCase of selected) {
           error = `simulated user returned no message (empty completion) on turn ${i + 1}`
           break
         }
+        if (handedOver) {
+          // The pass above was the person's chance to act on the wait. If they
+          // took it, the wait resolved and the assistant is finishing the turn it
+          // paused — let it, rather than speaking over its reply. If they ignored
+          // it, the wait is still armed and this returns 'waiting' at once, so
+          // nothing is spent waiting for something that will not happen.
+          handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
+          const resumed = await chat.readConversation()
+          conversation.length = 0
+          conversation.push(...resumed)
+        }
         // The persona may have navigated the page — or closed the drawer itself —
         // between turns, so re-open before sending rather than assuming the
         // composer survived whatever it just did.
         await ensureChatOpen()
-        await chat.sendMessage(message)
-        // Explicit ceiling, not the driver's own 10-minute default: 8 turns ×
-        // 5 minutes stays inside the 45-minute test budget (see
-        // playwright.sim.config.ts), so a wedged turn surfaces as a recorded
-        // invalid run rather than an unrecorded test-timeout abort.
-        await chat.waitForTurn(5 * 60 * 1000)
+        // The composer takes a message only once the assistant is not working —
+        // while it is, the send control is Stop. That is an ordinary wait for a
+        // turn, not a wedged page, so it gets the turn ceiling rather than the
+        // driver's short one: a judged run spent six turns failing to deliver in
+        // 15s slices and read as an assistant gone silent.
+        await chat.sendMessage(message, { readyTimeoutMs: TURN_CEILING_MS })
+        // A turn ends two ways. 'ended' is the assistant finished; 'waiting' is it
+        // holding the turn open for the person, which is a turn boundary as far as
+        // they are concerned — before the driver reported that, every declared
+        // wait ran its whole window and was then recorded as a wedged turn.
+        handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
         // Read first, then replace: clearing up front means a throw from
         // readConversation leaves the transcript empty, losing every prior turn
         // — and an empty transcript is the one thing a judge cannot judge.
@@ -219,6 +257,7 @@ for (const simCase of selected) {
       valid: !error,
       error,
       assistantModel: ASSISTANT_MODEL,
+      toolsModel: TOOLS_MODEL,
       userModel: USER_MODEL,
       turns,
       durationMs: Date.now() - started,

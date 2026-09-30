@@ -25,6 +25,54 @@ async function uploadCsv (ax: any, id: string, file: string, body: Record<string
 }
 
 /**
+ * The editable dataset the data-entry case works in: a subsidy-request register a
+ * team already uses, so it has columns and a little history.
+ *
+ * It is REST rather than a CSV because that is the whole point — a file dataset
+ * has no add-line dialog, and `open_add_line_dialog` refuses on a dataset with no
+ * columns. One seeded row carries a deliberate mistake (a decimal slip: 12000
+ * where the request was for 1200) so the "fix it" half of the case has something
+ * real to fix, rather than asking the person to invent an error.
+ */
+async function seedRestRegister (ax: any) {
+  await ax.post('/api/v1/datasets/sim-demandes-subvention', {
+    isRest: true,
+    title: 'Demandes de subvention des associations',
+    description: 'Registre des demandes de subvention déposées par les associations, saisi par le service vie associative.',
+    rest: { history: true },
+    schema: [
+      { key: 'association', type: 'string', title: 'Association', 'x-originalName': 'Association' },
+      { key: 'objet', type: 'string', 'x-display': 'textarea', title: 'Objet de la demande', 'x-originalName': 'Objet de la demande' },
+      { key: 'montant', type: 'number', title: 'Montant demandé (€)', 'x-originalName': 'Montant demandé (€)' },
+      { key: 'contact', type: 'string', title: 'Contact', 'x-originalName': 'Contact' },
+      { key: 'date_de_depot', type: 'string', format: 'date', title: 'Date de dépôt', 'x-originalName': 'Date de dépôt' }
+    ]
+  })
+
+  await ax.post('/api/v1/datasets/sim-demandes-subvention/_bulk_lines', [
+    {
+      _id: 'dem-1',
+      association: 'Harmonie municipale',
+      objet: 'Achat de pupitres et de partitions pour la saison',
+      montant: 800,
+      contact: 'service vie associative',
+      date_de_depot: '2026-02-04'
+    },
+    {
+      // The decimal slip the person spots. Kept plausible: a judo club really
+      // could ask for 1200, and 12000 is exactly the kind of error a register
+      // accumulates.
+      _id: 'dem-2',
+      association: 'Club de judo du centre',
+      objet: 'Renouvellement des tatamis de la salle municipale',
+      montant: 12000,
+      contact: 'service des sports',
+      date_de_depot: '2026-02-18'
+    }
+  ])
+}
+
+/**
  * Upload every fixture and wait for indexing. Returns the owner-context client,
  * which seedSettings needs to flip the agentChat flag.
  */
@@ -44,6 +92,8 @@ export async function seedDatasets () {
     title: 'Suivi des demandes citoyennes',
     description: 'Demandes adressées aux services de la collectivité et leur état d\'avancement.'
   })
+
+  await seedRestRegister(ax)
 
   // Indexing is asynchronous. Asking the assistant about a dataset that is
   // still finalising produces a transcript of the product failing at something

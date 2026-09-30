@@ -19,7 +19,7 @@
           </div>
           <div>
             {{ application.owner.name }}<template v-if="application.owner.department">
-              - {{ application.owner.departmentName || application.owner.department }}
+              - {{ departmentLabel(application.owner.department, application.owner.departmentName) }}
             </template>
           </div>
         </v-list-item>
@@ -120,6 +120,7 @@ const { application, baseAppFetch, nbParentApps } = useApplicationStore()
 
 const { t } = useI18n()
 const { dayjs } = useLocaleDayjs()
+const { departmentLabel } = useDisplayOwner()
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''

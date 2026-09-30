@@ -9,7 +9,8 @@ import {
   formatMetadataContext,
   formatMetadataOutcomes,
   FREQUENCY_VALUES,
-  SUMMARY_MAX_LENGTH
+  SUMMARY_MAX_LENGTH,
+  SEARCH_TERMS_MAX_LENGTH
 } from './agent-metadata-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
@@ -55,7 +56,7 @@ export function useAgentDatasetMetadataTools (
 
   useAgentTool({
     name: 'read_dataset_metadata',
-    description: 'Read the metadata card of the dataset being edited: current title, summary, description, licence, topics, keywords and optional fields, plus the closed lists of licences and topics this organization allows and which optional fields it has disabled. Call this before set_dataset_metadata so you propose values that exist.',
+    description: 'Read the metadata card of the dataset being edited: current title, summary, description, licence, topics, keywords, hidden search terms and optional fields, plus the closed lists of licences and topics this organization allows and which optional fields it has disabled. Call this before set_dataset_metadata so you propose values that exist.',
     annotations: { title: t('readDatasetMetadata'), readOnlyHint: true },
     inputSchema: { type: 'object' as const, properties: {} },
     execute: async () => {
@@ -75,6 +76,7 @@ export function useAgentDatasetMetadataTools (
         summary: { type: 'string' as const, description: `One-sentence summary shown in catalogs, ${SUMMARY_MAX_LENGTH} characters max, plain text, opening on the concrete subject` },
         description: { type: 'string' as const, description: 'Detailed markdown description' },
         keywords: { type: 'array' as const, items: { type: 'string' as const }, description: 'Keywords used for search and catalog facets' },
+        searchTerms: { type: 'string' as const, description: `Hidden search vocabulary, never displayed: synonyms, acronyms with their expansion, everyday wording, separated by commas or newlines, ${SEARCH_TERMS_MAX_LENGTH} characters max` },
         license: { type: ['string', 'null'] as const, description: "Licence title or href, from the organization's list; null clears it" },
         topics: { type: 'array' as const, items: { type: 'string' as const }, description: "Topic titles or ids, from the organization's list" },
         origin: { type: 'string' as const, description: 'Where the data comes from (producer, source URL)' },

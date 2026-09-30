@@ -13,6 +13,8 @@ const shortVal = 'koumoul'
 const plainStr = { key: 'c', type: 'string' }
 const wildcardStr = { key: 'c', type: 'string', 'x-capabilities': { wildcard: true } }
 const noTextStr = { key: 'c', type: 'string', 'x-capabilities': { text: false, textStandard: false } }
+// how prepareSchema configures a textarea/markdown column: analyzed text only
+const textOnlyStr = { key: 'c', type: 'string', 'x-capabilities': { index: false, values: false, insensitive: false } }
 const numberProp = { key: 'n', type: 'number' }
 
 test.describe('keyword ignore_above resolvers', () => {
@@ -54,6 +56,34 @@ test.describe('keyword ignore_above resolvers', () => {
 
   test('exists fields: flagged pure-keyword column falls back to keyword only', () => {
     assert.deepEqual(resolveExistsFields(noTextStr, true), ['c'])
+  })
+
+  test('exists fields: long-text column (no keyword index, no doc_values) uses its analyzed fields', () => {
+    // the main keyword field is in neither the inverted index, the doc_values nor _field_names:
+    // an exists on it silently matches nothing, so it must be left out entirely
+    assert.deepEqual(resolveExistsFields(textOnlyStr, false), ['c.text_standard', 'c.text'])
+    assert.deepEqual(resolveExistsFields({ ...textOnlyStr, 'x-capabilities': { ...textOnlyStr['x-capabilities'], text: false } }, false), ['c.text_standard'])
+  })
+
+  test('exists fields: an un-flagged long-text column also uses its exact case-insensitive field', () => {
+    assert.deepEqual(resolveExistsFields({ key: 'c', type: 'string', 'x-capabilities': { index: false, values: false } }, false),
+      ['c.text_standard', 'c.text', 'c.keyword_insensitive'])
+    // flagged: `.keyword_insensitive` carries the same ignore_above limit, so it drops out
+    assert.deepEqual(resolveExistsFields({ key: 'c', type: 'string', 'x-capabilities': { index: false, values: false } }, true),
+      ['c.text_standard', 'c.text'])
+  })
+
+  test('exists fields: doc_values alone can answer existence', () => {
+    // `values` still on: the main field keeps its doc_values, which ES reads for exists
+    assert.deepEqual(resolveExistsFields({ key: 'c', type: 'string', 'x-capabilities': { index: false } }, false), ['c'])
+    assert.deepEqual(resolveExistsFields({ key: 'n', type: 'number', 'x-capabilities': { index: false } }, false), ['n'])
+  })
+
+  test('exists fields: nothing indexed at all → empty, the caller must refuse the filter', () => {
+    assert.deepEqual(resolveExistsFields({ ...textOnlyStr, 'x-capabilities': { index: false, values: false, insensitive: false, text: false, textStandard: false } }, false), [])
+    // geometry-concept columns are mapped {keyword, index:false, doc_values:false} with no sub-field
+    assert.deepEqual(resolveExistsFields({ key: 'g', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }, false), [])
+    assert.deepEqual(resolveExistsFields({ key: 'n', type: 'number', 'x-capabilities': { index: false, values: false } }, false), [])
   })
 
   test('range/prefix: un-flagged stays keyword (not uncertain); flagged routes/flags', () => {

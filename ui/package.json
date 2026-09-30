@@ -19,11 +19,12 @@
   },
   "devDependencies": {
     "@data-fair/frame": "^0.18.0",
-    "@data-fair/lib-vue": "^1.30.0",
-    "@data-fair/lib-vue-agents": "^0.4.0",
-    "@data-fair/lib-vuetify": "^2.4.0",
-    "@data-fair/lib-vuetify-agents": "^0.6.0",
+    "@data-fair/lib-vue": "^1.31.1",
+    "@data-fair/lib-vue-agents": "^0.6.0",
+    "@data-fair/lib-vuetify": "^2.5.1",
+    "@data-fair/lib-vuetify-agents": "^0.6.4",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
+    "@json-layout/core": "~2.9.0",
     "@koumoul/vjsf": "^4.6.0",
     "@koumoul/vjsf-markdown": "^0.5.2",
     "@mdi/js": "^7.4.47",
@@ -63,7 +64,6 @@
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
     "@data-fair/lib-vuetify-events": "^0.3.0",
-    "tinycolor2": "^1.6.0",
-    "zod-to-json-schema": "^3.25.1"
+    "tinycolor2": "^1.6.0"
   }
 }

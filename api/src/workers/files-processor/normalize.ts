@@ -18,7 +18,7 @@ import config from '#config'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
-import mimeTypeStream from 'mime-type-stream'
+import { mimeTypeStream } from '../../datasets/utils/mime-type-stream.ts'
 import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
 import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import filesStorage from '#files-storage'
@@ -137,7 +137,7 @@ export default async function (dataset: FileDataset) {
       }
     }
 
-    if (datasetUtils.jsonTypes.has(dataset.originalFile.mimetype)) {
+    if (datasetUtils.isJsonType(dataset.originalFile.mimetype)) {
       const { stringify: csvStrStream } = await import('csv-stringify')
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       const readStream = compose(

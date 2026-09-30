@@ -19,7 +19,7 @@
           </div>
           <div>
             {{ dataset.owner.name }}<template v-if="dataset.owner.department">
-              - {{ dataset.owner.departmentName || dataset.owner.department }}
+              - {{ departmentLabel(dataset.owner.department, dataset.owner.departmentName) }}
             </template>
           </div>
         </v-list-item>
@@ -196,6 +196,7 @@ const { dataset, nbVirtualDatasets } = useDatasetStore()
 
 const { t, locale } = useI18n()
 const { dayjs } = useLocaleDayjs()
+const { departmentLabel } = useDisplayOwner()
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''

@@ -1,7 +1,7 @@
 import es from '#es'
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import mimeTypeStream from 'mime-type-stream'
+import { mimeTypeStream } from './mime-type-stream.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import batchStream from '../../misc/utils/batch-stream.ts'
 import * as esUtils from '../es/index.ts'
@@ -81,7 +81,9 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
         const [lat, lon] = line[input.property.key].split(',')
         params.geo_distance = `${lon},${lat},${input.distance}`
       } else {
-        throw httpError(400, `input type ${input.type} is not supported`)
+        // the contract's three matching methods are exhausted here, so `input` is `never`:
+        // the guard survives for documents stored before a method was added or removed
+        throw httpError(400, `input type ${(input as { type?: string }).type} is not supported`)
       }
     }
     if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
@@ -89,7 +91,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
     return params
   }
 
-  const ioStream = mimeTypeStream(contentType) || mimeTypeStream('application/json')
+  const ioStream = mimeTypeStream(contentType) ?? mimeTypeStream('application/json')
 
   let lineIndex = 0
   return [

@@ -2,6 +2,7 @@ import path from 'path'
 import express, { type RequestHandler } from 'express'
 import moment from 'moment'
 import mongo from '#mongo'
+import config from '#config'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import applicationAPIDocs from '../../contract/application-api-docs.ts'
 import * as ajv from '../misc/utils/ajv.ts'
@@ -12,6 +13,9 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
+import * as fragmentsService from '../fragments/service.ts'
+import { fragmentWriteGuard } from '../fragments/middlewares.ts'
+import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -23,6 +27,7 @@ import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { getAsVisitorContext } from '../misc/utils/as-visitor.ts'
 import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
@@ -46,12 +51,22 @@ router.use((req, res, next) => {
 
 // Get the list of applications
 router.get('', cacheHeaders.listBased, async (req, res) => {
+  const reqQuery = req.query as Record<string, string>
+  // an org admin can browse the list as a hypothetical visitor (access audit view)
+  let sessionState = reqSession(req)
+  let asVisitorFilters: any[] | undefined
+  if (reqQuery.asVisitor) {
+    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+    sessionState = ctx.sessionState
+    asVisitorFilters = [ctx.ownerFilter]
+  }
   const response = await service.findApplications(
     req.getLocale(),
     reqPublicationSite(req),
     reqPublicBaseUrl(req),
-    req.query as Record<string, string>,
-    reqSession(req)
+    reqQuery,
+    sessionState,
+    asVisitorFilters
   )
   res.json(response)
 })
@@ -71,6 +86,14 @@ router.post('', async (req, res) => {
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(patchedApplication, 'applications', reqSessionAuthenticated(req))
+}, async (patchedApplication) => {
+  await fragmentsService.syncFragmentPermissions('applications', patchedApplication)
+  // the application-context session proof memoizes this application's permissions for 30s
+  // (findCallingApplication in application-key.ts) — an ACL edit must invalidate it immediately,
+  // as a key write (writeApplicationKeys), a PATCH (patchApplication) and an attach/detach
+  // (applyPartOfChange) already do. NB: PUT /config and /configuration-draft do NOT clear these
+  // caches today, so a configuration.datasets edit made that way stays visible for up to 30s
+  clearApplicationKeysCaches()
 }))
 
 // retrieve a application by its id
@@ -82,7 +105,10 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
 })
 
 // PUT used to create or update
-router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), async (req, res) => {
+// the fragment guard is mounted after attemptInsert (which answers 201 and stops the chain on a
+// genuine create, where partOf is legitimate and validated by initApplicationPermissions) and after
+// the permission middleware, so an unauthorized caller still gets a 403 rather than a 400
+router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), fragmentWriteGuard(false), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
@@ -95,9 +121,23 @@ router.patch('/:applicationId',
   readApplication,
   permissionMiddleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  // fragments are never publishable — shared with the other three write routes (spec §5)
+  fragmentWriteGuard(true),
   async (req, res) => {
     const application = reqApplication(req)
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
+
+    // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
+    // the fragmentWriteGuard mounted above
+    let partOfUpdated: any
+    if ('partOf' in patch) {
+      partOfUpdated = await fragmentsService.applyPartOfChange('applications', application, patch.partOf ?? null, reqSession(req))
+      delete patch.partOf
+      if (!Object.keys(patch).length) {
+        res.status(200).json(clean(partOfUpdated, reqPublicBaseUrl(req), reqPublicationSite(req)))
+        return
+      }
+    }
 
     // Strip publicBaseUrl from image URL for multi-domain compatibility
     if (patch.image?.startsWith(reqPublicBaseUrl(req))) {
@@ -107,7 +147,7 @@ router.patch('/:applicationId',
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
     let patched
     try {
-      patched = await service.patchApplication(ctx, application, patch)
+      patched = await service.patchApplication(ctx, partOfUpdated ?? application, patch)
     } catch (err: any) {
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
@@ -120,18 +160,24 @@ router.patch('/:applicationId',
 router.put('/:applicationId/owner', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
 
+  const application = reqApplication(req)
+  if (application.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+  if (await fragmentsService.countFragments('application', application.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
+
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   // (checked against all the user's memberships, the new owner is rarely the active account)
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
-  const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
+  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body)
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
+  await fragmentsService.deleteFragments(req.app, ctx, 'application', reqApplication(req).id, reqApplication(req).owner)
   await service.deleteApplication(ctx, reqApplication(req))
   res.sendStatus(204)
 })

@@ -8,6 +8,7 @@ import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint } from './x-agent.ts'
 
 const datasetIdParam = {
   in: 'path',
@@ -59,6 +60,7 @@ const errorResponses = {
 type RootApiDoc = {
   openapi: string
   info: Record<string, any>
+  'x-agent'?: unknown
   servers: { url: string, description?: string }[]
   components: {
     schemas: Record<string, any>
@@ -77,6 +79,14 @@ type RootApiDoc = {
  * `privateDatasetAPIDocs` in `merged` mode, which produces every possible dataset route
  * with tags already prefixed for the merged drawer.
  */
+/** The dataset component with the agent hint on the column key; a clone, the resolved schema is shared. */
+const annotateDatasetSchema = (schema: any) => {
+  const out = structuredClone(schema)
+  const key = out?.properties?.schema?.items?.properties?.key
+  if (key) key['x-agent'] = datasetSchemaKeyHint
+  return out
+}
+
 export default (publicUrl: string = config.publicUrl, sessionState?: SessionStateAuthenticated) => {
   const api: RootApiDoc = {
     openapi: '3.1.0',
@@ -97,13 +107,14 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       'x-api-id': 'data-fair',
       ...config.info
     },
+    'x-agent': xAgentRoot,
     servers: [{
       url: `${publicUrl}/api/v1`,
       description: `Instance Data Fair - ${new URL(publicUrl).hostname}`
     }],
     components: {
       schemas: {
-        dataset,
+        dataset: annotateDatasetSchema(dataset),
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPost.properties.body,
         application,
@@ -198,6 +209,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
+          'x-agent': xAgent.listDatasets,
           tags: ['Jeux de données (JDD)'],
           parameters: [
             utils.qParam,

@@ -19,6 +19,28 @@ export const initNew = (body) => {
   return service
 }
 
+/**
+ * An action as `computeActions` below always builds it: carrying an id, and with both
+ * mappings resolved to arrays. The stored contract types all three loosely — `actions` is
+ * optional, `id` only exists through the index signature, and `input` / `output` are
+ * optional — so every consumer used to re-derive that guarantee with its own casts and
+ * non-null assumptions. `findAction` is the single place that assumption lives.
+ */
+export type RemoteServiceAction = NonNullable<RemoteService['actions']>[number] & {
+  id: string
+  input: NonNullable<NonNullable<RemoteService['actions']>[number]['input']>
+  output: NonNullable<NonNullable<RemoteService['actions']>[number]['output']>
+}
+
+/**
+ * Look up one of a remote service's actions by id. Returns undefined when the service has
+ * no actions at all or none with that id — callers decide whether that is fatal, because
+ * they disagree: applying an extension throws, building a schema skips the extension.
+ */
+export const findAction = (remoteService: RemoteService, actionId: unknown): RemoteServiceAction | undefined => {
+  return remoteService.actions?.find(action => action.id === actionId) as RemoteServiceAction | undefined
+}
+
 // TODO: explain ? simplify ? hard to understand piece of code
 export const computeActions = (apiDoc) => {
   return listActions(apiDoc).map(a => {

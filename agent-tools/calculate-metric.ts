@@ -64,14 +64,32 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   }
 }
 
+/**
+ * The API answers percentiles as an ARRAY of `{key, value}` pairs — metric-agg.ts
+ * sets `keyed = false`, so Elasticsearch is asked for the unkeyed form. This
+ * tool's outputSchema and description both promise an object keyed by
+ * percentage, and JSON Schema counts array as its own type, so the call used to
+ * fail at the output boundary with `Instance type "array" is invalid` and the
+ * model quietly gave up on a metric it had been offered.
+ */
+function keyPercentiles (metric: any): any {
+  if (!Array.isArray(metric)) return metric
+  const keyed: Record<string, any> = {}
+  for (const entry of metric) {
+    if (entry && typeof entry === 'object' && 'key' in entry) keyed[String(entry.key)] = entry.value
+  }
+  return Object.keys(keyed).length ? keyed : metric
+}
+
 export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
+  const metric = params.metric === 'percentiles' ? keyPercentiles(data.metric) : data.metric
   let result: string
-  if (params.metric === 'stats' && typeof data.metric === 'object') {
-    result = Object.entries(data.metric).map(([k, v]) => `${k}: ${v}`).join(', ')
-  } else if (params.metric === 'percentiles' && typeof data.metric === 'object') {
-    result = Object.entries(data.metric).map(([k, v]) => `p${k}: ${v}`).join(', ')
+  if (params.metric === 'stats' && typeof metric === 'object') {
+    result = Object.entries(metric).map(([k, v]) => `${k}: ${v}`).join(', ')
+  } else if (params.metric === 'percentiles' && typeof metric === 'object') {
+    result = Object.entries(metric).map(([k, v]) => `p${k}: ${v}`).join(', ')
   } else {
-    result = String(data.metric)
+    result = String(metric)
   }
 
   const filterQueryString = buildFilterQueryString(params)
@@ -93,7 +111,7 @@ export function formatResult (data: any, params: Params): { text: string, struct
       datasetId: params.datasetId,
       fieldKey: params.fieldKey,
       total: data.total,
-      metric: data.metric
+      metric
     }
   }
 }

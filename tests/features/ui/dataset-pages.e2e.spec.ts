@@ -211,4 +211,17 @@ test.describe('dataset detail pages', () => {
     const adrProp = res.data.schema.find((p: any) => p.key === 'adr')
     expect(adrProp.title).toBe('Adresse complète')
   })
+
+  test('edits the hidden search terms from the metadata form', async ({ page, goToWithAuth }) => {
+    const u1 = await axiosAuth('test_user1@test.com')
+    await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
+    await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_user1')
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    const field = page.locator('#metadata').getByLabel('Termes de recherche associés')
+    await expect(field).toBeVisible()
+    await field.fill('élections scrutin')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
+    await expect.poll(async () => (await u1.get('/api/v1/datasets/e2e-search-terms')).data.searchTerms).toBe('élections scrutin')
+  })
 })

@@ -47,9 +47,40 @@ while someone is relying on that data.
    SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate  # one case
    ```
 
-   Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`) and
-   `SIM_USER_MODEL` (default `haiku`), and recorded per run, so verdicts from
-   different tiers are never compared silently.
+   Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`),
+   `SIM_TOOLS_MODEL` (default `haiku`, for sub-agents, compaction and the
+   moderation guard) and `SIM_USER_MODEL` (default `haiku`), and recorded per
+   run, so verdicts from different tiers are never compared silently.
+
+   **Confirm it started.** A suite takes minutes, so you will want to background
+   it — and a run that never launched looks exactly like a run still going. The
+   sidecar is written BEFORE each case begins, so within a minute of starting:
+
+   ```bash
+   ls simulations/tmp/*.run.json      # a file here means a case really started
+   ```
+
+   An empty `simulations/tmp/` after a minute means the run is not going; find
+   out why rather than waiting longer.
+
+   **Wait on the process id, never on a text pattern.** `pgrep -f` matches full
+   command lines, including the command line of the waiter you are writing — so
+
+   ```bash
+   until ! pgrep -f "playwright.sim.config"; do sleep 15; done   # WRONG
+   ```
+
+   matches itself and waits forever, silently, producing nothing. One session lost
+   an hour and three quarters to exactly this, and then repeated it while trying to
+   fix it. Capture the pid and watch that instead:
+
+   ```bash
+   nohup npm run simulate > sim.log 2>&1 &
+   SIMPID=$!
+   while kill -0 "$SIMPID" 2>/dev/null; do sleep 20; done
+   ```
+
+   For the same reason, never `pkill -f` a pattern taken from your own script.
 
 4. **Ignore the runner's own account of how it went.** The transcript at
    `simulations/tmp/sim-<case>.json` is the evidence. A Playwright `passed` line
@@ -63,7 +94,15 @@ while someone is relying on that data.
 
    - the case name and its goal
    - the transcript path, `simulations/tmp/sim-<case>.json`
+   - the sidecar path, `simulations/tmp/sim-<case>.run.json`
    - ask for the JSON verdict its own definition specifies
+
+   **Dispatch them all the same way.** What to look at, what matters, what you
+   suspect is wrong this time — none of that goes in the dispatch. The judge's
+   own definition sets its mandate, and it reads `docs/architecture/` itself. A
+   briefing you write per run steers the verdict toward what you already
+   believed and makes two runs' verdicts incomparable. If a judge is looking in
+   the wrong place, fix its definition, not one dispatch.
 
 6. **Write each verdict** to `simulations/tmp/sim-<case>.verdict.json` as raw JSON.
    Strip any code fence the judge added. A malformed verdict reports as
@@ -75,14 +114,23 @@ while someone is relying on that data.
    npm run simulate:report
    ```
 
-   Relay the summary and the friction list. Exit code is non-zero if any case was
-   unsatisfactory, invalid, not judged, or never ran.
+   Relay the summary, the friction list and the findings. Exit code is non-zero
+   if any case was unsatisfactory, invalid, not judged, or never ran.
+
+8. **Root-cause what it found.** The judge reads a record, not the source: it
+   says a tool result misled the assistant, not which line built that result.
+   That half is yours, and it is where a run becomes a change. For each friction
+   point and each finding worth acting on, go into the code, find what produced
+   it, and say so — a defect you confirmed, a design decision the judge could
+   not see, or a harness artefact. Report that, not the verdict verbatim.
 
 ## Reading the result
 
-The friction list is the point. "Unsatisfactory" tells you a run went badly; a
-friction point names the reply or tool result that misled the person and what they
-did next — that is what turns a run into a concrete change.
+The friction list is the person's side, and it is what "unsatisfactory" is
+actually about: which reply or tool result misled them and what they did next.
+The findings are everything else the run exposed — cost, what the conversation
+was like to read, tools, the product, the harness. Both are claims about a
+record; both need confirming against the code before anyone acts on them.
 
 Rate limits are the practical ceiling: three Claude roles per case on one
 subscription. A run cut short by a rate limit is an **invalid run**, not a product

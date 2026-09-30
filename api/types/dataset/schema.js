@@ -114,6 +114,11 @@ const datasetProperties = {
       type: 'string'
     }
   },
+  searchTerms: {
+    type: 'string',
+    maxLength: 1000,
+    description: 'Free text used only by the catalog search, never displayed: synonyms, acronyms and their expansion, everyday wording'
+  },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
   frequency: {
     type: 'string',
@@ -759,7 +764,7 @@ const datasetProperties = {
               type: 'string'
             }
           },
-          overwriteProperties: {
+          overwrite: {
             type: 'object',
             description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
             additionalProperties: {
@@ -866,6 +871,16 @@ const datasetProperties = {
       filterActiveAccount: {
         type: 'boolean'
       }
+    }
+  },
+  partOf: {
+    type: 'object',
+    description: 'Declares this dataset as a fragment of another resource (a virtual dataset or an application). A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.',
+    additionalProperties: false,
+    required: ['type', 'id'],
+    properties: {
+      type: { type: 'string', enum: ['dataset', 'application'] },
+      id: { type: 'string' }
     }
   },
   isRest: {
@@ -1081,6 +1096,7 @@ const dataset = {
         spatial: datasetProperties.spatial,
         temporal: datasetProperties.temporal,
         keywords: datasetProperties.keywords,
+        searchTerms: datasetProperties.searchTerms,
         frequency: datasetProperties.frequency,
         customMetadata: datasetProperties.customMetadata
       }

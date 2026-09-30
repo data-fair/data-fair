@@ -66,3 +66,27 @@ declare module 'vt-pbf' {
   }
   export default vtpbf
 }
+
+declare module 'JSONStream' {
+  import type { Transform } from 'node:stream'
+  const JSONStream: {
+    parse: (path: string | any[], map?: (data: any) => any) => Transform
+    stringify: (open?: string | false, sep?: string, close?: string, indent?: number) => Transform
+  }
+  export default JSONStream
+}
+
+declare module 'ndjson' {
+  import type { Transform } from 'node:stream'
+  const ndjson: { parse: (opts?: { strict?: boolean }) => Transform, serialize: () => Transform }
+  export default ndjson
+}
+
+declare module 'mongo-escape' {
+  const mongoEscape: {
+    /** `$` and `.` in keys become their fullwidth forms; `recurse` also escapes nested objects. */
+    escape: <T>(input: T, recurse?: boolean) => T
+    unescape: <T>(input: T, recurse?: boolean) => T
+  }
+  export default mongoEscape
+}

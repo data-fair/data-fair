@@ -145,13 +145,34 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     watch: false
   })
 
-  const nbVirtualDatasetsFetch = useFetch<{ count: number }>(() => {
+  // the virtual datasets using this one as a child: counted, and the first ones kept so that a single
+  // virtual parent can be offered as the parent to attach this dataset to (see fragment-attach-dialog)
+  const nbVirtualDatasetsFetch = useFetch<{ count: number, results: { id: string, title: string, owner: any, partOf?: any }[] }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/datasets`
   }, {
-    query: computed(() => ({ children: id, size: 0 }))
+    query: computed(() => ({ children: id, size: 2, select: 'id,title,owner,partOf,-userPermissions,-links' }))
   })
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
+  const virtualParents = computed(() => nbVirtualDatasetsFetch.data.value?.results ?? [])
+
+  // fragments of this dataset (only a virtual dataset can have some, and only datasets can be fragments of a dataset)
+  // fragments are hidden from every other listing, so this one must reach all of them: the size grows on demand
+  const fragmentsSize = ref(100)
+  const fragmentsFetch = useFetch<{ results: any[], count: number }>(() => {
+    if (!dataset.value?.isVirtual || dataset.value.partOf) return null
+    return `${$apiPath}/datasets`
+  }, {
+    query: computed(() => ({ partOf: `dataset:${id}`, size: fragmentsSize.value, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
+  })
+  const fragments = computed(() => ({ datasets: fragmentsFetch.data.value?.results ?? [], applications: [] as any[] }))
+  const nbFragments = computed(() => fragmentsFetch.data.value?.count ?? 0)
+  const hasMoreFragments = computed(() => (fragmentsFetch.data.value?.results.length ?? 0) < nbFragments.value)
+  const loadMoreFragments = () => { fragmentsSize.value += 100 }
+
+  const detach = async () => {
+    await patchDataset.execute({ partOf: null } as any)
+  }
 
   const dataFiles = computed(() => {
     if (!dataset.value) return []
@@ -229,6 +250,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     applicationsFetch,
     nbVirtualDatasetsFetch,
     nbVirtualDatasets,
+    virtualParents,
+    fragmentsFetch,
+    fragments,
+    nbFragments,
+    hasMoreFragments,
+    loadMoreFragments,
+    detach,
     publishedDatasetFetch,
     publishedDataset,
     dataFiles,

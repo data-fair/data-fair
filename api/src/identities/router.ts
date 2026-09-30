@@ -1,37 +1,34 @@
 // Routes used to synchronize data with the users/organizations directory.
 // Useful both for functionalities and to help respect GDPR rules.
 
-import { Router } from 'express'
+import { type Application, Router } from 'express'
+import { createIdentitiesRouter } from '@data-fair/lib-express/identities/index.js'
+import { assertReqInternalSecret } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import config from '#config'
 import { renameIdentity, deleteIdentity, reportIdentity } from './service.ts'
 
-const router = Router()
-export default router
+export default (app: Application) => {
+  const router = Router()
 
-router.use((req, res, next) => {
-  if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {
-    return res.status(403).type('text/plain').send('Bad secret in "key" parameter')
-  }
-  next()
-})
+  // the shared router has no report yet (501), keep ours ahead of it with the same guard
+  router.get('/:type/:id/report', async (req, res) => {
+    assertReqInternalSecret(req, config.secretKeys.identities ?? '')
+    if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
+    res.send(await reportIdentity({ type: req.params.type, id: req.params.id }))
+  })
 
-// notify a name change
-router.post('/:type/:id', async (req, res) => {
-  if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
-  await renameIdentity({ type: req.params.type, id: req.params.id, name: req.body.name }, req.body.departments)
-  res.send()
-})
+  router.use(createIdentitiesRouter(
+    config.secretKeys.identities,
+    // onUpdate: propagate a name change, reconcile the permissions granted to partners
+    async (identity) => {
+      await renameIdentity(identity, identity.departments, identity.partners)
+    },
+    // onDelete: remove resources owned, permissions and the data directory
+    async (identity) => {
+      await deleteIdentity(app, identity)
+    }
+  ))
 
-// Remove resources owned, permissions and anonymize created and updated
-router.delete('/:type/:id', async (req, res) => {
-  if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
-  await deleteIdentity(req.app, { type: req.params.type, id: req.params.id })
-  res.send()
-})
-
-// Ask for a report of every piece of data in the service related to an identity
-router.get('/:type/:id/report', async (req, res) => {
-  if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
-  res.send(await reportIdentity({ type: req.params.type, id: req.params.id }))
-})
+  return router
+}

@@ -23,6 +23,7 @@ import { getThumbnail } from '../../misc/utils/thumbnails.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
 import { getFlatten } from '../utils/flatten.ts'
+import { rootSettingsFilter } from '../../settings/operations.ts'
 import { memoizedGetDataset } from '../service.ts'
 import { readDataset, reqDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite } from './_common.ts'
@@ -37,21 +38,21 @@ export const registerMiscRoutes = (router: Router) => {
   router.get('/:datasetId/metadata-settings', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { datasetsMetadata: 1 } })
     return res.send(settings?.datasetsMetadata ?? {})
   })
 
   router.get('/:datasetId/api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
     res.send(datasetAPIDocs(dataset, reqPublicBaseUrl(req), settings, reqPublicationSite(req)).api)
   })
 
   router.get('/:datasetId/private-api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
     const sessionState = reqSessionAuthenticated(req)
     const bypass = permissions.reqBypassPermissions(req)
     // admin mode returns the unfiltered doc; otherwise the doc is restricted to the caller's permissions

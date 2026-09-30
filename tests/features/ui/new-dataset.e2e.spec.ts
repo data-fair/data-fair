@@ -134,6 +134,28 @@ test.describe('new dataset stepper', () => {
     await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
   })
 
+  test('the confirmation step recaps what is about to be created', async ({ page, goToWithAuth }) => {
+    // Without this recap the step shows only an owner picker, so someone told
+    // "your dataset is configured, just click Create" — by the assistant or by
+    // the stepper itself — has nothing on screen to check that against.
+    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+
+    const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
+    await expect(restCard).toBeVisible({ timeout: 10000 })
+    await restCard.click()
+    await page.getByRole('button', { name: /Ignorer/ }).click()
+    await page.getByLabel(/Titre du jeu de données/).fill('Demandes de subvention')
+    await page.getByLabel(/Conserver un historique complet/).check()
+    await page.getByRole('button', { name: /Continuer/ }).click()
+
+    const recap = page.getByTestId('dataset-recap')
+    await expect(recap).toBeVisible({ timeout: 5000 })
+    await expect(recap).toContainText('Éditable')
+    await expect(recap).toContainText('Demandes de subvention')
+    // The option the person ticked two steps ago, which they can no longer see.
+    await expect(recap).toContainText('Historique des révisions')
+  })
+
   test('step navigation: subtitles and editable steps', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
 

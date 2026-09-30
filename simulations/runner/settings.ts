@@ -28,11 +28,7 @@ const provider = {
   compatibility: 'compatible'
 }
 
-// Defined inline rather than imported from a test helper: a static import of
-// those would authenticate at module load, making the unit suite do network I/O
-// before any test runs.
 const quotas = {
-  global: { unlimited: false, monthlyLimit: 10 },
   admin: { unlimited: true, monthlyLimit: 0 },
   contrib: { unlimited: false, monthlyLimit: 0 },
   user: { unlimited: false, monthlyLimit: 0 },
@@ -41,14 +37,44 @@ const quotas = {
   untrusted: { unlimited: false, monthlyLimit: 0 }
 }
 
-export function bridgeSettings (modelId: string) {
-  const model = { id: modelId, name: modelId, provider: { type: 'openai-compatible', id: 'bridge', name: 'Claude Code Bridge' } }
-  const role = { model, inputPricePerMillion: 0, outputPricePerMillion: 0 }
+/**
+ * Roles a deployment puts on a small model: sub-agents, compaction, the
+ * moderation guard. Running them on the assistant's model would both cost more
+ * per case and flatter the product — a sub-agent prompt that only a large model
+ * can follow reads as working until a real deployment runs it on the cheap tier.
+ * The evaluator is a trace-review role no run exercises, so it follows the
+ * assistant rather than earning a third setting.
+ */
+const BACKGROUND_ROLES = ['tools', 'summarizer', 'moderator'] as const
+
+/**
+ * The two bodies the agents API takes since settings were split by author:
+ * `superadmin` (the provider and the model catalog, each model listing the
+ * roles it may serve) and `org` (which model each role uses, quotas, traces).
+ * The org body is validated against the catalog, so it is written second.
+ */
+export function bridgeSettings (assistantModelId: string, toolsModelId: string) {
+  const bridge = { type: 'openai-compatible', id: 'bridge', name: 'Claude Code Bridge' }
+  const modelFor = (role: typeof MODEL_ROLES[number]) =>
+    (BACKGROUND_ROLES as readonly string[]).includes(role) ? toolsModelId : assistantModelId
+  const ids = [...new Set(MODEL_ROLES.map(modelFor))]
   return {
-    providers: [provider],
-    models: Object.fromEntries(MODEL_ROLES.map(r => [r, role])) as Record<typeof MODEL_ROLES[number], typeof role>,
-    quotas,
-    storeTraces: false
+    superadmin: {
+      providers: [provider],
+      models: ids.map(id => ({
+        model: { id, name: id, provider: bridge },
+        usage: MODEL_ROLES.filter(role => modelFor(role) === id),
+        inputPricePerMillion: 0,
+        outputPricePerMillion: 0
+      }))
+    },
+    org: {
+      modelMapping: Object.fromEntries(
+        MODEL_ROLES.map(role => [role, { provider: bridge.id, id: modelFor(role), name: modelFor(role) }])
+      ) as Record<typeof MODEL_ROLES[number], { provider: string, id: string, name: string }>,
+      quotas,
+      storeTraces: false
+    }
   }
 }
 
@@ -57,14 +83,16 @@ export function bridgeSettings (modelId: string) {
  * service, and the flag that makes data-fair render the chat at all.
  * `ownerAx` is the owner-context client from seedDatasets.
  */
-export async function seedSettings (modelId: string, ownerAx: any) {
+export async function seedSettings (assistantModelId: string, toolsModelId: string, ownerAx: any) {
   // Imported here rather than at module top level, so the unit suite (which
   // only needs bridgeSettings from this file) never loads
   // tests/support/axios.ts. Not a hazard avoidance: that module has no
   // authenticating side effect at load, it just isn't needed there.
   const { axiosAuth } = await import('../../tests/support/axios.ts')
   const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
-  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, bridgeSettings(modelId))
+  const { superadmin, org } = bridgeSettings(assistantModelId, toolsModelId)
+  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, superadmin)
+  await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}/org`, org)
   // PATCH merges, so it preserves the owner's other settings.
   await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, { agentChat: true })
 }

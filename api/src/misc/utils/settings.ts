@@ -3,10 +3,11 @@ import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import { type Account } from '@data-fair/lib-express'
 import memoize from 'memoizee'
+import { rootSettingsFilter } from '../../settings/operations.ts'
 
 export const getPrivateOwnerVocabulary = async (owner: Account) => {
   const settings = await mongo.db.collection('settings')
-    .findOne({ type: owner.type, id: owner.id }, { projection: { privateVocabulary: 1 } })
+    .findOne(rootSettingsFilter(owner), { projection: { privateVocabulary: 1 } })
   return ((settings && settings.privateVocabulary) || []).map((pv: any) => {
     // we do this to maintain compatibility for pieces of code that expect identifiers to be defined
     pv.identifiers = pv.identifiers.filter((i: string) => !!i)
