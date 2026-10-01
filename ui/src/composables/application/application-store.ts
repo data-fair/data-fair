@@ -161,14 +161,17 @@ const createApplicationStore = (id: string) => {
     await patch({ partOf: null } as any)
   }
 
-  // number of parent applications using this one (reverse reference, like virtual datasets for a dataset)
-  const nbParentAppsFetch = useFetch<{ count: number }>(() => {
+  // parent applications using this one (reverse reference, like virtual datasets for a dataset): counted,
+  // and the first ones kept so that a single dashboard can be offered as the parent to attach this
+  // application to (see fragment-attach-dialog)
+  const nbParentAppsFetch = useFetch<{ count: number, results: { id: string, title: string, owner: any, partOf?: any, userPermissions?: string[] }[] }>(() => {
     if (!application.value) return null
     return `${$apiPath}/applications`
   }, {
-    query: computed(() => ({ application: id, size: 0 }))
+    query: computed(() => ({ application: id, size: 2, select: 'id,title,owner,partOf,-links' }))
   })
   const nbParentApps = computed(() => nbParentAppsFetch.data.value?.count ?? 0)
+  const parentApps = computed(() => nbParentAppsFetch.data.value?.results ?? [])
 
   const permissionsFetch = useFetch<Permission[]>($apiPath + `/applications/${id}/permissions`, { immediate: false, watch: false })
   const permissions = ref<Permission[] | null>(null)
@@ -234,6 +237,7 @@ const createApplicationStore = (id: string) => {
     loadMoreFragments,
     detach,
     nbParentApps,
+    parentApps,
     remove,
     changeOwner,
   }

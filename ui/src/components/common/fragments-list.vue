@@ -11,7 +11,7 @@
       {{ t('newDatasetFragment') }}
     </v-btn>
     <v-btn
-      v-if="canContribDep && partOf.type === 'application' && canWriteParentConfig"
+      v-if="canContribDep && partOf.type === 'application' && canWriteParentConfig && usesApps"
       :to="`/new-application?partOf=${partOf.type}:${partOf.id}`"
       :prepend-icon="mdiPlus"
       class="mb-4"
@@ -128,6 +128,9 @@ defineProps<{
   // a sub-application declares what it grants on the parent's dataset fragments: the API requires
   // writeConfig on the parent application to create one
   canWriteParentConfig?: boolean
+  // the parent's base app declares that it embeds other applications (df:use-apps meta, typically a
+  // dashboard): only then is creating a sub-application offered
+  usesApps?: boolean
 }>()
 const emit = defineEmits<{ loadMore: [], addSource: [id: string] }>()
 const { t } = useI18n()

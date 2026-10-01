@@ -120,6 +120,7 @@
             :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
             :initial-dataset="initFromParent"
             :fragment="!!partOf"
+            :owner="owner"
           />
         </v-stepper-window-item>
 
@@ -558,9 +559,9 @@ const initFromData = computed(() => initFrom.value?.parts?.includes('data') ?? f
 
 function onInitFromNext () {
   if (initFromSourceTitle.value) {
-    if (datasetType.value === 'file' && (!fileTitle.value || fileTitle.value === lastAutoFilledTitle.value)) {
+    if (datasetType.value === 'file' && [lastFileTitle.value, lastSourceTitle.value, ''].includes(fileTitle.value)) {
       fileTitle.value = initFromSourceTitle.value
-      lastAutoFilledTitle.value = initFromSourceTitle.value
+      lastSourceTitle.value = initFromSourceTitle.value
     } else if (datasetType.value === 'rest' && !restTitle.value) {
       restTitle.value = initFromSourceTitle.value
     }
@@ -574,7 +575,9 @@ const file = ref<File | null>(null)
 const attachmentsInputValue = ref<File | null>(null)
 const attachments = computed(() => attachmentsInputValue.value ?? null)
 const fileTitle = ref('')
-const lastAutoFilledTitle = ref('')
+// a new file only replaces a title taken from the previous file, not one from the source dataset or typed by the user
+const lastFileTitle = ref('')
+const lastSourceTitle = ref('')
 const attachmentsAsImage = ref(false)
 const showAdvanced = ref(false)
 const escapeKeyAlgorithm = ref<string | null>(null)
@@ -611,10 +614,10 @@ function onFileChange (val: File | File[]) {
   }
   if (file.value) {
     const title = fileNameWithoutExt(file.value.name)
-    if (!fileTitle.value || fileTitle.value === lastAutoFilledTitle.value) {
+    if (!fileTitle.value || fileTitle.value === lastFileTitle.value) {
       fileTitle.value = title
     }
-    lastAutoFilledTitle.value = title
+    lastFileTitle.value = title
   }
 }
 
