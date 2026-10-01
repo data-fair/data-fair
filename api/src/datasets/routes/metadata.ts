@@ -23,6 +23,7 @@ import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
 import * as webhooks from '../../misc/utils/webhooks.ts'
+import * as usersUtils from '../../misc/utils/users.ts'
 import i18n from 'i18n'
 import { type Locale } from '../../../i18n/utils.ts'
 import * as limits from '../../limits/service.ts'
@@ -300,6 +301,7 @@ export const registerMetadataRoutes = (router: Router) => {
   // Change ownership of a dataset
   router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
+    usersUtils.normalizeOwner(req.body)
 
     if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
     if (await fragmentsService.countFragments('dataset', dataset.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
