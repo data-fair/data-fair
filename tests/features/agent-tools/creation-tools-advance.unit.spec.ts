@@ -9,7 +9,7 @@
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { untilReady, formatAdvanceResult } from '../../../ui/src/composables/dataset/agent-creation-tools-logic.ts'
+import { untilReady, formatAdvanceResult, resolveInitParts, sourceHasData } from '../../../ui/src/composables/dataset/agent-creation-tools-logic.ts'
 
 test.describe('untilReady', () => {
   test('resolves true as soon as the getter turns true', async () => {
@@ -46,5 +46,30 @@ test.describe('formatAdvanceResult', () => {
     assert.match(out, /confirmation step/)
     assert.match(out, /not.*ready|still|pending/i)
     assert.ok(!/can click/.test(out), out)
+  })
+})
+
+test.describe('resolveInitParts', () => {
+  const open = { allowData: true, sourceHasData: true }
+
+  test('copies the columns by default, and always', () => {
+    assert.deepEqual(resolveInitParts(undefined, open), { parts: ['schema'] })
+    assert.deepEqual(resolveInitParts(['description'], open), { parts: ['schema', 'description'] })
+  })
+
+  test('refuses a part the wizard does not have', () => {
+    assert.match((resolveInitParts(['columns'], open) as any).error, /unknown part/)
+  })
+
+  test('refuses the data where the wizard would', () => {
+    assert.match((resolveInitParts(['data'], { allowData: false, sourceHasData: true }) as any).error, /not offered/)
+    assert.match((resolveInitParts(['data'], { allowData: true, sourceHasData: false }) as any).error, /no rows/)
+    assert.deepEqual(resolveInitParts(['data'], open), { parts: ['schema', 'data'] })
+  })
+
+  test('reads a source as having data the way the init step does', () => {
+    assert.equal(sourceHasData({ file: { name: 'a.csv' } }), true)
+    assert.equal(sourceHasData({ count: 2 }), true)
+    assert.equal(sourceHasData({ count: 0 }), false)
   })
 })

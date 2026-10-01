@@ -74,6 +74,7 @@ export interface DatasetWizardInput {
   fileName?: string | null
   history?: boolean
   attachments?: boolean
+  initFrom?: { dataset: string, parts: string[] } | null
   childrenCount?: number
 }
 
@@ -85,6 +86,8 @@ export interface DatasetWizardState {
   file?: string
   history?: boolean
   attachments?: boolean
+  /** The dataset the new one starts from, and what it copies. */
+  initFrom?: { dataset: string, parts: string[] }
   children?: number
 }
 
@@ -99,6 +102,7 @@ export function buildDatasetWizardState (input: DatasetWizardInput): DatasetWiza
 
   // Only the options that belong to the chosen type. A `history` flag on a file
   // dataset is noise the model has to decide to ignore.
+  if ((input.type === 'file' || input.type === 'rest') && input.initFrom) state.initFrom = input.initFrom
   if (input.type === 'file') {
     // The agent cannot upload; whether a file is there decides what it can
     // usefully say next, so it is always reported, absent included.

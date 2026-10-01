@@ -2,7 +2,8 @@ import type { Ref } from 'vue'
 import { nextTick } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator, agentToolError } from '~/composables/agent/utils'
-import { untilReady, formatAdvanceResult } from './agent-creation-tools-logic'
+import { $fetch } from '~/context'
+import { untilReady, formatAdvanceResult, resolveInitParts, sourceHasData, INIT_FROM_PARTS } from './agent-creation-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -10,6 +11,7 @@ const messages: Record<string, Record<string, string>> = {
     setDatasetTitle: 'Définir le titre du jeu de données',
     setRestOptions: 'Configurer les options du jeu éditable',
     skipInitFromStep: 'Passer l\'étape d\'initialisation',
+    initFromDataset: 'Initialiser depuis un jeu de données',
     advanceToConfirmation: 'Passer à la confirmation'
   },
   en: {
@@ -17,6 +19,7 @@ const messages: Record<string, Record<string, string>> = {
     setDatasetTitle: 'Set dataset title',
     setRestOptions: 'Configure editable dataset options',
     skipInitFromStep: 'Skip initialization step',
+    initFromDataset: 'Initialize from a dataset',
     advanceToConfirmation: 'Advance to confirmation'
   }
 }
@@ -39,6 +42,13 @@ interface DatasetCreationState {
   virtualTitle: Ref<string>
   metaOnlyTitle: Ref<string>
   fileTitle: Ref<string>
+  /** The source the init step shows as selected; the step fills initFrom from it. */
+  initSource: Ref<any>
+  initFrom: Ref<{ dataset: string, parts: string[] } | null>
+  /** Whether the init step offers to copy the data (not for a fragment, only file/rest). */
+  initAllowData: Ref<boolean>
+  /** A fragment starts from its parent: the source is not the agent's to choose. */
+  initLocked: Ref<boolean>
 }
 
 export function useAgentDatasetCreationTools (locale: Ref<string>, state: DatasetCreationState) {
@@ -71,7 +81,7 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
         metaOnly: 'Metadata only'
       }
       const nextStep = type === 'file' || type === 'rest'
-        ? 'The wizard is now on the initialization step (optional). You can call skip_init_from_step to proceed to parameters, or let the user configure initialization from an existing dataset.'
+        ? 'The wizard is now on the initialization step (optional). If an existing dataset already has the structure wanted, call init_from_dataset so the new one is created with its columns; otherwise call skip_init_from_step.'
         : 'The wizard is now on the parameters step.'
       return `Dataset type set to "${typeLabels[type]}". ${nextStep}`
     }
@@ -143,6 +153,40 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
         changes.push(`attachmentsAsImage: ${params.attachmentsAsImage}`)
       }
       return `REST options updated: ${changes.join(', ')}.`
+    }
+  })
+
+  useAgentTool({
+    name: 'init_from_dataset',
+    description: 'Start the new dataset from an existing one, as the wizard\'s initialization step does: its columns by default, and optionally its data, extensions, metadata attachments or description. The new dataset is then created with those columns, so none need declaring afterwards and the person has a single button to press. Advances to the parameters step.',
+    annotations: { title: t('initFromDataset') },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        datasetId: { type: 'string' as const, description: 'Id of the existing dataset to start from' },
+        parts: { type: 'array' as const, items: { type: 'string' as const, enum: [...INIT_FROM_PARTS] }, description: 'What to copy besides the columns (schema), which are always copied' }
+      },
+      required: ['datasetId'] as const
+    },
+    execute: async (params) => {
+      if (!state.hasInitFromStep.value) return agentToolError('init_from_dataset', 'This dataset type has no initialization step.')
+      if (state.initLocked.value) return agentToolError('init_from_dataset', 'This new dataset is a fragment and already starts from its parent dataset.')
+      let source: any
+      try {
+        source = await $fetch(`datasets/${encodeURIComponent(String(params.datasetId))}`)
+      } catch {
+        return agentToolError('init_from_dataset', `No dataset "${params.datasetId}" you can read — find its id with list_datasets.`)
+      }
+      const resolved = resolveInitParts(params.parts as string[] | undefined, { allowData: state.initAllowData.value, sourceHasData: sourceHasData(source) })
+      if ('error' in resolved) return agentToolError('init_from_dataset', resolved.error)
+      // Shown as selected in the init step, which sets initFrom (columns) and the source title;
+      // the parts asked for go on top once it has.
+      state.initSource.value = source
+      await nextTick()
+      state.initFrom.value = { dataset: source.id, parts: resolved.parts }
+      state.step.value = 'params'
+      return `The new dataset will start from « ${source.title ?? source.id} », copying: ${resolved.parts.join(', ')}. ` +
+        'Its title was prefilled from the source; set the new one with set_dataset_title. The wizard is now on the parameters step.'
     }
   })
 

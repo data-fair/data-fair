@@ -24,3 +24,25 @@ export function formatAdvanceResult (ready: boolean, actionLabel: string): strin
   if (ready) return `The wizard is on the confirmation step and the form is ready: the user can click « ${actionLabel} ».`
   return 'The wizard is on the confirmation step, but its readiness check has not finished (a title conflict may be pending). The wizard state reports `ready` once it has; tell the user the button is ready only then.'
 }
+
+/** What the wizard's initialization step can copy from an existing dataset (dataset-init-from.vue). */
+export const INIT_FROM_PARTS = ['schema', 'data', 'extensions', 'metadataAttachments', 'description'] as const
+
+/**
+ * The parts init_from_dataset will copy, or why it cannot. The columns (schema) are always
+ * part of it, as in the wizard where they are the default. Data is refused where the wizard
+ * refuses it: when the step does not offer it, and from a source with no rows.
+ */
+export function resolveInitParts (requested: string[] | undefined, opts: { allowData: boolean, sourceHasData: boolean }): { parts: string[] } | { error: string } {
+  const parts = new Set<string>(['schema', ...(requested ?? [])])
+  const unknown = [...parts].filter(p => !(INIT_FROM_PARTS as readonly string[]).includes(p))
+  if (unknown.length) return { error: `unknown part(s) ${unknown.join(', ')} — pick from ${INIT_FROM_PARTS.join(', ')}` }
+  if (parts.has('data') && !opts.allowData) return { error: 'copying the data is not offered for this new dataset; copy the structure only' }
+  if (parts.has('data') && !opts.sourceHasData) return { error: 'the source dataset has no rows to copy; copy the structure only' }
+  return { parts: INIT_FROM_PARTS.filter(p => parts.has(p)) }
+}
+
+/** Whether the source has rows the data part could copy — the same rule as dataset-init-from.vue. */
+export function sourceHasData (source: { file?: unknown, count?: number }): boolean {
+  return !!source.file || !!source.count
+}
