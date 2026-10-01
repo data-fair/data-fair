@@ -102,6 +102,16 @@ for (const simCase of selected) {
       const ownerAx = await seedDatasets()
       await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
+      // SIM_SUB_AGENTS=0 runs the chat in its experimental flattened mode: sub-agents
+      // that do not pin a model hand their tools to the assistant itself. Set through
+      // the chat's own flags cookie, as its settings page does.
+      if (process.env.SIM_SUB_AGENTS === '0') {
+        await page.context().addCookies([{
+          name: 'agent-chat-flags',
+          value: encodeURIComponent(JSON.stringify({ toolExploration: false, subAgents: false, simpleSubAgents: true, mermaid: false, showReasoning: false })),
+          url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/agents`
+        }])
+      }
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
       // Not a bare 'iframe': an application page embeds its own render and activity
