@@ -41,6 +41,23 @@ test.describe('new dataset stepper', () => {
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 30000 })
   })
 
+  test('file title from the source dataset is kept when a file is loaded', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.post('/api/v1/datasets/meta-sheet', { isMetaOnly: true, title: 'Meta sheet' })
+
+    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await page.locator('.v-card-title', { hasText: 'Fichier' }).click()
+    await page.getByRole('combobox', { name: /comme modèle/ }).click()
+    await page.locator('.v-overlay__content .v-list-item', { hasText: 'Meta sheet' }).click()
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /Continuer/ }).click()
+
+    const titleInput = page.getByLabel(/Titre du jeu de données/)
+    await expect(titleInput).toHaveValue('Meta sheet')
+    await page.locator('input[type="file"]').first().setInputFiles(testFile)
+    await expect(titleInput).toHaveValue('Meta sheet')
+  })
+
   test('REST dataset creation', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
 
@@ -66,6 +83,33 @@ test.describe('new dataset stepper', () => {
 
     // Should redirect
     await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
+  })
+
+  test('REST dataset initialized from a metadata-only dataset copies all its metadata', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.post('/api/v1/datasets/meta-sheet', { isMetaOnly: true, title: 'Meta sheet', description: 'A description', keywords: ['kw1'] })
+
+    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await page.locator('.v-card-title', { hasText: 'Éditable' }).click()
+
+    const modelInput = page.getByRole('combobox', { name: /comme modèle/ })
+    await modelInput.click()
+    await page.locator('.v-overlay__content .v-list-item', { hasText: 'Meta sheet' }).click()
+    await page.keyboard.press('Escape')
+
+    const metadataSelect = page.getByRole('combobox', { name: 'Métadonnées à copier' })
+    await expect(metadataSelect).toHaveValue('Description, Mots-clés')
+    await expect(page.getByLabel('Copier la donnée')).toHaveCount(0)
+
+    await page.getByRole('button', { name: /Continuer/ }).click()
+    await page.getByLabel(/Titre du jeu de données/).fill('Data from meta sheet')
+    await page.getByRole('button', { name: /Continuer/ }).click()
+    await page.getByRole('button', { name: /Créer le jeu de données/ }).click()
+    await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
+
+    const datasetId = page.url().match(/\/dataset\/([^/?#]+)/)![1]
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${datasetId}`)).data.keywords, { timeout: 15000 }).toEqual(['kw1'])
+    expect((await ax.get(`/api/v1/datasets/${datasetId}`)).data.description).toBe('A description')
   })
 
   test('metaOnly dataset creation', async ({ page, goToWithAuth }) => {

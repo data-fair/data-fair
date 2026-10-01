@@ -485,7 +485,9 @@ permission model on the client, it is purely presentational.
   gate, which a reader of a virtual dataset lacks anyway (no read is derived on its fragments, §4). It lists fragment datasets and
   applications (two `partOf=` queries in the dataset/application stores, 100 at a time with a "load
   more" button so none is out of reach) and "Nouveau fragment" buttons that open
-  `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. On those creation pages the owner
+  `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. The sub-application button is
+  only offered when the parent's base app declares `<meta name="df:use-apps" content="true">` (it
+  embeds other applications, typically a dashboard), and `writeConfig` on the parent. On those creation pages the owner
   picker is replaced by the fragment banner and the owner is taken from the parent (a fragment has
   exactly its parent's owner), a metadata-only dataset is not offered, the breadcrumb leads back to
   the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
@@ -504,9 +506,10 @@ permission model on the client, it is purely presentational.
 - **Pickers opened from a parent offer its fragments.** `pickerPartOf` (`ui/src/utils/fragments.ts`)
   builds `partOf=false,<parent>` — the resource's own family, or its siblings when it is itself a
   fragment. The virtual-children picker (`dataset-virtual.vue`) passes it to `dataset-select`, and
-  `application-config.vue` appends it to every datasets / applications listing `x-fromUrl` of the
-  configuration schema (`addPartOfToFromUrls`), so an application can select its own fragment
-  datasets and a dashboard its sub-applications.
+  `application-config.vue` puts it in the `datasetFilter` of the configuration form context, which
+  base apps already use in every datasets / applications listing URL of their schema, so an
+  application can select its own fragment datasets and a dashboard its sub-applications. A base app
+  building a listing URL without `datasetFilter` does not offer fragments.
 - **`fragment-attach-dialog.vue`: attach only towards a known parent, never a free pick.** Use
   cases are opened one at a time, starting with virtual datasets. A standalone dataset's danger zone
   proposes "Rattacher au jeu de données virtuel" only when exactly **one** virtual dataset has it
@@ -516,7 +519,14 @@ permission model on the client, it is purely presentational.
   them (deleted with it, pulled from the others) would be wrong, so nothing is proposed. The dialog
   names that parent and carries two alerts: the dataset's own permissions are **permanently lost**
   and replaced by the derived ACL (detaching later does not restore them, §7), and the prerequisites
-  the API refuses on — a published dataset, or one configured as reference data. Attaching an
+  the API refuses on — a published dataset, or one configured as reference data. A standalone
+  application's danger zone likewise proposes "Rattacher à l'application parente" only when exactly
+  **one** application has it in `configuration.applications` (the `application=` listing behind the
+  "used by N applications" info, `parentApps` in the application store), with the same owner, not
+  itself a fragment, on which the user holds `writeConfig` (the API requires it, §9), and when the
+  application has no fragments of its own. The same dialog serves both (`resource-type` prop); for an
+  application it also warns that read access now follows the parent's (rule B, §4), so a public
+  application embedded in a private dashboard stops being public. Attaching a dataset to an
   application has no UI for now; the API (`PATCH .../partOf`) still accepts any valid parent.
 - **Parent delete dialog loop**: deleting a resource that has fragments shows a warning ("Ce jeu de
   données a N fragment(s) qui seront supprimés avec lui") with two actions: the default delete
@@ -619,7 +629,7 @@ work:
 | Application-context middleware (§5) | `api/src/misc/utils/application-key.ts` |
 | Proxy `partOf` reachability edge (§5) | `api/src/applications/proxy-service.ts`, `api/src/applications/middlewares.ts` |
 | Websocket application-context (§5) | `api/src/app.js` (`canSubscribe` callback) |
-| UI: banner, fragments tab, attach dialog | `ui/src/components/common/fragment-banner.vue`, `fragments-list.vue`, `fragment-attach-dialog.vue` |
+| UI: banner, fragments tab, attach dialog (datasets and applications) | `ui/src/components/common/fragment-banner.vue`, `fragments-list.vue`, `fragment-attach-dialog.vue` |
 | UI: fragment page gates, delete dialog loop | `ui/src/pages/dataset/[id]/index.vue`, `ui/src/pages/application/[id]/index.vue` |
 | UI: new-resource `partOf` prefill | `ui/src/pages/new-dataset.vue`, `ui/src/pages/new-application.vue` |
 | Tests | `tests/features/fragments/*.spec.ts`, `tests/features/ui/fragments.e2e.spec.ts`, `tests/features/datasets/virtual/virtual-member-deletion.api.spec.ts` |

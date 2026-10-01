@@ -219,6 +219,7 @@
               :part-of="{ type: 'application', id: application.id }"
               :fragments="fragments"
               :can-write-parent-config="can('writeConfig')"
+              :uses-apps="application.baseApp?.meta?.['df:use-apps'] === 'true'"
               :has-more="hasMoreFragments"
               @load-more="loadMoreFragments"
             />
@@ -373,6 +374,29 @@
             </template>
           </v-list-item>
 
+          <v-list-item
+            v-if="attachParent && can('delete') && can('setPermissions')"
+            :prepend-icon="mdiPuzzle"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('attach') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ t('attachDesc', { parent: attachParent.title }) }}
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showAttachDialog = true"
+              >
+                {{ t('attach') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
           <v-divider v-if="can('delete')" />
 
           <v-list-item
@@ -406,6 +430,15 @@
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
+      @changed="store.applicationFetch.refresh()"
+    />
+
+    <fragment-attach-dialog
+      v-if="attachParent && can('delete') && can('setPermissions')"
+      v-model="showAttachDialog"
+      resource-type="applications"
+      :resource="application"
+      :parent="attachParent"
       @changed="store.applicationFetch.refresh()"
     />
 
@@ -507,6 +540,8 @@ fr:
   detach: Détacher du parent
   detachDesc: Cette ressource redevient une application indépendante, avec les permissions qu'elle porte actuellement.
   detachSuccess: L'application a été détachée.
+  attach: Rattacher à l'application parente
+  attachDesc: "Cette application n'est intégrée que dans « {parent} » : en faire un fragment de cette application, masqué des listes et supprimé avec elle."
   deleteFragmentsWarning: "Cette application a {count} fragment(s) qui seront supprimés avec elle."
   detachFirst: Détacher d'abord
   deleteApp: Supprimer l'application
@@ -557,6 +592,8 @@ en:
   detach: Detach from parent
   detachDesc: This resource becomes an independent application again, with the permissions it currently carries.
   detachSuccess: The application was detached.
+  attach: Attach to the parent application
+  attachDesc: "This application is only embedded in “{parent}”: make it a fragment of this application, hidden from listings and deleted with it."
   deleteFragmentsWarning: "This application has {count} fragment(s) that will be deleted with it."
   detachFirst: Detach first
   deleteApp: Delete application
@@ -704,6 +741,20 @@ const confirmRemove = useAsyncAction(async () => {
   await router.push('/applications')
 }, { success: t('deleteAppSuccess') })
 
+const showAttachDialog = ref(false)
+// attaching is only proposed towards a parent already known to use this application: the single
+// application (typically a dashboard) having it in its configuration, with the same owner (a fragment
+// has exactly its parent's owner), not itself a fragment (one level only) and whose configuration
+// the user can write (required by the API: a sub-application's config can grant operations on the
+// parent's dataset fragments). Embedded in several applications, it is shared: nothing is proposed.
+const attachParent = computed(() => {
+  const a = application.value
+  if (!a || a.partOf || nbFragments.value || store.nbParentApps.value !== 1) return null
+  const parent = store.parentApps.value[0]
+  if (!parent || parent.partOf || !parent.userPermissions?.includes('writeConfig')) return null
+  const sameOwner = parent.owner?.type === a.owner.type && parent.owner?.id === a.owner.id && (parent.owner?.department ?? null) === (a.owner.department ?? null)
+  return sameOwner ? parent : null
+})
 const confirmDetach = useAsyncAction(async () => {
   await detach()
   await store.applicationFetch.refresh()
@@ -788,7 +839,7 @@ const sections = computedDeepDiff(() => {
   }
 
   if (can('delete')) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive operations: change owner, delete the application.' }
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive operations: change owner, attach to / detach from a parent application, delete the application.' }
   }
 
   return result

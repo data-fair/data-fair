@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator, agentToolError, buildPaginatedQuery } from '~/composables/agent/utils'
+import { createAgentTranslator, agentToolError, buildPaginatedQuery, activeAccountScope } from '~/composables/agent/utils'
 import { formatApplicationConfig, getConfigValue, projectConfigSchema } from './agent-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
@@ -72,7 +72,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'list_applications',
-    description: 'List applications accessible to the current user with optional text search. Returns id, title, status, application model, and last update.',
+    description: 'List the applications of the active account with optional text search. Returns id, title, status, application model, and last update.',
     annotations: { title: t('listApplications'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -83,7 +83,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
       }
     },
     execute: async (params) => {
-      const { query, page, size } = buildPaginatedQuery(params, { select: 'title,status,topics,updatedAt,url,baseApp' })
+      const { query, page, size } = buildPaginatedQuery(params, { select: 'title,status,topics,updatedAt,url,baseApp', ...activeAccountScope })
 
       const data = await $fetch<any>('applications', { query })
 

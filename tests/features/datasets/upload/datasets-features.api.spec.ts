@@ -297,6 +297,19 @@ test.describe('datasets - features', () => {
     assert.ok(captured[0].topic.key.endsWith(':topic1'))
     assert.equal(captured[0].visibility, 'private')
 
+    // a recipient is passed to the events service as the subscribed recipient (its schema knows no "recipient")
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', recipient: { id: 'test_user5', name: 'Test User5' } })
+    const [withRecipient] = (await notifs.waitFor(2)).slice(1)
+    assert.deepEqual(withRecipient.subscribedRecipient, { id: 'test_user5', name: 'Test User5' })
+    assert.equal(withRecipient.recipient, undefined)
+
+    // title and body can be localized, the events service picks the subscription's locale
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: { fr: 'Titre', en: 'Title' }, body: { fr: 'Corps', en: 'Body' } })
+    const [localized] = (await notifs.waitFor(3)).slice(2)
+    assert.deepEqual(localized.title, { fr: 'Titre', en: 'Title' })
+    assert.deepEqual(localized.body, { fr: 'Corps', en: 'Body' })
+    await assert.rejects(ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: { fr: 1 } }), (err: any) => err.status === 400)
+
     await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
     await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
       { type: 'user', id: 'test_user5', operations: ['sendUserNotification'] }

@@ -135,7 +135,9 @@ page that issued the request — to identify the calling application:
 1. Bail out if there is no referer (`next()` immediately — no bypass is applied).
 2. Decide which app/dataset the referer is for, based on the path prefix:
    - `/data-fair/embed/dataset/...` → extract dataset id (or `keyId:datasetId`) and key
-   - `/data-fair/app/...` → extract application id (or `keyId:appId`) and key
+   - `/data-fair/app/...` → extract application id or slug (or `keyId:appRef`) and key; portals
+     embed applications by slug, so the core resolves the calling application by id or
+     `_uniqueRefs` within the dataset owner and continues with its id
 3. Call `resolveApplicationContextBypass(applicationKeyId, dataset, appId, sessionState)`, which:
    - with a key id, looks it up in `applications-keys` **with the dataset owner's ownerFilter**,
      then verifies the calling app is allowed to reach this dataset — either the application

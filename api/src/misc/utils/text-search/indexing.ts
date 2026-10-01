@@ -42,7 +42,9 @@ export const buildIndexFields = (doc: any, def: ResolvedDefinition, analyzer: An
     for (const { term, position } of tokens) {
       // stems become mongo object keys; a '.' or a leading '$' would corrupt the write silently
       if (!SAFE_KEY.test(term)) throw new Error(`text-search: unsafe index key "${term}" produced by the analyzer`)
-      ;(positions[term] ??= []).push(position)
+      // hasOwn, not ??=: the stem "constructor" would otherwise find Object.prototype.constructor
+      if (!Object.hasOwn(positions, term)) positions[term] = []
+      positions[term].push(position)
       terms.add(term)
     }
     _pos[sanitised] = positions

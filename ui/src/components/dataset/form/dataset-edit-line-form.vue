@@ -86,7 +86,8 @@ const digitalDocumentField = computed(() => {
 
 const editSchema = computed(() => {
   const jsonSchema = jsonSchemaFetch.data.value
-  if (!jsonSchema) return
+  // the dialog can open before the schema is fetched
+  if (!jsonSchema) return { type: 'object', properties: {} }
   const schema = v2compat(jsonSchema)
   if (ownLines) {
     delete schema.properties._owner

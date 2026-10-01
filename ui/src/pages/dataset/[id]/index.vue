@@ -566,6 +566,7 @@
     <fragment-attach-dialog
       v-if="attachParent && can('changeOwner').value && can('setPermissions').value"
       v-model="showAttachDialog"
+      resource-type="datasets"
       :resource="dataset"
       :parent="attachParent"
       @changed="store.datasetFetch.refresh()"

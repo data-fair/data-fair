@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth, clean } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
+import { sendDataset, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 import type { AxiosInstance } from 'axios'
 import type { Page, Locator } from '@playwright/test'
 
@@ -126,6 +126,65 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#danger-zone').getByText(/Rattacher/)).toHaveCount(0)
   })
 
+  test('attaching is only proposed towards the single application already embedding the application', async ({ page, goToWithAuth }) => {
+    const embed = async (parentTitle: string, childIds: string[]) => {
+      const parent = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: parentTitle })).data
+      await ax.put(`/api/v1/applications/${parent.id}/config`, { applications: childIds.map(id => ({ id })) })
+      return parent
+    }
+    const standalone = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'standalone app' })).data
+    const dashboard = await embed('the only dashboard', [standalone.id])
+    await goToWithAuth(`/data-fair/application/${standalone.id}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.locator('#danger-zone'))
+    const dangerZone = page.locator('#danger-zone')
+    await expect(dangerZone.getByText(/n'est intégrée que dans « the only dashboard »/)).toBeVisible({ timeout: 15000 })
+    await dangerZone.getByRole('button', { name: 'Rattacher à l\'application parente' }).click()
+    await expect(page.getByText(/deviendra un fragment de « the only dashboard »/)).toBeVisible()
+    await page.getByRole('button', { name: 'Rattacher', exact: true }).click()
+    await expect.poll(async () => (await ax.get(`/api/v1/applications/${standalone.id}`)).data.partOf, { timeout: 10000 }).toEqual({ type: 'application', id: dashboard.id })
+
+    // embedded in two applications, the application is shared: nothing is proposed
+    const shared = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'shared app' })).data
+    await embed('first dashboard', [shared.id])
+    await embed('second dashboard', [shared.id])
+    await goToWithAuth(`/data-fair/application/${shared.id}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, page.locator('#danger-zone'))
+    await expect(page.locator('#danger-zone').getByText(/Supprimer l'application/).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('#danger-zone').getByText(/Rattacher/)).toHaveCount(0)
+  })
+
+  test('creating a sub-application fragment is only offered on base apps that embed applications', async ({ page, goToWithAuth }) => {
+    // a dashboard-like base app declaring that it embeds other applications
+    await setupMockRoute({
+      path: '/dashapp/index.html',
+      contentType: 'text/html',
+      body: '<html><head><title>Dashboard</title><meta name="application-name" content="dashapp"><meta name="df:use-apps" content="true"></head><body>dashboard</body></html>'
+    })
+    const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('dashapp') })
+    const dashboard = (await ax.post('/api/v1/applications', { url: mockAppUrl('dashapp'), title: 'a dashboard' })).data
+    const plain = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a plain app' })).data
+
+    const fragmentsTab = page.locator('#render').getByRole('tab', { name: 'Fragments' })
+    const render = page.locator('#render')
+    try {
+      await goToWithAuth(`/data-fair/application/${dashboard.id}`, 'test_user1', { org: 'test_org1' })
+      await pastActiveAccountGate(page, fragmentsTab)
+      await fragmentsTab.click()
+      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toBeVisible({ timeout: 15000 })
+      await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toBeVisible()
+
+      // the tab stays, dataset fragments are relevant to any application
+      await goToWithAuth(`/data-fair/application/${plain.id}`, 'test_user1', { org: 'test_org1' })
+      await pastActiveAccountGate(page, fragmentsTab)
+      await fragmentsTab.click()
+      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toBeVisible({ timeout: 15000 })
+      await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toHaveCount(0)
+    } finally {
+      await clearMockRoutes()
+    }
+  })
+
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
     const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
@@ -139,5 +198,30 @@ test.describe('fragments UI', () => {
     await page.getByRole('button', { name: /Détacher d'abord/ }).click()
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${fragmentId}`)).data.partOf, { timeout: 10000 }).toBeUndefined()
     await expect.poll(async () => ax.get(`/api/v1/datasets/${virtualId}`).then(() => 200, (err: any) => err.status), { timeout: 10000 }).toBe(404)
+  })
+
+  test('the application config pickers offer the application\'s own fragment datasets', async ({ page, goToWithAuth }) => {
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'fragments app' })).data
+    const otherApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other app' })).data
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'own fragment', partOf: { type: 'application', id: app.id } })
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'foreign fragment', partOf: { type: 'application', id: otherApp.id } })
+
+    const listing = page.waitForRequest(req => {
+      const url = decodeURIComponent(req.url())
+      return url.includes('/api/v1/datasets?') && url.includes(`partOf=false,application:${app.id}`)
+    }, { timeout: 20000 })
+    // the mock app server sends no CORS header, the config form could not read the schema
+    await page.route('**/monapp1/config-schema.json', async route => {
+      const response = await route.fetch()
+      await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })
+    })
+    await goToWithAuth(`/data-fair/application/${app.id}/config`, 'test_user1', { org: 'test_org1' })
+    const panel = page.locator('.v-expansion-panel-title').first()
+    await pastActiveAccountGate(page, panel)
+    await panel.click()
+    await page.getByRole('combobox', { name: 'Jeu de données', exact: true }).click()
+    await listing
+    await expect(page.getByRole('option', { name: 'own fragment' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('option', { name: 'foreign fragment' })).toHaveCount(0)
   })
 })
