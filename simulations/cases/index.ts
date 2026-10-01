@@ -116,7 +116,12 @@ export const cases: SimulationCase[] = [
     name: 'creation-guidee-jeu-de-donnees',
     route: '/data-fair/datasets',
     persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, un jeu de données éditable ou un historique de révisions, et tu n\'emploieras jamais ces mots. Les interfaces te fatiguent : tu n\'explores pas l\'écran de toi-même et tu ne veux pas avoir à le décrire à quelqu\'un. Tu ne veux pas faire les étapes toi-même : tu laisses l\'assistant tout préparer. La seule chose que tu fais à l\'écran, c\'est presser toi-même, avec tes outils, le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Après ça tu t\'arrêtes : tu n\'explores pas l\'interface tout seul, tu attends qu\'on te dise ce qui se passe. Tu ne demandes pas de détails techniques et tu ne réclames pas de colonnes ou de champs précis.',
-    goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations : tes collègues doivent pouvoir saisir les demandes et corriger leurs erreurs directement dans l\'outil, et tu veux pouvoir retrouver plus tard qui a modifié quoi. Tu veux que l\'assistant prépare tout ça pour toi ; tu presseras toi-même le bouton de création quand il te dira que c\'est prêt. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
+    goal: 'Tu dois mettre en place de quoi recueillir les demandes de subvention des associations pour la campagne 2027, dans un registre neuf, séparé de celui de cette année : on doit pouvoir y saisir les demandes et corriger les erreurs directement dans l\'outil, et garder l\'historique des modifications de chaque demande. Tu veux que l\'assistant prépare tout ça pour toi ; tu presseras toi-même le bouton de création quand il te dira que c\'est prêt. Une fois que tu as cliqué sur le bouton de création, tu poses les mains sur les genoux : tu veux qu\'on te dise ce qui vient d\'être créé et ce qui se passe maintenant, sans que tu aies à redemander, à chercher quoi que ce soit à l\'écran, ni à expliquer où tu es.',
+    // Narrowed after the 2026-09-30 baseline. It asked for colleagues to enter data and to
+    // find out later who changed what: permissions and updater tracking, which no agent
+    // tool can set, so no run could fully succeed. It now asks for history, which the
+    // wizard sets. And it names a new register for 2027: the data-entry case seeds this
+    // year's, which the assistant rightly offered to reuse.
     // 9, not 6: the flow used to end at Create. With add_columns the assistant
     // goes on to the dataset page, proposes the columns and has the person press
     // Enregistrer, which the goal has always needed — colleagues cannot enter a
@@ -143,5 +148,19 @@ export const cases: SimulationCase[] = [
     persona: 'Tu travailles au service vie associative d\'une petite collectivité. Tu tiens le registre des demandes de subvention : tu connais les dossiers par cœur, mais pas l\'outil informatique. Tu n\'emploies jamais de vocabulaire technique (ni schéma, ni colonne, ni ligne, ni enregistrement) et tu ne vas pas chercher toi-même où cliquer : tu ne veux pas explorer l\'écran ni le décrire à quelqu\'un. La seule chose que tu fais à l\'écran, c\'est presser toi-même le bouton précis qu\'on te dit prêt à être pressé — et tu ne prétends jamais l\'avoir pressé sans l\'avoir fait. Tu donnes les informations d\'un dossier quand on te les demande, une réponse par question si on te les demande une par une.',
     goal: 'Deux choses à régler dans le registre des demandes de subvention. D\'abord enregistrer une nouvelle demande qui vient d\'arriver : l\'association « Les Amis du Vieux Moulin » demande 4 500 € pour refaire la toiture du moulin, dossier déposé le 3 mars 2026, suivi par le service vie associative. Ensuite corriger une erreur que tu as repérée : la demande du club de judo du centre est inscrite à 12 000 € alors qu\'ils demandaient 1 200 € — il y a un zéro de trop. Tu veux que l\'assistant fasse la saisie et la correction à ta place ; tu presseras toi-même le bouton quand il te dira que c\'est prêt.',
     maxTurns: 9
+  },
+  // Speaking during a wait. The data-entry cases hand the Enregistrer button over through
+  // a declared wait, and a person who writes instead of pressing takes the turn back. For
+  // a while that dropped the whole interrupted turn from the model's history: the next
+  // request held two user messages and nothing between, and the assistant denied having
+  // filled the form and rebuilt it from scratch. The persona here always asks before
+  // pressing, so every run crosses that path; what is under test is the assistant
+  // answering from what it already did, and handing the same form back.
+  {
+    name: 'question-avant-enregistrement',
+    route: '/data-fair/datasets',
+    persona: 'Tu travailles au service vie associative d\'une petite collectivité et tu tiens le registre des demandes de subvention. Tu ne connais pas l\'outil et tu n\'emploies aucun vocabulaire technique. Tu ne cherches pas toi-même où cliquer. Tu es prudent : avant d\'appuyer sur un bouton qui enregistre quelque chose, tu poses toujours d\'abord une question par écrit pour vérifier, et tu n\'appuies qu\'une fois la réponse obtenue. Tu ne prétends jamais avoir appuyé sur un bouton sans l\'avoir fait.',
+    goal: 'Tu veux enregistrer une nouvelle demande : l\'association « Les Jardins Partagés » demande 2 300 € pour des bacs de culture, dossier déposé le 12 mars 2026, suivi par le service vie associative. Quand l\'assistant te dit que c\'est prêt, tu lui demandes d\'abord par écrit quel montant il a saisi, parce que tu as un doute ; une fois la réponse obtenue, tu appuies toi-même sur le bouton d\'enregistrement.',
+    maxTurns: 7
   }
 ]

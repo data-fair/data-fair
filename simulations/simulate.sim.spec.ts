@@ -42,6 +42,8 @@ const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
 // sonnet and this sidecar recorded haiku, which defeats the one thing the field
 // is for — never comparing verdicts from different tiers silently.
 const USER_MODEL = resolveUserModel()
+// The agents chat drawer's frame, whose src is /agents/<type>/<id>/chat?…
+const CHAT_FRAME = 'iframe[src*="/agents/"][src*="/chat"]'
 const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
 
 for (const simCase of selected) {
@@ -100,9 +102,21 @@ for (const simCase of selected) {
       const ownerAx = await seedDatasets()
       await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
+      // SIM_SUB_AGENTS=0 runs the chat in its experimental flattened mode: sub-agents
+      // that do not pin a model hand their tools to the assistant itself. Set through
+      // the chat's own flags cookie, as its settings page does.
+      if (process.env.SIM_SUB_AGENTS === '0') {
+        await page.context().addCookies([{
+          name: 'agent-chat-flags',
+          value: encodeURIComponent(JSON.stringify({ toolExploration: false, subAgents: false, simpleSubAgents: true, mermaid: false, showReasoning: false })),
+          url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/agents`
+        }])
+      }
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
-      const root = page.frameLocator('iframe')
+      // Not a bare 'iframe': an application page embeds its own render and activity
+      // frames beside the chat, and a strict-mode match on three frames voids the run.
+      const root = page.frameLocator(CHAT_FRAME)
       // Single source of truth for the composer's locale-dependent strings: the
       // chat driver and the perception's off-limits list must agree on exactly
       // what "the composer" is called, or the guard could miss it.
@@ -145,7 +159,10 @@ for (const simCase of selected) {
       // produce. Ordinary controls stay reachable — including the drawer toggle,
       // which a real user can and does click.
       perception = createPagePerception(
-        [{ label: 'page', root: page }, { label: 'chat panel', root: page.frameLocator('iframe') }],
+        // The back-office page gets more room than the chat panel: a dataset page's
+        // metadata form alone fills the default budget, and the persona has the
+        // conversation as text anyway.
+        [{ label: 'page', root: page, cap: 6000 }, { label: 'chat panel', root: page.frameLocator(CHAT_FRAME) }],
         { offLimits: [strings.input, strings.send, strings.stop, strings.reset] }
       )
 
@@ -158,6 +175,23 @@ for (const simCase of selected) {
       for (let i = 0; i < simCase.maxTurns; i++) {
         perception.setTurn(i + 1)
         const message = await nextUserMessage(simCase, conversation, simCase.maxTurns - i, { perception })
+        if (handedOver) {
+          // The pass above was the person's chance to act on the wait. If they took it,
+          // the wait resolved and the assistant is finishing the turn it paused — let it,
+          // rather than speaking over its reply or ending the run under it. If they
+          // ignored it, the wait is still armed and this returns 'waiting' at once, so
+          // nothing is spent waiting for something that will not happen.
+          handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
+          const resumed = await chat.readConversation()
+          const changed = resumed.length !== conversation.length
+          conversation.length = 0
+          conversation.push(...resumed)
+          // Whatever the person wrote in that pass, they wrote it before the reply their
+          // action caused: judged runs sent "qu'est-ce qui vient d'être créé ?" under the
+          // very message that said so, interrupting the next wait, and an agents-repo run
+          // ended on the click unseen. Drop it and let them read the reply first.
+          if (changed) continue
+        }
         if (isDone(message)) break
         if (message === '') {
           // Distinct from a real stop: the persona subprocess produced no text
@@ -166,17 +200,6 @@ for (const simCase of selected) {
           // satisfied" when nothing of the sort happened.
           error = `simulated user returned no message (empty completion) on turn ${i + 1}`
           break
-        }
-        if (handedOver) {
-          // The pass above was the person's chance to act on the wait. If they
-          // took it, the wait resolved and the assistant is finishing the turn it
-          // paused — let it, rather than speaking over its reply. If they ignored
-          // it, the wait is still armed and this returns 'waiting' at once, so
-          // nothing is spent waiting for something that will not happen.
-          handedOver = (await chat.waitForTurn(TURN_CEILING_MS)) === 'waiting'
-          const resumed = await chat.readConversation()
-          conversation.length = 0
-          conversation.push(...resumed)
         }
         // The persona may have navigated the page — or closed the drawer itself —
         // between turns, so re-open before sending rather than assuming the

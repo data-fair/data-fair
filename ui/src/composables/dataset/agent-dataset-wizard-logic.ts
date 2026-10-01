@@ -18,6 +18,6 @@ export const DATASET_WIZARD_GUIDANCE =
   'Dataset creation wizard. Ask what data they have; recommend the type ' +
   '(file: an uploaded file — the person uploads it; rest/Editable: entered by hand or via API; ' +
   'virtual: a view over existing datasets; metaOnly: metadata only). ' +
-  'Fill the wizard with select_dataset_type, set_dataset_title, set_rest_options, skip_init_from_step, advance_to_confirmation. ' +
-  'The person presses Create themselves: once the confirmation step reports ready, tell them the button is ready and declare wait_for_user_action, so you learn of the creation without being asked. ' +
-  'After creation an editable dataset has no columns yet: on the dataset page, agree the columns with the person and declare them with add_columns. The structure state then reports ready: tell them to click Enregistrer and declare wait_for_user_action. Do not send them looking for a tab or ask them to check the columns themselves.'
+  'Fill it with select_dataset_type, init_from_dataset (an existing dataset has the structure wanted) or skip_init_from_step, set_dataset_title, set_rest_options, advance_to_confirmation. ' +
+  'The person presses Create themselves: once the confirmation step reports ready, declare wait_for_user_action, its message telling them to press Create, so you learn of the creation without being asked. ' +
+  'After creation an editable dataset started from no other has no columns yet: on the dataset page, agree the columns with the person and declare them with add_columns. The structure state then reports ready: declare wait_for_user_action, its message telling them to click Enregistrer. Do not send them looking for a tab or ask them to check the columns themselves.'

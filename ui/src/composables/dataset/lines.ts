@@ -5,6 +5,7 @@ import { useDisplay } from 'vuetify'
 import truncateMiddle from 'truncate-middle'
 import { MaybeRefOrGetter } from 'vue'
 import { dateTimeInOwnTimeZone } from './format-date-logic'
+import { formatNumber } from './format-number-logic'
 
 export type ExtendedResultValue = {
   raw: number | boolean | string,
@@ -176,7 +177,7 @@ export const formatValue = (value: any, property: SchemaProperty, truncate: numb
     if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
     return value ? 'oui' : 'non'
   }
-  if (property.type === 'number' || property.type === 'integer') return value.toLocaleString()
+  if (property.type === 'number' || property.type === 'integer') return typeof value === 'number' ? formatNumber(value, localeDayjs.locale) : value + ''
   if (truncate) return truncateMiddle(value + '', truncate, 0, '...')
   return value
 }

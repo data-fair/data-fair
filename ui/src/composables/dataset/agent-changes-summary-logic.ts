@@ -6,13 +6,18 @@
 // now write, and the user could save a schema reshuffle the summary never mentioned.
 // It is a structured field-by-field diff instead.
 
-const METADATA_FIELDS: { key: string, label: string }[] = [
+// Every field the metadata form or set_dataset_metadata can write must be listed here, or
+// its edit is saved unseen: searchTerms was missing for a release after the tool learned
+// to write it. A unit test holds this list against the tool's fields.
+export const METADATA_FIELDS: { key: string, label: string }[] = [
   { key: 'title', label: 'titre' },
   { key: 'summary', label: 'résumé' },
   { key: 'description', label: 'description' },
   { key: 'license', label: 'licence' },
   { key: 'topics', label: 'thématiques' },
   { key: 'keywords', label: 'mots-clés' },
+  { key: 'searchTerms', label: 'termes de recherche associés' },
+  { key: 'attachmentsAsImage', label: 'pièces jointes affichées comme images' },
   { key: 'origin', label: 'provenance' },
   { key: 'creator', label: 'producteur' },
   { key: 'frequency', label: 'fréquence' },

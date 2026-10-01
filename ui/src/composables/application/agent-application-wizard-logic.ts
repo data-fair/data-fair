@@ -22,6 +22,6 @@ export const APPLICATION_WIZARD_GUIDANCE =
   '(or an application to copy with list_applications), present the options and let them choose. ' +
   'Fill the wizard with select_creation_type, then select_base_application or select_copy_application, then set_application_title. ' +
   'Those tools advance the steps themselves. The person presses the final save button themselves: once the wizard state reports ready, ' +
-  'tell them it is ready and declare wait_for_user_action, so you learn of the creation without being asked. ' +
+  'declare wait_for_user_action, its message telling them it is ready, so you learn of the creation without being asked. ' +
   'When the page query carries a dataset id, the application is being built on that dataset — use it rather than asking which data to show. ' +
   'After saving, the application opens on its configuration form, which has its own assistant. Do not send them looking for anything.'

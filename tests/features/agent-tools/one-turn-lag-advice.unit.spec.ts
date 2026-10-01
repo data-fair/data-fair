@@ -44,7 +44,7 @@ test.describe('what a tool result says about newly registered tools', () => {
     // dataset-line-saved exists precisely so the person is not asked to say
     // "c'est fait" — which two of four user messages were spent on.
     const code = codeOf(sources.lineDialogs)
-    assert.match(code, /declare wait_for_user_action: the save reports itself/)
+    assert.match(code, /declare wait_for_user_action, its message telling the user to press Enregistrer: the save reports itself/)
     assert.ok(!/Dites-moi quand/i.test(code), 'nothing should instruct the model to ask for a click report')
   })
 })

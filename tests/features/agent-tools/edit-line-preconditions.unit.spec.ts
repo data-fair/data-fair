@@ -63,7 +63,7 @@ test.describe('line dialog opener results', () => {
     for (const mode of ['add', 'edit'] as const) {
       const text = lineDialogOpenedResult(mode, true)
       assert.match(text, /delegate to the editLine_form subagent now/)
-      assert.match(text, /declare wait_for_user_action: the save reports itself/)
+      assert.match(text, /declare wait_for_user_action, its message telling the user to press Enregistrer: the save reports itself/)
       assert.ok(!/not in the tool list|dialog will report itself/.test(text), text)
     }
   })

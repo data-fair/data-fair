@@ -41,6 +41,19 @@ export function errorsInSseBody (body: string): string[] {
   return found
 }
 
+/**
+ * Errors in one gateway response. A quota refusal (the account credit cap,
+ * checked before any stream opens) is an HTTP 429 with a JSON body, not an SSE
+ * error chunk — the chat retries it and renders the same alert, so it must
+ * invalidate the run just the same.
+ */
+export function errorsInResponse (status: number, body: string): string[] {
+  if (status < 400) return errorsInSseBody(body)
+  let reason: unknown
+  try { reason = JSON.parse(body)?.reason ?? JSON.parse(body)?.error?.message } catch {}
+  return [`HTTP ${status}${typeof reason === 'string' && reason ? `: ${reason}` : ''}`]
+}
+
 export function captureGatewayErrors (page: Page): GatewayErrors {
   const messages: string[] = []
   const pending: Promise<unknown>[] = []
@@ -52,7 +65,7 @@ export function captureGatewayErrors (page: Page): GatewayErrors {
     // never returns stalls Playwright's event dispatch.
     pending.push(
       res.text()
-        .then(body => { messages.push(...errorsInSseBody(body)) })
+        .then(body => { messages.push(...errorsInResponse(res.status(), body)) })
         // An unreadable body (navigated away, aborted) is not evidence of an
         // error — only a parsed error chunk is.
         .catch(() => {})

@@ -8,7 +8,8 @@ import {
 } from '../../../ui/src/composables/dataset/agent-schema-annotation-tools-logic.ts'
 import { applyColumnLabels, isLabellable } from '../../../ui/src/composables/dataset/agent-column-labels-tools-logic.ts'
 import { reorderSchema } from '../../../ui/src/composables/dataset/agent-schema-order-tools-logic.ts'
-import { diffDataset } from '../../../ui/src/composables/dataset/agent-changes-summary-logic.ts'
+import { diffDataset, METADATA_FIELDS } from '../../../ui/src/composables/dataset/agent-changes-summary-logic.ts'
+import { ALWAYS_FIELDS, OPTIONAL_FIELDS } from '../../../ui/src/composables/dataset/agent-metadata-tools-logic.ts'
 
 const vocabulary = [
   { id: 'codeCommune', title: 'Code commune', identifiers: ['http://rdf.insee.fr/def/geo#codeCommune'], type: 'string', tag: 'Territoire' },
@@ -196,6 +197,15 @@ test.describe('diffDataset', () => {
     })
     assert.ok(out.includes('**titre** : A → B'))
     assert.ok(out.includes('**mots-clés**'))
+  })
+
+  test('covers every field set_dataset_metadata can write', () => {
+    const diffed = METADATA_FIELDS.map(f => f.key)
+    for (const field of [...ALWAYS_FIELDS, ...OPTIONAL_FIELDS]) {
+      assert.ok(diffed.includes(field), `${field} can be written but is missing from the changes summary`)
+    }
+    const out = diffDataset({ metadataServer: { searchTerms: '' }, metadataEdited: { searchTerms: 'gymnase, piscine' } })
+    assert.ok(out.includes('**termes de recherche associés**'))
   })
 
   test('reports what the old text diff could not see: capabilities, groups and labels', () => {
