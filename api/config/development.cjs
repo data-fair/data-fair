@@ -51,7 +51,8 @@ module.exports = {
   privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
   privateRegistryUrl: `http://localhost:${process.env.REGISTRY_PORT}`,
   brand: {
-    embed: '<div>application embed</div>'
+    // hidden: the injection is still checked by the tests, without taking room under fixed-height apps
+    embed: '<div hidden>application embed</div>'
   },
   defaultLimits: {
     totalStorage: 200000,
