@@ -100,11 +100,13 @@ export function formatResult (data: any, params: Params): { text: string, struct
     return line
   }
 
-  const filterQueryString = buildFilterQueryString(params)
+  // the sort keys here (count, key, metric) order the groups, not the rows: a table link carrying them fails
+  const filterQueryString = buildFilterQueryString({ ...params, sort: undefined })
+  const aggs = data.aggs ?? []
   const lines = [
-    `**${data.total}** total rows, **${data.total_values}** groups shown, **${data.total_other}** rows not represented`,
+    `**${data.total}** total rows, **${data.total_values}** distinct values of ${params.groupByColumns?.[0]}, **${aggs.length}** groups shown, **${data.total_other}** rows not represented`,
     '',
-    ...(data.aggs ?? []).map((agg: any) => formatAgg(agg, ''))
+    ...aggs.map((agg: any) => formatAgg(agg, ''))
   ]
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)

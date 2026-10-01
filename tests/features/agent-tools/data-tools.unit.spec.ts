@@ -260,6 +260,21 @@ test.describe('aggregate_data formatResult', () => {
     })
     assert.ok(text.includes('sum(amount) = 1500.5'))
   })
+
+  test('counts the groups actually listed, apart from the distinct values', () => {
+    const data = { total: 40, total_values: 40, total_other: 38, aggs: [{ value: 'A', total: 1 }, { value: 'B', total: 1 }] }
+    const { text } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['nom'] })
+    assert.ok(text.includes('**40** distinct values of nom, **2** groups shown, **38** rows not represented'))
+  })
+
+  test('leaves the group sort out of the filter query, which is pasted into table links', () => {
+    const data = { total: 40, total_values: 2, total_other: 0, aggs: [] }
+    const { text } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['commune'], sort: 'key', filters: { type_eq: 'Stade' } })
+    assert.ok(text.includes('Filter query: type_eq=Stade'))
+    assert.ok(!text.includes('sort='))
+    const { text: unfiltered } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['commune'], sort: '-count' })
+    assert.ok(!unfiltered.includes('Filter query'))
+  })
 })
 
 // --- calculate_metric ---
