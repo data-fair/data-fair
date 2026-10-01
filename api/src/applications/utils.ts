@@ -115,6 +115,7 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
         for (const key of refreshKeys) {
           if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, reqSession(req))
           if (key in freshDataset) dataset[key] = freshDataset[key]
+          else if (key === 'partOf') delete dataset.partOf
         }
       }
       if (datasetFilters.properties) {
