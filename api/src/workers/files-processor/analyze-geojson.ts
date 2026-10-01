@@ -39,7 +39,7 @@ export default async function (dataset: FileDataset) {
   crsParser.end()
 
   // keep track of the original name behind each key to detect collisions
-  // (e.g. a feature top-level "id" and a property "_id" both escape to "id")
+  // (e.g. properties "ID" and "id" both escape to "id")
   const originalNamesByKey = new Map<string, string>([['geometry', 'geometry']])
   for (const property in sampleValues) {
     const key = fieldsSniffer.escapeKey(property, dataset?.analysis?.escapeKeyAlgorithm)
