@@ -166,14 +166,9 @@ export const transformFileStreams = (mimeType: string, schema: SchemaProperty[],
   } else if (mimeType === 'application/geo+json') {
     streams.push(JSONStream.parse('features.*'))
     // a property escaping to the "id" key (id, ID, _id...) takes precedence over the feature top-level id
-    const escapeAlgorithm = dataset?.analysis?.escapeKeyAlgorithm
-    const idKey = fieldsSniffer.escapeKey('id', escapeAlgorithm)
-    const escapedKeys = new Map<string, string>()
-    const escapesToId = (key: string) => {
-      let escaped = escapedKeys.get(key)
-      if (escaped === undefined) escapedKeys.set(key, escaped = fieldsSniffer.escapeKey(key, escapeAlgorithm))
-      return escaped === idKey
-    }
+    const idKey = fieldsSniffer.escapeKey('id', dataset?.analysis?.escapeKeyAlgorithm)
+    const escapedKeys: Record<string, string> = {}
+    const escapesToId = (k: string) => (escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset?.analysis?.escapeKeyAlgorithm)) === idKey
     // transform geojson features into raw data items
     streams.push(new Transform({
       objectMode: true,
