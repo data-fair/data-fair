@@ -145,14 +145,17 @@ test.describe('REST datasets - single line _action', () => {
       { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine'] }
     ])
 
+    // without updateLine the default createOrUpdate only creates: 201, not the upsert's 200
     let res = await testUser2.post('/api/v1/datasets/restaction5/lines', { _id: 'line2', attr1: 'test2' })
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 201)
     await waitForFinalize(ax, 'restaction5')
 
     // but not delete/patch/update lines through _action
     for (const _action of ['delete', 'patch', 'update']) {
       await assert.rejects(testUser2.post('/api/v1/datasets/restaction5/lines', { _action, _id: 'line1', attr1: 'x' }), (err: any) => err.status === 403)
     }
+    // nor replace one through the default createOrUpdate, which only creates for them
+    await assert.rejects(testUser2.post('/api/v1/datasets/restaction5/lines', { _id: 'line1', attr1: 'x' }), (err: any) => err.status === 409)
     res = await testUser2.get('/api/v1/datasets/restaction5/lines/line1')
     assert.equal(res.data.attr1, 'test1')
 

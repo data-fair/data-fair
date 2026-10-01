@@ -1249,13 +1249,17 @@ const alternateActionOperations: Record<string, { operationId: string, ownOperat
   patch: { operationId: 'patchLine', ownOperationId: 'patchOwnLine' },
   delete: { operationId: 'deleteLine', ownOperationId: 'deleteOwnLine' }
 }
+const alternateActionOperationId = (req: RequestWithRestDataset, _action: string) => {
+  const actionOperation = alternateActionOperations[_action]
+  return reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
+}
+const canAlternateAction = (req: RequestWithRestDataset, _action: string) =>
+  can(reqResourceType(req), reqResource(req), alternateActionOperationId(req, _action), reqSession(req), reqBypassPermissions(req))
 const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
   if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
-  const actionOperation = alternateActionOperations[_action]
-  if (!actionOperation) return // create / createOrUpdate are covered by the route's createLine gate
-  const operationId = reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
-  if (!can(reqResourceType(req), reqResource(req), operationId, reqSession(req), reqBypassPermissions(req))) {
-    throw httpError(403, `Permission manquante pour l'opération "${operationId}".`)
+  if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's createLine gate
+  if (!canAlternateAction(req, _action)) {
+    throw httpError(403, `Permission manquante pour l'opération "${alternateActionOperationId(req, _action)}".`)
   }
 }
 
@@ -1272,7 +1276,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     delete req.body._ownerName
   }
 
-  const _action: string = req.body._action ?? 'createOrUpdate'
+  let _action: string = req.body._action ?? 'createOrUpdate'
   // this duplicates a check inside applyTransactions, but it is load-bearing here: without it an
   // unknown action would run manageAttachment below, then applyTransactions would throw (not set
   // operation._error), skipping rollbackUploadedAttachment and orphaning a stored attachment.
@@ -1282,6 +1286,11 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
   }
   checkAlternateActionPermission(req, _action)
+  // createOrUpdate replaces an existing line, which the createLine gate does not cover: without the
+  // update permission it would let a caller overwrite any line whose _id or primary key it knows (an
+  // anonymous form under an application key, for instance). Such a caller only creates, and gets a
+  // 409 on an existing line, the same answer as an explicit _action create.
+  if (_action === 'createOrUpdate' && !req.params.lineId && !canAlternateAction(req, 'update')) _action = 'create'
 
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
   if (!definedId && _action !== 'create' && _action !== 'createOrUpdate') {
