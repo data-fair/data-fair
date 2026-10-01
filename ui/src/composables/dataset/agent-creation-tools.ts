@@ -3,7 +3,7 @@ import { nextTick } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator, agentToolError } from '~/composables/agent/utils'
 import { $fetch } from '~/context'
-import { untilReady, formatAdvanceResult, resolveInitParts, sourceHasData, INIT_FROM_PARTS } from './agent-creation-tools-logic'
+import { untilReady, formatAdvanceResult, resolveInitParts, INIT_FROM_PARTS } from './agent-creation-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -158,13 +158,13 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
 
   useAgentTool({
     name: 'init_from_dataset',
-    description: 'Start the new dataset from an existing one, as the wizard\'s initialization step does: its columns by default, and optionally its data, extensions, metadata attachments or description. The new dataset is then created with those columns, so none need declaring afterwards and the person has a single button to press. Advances to the parameters step.',
+    description: 'Start the new dataset from an existing one, as the wizard\'s initialization step does: by default its columns (all its metadata for a metadata-only source); parts can also name its data, extensions, metadata attachments or single metadata fields. The new dataset is then created with those columns, so none need declaring afterwards and the person has a single button to press. Advances to the parameters step.',
     annotations: { title: t('initFromDataset') },
     inputSchema: {
       type: 'object' as const,
       properties: {
         datasetId: { type: 'string' as const, description: 'Id of the existing dataset to start from' },
-        parts: { type: 'array' as const, items: { type: 'string' as const, enum: [...INIT_FROM_PARTS] }, description: 'What to copy besides the columns (schema), which are always copied' }
+        parts: { type: 'array' as const, items: { type: 'string' as const, enum: [...INIT_FROM_PARTS] }, description: 'What to copy instead of the default; the columns (schema) are always included from a dataset that has some' }
       },
       required: ['datasetId'] as const
     },
@@ -177,15 +177,17 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
       } catch {
         return agentToolError('init_from_dataset', `No dataset "${params.datasetId}" you can read — find its id with list_datasets.`)
       }
-      const resolved = resolveInitParts(params.parts as string[] | undefined, { allowData: state.initAllowData.value, sourceHasData: sourceHasData(source) })
+      const resolved = resolveInitParts(params.parts as string[] | undefined, source, { allowData: state.initAllowData.value })
       if ('error' in resolved) return agentToolError('init_from_dataset', resolved.error)
-      // Shown as selected in the init step, which sets initFrom (columns) and the source title;
-      // the parts asked for go on top once it has.
+      // Shown as selected in the init step, which sets initFrom to its own default (the
+      // columns, or all the metadata of a metadata-only source) and the source title;
+      // parts asked for replace that default once it has.
       state.initSource.value = source
       await nextTick()
-      state.initFrom.value = { dataset: source.id, parts: resolved.parts }
+      if (resolved.parts) state.initFrom.value = { dataset: source.id, parts: resolved.parts }
       state.step.value = 'params'
-      return `The new dataset will start from « ${source.title ?? source.id} », copying: ${resolved.parts.join(', ')}. ` +
+      const copied = state.initFrom.value?.parts ?? []
+      return `The new dataset will start from « ${source.title ?? source.id} », copying: ${copied.join(', ') || 'nothing yet'}. ` +
         'Its title was prefilled from the source; set the new one with set_dataset_title. The wizard is now on the parameters step.'
     }
   })
