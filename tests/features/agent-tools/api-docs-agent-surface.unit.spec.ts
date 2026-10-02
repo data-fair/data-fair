@@ -42,6 +42,18 @@ const expectedTools: Record<string, string[]> = {
   manage_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application', 'datafair_publish_application', 'datafair_delete_application']
 }
 
+/** Every nested property path under a schema, `[]` marking array items, composition keywords followed. */
+const nestedPaths = (schema: any, prefix: string, out: string[] = [], depth = 0): string[] => {
+  if (!schema || typeof schema !== 'object' || depth > 8) return out
+  for (const k of ['oneOf', 'anyOf', 'allOf']) for (const s of schema[k] ?? []) nestedPaths(s, prefix, out, depth + 1)
+  if (schema.items) nestedPaths(schema.items, `${prefix}[]`, out, depth + 1)
+  for (const [k, v] of Object.entries<any>(schema.properties ?? {})) {
+    out.push(`${prefix}.${k}`)
+    nestedPaths(v, `${prefix}.${k}`, out, depth + 1)
+  }
+  return out
+}
+
 const annotatedOperationIds = (doc: any): string[] => Object.values<any>(doc.paths)
   .flatMap(item => Object.values<any>(item))
   .filter(op => op?.operationId && op['x-agent'])
@@ -136,6 +148,25 @@ test.describe('agent surface of the root document', () => {
       assert.match(tool(name).description, /replace the current value entirely/, name)
     }
     assert.equal(tool('datafair_set_dataset_permissions').annotations.destructiveHint, true)
+  })
+
+  // The field placement tests above are top-level only: a governance sub-field added later inside a
+  // write field (rest.*, configuration.*) would ride along. Pinning every nested path turns it into
+  // a diff a reviewer has to accept. Regenerate with UPDATE_GOLDEN=1 when the change is intended.
+  test('pins the nested fields the write views offer', async () => {
+    const { apiDocs, xAgent } = await generators()
+    const doc = apiDocs(PUBLIC_URL)
+    const bodies = {
+      datasets: [doc.paths['/datasets/{id}'].patch.requestBody.content['application/json'].schema, xAgent.datasetPatchFields.write],
+      applications: [doc.components.schemas.applicationPatch, xAgent.applicationPatchFields.write]
+    } as const
+    const pinned: Record<string, string[]> = {}
+    for (const [resource, [body, fields]] of Object.entries(bodies)) {
+      pinned[resource] = [...new Set(fields.flatMap((f: string) => nestedPaths(body.properties[f], f)))].sort()
+    }
+    const pinPath = path.resolve(import.meta.dirname, '../../fixtures/agent-patch-write-nested-fields.json')
+    if (process.env.UPDATE_GOLDEN) writeFileSync(pinPath, JSON.stringify(pinned, null, 2) + '\n')
+    assert.deepEqual(pinned, JSON.parse(readFileSync(pinPath, 'utf8')))
   })
 
   test('the catalog workflow skill comes with the catalog profile only', async () => {
