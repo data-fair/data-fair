@@ -760,6 +760,10 @@ that one URL. The metrics service (`privateMetricsUrl`) contributes `metrics_agg
 and a `metrics-review` skill, so an agent can review the audience of the active account's
 datasets and applications.
 
+How tools are grouped into profiles across the stack — the `read`/`write`/`manage` grid per
+resource family, the `catalog` profile, and the stability rules agent configurations rely on —
+is described in [agent-profiles.md](./agent-profiles.md). `explore` is being retired there.
+
 The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
 loads the generator with `lint: 'error'` and diffs `tests/fixtures/agent-surface.explore.json`.
 Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is what the reviewer reads.
