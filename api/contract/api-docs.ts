@@ -358,6 +358,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les applications',
           description: 'Récupérer la liste des applications.',
           operationId: 'listApplications',
+          'x-agent': xAgent.listApplications,
           tags: ['Applications'],
           parameters: [
             utils.qParam,
@@ -427,6 +428,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: "Lire les informations d'une application",
           description: "Récupérer les informations d'une application.",
           operationId: 'getApplication',
+          'x-agent': xAgent.getApplication,
           tags: ['Applications'],
           responses: {
             200: {
@@ -478,6 +480,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Modifier une application',
           description: "Modifier seulement certaines informations d'une application.",
           operationId: 'patchApplication',
+          'x-agent': xAgent.patchApplication,
           tags: ['Applications'],
           requestBody: {
             description: 'Informations à modifier.',
@@ -504,6 +507,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Supprimer une application',
           description: 'Supprimer cette application.',
           operationId: 'deleteApplication',
+          'x-agent': xAgent.deleteApplication,
           tags: ['Applications'],
           responses: {
             204: {

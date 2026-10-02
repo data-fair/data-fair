@@ -61,6 +61,14 @@ export const datasetPatchFields = {
   manage: ['publications', 'publicationSites', 'readApiKey', 'masterData']
 }
 
+/** PATCH /applications/{id} body fields per tier, checked like datasetPatchFields. */
+export const applicationPatchFields = {
+  write: ['slug', 'title', 'summary', 'description', 'image', 'configuration', 'url', 'urlDraft', 'requestedPublicationSites', 'topics', 'partOf', 'extras', 'preferLargeDisplay', 'attachments'],
+  manage: ['publications', 'publicationSites']
+}
+
+const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in list_account_applications results.' }
+
 export const operations = {
   listDatasets: {
     profiles: ['read_datasets'],
@@ -224,5 +232,52 @@ export const operations = {
     name: 'set_dataset_permissions',
     description: 'Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.',
     params: { id: datasetId }
+  },
+  listApplications: {
+    profiles: ['read_applications'],
+    name: 'list_account_applications',
+    description: 'List the applications (data visualizations) of the active account and those shared with the current user, with optional text search. Returns id, title, status and last update.',
+    params: {
+      q: { description: 'Keywords for full-text search.' },
+      dataset: { description: 'Restrict to the applications using these datasets (ids from list_account_datasets).' },
+      size: { default: 10, maximum: 50 },
+      page: { default: 1 },
+      mine: { exclude: true },
+      owner: { exclude: true },
+      raw: { exclude: true },
+      ids: { exclude: true },
+      service: { exclude: true },
+      visibility: { exclude: true }
+    },
+    fixed: { select: 'id,slug,title,summary,status,updatedAt,page' },
+    response: { rows: '/results', concise: ['id', 'slug', 'title', 'summary', 'status', 'updatedAt', 'page'], detailed: true }
+  },
+  getApplication: {
+    profiles: ['read_applications'],
+    name: 'describe_application',
+    description: 'Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.',
+    params: { id: applicationId }
+  },
+  patchApplication: [
+    {
+      profiles: ['write_applications'],
+      name: 'update_application',
+      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Publishing on portals and publications to remote catalogs are done with publish_application.',
+      params: { id: applicationId },
+      bodyFields: applicationPatchFields.write
+    },
+    {
+      profiles: ['manage_applications'],
+      name: 'publish_application',
+      description: 'Change where an application is exposed: the portals it is published on (publicationSites) and its publications to remote catalogs. Send only the fields to change.',
+      params: { id: applicationId },
+      bodyFields: applicationPatchFields.manage
+    }
+  ],
+  deleteApplication: {
+    profiles: ['manage_applications'],
+    name: 'delete_application',
+    description: 'Delete an application permanently. Irreversible.',
+    params: { id: applicationId }
   }
 } satisfies Record<string, AgentOperationAnnotation>

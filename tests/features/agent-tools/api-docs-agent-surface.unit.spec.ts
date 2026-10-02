@@ -37,9 +37,9 @@ const expectedTools: Record<string, string[]> = {
   read_datasets: [...datasetReads, 'datafair_list_account_datasets'],
   write_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset'],
   manage_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset', 'datafair_publish_dataset', 'datafair_delete_dataset', 'datafair_get_dataset_permissions', 'datafair_set_dataset_permissions'],
-  read_applications: [],
-  write_applications: [],
-  manage_applications: []
+  read_applications: ['datafair_list_account_applications', 'datafair_describe_application'],
+  write_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application'],
+  manage_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application', 'datafair_publish_application', 'datafair_delete_application']
 }
 
 const annotatedOperationIds = (doc: any): string[] => Object.values<any>(doc.paths)
@@ -82,6 +82,14 @@ test.describe('agent surface of the root document', () => {
     const { apiDocs, xAgent } = await generators()
     const body = apiDocs(PUBLIC_URL).paths['/datasets/{id}'].patch.requestBody.content['application/json'].schema
     const placed = [...xAgent.datasetPatchFields.write, ...xAgent.datasetPatchFields.manage]
+    assert.equal(new Set(placed).size, placed.length, 'no field is in two views')
+    assert.deepEqual([...placed].sort(), Object.keys(body.properties).sort(), 'a new PATCH field must be placed in write or manage')
+  })
+
+  test('places every application PATCH body field in exactly one view', async () => {
+    const { apiDocs, xAgent } = await generators()
+    const body = apiDocs(PUBLIC_URL).components.schemas.applicationPatch
+    const placed = [...xAgent.applicationPatchFields.write, ...xAgent.applicationPatchFields.manage]
     assert.equal(new Set(placed).size, placed.length, 'no field is in two views')
     assert.deepEqual([...placed].sort(), Object.keys(body.properties).sort(), 'a new PATCH field must be placed in write or manage')
   })
