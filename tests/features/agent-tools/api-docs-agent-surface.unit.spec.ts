@@ -177,6 +177,12 @@ test.describe('agent surface of the root document', () => {
     }
   })
 
+  test('update_application asks not to change application key permissions unless asked', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['write_applications'] })
+    assert.match(toolSet.tools.find(t => t.name === 'datafair_update_application')!.description, /Do not change configuration\.datasets\[\]\.applicationKeyPermissions unless explicitly asked/)
+  })
+
   test('the catalog workflow skill comes with the catalog profile only', async () => {
     const { apiDocs } = await generators()
     assert.deepEqual((await load(apiDocs(PUBLIC_URL), { profiles: ['catalog'] })).skills.map(s => s.id), ['workflow'])
