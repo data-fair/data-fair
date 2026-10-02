@@ -270,6 +270,10 @@ one release as a deprecated alias that includes `catalog`, then drops it.
 
 ## 10. Rollout
 
+Release order: a consumer must run `@data-fair/openapi-mcp` 0.3.0 or later before data-fair
+publishes the step 2 document — older versions refuse its views (`x-agent` arrays) and drop the
+whole data-fair service, `explore` included. The `mcp` server moves to `^0.3.0` first.
+
 1. openapi-mcp: views, body allow-list, vocabulary check. — done
 2. data-fair index and annotations, metrics moved to `read_metrics`, `explore` alias. — done
 3. `mcp` server: `catalog` in public mode, the compatibility route.

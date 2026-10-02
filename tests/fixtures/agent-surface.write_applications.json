@@ -5,7 +5,7 @@
   "tools": [
     {
       "name": "datafair_list_account_applications",
-      "description": "List the applications (data visualizations) of the active account and those shared with the current user, with optional text search. Returns id, title, status and last update.",
+      "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Returns id, title, status and last update.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -73,7 +73,7 @@
     },
     {
       "name": "datafair_update_application",
-      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Publishing on portals and publications to remote catalogs are done with publish_application.",
+      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -310,34 +310,6 @@
                         }
                       }
                     }
-                  }
-                }
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "partOf": {
-            "anyOf": [
-              {
-                "type": "object",
-                "description": "Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.",
-                "additionalProperties": false,
-                "required": [
-                  "type",
-                  "id"
-                ],
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "dataset",
-                      "application"
-                    ]
-                  },
-                  "id": {
-                    "type": "string"
                   }
                 }
               },

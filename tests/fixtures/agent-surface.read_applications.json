@@ -5,7 +5,7 @@
   "tools": [
     {
       "name": "datafair_list_account_applications",
-      "description": "List the applications (data visualizations) of the active account and those shared with the current user, with optional text search. Returns id, title, status and last update.",
+      "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Returns id, title, status and last update.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -94,6 +94,50 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual([...placed].sort(), Object.keys(body.properties).sort(), 'a new PATCH field must be placed in write or manage')
   })
 
+  test('fields that change who can access a resource are offered in manage only', async () => {
+    const { xAgent } = await generators()
+    for (const lists of [xAgent.datasetPatchFields, xAgent.applicationPatchFields]) {
+      for (const field of ['partOf', 'publicationSites', 'publications']) {
+        assert.ok(lists.manage.includes(field), `${field} in manage`)
+        assert.ok(!lists.write.includes(field), `${field} not in write`)
+      }
+    }
+  })
+
+  test('the account listings are scoped to the active account', async () => {
+    const { apiDocs } = await generators()
+    const urls: string[] = []
+    const fetchFn = (async (input: RequestInfo | URL) => {
+      urls.push(input instanceof Request ? input.url : String(input))
+      return new Response(JSON.stringify({ count: 0, results: [] }), { headers: { 'content-type': 'application/json' } })
+    }) as typeof fetch
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['read_datasets', 'read_applications'], fetch: fetchFn })
+    for (const name of ['datafair_list_account_datasets', 'datafair_list_account_applications']) {
+      const result = await toolSet.tools.find(t => t.name === name)!.execute({})
+      assert.ok(!result.isError, result.text)
+    }
+    assert.equal(urls.length, 2)
+    for (const url of urls) assert.equal(new URL(url).searchParams.get('mine'), 'true', url)
+  })
+
+  test('grid dataset tools point to a listing tool of the grid for ids', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['manage_datasets'] })
+    for (const tool of toolSet.tools.filter(t => t.inputSchema.properties?.datasetId)) {
+      assert.match(tool.inputSchema.properties.datasetId.description, /list_account_datasets/, tool.name)
+    }
+  })
+
+  test('tools replacing whole values say so, and the ACL replacement is destructive', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['manage_datasets', 'manage_applications'] })
+    const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
+    for (const name of ['datafair_update_dataset', 'datafair_update_application']) {
+      assert.match(tool(name).description, /replace the current value entirely/, name)
+    }
+    assert.equal(tool('datafair_set_dataset_permissions').annotations.destructiveHint, true)
+  })
+
   test('the catalog workflow skill comes with the catalog profile only', async () => {
     const { apiDocs } = await generators()
     assert.deepEqual((await load(apiDocs(PUBLIC_URL), { profiles: ['catalog'] })).skills.map(s => s.id), ['workflow'])

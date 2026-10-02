@@ -12,7 +12,7 @@ import { documentProfiles } from './agent-profiles.ts'
 
 const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
 
-const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in list_datasets results. Do not use the title or slug.' }
+const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug.' }
 
 /** Geo and temporal filters, shared by every query operation. */
 const queryParams: Record<string, AgentParamOverride> = {
@@ -53,18 +53,19 @@ export const datasetSchemaKeyHint: AgentProperty = { hint: 'use this key in filt
 
 /**
  * PATCH /datasets/{id} body fields per tier: content (write) and exposure (manage — portals,
- * remote catalog publications, read API key, master-data exposure). A test checks that every
+ * remote catalog publications, read API key, master-data exposure, and partOf, which replaces the
+ * resource's permissions with its parent's). A test checks that every
  * field of the body is in exactly one list, so a field added to the API is placed deliberately.
  */
 export const datasetPatchFields = {
-  write: ['slug', 'title', 'summary', 'description', 'image', 'spatial', 'temporal', 'keywords', 'searchTerms', 'frequency', 'creator', 'modified', 'attachments', 'primaryKey', 'schema', 'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'requestedPublicationSites', 'attachmentsAsImage', 'virtual', 'partOf', 'rest', 'topics', 'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'nonBlockingValidation'],
-  manage: ['publications', 'publicationSites', 'readApiKey', 'masterData']
+  write: ['slug', 'title', 'summary', 'description', 'image', 'spatial', 'temporal', 'keywords', 'searchTerms', 'frequency', 'creator', 'modified', 'attachments', 'primaryKey', 'schema', 'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'requestedPublicationSites', 'attachmentsAsImage', 'virtual', 'rest', 'topics', 'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'nonBlockingValidation'],
+  manage: ['publications', 'publicationSites', 'readApiKey', 'masterData', 'partOf']
 }
 
 /** PATCH /applications/{id} body fields per tier, checked like datasetPatchFields. */
 export const applicationPatchFields = {
-  write: ['slug', 'title', 'summary', 'description', 'image', 'configuration', 'url', 'urlDraft', 'requestedPublicationSites', 'topics', 'partOf', 'extras', 'preferLargeDisplay', 'attachments'],
-  manage: ['publications', 'publicationSites']
+  write: ['slug', 'title', 'summary', 'description', 'image', 'configuration', 'url', 'urlDraft', 'requestedPublicationSites', 'topics', 'extras', 'preferLargeDisplay', 'attachments'],
+  manage: ['publications', 'publicationSites', 'partOf']
 }
 
 const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in list_account_applications results.' }
@@ -73,7 +74,7 @@ export const operations = {
   listDatasets: {
     profiles: ['read_datasets'],
     name: 'list_account_datasets',
-    description: 'List the datasets of the active account and those shared with the current user, with optional text search. Returns id, title, status, row count, and last update.',
+    description: 'List the datasets owned by the active account (its department included), with optional text search. Returns id, title, status, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
       size: { default: 10, maximum: 50 },
@@ -93,7 +94,7 @@ export const operations = {
       queryable: { exclude: true },
       visibility: { exclude: true }
     },
-    fixed: { select: 'id,slug,title,summary,topics,count,status,updatedAt,page' },
+    fixed: { mine: 'true', select: 'id,slug,title,summary,topics,count,status,updatedAt,page' },
     response: { rows: '/results', concise: ['id', 'slug', 'title', 'summary', 'count', 'status', 'updatedAt', 'page'], detailed: true }
   },
   listCatalogDatasets: {
@@ -201,7 +202,7 @@ export const operations = {
     {
       profiles: ['write_datasets'],
       name: 'update_dataset',
-      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Publishing on portals, publications to remote catalogs, the read API key and master-data exposure are done with publish_dataset.',
+      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with publish_dataset.',
       params: { id: datasetId },
       body: 'compact',
       bodyFields: datasetPatchFields.write
@@ -209,7 +210,7 @@ export const operations = {
     {
       profiles: ['manage_datasets'],
       name: 'publish_dataset',
-      description: 'Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key and its master-data exposure. Send only the fields to change.',
+      description: 'Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key, its master-data exposure, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.',
       params: { id: datasetId },
       body: 'compact',
       bodyFields: datasetPatchFields.manage
@@ -231,12 +232,13 @@ export const operations = {
     profiles: ['manage_datasets'],
     name: 'set_dataset_permissions',
     description: 'Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.',
+    annotations: { destructiveHint: true },
     params: { id: datasetId }
   },
   listApplications: {
     profiles: ['read_applications'],
     name: 'list_account_applications',
-    description: 'List the applications (data visualizations) of the active account and those shared with the current user, with optional text search. Returns id, title, status and last update.',
+    description: 'List the applications (data visualizations) owned by the active account (its department included), with optional text search. Returns id, title, status and last update.',
     params: {
       q: { description: 'Keywords for full-text search.' },
       dataset: { description: 'Restrict to the applications using these datasets (ids from list_account_datasets).' },
@@ -249,7 +251,7 @@ export const operations = {
       service: { exclude: true },
       visibility: { exclude: true }
     },
-    fixed: { select: 'id,slug,title,summary,status,updatedAt,page' },
+    fixed: { mine: 'true', select: 'id,slug,title,summary,status,updatedAt,page' },
     response: { rows: '/results', concise: ['id', 'slug', 'title', 'summary', 'status', 'updatedAt', 'page'], detailed: true }
   },
   getApplication: {
@@ -262,14 +264,14 @@ export const operations = {
     {
       profiles: ['write_applications'],
       name: 'update_application',
-      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Publishing on portals and publications to remote catalogs are done with publish_application.',
+      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application.',
       params: { id: applicationId },
       bodyFields: applicationPatchFields.write
     },
     {
       profiles: ['manage_applications'],
       name: 'publish_application',
-      description: 'Change where an application is exposed: the portals it is published on (publicationSites) and its publications to remote catalogs. Send only the fields to change.',
+      description: 'Change where an application is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.',
       params: { id: applicationId },
       bodyFields: applicationPatchFields.manage
     }

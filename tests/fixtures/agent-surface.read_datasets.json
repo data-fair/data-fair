@@ -5,7 +5,7 @@
   "tools": [
     {
       "name": "datafair_list_account_datasets",
-      "description": "List the datasets of the active account and those shared with the current user, with optional text search. Returns id, title, status, row count, and last update.",
+      "description": "List the datasets owned by the active account (its department included), with optional text search. Returns id, title, status, row count, and last update.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -51,7 +51,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "response_format": {
             "type": "string",
@@ -81,7 +81,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "after": {
             "type": "integer",
@@ -165,7 +165,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "fieldKey": {
             "type": "string",
@@ -250,7 +250,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "groupByColumns": {
             "type": "array",
@@ -340,7 +340,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "metric": {
             "type": "string",
