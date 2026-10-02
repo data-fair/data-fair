@@ -281,6 +281,40 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         }
       },
+      '/catalog/datasets': {
+        get: {
+          summary: 'Lister les jeux de données du portail',
+          description: "Récupérer la liste des jeux de données publiés sur le portail depuis lequel l'API est appelée. Indisponible depuis le back-office.",
+          operationId: 'listCatalogDatasets',
+          'x-agent': xAgent.listCatalogDatasets,
+          tags: ['Jeux de données (JDD)'],
+          parameters: [
+            utils.qParam,
+            utils.selectParam(Object.keys(dataset.properties)),
+            utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
+            utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
+            utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
+            ...utils.paginationParams
+          ],
+          responses: {
+            200: {
+              description: 'Les jeux de données publiés sur le portail.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      count: { type: 'number', description: 'Nombre total de jeux de données' },
+                      results: { type: 'array', items: { $ref: '#/components/schemas/dataset' } }
+                    }
+                  }
+                }
+              }
+            },
+            ...errorResponses
+          }
+        }
+      },
       '/datasets/{id}': {
         parameters: [datasetIdParam],
         put: {

@@ -5,9 +5,10 @@
  * per-dataset operations are annotated once in dataset-api-docs.ts and so appear identically
  * on the root document and on every dataset's own document.
  *
- * The agent-facing surface these produce is pinned by tests/fixtures/agent-surface.explore.json.
+ * The agent-facing surface these produce is pinned by tests/fixtures/agent-surface.<profile>.json.
  */
 import type { AgentRoot, AgentOperation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
+import { documentProfiles } from './agent-profiles.ts'
 
 const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
 
@@ -29,15 +30,14 @@ const queryParams: Record<string, AgentParamOverride> = {
 /** The root block of a single dataset's document: names and profiles, no cross-dataset workflow. */
 export const datasetRoot: AgentRoot = {
   namePrefix: 'datafair_',
-  profiles: {
-    explore: { title: { en: 'Explore', fr: 'Explorer' }, description: { en: 'Read-only tools: find datasets, read their schema, query, aggregate.', fr: 'Outils en lecture seule : trouver des jeux de données, lire leur schéma, requêter, agréger.' } }
-  }
+  profiles: documentProfiles(['datasets', 'applications'], true)
 }
 
 export const root: AgentRoot = {
   ...datasetRoot,
   skills: [{
     name: 'workflow',
+    profiles: ['catalog'],
     description: `You are querying French open data through Data Fair.
 1. **list_datasets** — find datasets with French keywords (simple terms, not sentences). If 0 results try synonyms or broader terms.
 2. **describe_dataset** — schema and metadata of a dataset. Then call **search_data** with size=3 to see sample rows before filtering.
@@ -53,9 +53,9 @@ export const datasetSchemaKeyHint: AgentProperty = { hint: 'use this key in filt
 
 export const operations = {
   listDatasets: {
-    profiles: ['explore'],
-    name: 'list_datasets',
-    description: 'List datasets accessible to the current user with optional text search. Returns id, title, status, row count, and last update.',
+    profiles: ['read_datasets'],
+    name: 'list_account_datasets',
+    description: 'List the datasets of the active account and those shared with the current user, with optional text search. Returns id, title, status, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
       size: { default: 10, maximum: 50 },
@@ -78,8 +78,23 @@ export const operations = {
     fixed: { select: 'id,slug,title,summary,topics,count,status,updatedAt,page' },
     response: { rows: '/results', concise: ['id', 'slug', 'title', 'summary', 'count', 'status', 'updatedAt', 'page'], detailed: true }
   },
+  listCatalogDatasets: {
+    profiles: ['catalog'],
+    name: 'list_datasets',
+    description: 'List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update. Only available from a portal, not from the back-office.',
+    params: {
+      q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
+      size: { default: 10, maximum: 50 },
+      page: { default: 1 },
+      files: { exclude: true },
+      bbox: { exclude: true },
+      queryable: { exclude: true }
+    },
+    fixed: { select: 'id,slug,title,summary,topics,count,updatedAt,page' },
+    response: { rows: '/results', concise: ['id', 'slug', 'title', 'summary', 'count', 'updatedAt', 'page'], detailed: true }
+  },
   readDescription: {
-    profiles: ['explore'],
+    profiles: ['catalog', 'read_datasets'],
     name: 'describe_dataset',
     description: 'Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.',
     params: { id: datasetId },
@@ -89,7 +104,7 @@ export const operations = {
     }
   },
   readLines: {
-    profiles: ['explore'],
+    profiles: ['catalog', 'read_datasets'],
     name: 'search_data',
     description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the "after" value returned as next.',
     params: {
@@ -113,7 +128,7 @@ export const operations = {
     response: { rows: '/results', hints: true }
   },
   getValues: {
-    profiles: ['explore'],
+    profiles: ['catalog', 'read_datasets'],
     name: 'get_field_values',
     description: 'List distinct values of a column. Useful to discover values before filtering with _eq or _in.',
     params: {
@@ -125,7 +140,7 @@ export const operations = {
     }
   },
   getValuesAgg: {
-    profiles: ['explore'],
+    profiles: ['catalog', 'read_datasets'],
     name: 'aggregate_data',
     description: 'Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use calculate_metric.',
     params: {
@@ -152,7 +167,7 @@ export const operations = {
     response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: true }
   },
   getMetricAgg: {
-    profiles: ['explore'],
+    profiles: ['catalog', 'read_datasets'],
     name: 'calculate_metric',
     description: 'Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use aggregate_data.',
     params: {
