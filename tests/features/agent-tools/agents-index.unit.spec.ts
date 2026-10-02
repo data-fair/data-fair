@@ -19,9 +19,28 @@ test.describe('agentsIndex', () => {
       { id: 'data-fair', openapi: 'https://host.test/data-fair/api/v1/api-docs.json' },
       { id: 'simple-directory', openapi: 'https://host.test/simple-directory/api/api-docs.json' }
     ])
-    assert.deepEqual(Object.keys(index.profiles!), ['explore'])
-    assert.deepEqual(index.profiles!.explore.title, { fr: 'Explorer', en: 'Explore' })
   })
+  const silos = ['datasets', 'applications', 'portals', 'processings', 'catalogs', 'notifications', 'metrics', 'account']
+
+  test('declares the whole profile vocabulary: catalog first, umbrellas, every cell, platform, the explore alias', () => {
+    const profiles = agentsIndex('https://host.test/data-fair', cfg).profiles!
+    assert.equal(Object.keys(profiles)[0], 'catalog')
+    for (const tier of ['read', 'write', 'manage']) {
+      assert.deepEqual(profiles[tier].includes, silos.map(s => `${tier}_${s}`))
+    }
+    assert.equal(profiles.read_portals.includes, undefined)
+    assert.deepEqual(profiles.write_portals.includes, ['read_portals'])
+    assert.deepEqual(profiles.manage_portals.includes, ['write_portals'])
+    assert.deepEqual(profiles.explore.includes, ['catalog'])
+    assert.deepEqual(profiles.manage_metrics.title, { fr: "Administrer — métriques d'audience", en: 'Manage — audience metrics' })
+    assert.ok(profiles.platform)
+  })
+
+  test('pins the vocabulary: names are only ever appended', () => {
+    const cells = silos.flatMap(s => ['read', 'write', 'manage'].map(t => `${t}_${s}`))
+    assert.deepEqual(Object.keys(agentsIndex('https://host.test/data-fair', cfg).profiles!), ['catalog', 'read', 'write', 'manage', ...cells, 'platform', 'explore'])
+  })
+
   test('lists processings at the site origin when its integration is configured', () => {
     const index = agentsIndex('https://host.test/data-fair', { ...cfg, privateProcessingsUrl: 'http://processings:8080' })
     assert.deepEqual(index.services.map(s => s.id), ['data-fair', 'processings', 'simple-directory'])

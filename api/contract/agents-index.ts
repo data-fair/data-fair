@@ -8,6 +8,7 @@
  * Pure: the route passes the request's public base URL and the config values.
  */
 import type { Index } from '@data-fair/openapi-mcp'
+import { vocabulary } from './agent-profiles.ts'
 
 export interface AgentsIndexConfig {
   publicUrl: string
@@ -31,11 +32,6 @@ export function agentsIndex (publicBaseUrl: string, cfg: AgentsIndexConfig): Ind
   return {
     version: 1,
     services,
-    profiles: {
-      explore: {
-        title: { fr: 'Explorer', en: 'Explore' },
-        description: { fr: 'Outils en lecture seule sur tous les services.', en: 'Read-only tools over every service.' }
-      }
-    }
+    profiles: vocabulary()
   }
 }
