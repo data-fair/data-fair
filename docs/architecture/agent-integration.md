@@ -769,8 +769,9 @@ The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-a
 loads the generator with `lint: 'error'` and diffs one golden per profile
 (`tests/fixtures/agent-surface.<profile>.json`); `agents-composition.unit.spec.ts` composes the
 index with the document. Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is
-what the reviewer reads. Admin-only routes carry no annotation, so the surface does not vary with
-the session.
+what the reviewer reads. Superadmin routes (only documented in admin mode) carry no annotation,
+so the surface does not vary with the session; routes of the owner's admin class (deletion,
+permissions) are annotated in the `manage_*` profiles and present for every session.
 
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
