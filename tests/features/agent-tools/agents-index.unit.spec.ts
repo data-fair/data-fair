@@ -36,6 +36,18 @@ test.describe('agentsIndex', () => {
     assert.ok(profiles.platform)
   })
 
+  test('describes every profile in French and English, each cell naming its scope', () => {
+    const profiles = agentsIndex('https://host.test/data-fair', cfg).profiles!
+    for (const [name, profile] of Object.entries(profiles)) {
+      const description = profile.description as Record<string, string> | undefined
+      assert.ok(description?.fr && description?.en, `${name} has a fr and an en description`)
+    }
+    assert.deepEqual(profiles.write_portals.description, {
+      fr: 'Créer et modifier le contenu des ressources. Périmètre : portails.',
+      en: 'Create and edit the content of resources. Scope: portals.'
+    })
+  })
+
   test('pins the vocabulary: names are only ever appended', () => {
     const cells = silos.flatMap(s => ['read', 'write', 'manage'].map(t => `${t}_${s}`))
     assert.deepEqual(Object.keys(agentsIndex('https://host.test/data-fair', cfg).profiles!), ['catalog', 'read', 'write', 'manage', ...cells, 'platform', 'explore'])

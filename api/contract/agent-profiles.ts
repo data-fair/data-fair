@@ -43,7 +43,11 @@ export const cell = (tier: Tier, silo: Silo): string => `${tier}_${silo}`
 const cellProfile = (tier: Tier, silo: Silo): IndexProfile => {
   const below = tierOrder[tierOrder.indexOf(tier) - 1]
   const profile: IndexProfile = {
-    title: { fr: `${tiers[tier].title.fr} — ${silos[silo].fr}`, en: `${tiers[tier].title.en} — ${silos[silo].en}` }
+    title: { fr: `${tiers[tier].title.fr} — ${silos[silo].fr}`, en: `${tiers[tier].title.en} — ${silos[silo].en}` },
+    description: {
+      fr: `${tiers[tier].description.fr} Périmètre : ${silos[silo].fr}.`,
+      en: `${tiers[tier].description.en} Scope: ${silos[silo].en}.`
+    }
   }
   if (below) profile.includes = [cell(below, silo)]
   return profile
