@@ -756,7 +756,9 @@ and by the agents service's autonomous runs; the browser assistant does not use 
 `GET /api/v1/agents/index.json` lists the deployment's service-level documents
 (`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
 configured, at the site origin and its conventional mount path. A consumer is configured with
-that one URL.
+that one URL. The metrics service (`privateMetricsUrl`) contributes `metrics_aggregate_requests`
+and a `metrics-review` skill, so an agent can review the audience of the active account's
+datasets and applications.
 
 The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
 loads the generator with `lint: 'error'` and diffs `tests/fixtures/agent-surface.explore.json`.

@@ -13,6 +13,7 @@ export interface AgentsIndexConfig {
   publicUrl: string
   directoryUrl?: string
   privateProcessingsUrl?: string | null
+  privateMetricsUrl?: string | null
 }
 
 /** The site base: the request's public base URL without data-fair's own mount path. */
@@ -25,6 +26,7 @@ export function agentsIndex (publicBaseUrl: string, cfg: AgentsIndexConfig): Ind
   const base = siteBase(publicBaseUrl, cfg.publicUrl)
   const services: Index['services'] = [{ id: 'data-fair', openapi: `${publicBaseUrl}/api/v1/api-docs.json` }]
   if (cfg.privateProcessingsUrl) services.push({ id: 'processings', openapi: `${base}/processings/api/v1/admin/api-docs.json` })
+  if (cfg.privateMetricsUrl) services.push({ id: 'metrics', openapi: `${base}/metrics/api/api-docs.json` })
   if (cfg.directoryUrl) services.push({ id: 'simple-directory', openapi: `${cfg.directoryUrl}/api/api-docs.json` })
   return {
     version: 1,

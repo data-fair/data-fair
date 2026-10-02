@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { validateIndex } from '@data-fair/openapi-mcp'
 import { agentsIndex } from '../../../api/contract/agents-index.ts'
 
-const cfg = { publicUrl: 'http://localhost:8080/data-fair', directoryUrl: 'https://host.test/simple-directory', privateProcessingsUrl: null }
+const cfg = { publicUrl: 'http://localhost:8080/data-fair', directoryUrl: 'https://host.test/simple-directory', privateProcessingsUrl: null, privateMetricsUrl: null }
 
 test.describe('agentsIndex', () => {
   test('lists data-fair and simple-directory at the request public base URL, validating against the contract', () => {
@@ -26,6 +26,12 @@ test.describe('agentsIndex', () => {
     const index = agentsIndex('https://host.test/data-fair', { ...cfg, privateProcessingsUrl: 'http://processings:8080' })
     assert.deepEqual(index.services.map(s => s.id), ['data-fair', 'processings', 'simple-directory'])
     assert.equal(index.services[1].openapi, 'https://host.test/processings/api/v1/admin/api-docs.json')
+  })
+  test('lists metrics at the site origin when its integration is configured', () => {
+    const index = agentsIndex('https://host.test/data-fair', { ...cfg, privateProcessingsUrl: 'http://processings:8080', privateMetricsUrl: 'http://metrics:8080' })
+    assert.doesNotThrow(() => validateIndex(index))
+    assert.deepEqual(index.services.map(s => s.id), ['data-fair', 'processings', 'metrics', 'simple-directory'])
+    assert.equal(index.services[2].openapi, 'https://host.test/metrics/api/api-docs.json')
   })
   test('derives the site base from the public base URL minus data-fair\'s own mount path', () => {
     const index = agentsIndex('https://other.test/site/data-fair', { ...cfg, publicUrl: 'https://host.test/data-fair', privateProcessingsUrl: 'x' })
