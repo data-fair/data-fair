@@ -209,6 +209,7 @@ test.describe('agent surface of the root document', () => {
       ]
     }
     const doc = datasetAPIDocs(dataset, PUBLIC_URL).api
+    assert.deepEqual(Object.keys(doc['x-agent'].profiles), ['catalog', 'read_datasets', 'write_datasets', 'manage_datasets'], 'a dataset document declares only the cells it can fill')
     const toolSet = await load(doc, { profiles: ['read_datasets'], lint: 'error' })
     const search = toolSet.tools.find(t => t.name === 'datafair_search_data')
     assert.ok(search, 'search_data is generated from the per-dataset document')

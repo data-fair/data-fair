@@ -30,11 +30,12 @@ const queryParams: Record<string, AgentParamOverride> = {
 /** The root block of a single dataset's document: names and profiles, no cross-dataset workflow. */
 export const datasetRoot: AgentRoot = {
   namePrefix: 'datafair_',
-  profiles: documentProfiles(['datasets', 'applications'], true)
+  profiles: documentProfiles(['datasets'], true)
 }
 
 export const root: AgentRoot = {
   ...datasetRoot,
+  profiles: documentProfiles(['datasets', 'applications'], true),
   skills: [{
     name: 'workflow',
     profiles: ['catalog'],
