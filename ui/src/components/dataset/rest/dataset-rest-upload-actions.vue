@@ -28,7 +28,10 @@
           <div
             class="mt-3 mb-3"
           >
+            <!-- drop swaps the whole collection and is forbidden on the own/{owner} routes (a
+                 manageOwnLines holder must not wipe the dataset), so hide it in own-lines mode -->
             <v-alert
+              v-if="!ownLines"
               color="warning"
               class="mb-6"
               :variant="drop ? undefined : 'outlined'"
@@ -152,10 +155,13 @@ en:
 import { type RestActionsSummary } from '#api/types'
 import axios, { AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
+import useDatasetEdition from '../table/use-dataset-edition'
 
 const { t, locale } = useI18n()
 
-const { dataset, id: datasetId } = useDatasetStore()
+const { dataset } = useDatasetStore()
+// own-lines mode: post to own/{owner}/_bulk_lines (bulkOwnLines) so the upload is scoped to the caller
+const { ownLines, routeBase } = useDatasetEdition()
 
 const form = ref(false)
 const dialog = ref(false)
@@ -204,7 +210,7 @@ const upload = useAsyncAction(async () => {
     formData.append('attachments', attachmentsFile.value)
   }
   try {
-    result.value = await axios.post(`${$apiPath}/datasets/${datasetId}/_bulk_lines`, formData, options).then(r => r.data)
+    result.value = await axios.post(`${$apiPath}/${routeBase.value}/_bulk_lines`, formData, options).then(r => r.data)
   } catch (error: any) {
     if (axios.isCancel(error)) return
     if (typeof (error.response && error.response.data) === 'object') {
