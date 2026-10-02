@@ -74,6 +74,32 @@
       }
     },
     {
+      "name": "datafair_update_dataset",
+      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Publishing on portals, publications to remote catalogs, the read API key and master-data exposure are done with publish_dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "body": {
+            "type": "object",
+            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL d'une image, illustration du jeu de données\nspatial?: string | null — spatial coverage\ntemporal?: object | null — temporal coverage\nkeywords?: string[] | null — keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms a…\nfrequency?: \"\"|\"triennial\"|\"biennial\"|\"annual\"|\"semiannual\"|\"threeTimesAYear\"|\"quarterly\"|\"bimonthly\"|… (18 values) | null — update frequency\ncreator?: string | null\nmodified?: string | null\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null\norigin?: string | null — The URL where the original data can be found\nconstraints?: object | object[] | null — Contraintes de validation à l'échelle du jeu de données, au delà des validations…\nextensions?: object[] | null — Définition des enrichissements appliqués à ce jeu de données\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset or an…\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null\nrelatedDatasets?: object[] | null\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
       "name": "datafair_search_data",
       "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the \"after\" value returned as next.",
       "inputSchema": {

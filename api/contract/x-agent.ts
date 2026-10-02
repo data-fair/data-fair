@@ -7,7 +7,7 @@
  *
  * The agent-facing surface these produce is pinned by tests/fixtures/agent-surface.<profile>.json.
  */
-import type { AgentRoot, AgentOperation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
+import type { AgentRoot, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
 import { documentProfiles } from './agent-profiles.ts'
 
 const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
@@ -50,6 +50,16 @@ Always cite the dataset page link and license. Answer in the user's language.`
 
 /** On dataset.schema[].key in the dataset component. */
 export const datasetSchemaKeyHint: AgentProperty = { hint: 'use this key in filters, select, sort and field params' }
+
+/**
+ * PATCH /datasets/{id} body fields per tier: content (write) and exposure (manage — portals,
+ * remote catalog publications, read API key, master-data exposure). A test checks that every
+ * field of the body is in exactly one list, so a field added to the API is placed deliberately.
+ */
+export const datasetPatchFields = {
+  write: ['slug', 'title', 'summary', 'description', 'image', 'spatial', 'temporal', 'keywords', 'searchTerms', 'frequency', 'creator', 'modified', 'attachments', 'primaryKey', 'schema', 'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'requestedPublicationSites', 'attachmentsAsImage', 'virtual', 'partOf', 'rest', 'topics', 'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'nonBlockingValidation'],
+  manage: ['publications', 'publicationSites', 'readApiKey', 'masterData']
+}
 
 export const operations = {
   listDatasets: {
@@ -178,5 +188,41 @@ export const operations = {
       ...queryParams
     },
     response: { rows: '/metric' }
+  },
+  writeDescription: [
+    {
+      profiles: ['write_datasets'],
+      name: 'update_dataset',
+      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Publishing on portals, publications to remote catalogs, the read API key and master-data exposure are done with publish_dataset.',
+      params: { id: datasetId },
+      body: 'compact',
+      bodyFields: datasetPatchFields.write
+    },
+    {
+      profiles: ['manage_datasets'],
+      name: 'publish_dataset',
+      description: 'Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key and its master-data exposure. Send only the fields to change.',
+      params: { id: datasetId },
+      body: 'compact',
+      bodyFields: datasetPatchFields.manage
+    }
+  ],
+  deleteDataset: {
+    profiles: ['manage_datasets'],
+    name: 'delete_dataset',
+    description: 'Delete a dataset permanently, with its data. Irreversible.',
+    params: { id: datasetId }
+  },
+  getDatasetPermissions: {
+    profiles: ['manage_datasets'],
+    name: 'get_dataset_permissions',
+    description: 'Read who can access a dataset: its permission entries for users, organizations, roles and departments, or for everyone.',
+    params: { id: datasetId }
+  },
+  setDatasetPermissions: {
+    profiles: ['manage_datasets'],
+    name: 'set_dataset_permissions',
+    description: 'Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.',
+    params: { id: datasetId }
   }
-} satisfies Record<string, AgentOperation>
+} satisfies Record<string, AgentOperationAnnotation>

@@ -74,6 +74,79 @@
       }
     },
     {
+      "name": "datafair_delete_dataset",
+      "description": "Delete a dataset permanently, with its data. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "datafair_update_dataset",
+      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Publishing on portals, publications to remote catalogs, the read API key and master-data exposure are done with publish_dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "body": {
+            "type": "object",
+            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL d'une image, illustration du jeu de données\nspatial?: string | null — spatial coverage\ntemporal?: object | null — temporal coverage\nkeywords?: string[] | null — keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms a…\nfrequency?: \"\"|\"triennial\"|\"biennial\"|\"annual\"|\"semiannual\"|\"threeTimesAYear\"|\"quarterly\"|\"bimonthly\"|… (18 values) | null — update frequency\ncreator?: string | null\nmodified?: string | null\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null\norigin?: string | null — The URL where the original data can be found\nconstraints?: object | object[] | null — Contraintes de validation à l'échelle du jeu de données, au delà des validations…\nextensions?: object[] | null — Définition des enrichissements appliqués à ce jeu de données\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset or an…\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null\nrelatedDatasets?: object[] | null\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_publish_dataset",
+      "description": "Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key and its master-data exposure. Send only the fields to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "body": {
+            "type": "object",
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
       "name": "datafair_search_data",
       "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the \"after\" value returned as next.",
       "inputSchema": {
@@ -413,6 +486,175 @@
       },
       "annotations": {
         "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_get_dataset_permissions",
+      "description": "Read who can access a dataset: its permission entries for users, organizations, roles and departments, or for everyone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_set_dataset_permissions",
+      "description": "Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_datasets results. Do not use the title or slug."
+          },
+          "body": {
+            "$id": "https://github.com/data-fair/data-fair/permissions-resolved",
+            "title": "Permissions",
+            "x-exports": [
+              "types",
+              "validate",
+              "resolvedSchema"
+            ],
+            "type": "array",
+            "items": {
+              "title": "Permission",
+              "type": "object",
+              "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "organization"
+                  ],
+                  "description": "If the entity is a user or an organization"
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Identifier of the entity"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the entity"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email of the user"
+                },
+                "department": {
+                  "type": "string",
+                  "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
+                },
+                "departmentName": {
+                  "type": "string",
+                  "description": "Name of the department"
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Role name"
+                  }
+                },
+                "operations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "API operation that can be used"
+                  }
+                },
+                "classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "API permission classes that can be used"
+                  }
+                }
+              }
+            },
+            "$defs": {
+              "permission": {
+                "title": "Permission",
+                "type": "object",
+                "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ],
+                    "description": "If the entity is a user or an organization"
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "Identifier of the entity"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the entity"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Email of the user"
+                  },
+                  "department": {
+                    "type": "string",
+                    "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
+                  },
+                  "departmentName": {
+                    "type": "string",
+                    "description": "Name of the department"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "Role name"
+                    }
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "API operation that can be used"
+                    }
+                  },
+                  "classes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "API permission classes that can be used"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
         "destructiveHint": false
       }
     }

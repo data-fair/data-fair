@@ -35,8 +35,8 @@ const datasetReads = ['datafair_aggregate_data', 'datafair_calculate_metric', 'd
 const expectedTools: Record<string, string[]> = {
   catalog: [...datasetReads, 'datafair_list_datasets'],
   read_datasets: [...datasetReads, 'datafair_list_account_datasets'],
-  write_datasets: [...datasetReads, 'datafair_list_account_datasets'],
-  manage_datasets: [...datasetReads, 'datafair_list_account_datasets'],
+  write_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset'],
+  manage_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset', 'datafair_publish_dataset', 'datafair_delete_dataset', 'datafair_get_dataset_permissions', 'datafair_set_dataset_permissions'],
   read_applications: [],
   write_applications: [],
   manage_applications: []
@@ -76,6 +76,14 @@ test.describe('agent surface of the root document', () => {
     const names = toolSet.tools.map(t => t.name)
     assert.equal(new Set(names).size, names.length)
     assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
+  })
+
+  test('places every dataset PATCH body field in exactly one view', async () => {
+    const { apiDocs, xAgent } = await generators()
+    const body = apiDocs(PUBLIC_URL).paths['/datasets/{id}'].patch.requestBody.content['application/json'].schema
+    const placed = [...xAgent.datasetPatchFields.write, ...xAgent.datasetPatchFields.manage]
+    assert.equal(new Set(placed).size, placed.length, 'no field is in two views')
+    assert.deepEqual([...placed].sort(), Object.keys(body.properties).sort(), 'a new PATCH field must be placed in write or manage')
   })
 
   test('the catalog workflow skill comes with the catalog profile only', async () => {
