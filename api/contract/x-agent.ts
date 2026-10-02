@@ -219,7 +219,7 @@ export const operations = {
   deleteDataset: {
     profiles: ['manage_datasets'],
     name: 'delete_dataset',
-    description: 'Delete a dataset permanently, with its data. Irreversible.',
+    description: 'Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
     params: { id: datasetId }
   },
   getDatasetPermissions: {
@@ -279,7 +279,7 @@ export const operations = {
   deleteApplication: {
     profiles: ['manage_applications'],
     name: 'delete_application',
-    description: 'Delete an application permanently. Irreversible.',
+    description: 'Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
     params: { id: applicationId }
   }
 } satisfies Record<string, AgentOperationAnnotation>

@@ -75,7 +75,7 @@
     },
     {
       "name": "datafair_delete_dataset",
-      "description": "Delete a dataset permanently, with its data. Irreversible.",
+      "description": "Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
       "inputSchema": {
         "type": "object",
         "properties": {

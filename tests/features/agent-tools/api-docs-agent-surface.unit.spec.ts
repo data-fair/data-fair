@@ -169,6 +169,14 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual(pinned, JSON.parse(readFileSync(pinPath, 'utf8')))
   })
 
+  test('the delete tools say that the resources attached to the deleted one go with it', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['manage_datasets', 'manage_applications'] })
+    for (const name of ['datafair_delete_dataset', 'datafair_delete_application']) {
+      assert.match(toolSet.tools.find(t => t.name === name)!.description, /attached to it \(partOf\) are deleted too/, name)
+    }
+  })
+
   test('the catalog workflow skill comes with the catalog profile only', async () => {
     const { apiDocs } = await generators()
     assert.deepEqual((await load(apiDocs(PUBLIC_URL), { profiles: ['catalog'] })).skills.map(s => s.id), ['workflow'])

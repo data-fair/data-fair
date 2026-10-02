@@ -73,7 +73,7 @@
     },
     {
       "name": "datafair_delete_application",
-      "description": "Delete an application permanently. Irreversible.",
+      "description": "Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
       "inputSchema": {
         "type": "object",
         "properties": {
