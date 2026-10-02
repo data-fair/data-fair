@@ -66,7 +66,7 @@ export default (publicUrl, publicationSite, info) => {
           parameters: [
             utils.qParam,
             utils.selectParam(Object.keys(datasetSchema.properties)),
-            utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
+            utils.booleanParam('file', 'Restreindre aux jeux avec fichiers attachés'),
             utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
             utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
             ...utils.paginationParams

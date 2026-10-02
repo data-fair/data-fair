@@ -1,7 +1,6 @@
 import config from '#config'
 import { resolvedSchema as _remoteServicePatchSchema } from '../doc/remote-services/patch-req/.type/index.js'
 import { resolvedSchema as _remoteServiceSchema } from '#types/remote-service/index.js'
-import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 
 const remoteServiceSchema = { ..._remoteServiceSchema }
 const remoteServicePatchSchema = { ..._remoteServicePatchSchema }
@@ -44,7 +43,7 @@ export default (remoteService) => {
           summary: 'Lire les informations',
           description: 'Récupérer les informations de configuration du service distant.',
           operationId: 'readDescription',
-          'x-permissionClass': 'read',
+          'x-permissionClass': 'superadmin',
           tags: ['Configuration'],
           responses: {
             200: {
@@ -61,7 +60,7 @@ export default (remoteService) => {
           summary: 'Modifier le service',
           description: 'Mettre à jour les informations de configuration du service distant.',
           operationId: 'writeDescription',
-          'x-permissionClass': 'write',
+          'x-permissionClass': 'superadmin',
           tags: ['Configuration'],
           requestBody: {
             description: 'Les informations de configuration du service distant.',
@@ -87,7 +86,7 @@ export default (remoteService) => {
           summary: 'Supprimer le service',
           description: 'Pour supprimer cette configuration du service distant.',
           operationId: 'delete',
-          'x-permissionClass': 'admin',
+          'x-permissionClass': 'superadmin',
           tags: ['Configuration'],
           responses: {
             204: {
@@ -97,11 +96,11 @@ export default (remoteService) => {
         }
       },
       '/_update': {
-        get: {
+        post: {
           summary: 'Resynchroniser le service',
           description: 'Se resynchroniser avec l\'API du service distant.',
           operationId: 'updateApiDoc',
-          'x-permissionClass': 'write',
+          'x-permissionClass': 'superadmin',
           tags: ['Configuration'],
           responses: {
             200: {
@@ -120,7 +119,6 @@ export default (remoteService) => {
           summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à la documentation du service distant au format OpenAPI v3.',
           operationId: 'readApiDoc',
-          'x-permissionClass': 'read',
           tags: ['Informations'],
           responses: {
             200: {
@@ -135,8 +133,7 @@ export default (remoteService) => {
             }
           }
         }
-      },
-      '/permissions': permissionsDoc
+      }
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
