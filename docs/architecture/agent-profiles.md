@@ -1,6 +1,7 @@
 # Agent profiles across the stack
 
-Status: design, agreed 2026-10-02. Nothing below the "Current state" section is implemented yet.
+Status: design agreed 2026-10-02. Rollout step 1 (openapi-mcp 0.3.0) and step 2 (data-fair's
+vocabulary and annotations, metrics) are implemented; see section 10.
 
 The services of the stack publish OpenAPI documents annotated with `x-agent`, which
 `@data-fair/openapi-mcp` turns into agent tools. data-fair's deployment index
@@ -192,6 +193,10 @@ Specified in its own repository; this document only depends on the result.
 - The catalog workflow skill (today's `workflow`) is restricted to `catalog`; a back-office
   workflow skill, if any, to the grid.
 
+Done in step 2, except what needs API work first: the portal-scoped `list_applications` (data-fair
+has no `/catalog/applications` route), `PUT /owner`, application permissions and settings (not in
+the root document yet), and creation tools, whose bodies deserve their own design.
+
 ### metrics
 
 `aggregate_requests` moves from `explore` to `read_metrics`.
@@ -265,8 +270,8 @@ one release as a deprecated alias that includes `catalog`, then drops it.
 
 ## 10. Rollout
 
-1. openapi-mcp: views, body allow-list, vocabulary check.
-2. data-fair index and annotations, metrics moved to `read_metrics`, `explore` alias.
+1. openapi-mcp: views, body allow-list, vocabulary check. — done
+2. data-fair index and annotations, metrics moved to `read_metrics`, `explore` alias. — done
 3. `mcp` server: `catalog` in public mode, the compatibility route.
 4. agents service: profile selection and the tree.
 5. Then each service in turn — portals, processings, catalogs, events, capture,

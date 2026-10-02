@@ -748,10 +748,11 @@ still builds the absolute URLs, and the reported `location.url` uses it.
 ## 11. The API-facing agent surface
 
 Independently of the browser tools above, the served OpenAPI document carries `x-agent`
-annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into the `explore`
-tools — the same six read tools as `agent-tools/`, generated from the document instead of
-hand-written. They are consumed by the stack's MCP server (`data-fair/mcp`), by coding agents
-and by the agents service's autonomous runs; the browser assistant does not use them yet.
+annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into tools, grouped by
+the profiles of [agent-profiles.md](./agent-profiles.md): `catalog` (what a portal publishes),
+and `read`/`write`/`manage` for datasets and applications. They are consumed by the stack's MCP
+server (`data-fair/mcp`), by coding agents and by the agents service's autonomous runs; the
+browser assistant does not use them yet.
 
 `GET /api/v1/agents/index.json` lists the deployment's service-level documents
 (`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
@@ -762,12 +763,14 @@ datasets and applications.
 
 How tools are grouped into profiles across the stack — the `read`/`write`/`manage` grid per
 resource family, the `catalog` profile, and the stability rules agent configurations rely on —
-is described in [agent-profiles.md](./agent-profiles.md). `explore` is being retired there.
+is described in [agent-profiles.md](./agent-profiles.md).
 
 The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
-loads the generator with `lint: 'error'` and diffs `tests/fixtures/agent-surface.explore.json`.
-Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is what the reviewer reads.
-Admin-only routes carry no annotation, so the surface does not vary with the session.
+loads the generator with `lint: 'error'` and diffs one golden per profile
+(`tests/fixtures/agent-surface.<profile>.json`); `agents-composition.unit.spec.ts` composes the
+index with the document. Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is
+what the reviewer reads. Admin-only routes carry no annotation, so the surface does not vary with
+the session.
 
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
