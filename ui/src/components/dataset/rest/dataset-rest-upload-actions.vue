@@ -34,13 +34,14 @@
               v-if="!ownLines"
               color="warning"
               class="mb-6"
-              :variant="drop ? undefined : 'outlined'"
+              variant="outlined"
             >
               <v-checkbox
                 v-model="drop"
                 class="mt-0"
                 :label="t('drop')"
                 hide-details
+                color="warning"
                 base-color="warning"
               />
             </v-alert>
