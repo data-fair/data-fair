@@ -192,7 +192,9 @@ function readBody (req: IncomingMessage): Promise<string> {
 
 function sendResult (res: ServerResponse, result: RouteResult) {
   const contentType = result.contentType || 'application/json'
-  res.writeHead(result.status, { 'Content-Type': contentType })
+  // Base apps are fetched cross-origin by the browser (config-schema.json, like the
+  // CDNs serving them in production, which send the same header).
+  res.writeHead(result.status, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' })
   if (result.bodyBase64) {
     res.end(Buffer.from(result.bodyBase64, 'base64'))
   } else {

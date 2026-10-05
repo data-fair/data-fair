@@ -9,7 +9,7 @@
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { untilReady, formatAdvanceResult } from '../../../ui/src/composables/dataset/agent-creation-tools-logic.ts'
+import { untilReady, formatAdvanceResult, resolveInitParts, noDataReason } from '../../../ui/src/composables/dataset/agent-creation-tools-logic.ts'
 
 test.describe('untilReady', () => {
   test('resolves true as soon as the getter turns true', async () => {
@@ -46,5 +46,35 @@ test.describe('formatAdvanceResult', () => {
     assert.match(out, /confirmation step/)
     assert.match(out, /not.*ready|still|pending/i)
     assert.ok(!/can click/.test(out), out)
+  })
+})
+
+test.describe('resolveInitParts', () => {
+  const finalized = { count: 2, finalizedAt: '2026-01-01' }
+
+  test('without parts, the step keeps its own default', () => {
+    assert.deepEqual(resolveInitParts(undefined, finalized, { allowData: true }), {})
+  })
+
+  test('asked-for parts always include the columns of a dataset that has some', () => {
+    assert.deepEqual(resolveInitParts(['description', 'keywords'], finalized, { allowData: true }), { parts: ['schema', 'description', 'keywords'] })
+    assert.deepEqual(resolveInitParts(['summary'], { isMetaOnly: true }, { allowData: true }), { parts: ['summary'] })
+  })
+
+  test('refuses a part the API does not know', () => {
+    assert.match((resolveInitParts(['columns'], finalized, { allowData: true }) as any).error, /unknown part/)
+  })
+
+  test('refuses the data where the step would', () => {
+    assert.match((resolveInitParts(['data'], finalized, { allowData: false }) as any).error, /not offered/)
+    assert.match((resolveInitParts(['data'], { isMetaOnly: true }, { allowData: true }) as any).error, /not offered/)
+    assert.match((resolveInitParts(['data'], { count: 2 }, { allowData: true }) as any).error, /not finalized/)
+    assert.match((resolveInitParts(['data'], { count: 0, finalizedAt: 'x' }, { allowData: true }) as any).error, /no rows/)
+    assert.deepEqual(resolveInitParts(['data'], { file: { name: 'a.csv' } }, { allowData: true }), { parts: ['schema', 'data'] })
+    assert.deepEqual(resolveInitParts(['data'], finalized, { allowData: true }), { parts: ['schema', 'data'] })
+  })
+
+  test('the reasons match the step', () => {
+    assert.equal(noDataReason(finalized, true), null)
   })
 })

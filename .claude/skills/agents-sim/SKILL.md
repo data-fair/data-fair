@@ -49,8 +49,14 @@ while someone is relying on that data.
 
    Models are pinned by `SIM_ASSISTANT_MODEL` (default `sonnet`),
    `SIM_TOOLS_MODEL` (default `haiku`, for sub-agents, compaction and the
-   moderation guard) and `SIM_USER_MODEL` (default `haiku`), and recorded per
+   moderation guard) and `SIM_USER_MODEL` (default `sonnet`), and recorded per
    run, so verdicts from different tiers are never compared silently.
+
+   Keep the persona on `sonnet`: a weaker persona drops its premise or breaks
+   character, and the case stops testing anything. It is the assistant that
+   earns a second tier — a new baseline repeats each case several times with
+   the default assistant, then again with `SIM_ASSISTANT_MODEL=haiku`, to show
+   a small model can still carry the scenario through.
 
    **Confirm it started.** A suite takes minutes, so you will want to background
    it — and a run that never launched looks exactly like a run still going. The

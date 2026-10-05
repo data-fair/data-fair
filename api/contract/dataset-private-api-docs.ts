@@ -4,7 +4,6 @@ import type { Dataset, Settings } from '#types'
 import config from '#config'
 import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
 import { gettingStartedGuide } from './getting-started-guide.ts'
-import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.ts'
@@ -173,16 +172,33 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (ds.file) {
     api.paths['/'].post = {
       summary: 'Mettre à jour les données',
-      description: 'Mettre à jour le fichier de données du jeu de données. La nouvelle version est créée en brouillon, à valider via la route `validateDraft`.',
+      description: "Mettre à jour le fichier de données du jeu de données. La nouvelle version est d'abord chargée en brouillon, puis validée selon le paramètre `draft`.",
       operationId: 'writeData',
       'x-permissionClass': 'write',
       tags: ['Données'],
+      parameters: [{
+        in: 'query',
+        name: 'draft',
+        description: 'Mode de validation du brouillon :\n- `always` (par défaut) : valider automatiquement, nécessite la permission de faire des modifications cassantes (`writeDescriptionBreaking`)\n- `compatible` : valider automatiquement si le schéma reste compatible\n- `compatibleOrCancel` : valider si le schéma reste compatible, sinon annuler le brouillon\n- `never` : ne pas valider, le brouillon doit être validé via la route `validateDraft`\n- `true` : équivalent à `compatible`, ou à `never` pour un jeu de documents numériques',
+        schema: {
+          type: 'string',
+          enum: ['always', 'compatible', 'compatibleOrCancel', 'never', 'true'],
+          default: 'always'
+        }
+      }],
       requestBody: {
         description: 'Le fichier à charger et autres informations.',
         required: true,
         content: {
           'multipart/form-data': {
-            schema: datasetPost.properties.body
+            schema: {
+              type: 'object',
+              properties: {
+                file: { type: 'string', format: 'binary', description: 'Le fichier de données.' },
+                attachments: { type: 'string', format: 'binary', description: 'Archive .zip des pièces jointes référencées par les lignes.' },
+                body: { type: 'string', description: 'Les métadonnées à modifier, en JSON (mêmes propriétés que pour `PATCH /`).' }
+              }
+            }
           }
         }
       },
@@ -196,7 +212,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }
         },
         ...writeErrorResponses,
-        413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+        413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+        429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
       }
     }
   }
@@ -273,7 +290,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }
         },
         ...errorResponses,
-        413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+        413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+        429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
       }
     }
   }
@@ -497,7 +515,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             }
           },
           ...errorResponses,
-          413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+          413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+          429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
         }
       },
       patch: {
@@ -521,7 +540,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             }
           },
           ...errorResponses,
-          413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+          413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+          429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
         }
       },
       delete: {
@@ -570,7 +590,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             description: 'La ligne de données a été supprimée (`_action: delete`).'
           },
           ...errorResponses,
-          413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+          413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+          429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
         }
       },
       delete: {
@@ -594,6 +615,27 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         operationId: 'bulkLines',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
+        parameters: [{
+          in: 'query',
+          name: 'drop',
+          description: 'Remplacer toutes les lignes existantes par celles de la requête.',
+          schema: { type: 'boolean', default: false }
+        }, {
+          in: 'query',
+          name: 'async',
+          description: "Ne pas attendre l'indexation des lignes avant de répondre. Automatique quand le corps dépasse la taille maximale d'un traitement synchrone.",
+          schema: { type: 'boolean', default: false }
+        }, {
+          in: 'query',
+          name: 'sep',
+          description: 'Séparateur de colonnes quand les opérations sont envoyées au format CSV.',
+          schema: { type: 'string', default: ',' }
+        }, {
+          in: 'query',
+          name: 'lock',
+          description: 'Bloquer les autres opérations sur le jeu de données pendant le traitement.',
+          schema: { type: 'boolean', default: false }
+        }],
         requestBody: {
           description: 'Les opérations à appliquer.',
           required: true,
@@ -606,12 +648,24 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             },
             'application/x-ndjson': {
               schema: bulkLineSchema
+            },
+            'text/csv': {
+              schema: { type: 'string' }
+            },
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  actions: { type: 'string', format: 'binary', description: 'Fichier des opérations (JSON, NDJSON, CSV, XLSX, ODS, éventuellement compressé en .gz ou dans une archive .zip contenant un seul fichier).' },
+                  attachments: { type: 'string', format: 'binary', description: 'Archive .zip des pièces jointes référencées par les lignes.' }
+                }
+              }
             }
           }
         },
         responses: {
           200: {
-            description: 'Le résultat des opérations.',
+            description: "Le résultat des opérations. Le statut est 400 avec le même corps quand aucune opération n'a réussi et qu'au moins une est en erreur.",
             content: {
               'application/json': {
                 schema: {
@@ -620,23 +674,44 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                     nbOk: { type: 'integer' },
                     nbNotModified: { type: 'integer' },
                     nbErrors: { type: 'integer' },
+                    nbWarnings: { type: 'integer' },
+                    nbCreated: { type: 'integer' },
+                    nbModified: { type: 'integer' },
+                    nbDeleted: { type: 'integer' },
                     errors: {
                       type: 'array',
+                      description: 'Les 50 premières erreurs.',
                       items: {
                         type: 'object',
                         properties: {
                           line: { type: 'integer' },
-                          error: { type: 'string' }
+                          error: { type: 'string' },
+                          status: { type: 'integer' }
                         }
                       }
-                    }
+                    },
+                    warnings: {
+                      type: 'array',
+                      description: 'Les 50 premiers avertissements.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          line: { type: 'integer' },
+                          warning: { type: 'string' }
+                        }
+                      }
+                    },
+                    indexedAt: { type: 'string', format: 'date-time' },
+                    dropped: { type: 'boolean' },
+                    cancelled: { type: 'boolean' }
                   }
                 }
               }
             }
           },
           ...errorResponses,
-          413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+          413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+          429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
         }
       }
     }
@@ -663,7 +738,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           // A different operation: the agent annotation of the original does not carry over.
           delete p['x-agent']
           p['x-permissionClass'] = 'manageOwnLines'
-          p.operationId = p.operationId.replace('Line', 'OwnLine')
+          p.operationId = p.operationId.replace(/^[a-z]+/, '$&Own')
           if (p.summary) p.summary += ' (par propriétaire)'
           if (p.description) {
             p.description += ' (restreint par propriétaire de ligne)'
@@ -822,7 +897,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                 schema: {
                   type: 'object',
                   properties: {
-                    current: { type: 'string' }
+                    current: { type: 'string' },
+                    previous: { type: 'string', description: 'La clé précédente, encore acceptée pendant le renouvellement.' }
                   }
                 }
               }

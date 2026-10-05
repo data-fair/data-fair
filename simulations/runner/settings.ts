@@ -93,6 +93,13 @@ export async function seedSettings (assistantModelId: string, toolsModelId: stri
   const { superadmin, org } = bridgeSettings(assistantModelId, toolsModelId)
   await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}`, superadmin)
   await admin.put(`/agents/api/settings/${OWNER.type}/${OWNER.id}/org`, org)
+  // The agents service caps each account's AI credits before any quota, and a
+  // production-mode image defaults that cap to 0: every request is refused with
+  // a 429. -1 lifts it; consumption is reset so a run never inherits the last.
+  await admin.post(`/agents/api/v1/limits/${OWNER.type}/${OWNER.id}`, {
+    lastUpdate: new Date().toISOString(),
+    ai_credits: { limit: -1, consumption: 0 }
+  })
   // PATCH merges, so it preserves the owner's other settings.
   await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, { agentChat: true })
 }

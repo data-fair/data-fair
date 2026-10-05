@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, patchRawDataset } from '../../support/workers.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -229,7 +229,10 @@ test.describe('permissions', () => {
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'test_org1',
-      name: 'Test Org 1'
+      name: 'Test Org 1',
+      // an empty department is the org root, it must not be stored as such
+      department: '',
+      departmentName: ''
     })
     dataset = (await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.deepEqual(dataset.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
@@ -263,6 +266,18 @@ test.describe('permissions', () => {
       name: 'Test Org 6'
     })
     assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
+  })
+
+  test('a legacy empty owner department is listed as the org root', async () => {
+    const ax = testUser1Org
+    const legacy = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'legacy' })).data
+    const root = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'root' })).data
+    await patchRawDataset(legacy.id, { 'owner.department': '' })
+
+    const res = (await ax.get('/api/v1/datasets', { params: { owner: 'organization:test_org1:-', facets: 'owner', select: 'id' } })).data
+    assert.deepEqual(res.results.map((d: any) => d.id).sort(), [legacy.id, root.id].sort())
+    assert.equal(res.facets.owner.length, 1)
+    assert.equal(res.facets.owner[0].count, 2)
   })
 
   test('Upload new dataset in org zone then change ownership to department', async () => {

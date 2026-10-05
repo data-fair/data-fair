@@ -114,11 +114,11 @@
             class="mb-4"
           />
           <dataset-init-from
-            :key="initFromParent?.id"
+            :key="(initFromParent ?? agentInitSource)?.id"
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
-            :allow-data="!initFromParent && (datasetType === 'file' || datasetType === 'rest')"
-            :initial-dataset="initFromParent"
+            :allow-data="initAllowData"
+            :initial-dataset="initFromParent ?? agentInitSource"
             :fragment="!!partOf"
             :owner="owner"
           />
@@ -554,6 +554,8 @@ function goToNext () {
 
 // ---- Init from ----
 const initFrom = ref<InitFrom | null>(null)
+// A source chosen by the assistant (init_from_dataset), shown selected like a person's pick.
+const agentInitSource = ref<any>(null)
 const initFromSourceTitle = ref<string | null>(null)
 const initFromData = computed(() => initFrom.value?.parts?.includes('data') ?? false)
 
@@ -646,6 +648,7 @@ const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVi
 watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
 // a fragment of a virtual dataset starts from the columns the parent exposes, so it fits right in once
 // it joins the parent's children (the data part is not offered: it would duplicate the parent's rows)
+const initAllowData = computed(() => !initFromParent.value && (datasetType.value === 'file' || datasetType.value === 'rest'))
 const initFromParent = computed(() => {
   const parent = partOfParentFetch.data.value
   if (partOf.value?.type !== 'dataset' || !parent?.isVirtual || !parent.schema?.some(p => !p['x-calculated'])) return null
@@ -753,6 +756,7 @@ useAgentState('wizard', () => buildDatasetWizardState({
   fileName: file.value?.name,
   history: restHistory.value,
   attachments: restAttachments.value,
+  initFrom: initFrom.value,
   childrenCount: virtualChildren.value.length
 }))
 
@@ -769,7 +773,11 @@ useAgentDatasetCreationTools(locale, {
   restAttachmentsAsImage,
   virtualTitle,
   metaOnlyTitle,
-  fileTitle
+  fileTitle,
+  initSource: agentInitSource,
+  initFrom,
+  initAllowData,
+  initLocked: computed(() => !!initFromParent.value)
 })
 
 // The action button sends the same text as its hidden context: one source.

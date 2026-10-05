@@ -1193,6 +1193,11 @@ useAgentState('structure', () => buildDatasetStructureState({
   valid: masterDataFormValid.value && !hasInvalidExtension.value
 }))
 
+// The metadata card's pending edits. Without it an assistant that had written
+// searchTerms with set_dataset_metadata read structure.unsaved:false and told the
+// person their edit had not registered.
+useAgentState('metadata', () => ({ unsaved: metadataEditFetch.hasDiff.value }))
+
 /** Save, then report it — the transition a declared wait resolves on. */
 const saveStructure = async () => {
   await structureEditFetch.save.execute()

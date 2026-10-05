@@ -161,6 +161,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
   const sessionState = reqSessionAuthenticated(req)
 
   const application = reqApplication(req)
+  usersUtils.normalizeOwner(req.body)
   if (application.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
   if (await fragmentsService.countFragments('application', application.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
 

@@ -207,7 +207,7 @@ services:
   agents:
     profiles:
       - dev
-    image: ghcr.io/data-fair/agents:main
+    image: ${AGENTS_IMAGE:-ghcr.io/data-fair/agents:main}
     network_mode: host
     depends_on:
       - mongodb
