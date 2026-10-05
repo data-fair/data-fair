@@ -204,6 +204,9 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   if (fetchedData.temporal) meta.push(`- **Temporal:** ${JSON.stringify(fetchedData.temporal)}`)
   if (Array.isArray(fetchedData.bbox) && fetchedData.bbox.length > 0) {
     meta.push(`- **Geolocalized:** yes (bbox: [${fetchedData.bbox.join(', ')}]). Geo filters (bbox, geoDistance) are available in search_data, aggregate_data, and calculate_metric.`)
+  } else {
+    // stated, not left out: judged runs offered a map of a dataset that had none
+    meta.push('- **Geolocalized:** no — it has no map view and no geo filters, only its table.')
   }
   if (fetchedData.timePeriod) {
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
