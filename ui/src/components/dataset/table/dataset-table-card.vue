@@ -6,28 +6,33 @@
 <template>
   <v-card
     class="fill-height dataset-table-card"
+    :class="{'dataset-table-card--selected': selected}"
     variant="outlined"
   >
-    <v-card-title
-      v-if="labelField || result._thumbnail"
-      class="pb-0"
+    <div
+      v-if="selectable || label || result._thumbnail"
+      class="d-flex align-center ga-2 pa-2 pb-0"
     >
-      <v-row class="ma-0">
-        <v-avatar
-          v-if="result._thumbnail"
-          rounded="0"
-          style="position:relative;top:-12px;left:-12px;"
-        >
-          <img :src="result._thumbnail">
-        </v-avatar>
-        <h5
-          v-if="labelField && result.values[labelField.key] && !Array.isArray(result.values[labelField.key])"
-          style="word-break: normal;line-height:18px"
-        >
-          {{ (result.values[labelField.key] as ExtendedResultValue).formatted }}
-        </h5>
-      </v-row>
-    </v-card-title>
+      <v-btn
+        v-if="selectable"
+        :icon="selected ? mdiCheckboxMarked : mdiCheckboxBlankOutline"
+        :title="selected ? t('unselectLine') : t('selectLine')"
+        :color="selected ? 'primary' : undefined"
+        density="compact"
+        variant="text"
+        @click="emit('select')"
+      />
+      <v-avatar
+        v-if="result._thumbnail"
+        rounded="sm"
+      >
+        <img :src="result._thumbnail">
+      </v-avatar>
+      <span
+        v-if="label"
+        class="text-title-small"
+      >{{ label }}</span>
+    </div>
     <v-card-text class="py-0 px-2">
       <div
         v-if="result._highlight && result._highlight['_file.content'] && result._highlight['_file.content'][0]"
@@ -46,7 +51,6 @@
           :key="`input-${header.key}`"
         >
           <div
-            v-if="result.values[header.key]"
             :class="`dataset-table-card-value-${result._id}-${header.cssKey ?? header.key}`"
             style="position: relative;"
             :style="showHeaderMenu ? 'cursor:pointer' : ''"
@@ -125,8 +129,12 @@
 <i18n lang="yaml">
   fr:
     showFullValue: Afficher la valeur entière
+    selectLine: Sélectionner la ligne
+    unselectLine: Désélectionner la ligne
   en:
     showFullValue: Show full value
+    selectLine: Select the line
+    unselectLine: Deselect the line
   </i18n>
 
 <script setup lang="ts">
@@ -134,9 +142,9 @@ import { type DatasetFilter } from '~/composables/dataset/filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset/lines'
 import { type TableHeaderWithProperty, type TableSort } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
-import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
+import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus, mdiCheckboxMarked, mdiCheckboxBlankOutline } from '@mdi/js'
 
-const { headers, noSort, noFilter, noCols } = defineProps({
+const { result, headers, noSort, noFilter, noCols } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
@@ -145,7 +153,9 @@ const { headers, noSort, noFilter, noCols } = defineProps({
   noFilter: { type: Boolean, default: false },
   noSort: { type: Boolean, default: false },
   noCols: { type: Boolean, default: false },
-  hovered: { type: Object as () => ExtendedResultValue, default: null }
+  hovered: { type: Object as () => ExtendedResultValue, default: null },
+  selectable: { type: Boolean, default: false },
+  selected: { type: Boolean, default: false }
 })
 
 const sort = defineModel<TableSort>('sort')
@@ -156,24 +166,30 @@ const emit = defineEmits<{
   hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
   hoverstop: [],
   showMapPreview: [],
-  showDetailDialog: [header: TableHeaderWithProperty]
+  showDetailDialog: [header: TableHeaderWithProperty],
+  select: []
 }>()
 
 // the header menu is only worth opening if at least one of its sections is active
 const showHeaderMenu = computed(() => !noSort || !noFilter || !noCols)
 
 const { t } = useI18n()
-const { labelField } = useDatasetStore()
+const { labelField, imageField } = useDatasetStore()
 
-const otherHeaders = computed(() => headers.filter(h => {
-  if (!h.property) return false
-  // if (this.descriptionField && this.descriptionField.key === f.key) return false
-  if (labelField.value && labelField.value.key === h.key) return false
-  return true
-}))
+const label = computed(() => {
+  const value = labelField.value && result.values[labelField.value.key]
+  return value && !Array.isArray(value) ? value.formatted : undefined
+})
+
+// label and image are already shown in the card header
+const otherHeaders = computed(() => headers.filter(h => h.property && h.key !== labelField.value?.key && h.key !== imageField.value?.key))
 </script>
 
 <style>
+
+.dataset-table-card--selected {
+  border-color: rgb(var(--v-theme-primary));
+}
 
 .dataset-table-card .v-input__slot {
   display: block;

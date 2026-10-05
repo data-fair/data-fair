@@ -290,7 +290,7 @@
         dense
       >
         <v-col
-          v-for="result in results"
+          v-for="result in (pagination ? paginatedResults : results)"
           :key="result._id"
           cols="12"
           sm="6"
@@ -310,6 +310,9 @@
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
+            :selectable="selectable"
+            :selected="selectedItem === result._id"
+            @select="selectedItem = selectedItem === result._id ? '' : result._id"
             @filter="f => can('cells') && addFilter(f)"
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
@@ -322,7 +325,7 @@
       <!-- list mode show more (infinite scroll only) -->
       <v-row
         v-if="results.length && !pagination"
-        v-intersect="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
+        v-intersect="(isIntersecting: boolean) => isIntersecting && !fetchResults.loading.value && fetchResults.execute()"
         align="center"
         class="my-0"
       >

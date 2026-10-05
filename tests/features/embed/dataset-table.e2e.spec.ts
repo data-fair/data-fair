@@ -15,6 +15,34 @@ test.describe('embed dataset table page', () => {
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
   })
 
+  test('selects a line from the card list display', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&selectable=true`, 'test_user1')
+    const card = page.locator('.dataset-table-card').filter({ hasText: 'koumoul' })
+    await card.getByTitle('Sélectionner la ligne').click()
+    await expect(page).toHaveURL(/_id_eq=/)
+    await expect(card.getByTitle('Désélectionner la ligne')).toBeVisible()
+  })
+
+  // the infinite-scroll sentinel stays visible on a short list and used to fetch the first page a
+  // second time while the filter reset was loading it, duplicating the cards
+  test('does not duplicate cards when filtering the card list display', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+    const cards = page.locator('.dataset-table-card')
+    await expect(cards).toHaveCount(2, { timeout: 10000 })
+    await cards.getByText('koumoul', { exact: true }).click()
+    await page.getByText('Ajouter un filtre').click()
+    await page.getByText('Égal à une valeur').click()
+    await page.locator('.v-overlay').getByText('koumoul', { exact: true }).click()
+    await expect(page.getByText('1 ligne', { exact: true })).toBeVisible()
+    await expect(cards).toHaveCount(1)
+  })
+
   test('displays dataset journal', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
