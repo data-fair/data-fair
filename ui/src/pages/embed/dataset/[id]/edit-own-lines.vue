@@ -12,27 +12,26 @@
       :height="windowHeight"
       :interactions="interactions"
       :edit="true"
+      :own-lines="true"
     />
   </v-container>
 </template>
 
 <script setup lang="ts">
-// exemple avec volumétrie, historique DPE:
-// https://koumoul.com/data-fair/embed/dataset/rr6wq5gxjqpm-89iyna6n4dz/table
+// editable table restricted to the active account's own lines, for a crowd-sourcing contributor who
+// typically holds only readSafeDescription, readSafeSchema and manageOwnLines. Every read and write
+// goes through the own/{owner}/* routes. No background watch: the realtime channels need permissions
+// such a contributor does not hold, and the table already refreshes after its own writes.
 
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
-import { useDatasetWatch } from '~/composables/dataset/watch'
 import { parseInteractions } from '~/composables/dataset/interactions'
 
 const { height: windowHeight } = useWindowSize()
 
-const route = useRoute<'/embed/dataset/[id]/table-edit'>()
+const route = useRoute<'/embed/dataset/[id]/edit-own-lines'>()
 
-const store = provideDatasetStore(route.params.id, undefined, true)
-// subscribe to background changes so the editable embed refreshes its rows
-// like the back-office table (reloads on finalize-end via the changed finalizedAt)
-useDatasetWatch(store, ['info'])
+provideDatasetStore(route.params.id, undefined, true)
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')

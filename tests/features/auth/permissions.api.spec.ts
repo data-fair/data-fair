@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
-import { sendDataset, patchRawDataset } from '../../support/workers.ts'
+import { sendDataset, patchRawDataset, waitForFinalize } from '../../support/workers.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -121,6 +121,46 @@ test.describe('permissions', () => {
       testUser1.get('/api/v1/datasets/' + datasetId2 + '/api-docs.json'),
       { status: 403 }
     )
+  })
+
+  test('safe description hides what reflects the data', async () => {
+    let res = await testUser1.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'A dataset',
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    const datasetId = res.data.id
+    await testUser1.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, [{ col1: 'a' }, { col1: 'a' }, { col1: 'b' }, { col1: 'b' }])
+    const full = await waitForFinalize(testUser1, datasetId)
+    assert.deepEqual(full.schema.find((p: any) => p.key === 'col1').enum, ['a', 'b'])
+    assert.equal(full.safe, undefined)
+
+    await testUser1.put('/api/v1/datasets/' + datasetId + '/permissions', [
+      { type: 'user', id: 'test_user3', operations: ['readSafeDescription'] },
+      { type: 'user', id: 'test_user5', operations: ['readDescription'] }
+    ])
+
+    res = await testUser3.get('/api/v1/datasets/' + datasetId)
+    const safe = res.data
+    assert.equal(safe.safe, true)
+    assert.equal(safe.title, 'A dataset')
+    assert.equal(safe.isRest, true)
+    assert.deepEqual(safe.userPermissions, ['readSafeDescription'])
+    const col1 = safe.schema.find((p: any) => p.key === 'col1')
+    assert.equal(col1.type, 'string')
+    assert.equal(col1.enum, undefined)
+    assert.equal(col1['x-cardinality'], undefined)
+    for (const key of ['count', 'storage', 'bbox', 'timePeriod', 'finalizedAt', 'dataUpdatedAt']) {
+      assert.equal(safe[key], undefined, `${key} must not be part of a safe description`)
+    }
+
+    // a stored permission granting readDescription alone still gets the whole description
+    res = await testUser5.get('/api/v1/datasets/' + datasetId)
+    assert.equal(res.data.safe, undefined)
+    assert.equal(res.data.count, 4)
+    assert.deepEqual(res.data.schema.find((p: any) => p.key === 'col1').enum, ['a', 'b'])
+
+    await assert.rejects(testAlone.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
   })
 
   test('apply permissions to datasets in organization and departments', async () => {

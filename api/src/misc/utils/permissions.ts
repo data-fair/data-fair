@@ -36,7 +36,13 @@ const resourceTypesLabels: Record<ResourceType, string> = {
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
-export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
+// operationIds may list several operations, any of which grants access (e.g. readDescription or
+// readSafeDescription); the first one is the operation reported in x-operation
+export const middleware = function (operationIds: string | string[], operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
+  const operationIdsList = Array.isArray(operationIds) ? operationIds : [operationIds]
+  const operationId = operationIdsList[0]
+  const canAny = (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypass?: BypassPermissions) =>
+    operationIdsList.some(op => can(resourceType, resource, op, sessionState, bypass))
   // pre-compute the x-operation header since it is constant per route
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
   const operationHeader = JSON.stringify(operation)
@@ -48,12 +54,12 @@ export const middleware = function (operationId: string, operationClass: string,
       next()
       return
     }
-    if (can(reqResourceType(req), reqResource(req), operationId, sessionState, reqBypassPermissions(req))) {
+    if (canAny(reqResourceType(req), reqResource(req), sessionState, reqBypassPermissions(req))) {
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
       const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'
-      if (operationId === 'readDescription') {
+      if (operationIdsList.includes('readDescription')) {
         const resource = reqResource(req)
         if (!sessionState.user) {
           res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
@@ -63,7 +69,7 @@ export const middleware = function (operationId: string, operationClass: string,
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
-          if (can(reqResourceType(req), resource, operationId, altSessionState, reqBypassPermissions(req))) {
+          if (canAny(reqResourceType(req), resource, altSessionState, reqBypassPermissions(req))) {
             // expose x-owner so the UI can offer a "switch active account" action without parsing the error body
             if (resource.owner) {
               const ownerKey = resource.owner.department
@@ -83,7 +89,7 @@ export const middleware = function (operationId: string, operationClass: string,
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    setReqPublicOperation(req, can(reqResourceType(req), reqResource(req), operationId, { lang: 'fr' }))
+    setReqPublicOperation(req, canAny(reqResourceType(req), reqResource(req), { lang: 'fr' }))
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
     const resource = reqResourceOptional(req)
