@@ -28,8 +28,8 @@ Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
 - When the result is tabular or aggregated, include the key values as a compact markdown table (the relevant rows or aggregation groups, typically up to ~20) so the parent assistant can render a table or small chart — add a short summary of the takeaways, but never paste large raw result dumps
-- Any table/map link you write must be datasetUrl + /table?<filterQuery> (or /map), reusing the verbatim filterQuery below — never hand-assemble \`column=value\` filter params, even if your task phrased the filter differently
-- Map links additionally accept &category=<column_key>: the map then colors its features by that column's values and displays a legend. Offer it when the user wants to visually distinguish items on a map by a category-like column (string/boolean, few distinct values — at most ~12 render distinctly, check with get_field_values when unsure). Example: datasetUrl + /map?<filterQuery>&category=type
+- Write a table/map link only when your task gives the dataset page URL: it is that URL + /table?<filterQuery> (or /map), reusing the verbatim filterQuery below — never hand-assemble \`column=value\` filter params, even if your task phrased the filter differently. Without a URL, give the filterQuery alone: the parent assistant builds the link
+- Map links additionally accept &category=<column_key>: the map then colors its features by that column's values and displays a legend. Offer it when the user wants to visually distinguish items on a map by a category-like column (string/boolean, few distinct values — at most ~12 render distinctly, check with get_field_values when unsure). Example: <dataset page URL>/map?<filterQuery>&category=type
 - Respond in the same language as the user's question
 
 Response structure:
@@ -39,8 +39,7 @@ Your response will be read by a parent assistant that may need to ask you follow
 
 2. **Context** (after a "---" separator): a structured summary for the parent assistant containing:
    - **datasetId**: the dataset ID(s) you queried
-   - **datasetSlug**: the dataset slug(s) from the schema
-   - **datasetTitle**: the dataset title(s) from the schema
+   - **datasetSlug** and **datasetTitle**: only as a tool result showed them (get_dataset_schema prints both); if you did not fetch them, leave these two lines out — never put the dataset id in their place
    - **columns**: the column keys and titles that were relevant to the query
    - **filters**: the exact filters, q, bbox, geoDistance, dateMatch, and sort parameters you used (as key-value pairs), so the parent assistant can refine or extend them in follow-up queries
    - **filterQuery**: copy the "Filter query:" line from the tool output verbatim (URL query string format) — this is the only correct filter syntax; never reconstruct it from how the task worded the filter. Both you and the parent assistant use it to link to a filtered table view.

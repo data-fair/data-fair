@@ -58,4 +58,15 @@ test.describe('dataset_data subagent', () => {
   test('prompt instructs to report datasetSlug', () => {
     assert.ok(datasetDataSubagentPrompt.includes('datasetSlug'), 'subagent prompt missing datasetSlug')
   })
+
+  // Judged portal simulations: told the columns, the sub-agent skips get_dataset_schema, never
+  // sees the slug or title, and reported the dataset id as both — a link built from it misses
+  // the slug route. It also wrote links on a '[datasetUrl]' placeholder it was never given.
+  test('prompt reports slug and title only when a tool result showed them', () => {
+    assert.ok(datasetDataSubagentPrompt.includes('never put the dataset id in their place'), 'subagent prompt lets the id stand in for slug/title')
+  })
+
+  test('prompt writes links only from a URL it was given', () => {
+    assert.ok(datasetDataSubagentPrompt.includes('only when your task gives the dataset page URL'), 'subagent prompt asks for links without a URL')
+  })
 })
