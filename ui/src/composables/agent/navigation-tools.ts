@@ -3,7 +3,7 @@ import type { Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { unwrapFilterQuery } from '@data-fair/agent-tools-data-fair/_utils'
 import { createAgentTranslator, untilStable } from './utils'
-import { toAbsoluteUrl, toRoutePath, suggestRoutes } from './url-utils'
+import { toAbsoluteUrl, toRoutePath, suggestRoutes, toolsChangeNote } from './url-utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
 
 const messages: Record<string, Record<string, string>> = {
@@ -138,16 +138,17 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
           }
         }
 
+        const toolNames = () => {
+          const tools = (navigator as any).modelContext?.listTools?.()
+          return Array.isArray(tools) ? tools.map((t: { name: string }) => t.name).sort().join(',') : ''
+        }
+        const toolsBefore = toolNames()
         await router.push(query ? { path, query } : path)
         // Return once the destination has registered its tools: the chat offers a
         // tool registered while a host tool runs on its very next step. This used to
         // sleep 500ms and then call those tools "not callable in this request",
         // sending the model into a wait on the arrival — whose `location` event had
         // already been delivered inside this very result, so nothing woke the wait.
-        const toolNames = () => {
-          const tools = (navigator as any).modelContext?.listTools?.()
-          return Array.isArray(tools) ? tools.map((t: { name: string }) => t.name).sort().join(',') : ''
-        }
         // The floor covers a destination whose chunk is still loading: its list has
         // not started changing yet, and a quiet window alone would read that as done.
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -156,7 +157,7 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         return {
           content: [{
             type: 'text' as const,
-            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Note**: this page's agent tools are registered and callable from your next step.`
+            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}\n**Tools**: ${toolsChangeNote(toolsBefore.split(',').filter(Boolean), toolNames().split(',').filter(Boolean))}, callable from your next step.`
           }]
         }
       } catch (error: any) {
