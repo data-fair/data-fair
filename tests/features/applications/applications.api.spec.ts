@@ -260,12 +260,12 @@ test.describe('Applications', () => {
     // The app reference a service worker
     assert.ok(res.data.includes('/app-sw.js'))
     // the app contains the brand embed (cf config.brand.embed)
-    assert.ok(res.data.includes('<div>application embed</div>'))
+    assert.ok(res.data.includes('<div hidden="">application embed</div>'))
 
     // no brand embed if the specific limit is defined
     await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
-    assert.equal(res.data.includes('<div>application embed</div>'), false)
+    assert.equal(res.data.includes('<div hidden="">application embed</div>'), false)
   })
 
   test('Title a proxied application that declares no title', async () => {

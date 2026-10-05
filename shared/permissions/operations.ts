@@ -104,7 +104,10 @@ const withReadApiKey = (c: DatasetContext) => c.hasReadApiKey
 
 const datasetOverrides: Record<string, OpOverride> = {
   list: { title: L('Lister les jeux de données', 'List datasets') },
-  readDescription: { title: L('Lire les informations', 'Read metadata') },
+  // GET /datasets/:id serves readDescription holders the full description and readSafeDescription holders
+  // the safe one; listed as an alt so the contextual doc keeps the route for the latter
+  readDescription: { title: L('Lire les informations', 'Read metadata'), grantedByAlts: ['readSafeDescription'] },
+  readSafeDescription: { title: L('Lire les informations réduites', 'Read the reduced metadata') },
   readSchema: { title: L('Lire le schéma', 'Read the schema'), appliesTo: notMetaOnly },
   readSafeSchema: { title: L('Lire le schéma réduit', 'Read the reduced schema'), appliesTo: notMetaOnly },
   readLines: { title: L('Lire les lignes', 'Read the lines'), appliesTo: notMetaOnly },
@@ -198,7 +201,7 @@ const datasetOverrides: Record<string, OpOverride> = {
 const datasetOperations: OperationDescriptor[] = [
   ...expand('datasets', {
     list: ['list'],
-    read: ['readDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey', 'readCompatODSRecords', 'readCompatODSExports'],
+    read: ['readDescription', 'readSafeDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey', 'readCompatODSRecords', 'readCompatODSExports'],
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
     write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
     manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],

@@ -81,6 +81,7 @@
       <dataset-select-cols
         v-if="can('select-cols')"
         v-model="cols"
+        :title-overrides="colTitles"
       />
       <dataset-download-results-menu
         v-if="can('download') && baseFetchUrl && total !== undefined"
@@ -456,6 +457,9 @@
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
     fullscreen: Afficher en plein écran
+    colTitles:
+      _updatedBy: Mis à jour par
+      _owner: Propriétaire de ligne
   en:
     cancel: Cancel
     delete: Delete
@@ -467,6 +471,9 @@
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
     fullscreen: Show fullscreen
+    colTitles:
+      _updatedBy: Updated by
+      _owner: Line owner
 </i18n>
 
 <script setup lang="ts">
@@ -480,7 +487,7 @@ import { agentToolError } from '~/composables/agent/utils'
 import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
-import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
+import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -494,13 +501,16 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, interactions, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
+const { height, noInteraction, interactions, edit, ownLines, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
   height: { type: Number, default: 800 },
   // legacy all-or-nothing switch, kept for the callers that do not need per-element control
   noInteraction: { type: Boolean, default: false },
   // explicit list of active interactive elements, takes precedence over noInteraction/searchOnly
   interactions: { type: Array as () => Interaction[], default: undefined },
   edit: { type: Boolean, default: false },
+  // own-lines mode: list and edit only the active account's own lines, through the own/{owner}/* routes.
+  // Opt-in like edit; meant for crowd-sourcing embeds where the user holds only manageOwnLines.
+  ownLines: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   pagination: { type: Boolean, default: false },
   searchOnly: { type: Boolean, default: false },
@@ -565,11 +575,21 @@ const sort = computed<TableSort | undefined>({
 })
 
 const display = useDisplay()
+const session = useSession()
 
 const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
-const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
+// in own-lines mode every read/write targets the own/{owner} routes, whose owner is the full active
+// account (department included), exactly as the own-lines embed form builds it
+const linesOwner = computed(() => {
+  if (!ownLines) return undefined
+  const account = session.account.value
+  if (!account) return undefined
+  return `${account.type}:${account.id}` + (account.department ? `:${account.department}` : '')
+})
+
+const allCols = computed(() => dataset.value?.schema?.filter(isVisibleCol).map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
 const hideHeader = (header: TableHeader) => {
@@ -620,7 +640,7 @@ const extraParams = computed(() => ({
   ...(imageField.value ? { thumbnail: '40x40' } : {})
 }))
 const indexedAt = ref<string>()
-const { baseFetchUrl, total, meta, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+const { baseFetchUrl, total, meta, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt, linesOwner)
 
 // caption under a date-time column header stating the timezone its values are displayed in
 // (the offset comes from a real cell so it is DST-correct); empty when values are shown in the
@@ -648,8 +668,11 @@ const nextPage = async () => {
   }
   paginationPage.value++
 }
-const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
-const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt)
+// the API titles these columns from the data's point of view ("Utilisateur de mise à jour"), which is
+// verbose and imprecise as a table header ; relabel them for display rather than in the schema
+const colTitles = computed(() => Object.fromEntries(['_updatedBy', '_owner'].map(key => [key, t(`colTitles.${key}`)])))
+const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys, colTitles, ownLines)
+const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt, linesOwner)
 
 if (edit) {
   // The pair the creation wizard and the schema form already have: what is true
@@ -785,7 +808,8 @@ watch(showEditDialog, async () => {
   loadedLineId.value = undefined
   if (!showEditDialog.value) return
   const lineId = showEditDialog.value._id
-  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${lineId}`, { params: { arrays: true } })
+  const readBase = linesOwner.value ? `datasets/${datasetId}/own/${linesOwner.value}` : `datasets/${datasetId}`
+  editedLine.value = await $fetch(`${readBase}/lines/${lineId}`, { params: { arrays: true } })
   loadedLineId.value = lineId
   // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined

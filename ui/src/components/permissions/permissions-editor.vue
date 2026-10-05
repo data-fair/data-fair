@@ -592,7 +592,10 @@ const allUsersManageOwnLines = computed({
   set (v) {
     if (!props.modelValue) return
     const next = props.modelValue.filter((p) => !isManageOwnLinesPermission(p))
-    if (v) next.push({ type: 'user', id: '*', operations: ['readSafeSchema'], classes: ['manageOwnLines'] })
+    // readSafeDescription + readSafeSchema let the own-lines table/form load the dataset and render the edit
+    // forms without exposing what reflects the other contributors' data; manageOwnLines carries the per-line
+    // read/write. Together the single toggle is enough for a crowd-sourcing user to manage their own lines.
+    if (v) next.push({ type: 'user', id: '*', operations: ['readSafeDescription', 'readSafeSchema'], classes: ['manageOwnLines'] })
     save(next)
   }
 })

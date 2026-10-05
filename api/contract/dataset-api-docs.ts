@@ -682,7 +682,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       '/': {
         get: {
           summary: 'Lire les informations',
-          description: 'Récupérer les informations du jeu de données.',
+          description: 'Récupérer les informations du jeu de données.\n*Avec la seule permission de lire les informations réduites (`readSafeDescription`), la réponse ne contient que les métadonnées et le schéma réduit, sans rien qui reflète les données (nombre de lignes, emprise, période, volume, `enum`, `x-cardinality`...), et porte `safe: true`.*',
           operationId: 'readDescription',
           'x-agent': xAgent.readDescription,
           'x-permissionClass': 'read',
