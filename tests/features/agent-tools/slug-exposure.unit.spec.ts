@@ -66,6 +66,12 @@ test.describe('dataset_data subagent', () => {
     assert.ok(datasetDataSubagentPrompt.includes('never put the dataset id in their place'), 'subagent prompt lets the id stand in for slug/title')
   })
 
+  test('prompt reports only figures a tool computed', () => {
+    // a judged run's sub-agent added an unrequested « capacité totale : 3 250 places » to its
+    // answer, computed by nobody (the 8 values it had returned add up to 2 850)
+    assert.ok(datasetDataSubagentPrompt.includes('never a figure you worked out yourself'), 'subagent prompt lets it state uncomputed figures')
+  })
+
   test('prompt writes links only from a URL it was given', () => {
     assert.ok(datasetDataSubagentPrompt.includes('only when your task gives the dataset page URL'), 'subagent prompt asks for links without a URL')
   })

@@ -25,6 +25,7 @@ Filtering:
 ${filtersGuide}
 
 Format:
+- Every figure you state comes from a tool result: a count, sum or average the user did not ask for is left out, and one they asked for is computed with aggregate_data or calculate_metric — never a figure you worked out yourself from rows
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
 - When the result is tabular or aggregated, include the key values as a compact markdown table (the relevant rows or aggregation groups, typically up to ~20) so the parent assistant can render a table or small chart — add a short summary of the takeaways, but never paste large raw result dumps
