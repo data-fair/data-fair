@@ -236,6 +236,17 @@ test.describe('Attachments', () => {
     assert.equal(downloadAttachmentRes4.headers['x-remote-status'], 'DOWNLOAD')
   })
 
+  test('Refuse a metadata attachment with a target URL on a non public address', async () => {
+    const ax = testUser1
+    await ax.put('/api/v1/datasets/attachments3', { isRest: true, title: 'attachments3' })
+    await ax.patch('/api/v1/datasets/attachments3', { attachments: [{ type: 'remoteFile', name: 'secret.txt', title: 'Secret', targetUrl: 'http://10.255.255.1/secret.txt' }] })
+    await assert.rejects(ax.get('/api/v1/datasets/attachments3/metadata-attachments/secret.txt'), (err: any) => {
+      assert.equal(err.status, 502)
+      assert.ok(err.data.includes('not a public address'), err.data)
+      return true
+    })
+  })
+
   test('Metadata attachment supports Range query (used for PMTILES support)', async () => {
     const ax = testUser1
     await ax.put('/api/v1/datasets/attachments1', { isMetaOnly: true, title: 'attachments1' })

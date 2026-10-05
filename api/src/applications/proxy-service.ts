@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import axios from '../misc/utils/axios.ts'
+import axios, { privateAxios } from '../misc/utils/axios.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 // module-private HTML response cache (keyed by cleanApplicationUrl)
@@ -39,7 +39,8 @@ export const getProxyBaseAppAndLimits = (application: any, applicationUrl: strin
   ])
 }
 
-export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any) => {
+// isPrivate: the target is a private mapping of the application url (our own infrastructure)
+export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any, isPrivate: boolean) => {
   const cacheEntry = htmlCache[cleanApplicationUrl]
   try {
     // search params should not be interpreted by the static application server
@@ -47,7 +48,7 @@ export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any) => 
     const headers: Record<string, string> = {}
     if (cacheEntry?.etag) headers['If-None-Match'] = cacheEntry.etag
     if (cacheEntry?.lastModified) headers['If-Modified-Since'] = cacheEntry.lastModified
-    const res = await axios.get(targetUrl.href, {
+    const res = await (isPrivate ? privateAxios : axios).get(targetUrl.href, {
       headers,
       validateStatus: function (status) {
         return status === 200 || status === 304

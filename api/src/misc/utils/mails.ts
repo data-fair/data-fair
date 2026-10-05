@@ -1,4 +1,5 @@
-import axios from './axios.ts'
+// the directory is a service of our own infrastructure (configured url, not user input)
+import { privateAxios as axios } from './axios.ts'
 import config from '#config'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

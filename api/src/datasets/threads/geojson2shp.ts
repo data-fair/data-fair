@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 import { tmpDir } from '../../datasets/utils/files.ts'
 import { rawEsBuffer2geojson, rawEsBuffer2wkt } from '../../datasets/utils/geo-features.ts'
 import tmp from 'tmp-promise'
+import { getOgrEnv } from '../../misc/utils/ogr.ts'
 
 const config = _config as any
 
@@ -40,6 +41,7 @@ export default async (params: Params) => {
   const tmpFile = `${tmpD}/${params.baseName}.shz`
 
   const opts: string[] = [
+    '-if', 'GeoJSON',
     '-lco', 'ENCODING=UTF-8',
     '-f', 'ESRI Shapefile', tmpFile,
     // read from stdin
@@ -47,7 +49,7 @@ export default async (params: Params) => {
     '/vsistdin/'
   ]
 
-  const ogr = spawn('ogr2ogr', opts)
+  const ogr = spawn('ogr2ogr', opts, { env: getOgrEnv() })
   return await new Promise((resolve, reject) => {
     ogr.stderr.on('data', (data) => {
       console.warn('grojson2shp stderr', data.toString())

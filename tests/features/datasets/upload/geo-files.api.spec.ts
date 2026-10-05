@@ -306,6 +306,19 @@ test.describe('geo files support', () => {
     assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')
   })
 
+  test('Refuse a geographical file whose content is a GDAL VRT', async () => {
+    test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
+    // without an explicit input driver GDAL sniffs the content, a VRT is not a legitimate content in our case
+    const vrt = '<OGRVRTDataSource><OGRVRTLayer name="probe"><SrcDataSource>CSV:/etc/passwd</SrcDataSource><SrcLayer>passwd</SrcLayer><GeometryType>wkbNone</GeometryType></OGRVRTLayer></OGRVRTDataSource>'
+    const form = new FormData()
+    form.append('file', Buffer.from(vrt), 'probe.kml')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    const errorDataset = await waitForDatasetError(ax, res.data.id)
+    assert.equal(errorDataset.status, 'error')
+  })
+
   test('Process uploaded mapinfo dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     // Send dataset
