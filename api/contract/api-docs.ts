@@ -5,6 +5,7 @@ import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
+import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
@@ -119,6 +120,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         datasetPost: datasetPost.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
+        applicationPost: applicationPostReq.properties.body,
       },
       securitySchemes: {
         apiKey: {
@@ -277,7 +279,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             ...writeErrorResponses,
-            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+            413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+            429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
           }
         }
       },
@@ -349,7 +352,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             ...writeErrorResponses,
-            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+            413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+            429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
           }
         }
       },
@@ -367,7 +371,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             utils.selectParam(Object.keys(application.properties)),
             utils.filterParam('ids', 'Restreindre sur les identifiants'),
             utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
-            utils.filterParam('service', 'Restreindre sur les services distants utilisés'),
             ...utils.paginationParams,
             ...utils.visibilityParams
           ],
@@ -405,7 +408,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/application' }
+                schema: { $ref: '#/components/schemas/applicationPost' }
               }
             }
           },
@@ -452,7 +455,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/application' }
+                schema: { $ref: '#/components/schemas/applicationPost' }
               }
             }
           },

@@ -260,12 +260,12 @@ test.describe('Applications', () => {
     // The app reference a service worker
     assert.ok(res.data.includes('/app-sw.js'))
     // the app contains the brand embed (cf config.brand.embed)
-    assert.ok(res.data.includes('<div>application embed</div>'))
+    assert.ok(res.data.includes('<div hidden="">application embed</div>'))
 
     // no brand embed if the specific limit is defined
     await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
-    assert.equal(res.data.includes('<div>application embed</div>'), false)
+    assert.equal(res.data.includes('<div hidden="">application embed</div>'), false)
   })
 
   test('Title a proxied application that declares no title', async () => {
@@ -416,6 +416,18 @@ test.describe('Applications', () => {
     assert.equal(res.data.title, 'updated title')
     // readonly field must be preserved across the replace
     assert.equal(res.data.createdAt, createdAt)
+  })
+
+  test('PUT creates several applications with a chosen id for the same owner', async () => {
+    const ax = testUser1
+    // without a slug, every PUT-created application of an owner indexed a missing _uniqueRefs, so the
+    // second one collided on the unique-refs index and fell through to a 404
+    for (const id of ['put-created-app1', 'put-created-app2']) {
+      const res = await ax.put('/api/v1/applications/' + id, { url: mockAppUrl('monapp1'), title: 'PUT created ' + id })
+      assert.equal(res.status, 201)
+      assert.equal(res.data.id, id)
+      assert.equal(res.data.slug, id)
+    }
   })
 
   test('Reconfiguring an application reconciles old dataset back-references', async () => {

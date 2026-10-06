@@ -66,6 +66,13 @@ echo ""
 echo -e "${BOLD}Dev processes:${RESET}"
 check_http "dev-api" "${NGINX1}/data-fair/api/v1/ping"
 check_http "dev-ui" "http://localhost:${DEV_UI_PORT}"
+# Guarded because .env is generated once per worktree and an older one predates
+# DEV_UI_HMR_PORT. A TCP check is used because the HMR server answers HTTP with 426.
+if [ -n "${DEV_UI_HMR_PORT:-}" ]; then
+  check_tcp "dev-ui hmr" "localhost" "${DEV_UI_HMR_PORT}"
+else
+  printf "%-20s n/a      (DEV_UI_HMR_PORT missing from .env — see dev/init-env.sh)\n" "dev-ui hmr"
+fi
 check_http "mock-server" "http://localhost:${MOCK_PORT}"
 # Optional: only the simulations need it, so DOWN here is not a broken dev stack.
 # Guarded because .env is generated once per worktree and an older one predates

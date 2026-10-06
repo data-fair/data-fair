@@ -113,5 +113,5 @@ export default defineConfig({
       return { relative: true }
     }
   },
-  server: { hmr: { port: 7200 } }
+  server: { hmr: { port: Number(process.env.DEV_UI_HMR_PORT) || 7200 } }
 })

@@ -15,6 +15,7 @@ NGINX_PORT2=$((RANDOM_NB + 1))
 DEV_API_PORT=$((RANDOM_NB + 10))
 DEV_UI_PORT=$((RANDOM_NB + 11))
 DEV_OBSERVER_PORT=$((RANDOM_NB + 12))
+DEV_UI_HMR_PORT=$((RANDOM_NB + 13))
 
 ES_PORT=$((RANDOM_NB + 20))
 MONGO_PORT=$((RANDOM_NB + 21))
@@ -30,4 +31,8 @@ MOCK_PORT=$((RANDOM_NB + 35))
 AGENTS_PORT=$((RANDOM_NB + 36))
 REGISTRY_PORT=$((RANDOM_NB + 37))
 BRIDGE_PORT=$((RANDOM_NB + 38))
+
+# all dev services listen on the loopback, the SSRF protection of the default http agents
+# would refuse them (cf @data-fair/lib-node http-agents)
+SSRF_PUBLIC_IPS=127.0.0.1,::1
 EOF

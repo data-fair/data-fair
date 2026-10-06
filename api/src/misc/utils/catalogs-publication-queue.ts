@@ -1,5 +1,6 @@
 import { internalError } from '@data-fair/lib-node/observer.js'
-import axios from './axios.ts'
+// the catalogs service is part of our own infrastructure (configured url, not user input)
+import { privateAxios as axios } from './axios.ts'
 import Debug from 'debug'
 
 const debug = Debug('catalogs-publication-queue')

@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, patchRawDataset, waitForFinalize } from '../../support/workers.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -123,6 +123,46 @@ test.describe('permissions', () => {
     )
   })
 
+  test('safe description hides what reflects the data', async () => {
+    let res = await testUser1.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'A dataset',
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    const datasetId = res.data.id
+    await testUser1.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, [{ col1: 'a' }, { col1: 'a' }, { col1: 'b' }, { col1: 'b' }])
+    const full = await waitForFinalize(testUser1, datasetId)
+    assert.deepEqual(full.schema.find((p: any) => p.key === 'col1').enum, ['a', 'b'])
+    assert.equal(full.safe, undefined)
+
+    await testUser1.put('/api/v1/datasets/' + datasetId + '/permissions', [
+      { type: 'user', id: 'test_user3', operations: ['readSafeDescription'] },
+      { type: 'user', id: 'test_user5', operations: ['readDescription'] }
+    ])
+
+    res = await testUser3.get('/api/v1/datasets/' + datasetId)
+    const safe = res.data
+    assert.equal(safe.safe, true)
+    assert.equal(safe.title, 'A dataset')
+    assert.equal(safe.isRest, true)
+    assert.deepEqual(safe.userPermissions, ['readSafeDescription'])
+    const col1 = safe.schema.find((p: any) => p.key === 'col1')
+    assert.equal(col1.type, 'string')
+    assert.equal(col1.enum, undefined)
+    assert.equal(col1['x-cardinality'], undefined)
+    for (const key of ['count', 'storage', 'bbox', 'timePeriod', 'finalizedAt', 'dataUpdatedAt']) {
+      assert.equal(safe[key], undefined, `${key} must not be part of a safe description`)
+    }
+
+    // a stored permission granting readDescription alone still gets the whole description
+    res = await testUser5.get('/api/v1/datasets/' + datasetId)
+    assert.equal(res.data.safe, undefined)
+    assert.equal(res.data.count, 4)
+    assert.deepEqual(res.data.schema.find((p: any) => p.key === 'col1').enum, ['a', 'b'])
+
+    await assert.rejects(testAlone.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
+  })
+
   test('apply permissions to datasets in organization and departments', async () => {
     // A dataset made accessible to all users of owner organization
     const res = await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
@@ -229,7 +269,10 @@ test.describe('permissions', () => {
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'test_org1',
-      name: 'Test Org 1'
+      name: 'Test Org 1',
+      // an empty department is the org root, it must not be stored as such
+      department: '',
+      departmentName: ''
     })
     dataset = (await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.deepEqual(dataset.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
@@ -263,6 +306,18 @@ test.describe('permissions', () => {
       name: 'Test Org 6'
     })
     assert.equal(await count(testUser5Org6, 'griffonmarker'), 1, 'the transfer must recompute the index from the new permissions')
+  })
+
+  test('a legacy empty owner department is listed as the org root', async () => {
+    const ax = testUser1Org
+    const legacy = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'legacy' })).data
+    const root = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'root' })).data
+    await patchRawDataset(legacy.id, { 'owner.department': '' })
+
+    const res = (await ax.get('/api/v1/datasets', { params: { owner: 'organization:test_org1:-', facets: 'owner', select: 'id' } })).data
+    assert.deepEqual(res.results.map((d: any) => d.id).sort(), [legacy.id, root.id].sort())
+    assert.equal(res.facets.owner.length, 1)
+    assert.equal(res.facets.owner[0].count, 2)
   })
 
   test('Upload new dataset in org zone then change ownership to department', async () => {
