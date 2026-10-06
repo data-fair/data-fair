@@ -18,9 +18,14 @@ const composer = async () => {
   const { agentsIndex } = await import('../../../api/contract/agents-index.ts')
   const apiDocs = (await import('../../../api/contract/api-docs.ts')).default
   const index = agentsIndex(PUBLIC_URL, { publicUrl: PUBLIC_URL })
+  const { readAgentSkill } = await import('../../../api/contract/agent-skills.ts')
   const bodies: Record<string, unknown> = { [INDEX_URL]: index, [index.services[0].openapi]: apiDocs(PUBLIC_URL) }
+  const skillPrefix = `${PUBLIC_URL}/api/v1/agents/skills/`
   const fetchFn = (async (input: RequestInfo | URL) => {
     const url = input instanceof Request ? input.url : String(input)
+    // what the root router serves at /api/v1/agents/skills/<name>.md
+    const skill = url.startsWith(skillPrefix) && url.endsWith('.md') ? readAgentSkill(url.slice(skillPrefix.length, -3)) : undefined
+    if (skill) return new Response(skill, { headers: { 'content-type': 'text/markdown' } })
     const body = bodies[url]
     return body ? new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } }) : new Response('not found', { status: 404 })
   }) as typeof fetch
@@ -33,6 +38,15 @@ test.describe('agents index composed with the data-fair document', () => {
   test('data-fair declares no profile outside the index vocabulary', async () => {
     const c = await composer()
     assert.deepEqual(c.services.map(s => [s.id, s.status, s.warnings]), [['data-fair', 'ok', undefined]])
+  })
+
+  test('the catalog workflow skill is read from its served markdown file', async () => {
+    const c = await composer()
+    const catalog = await c.compose(['catalog'])
+    const workflow = catalog.toolSet.skills.find(s => s.id === 'data-fair/workflow')!
+    assert.equal(workflow.error, undefined)
+    assert.match(workflow.body, /^# Exploring the data published on a portal/)
+    assert.doesNotMatch(catalog.toolSet.instructions, /Never prefix with _c_/, 'the body is not in the instructions')
   })
 
   test('the deprecated explore alias yields the catalog tools', async () => {

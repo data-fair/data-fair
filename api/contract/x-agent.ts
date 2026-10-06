@@ -10,7 +10,7 @@
 import type { AgentRoot, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
 import { documentProfiles } from './agent-profiles.ts'
 
-const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
+export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
 
 const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug.' }
 
@@ -39,13 +39,9 @@ export const root: AgentRoot = {
   skills: [{
     name: 'workflow',
     profiles: ['catalog'],
-    description: `You are querying French open data through Data Fair.
-1. **list_datasets** — find datasets with French keywords (simple terms, not sentences). If 0 results try synonyms or broader terms.
-2. **describe_dataset** — schema and metadata of a dataset. Then call **search_data** with size=3 to see sample rows before filtering.
-3. Choose the tool: rows → search_data (never for statistics); breakdown per category → aggregate_data; single total/avg/min/max → calculate_metric; values of a column → get_field_values.
-Filters: ${filtersDescription}
-Geo filters (bbox, geoDistance) only on geolocalized datasets; sort by distance with sort "_geo_distance:lon:lat". Temporal filter dateMatch only on datasets with date columns.
-Always cite the dataset page link and license. Answer in the user's language.`
+    description: 'How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
+    // the body is agent-skills/workflow.md, served next to this document
+    href: 'agents/skills/workflow.md'
   }]
 }
 
