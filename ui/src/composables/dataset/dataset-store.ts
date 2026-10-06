@@ -126,14 +126,14 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
-  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>[], count: number }>(() => {
+  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics' | 'partOf'>[], count: number }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => ({
       dataset: id,
       size: 100,
-      select: 'title,id,status,description,updatedAt,owner,topics'
+      select: 'title,id,status,description,updatedAt,owner,topics,visibility,partOf'
     })),
     immediate: false,
     watch: false
