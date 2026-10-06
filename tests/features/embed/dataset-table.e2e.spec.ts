@@ -55,6 +55,21 @@ test.describe('embed dataset table page', () => {
     await expect(cards).toHaveCount(1)
   })
 
+  // the card menu filters depend on the "filters" interaction only, as the table header menus do
+  test('filters from the card menu when cell interactions are disabled', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&interaction=-cells`, 'test_user1')
+    const cards = page.locator('.dataset-table-card')
+    await expect(cards).toHaveCount(2, { timeout: 10000 })
+    await cards.getByText('koumoul', { exact: true }).click()
+    await page.getByText('Ajouter un filtre').click()
+    await page.getByText('Égal à une valeur').click()
+    await page.locator('.v-overlay').getByText('koumoul', { exact: true }).click()
+    await expect(cards).toHaveCount(1)
+  })
+
   // the sentinel stays visible when a filter fails, and used to retry the failing page in a loop
   test('does not retry a failing page of the card list display in a loop', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')

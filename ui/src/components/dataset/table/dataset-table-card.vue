@@ -76,6 +76,7 @@
                 :dense="true"
                 :hovered="hovered"
                 :filter="findEqFilter(filters, header.property, result)"
+                :no-interaction="noInteraction"
                 :no-filter="noFilter"
                 @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw + '', formattedValue: v.formatted})"
                 @hoverstart="v => emit('hoverstart', result, v)"
@@ -96,7 +97,7 @@
                 class="item-value-hover-actions"
               >
                 <v-btn
-                  v-if="(result.values[header.key] as ExtendedResultValue).displayDetail || isGeometry(header)"
+                  v-if="!noInteraction && (result.values[header.key] as ExtendedResultValue).formatted && ((result.values[header.key] as ExtendedResultValue).displayDetail || isGeometry(header) || isMarkdown(header))"
                   :icon="mdiLoupe"
                   :title="t('showFullValue')"
                   color="primary"
@@ -179,7 +180,7 @@ import { type TableHeaderWithProperty, type TableSort } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiChevronDown, mdiLoupe, mdiMagnifyPlus, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiMap } from '@mdi/js'
 
-const { result, headers, noSort, noFilter, noCols, mapPreview } = defineProps({
+const { result, headers, noSort, noFilter, noCols, noInteraction, mapPreview } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
@@ -188,6 +189,7 @@ const { result, headers, noSort, noFilter, noCols, mapPreview } = defineProps({
   noFilter: { type: Boolean, default: false },
   noSort: { type: Boolean, default: false },
   noCols: { type: Boolean, default: false },
+  noInteraction: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
   selectable: { type: Boolean, default: false },
   selected: { type: Boolean, default: false },
@@ -220,6 +222,8 @@ const label = computed(() => {
 const showMapBtn = computed(() => mapPreview && !!result._geopoint)
 
 const isGeometry = (header: TableHeaderWithProperty) => header.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry'
+// same rule as the detail dialog, which renders these values as html
+const isMarkdown = (header: TableHeaderWithProperty) => header.property['x-display'] === 'markdown' || header.property['x-refersTo'] === 'http://schema.org/description'
 
 // label and image are already shown in the card header
 const otherHeaders = computed(() => headers.filter(h => h.property && h.key !== labelField.value?.key && h.key !== imageField.value?.key))
