@@ -23,6 +23,11 @@ import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
 import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
 import filesStorage from '#files-storage'
 import { createWriteStream } from 'node:fs'
+import { getOgrInputOptions, getOgrEnv } from '../../misc/utils/ogr.ts'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+
+const execFileAsync = promisify(execFile)
 
 export const eventsPrefix = 'normalize'
 
@@ -205,13 +210,12 @@ export default async function (dataset: FileDataset) {
       if (config.ogr2ogr.skip) {
         throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
       }
-      const { default: ogr2ogr } = await import('ogr2ogr')
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
         // this rule is deactivated as ogr2ogr actually seems to take a negligible amount of RAM
         // for the transformation we use it for
         // throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
-      const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
+      const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326', ...getOgrInputOptions({ shapefile, mapinfo, mimetype: dataset.originalFile.mimetype })]
       if (dataset.originalFile.mimetype === 'application/gpx+xml') {
         // specify the layers we want to keep from gpx files (tracks and routes), and rename the output geojson layer
         ogrOptions.push('-nln')
@@ -229,11 +233,10 @@ export default async function (dataset: FileDataset) {
         await fsyncFile(srcFile)
       }
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
-      await ogr2ogr(srcFile, {
-        format: 'GeoJSON',
-        options: ogrOptions,
+      await execFileAsync('ogr2ogr', ['-f', 'GeoJSON', '-skipfailures', tmpFile, srcFile, ...ogrOptions], {
+        env: getOgrEnv(),
         timeout: config.ogr2ogr.timeout,
-        destination: tmpFile
+        maxBuffer: 50 * 1024 * 1024
       })
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
       await filesStorage.moveFromFs(tmpFile, filePath)

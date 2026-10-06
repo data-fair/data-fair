@@ -1,7 +1,8 @@
 import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
-import axios from '../misc/utils/axios.ts'
+// the directory is a service of our own infrastructure (configured url, not user input)
+import { privateAxios as axios } from '../misc/utils/axios.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import filesStorage from '#files-storage'
 import debugModule from 'debug'

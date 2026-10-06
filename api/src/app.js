@@ -306,6 +306,9 @@ export const run = async () => {
         const [type, id, subject] = channel.split('/')
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
+        // TODO: readApiKey is called without the request here, so the "only from inside the infrastructure"
+        // check of adminMode api keys (assertReqInternal) is skipped for websocket subscriptions.
+        // lib-express wsServer should pass the upgrade request to this callback so it can be applied.
         if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
         // browsers send no Referer on a websocket handshake, so the HTTP application-key path
         // cannot apply here; resolve the same bypass from the key passed in the subscribe message

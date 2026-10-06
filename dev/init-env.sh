@@ -31,4 +31,8 @@ MOCK_PORT=$((RANDOM_NB + 35))
 AGENTS_PORT=$((RANDOM_NB + 36))
 REGISTRY_PORT=$((RANDOM_NB + 37))
 BRIDGE_PORT=$((RANDOM_NB + 38))
+
+# all dev services listen on the loopback, the SSRF protection of the default http agents
+# would refuse them (cf @data-fair/lib-node http-agents)
+SSRF_PUBLIC_IPS=127.0.0.1,::1
 EOF

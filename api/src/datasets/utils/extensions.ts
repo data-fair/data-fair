@@ -7,7 +7,8 @@ import { Transform, Writable } from 'stream'
 import stringify from 'fast-json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
-import axios from '../../misc/utils/axios.ts'
+import axios, { privateAxios } from '../../misc/utils/axios.ts'
+import { applyPrivateMapping } from '../../misc/utils/private-mapping.ts'
 import { fullFilePath, attachmentPath } from './files.ts'
 import { readStreams, writeExtendedStreams } from './data-streams.ts'
 import * as restDatasetsUtils from './rest.ts'
@@ -329,9 +330,11 @@ class ExtensionsStream extends Transform {
           }
         }
 
+        // a mapped url is served by our own infrastructure (private agents), any other one is requested as a public url
+        const privateServerUrl = applyPrivateMapping(extension.remoteService.server, config.remoteServicesPrivateMapping)
         const opts: any = {
           method: extension.action.operation.method,
-          url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
+          url: (privateServerUrl ?? extension.remoteService.server) + extension.action.operation.path,
           headers: {
             Accept: 'application/x-ndjson',
             'Content-Type': 'application/x-ndjson'
@@ -409,7 +412,7 @@ class ExtensionsStream extends Transform {
             opts.data
           )
         } else {
-          data = (await axios(opts)).data
+          data = (await (privateServerUrl ? privateAxios : axios)(opts)).data
         }
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter((line: string) => !!line).map(JSON.parse)

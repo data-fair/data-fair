@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
-import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl, apiUrl } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, clearRateLimiting, clearDatasetCache } from '../../support/workers.ts'
 
 const anonymous = axios()
@@ -212,9 +212,13 @@ test.describe('API keys', () => {
     })
     const key = res.data.apiKeys[0].clearKey
     assert.ok(key)
-    const axKey = axios({
-      headers: { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1 testé') }) }
-    })
+    const headers = { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1 testé') }) }
+
+    // only accepted from inside the infrastructure: refused through the reverse proxy (X-Forwarded-Host)
+    await assert.rejects(axios({ headers }).get('/api/v1/datasets'), { status: 421 })
+
+    // accepted on a direct call to the API
+    const axKey = axios({ baseURL: apiUrl, headers })
 
     const dataset = await sendDataset('datasets/dataset1.csv', axKey)
     assert.equal(dataset.status, 'finalized')
