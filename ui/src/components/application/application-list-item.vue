@@ -4,11 +4,12 @@
     lines="two"
   >
     <template
-      v-if="application.visibility"
+      v-if="application.visibility || application.partOf"
       #prepend
     >
       <resource-visibility
         :visibility="application.visibility"
+        :part-of="application.partOf"
         class="mr-2"
         size="small"
       />

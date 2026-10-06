@@ -119,7 +119,7 @@ const createApplicationStore = (id: string) => {
       return {
         id: datasetsIds.join(','),
         size: 10000,
-        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt,visibility',
+        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt,visibility,partOf',
         sort: 'createdAt:-1'
       }
     }),
@@ -137,7 +137,7 @@ const createApplicationStore = (id: string) => {
       return {
         id: appIds.join(','),
         size: 10000,
-        select: 'title,description,status,topics,errorMessage,updatedAt',
+        select: 'title,description,status,topics,errorMessage,updatedAt,visibility,partOf',
         sort: 'createdAt:-1'
       }
     }),
@@ -151,7 +151,7 @@ const createApplicationStore = (id: string) => {
     query: computed(() => ({ partOf: `application:${id}`, size: fragmentsSize.value, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
   })
   const fragmentApplicationsFetch = useFetch<{ results: any[], count: number }>(() => application.value && !application.value.partOf ? `${$apiPath}/applications` : null, {
-    query: computed(() => ({ partOf: `application:${id}`, size: fragmentsSize.value, select: 'title,id,status,description,updatedAt,owner,topics,partOf' }))
+    query: computed(() => ({ partOf: `application:${id}`, size: fragmentsSize.value, select: 'title,id,status,description,updatedAt,owner,topics,visibility,partOf' }))
   })
   const fragments = computed(() => ({ datasets: fragmentDatasetsFetch.data.value?.results ?? [], applications: fragmentApplicationsFetch.data.value?.results ?? [] }))
   const nbFragments = computed(() => (fragmentDatasetsFetch.data.value?.count ?? 0) + (fragmentApplicationsFetch.data.value?.count ?? 0))

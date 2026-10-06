@@ -418,6 +418,18 @@ test.describe('Applications', () => {
     assert.equal(res.data.createdAt, createdAt)
   })
 
+  test('PUT creates several applications with a chosen id for the same owner', async () => {
+    const ax = testUser1
+    // without a slug, every PUT-created application of an owner indexed a missing _uniqueRefs, so the
+    // second one collided on the unique-refs index and fell through to a 404
+    for (const id of ['put-created-app1', 'put-created-app2']) {
+      const res = await ax.put('/api/v1/applications/' + id, { url: mockAppUrl('monapp1'), title: 'PUT created ' + id })
+      assert.equal(res.status, 201)
+      assert.equal(res.data.id, id)
+      assert.equal(res.data.slug, id)
+    }
+  })
+
   test('Reconfiguring an application reconciles old dataset back-references', async () => {
     const ax = testUser1
     const datasetA = await sendDataset('datasets/split.csv', ax)

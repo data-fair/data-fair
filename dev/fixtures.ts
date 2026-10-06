@@ -421,6 +421,65 @@ async function seedFragments () {
   console.log(`${id}: ${sources.join(', ')} added to its sources`)
 }
 
+/** Fragments demo, application side: a dashboard application with its own fragments — a
+ * sub-application and a lookup-table dataset — next to a standalone application, all built on the
+ * virtual dataset of seedFragments. Illustrates the puzzle icon that replaces the visibility lock on
+ * the cards of fragments: the virtual dataset's "Applications" tab lists the 3 applications (the
+ * sub-application is a fragment, the 2 others are not), the dashboard's datasets and sub-applications
+ * tabs mix fragments and standalone resources. Skip-if-exists per resource. */
+async function seedFragmentApplications () {
+  const baseAppUrl = `http://localhost:${process.env.MOCK_PORT}/monapp1/`
+  const datasetRef = (id: string, title: string) => ({ href: `${dfBaseURL}/api/v1/datasets/${id}`, id, title })
+  const virtualRef = datasetRef('fixtures-fragments-virtuel', 'Consommations électriques mensuelles (agrégées)')
+  const applicationExists = async (id: string) => {
+    try {
+      await dfAx.get(`/api/v1/applications/${id}`)
+      return true
+    } catch (err: any) {
+      if (err.status === 404) return false
+      throw err
+    }
+  }
+  const seedApplication = async (id: string, body: Record<string, any>, configuration: Record<string, any>) => {
+    if (await applicationExists(id)) { console.log(`${id}: skipped (exists)`); return }
+    await dfAx.put(`/api/v1/applications/${id}`, { url: baseAppUrl, ...body })
+    await dfAx.put(`/api/v1/applications/${id}/configuration`, configuration)
+    console.log(`${id}: seeded (application${body.partOf ? `, fragment of ${body.partOf.id}` : ''})`)
+  }
+
+  const dashboardId = 'fixtures-fragments-tableau-de-bord'
+  const partOf = { type: 'application', id: dashboardId }
+  const thresholdsId = 'fixtures-fragments-seuils'
+
+  await seedApplication(dashboardId, {
+    title: 'Tableau de bord des consommations',
+    description: 'Application tableau de bord composée d\'une sous-application et d\'un jeu de données de seuils ' +
+      'déclarés comme ses **fragments** : ils n\'apparaissent pas dans les listes et seront supprimés avec elle.'
+  }, {
+    datasets: [virtualRef, datasetRef(thresholdsId, 'Seuils d\'alerte par commune')],
+    applications: [{ id: 'fixtures-fragments-carte' }]
+  })
+
+  if (await datasetExists(thresholdsId)) {
+    console.log(`${thresholdsId}: skipped (exists)`)
+  } else {
+    const csv = 'commune,seuil_alerte_mwh\nRennes,230\nBrest,140\nVannes,70\n'
+    await uploadCsv(thresholdsId, 'seuils.csv', { title: 'Seuils d\'alerte par commune', partOf }, csv)
+    console.log(`${thresholdsId}: seeded (CSV fragment of ${dashboardId})`)
+  }
+
+  await seedApplication('fixtures-fragments-carte', {
+    title: 'Consommations par commune (vue du tableau de bord)',
+    partOf
+  }, { datasets: [virtualRef] })
+
+  await seedApplication('fixtures-fragments-graphique', {
+    title: 'Évolution des consommations',
+    description: 'Application autonome construite sur le même jeu de données virtuel, pour comparaison avec la ' +
+      'sous-application fragment du tableau de bord.'
+  }, { datasets: [virtualRef] })
+}
+
 /** Integrity demo — healthy: a file dataset with integrity on, a real version
  * history (anchor + one published update), and a passing check. */
 async function seedIntegriteOk () {
@@ -971,6 +1030,7 @@ async function main () {
   await seedDateCoherenceFichier()
   await seedBrouillonErreur()
   await seedFragments()
+  await seedFragmentApplications()
 
   // after seeding so it also upgrades datasets skipped by earlier runs
   await ensureDatasetTopics()
@@ -979,6 +1039,9 @@ async function main () {
   console.log('\nDone. Browse the seeded data at:')
   for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-lignes', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-date-coherence-rest', 'fixtures-date-coherence-fichier', 'fixtures-brouillon-erreur', 'fixtures-fragments-virtuel']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
+  }
+  for (const id of ['fixtures-fragments-tableau-de-bord', 'fixtures-fragments-graphique']) {
+    console.log(`  application:     ${dfBaseURL}/application/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
