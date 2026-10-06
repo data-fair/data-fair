@@ -358,6 +358,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
         title: 'Taille de la pagination',
         default: defaultSize,
         type: 'integer',
+        minimum: 0,
         maximum: maxSize
       }
     }, {
@@ -400,8 +401,7 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
         items: {
           type: 'string',
           enum: propertiesEnum(schema)
-        },
-        default: 'all'
+        }
       },
       style: 'form',
       explode: false
@@ -465,7 +465,8 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     schema: {
       default: 20,
       type: 'integer',
-      maximum: 10000
+      minimum: 0,
+      maximum: 1000
     }
   }
 
@@ -629,12 +630,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     ],
     responses: {
       200: {
-        description: 'La liste des colonnes.',
+        description: 'La liste des colonnes. Avec `mimeType=application/tableschema+json` ou `mimeType=application/schema+json`, un objet au format demandé.',
         content: {
           'application/json': {
             schema: {
-              type: 'array',
-              items: { type: 'object' }
+              oneOf: [
+                { type: 'array', items: { type: 'object' } },
+                { type: 'object' }
+              ]
             }
           }
         }
@@ -679,7 +682,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       '/': {
         get: {
           summary: 'Lire les informations',
-          description: 'Récupérer les informations du jeu de données.',
+          description: 'Récupérer les informations du jeu de données.\n*Avec la seule permission de lire les informations réduites (`readSafeDescription`), la réponse ne contient que les métadonnées et le schéma réduit, sans rien qui reflète les données (nombre de lignes, emprise, période, volume, `enum`, `x-cardinality`...), et porte `safe: true`.*',
           operationId: 'readDescription',
           'x-agent': xAgent.readDescription,
           'x-permissionClass': 'read',
@@ -711,16 +714,17 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*",
             schema: {
               title: 'Pagination en profondeur',
-              type: 'integer'
+              type: 'string'
             }
           }, {
             in: 'query',
             name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1.\n\n*Pour paginer sur de gros volumes de données utilisez plutôt le paramètre **after***.',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1. Le produit du numéro de page et de la taille de la pagination ne peut pas dépasser 10000.\n\n*Pour paginer sur de gros volumes de données utilisez plutôt le paramètre **after***.',
             schema: {
               title: 'Numéro de la page',
               type: 'integer',
-              default: 1
+              default: 1,
+              minimum: 1
             }
           },
           ...hitsParams(),
@@ -810,12 +814,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'size',
-            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut.',
+            description: 'Le nombre de résultats à retourner (taille de la pagination).',
             schema: {
               title: 'Taille de la pagination',
-              default: 10,
+              default: 12,
               type: 'integer',
-              maximum: 10000
+              minimum: 0,
+              maximum: 1000
             }
           }, {
             in: 'query',
@@ -874,7 +879,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               title: 'Taille de la pagination',
               default: 1000,
               type: 'integer',
-              maximum: 10000
+              minimum: 0,
+              maximum: 1000
             }
           },
           ...filterParams],
@@ -984,7 +990,8 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
               items: {
                 default: 20,
                 type: 'integer',
-                maximum: 10000
+                minimum: 0,
+                maximum: 1000
               }
             }
           },
@@ -1355,7 +1362,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        parameters: [aggSizeParam, ...hitsParams(0, 100), formatParam, htmlParam, hintParam, ...filterParams],
+        parameters: [aggSizeParam, ...hitsParams(1, 100), formatParam, htmlParam, hintParam, ...filterParams],
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement.',

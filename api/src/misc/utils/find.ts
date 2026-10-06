@@ -164,7 +164,8 @@ export const ownerFilters = (reqQuery: Record<string, string>): any => {
     if (!dep || dep === '*') {
       // no department filter to apply
     } else if (dep === '-') {
-      filter['owner.department'] = { $exists: false }
+      // legacy resources may store an empty string for the org root
+      filter['owner.department'] = { $in: [null, ''] }
     } else {
       filter['owner.department'] = dep
     }
@@ -425,7 +426,7 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
       } else if (f === 'owner') {
         facet.push({
           $group: {
-            _id: { ownerType: '$owner.type', ownerId: '$owner.id', ownerDepartment: '$owner.department' },
+            _id: { ownerType: '$owner.type', ownerId: '$owner.id', ownerDepartment: { $ifNull: ['$owner.department', ''] } },
             owner: { $first: '$owner' },
             count: { $sum: 1 }
           }

@@ -468,6 +468,14 @@ permission model on the client, it is purely presentational.
   parent. The parent title is fetched with `notifError: false` and falls back to the parent id:
   holding a derived management entry on the fragment does **not** imply `readDescription` on the
   parent, so a 403/404 there is an ordinary case, not something to toast on every page load.
+- **Cards and list items** (`dataset-card`, `application-card`, `dataset-list-item`,
+  `application-list-item`): wherever a fragment is still listed — a dataset's Applications tab (the
+  `dataset=` query pins resources, §6), an application's datasets and sub-applications tabs, the
+  virtual children, the Fragments tab, the pickers — `resource-visibility.vue` shows the banner's
+  puzzle icon instead of the visibility lock, given `partOf`. Its tooltip names the parent ("Fragment
+  de l'application « … »", title fetched on first open with the banner's `notifError: false`
+  fallback) and keeps the visibility as a second line. A private fragment is the normal case, so the icon is not warning-colored
+  like a private lock. The listing queries behind those cards select `partOf` for this.
 - **Hidden on a fragment's own page, to keep it minimal** (both `dataset/[id]/index.vue` and
   `application/[id]/index.vue`). A "Détacher" row replaces "Changer de propriétaire" in the danger
   zone. Also hidden: everything that only serves publication

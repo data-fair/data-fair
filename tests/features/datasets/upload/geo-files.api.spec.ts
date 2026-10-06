@@ -114,13 +114,21 @@ test.describe('geo files support', () => {
     assert.ok(!res.data.results[0]._vt)
   })
 
-  test('Reject geojson with colliding column keys (feature id and _id property)', async () => {
-    // a feature top-level `id` is mapped to a property `id`, and a property `_id`
-    // is escaped to the same `id` key: this collision must produce a clear error
-    // instead of silently creating two confusing columns
-    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-duplicate-id-key.geojson')
+  test('Geojson property escaping to "id" takes precedence over the feature top-level id', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('geo/geojson-top-level-id-and-id-property.geojson', ax)
+    assert.equal(dataset.status, 'finalized')
+    const idFields = dataset.schema.filter((f: any) => f.key === 'id')
+    assert.equal(idFields.length, 1)
+    assert.equal(idFields[0]['x-originalName'], 'ID')
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: 'id' } })).data.results
+    assert.deepEqual(lines.map((l: any) => l.id), ['AF_5', 'AF_6'])
+  })
+
+  test('Reject geojson with colliding property keys', async () => {
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-colliding-properties.geojson')
     const form = new FormData()
-    form.append('file', datasetFd, 'geojson-duplicate-id-key.geojson')
+    form.append('file', datasetFd, 'geojson-colliding-properties.geojson')
     const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)

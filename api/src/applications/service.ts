@@ -172,7 +172,12 @@ export const syncDatasets = async (newApp: any, oldApp: any = {}) => {
 
 export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string }, id?: string) => {
   const application = { ...body }
-  if (id) application.id = id
+  // a PUT create chooses the id: it is also the slug, as for datasets. Without a slug no _uniqueRefs is
+  // set, and every such application of an owner collided on the (non-sparse) unique-refs index
+  if (id) {
+    application.id = id
+    application.slug = application.slug || id
+  }
   application.owner = owner
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date

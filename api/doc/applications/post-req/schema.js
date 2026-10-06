@@ -20,7 +20,7 @@ body.properties['initFrom'] = {
 export default {
   $id: 'https://github.com/data-fair/data-fair/applications/post-req',
   title: 'Post application req',
-  'x-exports': ['validate', 'types'],
+  'x-exports': ['validate', 'types', 'resolvedSchema'],
   type: 'object',
   required: ['body'],
   properties: { body }
