@@ -16,15 +16,15 @@
           "page": {
             "type": "integer",
             "default": 1,
-            "min": 1,
+            "minimum": 1,
             "description": "Numéro de page"
           },
           "size": {
             "type": "integer",
             "default": 10,
-            "min": 1,
-            "description": "Taille de la page",
-            "maximum": 50
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
           },
           "response_format": {
             "type": "string",
@@ -157,12 +157,13 @@
             "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
           },
           "after": {
-            "type": "integer",
+            "type": "string",
             "description": "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*"
           },
           "size": {
             "default": 12,
             "type": "integer",
+            "minimum": 0,
             "maximum": 100,
             "description": "Le nombre de résultats à retourner (taille de la pagination)."
           },
@@ -176,8 +177,7 @@
           "select": {
             "type": "array",
             "items": {
-              "type": "string",
-              "default": "all"
+              "type": "string"
             },
             "description": "Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned."
           },
@@ -247,8 +247,9 @@
           "size": {
             "default": 10,
             "type": "integer",
+            "minimum": 0,
             "maximum": 1000,
-            "description": "Le nombre de résultats à retourner (taille de la pagination). 10 par défaut."
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
           },
           "sort": {
             "type": "string",

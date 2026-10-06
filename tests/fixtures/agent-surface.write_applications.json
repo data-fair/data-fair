@@ -23,15 +23,15 @@
           "page": {
             "type": "integer",
             "default": 1,
-            "min": 1,
+            "minimum": 1,
             "description": "Numéro de page"
           },
           "size": {
             "type": "integer",
             "default": 10,
-            "min": 1,
-            "description": "Taille de la page",
-            "maximum": 50
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
           },
           "response_format": {
             "type": "string",
