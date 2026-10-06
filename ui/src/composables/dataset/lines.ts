@@ -76,7 +76,8 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (!next.value) return
     abortController = new AbortController()
     // await new Promise(resolve => setTimeout(resolve, 2000))
-    const data = await $fetch<Lines>(next.value)
+    // a failed page stops the infinite scroll, or a visible sentinel would retry it in a loop
+    const data = await $fetch<Lines>(next.value).catch(err => { next.value = undefined; throw err })
     const extendedResults = []
     for (const raw of data.results) {
       const extendedResult: ExtendedResult = {
