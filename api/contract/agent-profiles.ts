@@ -68,10 +68,6 @@ export function vocabulary (): Record<string, IndexProfile> {
     out[tier] = { title: tiers[tier].title, description: tiers[tier].description, includes: siloNames.map(s => cell(tier, s)) }
   }
   for (const silo of siloNames) for (const tier of tierOrder) out[cell(tier, silo)] = cellProfile(tier, silo)
-  out.platform = {
-    title: { fr: 'Plateforme', en: 'Platform' },
-    description: { fr: 'Opérations réservées aux super-administrateurs.', en: 'Operations reserved to superadmins.' }
-  }
   return out
 }
 

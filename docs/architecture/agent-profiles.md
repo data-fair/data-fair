@@ -99,8 +99,9 @@ Profile names are `<tier>_<silo>`: `read_datasets`, `write_portals`, `manage_pro
   private portal its members see what was published for them. It combines freely with the
   grid — an agent holding `read_datasets` and `catalog` can manage its datasets and check what
   end users actually get.
-- **`platform`** — superadmin operations (reindex, diagnose, plugins, service status). It is
-  included in no umbrella and never offered to autonomous agents.
+- **Superadmin operations** (reindex, diagnose, plugins, service status) have no profile yet:
+  none is annotated, and what a superadmin agent may do is a design of its own. They get a
+  profile, outside the umbrellas, when the first one is annotated.
 
 ### The index declares everything
 
