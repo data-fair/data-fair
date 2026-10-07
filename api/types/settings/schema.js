@@ -510,7 +510,7 @@ export default {
         },
         custom: {
           type: 'array',
-          title: 'Métadonnées spécifiques',
+          title: 'Métadonnées personnalisées',
           layout: {
             messages: {
               addItem: 'Add a custom metadata',
@@ -540,6 +540,12 @@ export default {
                 title: 'Libellé',
                 type: 'string',
                 minLength: 3
+              },
+              description: {
+                title: 'Infobulle',
+                description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
+                type: 'string',
+                layout: 'textarea'
               }
             }
           }

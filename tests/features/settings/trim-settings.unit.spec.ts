@@ -24,13 +24,13 @@ test.describe('trimSettings', () => {
     const settings: any = {
       datasetsMetadata: {
         spatial: { active: true, title: ' Zone ' },
-        custom: [{ key: ' ref ', title: ' Référence ' }]
+        custom: [{ key: ' ref ', title: ' Référence ', description: ' Référence interne du jeu. ' }]
       },
       info: { contact: { name: ' Koumoul ', url: ' https://koumoul.com ', email: ' contact@koumoul.com ' } }
     }
     trimSettings(settings)
     assert.equal(settings.datasetsMetadata.spatial.title, 'Zone')
-    assert.deepEqual(settings.datasetsMetadata.custom[0], { key: 'ref', title: 'Référence' })
+    assert.deepEqual(settings.datasetsMetadata.custom[0], { key: 'ref', title: 'Référence', description: 'Référence interne du jeu.' })
     assert.deepEqual(settings.info.contact, { name: 'Koumoul', url: 'https://koumoul.com', email: 'contact@koumoul.com' })
   })
 

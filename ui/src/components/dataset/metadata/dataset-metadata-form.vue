@@ -162,7 +162,7 @@
               density="compact"
               class="flex-grow-1"
             >
-              <template #append-inner>
+              <template #append>
                 <help-tooltip :text="t('searchTermsHelp')" />
               </template>
             </v-textarea>
@@ -268,7 +268,14 @@
               class="mb-4"
               clearable
               @update:model-value="(v) => setCustomMetadata(cm.key, v)"
-            />
+            >
+              <template
+                v-if="cm.description"
+                #append
+              >
+                <help-tooltip :text="cm.description" />
+              </template>
+            </v-text-field>
           </template>
 
           <!-- Related datasets -->
