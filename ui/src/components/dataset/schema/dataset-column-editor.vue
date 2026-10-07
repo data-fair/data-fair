@@ -30,18 +30,21 @@
         </template>
       </v-text-field>
 
-      <markdown-editor
-        v-model="column.description"
-        :label="t('description')"
-        :disabled="!editable"
-        :easy-mde-options="{ minHeight: '150px' }"
-        :locale="locale"
-        :csp-nonce="$cspNonce"
-      >
-        <template #append>
-          <help-tooltip>{{ t('descriptionHelp') }}</help-tooltip>
-        </template>
-      </markdown-editor>
+      <!-- markdown-editor ignores slots, so the help sits beside it -->
+      <div class="d-flex align-start">
+        <markdown-editor
+          v-model="column.description"
+          :label="t('description')"
+          :disabled="!editable"
+          :easy-mde-options="{ minHeight: '150px' }"
+          :locale="locale"
+          :csp-nonce="$cspNonce"
+          :input-props="{ class: 'flex-grow-1' }"
+        />
+        <help-tooltip class="ml-4 mt-8">
+          {{ t('descriptionHelp') }}
+        </help-tooltip>
+      </div>
     </v-col>
 
     <!-- Right column: actions, info, concept -->
@@ -111,7 +114,10 @@
         >
           <span class="text-medium-emphasis">{{ t('distinctValues') }}:&nbsp;</span>
           {{ column['x-cardinality'].toLocaleString() }}
-          <help-tooltip small>
+          <help-tooltip
+            small
+            class="ml-1"
+          >
             {{ t('distinctValuesHelp') }}
           </help-tooltip>
         </div>

@@ -149,7 +149,7 @@ export const trimSettings = (settings: Partial<Settings>) => {
     for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
       if (option) trimFields(option, 'title')
     }
-    for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title')
+    for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title', 'description')
   }
   if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
 }
