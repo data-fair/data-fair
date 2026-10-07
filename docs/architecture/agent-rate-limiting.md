@@ -36,8 +36,10 @@ services" — which is what makes a relay's own address win in data-fair today.
 
 - The `mcp` server has no `mode` any more: one published server, every declared profile reachable;
   what a caller may do is data-fair's permissions on its identity.
-- Its own limiter is always on, keyed by the caller's identity (the hash of its cookie or API key,
-  already computed for editor sessions) when authenticated, by client IP otherwise.
+- Its own limiter is always on, for every caller (in-cluster ones included), keyed by the caller's
+  claimed identity (a hash of its `id_token` session cookie or of its API key) when it has one, by
+  client IP otherwise — and always under a per-IP ceiling of ten times the per-caller budget, since
+  the identity is not verified there: made-up identities cannot buy more than the ceiling.
 - It still sends `x-ignore-rate-limiting` to data-fair.
 
 Limiting is weak in this state, knowingly: agents are limited by nginx on the way in (per client
