@@ -543,7 +543,7 @@ export default {
               },
               description: {
                 title: 'Infobulle',
-                description: "Texte d'aide affiché au survol de l'icône à côté du champ, dans le formulaire du jeu de données.",
+                description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
                 type: 'string',
                 layout: 'textarea'
               }
