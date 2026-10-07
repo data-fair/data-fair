@@ -1,0 +1,549 @@
+{
+  "profiles": [
+    "manage_applications"
+  ],
+  "tools": [
+    {
+      "name": "datafair_list_account_applications",
+      "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Returns id, title, status and last update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Keywords for full-text search."
+          },
+          "dataset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Restrict to the applications using these datasets (ids from list_account_datasets)."
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, status, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_describe_application",
+      "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_delete_application",
+      "description": "Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "datafair_update_application",
+      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier of the application, usually a slug for URL readability (unique inside the tenant)",
+            "pattern": "^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short title of the application"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Short description of the application"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Detailed description of the application"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "URL d'une image, illustration du jeu de données"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "configuration": {
+            "anyOf": [
+              {
+                "x-exports": [
+                  "types",
+                  "validate",
+                  "resolvedSchema"
+                ],
+                "title": "App config",
+                "type": "object",
+                "description": "A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services",
+                "additionalProperties": true,
+                "properties": {
+                  "datasets": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "href"
+                      ],
+                      "properties": {
+                        "href": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "string",
+                          "description": "Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context."
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "applicationKeyPermissions": {
+                          "type": "object",
+                          "description": "The permissions that should be applied to users accessing this dataset through a protecte application key of this application",
+                          "default": {
+                            "classes": [
+                              "read"
+                            ]
+                          },
+                          "properties": {
+                            "operations": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "API operation that can be used"
+                              }
+                            },
+                            "classes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "API permission classes that can be used"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "type": "string",
+            "deprecated": true,
+            "description": "The URL the base application is located at (replaced by baseApp.url)"
+          },
+          "urlDraft": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "The URL the base application for the draft configuration is located at (replaced by baseAppDraft.url)"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestedPublicationSites": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all sites the application would be exposed in if validated by an admin.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topics": {
+            "anyOf": [
+              {
+                "type": "array",
+                "title": "Liste de thématiques",
+                "layout": {
+                  "itemTitle": "item.title"
+                },
+                "items": {
+                  "title": "Topic",
+                  "x-exports": [
+                    "types",
+                    "schema"
+                  ],
+                  "type": "object",
+                  "required": [
+                    "title"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "readOnly": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title",
+                      "x-i18n-title": {
+                        "fr": "Titre"
+                      },
+                      "layout": {
+                        "cols": {
+                          "md": 5
+                        }
+                      }
+                    },
+                    "icon": {
+                      "type": "object",
+                      "title": "Icon",
+                      "x-i18n-title": {
+                        "fr": "Icône"
+                      },
+                      "description": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
+                      "x-i18n-description": {
+                        "en": "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance."
+                      },
+                      "layout": {
+                        "getItems": {
+                          "url": "https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg,svgPath&size=25",
+                          "itemsResults": "data.results",
+                          "itemTitle": "item.name",
+                          "itemIcon": "item.svg",
+                          "itemKey": "item.name"
+                        },
+                        "cols": {
+                          "md": 5,
+                          "sm": 6
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "svg": {
+                          "type": "string"
+                        },
+                        "svgPath": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "color": {
+                      "type": "string",
+                      "title": "Color",
+                      "x-i18n-title": {
+                        "fr": "Couleur"
+                      },
+                      "layout": {
+                        "comp": "color-picker",
+                        "cols": {
+                          "md": 2,
+                          "sm": 6
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "An object for extra content from client services of data-fair"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preferLargeDisplay": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "default": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attachments": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "name"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "title": "Titre",
+                      "layout": {
+                        "props": {
+                          "outlined": true,
+                          "dense": true
+                        }
+                      }
+                    },
+                    "name": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Name of the file that was used to create or update this attachment"
+                    },
+                    "size": {
+                      "layout": "none",
+                      "type": "number",
+                      "description": "Size of the file on disk"
+                    },
+                    "mimetype": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Mime type of the file"
+                    },
+                    "updatedAt": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Date of the last update for this attachment",
+                      "format": "date-time"
+                    },
+                    "url": {
+                      "layout": "none",
+                      "readOnly": true,
+                      "type": "string",
+                      "title": "URL"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_publish_application",
+      "description": "Change where an application is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+          },
+          "publications": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all the catalogs the application metadata is published too",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "catalog",
+                    "status"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "catalog": {
+                      "type": "string",
+                      "description": "L'identifiant du catalogue de destination de cette publication."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Statut indiquant clairement si la publication a réussi. Si \"published\", la propriété targetUrl doit être renseignée. Si \"error\", la propriété error doit être renseignée.",
+                      "enum": [
+                        "waiting",
+                        "published",
+                        "error",
+                        "deleted"
+                      ]
+                    },
+                    "publishedAt": {
+                      "type": "string",
+                      "description": "Date de la dernière mise à jour de cette publication.",
+                      "format": "date-time"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "targetUrl": {
+                      "type": "string"
+                    },
+                    "result": {
+                      "type": "object",
+                      "description": "Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue."
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publicationSites": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all sites the application is exposed in.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partOf": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "dataset",
+                      "application"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    }
+  ],
+  "skills": []
+}
