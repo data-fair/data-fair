@@ -72,11 +72,6 @@ export function vocabulary (): Record<string, IndexProfile> {
     title: { fr: 'Plateforme', en: 'Platform' },
     description: { fr: 'Opérations réservées aux super-administrateurs.', en: 'Operations reserved to superadmins.' }
   }
-  out.explore = {
-    title: { fr: 'Explorer (obsolète)', en: 'Explore (deprecated)' },
-    description: { fr: 'Alias obsolète de catalog, retiré à la prochaine version.', en: 'Deprecated alias of catalog, removed in the next release.' },
-    includes: ['catalog']
-  }
   return out
 }
 

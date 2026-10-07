@@ -22,7 +22,7 @@ test.describe('agentsIndex', () => {
   })
   const silos = ['datasets', 'applications', 'portals', 'processings', 'catalogs', 'notifications', 'metrics', 'account']
 
-  test('declares the whole profile vocabulary: catalog first, umbrellas, every cell, platform, the explore alias', () => {
+  test('declares the whole profile vocabulary: catalog first, umbrellas, every cell, platform', () => {
     const profiles = agentsIndex('https://host.test/data-fair', cfg).profiles!
     assert.equal(Object.keys(profiles)[0], 'catalog')
     for (const tier of ['read', 'write', 'manage']) {
@@ -31,7 +31,7 @@ test.describe('agentsIndex', () => {
     assert.equal(profiles.read_portals.includes, undefined)
     assert.deepEqual(profiles.write_portals.includes, ['read_portals'])
     assert.deepEqual(profiles.manage_portals.includes, ['write_portals'])
-    assert.deepEqual(profiles.explore.includes, ['catalog'])
+    assert.equal(profiles.explore, undefined, 'no deprecated alias: explore never shipped')
     assert.deepEqual(profiles.manage_metrics.title, { fr: "Administrer — métriques d'audience", en: 'Manage — audience metrics' })
     assert.ok(profiles.platform)
   })
@@ -50,7 +50,7 @@ test.describe('agentsIndex', () => {
 
   test('pins the vocabulary: names are only ever appended', () => {
     const cells = silos.flatMap(s => ['read', 'write', 'manage'].map(t => `${t}_${s}`))
-    assert.deepEqual(Object.keys(agentsIndex('https://host.test/data-fair', cfg).profiles!), ['catalog', 'read', 'write', 'manage', ...cells, 'platform', 'explore'])
+    assert.deepEqual(Object.keys(agentsIndex('https://host.test/data-fair', cfg).profiles!), ['catalog', 'read', 'write', 'manage', ...cells, 'platform'])
   })
 
   test('lists processings at the site origin when its integration is configured', () => {

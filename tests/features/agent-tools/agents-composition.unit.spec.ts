@@ -1,7 +1,7 @@
 /**
  * The deployment index and data-fair's document composed by `@data-fair/openapi-mcp`, the way
  * the `mcp` server and the agents service consume them: the umbrellas reach data-fair's cells,
- * the deprecated `explore` alias still yields the catalog tools, and data-fair declares nothing
+ * the default profile is `catalog`, and data-fair declares nothing
  * outside the index vocabulary.
  */
 import { test } from '@playwright/test'
@@ -47,12 +47,6 @@ test.describe('agents index composed with the data-fair document', () => {
     assert.equal(workflow.error, undefined)
     assert.match(workflow.body, /^# Exploring the data published on a portal/)
     assert.doesNotMatch(catalog.toolSet.instructions, /Never prefix with _c_/, 'the body is not in the instructions')
-  })
-
-  test('the deprecated explore alias yields the catalog tools', async () => {
-    const c = await composer()
-    assert.deepEqual(names(await c.compose(['explore'])), names(await c.compose(['catalog'])))
-    assert.ok(names(await c.compose(['explore'])).includes('datafair_list_datasets'))
   })
 
   test('the default profile is catalog', async () => {

@@ -179,8 +179,7 @@ Specified in its own repository; this document only depends on the result.
 
 ### data-fair
 
-- `api/contract/agents-index.ts` declares the vocabulary of section 3, plus `explore` as a
-  deprecated alias (section 8).
+- `api/contract/agents-index.ts` declares the vocabulary of section 3.
 - `api/contract/x-agent.ts` moves to the grid:
   - `GET /catalog/datasets` is annotated `catalog` as `list_datasets`; `GET /datasets` becomes
     `list_account_datasets` in `read_datasets`;
@@ -233,7 +232,7 @@ tool, so it can stay in the index meanwhile.
   do is data-fair's permissions on its identity. `catalog` is the default set.
 - `/v0/servers` lists `catalog` and the umbrellas (`read`, `write`, `manage`) — `catalog` included,
   since exploring what a portal publishes is useful even to an agent with back-office access. The
-  cells stay selectable by name; the deprecated `explore` is accepted but never listed.
+  cells stay selectable by name.
 - Rate limiting follows the caller, not the relay: see [agent-rate-limiting.md](./agent-rate-limiting.md).
 - The compatibility route `/datasets/mcp` composes `catalog` from data-fair with no prefix: the
   historical names, now with the portal scoping they used to have.
@@ -256,11 +255,11 @@ Out of scope. Its direction: combine server-side tools selected by these same pr
 derived from the user's role rather than from a configuration — with the contextual tools of
 the page it runs in.
 
-### Retiring `explore`
+### No `explore` any more
 
-`explore` is deployed only through `mcp`'s public mode and compatibility route, which are
-catalog uses, and no autonomous agent configuration exists yet. The index keeps `explore` for
-one release as a deprecated alias that includes `catalog`, then drops it.
+`explore`, the single profile of the first annotations, is removed outright rather than kept as
+an alias of `catalog`: only unreleased code (the profile-based `mcp` branch) ever consumed it, so
+there is nothing to keep compatible. A request naming it is refused like any undeclared profile.
 
 ## 9. Guardrails
 
@@ -273,12 +272,12 @@ one release as a deprecated alias that includes `catalog`, then drops it.
 
 ## 10. Rollout
 
-Release order: a consumer must run `@data-fair/openapi-mcp` 0.3.0 or later before data-fair
-publishes the step 2 document — older versions refuse its views (`x-agent` arrays) and drop the
-whole data-fair service, `explore` included. The `mcp` server moves to `^0.3.0` first.
+Release order: a consumer must run `@data-fair/openapi-mcp` 0.4.0 or later before data-fair
+publishes the step 2 document — older versions refuse its views (`x-agent` arrays) and its linked
+skills, and drop the whole data-fair service. The `mcp` server moves to `^0.4.0` first.
 
 1. openapi-mcp: views, body allow-list, vocabulary check. — done
-2. data-fair index and annotations, metrics moved to `read_metrics`, `explore` alias. — done
+2. data-fair index and annotations, metrics moved to `read_metrics`. — done
 3. `mcp` server: `catalog` in public mode, the compatibility route.
 4. agents service: profile selection and the tree.
 5. Then each service in turn — portals, processings, catalogs, events, capture,
