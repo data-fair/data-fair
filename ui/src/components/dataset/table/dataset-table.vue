@@ -68,7 +68,7 @@
     />
     <v-btn-group
       v-if="showBtnGroup"
-      class="mx-2"
+      class="mx-2 flex-shrink-0"
       density="compact"
       variant="outlined"
       divided
@@ -290,7 +290,7 @@
         dense
       >
         <v-col
-          v-for="result in results"
+          v-for="result in (pagination ? paginatedResults : results)"
           :key="result._id"
           cols="12"
           sm="6"
@@ -304,13 +304,19 @@
             :filters="filters"
             :headers="headersWithProperty"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
+            :no-interaction="!can('cells')"
             :no-filter="!can('filters')"
             :no-sort="!can('sort')"
             :no-cols="!can('select-cols')"
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
-            @filter="f => can('cells') && addFilter(f)"
+            :selectable="selectable"
+            :selected="selectedItem === result._id"
+            :map-preview="!!headers.some(h => h.key === '_map_preview')"
+            @select="selectedItem = selectedItem === result._id ? '' : result._id"
+            @show-map-preview="selectMapPreview(result._id)"
+            @filter="addFilter"
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
@@ -322,7 +328,7 @@
       <!-- list mode show more (infinite scroll only) -->
       <v-row
         v-if="results.length && !pagination"
-        v-intersect="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
+        v-intersect="(isIntersecting: boolean) => isIntersecting && !fetchResults.loading.value && fetchResults.execute()"
         align="center"
         class="my-0"
       >

@@ -17,14 +17,14 @@
         color="primary"
         variant="outlined"
         style="font-weight: bold;"
-        :style="{height: '40px', borderRadius: '20px', lineHeight: '16px', maxWidth: (maxWidth - 16) + 'px'}"
+        :style="{height: '40px', borderRadius: '20px', lineHeight: '16px', maxWidth: (maxWidth - 96) + 'px'}"
         @click:close="removeFilter(filter)"
         @click="toggle"
       >
-        <div :style="`max-width: ${maxWidth - 56}px;`">
-          <span style="display:inline-block;white-space:nowrap;">{{ (filter.property.title || filter.property['x-originalName'] || filter.property.key) }}</span>
+        <div :style="`max-width: ${maxWidth - 136}px;`">
+          <span style="display:inline-block;white-space:nowrap;">{{ filterLabel(filter) + (opOnLabel(filter) ? ' ' + t(filter.operator) : '') }}</span>
           <br>
-          <span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow: ellipsis;">{{ t(filter.operator) + ' ' + filter.formattedValue }}</span>
+          <span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow: ellipsis;">{{ (opOnLabel(filter) ? '' : t(filter.operator) + ' ') + filter.formattedValue }}</span>
         </div>
       </v-chip>
     </v-slide-group-item>
@@ -51,9 +51,14 @@ import { useCurrentElement, useElementSize } from '@vueuse/core'
 import { type DatasetFilter } from '~/composables/dataset/filters'
 
 const filters = defineModel<DatasetFilter[]>({ default: () => [] })
+// the chip widths leave room for the 2 scroll arrows (40px each), so a long chip is never hidden under one
 const { width: maxWidth } = useElementSize(useCurrentElement())
 
 const { t } = useI18n()
+
+const filterLabel = (filter: DatasetFilter) => filter.property.title || filter.property['x-originalName'] || filter.property.key
+// the operator sits next to the value, unless the value is much longer than the column label
+const opOnLabel = (filter: DatasetFilter) => (filter.formattedValue ?? '').length > 2 * filterLabel(filter).length
 
 const removeFilter = (filter: DatasetFilter) => {
   filters.value = filters.value.filter(f => f !== filter)
