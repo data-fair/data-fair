@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 test.describe('dataset edit-metadata master data tab', () => {
   let datasetId: string
@@ -24,6 +24,25 @@ test.describe('dataset edit-metadata master data tab', () => {
   // Skipped: non-admin test requires org context switching which the current login fixture doesn't support.
   // Personal account users always have admin role, so the master data tab is always visible for personal datasets.
   test.skip('master data tab is NOT visible for non-admin', async () => {})
+
+  test('department admin sees the master data configuration read-only', async ({ page, goToWithAuth }) => {
+    const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
+    await orgAdmin.put('/api/v1/datasets/dep-master', {
+      isRest: true,
+      title: 'dep master',
+      schema: [{ key: 'code', type: 'string' }],
+      owner: { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep1' }
+    })
+    await waitForFinalize(orgAdmin, 'dep-master')
+
+    await goToWithAuth('/data-fair/dataset/dep-master', 'test_user4', { org: 'test_org1', dep: 'dep1' })
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    await page.locator('#structure').getByRole('tab', { name: /Données de référence|Master data/ }).click()
+    await expect(page.getByText(/Seuls les administrateurs de l'organisation/)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByLabel(/Création de jeux virtuels/)).toBeDisabled()
+    await expect(page.getByRole('button', { name: /Aide-moi à configurer/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toHaveCount(0)
+  })
 
   test('enable virtualDatasets and save', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_superadmin')

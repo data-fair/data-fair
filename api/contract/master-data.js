@@ -109,7 +109,9 @@ export const schema = {
                     title: 'Propriété comparée',
                     required: ['key'],
                     properties: {
-                      key: { type: 'string' }
+                      key: { type: 'string' },
+                      title: { type: 'string' },
+                      'x-refersTo': { type: 'string' }
                     },
                     layout: {
                       props: {
@@ -382,7 +384,8 @@ export const endpoints = (dataset) => {
   for (const bulkSearch of dataset.masterData.bulkSearchs || []) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
-      const matchingProp = dataset.schema.find(p => p.key === input.property.key && p['x-refersTo'] === input.property['x-refersTo'])
+      // equals inputs saved as a bare { key } (UI regression, see #576) take the concept from the schema
+      const matchingProp = dataset.schema.find(p => p.key === input.property.key && p['x-refersTo'] === (input.property['x-refersTo'] ?? p['x-refersTo']))
       inputProperties[input.property.key] = matchingProp ? { ...matchingProp } : { ...input.property }
       inputProperties[input.property.key].title = inputProperties[input.property.key].title || ''
       inputProperties[input.property.key].description = inputProperties[input.property.key].description || ''
