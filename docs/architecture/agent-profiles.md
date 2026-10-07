@@ -228,10 +228,13 @@ tool, so it can stay in the index meanwhile.
 
 ### The `mcp` server
 
-- Public mode exposes `catalog` only (`PUBLIC_PROFILES` defaults to `["catalog"]`), and
-  `/v0/servers` lists it alone.
-- Internal mode — the agents service's runs — accepts any combination of declared profiles;
-  `/v0/servers` lists `catalog` and the umbrellas.
+- One published server, no public/internal split: parity means the agents service reaches it like
+  any other client, so every declared profile is available to every caller, and what a caller may
+  do is data-fair's permissions on its identity. `catalog` is the default set.
+- `/v0/servers` lists `catalog` and the umbrellas (`read`, `write`, `manage`) — `catalog` included,
+  since exploring what a portal publishes is useful even to an agent with back-office access. The
+  cells stay selectable by name; the deprecated `explore` is accepted but never listed.
+- Rate limiting follows the caller, not the relay: see [agent-rate-limiting.md](./agent-rate-limiting.md).
 - The compatibility route `/datasets/mcp` composes `catalog` from data-fair with no prefix: the
   historical names, now with the portal scoping they used to have.
 
