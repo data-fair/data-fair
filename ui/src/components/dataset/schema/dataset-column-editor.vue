@@ -158,6 +158,18 @@
         </template>
       </v-autocomplete>
 
+      <!-- stored on the dataset, shown on the column holding the attachments; derived from the children on virtual datasets -->
+      <v-checkbox
+        v-if="column?.['x-refersTo'] === 'http://schema.org/DigitalDocument' && !dataset?.isVirtual"
+        :model-value="!!attachmentsAsImage"
+        :label="t('attachmentsAsImage')"
+        :disabled="!editable || !dataset?.userPermissions?.includes('writeDescriptionBreaking')"
+        density="compact"
+        class="mb-2"
+        hide-details
+        @update:model-value="v => emit('update:attachmentsAsImage', !!v)"
+      />
+
       <!-- Separator select -->
       <v-select
         v-if="column && column.type === 'string'"
@@ -216,6 +228,7 @@
 <i18n lang="yaml">
 fr:
   noColumnSelected: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
+  attachmentsAsImage: Afficher les pièces jointes de lignes comme des images
   sourceKey: Clé source
   type: Type
   label: Libellé
@@ -241,6 +254,7 @@ fr:
   privateVocabulary: Vocabulaire privé
 en:
   noColumnSelected: Click on a column title to display its detailed information.
+  attachmentsAsImage: Display row attachments as images
   sourceKey: Source key
   type: Type
   label: Label
@@ -282,10 +296,12 @@ const props = defineProps<{
   column: SchemaProperty | null
   allColumns: SchemaProperty[]
   editable?: boolean
+  attachmentsAsImage?: boolean
 }>()
 
 const emit = defineEmits<{
   remove: [key: string]
+  'update:attachmentsAsImage': [value: boolean]
 }>()
 
 const currentFileColumn = computed(() => {

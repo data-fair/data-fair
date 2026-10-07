@@ -54,7 +54,8 @@ const context = computed(() => ({
     { key: 'license', title: t('license') },
     { key: 'topics', title: t('topic') }
   ].concat(Object.keys(datasetsMetadata || {})
-    .filter(metadata => datasetsMetadata![metadata as 'spatial']!.active)
+    // metadata always shown have a read-only switch, the main ones are listed above
+    .filter(metadata => datasetsMetadata![metadata as 'spatial']!.active && !datasetsMetadataSchema.properties[metadata].properties.active.readOnly)
     .map(metadata => ({
       key: metadata,
       title: datasetsMetadataSchema.properties[metadata].title || datasetsMetadataSchema.properties[metadata].properties.active.title

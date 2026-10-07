@@ -105,7 +105,9 @@
     :column="activeColumn"
     :all-columns="props.modelValue"
     :editable="true"
+    :attachments-as-image="attachmentsAsImage"
     @remove="removeColumn"
+    @update:attachments-as-image="emit('update:attachmentsAsImage', $event)"
   />
 </template>
 
@@ -154,6 +156,7 @@ const props = defineProps<{
   originalConformsTo?: ConformsTo | null
   owner?: { type: string, id: string } | null
   conformsToActive?: boolean
+  attachmentsAsImage?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -161,6 +164,7 @@ const emit = defineEmits<{
   'update:primaryKey': [value: string[]]
   'update:projection': [value: { title?: string, code?: string } | null]
   'update:conformsTo': [value: ConformsTo | null]
+  'update:attachmentsAsImage': [value: boolean]
 }>()
 
 const { t } = useI18n()

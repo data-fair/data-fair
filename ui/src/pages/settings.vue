@@ -451,6 +451,10 @@ function normalizeSettings (s: any) {
   }
   // searchTerms defaults to active TRUE in the schema, unlike its neighbours
   if (!dm.searchTerms) dm.searchTerms = { active: true }
+  // metadata always shown, their read-only switch defaults to active
+  for (const key of ['license', 'origin', 'image', 'topics', 'relatedDatasets']) {
+    if (!dm[key]) dm[key] = { active: true }
+  }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {

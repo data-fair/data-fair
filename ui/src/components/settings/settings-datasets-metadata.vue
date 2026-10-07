@@ -21,6 +21,12 @@ watchDeepDiff(datasetsMetadata, () => {
   editDatasetsMetadata.value = datasetsMetadata.value
 }, { immediate: true })
 watchDeepDiff(editDatasetsMetadata, () => {
+  // a new category gets its key at once, so a metadata can pick it before the settings are saved
+  const groups = editDatasetsMetadata.value?.groups
+  if (groups?.some(g => !g.key)) {
+    editDatasetsMetadata.value = { ...editDatasetsMetadata.value, groups: groups.map(g => g.key ? g : { ...g, key: crypto.randomUUID().slice(0, 8) }) }
+    return
+  }
   datasetsMetadata.value = editDatasetsMetadata.value
 }, {})
 const { locale } = useI18n()

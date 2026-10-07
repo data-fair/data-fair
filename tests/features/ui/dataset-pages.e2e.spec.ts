@@ -217,6 +217,7 @@ test.describe('dataset detail pages', () => {
     await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
     await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await page.locator('#metadata').getByRole('tab', { name: 'Couverture & indexation' }).click()
     const field = page.locator('#metadata').getByLabel('Termes de recherche associés')
     await expect(field).toBeVisible()
     await field.fill('élections scrutin')

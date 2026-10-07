@@ -1,6 +1,37 @@
 import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
+// the two default tabs of the dataset metadata form, never stored in datasetsMetadata.groups
+const informationsGroup = { key: 'informations', title: 'Informations' }
+const coverageGroup = { key: 'coverage', title: 'Couverture & indexation' }
+
+// tab of a metadata in the dataset form, left empty it stays in its default tab
+const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
+  type: 'string',
+  title: 'Catégorie',
+  layout: {
+    ...(toggleable && { if: 'parent.data.active' }),
+    cols,
+    getItems: {
+      expr: `[${JSON.stringify(informationsGroup)}, ${JSON.stringify(coverageGroup)}].concat(rootData.groups ?? [])`,
+      itemTitle: 'item.title',
+      itemKey: 'item.key'
+    },
+    props: { placeholder: defaultGroup.title, persistentPlaceholder: true, clearable: true }
+  }
+})
+
+// a metadata always shown on a dataset: only its tab can be chosen
+const fixedMetadata = (title, defaultGroup, description) => ({
+  type: 'object',
+  // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
+  layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group'] },
+  properties: {
+    active: { title, description, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
+    group: metadataGroup(defaultGroup)
+  }
+})
+
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
   title: 'Settings',
@@ -345,25 +376,88 @@ export default {
         title: null
       },
       properties: {
-        // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
-        spatial: {
+        groups: {
+          type: 'array',
+          title: 'Catégories',
+          description: 'Onglets ajoutés au formulaire des métadonnées, après « Informations » et « Couverture & indexation ».',
+          layout: {
+            listEditMode: 'inline',
+            listActions: ['add', 'delete', 'sort'],
+            messages: {
+              addItem: 'Add a category',
+              'x-i18n-addItem': {
+                fr: 'Ajouter une catégorie'
+              }
+            }
+          },
+          items: {
+            type: 'object',
+            required: ['title'],
+            properties: {
+              key: {
+                type: 'string',
+                readOnly: true,
+                layout: 'none'
+              },
+              title: {
+                title: "Titre de l'onglet",
+                type: 'string',
+                minLength: 3,
+                // the icon below comes from the topic schema, 5 columns wide
+                layout: { cols: { md: 7, sm: 6 } }
+              },
+              icon: { $ref: 'https://github.com/data-fair/data-fair/topic#/properties/icon' }
+            }
+          }
+        },
+        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."),
+        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."),
+        image: fixedMetadata('Vignette', informationsGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
+        topics: fixedMetadata('Thématiques', coverageGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
+        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."),
+        creator: {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture géographique',
+              title: 'Producteur',
+              description: "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données.",
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
+                props: { variant: 'outlined', placeholder: 'Producteur' }
+              }
+            },
+            group: metadataGroup(informationsGroup, true)
+          }
+        },
+        // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
+        spatial: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'Couverture géographique',
+              description: 'Zone géographique couverte par les données, par exemple une commune ou une région.',
+              type: 'boolean',
+              default: false,
+              layout: { comp: 'switch', cols: 4 }
+            },
+            title: {
+              title: 'Libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Couverture géographique' }
               }
-            }
+            },
+            group: metadataGroup(coverageGroup, true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
@@ -372,19 +466,21 @@ export default {
           properties: {
             active: {
               title: 'Couverture temporelle',
+              description: 'Période couverte par les données.',
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
               }
-            }
+            },
+            group: metadataGroup(coverageGroup, true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -393,39 +489,21 @@ export default {
           properties: {
             active: {
               title: 'Fréquence de mise à jour',
+              description: 'Fréquence à laquelle les données sont mises à jour.',
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Fréquence de mise à jour' }
               }
-            }
-          }
-        },
-        creator: {
-          type: 'object',
-          properties: {
-            active: {
-              title: 'Producteur',
-              type: 'boolean',
-              default: false,
-              layout: { cols: 6 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 6,
-                props: { variant: 'outlined', placeholder: 'Producteur' }
-              }
-            }
+            group: metadataGroup(coverageGroup, true)
           }
         },
         modified: {
@@ -433,19 +511,21 @@ export default {
           properties: {
             active: {
               title: 'Date de modification de la source',
+              description: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée.",
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Date de modification de la source' }
               }
-            }
+            },
+            group: metadataGroup(coverageGroup, true)
           }
         },
         keywords: {
@@ -453,19 +533,21 @@ export default {
           properties: {
             active: {
               title: 'Mots-clés',
+              description: 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.',
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Mots-clés' }
               }
-            }
+            },
+            group: metadataGroup(coverageGroup, true)
           }
         },
         searchTerms: {
@@ -473,19 +555,21 @@ export default {
           properties: {
             active: {
               title: 'Termes de recherche associés',
+              description: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel.",
               type: 'boolean',
               default: true,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
               }
-            }
+            },
+            group: metadataGroup(coverageGroup, true)
           }
         },
         conformsTo: {
@@ -493,16 +577,17 @@ export default {
           properties: {
             active: {
               title: 'Schéma',
+              description: 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.',
               type: 'boolean',
               default: false,
-              layout: { cols: 6 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 6,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Schéma' }
               }
             }
@@ -518,7 +603,8 @@ export default {
                 fr: 'Ajouter une métadonnée'
               }
             },
-            itemTitle: '(item.title ?? "") + (item.key ? (" (" + item.key + ")") : "")'
+            itemTitle: 'item.title',
+            itemSubtitle: `[item.key && "Clé : " + item.key, "Catégorie : " + ([${JSON.stringify(informationsGroup)}, ${JSON.stringify(coverageGroup)}].concat(rootData.groups ?? []).find(g => g.key === item.group) ?? ${JSON.stringify(informationsGroup)}).title].filter(Boolean).join(" · ")`
           },
           items: {
             type: 'object',
@@ -539,8 +625,10 @@ export default {
               title: {
                 title: 'Libellé',
                 type: 'string',
-                minLength: 3
+                minLength: 3,
+                layout: { cols: 6 }
               },
+              group: metadataGroup(informationsGroup, false, 6),
               description: {
                 title: 'Infobulle',
                 description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
