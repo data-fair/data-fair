@@ -1,4 +1,5 @@
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AgentRoot } from '@data-fair/openapi-mcp'
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
@@ -61,7 +62,7 @@ const errorResponses = {
 type RootApiDoc = {
   openapi: string
   info: Record<string, any>
-  'x-agent'?: unknown
+  'x-agent'?: AgentRoot
   servers: { url: string, description?: string }[]
   components: {
     schemas: Record<string, any>

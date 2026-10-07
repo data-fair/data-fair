@@ -72,7 +72,7 @@ const annotatedOperationIds = (doc: any): string[] => Object.values<any>(doc.pat
 test.describe('agent surface of the root document', () => {
   test('declares the cells data-fair fills, all of them in the index vocabulary', async () => {
     const { apiDocs, agentsIndex } = await generators()
-    const declared = Object.keys(apiDocs(PUBLIC_URL)['x-agent'].profiles)
+    const declared = Object.keys(apiDocs(PUBLIC_URL)['x-agent']!.profiles!)
     assert.deepEqual([...declared].sort(), Object.keys(expectedTools).sort())
     const vocabulary = Object.keys(agentsIndex(PUBLIC_URL, { publicUrl: PUBLIC_URL }).profiles!)
     for (const p of declared) assert.ok(vocabulary.includes(p), `${p} is in the index vocabulary`)
@@ -93,7 +93,7 @@ test.describe('agent surface of the root document', () => {
   test('every profile combines with every other: one tool set, no name twice', async () => {
     const { apiDocs } = await generators()
     const doc = apiDocs(PUBLIC_URL)
-    const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent'].profiles), lint: 'error' })
+    const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), lint: 'error' })
     const names = toolSet.tools.map(t => t.name)
     assert.equal(new Set(names).size, names.length)
     assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
@@ -132,7 +132,7 @@ test.describe('agent surface of the root document', () => {
       urls.push(input instanceof Request ? input.url : String(input))
       return new Response(JSON.stringify({ count: 0, results: [] }), { headers: { 'content-type': 'application/json' } })
     }) as typeof fetch
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['read_datasets', 'read_applications'], fetch: fetchFn })
+    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['read_datasets', 'read_applications'], fetch: fetchFn })
     for (const name of ['datafair_list_account_datasets', 'datafair_list_account_applications']) {
       const result = await toolSet.tools.find(t => t.name === name)!.execute({})
       assert.ok(!result.isError, result.text)
@@ -206,7 +206,7 @@ test.describe('agent surface of the root document', () => {
     const admin = apiDocs(PUBLIC_URL, adminSession)
     assert.ok(annotatedOperationIds(admin).length > 0)
     assert.deepEqual(annotatedOperationIds(admin), annotatedOperationIds(anonymous))
-    const profiles = Object.keys(anonymous['x-agent'].profiles)
+    const profiles = Object.keys(anonymous['x-agent']!.profiles!)
     const [a, b] = await Promise.all([anonymous, admin].map(doc => load(doc, { profiles, lint: 'error' })))
     assert.deepEqual(toolSetSnapshot(a), toolSetSnapshot(b))
   })
