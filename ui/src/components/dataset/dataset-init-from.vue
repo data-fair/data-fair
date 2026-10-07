@@ -40,7 +40,7 @@
       @update:model-value="togglePart('extensions')"
     />
 
-    <!-- a fragment has neither its own attachments nor a description of its own to inherit: it is described by its parent -->
+    <!-- a fragment is not catalogued: copying the parent's attachments and catalog metadata would only duplicate them -->
     <v-checkbox
       v-if="initFromDataset.attachments?.length && !fragment"
       :model-value="modelValue.parts.includes('metadataAttachments')"

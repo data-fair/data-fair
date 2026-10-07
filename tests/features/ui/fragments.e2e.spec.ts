@@ -42,7 +42,7 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#structure').getByRole('tab', { name: 'Fragments' })).toHaveCount(0)
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes/ })).toHaveCount(0)
     await expect(page.locator('#metadata').getByLabel('Licence')).toHaveCount(0)
-    await expect(page.locator('#metadata').getByText('Description', { exact: true })).toHaveCount(0)
+    await expect(page.locator('#metadata').getByText('Description', { exact: true }).first()).toBeVisible()
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 
@@ -94,7 +94,7 @@ test.describe('fragments UI', () => {
     await expect(stepWindow.getByText('virtual parent')).toBeVisible()
     // copying the parent's rows into its own fragment would duplicate them
     await expect(stepWindow.getByText('Copier la donnée')).toHaveCount(0)
-    // nor its description: a fragment is described by its parent
+    // nor its catalog metadata: a fragment is not catalogued
     await expect(stepWindow.getByText(/Copier le résumé/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continuer' }).click()
     await page.getByLabel('Titre').fill('my rest fragment')

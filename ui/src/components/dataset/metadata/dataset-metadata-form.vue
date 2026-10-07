@@ -43,11 +43,8 @@
         />
       </div>
 
-      <!-- Description + Agent Help, a fragment is described by its parent: title and summary are enough -->
-      <div
-        v-if="!dataset.partOf"
-        class="d-flex align-start gap-1 mb-3"
-      >
+      <!-- Description + Agent Help -->
+      <div class="d-flex align-start gap-1 mb-3">
         <markdown-editor
           v-model="dataset.description"
           :read-only="!can('writeDescription')"

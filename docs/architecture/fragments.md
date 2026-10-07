@@ -482,9 +482,8 @@ permission model on the client, it is purely presentational.
   or sharing, which a fragment gets through its parent: the whole Share section (permissions, API
   key / protected links, portals, catalogs, embed snippets), the Attachments tab, the reference-data
   tab (refused by the API anyway), the dataset's Applications tab, the Fragments tab (one level
-  only), and the catalog fields of the metadata form: only title and summary remain
-  (plus the functional `attachmentsAsImage` checkbox on datasets), a fragment being described by
-  its parent.
+  only), and the catalog fields of the metadata form: only title, summary and description remain
+  (plus the functional `attachmentsAsImage` checkbox on datasets).
 - **`fragments-list.vue`**, rendered as a discreet **Fragments tab** — in the Structure section of a
   dataset, just before the "Jeu de données virtuel" tab, and in the Render section of an application,
   after the configuration tab. Fragments appear in no listing, so this is the one place they are
@@ -503,7 +502,8 @@ permission model on the client, it is purely presentational.
   pre-selected on the parent with its schema, so the fragment fits the parent once added to its
   sources (§7). For a
   fragment the step only offers structure: not the data (it would duplicate the parent's rows), nor
-  the description or metadata attachments (a fragment is described by its parent). A parent unreadable from the current active
+  the catalog metadata or metadata attachments (a fragment is not catalogued, it would only
+  duplicate them). A parent unreadable from the current active
   account shows the fetch-error page with its account-switch button. The tab carries an
   `agentDesc` for the back-office assistant (§9 of `agent-integration.md`).
 - **Sources of a virtual parent.** On a virtual parent, each fragment card of the Fragments tab
