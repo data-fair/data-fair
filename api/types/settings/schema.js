@@ -6,6 +6,7 @@ const informationsGroup = { key: 'informations', title: 'Informations' }
 const coverageGroup = { key: 'coverage', title: 'Couverture & indexation' }
 
 // tab of a metadata in the dataset form, left empty it stays in its default tab
+/** @param {{ key: string, title: string }} defaultGroup */
 const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   type: 'string',
   title: 'Catégorie',
@@ -22,6 +23,11 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
 })
 
 // a metadata always shown on a dataset: only its tab can be chosen
+/**
+ * @param {string} title
+ * @param {{ key: string, title: string }} defaultGroup
+ * @param {string} description
+ */
 const fixedMetadata = (title, defaultGroup, description) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
