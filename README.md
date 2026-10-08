@@ -4,13 +4,16 @@
 
 [Visit the official website](https://datafair.cloud)
 
-![](doc/static/data-fair.gif)
-
 ## Sponsors
 
-| | Click [here to support the development of this project](https://github.com/sponsors/koumoul-dev). |
-|-|-|
-| [<img alt="Koumoul logo" src="./docs/assets/koumoul-logo.png" height="40">](https://koumoul.com)<br><sub>La donnée accessible</sub> | [Koumoul](https://koumoul.com) develops the Data Fair ecosystem and hosts it as an online service. |
+<a href="https://koumoul.com"><img alt="Koumoul logo" src="./docs/assets/koumoul-logo.png" height="56" align="left"></a>
+
+**[Koumoul](https://koumoul.com)** · *La donnée accessible*<br>
+Koumoul develops the Data Fair ecosystem and hosts it as an online service.
+
+<br clear="left">
+
+Click [here to support the development of this project](https://github.com/sponsors/koumoul-dev).
 
 ## Developers
 
