@@ -46,8 +46,13 @@ test.describe('bridge provider settings', () => {
     assert.equal(org.modelMapping.moderator.id, 'haiku')
   })
 
-  test('leaves the evaluator on the assistant model, being a review role and not part of a run', () => {
-    assert.equal(bridgeSettings('sonnet', 'haiku').org.modelMapping.evaluator.id, 'sonnet')
+  test('declares exactly the roles the agents service accepts', () => {
+    // the agents settings schema refuses any other role (an "evaluator" role was dropped there), and
+    // a refused settings PUT fails every case at setup
+    assert.deepEqual([...MODEL_ROLES].sort(), ['assistant', 'moderator', 'summarizer', 'tools'])
+    for (const entry of bridgeSettings('sonnet', 'haiku').superadmin.models) {
+      for (const role of entry.usage) assert.ok((MODEL_ROLES as readonly string[]).includes(role), role)
+    }
   })
 
   test('lists one catalog entry per model, even when both roles share it', () => {

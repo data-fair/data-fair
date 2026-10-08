@@ -17,7 +17,8 @@ export const OWNER_USER = 'test_user1'
 /** Global admin, needed to write another owner's agent settings. */
 const SUPER_ADMIN = 'test_superadmin@test.com'
 
-export const MODEL_ROLES = ['assistant', 'tools', 'summarizer', 'evaluator', 'moderator'] as const
+// the roles the agents settings schema accepts, and no other: a refused settings PUT fails every case
+export const MODEL_ROLES = ['assistant', 'tools', 'summarizer', 'moderator'] as const
 
 const provider = {
   id: 'bridge',
@@ -44,8 +45,6 @@ const quotas = {
  * moderation guard. Running them on the assistant's model would both cost more
  * per case and flatter the product — a sub-agent prompt that only a large model
  * can follow reads as working until a real deployment runs it on the cheap tier.
- * The evaluator is a trace-review role no run exercises, so it follows the
- * assistant rather than earning a third setting.
  */
 const BACKGROUND_ROLES = ['tools', 'summarizer', 'moderator'] as const
 
