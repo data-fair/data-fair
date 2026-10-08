@@ -624,6 +624,38 @@ defaults it to 0 credits. Rate limits are the practical ceiling here: three Clau
 one subscription. An invalid run must never be judged, and
 `sim-<case>.run.json` is what tells the two apart.
 
+### Autonomous-agent cases
+
+`simulations/autonomous-agent.sim.spec.ts` drives the other way the stack exposes
+data-fair's tools: an **autonomous agent** of the agents service, owned by
+`test_org1`, acting as its own non-human identity and calling the **mcp server**,
+whose tools are composed from the `x-agent` annotations of this API
+(`/api/v1/agents/index.json`) — the configuration production runs. The back-office
+drawer and its in-page tools are not involved.
+
+- The NHI `test_org1_agent_nhi` is declared in simple-directory's file storage
+  (`dev/resources/users.template.json`, rendered into `users.json` by
+  `dev/init-env.sh` with the checkout's host and port, which its issuer names). Its
+  subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
+  through the agents test-env route, available because the dev stack runs the agents
+  image with `NODE_ENV=development`.
+- The agent reaches the mcp server through the operator catalog (`MCP_SERVERS` in
+  `docker-compose.yaml`): `datafair-read` (`/mcp-server/mcp?profiles=read`) and
+  `datafair-write` (`…?profiles=read,write`), both as the agent's own session.
+- Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
+  `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
+- Before any model call the runner asks the agent's tool diagnostic for the tools the
+  cases need: a broken NHI exchange or an mcp server that composed nothing fails the
+  run with its cause.
+- A case may carry a premise read from the conversation export (which tool was called,
+  on which dataset); a run whose premise did not hold is invalid, not judged.
+
+The stack needs the `agents` image of `feat-autonomous-agents` and the `mcp` image
+(`AGENTS_IMAGE`, `MCP_IMAGE` in `.env`); `AGENTS_IMAGE` goes back to the compose default
+once that branch is merged in agents. Run one case through `/agents-sim` as the others,
+e.g. `SIM_CASES=inventaire-du-compte`; `SIM_CASES` is shared by both spec files, each
+taking the cases it owns.
+
 ### Writing a case
 
 A case is a page, a person and something they want, with no expected result. Two

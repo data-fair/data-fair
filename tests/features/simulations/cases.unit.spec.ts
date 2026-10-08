@@ -52,3 +52,29 @@ test.describe('case registry', () => {
     )
   })
 })
+
+test.describe('case selection across the two simulation specs', () => {
+  test('a spec gets only the requested cases it owns', async () => {
+    const { selectOwnCases } = await import('../../../simulations/cases/select.ts')
+    const { agentCases } = await import('../../../simulations/cases/autonomous-agents.ts')
+    assert.deepEqual(selectOwnCases(cases, ['inventaire-du-compte']), [])
+    assert.deepEqual(selectOwnCases(agentCases, ['inventaire-du-compte']).map(c => c.name), ['inventaire-du-compte'])
+  })
+
+  test('no request selects all of a spec\'s cases', async () => {
+    const { selectOwnCases } = await import('../../../simulations/cases/select.ts')
+    assert.equal(selectOwnCases(cases, []).length, cases.length)
+  })
+
+  test('an unknown name still fails loudly', async () => {
+    const { selectOwnCases } = await import('../../../simulations/cases/select.ts')
+    assert.throws(() => selectOwnCases(cases, ['no-such-case']), /unknown simulation case/)
+  })
+
+  test('names are unique across both specs, since evidence files are named after them', async () => {
+    const { agentCases } = await import('../../../simulations/cases/autonomous-agents.ts')
+    const names = [...cases, ...agentCases].map(c => c.name)
+    assert.equal(new Set(names).size, names.length)
+    for (const name of agentCases.map(c => c.name)) assert.match(name, /^[a-z0-9-]+$/)
+  })
+})

@@ -8,6 +8,7 @@
 import { test } from '../tests/fixtures/login.ts'
 import { clean } from '../tests/support/axios.ts'
 import { cases } from './cases/index.ts'
+import { selectOwnCases } from './cases/select.ts'
 import { seedDatasets } from './runner/fixtures.ts'
 import { assertBridgeUp, seedSettings, fetchConversationExports, runErrors, OWNER, OWNER_USER, ROOT, CONSENT_COOKIE, CONSENT_YES } from './runner/settings.ts'
 import {
@@ -15,7 +16,6 @@ import {
   chatDriverStrings,
   nextUserMessage, isDone, resolveUserModel,
   writeEvidence, type TranscriptInput, parseConversationExport,
-  selectCases,
   createPagePerception
 } from '@data-fair/lib-agents-sim'
 
@@ -42,7 +42,7 @@ const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
 const USER_MODEL = resolveUserModel()
 // The agents chat drawer's frame, whose src is /agents/<type>/<id>/chat?…
 const CHAT_FRAME = 'iframe[src*="/agents/"][src*="/chat"]'
-const selected = selectCases(cases, (process.env.SIM_CASES ?? '').split(',').map(s => s.trim()).filter(Boolean))
+const selected = selectOwnCases(cases)
 
 for (const simCase of selected) {
   test(`simulation: ${simCase.name}`, async ({ page, goToWithAuth }) => {
