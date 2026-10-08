@@ -2,7 +2,7 @@
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[Visit documentation website](https://data-fair.github.io/3/)
+[Visit the official website](https://datafair.cloud)
 
 ![](doc/static/data-fair.gif)
 
@@ -10,8 +10,7 @@
 
 | | Click [here to support the development of this project](https://github.com/sponsors/koumoul-dev). |
 |-|-|
-| [<img alt="Koumoul logo" src="https://koumoul.com/static/logo-slogan.png" height="40">](https://koumoul.com) | [Koumoul](https://koumoul.com) develops the Data Fair ecosystem and hosts it as an online service. |
-| [<img alt="Dawizz logo" src="https://dawizz.fr/logo-Dawizz-all-about-your-data-home.png" height="40">](https://dawizz.fr) | [Dawizz](https://dawizz.fr) uses Data Fair inside its platform and supports its development. |
+| [<img alt="Koumoul logo" src="./docs/assets/koumoul-logo.png" height="40">](https://koumoul.com)<br><sub>La donnée accessible</sub> | [Koumoul](https://koumoul.com) develops the Data Fair ecosystem and hosts it as an online service. |
 
 ## Developers
 
