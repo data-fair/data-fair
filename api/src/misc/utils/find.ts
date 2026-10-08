@@ -20,6 +20,19 @@ function queryVal (val: string) {
 }
 
 /**
+ * The active-account filter that `mine=true` and `shared=false` ask for. Without an account there is
+ * nothing to scope to: dropping the parameters silently widened the listing to every account's public
+ * resources, which an agent's "account" tool then presented as its own. Refuse instead.
+ */
+export const activeAccountFilter = (reqQuery: Record<string, string>, sessionState: SessionState, locale: string = config.i18n.defaultLocale): Record<string, string> | undefined => {
+  if (reqQuery.shared !== 'false' && reqQuery.mine !== 'true') return undefined
+  if (!sessionState?.account) throw httpError(401, i18n.__({ locale, phrase: 'errors.activeAccountRequired' }))
+  const filter: Record<string, string> = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
+  if (sessionState.account.department) filter['owner.department'] = sessionState.account.department
+  return filter
+}
+
+/**
  *
  * @returns
  */
@@ -89,11 +102,8 @@ export const query = (reqQuery: Record<string, string>, locale: string, sessionS
       delete query['owner.id']
       query.$and = query.$and.concat(ownerFilters(reqQuery))
     }
-    if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
-      const accountFilter: any = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
-      if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
-      query.$and.push(accountFilter)
-    }
+    const accountFilter = activeAccountFilter(reqQuery, sessionState, locale)
+    if (accountFilter) query.$and.push(accountFilter)
   }
   if (!query.$and.length) delete query.$and
   return query
@@ -319,11 +329,8 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
       $or: permissions.filter(sessionState, resourceType as ResourceType)
     }
   })
-  if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
-    const accountFilter: any = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
-    if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
-    pipeline.push({ $match: accountFilter })
-  }
+  const accountFilter = activeAccountFilter(reqQuery, sessionState)
+  if (accountFilter) pipeline.push({ $match: accountFilter })
 
   if (extraFilters) {
     for (const extraFilter of extraFilters) {
