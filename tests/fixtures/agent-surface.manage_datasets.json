@@ -5,7 +5,7 @@
   "tools": [
     {
       "name": "datafair_list_account_datasets",
-      "description": "List the datasets owned by the active account (its department included), with optional text search. Returns id, title, status, row count, and last update.",
+      "description": "List the datasets owned by the active account (its department included), with optional text search. Without q it lists everything the account holds: prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -71,4 +71,15 @@ test.describe('agents index composed with the data-fair document', () => {
     assert.ok(names(both).includes('datafair_list_datasets'))
     assert.ok(names(both).includes('datafair_list_account_datasets'))
   })
+
+  test('the account listings say that calling them without q lists everything the account holds', async () => {
+    // simulations: agents chained keyword searches (a "sport" query missing "Équipements sportifs")
+    // and then could not say whether anything was missed, where one unfiltered listing settles it
+    const read = await (await composer()).compose(['read'])
+    for (const name of ['datafair_list_account_datasets', 'datafair_list_account_applications']) {
+      const tool = read.toolSet.tools.find(t => t.name === name) as { description: string } | undefined
+      assert.ok(tool, name)
+      assert.match(tool.description, /without q/i, name)
+    }
+  })
 })
