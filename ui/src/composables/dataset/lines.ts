@@ -162,6 +162,7 @@ const prepareExtendedResultValue = (value: any, property: SchemaProperty, trunca
 const shouldDisplayDetail = (value: any, property: SchemaProperty, truncate: number): boolean => {
   if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
   if (property['x-refersTo'] === 'https://schema.org/WebPage') return false
+  if (!property.separator && value && (property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description')) return true
   return property.type === 'string' && !property.separator && value && truncate < value.length
 }
 

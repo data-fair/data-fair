@@ -97,7 +97,7 @@
                 class="item-value-hover-actions"
               >
                 <v-btn
-                  v-if="!noInteraction && (result.values[header.key] as ExtendedResultValue).formatted && ((result.values[header.key] as ExtendedResultValue).displayDetail || isGeometry(header) || isMarkdown(header))"
+                  v-if="!noInteraction && (result.values[header.key] as ExtendedResultValue).formatted && ((result.values[header.key] as ExtendedResultValue).displayDetail || isGeometry(header))"
                   :icon="mdiLoupe"
                   :title="t('showFullValue')"
                   color="primary"
@@ -222,8 +222,6 @@ const label = computed(() => {
 const showMapBtn = computed(() => mapPreview && !!result._geopoint)
 
 const isGeometry = (header: TableHeaderWithProperty) => header.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry'
-// same rule as the detail dialog, which renders these values as html
-const isMarkdown = (header: TableHeaderWithProperty) => header.property['x-display'] === 'markdown' || header.property['x-refersTo'] === 'http://schema.org/description'
 
 // label and image are already shown in the card header
 const otherHeaders = computed(() => headers.filter(h => h.property && h.key !== labelField.value?.key && h.key !== imageField.value?.key))
