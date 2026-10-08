@@ -346,7 +346,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button next to the search terms field, on the metadata form (in the « Couverture & indexation » tab unless the owner settings move it) |
+| **Trigger** | Action button next to the search terms field, on the metadata form (in the « Informations complémentaires » tab unless the owner settings move it) |
 | **Action ID** | `suggest-search-terms` |
 | **Subagent** | `search_terms_writer` (model: `summarizer`) — reads metadata, schema and samples, returns a newline-separated list of hidden search terms (synonyms, acronyms with expansion, everyday wording) |
 | **Pattern** | The lead agent presents the list to the user and asks for approval, then applies it on approval via `set_dataset_metadata` (searchTerms field, one line of terms separated by commas or newlines). Nothing is saved — the user still clicks Enregistrer. |

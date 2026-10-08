@@ -155,6 +155,7 @@ export const trimSettings = (settings: Partial<Settings>) => {
     }
     for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title', 'description')
     for (const group of settings.datasetsMetadata.groups ?? []) trimFields(group, 'title')
+    trimFields(settings.datasetsMetadata, 'informationsTitle', 'coverageTitle')
   }
   if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
 }

@@ -45,7 +45,7 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await metadata.getByRole('tab', { name: 'Couverture & indexation' }).click()
+    await metadata.getByRole('tab', { name: 'Informations complémentaires' }).click()
     await expect(metadata.getByRole('combobox', { name: /Couverture géographique/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Couverture temporelle/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Date de modification de la source/ })).toBeVisible()
@@ -56,7 +56,7 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    const coverageTab = metadata.getByRole('tab', { name: 'Couverture & indexation' })
+    const coverageTab = metadata.getByRole('tab', { name: 'Informations complémentaires' })
     await coverageTab.click()
     const temporal = metadata.getByRole('textbox', { name: /Couverture temporelle/ })
     const start = dayOfCurrentMonth(6)

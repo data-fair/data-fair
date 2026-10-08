@@ -690,7 +690,8 @@ fr:
   permissionsUpdated: Les permissions ont été mises à jour
   metadata: Métadonnées
   informations: Informations
-  coverage: Couverture & indexation
+  generalInformations: Informations générales
+  coverage: Informations complémentaires
   schema: Schéma
   constraints: Contraintes
   attachments: Pièces jointes
@@ -764,7 +765,8 @@ en:
   permissionsUpdated: Permissions were updated
   metadata: Metadata
   informations: Information
-  coverage: Coverage & indexing
+  generalInformations: General information
+  coverage: Additional information
   schema: Schema
   constraints: Constraints
   attachments: Attachments
@@ -1314,12 +1316,12 @@ const sections = computedDeepDiff(() => {
     : new Set<string>()
   const groupColor = (key: string) => modifiedMetadataGroups.has(key) ? 'accent' : undefined
   const metadataTabs: any[] = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, image and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
+    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
   ]
   // a tab holding no metadata shown on datasets is left out
   const metadataGroupsInUse = usedGroups(datasetsMetadata.value)
   if (!d.partOf) {
-    if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, topics, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
+    if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: datasetsMetadata.value?.coverageTitle || t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, image, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
     for (const group of datasetsMetadata.value?.groups ?? []) {
       if (metadataGroupsInUse.has(group.key)) metadataTabs.push({ key: group.key, title: group.title, icon: group.icon?.svgPath ?? mdiShapeOutline, color: groupColor(group.key), agentDesc: 'Metadata category defined in the owner settings: holds the metadata (mostly custom ones) the settings assign to it.' })
     }

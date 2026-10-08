@@ -25,7 +25,8 @@ test.describe('trimSettings', () => {
       datasetsMetadata: {
         spatial: { active: true, title: ' Zone ' },
         custom: [{ key: ' ref ', title: ' Référence ', description: ' Référence interne du jeu. ' }],
-        groups: [{ key: 'g', title: ' Gouvernance ' }]
+        groups: [{ key: 'g', title: ' Gouvernance ' }],
+        informationsTitle: ' Général '
       },
       info: { contact: { name: ' Koumoul ', url: ' https://koumoul.com ', email: ' contact@koumoul.com ' } }
     }
@@ -33,6 +34,7 @@ test.describe('trimSettings', () => {
     assert.equal(settings.datasetsMetadata.spatial.title, 'Zone')
     assert.deepEqual(settings.datasetsMetadata.custom[0], { key: 'ref', title: 'Référence', description: 'Référence interne du jeu.' })
     assert.deepEqual(settings.datasetsMetadata.groups[0], { key: 'g', title: 'Gouvernance' })
+    assert.equal(settings.datasetsMetadata.informationsTitle, 'Général')
     assert.deepEqual(settings.info.contact, { name: 'Koumoul', url: 'https://koumoul.com', email: 'contact@koumoul.com' })
   })
 

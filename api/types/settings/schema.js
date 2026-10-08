@@ -2,8 +2,10 @@ import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
 // the two default tabs of the dataset metadata form, never stored in datasetsMetadata.groups
-const informationsGroup = { key: 'informations', title: 'Informations' }
-const coverageGroup = { key: 'coverage', title: 'Couverture & indexation' }
+const informationsGroup = { key: 'informations', title: 'Informations générales' }
+const coverageGroup = { key: 'coverage', title: 'Informations complémentaires' }
+// their titles can be overridden by datasetsMetadata.informationsTitle and coverageTitle
+const allGroupsExpr = `[{ key: "informations", title: rootData.informationsTitle || ${JSON.stringify(informationsGroup.title)} }, { key: "coverage", title: rootData.coverageTitle || ${JSON.stringify(coverageGroup.title)} }].concat(rootData.groups ?? [])`
 
 // tab of a metadata in the dataset form, left empty it stays in its default tab
 /** @param {{ key: string, title: string }} defaultGroup */
@@ -16,7 +18,7 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
     ...(toggleable && { if: 'parent.data.active' }),
     cols,
     getItems: {
-      expr: `[${JSON.stringify(informationsGroup)}, ${JSON.stringify(coverageGroup)}].concat(rootData.groups ?? [])`,
+      expr: allGroupsExpr,
       itemTitle: 'item.title',
       itemKey: 'item.key'
     },
@@ -384,10 +386,20 @@ export default {
         title: null
       },
       properties: {
+        informationsTitle: {
+          type: 'string',
+          title: 'Titre du premier onglet',
+          layout: { cols: 6, props: { placeholder: informationsGroup.title, persistentPlaceholder: true } }
+        },
+        coverageTitle: {
+          type: 'string',
+          title: 'Titre du deuxième onglet',
+          layout: { cols: 6, props: { placeholder: coverageGroup.title, persistentPlaceholder: true } }
+        },
         groups: {
           type: 'array',
           title: 'Catégories',
-          description: 'Onglets ajoutés au formulaire des métadonnées, après « Informations » et « Couverture & indexation ».',
+          description: 'Onglets ajoutés au formulaire des métadonnées, après les deux premiers.',
           layout: {
             listEditMode: 'inline',
             listActions: ['add', 'delete', 'sort'],
@@ -420,8 +432,8 @@ export default {
         },
         license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."),
         origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."),
-        image: fixedMetadata('Vignette', informationsGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
-        topics: fixedMetadata('Thématiques', coverageGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
+        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
+        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
         relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."),
         creator: {
           type: 'object',
@@ -612,7 +624,7 @@ export default {
               }
             },
             itemTitle: 'item.title',
-            itemSubtitle: `[item.key && "Clé : " + item.key, "Catégorie : " + ([${JSON.stringify(informationsGroup)}, ${JSON.stringify(coverageGroup)}].concat(rootData.groups ?? []).find(g => g.key === item.group) ?? ${JSON.stringify(informationsGroup)}).title].filter(Boolean).join(" · ")`
+            itemSubtitle: `[item.key && "Clé : " + item.key, "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
           },
           items: {
             type: 'object',

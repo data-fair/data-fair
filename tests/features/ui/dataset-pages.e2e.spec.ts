@@ -24,7 +24,7 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#activity')).toBeVisible()
 
     // Metadata section: informations + attachments tabs, editable title
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('tab', { name: 'Informations générales' })).toBeVisible()
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
     await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toBeVisible()
 
@@ -217,7 +217,7 @@ test.describe('dataset detail pages', () => {
     await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
     await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    await page.locator('#metadata').getByRole('tab', { name: 'Couverture & indexation' }).click()
+    await page.locator('#metadata').getByRole('tab', { name: 'Informations complémentaires' }).click()
     const field = page.locator('#metadata').getByLabel('Termes de recherche associés')
     await expect(field).toBeVisible()
     await field.fill('élections scrutin')

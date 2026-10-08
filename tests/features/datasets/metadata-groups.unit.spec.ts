@@ -19,6 +19,8 @@ test.describe('metadata groups', () => {
     assert.equal(fieldGroup(datasetsMetadata, 'temporal'), 'coverage')
     assert.equal(fieldGroup(datasetsMetadata, 'title'), 'informations')
     assert.equal(fieldGroup(null, 'relatedDatasets'), 'coverage')
+    assert.equal(fieldGroup(null, 'image'), 'coverage')
+    assert.equal(fieldGroup(null, 'topics'), 'informations')
   })
 
   test('a custom metadata goes to its chosen category, else to informations', () => {
@@ -30,8 +32,8 @@ test.describe('metadata groups', () => {
 
   test('a category holding no active metadata is not used', () => {
     assert.deepEqual([...usedGroups({ ...datasetsMetadata, groups: [...datasetsMetadata.groups, { key: 'empty', title: 'Vide' }] })].sort(), ['coverage', 'gouv', 'informations'])
-    // topics, related datasets and search terms (active by default) moved out: the coverage tab is empty
-    const moved = { topics: { group: 'informations' }, relatedDatasets: { group: 'informations' }, searchTerms: { active: false } }
+    // image, related datasets and search terms (active by default) moved out: the coverage tab is empty
+    const moved = { image: { group: 'informations' }, relatedDatasets: { group: 'informations' }, searchTerms: { active: false } }
     assert.deepEqual([...usedGroups(moved)], ['informations'])
   })
 
