@@ -80,6 +80,8 @@ test.describe('agents index composed with the data-fair document', () => {
       const tool = read.toolSet.tools.find(t => t.name === name) as { description: string } | undefined
       assert.ok(tool, name)
       assert.match(tool.description, /without q/i, name)
+      // and that it is paged: an agent that stops at the first page (size 10) would miss the rest
+      assert.match(tool.description, /page by page/i, name)
     }
   })
 })

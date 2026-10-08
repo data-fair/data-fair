@@ -71,7 +71,7 @@ export const operations = {
   listDatasets: {
     profiles: ['read_datasets'],
     name: 'list_account_datasets',
-    description: 'List the datasets owned by the active account (its department included), with optional text search. Without q it lists everything the account holds: prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.',
+    description: 'List the datasets owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
       size: { default: 10, maximum: 50 },
@@ -235,7 +235,7 @@ export const operations = {
   listApplications: {
     profiles: ['read_applications'],
     name: 'list_account_applications',
-    description: 'List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists everything the account holds: prefer that for an inventory. Returns id, title, status and last update.',
+    description: 'List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory. Returns id, title, status and last update.',
     params: {
       q: { description: 'Keywords for full-text search.' },
       dataset: { description: 'Restrict to the applications using these datasets (ids from list_account_datasets).' },
