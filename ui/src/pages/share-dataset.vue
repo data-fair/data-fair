@@ -334,10 +334,9 @@ const metadataValid = computed(() => {
   // Then check required metadata fields against the current in-progress edits
   if (!datasetEdit.value || !requiredMetadata.value.length) return true
   for (const field of requiredMetadata.value) {
-    if (field.startsWith('custom.')) {
-      const key = field.replace('custom.', '')
-      if (!datasetEdit.value.customMetadata?.[key]) return false
-    } else if (!datasetEdit.value[field]) return false
+    const value = field.startsWith('custom.') ? datasetEdit.value.customMetadata?.[field.replace('custom.', '')] : datasetEdit.value[field]
+    // an emptied list (keywords, topics, related datasets) is not filled either
+    if (!value || (Array.isArray(value) && !value.length)) return false
   }
   return true
 })
