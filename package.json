@@ -12,7 +12,7 @@
     "report": "nyc report --reporter=html",
     "lint": "eslint . && npm -w ui run lint",
     "lint-fix": "eslint --fix . && npm -w ui run lint-fix",
-    "dev-deps": "mkdir -p dev/logs && docker compose --profile dev up -d --wait && docker compose --profile dev logs -f 2>&1 | tee dev/logs/docker-compose.log",
+    "dev-deps": "mkdir -p dev/logs && node dev/upgrade-env.mjs && docker compose --profile dev up -d --wait && docker compose --profile dev logs -f 2>&1 | tee dev/logs/docker-compose.log",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server_worker npm -w api run dev",
     "dev-mock": "mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts 2>&1 | tee dev/logs/dev-mock.log",

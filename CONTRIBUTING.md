@@ -24,7 +24,7 @@ Run the 2 development servers with these commands in separate shells:
     npm run dev-server
     npm run dev-client
 
-When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `dev/resources/users.json` to login with its email.
+When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `dev/resources/users.template.json` to login with its email (`users.json` is rendered from it, with the checkout's host and port, by `dev/init-env.sh` and by `npm run dev-deps`, which also adds the keys an older `.env` lacks).
 
 Run test suite:
 
