@@ -104,3 +104,16 @@ test.describe('run errors from the conversation export', () => {
     assert.deepEqual(runErrors(parsed([{ status: 'error', calls: [] }])), ['run ended in error'])
   })
 })
+
+test.describe('the conversations a run exports', () => {
+  test('keeps only this person\'s conversations created since the run started', async () => {
+    const { runConversations } = await import('../../../simulations/runner/settings.ts')
+    const since = new Date('2026-10-08T09:57:45Z')
+    const listed = [
+      { conversationId: 'earlier-case', userId: 'test_user1', startedAt: '2026-10-08T09:57:10Z' },
+      { conversationId: 'this-run', userId: 'test_user1', startedAt: '2026-10-08T09:57:46Z' },
+      { conversationId: 'someone-else', userId: 'test_user2', startedAt: '2026-10-08T09:57:50Z' }
+    ]
+    assert.deepEqual(runConversations(listed, 'test_user1', since).map(c => c.conversationId), ['this-run'])
+  })
+})

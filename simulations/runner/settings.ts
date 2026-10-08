@@ -125,19 +125,29 @@ export async function assertBridgeUp () {
 export const CONSENT_COOKIE = 'agent-chat-trace-consent'
 export const CONSENT_YES = 'yes'
 
+/** A row of the agents review listing (`startedAt` is the conversation's creation). */
+type ListedConversation = { conversationId: string, userId?: string, agentId?: string, startedAt?: string }
+
+/**
+ * The conversations of a run: this person's, created since it started. `clean()` resets data-fair,
+ * not the agents service, so earlier cases' threads of the same person and agent are still listed.
+ */
+export function runConversations <T extends ListedConversation> (listed: T[], userId: string, since: Date): T[] {
+  return listed.filter(c => c.userId === userId && !!c.startedAt && new Date(c.startedAt) >= since)
+}
+
 /**
  * The conversation exports of everything `userId` said on `owner` during the run: the file a
  * maintainer downloads to debug a real session. Every chat loop runs on the server, so this is the
  * only record of what the model was sent and what it called — the browser no longer sees it.
- * `clean()` ran before the case, so every thread of this person on this account is this run's.
  */
-export async function fetchConversationExports (owner: { type: string, id: string }, userId: string): Promise<ConversationExport[]> {
+export async function fetchConversationExports (owner: { type: string, id: string }, userId: string, since: Date): Promise<ConversationExport[]> {
   const { axiosAuth } = await import('../../tests/support/axios.ts')
   const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
   const base = `/agents/api/review/${owner.type}/${owner.id}`
-  const listed = (await admin.get(`${base}?size=200`)).data.results as Array<{ conversationId: string, userId?: string, agentId?: string }>
+  const listed = (await admin.get(`${base}?size=200`)).data.results as ListedConversation[]
   const exports: ConversationExport[] = []
-  for (const conversation of listed.filter(c => c.userId === userId)) {
+  for (const conversation of runConversations(listed, userId, since)) {
     // text: the body is JSONL, which axios would otherwise try to parse as one JSON value
     const res = await admin.get(`${base}/${conversation.conversationId}/export`, { responseType: 'text', transformResponse: [(data: string) => data] })
     exports.push({ conversationId: conversation.conversationId, agentId: conversation.agentId, jsonl: res.data })

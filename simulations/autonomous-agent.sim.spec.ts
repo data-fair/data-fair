@@ -131,7 +131,7 @@ for (const simCase of selected) {
     let exports: TranscriptInput['exports'] = []
     const evidenceErrors: string[] = []
     try {
-      exports = await fetchConversationExports(OWNER, user)
+      exports = await fetchConversationExports(OWNER, user, new Date(started))
     } catch (err) {
       evidenceErrors.push(`could not export the run's conversations: ${err instanceof Error ? err.message : String(err)}`)
     }
