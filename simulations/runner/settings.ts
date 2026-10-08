@@ -160,5 +160,5 @@ export async function fetchConversationExports (owner: { type: string, id: strin
  * that hit one must not be judged as though it were.
  */
 export function runErrors (exports: ParsedExport[]): string[] {
-  return exports.flatMap(exported => exported.runs.filter(run => run.status === 'error').map(run => run.stopReason ?? 'run ended in error'))
+  return exports.flatMap(exported => exported.runs.filter(run => run.status === 'error').map(run => run.error ?? run.stopReason ?? 'run ended in error'))
 }

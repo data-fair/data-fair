@@ -96,6 +96,11 @@ test.describe('run errors from the conversation export', () => {
     assert.deepEqual(runErrors(parsed([{ status: 'done', calls: [] }, { status: 'error', stopReason: 'provider: rate limited', calls: [] }])), ['provider: rate limited'])
   })
 
+  test('reports the run\'s own error over its stop reason', () => {
+    // a refused or failed turn stops with the bare reason 'error'; the cause is in the run's error
+    assert.deepEqual(runErrors(parsed([{ status: 'error', stopReason: 'error', error: 'credit cap reached', calls: [] }])), ['credit cap reached'])
+  })
+
   test('finished and aborted runs report nothing', () => {
     assert.deepEqual(runErrors(parsed([{ status: 'done', calls: [] }, { status: 'aborted', calls: [] }])), [])
   })

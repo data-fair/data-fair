@@ -617,9 +617,10 @@ runner reads the run's own record instead, from the **conversation export**
 downloads to debug a real session). A run whose status is `error` invalidates the
 case, and the exports are handed to the judge with the transcript. That route
 sits behind the review gate, so the simulation owner stores traces and the
-runner answers the trace consent up front. A request the agents service refuses before streaming (its account credit
-cap answers 429 with a JSON body) invalidates the run the same way; the seeding
-lifts that cap for the simulation owner, since a production-mode agents image
+runner answers the trace consent up front. A turn the agents service refuses before any model call (the account credit
+cap, a quota) is recorded the same way, as a run in error whose `error` names
+the cause, and invalidates the case with that cause; the seeding lifts the cap
+for the simulation owner, since a production-mode agents image
 defaults it to 0 credits. Rate limits are the practical ceiling here: three Claude roles per case on
 one subscription. An invalid run must never be judged, and
 `sim-<case>.run.json` is what tells the two apart.

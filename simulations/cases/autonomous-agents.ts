@@ -9,8 +9,6 @@
 import { calledTool, SIM_AGENT_ID, type AgentCase } from '../runner/autonomous-agent.ts'
 
 const route = `/agents/organization/test_org1/chat?agentId=${SIM_AGENT_ID}`
-/** Seeded by seedDatasets for test_org1. */
-const OWN_DATASETS = ['sim-equipements-sportifs', 'sim-suivi-demandes', 'sim-demandes-subvention']
 
 export const agentCases: AgentCase[] = [
   {
@@ -38,9 +36,9 @@ export const agentCases: AgentCase[] = [
     goal: 'Tu veux savoir, d\'après les équipements sportifs recensés par ton organisation, quelle commune a la plus grande capacité d\'accueil cumulée, avec le chiffre.',
     maxTurns: 5,
     premise: {
-      description: 'a data tool was called on one of the organization\'s datasets',
+      description: 'a data tool was called on the organization\'s sports facilities dataset',
       holds: exports => ['datafair_describe_dataset', 'datafair_search_data', 'datafair_aggregate_data', 'datafair_calculate_metric', 'datafair_get_field_values']
-        .some(tool => calledTool(exports, tool, input => OWN_DATASETS.includes(input?.datasetId)))
+        .some(tool => calledTool(exports, tool, input => input?.datasetId === 'sim-equipements-sportifs'))
     }
   },
   {

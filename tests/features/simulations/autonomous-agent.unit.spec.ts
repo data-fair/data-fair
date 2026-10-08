@@ -40,3 +40,20 @@ test('toolMatches accepts the bare name and server-prefixed forms only', () => {
 test('the default agent uses the read server only', () => {
   assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [{ serverId: 'datafair-read' }])
 })
+
+test.describe('question-sur-un-jeu-du-compte premise', () => {
+  const premise = async () => {
+    const { agentCases } = await import('../../../simulations/cases/autonomous-agents.ts')
+    return agentCases.find(c => c.name === 'question-sur-un-jeu-du-compte')!.premise!
+  }
+
+  test('holds when a data tool ran on the sports facilities dataset', async () => {
+    const exports = exportWith([{ type: 'dynamic-tool', toolName: 'datafair_aggregate_data', input: { datasetId: 'sim-equipements-sportifs' } }])
+    assert.equal((await premise()).holds(exports), true)
+  })
+
+  test('does not hold for another of the organization\'s datasets', async () => {
+    const exports = exportWith([{ type: 'dynamic-tool', toolName: 'datafair_describe_dataset', input: { datasetId: 'sim-suivi-demandes' } }])
+    assert.equal((await premise()).holds(exports), false)
+  })
+})
