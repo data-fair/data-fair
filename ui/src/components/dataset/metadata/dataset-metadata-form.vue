@@ -409,14 +409,14 @@ const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? fals
 const props = withDefaults(defineProps<{
   required?: string[]
   serverData?: any
+  // owner settings, fetched once by the page rather than by each tab
+  datasetsMetadata?: Record<string, any> | null
   // tab of the metadata section, every field is shown without it
   group?: string
 }>(), { required: () => [] })
 
 const owner = computed(() => dataset.value?.owner)
-const datasetsMetadataFetch = useFetch<Record<string, any>>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/datasets-metadata` : null)
-const datasetsMetadata = datasetsMetadataFetch.data
-const inTab = (field: string) => !props.group || fieldGroup(datasetsMetadata.value, field) === props.group
+const inTab = (field: string) => !props.group || fieldGroup(props.datasetsMetadata, field) === props.group
 const licensesFetch = useFetch<any[]>(() => owner.value && inTab('license') ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/licenses` : null)
 const topicsFetch = useFetch<any[]>(() => owner.value && inTab('topics') ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/topics` : null)
 

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { fieldGroup, customGroup, modifiedGroups } from '../../../ui/src/utils/metadata-groups.ts'
+import { fieldGroup, customGroup, usedGroups, modifiedGroups } from '../../../ui/src/utils/metadata-groups.ts'
 
 const datasetsMetadata = {
   groups: [{ key: 'gouv', title: 'Gouvernance' }],
@@ -26,6 +26,13 @@ test.describe('metadata groups', () => {
     assert.equal(customGroup(datasetsMetadata, 'ref'), 'informations')
     assert.equal(customGroup(datasetsMetadata, 'note'), 'informations')
     assert.equal(customGroup(datasetsMetadata, 'unknown'), 'informations')
+  })
+
+  test('a category holding no active metadata is not used', () => {
+    assert.deepEqual([...usedGroups({ ...datasetsMetadata, groups: [...datasetsMetadata.groups, { key: 'empty', title: 'Vide' }] })].sort(), ['coverage', 'gouv', 'informations'])
+    // topics, related datasets and search terms (active by default) moved out: the coverage tab is empty
+    const moved = { topics: { group: 'informations' }, relatedDatasets: { group: 'informations' }, searchTerms: { active: false } }
+    assert.deepEqual([...usedGroups(moved)], ['informations'])
   })
 
   test('the modified categories are the ones holding a changed field', () => {

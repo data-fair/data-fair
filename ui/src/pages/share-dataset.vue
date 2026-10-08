@@ -134,6 +134,7 @@
             <dataset-metadata-form
               v-model="datasetEdit"
               :server-data="datasetServer"
+              :datasets-metadata="datasetsMetadataFetch.data.value"
               :required="requiredMetadata"
               class="mt-2"
             />
@@ -293,15 +294,11 @@ const datasetOwnerFilter = computed(() => {
   }
 })
 
-// Fetch publication site settings to get required metadata fields
-const settingsFetch = useFetch<any>(() => {
-  if (!datasetServer.value || !publicationSite.value) return null
-  const o = datasetServer.value.owner
-  return `${$apiPath}/settings/${o.type}/${o.id}`
-})
+const requiredMetadata = computed(() => publicationSite.value?.settings?.datasetsRequiredMetadata ?? [])
 
-const requiredMetadata = computed(() => {
-  return settingsFetch.data.value?.publicationSite?.settings?.datasetsRequiredMetadata ?? []
+const datasetsMetadataFetch = useFetch<Record<string, any>>(() => {
+  const o = datasetServer.value?.owner
+  return o ? `${$apiPath}/settings/${o.type}/${o.id}/datasets-metadata` : null
 })
 
 // Publication site key for comparing

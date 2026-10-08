@@ -10,6 +10,8 @@ const coverageGroup = { key: 'coverage', title: 'Couverture & indexation' }
 const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   type: 'string',
   title: 'Catégorie',
+  // read by the dataset form, not a json schema default: vjsf would store it
+  'x-default': defaultGroup.key,
   layout: {
     ...(toggleable && { if: 'parent.data.active' }),
     cols,

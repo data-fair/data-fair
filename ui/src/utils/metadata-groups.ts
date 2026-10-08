@@ -1,12 +1,12 @@
 import equal from 'fast-deep-equal'
+import { settingsSchema } from '#api/types'
 
 type DatasetsMetadata = Record<string, any> & {
   groups?: { key: string, title: string, icon?: { svgPath?: string } }[]
   custom?: { key: string, group?: string }[]
 } | null | undefined
 
-// fixed metadata shown in the coverage tab unless the settings move them, all others go to informations
-const coverageFields = ['spatial', 'temporal', 'frequency', 'modified', 'topics', 'keywords', 'searchTerms', 'relatedDatasets']
+const fixedMetadata = settingsSchema.properties.datasetsMetadata.properties as Record<string, any>
 
 // a removed category sends its metadata back to their default tab
 const isGroup = (datasetsMetadata: DatasetsMetadata, group?: string): group is string =>
@@ -15,13 +15,22 @@ const isGroup = (datasetsMetadata: DatasetsMetadata, group?: string): group is s
 export const fieldGroup = (datasetsMetadata: DatasetsMetadata, field: string): string => {
   const group = datasetsMetadata?.[field]?.group
   if (isGroup(datasetsMetadata, group)) return group
-  return coverageFields.includes(field) ? 'coverage' : 'informations'
+  return fixedMetadata[field]?.properties?.group?.['x-default'] ?? 'informations'
 }
 
 export const customGroup = (datasetsMetadata: DatasetsMetadata, key: string): string => {
   const group = datasetsMetadata?.custom?.find(c => c.key === key)?.group
   return isGroup(datasetsMetadata, group) ? group : 'informations'
 }
+
+// the tabs holding at least one active metadata, informations always holds the title
+export const usedGroups = (datasetsMetadata: DatasetsMetadata) => new Set([
+  'informations',
+  ...Object.entries(fixedMetadata)
+    .filter(([key, prop]) => prop.properties?.group && (datasetsMetadata?.[key]?.active ?? prop.properties.active.default))
+    .map(([key]) => fieldGroup(datasetsMetadata, key)),
+  ...(datasetsMetadata?.custom ?? []).map(c => customGroup(datasetsMetadata, c.key))
+])
 
 // the tabs holding a field changed between the edited dataset and the saved one
 export const modifiedGroups = (datasetsMetadata: DatasetsMetadata, data: any, serverData: any) => {
