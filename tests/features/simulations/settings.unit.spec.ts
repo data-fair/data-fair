@@ -7,7 +7,7 @@
 
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { bridgeSettings, MODEL_ROLES, OWNER } from '../../../simulations/runner/settings.ts'
+import { bridgeSettings, MODEL_ROLES, OWNER, runErrors } from '../../../simulations/runner/settings.ts'
 
 test.describe('bridge provider settings', () => {
   test('declares the provider openai-compatible in compatible mode', () => {
@@ -57,13 +57,18 @@ test.describe('bridge provider settings', () => {
     assert.deepEqual([...only.usage].sort(), [...MODEL_ROLES].sort())
   })
 
-  test('prices the run at zero and stores no traces', () => {
-    const { superadmin, org } = bridgeSettings('sonnet', 'haiku')
+  test('prices the run at zero', () => {
+    const { superadmin } = bridgeSettings('sonnet', 'haiku')
     for (const entry of superadmin.models) {
       assert.equal(entry.inputPricePerMillion, 0)
       assert.equal(entry.outputPricePerMillion, 0)
     }
-    assert.equal(org.storeTraces, false)
+  })
+
+  test('stores traces, so a run can be read back through the conversation export', () => {
+    // the export route sits behind the review gate, which needs stored traces: without them every
+    // run would have no evidence and be recorded invalid
+    assert.equal(bridgeSettings('sonnet', 'haiku').org.storeTraces, true)
   })
 
   test('gives the admin role unlimited quota', () => {
@@ -76,5 +81,21 @@ test.describe('bridge provider settings', () => {
   test('targets a test owner, so clean() can reset it', () => {
     assert.equal(OWNER.type, 'organization')
     assert.match(OWNER.id, /^test_/)
+  })
+})
+
+test.describe('run errors from the conversation export', () => {
+  const parsed = (runs: any[]) => [{ conversationId: 'c', messages: [], runs, blobs: new Map() }] as any
+
+  test('a run that ended in error makes the case unjudgeable', () => {
+    assert.deepEqual(runErrors(parsed([{ status: 'done', calls: [] }, { status: 'error', stopReason: 'provider: rate limited', calls: [] }])), ['provider: rate limited'])
+  })
+
+  test('finished and aborted runs report nothing', () => {
+    assert.deepEqual(runErrors(parsed([{ status: 'done', calls: [] }, { status: 'aborted', calls: [] }])), [])
+  })
+
+  test('an error without a stop reason is still reported', () => {
+    assert.deepEqual(runErrors(parsed([{ status: 'error', calls: [] }])), ['run ended in error'])
   })
 })

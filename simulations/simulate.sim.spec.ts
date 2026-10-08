@@ -9,14 +9,12 @@ import { test } from '../tests/fixtures/login.ts'
 import { clean } from '../tests/support/axios.ts'
 import { cases } from './cases/index.ts'
 import { seedDatasets } from './runner/fixtures.ts'
-import { assertBridgeUp, seedSettings, OWNER, OWNER_USER } from './runner/settings.ts'
-import { captureGatewayErrors } from './runner/gateway-errors.ts'
+import { assertBridgeUp, seedSettings, fetchConversationExports, runErrors, OWNER, OWNER_USER, ROOT, CONSENT_COOKIE, CONSENT_YES } from './runner/settings.ts'
 import {
   createChatDriver,
   chatDriverStrings,
-  captureGateway,
   nextUserMessage, isDone, resolveUserModel,
-  writeEvidence, type Transcript,
+  writeEvidence, type TranscriptInput, parseConversationExport,
   selectCases,
   createPagePerception
 } from '@data-fair/lib-agents-sim'
@@ -55,14 +53,10 @@ for (const simCase of selected) {
 
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()) })
     page.on('pageerror', err => consoleErrors.push(`pageerror: ${err.message}`))
-    // The chat iframe POSTs to the agents service's gateway route, so the
-    // browser sees the full message array and tool definitions. page.on covers
-    // sub-frames, which is why capturing on the top-level page is enough.
-    const gateway = captureGateway(page)
-    // Requests say what the assistant was offered; responses say whether the
-    // model actually answered. Only the second can tell a provider failure from
-    // a product one.
-    const gatewayErrors = captureGatewayErrors(page)
+    // Consent answered up front: the run is read back through the conversation export, which only
+    // covers threads the person agreed to have reviewed — and the consent sheet is not what a case is
+    // about, so the persona is not asked.
+    await page.context().addCookies([{ name: CONSENT_COOKIE, value: CONSENT_YES, url: ROOT }])
 
     const conversation: Array<{ role: string, text: string }> = []
     let perception: ReturnType<typeof createPagePerception> | undefined
@@ -77,9 +71,9 @@ for (const simCase of selected) {
       persona: simCase.persona,
       route: simCase.route,
       conversation: [],
-      gateway: [],
       consoleErrors: [],
-      observations: []
+      observations: [],
+      exports: []
     }, {
       case: simCase.name,
       valid: false,
@@ -232,45 +226,53 @@ for (const simCase of selected) {
       // on its first message produces one while looking like a clean run.
       if (turns === 0 && !error) error = 'no turns completed — the simulated user stopped before saying anything'
       // Keyed on the transcript, not on `turns`: the first real run completed a
-      // turn (turns=1, one gateway exchange) against a stale agents image whose
+      // turn against a stale agents image whose
       // markup predated the classes readConversation matches, so the transcript
       // came back empty while both other guards saw a healthy run. An empty
       // transcript is the one thing a judge cannot judge, however it got that way.
       if (conversation.length === 0 && !error) error = 'transcript is empty — messages were sent but readConversation matched nothing, so the chat markup has probably moved'
-      // captureGateway matches browser requests to /v1/chat/completions. Zero
-      // exchanges means the capture missed the path entirely, not that the
-      // assistant was idle — and the judge, told to look for tools offered but
-      // never used, would manufacture friction points out of the silence.
-      if (gateway.length === 0 && !error) error = 'no gateway exchanges captured — the chat never reached the agents service, or the capture path changed'
     } catch (err) {
       error = err instanceof Error ? err.message : String(err)
     }
 
-    // Outside the try, and overriding whatever else was recorded. A provider
-    // failure is never the product's fault and must not be judged as though it
-    // were — but it also does not throw: the gateway answers 200 and writes the
-    // failure into the SSE body, so the turn "completes" and the error text
-    // lands in the transcript as if the assistant had said it.
+    // Read AFTER the conversation, and outside the try so an invalid run still carries whatever the
+    // assistant managed to do — usually the most informative part of a failure. Never allowed to turn
+    // a good run into a failed one: this is evidence gathering, not a check.
+    let exports: TranscriptInput['exports'] = []
+    const evidenceErrors: string[] = []
+    try {
+      exports = await fetchConversationExports(OWNER, OWNER_USER)
+    } catch (err) {
+      evidenceErrors.push(`could not export the run's conversations: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    // Every turn must have left a record: a run with no export reached nothing the judge can read.
+    if (!error && !evidenceErrors.length && exports.length === 0) error = 'no conversation was exported — the chat never reached the agents service, or traces are not stored'
+
+    // Overriding whatever else was recorded. A provider failure is never the product's fault and
+    // must not be judged as though it were — but it does not throw: the turn "completes" and the
+    // error lands in the transcript as if the assistant had said it. The run's own record says it
+    // ended in error, which is what is read here.
     //
-    // It overrides rather than defers because every other symptom is downstream
-    // of it. A model that never answers is WHY the persona runs out of turns and
-    // why the composer goes stale; recording those instead would name the
-    // consequence and hide the cause. Verified against a real provider failure,
-    // which first reported "Reached maximum number of turns".
-    await gatewayErrors.settle()
-    if (gatewayErrors.messages.length) {
-      error = `provider error from the agents gateway (run is not judgeable): ${gatewayErrors.messages[0]}`
+    // It overrides rather than defers because every other symptom is downstream of it. A model
+    // that never answers is WHY the persona runs out of turns and why the composer goes stale;
+    // recording those instead would name the consequence and hide the cause.
+    try {
+      const failures = runErrors(exports.map(parseConversationExport))
+      if (failures.length) error = `provider or run error (run is not judgeable): ${failures[0]}`
+    } catch (err) {
+      evidenceErrors.push(`could not read the exported runs: ${err instanceof Error ? err.message : String(err)}`)
     }
 
-    const transcript: Transcript = {
+    const transcript: TranscriptInput = {
       case: simCase.name,
       goal: simCase.goal,
       persona: simCase.persona,
       route: simCase.route,
       conversation,
-      gateway,
       consoleErrors,
-      observations: perception?.observations ?? []
+      observations: perception?.observations ?? [],
+      exports,
+      ...(evidenceErrors.length ? { evidenceErrors } : {})
     }
     // `valid` is derived, never hardcoded: the sidecar exists to tell a run that
     // really happened apart from one that fell over, so that reportCases says

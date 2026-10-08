@@ -3,7 +3,9 @@
  * assistant under test runs on a real model instead of the dev mock provider.
  */
 
-const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+import type { ConversationExport, ParsedExport } from '@data-fair/lib-agents-sim'
+
+export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
 
 export const BRIDGE_URL = process.env.BRIDGE_URL ?? `http://localhost:${process.env.BRIDGE_PORT ?? 3194}/v1`
 
@@ -73,7 +75,9 @@ export function bridgeSettings (assistantModelId: string, toolsModelId: string) 
         MODEL_ROLES.map(role => [role, { provider: bridge.id, id: modelFor(role), name: modelFor(role) }])
       ) as Record<typeof MODEL_ROLES[number], { provider: string, id: string, name: string }>,
       quotas,
-      storeTraces: false
+      // ON: a run is read back through the conversation export, and that route sits behind the
+      // review gate, which needs stored traces
+      storeTraces: true
     }
   }
 }
@@ -116,4 +120,36 @@ export async function assertBridgeUp () {
       'Ask your user to start it with: npm run dev-bridge'
     )
   }
+}
+
+/** Trace consent, answered up front: the export only covers threads the person agreed to have reviewed. */
+export const CONSENT_COOKIE = 'agent-chat-trace-consent'
+export const CONSENT_YES = 'yes'
+
+/**
+ * The conversation exports of everything `userId` said on `owner` during the run: the file a
+ * maintainer downloads to debug a real session. Every chat loop runs on the server, so this is the
+ * only record of what the model was sent and what it called — the browser no longer sees it.
+ * `clean()` ran before the case, so every thread of this person on this account is this run's.
+ */
+export async function fetchConversationExports (owner: { type: string, id: string }, userId: string): Promise<ConversationExport[]> {
+  const { axiosAuth } = await import('../../tests/support/axios.ts')
+  const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
+  const base = `/agents/api/review/${owner.type}/${owner.id}`
+  const listed = (await admin.get(`${base}?size=200`)).data.results as Array<{ conversationId: string, userId?: string, agentId?: string }>
+  const exports: ConversationExport[] = []
+  for (const conversation of listed.filter(c => c.userId === userId)) {
+    // text: the body is JSONL, which axios would otherwise try to parse as one JSON value
+    const res = await admin.get(`${base}/${conversation.conversationId}/export`, { responseType: 'text', transformResponse: [(data: string) => data] })
+    exports.push({ conversationId: conversation.conversationId, agentId: conversation.agentId, jsonl: res.data })
+  }
+  return exports
+}
+
+/**
+ * Runs that failed, by their own record. A provider failure is never the product's fault, and a run
+ * that hit one must not be judged as though it were.
+ */
+export function runErrors (exports: ParsedExport[]): string[] {
+  return exports.flatMap(exported => exported.runs.filter(run => run.status === 'error').map(run => run.stopReason ?? 'run ended in error'))
 }

@@ -607,15 +607,17 @@ not the persona's. Every call is recorded as an `Observation`, and the judge
 cross-checks the persona's claims against them rather than taking an assertion
 about what is or isn't on screen at face value.
 
-**Provider failures are not product failures.** When the model stream dies — a
-rate limit, a dead bridge, a model the provider will not serve — the agents
-gateway does not fail the request. It writes an error chunk into the SSE body
-and closes cleanly, so the chat shows an alert, the Stop button disappears, the
-turn "finishes" and nothing throws. Left alone, that run records as valid and a
-judge blames the assistant for never replying. `simulations/runner/gateway-errors.ts`
-reads the gateway's own `error` chunk — a JSON field the service emits, not the
-prose it renders, so it survives translation and restyling — and invalidates the
-run. A request the agents service refuses before streaming (its account credit
+**Provider failures are not product failures.** When the model call fails — a
+rate limit, a dead bridge, a model the provider will not serve — the turn still
+"finishes": the chat shows an alert and nothing throws. Left alone, that run
+records as valid and a judge blames the assistant for never replying. The agents
+loop runs on the server, so the browser no longer sees the model calls; the
+runner reads the run's own record instead, from the **conversation export**
+(`GET /agents/api/review/:type/:id/:conversationId/export`, the file a maintainer
+downloads to debug a real session). A run whose status is `error` invalidates the
+case, and the exports are handed to the judge with the transcript. That route
+sits behind the review gate, so the simulation owner stores traces and the
+runner answers the trace consent up front. A request the agents service refuses before streaming (its account credit
 cap answers 429 with a JSON body) invalidates the run the same way; the seeding
 lifts that cap for the simulation owner, since a production-mode agents image
 defaults it to 0 credits. Rate limits are the practical ceiling here: three Claude roles per case on
