@@ -11,22 +11,27 @@ transcript.
 
 ## Before you start
 
-Four things must be true, and each fails confusingly if it is not:
+Three things must be true, and each fails confusingly if it is not:
 
 1. The dev stack is up — `bash dev/status.sh`.
-2. The workspace packages are built — `ls lib-vue/*.js lib-vuetify/*.js`. If they
-   are missing, e2e-style runs fail with "element not found".
-3. `lib-sim` is built — `npm -w @data-fair/lib-agents-sim run build`.
-   `simulations/` imports it by package name, not by relative path, so a stale
-   build silently runs the OLD code and still reports the run valid — the exact
-   failure mode this subsystem exists to catch.
-4. The bridge is running — only the maintainer starts it (`npm run dev-bridge`). The runner checks this and says so.
+2. The UI is built — `ls ui/dist/index.html`. If it is missing, e2e-style runs
+   fail with "element not found".
+3. The bridge is running — it has a `bridge` pane in the zellij layout, and
+   `bash dev/status.sh` reports it as `dev-bridge (opt)`. The runner checks it
+   and says so. Only the maintainer starts it (`npm run dev-bridge`).
 
 Ask the user to start anything that is down. Never start or stop dev processes yourself.
 
+A run calls `clean()`, which wipes the dev environment's test state — see the warning
+in AGENTS.md's Simulations section for exactly what it deletes. Do not run simulations
+while someone is relying on that data.
+
 ## Steps
 
-1. **Read the case list** in `simulations/cases/index.ts`. Note each `name` and `goal`.
+1. **Read the case lists**: `simulations/cases/index.ts` (the back-office assistant)
+   and `simulations/cases/autonomous-agents.ts` (an autonomous agent on the mcp
+   server, see docs/architecture/agent-integration.md). Note each `name` and `goal`.
+   `SIM_CASES` selects across both.
 
 2. **Delete evidence from earlier runs.**
 
@@ -50,30 +55,22 @@ Ask the user to start anything that is down. Never start or stop dev processes y
    moderation guard) and `SIM_USER_MODEL` (default `sonnet`), and recorded per
    run, so verdicts from different tiers are never compared silently.
 
-   The persona is on `sonnet` deliberately. On `haiku` it stopped enforcing its
-   own goal: a case whose goal said the answer had to be shown on screen was
-   ended with a chat-only reply and marked done, and another persona asserted it
-   could see nothing but the chat while its own `look` had just returned the
-   page. A persona that lets the product off the hook produces green runs that
-   prove nothing. It is the most expensive knob here, so lower it deliberately,
-   not by default.
+   Keep the persona on `sonnet`: a weaker persona drops its premise or breaks
+   character, and the case stops testing anything. It is the assistant that
+   earns a second tier — a new baseline repeats each case several times with
+   the default assistant, then again with `SIM_ASSISTANT_MODEL=haiku`, to show
+   a small model can still carry the scenario through.
 
    **Confirm it started.** A suite takes minutes, so you will want to background
-   it — and a run that never launched looks exactly like a run still going. Check
-   the runner's own log first, and the sidecar as the stronger signal:
+   it — and a run that never launched looks exactly like a run still going. The
+   sidecar is written BEFORE each case begins, so within a minute of starting:
 
    ```bash
-   tail -5 sim.log                    # state-setup passing means it is going
    ls simulations/tmp/*.run.json      # a file here means a case really started
    ```
 
-   The sidecar is written before each case's body, but AFTER the login fixture,
-   which can take more than a minute on a cold page — so an empty
-   `simulations/tmp/` on its own is not proof of a stall. A log with no progress
-   at all is. Check the directory you are looking in, too: a backgrounded
-   `cd X && … &` runs the `cd` in a subshell, so a later `ls` reads whatever
-   directory you started from. One session read another repo's stale evidence
-   that way and called a dead run healthy.
+   An empty `simulations/tmp/` after a minute means the run is not going; find
+   out why rather than waiting longer.
 
    **Wait on the process id, never on a text pattern.** `pgrep -f` matches full
    command lines, including the command line of the waiter you are writing — so
