@@ -123,6 +123,11 @@ server {
     proxy_pass http://localhost:${AGENTS_PORT};
   }
 
+  # the mcp server serves its own /mcp-server prefix (createSiteMiddleware), so the path is passed whole
+  location /mcp-server {
+    proxy_pass http://localhost:${MCP_PORT};
+  }
+
   # Registry expects the /registry prefix in the URL itself
   # (PUBLIC_URL=...registry); pass the full path through unchanged.
   location /registry/ {

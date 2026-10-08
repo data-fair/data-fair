@@ -5,11 +5,16 @@ echo "Use random base port $RANDOM_NB"
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | sed 's/[^a-zA-Z0-9-]/-/g')
 DEV_HOST="${BRANCH:-df}.localhost"
+NGINX_PORT1=$((RANDOM_NB))
+
+# rendered BEFORE .env is written, so the two cannot disagree (see dev/render-users.mjs)
+echo "Render dev/resources/users.json from users.template.json"
+RENDER_VALUES="{\"DEV_HOST\": \"$DEV_HOST\", \"NGINX_PORT1\": \"$NGINX_PORT1\"}" node dev/render-users.mjs || exit 1
 
 cat <<EOF > ".env"
 DEV_HOST=${DEV_HOST}
 
-NGINX_PORT1=$((RANDOM_NB))
+NGINX_PORT1=${NGINX_PORT1}
 NGINX_PORT2=$((RANDOM_NB + 1))
 
 DEV_API_PORT=$((RANDOM_NB + 10))
@@ -31,6 +36,12 @@ MOCK_PORT=$((RANDOM_NB + 35))
 AGENTS_PORT=$((RANDOM_NB + 36))
 REGISTRY_PORT=$((RANDOM_NB + 37))
 BRIDGE_PORT=$((RANDOM_NB + 38))
+MCP_PORT=$((RANDOM_NB + 39))
+
+# the autonomous-agent simulations need the agents server loop and the mcp server, which these branch
+# images provide: set AGENTS_IMAGE back to the compose default once feat-autonomous-agents is merged in agents
+AGENTS_IMAGE=ghcr.io/data-fair/agents:feat-autonomous-agents
+MCP_IMAGE=ghcr.io/data-fair/mcp:feat-openapi-mcp
 
 # all dev services listen on the loopback, the SSRF protection of the default http agents
 # would refuse them (cf @data-fair/lib-node http-agents)

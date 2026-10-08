@@ -217,5 +217,15 @@
     "password": {
       "clear": "passwd"
     }
+  },
+  {
+    "id": "test_org1_agent_nhi",
+    "email": "test_org1_agent_nhi@test.com",
+    "nhi": {
+      "provider": {
+        "issuer": "http://{DEV_HOST}:{NGINX_PORT1}/agents/api/nhi"
+      },
+      "subject": "autonomous-agent:sim-mcp"
+    }
   }
 ]
