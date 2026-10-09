@@ -225,6 +225,27 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
+  // list values are stored whole: a renamed or deleted entry reaches the datasets, like a topic
+  for (const newMeta of newDatasetsMetadata.custom ?? []) {
+    const oldMeta = oldDatasetsMetadata.custom?.find(oc => oc.key === newMeta.key)
+    // a type or multiple change keeps the values as they are (hidden until reverted)
+    if (!oldMeta?.enum?.length || !newMeta.enum?.length || !!oldMeta.multiple !== !!newMeta.multiple) continue
+    for (const entry of oldMeta.enum) {
+      const current = newMeta.enum.find(e => e.code === entry.code)
+      if (current?.label === entry.label) continue
+      for (const path of [`customMetadata.${newMeta.key}`, `draft.customMetadata.${newMeta.key}`]) {
+        const filter = { 'owner.type': owner.type, 'owner.id': owner.id, [`${path}.code`]: entry.code }
+        if (current) {
+          if (newMeta.multiple) await mongo.datasets.updateMany(filter, { $set: { [`${path}.$[v].label`]: current.label } }, { arrayFilters: [{ 'v.code': entry.code }] })
+          else await mongo.datasets.updateMany(filter, { $set: { [`${path}.label`]: current.label } })
+        } else {
+          // stamp BEFORE the removal, same reason as the definition removal above
+          if (!path.startsWith('draft.')) await stampHistorizeMany(filter)
+          await mongo.datasets.updateMany(filter, newMeta.multiple ? { $pull: { [path]: { code: entry.code } } } : { $unset: { [path]: 1 } })
+        }
+      }
+    }
+  }
 }
 
 export const updateSettings = async (ctx: SettingsWriteContext, settings: any) => {
