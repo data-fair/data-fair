@@ -183,6 +183,15 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       if (existing) throw httpError(400, `Les catégories "${existing}" et "${group.title}" ont le même identifiant`)
       seenKeys.set(group.key!, group.title)
     }
+    // list codes are hidden in the form, so the message names the labels
+    for (const custom of settings.datasetsMetadata.custom ?? []) {
+      const seenCodes = new Map<string, string>()
+      for (const entry of custom.enum ?? []) {
+        const existing = seenCodes.get(entry.code!)
+        if (existing) throw httpError(400, `Les valeurs "${existing}" et "${entry.label}" de "${custom.title}" sont trop proches`)
+        seenCodes.set(entry.code!, entry.label)
+      }
+    }
   }
 
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
