@@ -3,12 +3,6 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
-    <fragment-banner
-      v-if="dataset.partOf"
-      :part-of="dataset.partOf"
-      :fragment="{ id: dataset.id, status: dataset.status }"
-    />
-
     <!-- Metadata details -->
     <df-section-tabs
       v-if="sections.informations"
@@ -842,7 +836,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFileTree, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTableColumnPlusAfter, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -1240,7 +1234,7 @@ const sections = computedDeepDiff(() => {
   result.informations = {
     title: t('informations'),
     subtitle: t('informationsSubtitle'),
-    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below.'
+    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent virtual dataset, with an "Add to the sources" button while it is not yet one of the parent\'s sources.'
   }
 
   // Structure section (new)
@@ -1264,7 +1258,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'extensions',
         title: t('extensions'),
-        icon: mdiPuzzle,
+        icon: mdiTableColumnPlusAfter,
         color: extensionsHasDiff.value ? 'accent' : undefined,
         agentDesc: '**Column-value transformations and row enrichments live here.** Two extension types: (a) remote-service extensions calling external REST APIs (geocoding, SIRENE lookup, geo enrichment, etc.); (b) expr-eval calculated columns (PAD_LEFT, CONCAT, SUBSTRING, REPLACE, TRANSFORM_DATE, MD5, JSON_PARSE, …). Add via the "Add extension" menu. For expr-eval, opening an extension card\'s edit dialog reveals the expression input with a help button next to it → `expression_helper` subagent (writes and tests the expression against sample data).'
       })
@@ -1285,7 +1279,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'fragments',
         title: t('fragments'),
-        icon: mdiFileTree,
+        icon: mdiPuzzle,
         agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }

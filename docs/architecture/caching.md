@@ -186,6 +186,15 @@ a `304` reuses it.
   expiry, never cleared): each render does a conditional GET to the static app server with the
   stored `ETag`/`Last-Modified`; a `304` reuses the cached HTML, a fetch error falls back to the
   last good copy. Bounded only by the number of distinct app URLs.
+- **Site resource hashes for applications** — `getSiteHashes` in
+  `api/src/applications/proxy-service.ts` (1 minute per site URL, same source and freshness as
+  serve-spa's): the proxy rewrites an application's `/simple-directory/api/sites/_theme.css` and
+  `_public.js` references to their hashed, immutable URLs. With `_t_*` query parameters (local theme
+  override, e.g. `_t_primary`) it points them to the plain URLs with these parameters instead — an
+  overridden resource is never hashed, so it stays on simple-directory's 60 s cache — and injects
+  `_public.js` if the application lacks it. A failed hashes fetch keeps the plain URLs.
+  The SPA itself (back-office and `/embed/*` views) gets the same treatment from serve-spa
+  (`@data-fair/lib-express` ≥ 1.29.0), which shares `getThemeParams` with the proxy.
 - **Remote-services proxy** (`api/src/remote-services/router.js` ≈ lines 247/276) — not a cache, but
   it forwards the conditional/cache headers both ways so the browser ↔ remote-service cache contract
   is preserved through Data Fair.

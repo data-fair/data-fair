@@ -26,6 +26,17 @@
       </v-col>
 
       <v-col
+        v-if="application.partOf"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <fragment-info
+          :part-of="application.partOf"
+        />
+      </v-col>
+
+      <v-col
         v-if="baseAppFetch.data.value"
         cols="12"
         md="6"
@@ -72,7 +83,7 @@
       </v-col>
 
       <v-col
-        v-if="nbParentApps > 0"
+        v-if="nbParentApps > 0 && !(nbParentApps === 1 && parentApps[0]?.id === application.partOf?.id)"
         cols="12"
         md="6"
         lg="4"
@@ -116,7 +127,7 @@ import { mdiImageMultiple, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline
 import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useApplicationStore from '~/composables/application/application-store'
 
-const { application, baseAppFetch, nbParentApps } = useApplicationStore()
+const { application, baseAppFetch, nbParentApps, parentApps } = useApplicationStore()
 
 const { t } = useI18n()
 const { dayjs } = useLocaleDayjs()

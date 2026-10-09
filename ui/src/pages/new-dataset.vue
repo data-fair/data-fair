@@ -357,7 +357,7 @@
             </v-card-text>
           </v-card>
 
-          <fragment-banner
+          <fragment-info
             v-if="partOf"
             :part-of="partOf"
           />

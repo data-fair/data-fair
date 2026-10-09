@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { setUniqueRefs, buildManifest, buildLoginHtml } from '../../../api/src/applications/operations.ts'
+import { setUniqueRefs, buildManifest, buildLoginHtml, matchSiteResource, siteResourceHref } from '../../../api/src/applications/operations.ts'
 
 test.describe('applications operations', () => {
   test('setUniqueRefs: id only when slug === id', () => {
@@ -64,5 +64,26 @@ test.describe('applications operations', () => {
     })
     assert.ok(!html.includes('<script>'))
     assert.ok(html.includes('&lt;script&gt;'))
+  })
+
+  test('matchSiteResource: root-relative references to the site resources of simple-directory', () => {
+    assert.equal(matchSiteResource('/simple-directory/api/sites/_theme.css'), '_theme.css')
+    assert.equal(matchSiteResource('/simple-directory/api/sites/_public.js'), '_public.js')
+    assert.equal(matchSiteResource('/simple-directory/api/sites/_public.js?v=1'), '_public.js')
+    assert.equal(matchSiteResource('/simple-directory/api/sites/abc/_theme.css'), undefined)
+    assert.equal(matchSiteResource('/simple-directory/api/sites/_public'), undefined)
+    assert.equal(matchSiteResource('https://cdn.example.com/simple-directory/api/sites/_theme.css'), undefined)
+    assert.equal(matchSiteResource('./style.css'), undefined)
+    assert.equal(matchSiteResource(undefined), undefined)
+  })
+
+  test('siteResourceHref: hashed by default, plain with a theme override', () => {
+    const hashes = { themeCss: 'h1', publicInfo: 'h2' }
+    const none = new URLSearchParams()
+    assert.equal(siteResourceHref('_theme.css', hashes, none), '/simple-directory/api/sites/h1/_theme.css')
+    assert.equal(siteResourceHref('_public.js', hashes, none), '/simple-directory/api/sites/h2/_public.js')
+    assert.equal(siteResourceHref('_theme.css', undefined, none), '/simple-directory/api/sites/_theme.css')
+    const override = new URLSearchParams({ _t_primary: '#FFEB3B' })
+    assert.equal(siteResourceHref('_theme.css', hashes, override), '/simple-directory/api/sites/_theme.css?_t_primary=%23FFEB3B')
   })
 })

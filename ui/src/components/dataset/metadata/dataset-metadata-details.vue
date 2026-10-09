@@ -26,6 +26,18 @@
       </v-col>
 
       <v-col
+        v-if="dataset.partOf"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <fragment-info
+          :part-of="dataset.partOf"
+          :fragment="{ id: dataset.id, status: dataset.status }"
+        />
+      </v-col>
+
+      <v-col
         v-if="dataset.count != null"
         cols="12"
         md="6"
@@ -123,7 +135,7 @@
       </template>
 
       <v-col
-        v-if="nbVirtualDatasets > 0"
+        v-if="nbVirtualDatasets > 0 && !(nbVirtualDatasets === 1 && virtualParents[0]?.id === dataset.partOf?.id)"
         cols="12"
         md="6"
         lg="4"
@@ -192,7 +204,7 @@ import formatBytes from '@data-fair/lib-vue/format/bytes'
 import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
 
-const { dataset, nbVirtualDatasets } = useDatasetStore()
+const { dataset, nbVirtualDatasets, virtualParents } = useDatasetStore()
 
 const { t, locale } = useI18n()
 const { dayjs } = useLocaleDayjs()
