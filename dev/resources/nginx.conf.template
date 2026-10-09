@@ -128,6 +128,11 @@ server {
     proxy_pass http://localhost:${MCP_PORT};
   }
 
+  # the AI Catalog (MCP server cards) a site publishes at its domain root, built by the mcp server for the forwarded host
+  location = /.well-known/ai-catalog.json {
+    proxy_pass http://localhost:${MCP_PORT}/mcp-server/ai-catalog.json;
+  }
+
   # Registry expects the /registry prefix in the URL itself
   # (PUBLIC_URL=...registry); pass the full path through unchanged.
   location /registry/ {
@@ -203,5 +208,14 @@ server {
   location /events {
     rewrite  ^/events/(.*) /$1 break;
     proxy_pass http://localhost:${EVENTS_PORT}/;
+  }
+
+  # every publication site exposes the mcp server, and lists it in its AI Catalog
+  location /mcp-server {
+    proxy_pass http://localhost:${MCP_PORT};
+  }
+
+  location = /.well-known/ai-catalog.json {
+    proxy_pass http://localhost:${MCP_PORT}/mcp-server/ai-catalog.json;
   }
 }
