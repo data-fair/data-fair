@@ -92,4 +92,23 @@ test.describe('typed custom metadata', () => {
     })
     assert.deepEqual(res.data.customMetadata, { domaines: ['a'], other: 'x' })
   })
+  test('a renamed list label reaches the datasets, a deleted entry is removed from them', async () => {
+    const defs = (entries: any[]) => settingsWith([
+      { key: 'service', title: 'Service', enum: entries },
+      { key: 'domaines', title: 'Domaines', multiple: true, enum: entries }
+    ])
+    await testUser1.put(settingsUrl, defs([{ code: 'voi', label: 'Voirie' }, { code: 'urb', label: 'Urbanisme' }]))
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: { code: 'urb' }, domaines: [{ code: 'voi' }, { code: 'urb' }] } }))).data
+    const kept = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: { code: 'voi' } } }))).data
+    await testUser1.put(settingsUrl, defs([{ code: 'voi', label: 'Voirie et réseaux' }]))
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { domaines: [{ code: 'voi', label: 'Voirie et réseaux' }] })
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${kept.id}`)).data.customMetadata, { service: { code: 'voi', label: 'Voirie et réseaux' } })
+  })
+
+  test('a definition whose type changed keeps its stored values', async () => {
+    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', enum: [{ code: 'voi', label: 'Voirie' }] }]))
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: { code: 'voi' } } }))).data
+    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', type: 'date' }]))
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { service: { code: 'voi', label: 'Voirie' } })
+  })
 })
