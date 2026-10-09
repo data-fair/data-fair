@@ -624,7 +624,7 @@ export default {
               }
             },
             itemTitle: 'item.title',
-            itemSubtitle: `[item.key && "Clé : " + item.key, "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
+            itemSubtitle: `[item.key && "Clé : " + item.key, ({ string: "Texte", integer: "Nombre entier", number: "Nombre", date: "Date", link: "Lien" })[item.type ?? "string"] + (item.enum?.length ? ", liste de valeurs" : "") + (item.multiple ? ", plusieurs valeurs" : ""), "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
           },
           items: {
             type: 'object',
@@ -646,14 +646,52 @@ export default {
                 title: 'Libellé',
                 type: 'string',
                 minLength: 3,
-                layout: { cols: 6 }
+                layout: { cols: 4 }
               },
-              group: metadataGroup(informationsGroup, false, 6),
+              type: {
+                title: 'Type',
+                type: 'string',
+                default: 'string',
+                layout: { cols: 3 },
+                oneOf: [
+                  { const: 'string', title: 'Texte' },
+                  { const: 'integer', title: 'Nombre entier' },
+                  { const: 'number', title: 'Nombre' },
+                  { const: 'date', title: 'Date' },
+                  { const: 'link', title: 'Lien (adresse et titre)' }
+                ]
+              },
+              group: metadataGroup(informationsGroup, false, 3),
+              multiple: {
+                title: 'Plusieurs valeurs',
+                type: 'boolean',
+                layout: { cols: 2, comp: 'checkbox', if: '(parent.data?.type ?? "string") === "string"' }
+              },
               description: {
                 title: 'Infobulle',
                 description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
                 type: 'string',
                 layout: 'textarea'
+              },
+              enum: {
+                title: 'Liste de valeurs',
+                description: 'Laissez vide pour une saisie libre.',
+                type: 'array',
+                layout: {
+                  if: '(parent.data?.type ?? "string") === "string"',
+                  listEditMode: 'inline',
+                  listActions: ['add', 'delete', 'sort'],
+                  messages: { addItem: 'Ajouter une valeur' }
+                },
+                items: {
+                  type: 'object',
+                  required: ['label'],
+                  properties: {
+                    // generated from the label at first save, like the definition key: renaming keeps the stored values
+                    code: { title: 'Code', type: 'string', readOnly: true, layout: 'none' },
+                    label: { title: 'Libellé', type: 'string' }
+                  }
+                }
               }
             }
           }
