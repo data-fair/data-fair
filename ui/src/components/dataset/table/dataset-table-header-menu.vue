@@ -5,7 +5,7 @@
     :close-on-content-click="false"
     :max-height="filterHeight"
     location="bottom right"
-    @update:model-value="onMenuToggle"
+    @update:model-value="toggleMenu"
   >
     <v-sheet
       class="pa-1"
@@ -711,13 +711,12 @@ import { type DatasetFilter } from '~/composables/dataset/filters'
 import { formatValue } from '~/composables/dataset/lines'
 import useHeaderFilters from './use-header-filters'
 
-const { header, localEnum, filters, closeOnFilter, activator, triggerSelector, noFilter, noSort, noCols } = defineProps({
+const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols } = defineProps({
   header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
   fixed: { type: Boolean, default: false },
   activator: { type: String, required: true },
-  triggerSelector: { type: String, default: undefined }, // focusable element to restore focus to on close; defaults to activator
   // fixing a column and choosing the visible columns are two separate interactive elements
   noFix: { type: Boolean, default: false },
   localEnum: { type: Array, required: false, default: null },
@@ -785,33 +784,8 @@ watch(nEquals, () => {
   if (JSON.stringify(nEquals.value) !== JSON.stringify(newNequals)) nEquals.value = newNequals
 }, { deep: true, immediate: true })
 
-// Restore focus to the activator button when the menu closes (RGAA 7.3).
-// Vuetify's built-in restore targets the activator element by selector but,
-// since the activator can cover a non-focusable wrapper (e.g. a <th>), we
-// look up `triggerSelector` first and fall back to any visible header button
-// inside the same table when the activator was unmounted (e.g. after the
-// user picked "Hide column"). The query runs inside nextTick so we read the
-// post-close DOM, not the snapshot from the toggle moment.
-let activatorScope: HTMLElement | null = null
-const onMenuToggle = () => {
-  if (!showMenu.value) {
-    nextTick(() => {
-      const focusSelector = triggerSelector ?? activator
-      let trigger = document.querySelector<HTMLElement>(focusSelector)
-      if (!trigger && activatorScope?.isConnected) {
-        // Activator was unmounted (e.g. column hidden) — fall back to any
-        // visible header button inside the same table so keyboard focus
-        // doesn't drop to <body>.
-        trigger = activatorScope.querySelector<HTMLElement>('button[aria-haspopup]')
-      }
-      trigger?.focus()
-    })
-    return
-  }
-  // Snapshot the closest table ancestor while the activator still exists,
-  // so we can scope the close-time fallback to the same instance.
-  const activatorEl = document.querySelector<HTMLElement>(activator)
-  activatorScope = activatorEl?.closest<HTMLElement>('.dataset-table, .dataset-table-card') ?? null
+const toggleMenu = () => {
+  if (!showMenu.value) return
   emptyFilters()
   newFilter.value = undefined
   for (const filter of filters.filter(f => f.property.key === header.property.key)) {

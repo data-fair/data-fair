@@ -99,14 +99,6 @@
       />
     </v-btn-group>
   </v-toolbar>
-  <div
-    class="d-sr-only"
-    role="status"
-    aria-live="polite"
-    aria-atomic="true"
-  >
-    {{ liveMessage }}
-  </div>
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
@@ -126,11 +118,8 @@
             :key="header.key"
           >
             <th
-              :id="`${instanceId}-header-${header.cssKey ?? header.key}`"
               scope="col"
-              :aria-sort="header.property && can('sort') && header.sortable
-                ? (header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none')
-                : undefined"
+              :aria-sort="header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : undefined"
               :title="header.title"
               class="text-left"
               :class="{
@@ -170,8 +159,6 @@
                 :id="`${instanceId}-header-button-${header.cssKey ?? header.key}`"
                 type="button"
                 class="pr-2 header-wrapper dataset-table-th-button"
-                aria-haspopup="true"
-                :aria-label="t('headerMenuLabel', { column: header.title })"
               >
                 <span class="two-lines">{{ header.title }}</span>
                 <v-icon
@@ -190,8 +177,7 @@
             </th>
             <dataset-table-header-menu
               v-if="header.property && showHeaderMenu(header)"
-              :activator="`#${instanceId}-header-${header.cssKey ?? header.key}`"
-              :trigger-selector="`#${instanceId}-header-button-${header.cssKey ?? header.key}`"
+              :activator="`#${instanceId}-header-button-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
               :no-filter="!can('filters')"
@@ -492,30 +478,6 @@
     fullscreen: Afficher en plein écran
     tableCaption: "Tableau de données : {title}"
     tableCaptionFallback: Tableau de données
-    announce:
-      results: "Aucun résultat | 1 résultat | {count} résultats"
-      searchResults: "Aucun résultat pour « {query} » | 1 résultat pour « {query} » | {count} résultats pour « {query} »"
-      loading: Chargement des résultats
-      sort: "Tri appliqué : colonne {column}, {direction}"
-      sortRemoved: Tri retiré
-      display: "Affichage : {mode}"
-      column:
-        hidden: "Colonne {column} masquée"
-        shown: "Colonne {column} affichée"
-        changed: "Affichage mis à jour : 1 colonne visible | Affichage mis à jour : {count} colonnes visibles"
-        fixed: "Colonne {column} épinglée à gauche"
-        unfixed: "Colonne {column} dépinglée"
-      filter:
-        added: "Filtre appliqué sur la colonne {column} : {value}"
-        removed: "Filtre retiré sur la colonne {column}"
-    sortDirection:
-      ascending: ordre croissant
-      descending: ordre décroissant
-    headerMenuLabel: "Colonne {column}, ouvrir les options de tri et de filtre"
-    displayMode:
-      table: Tableau
-      tableDense: Tableau dense
-      list: Liste de vignettes
     colTitles:
       _updatedBy: Mis à jour par
       _owner: Propriétaire de ligne
@@ -532,30 +494,6 @@
     fullscreen: Show fullscreen
     tableCaption: "Data table: {title}"
     tableCaptionFallback: Data table
-    announce:
-      results: "No result | 1 result | {count} results"
-      searchResults: "No result for \"{query}\" | 1 result for \"{query}\" | {count} results for \"{query}\""
-      loading: Loading results
-      sort: "Sort applied: column {column}, {direction}"
-      sortRemoved: Sort removed
-      display: "Display: {mode}"
-      column:
-        hidden: "Column {column} hidden"
-        shown: "Column {column} shown"
-        changed: "Display updated: 1 column visible | Display updated: {count} columns visible"
-        fixed: "Column {column} pinned to the left"
-        unfixed: "Column {column} unpinned"
-      filter:
-        added: "Filter applied on column {column}: {value}"
-        removed: "Filter removed on column {column}"
-    sortDirection:
-      ascending: ascending order
-      descending: descending order
-    headerMenuLabel: "Column {column}, open sort and filter options"
-    displayMode:
-      table: Table
-      tableDense: Dense table
-      list: Card list
     colTitles:
       _updatedBy: Updated by
       _owner: Line owner
@@ -573,7 +511,6 @@ import { untilReady } from '../../../composables/dataset/agent-creation-tools-lo
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
 import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
-import { useTableAnnouncer } from './use-table-announcer'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -667,7 +604,7 @@ const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
 // Scope per-table DOM IDs so two coexisting tables (e.g. back-office + preview
-// drawer) don't collide on `#header-…` selectors used by the header v-menu.
+// drawer) don't collide on the header button selectors used as v-menu activators.
 const instanceId = useId()
 
 const tableLabel = computed(() => dataset.value?.title
@@ -768,36 +705,6 @@ const colTitles = computed(() => Object.fromEntries(['_updatedBy', '_owner'].map
 const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys, colTitles, ownLines)
 const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt, linesOwner)
 
-const { message: liveMessage } = useTableAnnouncer({
-  q,
-  total,
-  loading: fetchResults.loading,
-  sort,
-  displayMode,
-  cols,
-  allCols,
-  fixed,
-  filters,
-  headerTitleFor: (key) => {
-    // Visible headers carry the resolved title for the current display.
-    // Hidden columns (e.g. after a `hide` action) are no longer there, so
-    // fall back to the dataset schema so announcements still use a human-
-    // readable label instead of the raw key.
-    const fromHeaders = headers.value?.find(h => h.key === key)?.title
-    if (fromHeaders) return fromHeaders
-    const p = dataset.value?.schema?.find(p => p.key === key)
-    return p?.title || p?.['x-originalName'] || p?.key || key
-  },
-  displayModeLabelFor: (mode) => t(
-    mode === 'table-dense'
-      ? 'displayMode.tableDense'
-      : mode === 'list'
-        ? 'displayMode.list'
-        : 'displayMode.table'
-  ),
-  t
-})
-
 if (edit) {
   // The pair the creation wizard and the schema form already have: what is true
   // now, and — from saveLine — the transition that ends a declared wait. Inside the
@@ -865,15 +772,15 @@ const thead = ref<HTMLElement>()
 const tableRoot = ref<{ $el?: HTMLElement } | null>(null)
 
 // The scrollable wrapper is rendered by Vuetify inside v-table and doesn't expose a prop.
-// Make it focusable so keyboard users can reach the grid with Tab and scroll via arrow keys (RGAA 7.3).
+// Make it focusable so keyboard users can reach it with Tab and scroll with arrow keys (RGAA 7.3).
+// The table's <caption> already names it, so no role or label here.
 const applyWrapperA11y = () => {
   const wrapper = tableRoot.value?.$el?.querySelector?.<HTMLElement>('.v-table__wrapper')
   if (!wrapper) return
-  wrapper.setAttribute('tabindex', '0')
-  wrapper.setAttribute('role', 'region')
-  wrapper.setAttribute('aria-label', tableLabel.value)
+  if (pagination) wrapper.removeAttribute('tabindex') // not scrollable, would be a useless tab stop
+  else wrapper.setAttribute('tabindex', '0')
 }
-watch([tableRoot, displayMode, tableLabel], () => nextTick(applyWrapperA11y))
+watch([tableRoot, displayMode], () => nextTick(applyWrapperA11y))
 const minColWidth = computed(() => {
   return displayMode.value === 'table-dense' ? 80 : 120
 })
@@ -895,10 +802,9 @@ const onScrollItem = async (index: number) => {
   // ignore scroll on deprecated items that will soon be replaced
   if (fetchResults.loading.value) return
   incColsWidth()
-  if (index === results.value.length - 1 && next.value) {
-    // scrolled until the current end of the table; only re-fetch if there is a next page,
-    // otherwise execute() would flip loading true→false on every intersect re-bind for nothing
-    fetchResults.execute()
+  if (index === results.value.length - 1) {
+    // scrolled until the current end of the table
+    if (!fetchResults.loading.value) fetchResults.execute()
   }
 }
 
