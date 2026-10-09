@@ -77,6 +77,12 @@ export const attachmentPath = (dataset: any, name: string) => {
   return resolvePath(attachmentsDir(dataset), name)
 }
 
+// a line's attachments live in attachments/<lineId>/. An _id that is empty, "." or "..", or
+// that contains a separator would resolve to the attachments root or to another line's folder.
+export const isSafeLineAttachmentId = (lineId: unknown): lineId is string => {
+  return typeof lineId === 'string' && lineId !== '' && lineId !== '.' && lineId !== '..' && !/[/\\\0]/.test(lineId)
+}
+
 export const metadataAttachmentsDir = (dataset: any) => {
   return resolvePath(dir(dataset), 'metadata-attachments')
 }

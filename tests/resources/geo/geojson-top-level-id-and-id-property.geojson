@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 642,
+      "geometry": { "type": "Point", "coordinates": [103.5, 0.5] },
+      "properties": { "ID": "AF_5", "label": "value1" }
+    },
+    {
+      "type": "Feature",
+      "id": 643,
+      "geometry": { "type": "Point", "coordinates": [104.5, 1.5] },
+      "properties": { "ID": "AF_6", "label": "value2" }
+    }
+  ]
+}

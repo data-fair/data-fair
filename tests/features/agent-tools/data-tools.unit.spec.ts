@@ -175,7 +175,19 @@ test.describe('search_data formatResult', () => {
 
 // --- aggregate_data ---
 
+test.describe('search_data buildQuery sort', () => {
+  test('strips the quotes a model copies around a sort key', () => {
+    assert.equal(searchData.buildQuery({ datasetId: 'ds1', sort: '"-capacite"' }).query.sort, '-capacite')
+    assert.equal(searchData.buildQuery({ datasetId: 'ds1', sort: "'nom', \"-age\"" }).query.sort, 'nom,-age')
+  })
+})
+
 test.describe('aggregate_data buildQuery', () => {
+  test('strips the quotes a model copies from the quoted sort example', () => {
+    assert.equal(aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['type'], sort: '"-count"' }).query.sort, '-count')
+    assert.equal(aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['type'], sort: '-key' }).query.sort, '-key')
+  })
+
   test('builds correct field param for simple group-by', () => {
     const { path, query } = aggregateData.buildQuery({ datasetId: 'ds1', groupByColumns: ['status'] })
     assert.equal(path, 'datasets/ds1/values_agg')
@@ -247,6 +259,21 @@ test.describe('aggregate_data formatResult', () => {
       metric: { type: 'sum', column: 'amount' }
     })
     assert.ok(text.includes('sum(amount) = 1500.5'))
+  })
+
+  test('counts the groups actually listed, apart from the distinct values', () => {
+    const data = { total: 40, total_values: 40, total_other: 38, aggs: [{ value: 'A', total: 1 }, { value: 'B', total: 1 }] }
+    const { text } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['nom'] })
+    assert.ok(text.includes('**40** distinct values of nom, **2** groups shown, **38** rows not represented'))
+  })
+
+  test('leaves the group sort out of the filter query, which is pasted into table links', () => {
+    const data = { total: 40, total_values: 2, total_other: 0, aggs: [] }
+    const { text } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['commune'], sort: 'key', filters: { type_eq: 'Stade' } })
+    assert.ok(text.includes('Filter query: type_eq=Stade'))
+    assert.ok(!text.includes('sort='))
+    const { text: unfiltered } = aggregateData.formatResult(data, { datasetId: 'ds1', groupByColumns: ['commune'], sort: '-count' })
+    assert.ok(!unfiltered.includes('Filter query'))
   })
 })
 

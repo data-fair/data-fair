@@ -114,6 +114,32 @@ test.describe('geo files support', () => {
     assert.ok(!res.data.results[0]._vt)
   })
 
+  test('Geojson property escaping to "id" takes precedence over the feature top-level id', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('geo/geojson-top-level-id-and-id-property.geojson', ax)
+    assert.equal(dataset.status, 'finalized')
+    const idFields = dataset.schema.filter((f: any) => f.key === 'id')
+    assert.equal(idFields.length, 1)
+    assert.equal(idFields[0]['x-originalName'], 'ID')
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: 'id' } })).data.results
+    assert.deepEqual(lines.map((l: any) => l.id), ['AF_5', 'AF_6'])
+  })
+
+  test('Reject geojson with colliding property keys', async () => {
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-colliding-properties.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-colliding-properties.geojson')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+
+    const errorDataset = await waitForDatasetError(ax, res.data.id)
+    assert.equal(errorDataset.status, 'error')
+    const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
+    const errorEvent = journal.find((e: any) => e.type === 'error')
+    assert.ok(errorEvent.data.includes('"id"'), `expected error to mention the colliding key, got: ${errorEvent.data}`)
+  })
+
   test('Upload geojson with geometry type GeometryCollection', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-geometry-collection.geojson')
@@ -286,6 +312,19 @@ test.describe('geo files support', () => {
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')
+  })
+
+  test('Refuse a geographical file whose content is a GDAL VRT', async () => {
+    test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
+    // without an explicit input driver GDAL sniffs the content, a VRT is not a legitimate content in our case
+    const vrt = '<OGRVRTDataSource><OGRVRTLayer name="probe"><SrcDataSource>CSV:/etc/passwd</SrcDataSource><SrcLayer>passwd</SrcLayer><GeometryType>wkbNone</GeometryType></OGRVRTLayer></OGRVRTDataSource>'
+    const form = new FormData()
+    form.append('file', Buffer.from(vrt), 'probe.kml')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    const errorDataset = await waitForDatasetError(ax, res.data.id)
+    assert.equal(errorDataset.status, 'error')
   })
 
   test('Process uploaded mapinfo dataset', async () => {

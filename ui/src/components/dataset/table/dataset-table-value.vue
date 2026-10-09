@@ -18,42 +18,44 @@
     >{{ extendedValue.formatted }}</a>
   </template>
 
-  <div v-else>
-    <!-- color pin is an extra decoration displayed alongside the value -->
-    <div
-      v-if="property['x-refersTo'] === 'https://schema.org/color' && extendedValue.raw"
+  <div
+    v-else
+    :class="{ 'item-value-with-pin': colorPin }"
+  >
+    <!-- color pin is an extra decoration prepended to the value -->
+    <span
+      v-if="colorPin"
       class="item-value-color-pin"
+      :class="{ 'item-value-color-pin-dense': dense }"
       :style="`background-color:${extendedValue.raw}`"
     />
 
-    <!-- updatedByName / ownerName: show the user/owner avatar followed by their name (not the avatar URL) -->
-    <template v-if="(property.key === '_updatedByName' || property.key === '_ownerName') && extendedValue.formatted.startsWith($sdUrl)">
+    <!-- account columns (_updatedBy, _owner, the account concept): the avatar, captioned with the
+         readable name when one exists, then the raw identifier as copyable text -->
+    <template v-if="extendedValue.avatar">
+      <v-tooltip
+        v-if="extendedValue.avatarTitle"
+        location="top"
+      >
+        <template #activator="{props: tooltipProps}">
+          <v-avatar
+            :size="dense ? 24 : 28"
+            :image="extendedValue.avatar"
+            class="me-2"
+            v-bind="tooltipProps"
+          />
+        </template>
+        {{ extendedValue.avatarTitle }}
+      </v-tooltip>
       <v-avatar
-        :size="28"
-        :image="extendedValue.formatted"
+        v-else
+        :size="dense ? 24 : 28"
+        :image="extendedValue.avatar"
         class="me-2"
       />
-      <span class="pr-2">{{ extendedValue.raw }}</span>
+      <span class="pr-2">{{ extendedValue.formatted }}</span>
     </template>
 
-    <v-tooltip
-      v-else-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
-      location="top"
-    >
-      <template #activator="{props}">
-        <span
-          class="text-body-medium"
-          v-bind="props"
-        >
-          <v-avatar
-            :size="28"
-            :image="extendedValue.formatted"
-          />
-        </span>
-      </template>
-      <!-- TODO: fetch account name ? -->
-      {{ extendedValue.raw }}
-    </v-tooltip>
     <span
       v-else
       class="pr-2"
@@ -77,7 +79,7 @@
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-if="!filtered && extendedValue.filterable"
+        v-if="!noFilter && !filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
         :loading="filterLoading"
         :density="dense ? 'comfortable' : 'default'"
@@ -120,13 +122,16 @@ const { value: extendedValue, property } = defineProps({
   filtered: { type: Boolean, required: true },
   hovered: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
-  filterLoading: { type: Boolean, default: false }
+  filterLoading: { type: Boolean, default: false },
+  noFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
   filter: [],
   showDetailDialog: []
 }>()
+
+const colorPin = computed(() => property['x-refersTo'] === 'https://schema.org/color' && !!extendedValue.raw)
 
 const { t } = useI18n()
 const localeDayjs = useLocaleDayjs()
@@ -147,15 +152,24 @@ const dateTimeTitle = computed(() => {
 </script>
 
 <style>
+.item-value-with-pin {
+  display: flex;
+  align-items: center;
+}
 .item-value-color-pin {
-  width: 24px;
-  height: 24px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  display: inline-block;
-  position: absolute;
-  top: 8px;
-  left: 2px;
-  border: 2px solid #ccc;
+  margin-right: 6px;
+  /* ring contrasted with the theme surface, so pale swatches stay visible in light and dark */
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.38);
+  box-sizing: border-box;
+}
+.item-value-color-pin-dense {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
 }
 .item-value-date-time {
   text-decoration: underline dotted;

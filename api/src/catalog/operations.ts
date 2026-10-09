@@ -1,4 +1,4 @@
-import mime from 'mime'
+import mimeTypes from 'mime-types'
 import dcatContext from '../misc/utils/dcat/context.ts'
 
 // build a DCAT catalog document (mostly useful for harvesting by data.gouv.fr) from the datasets
@@ -43,7 +43,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
         description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
         downloadURL: originalRessourceUrl,
         mediaType: dataset.originalFile.mimetype,
-        format: mime.extension(dataset.originalFile.mimetype),
+        format: mimeTypes.extension(dataset.originalFile.mimetype) || undefined,
         bytesSize: dataset.originalFile.size
       })
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
@@ -56,7 +56,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
           description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
           downloadURL: ressourceUrl,
           mediaType: dataset.file.mimetype,
-          format: mime.extension(dataset.file.mimetype),
+          format: mimeTypes.extension(dataset.file.mimetype) || undefined,
           bytesSize: dataset.file.size
         })
       }

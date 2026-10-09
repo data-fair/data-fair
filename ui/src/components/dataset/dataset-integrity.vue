@@ -463,7 +463,7 @@
       <v-card :title="t('restoreTitle', { i: restoreTarget })">
         <v-card-text>
           <p class="mb-2">
-            {{ t('restoreWarning') }}
+            {{ dataset?.isRest ? t('restoreWarningRest') : t('restoreWarning') }}
           </p>
           <v-text-field
             v-model="restoreReason"
@@ -812,6 +812,9 @@ fr:
   diffCurrent: État courant
   restoreTitle: "Restaurer la révision {i}"
   restoreWarning: Les métadonnées couvertes et le fichier de données seront restaurés à l'état de cette révision. Un fichier différent déclenche un retraitement complet du jeu de données.
+  restoreWarningRest: "Seules les métadonnées couvertes (titre, schéma, permissions...) seront restaurées à l'état de cette révision. Le contenu des lignes ne fait pas partie d'une révision du jeu de données : utilisez « Restaurer les lignes » pour les données."
+  restoreNone: "Cette révision est identique à l'état actuel : rien n'a été restauré."
+  restoreNoneRest: "Cette révision est identique à l'état actuel des métadonnées : rien n'a été restauré. Le contenu des lignes n'est pas concerné par cette action."
   restoreReason: Raison (optionnelle, tracée dans l'historique)
   cancel: Annuler
   close: Fermer
@@ -918,6 +921,9 @@ en:
   diffCurrent: Current state
   restoreTitle: "Restore revision {i}"
   restoreWarning: Covered metadata and the data file will be restored to this revision's state. A differing file triggers a full reprocessing of the dataset.
+  restoreWarningRest: "Only covered metadata (title, schema, permissions...) will be restored to this revision's state. Line content is not part of a dataset revision: use \"Restore lines\" for data."
+  restoreNone: "This revision is identical to the current state: nothing was restored."
+  restoreNoneRest: "This revision is identical to the current metadata state: nothing was restored. Line content is not affected by this action."
   restoreReason: Reason (optional, recorded in the history)
   cancel: Cancel
   close: Close
@@ -1191,12 +1197,20 @@ const restoreReason = ref('')
 const restore = useAsyncAction(async () => {
   const body: any = { i: restoreTarget.value }
   if (restoreReason.value) body.reason = restoreReason.value
-  const res = await $fetch<{ status: string }>(`datasets/${dataset.value!.id}/_integrity/_restore`, { method: 'POST', body })
+  const res = await $fetch<{ status: string, restored?: string[] }>(`datasets/${dataset.value!.id}/_integrity/_restore`, { method: 'POST', body })
   restoreTarget.value = null
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+  // an empty `restored` means the revision matched the live state and nothing was rewritten —
+  // reporting the usual success there is what made a scope misunderstanding (a REST dataset
+  // revision carries no line data) look like a restore that silently failed
+  if (res.status !== 'restoring' && res.restored?.length === 0) {
+    sendUiNotif({ type: 'warning', msg: dataset.value?.isRest ? t('restoreNoneRest') : t('restoreNone') })
+  } else {
+    sendUiNotif({ type: 'success', msg: t('restoreOk') })
+  }
   return res
-}, { success: t('restoreOk') })
+})
 
 // Target 3: restore every diverged line to its last verified state. The endpoint drains the
 // relay and re-checks synchronously, responding with the fresh verdict — swap it straight into

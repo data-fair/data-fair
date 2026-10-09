@@ -218,9 +218,6 @@ const downloadLargeCSV = useAsyncAction(async () => {
   largeCsvCancelled.value = false
   largeCsvLoading.value = true
   try {
-    const { WritableStream } = await import('web-streams-polyfill/ponyfill')
-    // @ts-ignore
-    streamSaver.WritableStream = WritableStream
     streamSaver.mitm = `${$sitePath}/data-fair/streamsaver/mitm.html`
     fileStream = streamSaver.createWriteStream(`${dataset.value?.slug}.csv`)
     writer = fileStream.getWriter()

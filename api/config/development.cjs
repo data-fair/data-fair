@@ -22,8 +22,8 @@ module.exports = {
     endpoint: `http://localhost:${process.env.S3_PORT}`,
     bucket: 'bucketdev',
     credentials: {
-      accessKeyId: 'minioadmin',
-      secretAccessKey: 'minioadmin',
+      accessKeyId: 'rustfsadmin',
+      secretAccessKey: 'rustfsadmin',
     },
     forcePathStyle: true
   },
@@ -33,7 +33,7 @@ module.exports = {
       region: 'us-east-1',
       endpoint: `http://localhost:${process.env.S3_PORT}`,
       bucket: 'data-fair-integrity',
-      credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
+      credentials: { accessKeyId: 'rustfsadmin', secretAccessKey: 'rustfsadmin' },
       forcePathStyle: true,
     },
     retention: { days: 2 },
@@ -51,7 +51,8 @@ module.exports = {
   privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
   privateRegistryUrl: `http://localhost:${process.env.REGISTRY_PORT}`,
   brand: {
-    embed: '<div>application embed</div>'
+    // hidden: the injection is still checked by the tests, without taking room under fixed-height apps
+    embed: '<div hidden>application embed</div>'
   },
   defaultLimits: {
     totalStorage: 200000,

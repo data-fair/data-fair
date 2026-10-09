@@ -19,10 +19,12 @@ import * as datasetUtils from '../utils/index.ts'
 import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import { extend } from '../utils/extensions.ts'
 import * as notifications from '../../misc/utils/notifications.ts'
+import type { PushEvent } from '@data-fair/lib-node/events-queue.js'
 import { getThumbnail } from '../../misc/utils/thumbnails.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
 import { getFlatten } from '../utils/flatten.ts'
+import { rootSettingsFilter } from '../../settings/operations.ts'
 import { memoizedGetDataset } from '../service.ts'
 import { readDataset, reqDataset } from '../middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite } from './_common.ts'
@@ -37,21 +39,21 @@ export const registerMiscRoutes = (router: Router) => {
   router.get('/:datasetId/metadata-settings', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { datasetsMetadata: 1 } })
     return res.send(settings?.datasetsMetadata ?? {})
   })
 
   router.get('/:datasetId/api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
     res.send(datasetAPIDocs(dataset, reqPublicBaseUrl(req), settings, reqPublicationSite(req)).api)
   })
 
   router.get('/:datasetId/private-api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+      .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
     const sessionState = reqSessionAuthenticated(req)
     const bypass = permissions.reqBypassPermissions(req)
     // admin mode returns the unfiltered doc; otherwise the doc is restricted to the caller's permissions
@@ -113,14 +115,15 @@ export const registerMiscRoutes = (router: Router) => {
         const ownerRole = permissions.getOwnerRole(dataset.owner, sessionState)
         if (!['admin', 'contrib'].includes(ownerRole as string)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
       }
-      const notif = {
+      const notif: PushEvent = {
         sender: dataset.owner,
         topic: { key: `data-fair:dataset-user-notification:${dataset.slug}:${userNotification.topic}` },
         title: userNotification.title,
         body: userNotification.body,
         urlParams: { ...urlParams, datasetId: dataset.id, datasetSlug: dataset.slug, userId: sessionState.user.id },
         visibility: userNotification.visibility,
-        recipient: userNotification.recipient,
+        // the events service only notifies a recipient subscribed to the topic
+        ...(userNotification.recipient && { subscribedRecipient: userNotification.recipient }),
         extra: { user: { id: sessionState.user.id, name: sessionState.user.name } },
         resource: { type: 'dataset', id: dataset.id }
       }

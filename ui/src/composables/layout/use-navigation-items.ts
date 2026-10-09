@@ -25,6 +25,7 @@ import {
   mdiAccountSupervisor,
   mdiMonitorDashboard,
   mdiRobotOutline,
+  mdiShieldAccountOutline,
 } from '@mdi/js'
 
 export interface NavItem {
@@ -104,6 +105,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
     }
+    if ($uiConfig.agentsIntegration && canAdmin.value) {
+      management.push({ to: '/agents-activity', icon: mdiRobotOutline, title: t('agentsActivity') })
+    }
     if (management.length) groups.push({ key: 'management', title: t('group.management'), items: management })
 
     // Connectors group
@@ -130,8 +134,8 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdmin.value && $uiConfig.eventsIntegration) {
       monitor.push({ to: '/events', icon: mdiClipboardTextClock, title: t('events') })
     }
-    if ($uiConfig.agentsIntegration && canAdmin.value) {
-      monitor.push({ to: '/agents-activity', icon: mdiRobotOutline, title: t('agentsActivity') })
+    if (account.value?.type === 'organization' && org?.role === $uiConfig.adminRole) {
+      monitor.push({ to: '/access-audit', icon: mdiShieldAccountOutline, title: t('accessAudit') })
     }
     if (monitor.length) groups.push({ key: 'monitor', title: t('group.monitor'), items: monitor })
 

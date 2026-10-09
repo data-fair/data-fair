@@ -48,9 +48,9 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
 
 | Middleware | Used on | Behaviour |
 |---|---|---|
-| `noCache` | mutable / admin / draft endpoints (`GET /datasets/:id`, `/schema`, `/raw`, `/data-files`, admin & settings routers) | `Cache-Control: must-revalidate, private, max-age=0` + `X-Accel-Buffering: no`. Never stored. |
+| `noCache` | mutable / admin / draft endpoints (`GET /datasets/:id`, `/schema` (see below), `/raw`, `/data-files`, admin & settings routers) | `Cache-Control: must-revalidate, private, max-age=0` + `X-Accel-Buffering: no`. Never stored. |
 | `resourceBased(dateKey = 'updatedAt')` | dataset data-query endpoints (`/lines`, `/values_agg`, `/geo_agg`, `/metric_agg`, `/values/:field`, `/api-docs.json`, …) — most pass `'finalizedAt'` so the cache key tracks the data, not metadata edits | full conditional-GET + max-age logic, below |
-| `listBased` | collection endpoints (`/api/v1/datasets`, `/applications`, `/catalog/datasets`) | public **only** when the caller opts out of per-user data (`select=-userPermissions` **and** `visibility` contains `public`); otherwise `setNoCache`. Public ⇒ `must-revalidate, public, max-age=publicMaxAge` + `X-Accel-Buffering: yes`. |
+| `listBased` | collection endpoints (`/api/v1/datasets`, `/applications`, `/catalog/datasets`) | public **only** when nothing in the response depends on the caller (`isPublicList`): `select=-userPermissions`, `visibility` exactly `public`, no `private`/`protected`/`can`/`mine`/`shared`/`privateAccess`/`showAll` param and no `visibility` facet; otherwise `setNoCache`. The reverse-proxy cache key has no session in it, so any caller-dependent part would be served to the next anonymous visitor. Public ⇒ `must-revalidate, public, max-age=publicMaxAge` + `X-Accel-Buffering: yes`. |
 
 **`resourceBased` logic:**
 
@@ -72,6 +72,14 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
      caller is asking for data that doesn't exist yet — usually a stale memoize cache, see Layer 3).
    - Otherwise: public ⇒ `must-revalidate, public, max-age=publicMaxAge` (5 min); private ⇒
      `setNoCache`.
+
+The same logic is exported as `applyResourceCacheHeaders(req, res, date)` for routes that decide
+per request. `GET /datasets/:id/schema` uses it: it stays `noCache` (a memoized Mongo read that
+the back-office reads right after schema edits), **except** when `maxCardinality` comes with data
+filters. That path runs an ES cardinality aggregation (see `datasets/es/cardinality-aggs.ts`), so it
+gets the full resource-based treatment. Its reference date is `max(updatedAt, finalizedAt)`: a
+metadata edit of the schema (labels…) moves only `updatedAt`, while a finalization (data change,
+refreshed `x-cardinality`) moves only `finalizedAt`. Either date alone would produce stale `304`s.
 
 `setNoCache` always also sets `X-Accel-Buffering: no` to keep the response streaming unbuffered.
 
@@ -178,6 +186,15 @@ a `304` reuses it.
   expiry, never cleared): each render does a conditional GET to the static app server with the
   stored `ETag`/`Last-Modified`; a `304` reuses the cached HTML, a fetch error falls back to the
   last good copy. Bounded only by the number of distinct app URLs.
+- **Site resource hashes for applications** — `getSiteHashes` in
+  `api/src/applications/proxy-service.ts` (1 minute per site URL, same source and freshness as
+  serve-spa's): the proxy rewrites an application's `/simple-directory/api/sites/_theme.css` and
+  `_public.js` references to their hashed, immutable URLs. With `_t_*` query parameters (local theme
+  override, e.g. `_t_primary`) it points them to the plain URLs with these parameters instead — an
+  overridden resource is never hashed, so it stays on simple-directory's 60 s cache — and injects
+  `_public.js` if the application lacks it. A failed hashes fetch keeps the plain URLs.
+  The SPA itself (back-office and `/embed/*` views) gets the same treatment from serve-spa
+  (`@data-fair/lib-express` ≥ 1.29.0), which shares `getThemeParams` with the proxy.
 - **Remote-services proxy** (`api/src/remote-services/router.js` ≈ lines 247/276) — not a cache, but
   it forwards the conditional/cache headers both ways so the browser ↔ remote-service cache contract
   is preserved through Data Fair.
@@ -219,6 +236,34 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
   the `getDatasetFresh` validation path and the `?updatedAt=`/`?finalizedAt=` bypass.
 - **Slug changes** bump `finalizedAt` (`datasets/utils/patch.ts`, right after `updatedAt` is stamped) —
   see below.
+### Freshness after a REST line write
+
+A line edit is live in the ES alias as soon as `commitLines` returns, but `/lines` revalidates
+against `finalizedAt`, which only the finalize task writes. The resulting window is **deliberate**,
+and covered on both sides:
+
+- `commitLines` sets `_partialRestStatus: 'indexed'`, which is what the finalize task selects on
+  (`workers/tasks.ts`) — so `finalizedAt` moves within seconds without the public validator
+  changing any faster than once per write.
+- The writer does not wait for it: `ui/src/components/dataset/table/use-dataset-edition.ts` records
+  an `indexedAt` from each write and `composables/dataset/lines.ts` sends `?indexedAt=…` **instead
+  of** `?finalizedAt=…`. The server never reads that parameter — its whole job is to be a different
+  URL, so the browser and proxy hold no entry for it and send no `If-Modified-Since`. That is the
+  "serve me fresh data because I just wrote" escape hatch.
+
+The one gap `commitLines` closes itself: a dataset that still accepts line writes but that the
+finalize task cannot select **at all**. `readWritableDataset` admits `finalized` | `indexed` |
+`error`, while finalize selects `{status:'indexed'}` and `{isRest, status:'finalized',
+_partialRestStatus:'indexed'}` — so on `status: 'error'`, `finalizedAt` never moves again and the
+edit stays behind a 304 until someone reindexes by hand (a reloaded page has no `indexedAt` to
+escape with). Only in that case does `commitLines` bump `finalizedAt` itself.
+
+That bump rounds **down** to the current second and is applied with `$max`, never up into the
+future — unlike the slug bump, which can round up safely because a slug patch does not wake
+finalize. A future value here would be rewound by a later finalize's plain-`now` `$set`, after
+which a client still holding it sends it back as `?finalizedAt=` and earns the hard 400 above.
+Trade-off of rounding down: an edit in the same second as the current `finalizedAt` does not move
+the validator, which the next edit or any finalize resolves.
 - **Cache busting**: the `x-fg87fa6658fpbuia83hb8` header/cookie (or `x-cache-bypass` in the test
   harness) makes the proxy bypass its cache; `DELETE /api/v1/test-env/dataset-cache` and
   `…/publication-sites-cache` clear the memoize caches; restarting the proxy empties the

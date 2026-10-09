@@ -39,11 +39,13 @@ test.describe('buildFilterQueryString', () => {
     assert.equal(qs, undefined)
   })
 
-  test('keeps sort/select unchanged', () => {
-    const qs = buildFilterQueryString({ sort: 'name,-age', select: 'a,b' })
+  test('keeps sort, and turns select into the cols a page reads', () => {
+    const qs = buildFilterQueryString({ sort: 'name,-age', select: 'a, b,_id' })
     const params = new URLSearchParams(qs)
     assert.equal(params.get('sort'), 'name,-age')
-    assert.equal(params.get('select'), 'a,b')
+    assert.equal(params.get('select'), null)
+    assert.equal(params.get('cols'), 'a,b')
+    assert.equal(buildFilterQueryString({ select: '_id' }), undefined)
   })
 
   test('combines everything into a URL-safe string', () => {
@@ -70,6 +72,11 @@ test.describe('formatSchemaColumns', () => {
     assert.ok(rows)
     assert.ok(rows[0].includes('lon,lat'), '_geopoint row should mention the reverse lon,lat order')
     assert.ok(rows[1].includes('lon,lat'), '_geocorners row should mention the reverse lon,lat order')
+  })
+
+  test('shows a hand-declared column under the name the UI shows', () => {
+    const rows = formatSchemaColumns([{ key: 'montant_demande_euro', type: 'number', title: '', 'x-originalName': 'Montant demandé (€)' }])
+    assert.ok(rows?.[0].includes('| Montant demandé (€) |'), rows?.[0])
   })
 
   test('does not add the geo warning to ordinary columns', () => {

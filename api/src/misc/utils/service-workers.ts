@@ -44,14 +44,16 @@ workbox.routing.registerRoute(
 );`
   // Cache first for datasets queries that are performed with explicit
   // cache invalidation using finalizedAt=... or updatedAt=... query param
+  // the parameter must carry a value: an empty one does not timestamp anything
+  // and would pin the first response forever (cacheFirst has no expiration)
   sw += `
 workbox.routing.registerRoute(
-  new RegExp('${basePath}api/v1/datasets/.*finalizedAt=.*'),
+  new RegExp('${basePath}api/v1/datasets/.*[?&]finalizedAt=[^&]'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );`
   sw += `
 workbox.routing.registerRoute(
-  new RegExp('${basePath}api/v1/datasets/.*updatedAt=.*'),
+  new RegExp('${basePath}api/v1/datasets/.*[?&]updatedAt=[^&]'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );`
 

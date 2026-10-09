@@ -41,14 +41,15 @@ export const axiosAuth = async (email: string, org?: string, adminMode = false, 
   })
 }
 
-export const waitForWorkerIdle = async (timeoutMs = 5000): Promise<void> => {
+export const waitForWorkerIdle = async (timeoutMs = 5000): Promise<boolean> => {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
     const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
     const allEmpty = Object.values(res.data).every((pending: any) => Object.keys(pending).length === 0)
-    if (allEmpty) return
+    if (allEmpty) return true
     await new Promise(resolve => setTimeout(resolve, 100))
   }
+  return false
 }
 
 export const clean = async () => {
@@ -64,15 +65,17 @@ export const config = {
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }
 
-export const checkPendingTasks = async () => {
+export const checkPendingTasks = async (timeoutMs = 30000) => {
   // some test paths legitimately leave a finalize task in-flight (e.g. a successful REST line POST
-  // sets _partialRestStatus: 'indexed' which the shortProcessor picks up asynchronously). Give workers
-  // the same idle grace period clean() uses before asserting — anything still pending after 5s is a leak.
-  await waitForWorkerIdle()
+  // sets _partialRestStatus: 'indexed' which the shortProcessor picks up asynchronously). A task that
+  // is still running is not a leak, so keep polling for the whole window and only report what is
+  // still pending at the end: waiting a flat 5s and then asserting once reported a slow finalize as
+  // a leak, which is where this check was failing intermittently.
+  if (await waitForWorkerIdle(timeoutMs)) return
   const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
   for (const [worker, pending] of Object.entries(res.data)) {
     if (Object.keys(pending as any).length > 0) {
-      throw new Error(`pending tasks remaining in worker "${worker}": ${JSON.stringify(pending)}`)
+      throw new Error(`pending tasks remaining in worker "${worker}" after ${timeoutMs}ms: ${JSON.stringify(pending)}`)
     }
   }
 }

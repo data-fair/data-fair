@@ -63,6 +63,11 @@ server {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
   }
+  # service worker registered by the applications proxy, served by the API
+  location = /data-fair/app-sw.js {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
   location /data-fair/streamsaver {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
@@ -76,6 +81,16 @@ server {
   location ~ /data-fair/(.*)-ui-config.js {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
+  }
+
+  # realtime: the websocket opened on /data-fair/ goes to the API, the page itself to the UI
+  # dev server (which answers the upgrade with a plain 200 page otherwise)
+  location = /data-fair/ {
+    if ($http_upgrade = "websocket") {
+      rewrite ^ / break;
+      proxy_pass http://localhost:${DEV_API_PORT};
+    }
+    proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
   # comment this to test built UI served by api

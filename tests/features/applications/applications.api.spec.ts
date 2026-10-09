@@ -2,8 +2,9 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import FormData from 'form-data'
-import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
-import { sendDataset, fileExists, clearDatasetCache } from '../../support/workers.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId, directoryUrl } from '../../support/axios.ts'
+import { sendDataset, fileExists, clearDatasetCache, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../support/notifications.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -199,6 +200,7 @@ test.describe('Applications', () => {
 
     let res = await ax.post('/api/v1/applications', {
       url: mockAppUrl('monapp1'),
+      title: 'Répartition des équipements sportifs',
       configuration: {
         datasets: [
           { id: dataset.id, href: datasetRefInit.href },
@@ -216,6 +218,12 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
+    // applications are embedded by portals, never a destination of their own
+    assert.equal(res.headers['x-robots-tag'], 'noindex, indexifembedded')
+    res = await ax.get(`/api/v1/applications/${appId}`)
+    assert.equal(res.status, 200)
+    // the json api stays indexable, it serves public data
+    assert.equal(res.headers['x-robots-tag'], undefined)
     res = await ax.get('/app/' + appId)
     assert.equal(res.status, 200)
     assert.ok(res.data.includes('My app body'))
@@ -237,17 +245,79 @@ test.describe('Applications', () => {
     assert.ok(/<html[^>]*\slang="(fr|en)"/.test(res.data), 'the html element carries the served locale')
     assert.ok(!res.data.includes('lang="zz"'), 'the language declared by the application is replaced')
 
+    // Same for the title: the ones declared by the application name its model in the catalog,
+    // the served document must be titled after the application itself (WCAG 2.4.2 / RGAA 8.6).
+    // The mock declares two of them (one per language) and none must survive.
+    assert.ok(res.data.includes('<title>Répartition des équipements sportifs</title>'), 'the document is titled after the application')
+    assert.equal((res.data.match(/<title[ >]/g) || []).length, 1, 'the document declares a single title')
+    assert.ok(!res.data.includes('<title>Base app model name</title>'), 'the title declared by the application is replaced')
+    assert.ok(!res.data.includes('<title lang="fr">'), 'the other language variant is dropped too')
+    // The model keeps naming itself in the base app metadata, which the proxy does not touch
+    assert.equal(application.baseApp.meta.title, 'Nom du modèle', 'the base app metadata still names the model')
+
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker
     assert.ok(res.data.includes('/app-sw.js'))
     // the app contains the brand embed (cf config.brand.embed)
-    assert.ok(res.data.includes('<div>application embed</div>'))
+    assert.ok(res.data.includes('<div hidden="">application embed</div>'))
 
     // no brand embed if the specific limit is defined
     await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
-    assert.equal(res.data.includes('<div>application embed</div>'), false)
+    assert.equal(res.data.includes('<div hidden="">application embed</div>'), false)
+  })
+
+  test('Title a proxied application that declares no title', async () => {
+    const ax = testUser1
+    // monapp3 serves an index.html without any title element
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp3'), title: 'Consommation énergétique' })
+    res = await ax.get(`/app/${res.data.id}`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('<title>Consommation énergétique</title>'), 'the title element is inserted')
+  })
+
+  test('Point the site theme resources of a proxied application to hashed or overridden URLs', async () => {
+    // the canonical references of an application following the theme of its site
+    await setupMockRoute({
+      path: '/themeapp/index.html',
+      contentType: 'text/html',
+      body: `<html><head>
+        <meta name="application-name" content="themeapp">
+        <link href="/simple-directory/api/sites/_theme.css" rel="stylesheet">
+        <script src="/simple-directory/api/sites/_public.js"></script>
+        <script>window.APPLICATION=%APPLICATION%;</script>
+      </head><body>themed app</body></html>`
+    })
+    await setupMockRoute({ path: '/themeapp/config-schema.json', body: {} })
+    try {
+      await testSuperadmin.post('/api/v1/base-applications', { url: mockAppUrl('themeapp') })
+      await testSuperadmin.patch(`/api/v1/base-applications/${mockAppId('themeapp')}`, { public: true })
+      const ax = testUser1
+      const themeApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('themeapp'), title: 'themed' })).data
+      const plainApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'plain' })).data
+      const hashes = (await anonymous.get(`${directoryUrl}/api/sites/_hashes`)).data
+
+      // by default the immutable hashed resources of the site
+      let html = (await ax.get(`/app/${themeApp.id}/`)).data
+      assert.ok(html.includes(`href="/simple-directory/api/sites/${hashes.themeCss}/_theme.css"`), html)
+      assert.ok(html.includes(`src="/simple-directory/api/sites/${hashes.publicInfo}/_public.js"`), html)
+
+      // a local override of the theme is passed through to the plain resources
+      html = (await ax.get(`/app/${themeApp.id}/`, { params: { _t_primary: 'FFEB3B', _t_secondary: '#004D40', _c_other: 'x' } })).data
+      assert.ok(html.includes('href="/simple-directory/api/sites/_theme.css?_t_primary=FFEB3B&amp;_t_secondary=%23004D40"'), html)
+      assert.ok(html.includes('src="/simple-directory/api/sites/_public.js?_t_primary=FFEB3B&amp;_t_secondary=%23004D40"'), html)
+      assert.equal((html.match(/_public\.js/g) || []).length, 1, 'the public info script is not duplicated')
+
+      // an application that does not load the site theme is left untouched by default
+      html = (await ax.get(`/app/${plainApp.id}/`)).data
+      assert.ok(!html.includes('/simple-directory/api/sites/'))
+      // with an override the public info script is injected, it takes precedence over a site info fetched by the application
+      html = (await ax.get(`/app/${plainApp.id}/`, { params: { _t_primary: 'FFEB3B' } })).data
+      assert.ok(html.includes('<script src="/simple-directory/api/sites/_public.js?_t_primary=FFEB3B"></script>'), html)
+    } finally {
+      await clearMockRoutes()
+    }
   })
 
   test('Read base app info of an application', async () => {
@@ -391,6 +461,18 @@ test.describe('Applications', () => {
     assert.equal(res.data.createdAt, createdAt)
   })
 
+  test('PUT creates several applications with a chosen id for the same owner', async () => {
+    const ax = testUser1
+    // without a slug, every PUT-created application of an owner indexed a missing _uniqueRefs, so the
+    // second one collided on the unique-refs index and fell through to a 404
+    for (const id of ['put-created-app1', 'put-created-app2']) {
+      const res = await ax.put('/api/v1/applications/' + id, { url: mockAppUrl('monapp1'), title: 'PUT created ' + id })
+      assert.equal(res.status, 201)
+      assert.equal(res.data.id, id)
+      assert.equal(res.data.slug, id)
+    }
+  })
+
   test('Reconfiguring an application reconciles old dataset back-references', async () => {
     const ax = testUser1
     const datasetA = await sendDataset('datasets/split.csv', ax)
@@ -413,6 +495,16 @@ test.describe('Applications', () => {
     // dataset B is now referenced
     const dsB = (await ax.get('/api/v1/datasets/' + datasetB.id)).data
     assert.equal(dsB.extras.applications.length, 1)
+  })
+
+  test('emits application-created notif on POST', async () => {
+    const ax = testUser1
+    const notifs = await collectNotifs()
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'notif-test-app' })
+    const captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:application-application-created:' })
+
+    expectNotif(captured, `data-fair:application-application-created:${app.slug || app.id}`)
   })
 
   test('Upload a simple attachment on an application', async () => {

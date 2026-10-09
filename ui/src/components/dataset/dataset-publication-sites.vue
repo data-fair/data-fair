@@ -117,10 +117,10 @@ fr:
     topics: thématique
     license: licence
     temporal: couverture temporelle
-    spatial: couverture spatiale
-    keywords: mot clé
+    spatial: couverture géographique
+    keywords: mot-clé
     frequency: fréquence de mise à jour
-    creator: personne ou organisme créateur
+    creator: producteur
     modified: date de modification de la source
   contribPermission: Permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
   publishedNotif: Le jeu de données a été publié sur le portail
@@ -141,10 +141,10 @@ en:
     topics: topic
     license: license
     temporal: temporal coverage
-    spatial: spatial coverage
+    spatial: geographic coverage
     keywords: keyword
     frequency: update frequency
-    creator: creator person or entity
+    creator: producer
     modified: date of modification of the source
   contribPermission: Too broad permission granted to contribs (risk of compatibility breakage)
   publishedNotif: The dataset was published on the portal

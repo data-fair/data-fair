@@ -4,6 +4,8 @@
 
 The test suite uses **Playwright** as test runner with three sub-projects: `unit`, `api`, and `e2e`. Tests are organized by feature under `tests/features/`.
 
+The judged agent simulations (`*.sim.spec.ts`, under `simulations/`) live under their own `playwright.sim.config.ts` instead — a bare `playwright test` or `npm test` can never reach them, because every case spends Claude plan quota. See `npm run simulate` in AGENTS.md's Simulations section and [agent-integration.md](agent-integration.md).
+
 The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
 
 ## Running Tests
@@ -31,6 +33,7 @@ npx playwright test tests/features/datasets/bulk.api.spec.ts -g "test name"
 | `*.unit.spec.ts` | Pure unit tests | No server needed |
 | `*.api.spec.ts` | API tests (HTTP-only) | Depends on `state-setup` project |
 | `*.e2e.spec.ts` | End-to-end browser tests | Depends on `state-setup`, uses Desktop Chrome |
+| `*.sim.spec.ts` | Judged agent simulations | Own `playwright.sim.config.ts`; not part of `npm test` |
 
 ## Directory Structure
 

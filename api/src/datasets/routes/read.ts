@@ -40,6 +40,14 @@ import { runAdaptivePreflight } from '../es/adaptive-q.ts'
 const streamEligible = (query: any): boolean =>
   !query.format || query.format === 'json' || query.format === 'csv' || query.format === 'geojson'
 
+// Size of the tile payload carried by a page of hits (the prepared pbf or the source geometries).
+// Measured on the hits because ES >= 8.9 streams _search responses without a content-length header.
+const hitsLength = (hits: any[]): number => {
+  let length = 0
+  for (const hit of hits) length += JSON.stringify(hit._source ?? null).length
+  return length
+}
+
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
   const dataset = reqDataset(req)
@@ -304,6 +312,8 @@ const readLines: RequestHandler = async (req, res) => {
       await manageESError(req, err)
     }
   } else if (vectorTileRequested && sampling === 'max' && !query.collapse) {
+    // size is a page size here (up to 4 pages), not a cap: map apps send size=10000 to mean "fill the tile"
+    // TODO: once map apps stop sending size, only page when size is defaulted and honor an explicit size
     let previousEsResponse
     let totalLength = 0
     for (let i = 0; i < 4; i++) {
@@ -321,7 +331,7 @@ const readLines: RequestHandler = async (req, res) => {
         await manageESError(req, err)
         break
       }
-      totalLength += previousEsResponse.contentLength
+      totalLength += hitsLength(previousEsResponse.hits.hits)
 
       if (!esResponse) esResponse = previousEsResponse
       else esResponse.hits.hits = esResponse.hits.hits.concat(previousEsResponse.hits.hits)
@@ -630,7 +640,13 @@ export const registerReadRoutes = (router: Router) => {
     const field: any = (dataset.schema ?? []).find(p => p.key === req.params.fieldKey)
     if (!field) throw httpError(400, `field "${req.params.fieldKey}" is unknown`)
     if (field['x-labels'] && field['x-labelsRestricted']) {
-      result = Object.entries(field['x-labels']).map(([value, label]) => ({ value, label }))
+      // this shortcut answers from the schema without querying the index at all, so it has to
+      // apply the same value-level narrowing itself — otherwise the very same request answers
+      // differently depending on a column setting the caller has no reason to know about
+      const exactValues = esUtils.sameColumnExactValues(field, req.query)
+      result = Object.entries(field['x-labels'])
+        .filter(([value]) => !exactValues || exactValues.includes(value))
+        .map(([value, label]) => ({ value, label }))
     } else {
       req.query.size = req.query.size ?? '1000'
       const esAbortContext = esUtils.createEsRequestOptions(req, res)

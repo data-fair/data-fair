@@ -1,11 +1,20 @@
 import { type Request } from 'express'
 import { type Account, reqSessionAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 
+// an empty department means the org root, store it as an absent key so mongo filters and facets match it
+export const normalizeOwner = (owner: any) => {
+  if (!owner.department) {
+    delete owner.department
+    delete owner.departmentName
+  }
+  return owner
+}
+
 export const owner = (req: Request) => {
   // it is possible to specify owner of a new resource
   // permission canDoForOwner should be checked afterward
   const body = req.body as any
-  if (body && body.owner) return body.owner as Account
+  if (body && body.owner) return normalizeOwner(body.owner) as Account
 
   const sessionState = reqSessionAuthenticated(req)
 

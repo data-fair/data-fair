@@ -29,7 +29,7 @@ const test = base.extend<{
             const loginUrl = `${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`
             await page.goto(loginUrl)
             await page.getByLabel('Adresse mail').fill('test_superadmin@test.com')
-            await page.getByLabel('Mot de passe').fill('passwd')
+            await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
             await page.getByRole('button', { name: 'Se connecter' }).click()
             await page.waitForURL(fullUrl, { timeout: 10000 })
             loggedIn = true

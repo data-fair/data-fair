@@ -124,6 +124,7 @@ fr:
   applications: Applications
   org: Gestion de l'organisation
   dep: Gestion du département
+  accessAudit: Audit des accès
   params: Paramètres
   catalogs: Catalogues distants
   processings: Traitements périodiques
@@ -135,7 +136,7 @@ fr:
   metrics: Audience
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
-  agentsActivity: Suivi des agents
+  agentsActivity: Agents
   subscription: Abonnement
   assistance: Assistance
   services: Services distants
@@ -161,6 +162,7 @@ en:
   applications: Applications
   org: Manage organization
   dep: Manage department
+  accessAudit: Access audit
   params: Parameters
   catalogs: Remote catalogs
   processings: Periodic processings
@@ -172,7 +174,7 @@ en:
   metrics: Audience
   metricsSub: Downloads, API
   events: Traceability (beta)
-  agentsActivity: Agents activity
+  agentsActivity: Agents
   subscription: Subscription
   assistance: Support
   services: Remote services

@@ -133,6 +133,16 @@ export default {
         $ref: 'https://github.com/data-fair/data-fair/topic'
       }
     },
+    partOf: {
+      type: 'object',
+      description: 'Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.',
+      additionalProperties: false,
+      required: ['type', 'id'],
+      properties: {
+        type: { type: 'string', enum: ['dataset', 'application'] },
+        id: { type: 'string' }
+      }
+    },
     extras: {
       type: 'object',
       description: 'An object for extra content from client services of data-fair'

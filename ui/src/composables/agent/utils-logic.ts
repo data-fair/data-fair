@@ -48,6 +48,14 @@ export function cleanRow (row: any): any {
 }
 
 /**
+ * Scope a back-office listing tool to the active account, as the datasets and
+ * applications pages do. Without it the API also lists the public resources of
+ * every other account, and the assistant explores a catalog the user never sees
+ * on those pages. The API reads the account and department from the session.
+ */
+export const activeAccountScope = { shared: 'false' } as const
+
+/**
  * Build a paginated query object from common list tool parameters.
  */
 export function buildPaginatedQuery (params: { q?: string, page?: number, size?: number }, extra?: Record<string, string>): { query: Record<string, string>, page: number, size: number } {
@@ -60,4 +68,23 @@ export function buildPaginatedQuery (params: { q?: string, page?: number, size?:
   }
   if (params.q) query.q = params.q
   return { query, page, size }
+}
+
+/**
+ * Resolves once `read()` has returned the same value for `quietMs`, or after
+ * `maxMs` whatever it returns. Used to let a page finish registering its agent
+ * tools: there is no "done" signal, only the list ceasing to change.
+ */
+export function untilStable (read: () => string, quietMs: number, maxMs: number, tickMs = 50): Promise<void> {
+  const deadline = Date.now() + maxMs
+  let last = read()
+  let since = Date.now()
+  return new Promise(resolve => {
+    const timer = setInterval(() => {
+      const now = Date.now()
+      const current = read()
+      if (current !== last) { last = current; since = now }
+      if (now - since >= quietMs || now >= deadline) { clearInterval(timer); resolve() }
+    }, tickMs)
+  })
 }

@@ -1,5 +1,6 @@
 import type { Application } from '#types'
 import escapeHtml from 'escape-html'
+import trimFields from '../misc/utils/trim-fields.ts'
 
 type ApplicationWithExposedUrl = Application & { exposedUrl: string }
 
@@ -46,4 +47,34 @@ export const buildLoginHtml = (loginHtml: string, opts: { siteUrl: string, appli
     .replace('{ERROR}', opts.error ? `<p style="color:red">${escapeHtml(opts.error)}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl.href)
     .replace('{LOGO}', logoUrl.href)
+}
+
+// trim leading/trailing whitespace of the free-text fields (configuration is the base
+// application's own form, not ours to touch)
+export const trimApplication = (application: Partial<Application>) => {
+  trimFields(application, 'title', 'summary', 'description', 'image')
+  for (const attachment of application.attachments ?? []) trimFields(attachment, 'title')
+}
+
+// site resources of simple-directory that an application loads to follow the theme of its site
+export const siteResourcesPrefix = '/simple-directory/api/sites/'
+export type SiteResource = '_theme.css' | '_public.js'
+export type SiteHashes = { themeCss: string, publicInfo: string }
+const siteResourceHashKeys = { '_theme.css': 'themeCss', '_public.js': 'publicInfo' } as const
+
+/** The site resource an application references with a root-relative href, if any */
+export const matchSiteResource = (href: string | undefined): SiteResource | undefined => {
+  if (!href?.startsWith(siteResourcesPrefix)) return
+  const resource = new URL(href, 'http://host').pathname.slice(siteResourcesPrefix.length)
+  if (resource === '_theme.css' || resource === '_public.js') return resource
+}
+
+/**
+ * Hashed and immutable by default, a theme override is only ever served
+ * from the plain URL (its hash would describe the site's own theme).
+ */
+export const siteResourceHref = (resource: SiteResource, hashes: SiteHashes | undefined, themeParams: URLSearchParams): string => {
+  if (themeParams.size) return `${siteResourcesPrefix}${resource}?${themeParams}`
+  const hash = hashes?.[siteResourceHashKeys[resource]]
+  return hash ? `${siteResourcesPrefix}${hash}/${resource}` : `${siteResourcesPrefix}${resource}`
 }

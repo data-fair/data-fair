@@ -21,7 +21,7 @@ import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal, Event } from '#types'
-import { isRestDataset } from '#types/dataset/index.ts'
+import { isRestDataset, type Unicite } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import config from '#config'
 import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
@@ -91,7 +91,9 @@ export default async function (dataset: DatasetInternal) {
 
   // only the REST path consumes the re-emitted lines (markIndexedStream); for file
   // datasets the sink is a no-op, so skip the per-line copy on the readable side
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
+  // a full reindex targets a fresh index that maps _bytes; a partial REST sync targets the
+  // existing one, which maps it iff the dataset is marked _esLineBytes
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset), stampBytes: !partialUpdate || !!dataset._esLineBytes })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
@@ -136,7 +138,7 @@ export default async function (dataset: DatasetInternal) {
     // temp index before promoting it. File datasets only (REST enforce via a
     // MongoDB unique index). Real stored columns are guaranteed by config-time
     // checkConstraints.
-    const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
+    const uniqueConstraints = (dataset.constraints ?? []).filter((c): c is Unicite => c.type === 'unique')
     // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
     // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
     // truthy (an empty array) when a constraint is dropped: preparePatch normalizes the
@@ -172,7 +174,7 @@ export default async function (dataset: DatasetInternal) {
       }
       if (unicityErrorCount > 0) {
         const fileResult = await writer.finalize()
-        const summary = `${unicityErrorCount} ligne(s) en double sur une contrainte d'unicité`
+        const summary = `${unicityErrorCount} ligne${unicityErrorCount > 1 ? 's' : ''} en double sur une contrainte d'unicité`
         const diagnosticEventData = {
           hasDiagnosticFile: true,
           diagnosticErrorCount: fileResult.count,

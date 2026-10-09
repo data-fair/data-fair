@@ -6,13 +6,20 @@
         {{ t('intro') }}
       </p>
       <df-agent-chat-action
-        v-if="can('writeDescription')"
+        v-if="canManage"
         action-id="configure-master-data"
         :visible-prompt="t('configurePrompt')"
         :hidden-context="configureContext"
         :title="t('configurePrompt')"
       />
     </div>
+
+    <df-tutorial-alert
+      v-if="!canManage"
+      id="master-data-org-admin-only"
+      :text="t('orgAdminOnly')"
+      persistent
+    />
 
     <v-form v-model="formValid">
       <vjsf
@@ -31,9 +38,11 @@
 fr:
   intro: Transformez ce jeu de données en une donnée de référence et augmentez sa ré-utilisabilité dans de multiples contextes.
   configurePrompt: Aide-moi à configurer les données de référence
+  orgAdminOnly: Seuls les administrateurs de l'organisation peuvent modifier la configuration des données de référence. Contactez l'un d'eux pour la faire évoluer.
 en:
   intro: Transform this dataset into a master data source and increase its reusability in multiple contexts.
   configurePrompt: Help me configure master data
+  orgAdminOnly: Only the organization's administrators can change the master data configuration. Contact one of them to update it.
 </i18n>
 
 <script setup lang="ts">
@@ -50,7 +59,14 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 
-const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
+const { account, accountRole, user } = useSession()
+// mirrors the API's manageMasterData check: admin of the owner at the root of the organization
+const canManage = computed(() => {
+  if (user.value?.adminMode) return true
+  const owner = dataset.value?.owner
+  return !!owner && account.value?.type === owner.type && account.value?.id === owner.id &&
+    !account.value?.department && accountRole.value === 'admin'
+})
 
 const schema = JSON.parse(JSON.stringify(masterDataSchema))
 
@@ -90,7 +106,7 @@ const configureContext = computed(() => {
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   locale: locale.value,
-  readOnly: !can('writeDescription'),
+  readOnly: !canManage.value,
   context: context.value,
   density: 'comfortable'
 }))

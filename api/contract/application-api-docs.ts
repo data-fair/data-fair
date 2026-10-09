@@ -3,6 +3,7 @@ import type { Application, Settings } from '#types'
 import config from '#config'
 import { resolvedSchema as applicationSchema } from '../types/application/index.ts'
 import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
+import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
 import journalSchema from './journal.js'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import pJson from './p-json.js'
@@ -40,7 +41,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       contact: { ...(info.contact || {}) }
     },
     components: {
-      schemas: { application: applicationSchema },
+      schemas: { application: applicationSchema, applicationPatch: applicationPatchReq.properties.body },
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
@@ -92,11 +93,11 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
           'x-permissionClass': 'write',
           tags: ['Configuration'],
           requestBody: {
-            description: "Les informations de l'application.",
+            description: "Les informations de l'application à modifier.",
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/application' }
+                schema: { $ref: '#/components/schemas/applicationPatch' }
               }
             }
           },
@@ -176,9 +177,9 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       '/configuration-draft': {
         get: {
           summary: 'Lire le brouillon',
-          description: "Récupérer le brouillon de la configuration de l'application.",
+          description: "Récupérer le brouillon de la configuration de l'application, ou la configuration actuelle s'il n'y a pas de brouillon. Nécessite la permission de modifier la configuration (`writeConfig`).",
           operationId: 'readConfigDraft',
-          'x-permissionClass': 'read',
+          'x-permissionClass': 'write',
           tags: ['Paramétrage'],
           responses: {
             200: {
@@ -226,8 +227,13 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
           'x-permissionClass': 'write',
           tags: ['Paramétrage'],
           responses: {
-            204: {
-              description: 'Brouillon de la configuration supprimé.'
+            200: {
+              description: 'Brouillon de la configuration supprimé.',
+              content: {
+                'application/json': {
+                  schema: { type: 'object' }
+                }
+              }
             },
             ...readErrorResponses
           }
@@ -400,7 +406,9 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
               }
             },
             ...errorResponses,
-            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+            411: textPlainResponse("L'en-tête Content-Length est obligatoire."),
+            413: textPlainResponse('Fichier trop volumineux.'),
+            429: textPlainResponse('Quota de stockage du propriétaire dépassé.')
           }
         }
       },

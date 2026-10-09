@@ -27,14 +27,21 @@ export const setNoCache = (req: Request, res: Response) => {
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
 export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'): RequestHandler => (req, res, next) => {
+  const resource = reqResource(req)
+  if (applyResourceCacheHeaders(req, res, new Date(resource[dateKey] || resource.updatedAt))) return
+  next()
+}
+
+// same logic as the resourceBased middleware, for routes that decide per request whether the
+// response is cacheable and what its reference date is
+// returns true when a 304 was sent and the caller must stop there
+export const applyResourceCacheHeaders = (req: Request, res: Response, date: Date): boolean => {
   if (reqNoCache(req)) {
     setNoCache(req, res)
-    return next()
+    return false
   }
 
   const resource = reqResource(req)
-  const dateStr = resource[dateKey] || resource.updatedAt
-  const date = new Date(dateStr)
   const dateUTC = date.toUTCString()
   const cacheVisibility = reqPublicOperation(req) ? 'public' : 'private'
   debug(`dateUTC=${dateUTC}, visibility=${cacheVisibility}`)
@@ -43,7 +50,8 @@ export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'
     const ifModifiedSince = req.get('if-modified-since')
     if (ifModifiedSince && dateUTC === ifModifiedSince) {
       debug('if-modified-since matches local date, return 304')
-      return res.status(304).send()
+      res.status(304).send()
+      return true
     }
     res.setHeader('Last-Modified', dateUTC)
   }
@@ -74,14 +82,25 @@ export const resourceBased = (dateKey: 'updatedAt' | 'finalizedAt' = 'updatedAt'
     }
   }
 
-  next()
+  return false
+}
+
+// The reverse-proxy cache is keyed on the URL, not on the session: a list response can only be
+// shared when nothing in it depends on the caller. Only public items (visibility=public and no
+// private/protected flag, see visibility.filters), no user-scoped filter, no count of private items,
+// no asVisitor audit (it carries access provenance of the caller's org).
+const callerDependentListParams = ['private', 'protected', 'can', 'mine', 'shared', 'privateAccess', 'showAll', 'asVisitor']
+export const isPublicList = (query: Record<string, any>) => {
+  if (query.visibility !== 'public') return false
+  if (typeof query.select !== 'string' || !query.select.split(',').includes('-userPermissions')) return false
+  if (callerDependentListParams.some(p => query[p] !== undefined)) return false
+  if (query.facets !== undefined && (typeof query.facets !== 'string' || query.facets.split(',').includes('visibility'))) return false
+  return true
 }
 
 // adapt headers for a request listing the content of a collection
 export const listBased: RequestHandler = (req, res, next) => {
-  const select = req.query.select ? req.query.select.split(',') : []
-  let cacheVisibility = 'private'
-  if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
+  const cacheVisibility = isPublicList(req.query) ? 'public' : 'private'
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'yes')

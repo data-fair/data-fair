@@ -31,7 +31,7 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('agentsActivity') }] })
 
 <i18n lang="yaml">
 fr:
-  agentsActivity: Suivi des agents
+  agentsActivity: Agents
 en:
-  agentsActivity: Agents activity
+  agentsActivity: Agents
 </i18n>

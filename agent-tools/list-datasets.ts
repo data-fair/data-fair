@@ -47,7 +47,10 @@ export function buildQuery (params: Params, catalogMode?: boolean): { path: stri
   const size = Math.min(Math.max(params.size || 10, 1), 50)
   const page = Math.max(params.page || 1, 1)
   const query: Record<string, string> = {
-    select: 'id,title,summary,topics,count,slug',
+    // Must cover everything formatResult renders: the description promises
+    // status and last update, and omitting them here printed 'unknown' and '?'
+    // on every call, for datasets the UI showed as finalized and current.
+    select: 'id,title,summary,topics,count,slug,status,updatedAt,isRest',
     size: String(size),
     page: String(page)
   }
@@ -82,12 +85,24 @@ export function formatResult (data: any, page: number, size: number, options?: {
 
   const lines = rows.map((d: any) => {
     const idPart = d.slug ? `id: \`${d.id}\`, slug: \`${d.slug}\`` : `id: \`${d.id}\``
-    const parts = [`- **${d.title || d.id}** (${idPart})`,
-      `  Status: ${d.status || 'unknown'}, ${d.count ?? '?'} rows, updated ${d.updatedAt || '?'}`]
+    // Only what the API actually returned. A dataset mid-creation has no row
+    // count yet, and printing 'unknown'/'?' states something false about it
+    // where saying nothing states nothing.
+    const facts = [
+      d.status ? `Status: ${d.status}` : '',
+      d.count === undefined || d.count === null ? '' : `${d.count} rows`,
+      d.updatedAt ? `updated ${d.updatedAt}` : ''
+    ].filter(Boolean)
+    const parts = [`- **${d.title || d.id}** (${idPart})`]
+    if (facts.length) parts.push(`  ${facts.join(', ')}`)
     if (d.topics?.length) parts.push(`  Topics: ${d.topics.map((t: any) => t.title).join(', ')}`)
     const datasetUrl = link(d)
     // absolute link — use it verbatim, and as the base for table/map views ({link}/table?<filterQuery>)
     if (datasetUrl) parts.push(`  Link: ${datasetUrl}`)
+    // Back-office only, as in describe_dataset: /edit-data is a back-office route. A
+    // judged run went from this list straight to the read-only /table, never called
+    // describe_dataset, and told a person asking to enter a row that it could not.
+    if (d.isRest && options?.datasetLink && datasetUrl) parts.push(`  Editable: rows are entered and corrected on ${datasetUrl}/edit-data, where the line tools live`)
     return parts.join('\n')
   })
 

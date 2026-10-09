@@ -42,6 +42,14 @@ test.describe('limits', () => {
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 429)
 
+    // a wrong or repeated secret key does not open the route (the user is not a super admin)
+    for (const key of [config.secretKeys.limits + 'x', config.secretKeys.limits.slice(0, -1), [config.secretKeys.limits, config.secretKeys.limits]]) {
+      await assert.rejects(
+        ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key }, paramsSerializer: { indexes: null } }),
+        (err: any) => [400, 401, 403].includes(err.status)
+      )
+    }
+
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
 

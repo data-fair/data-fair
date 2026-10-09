@@ -5,24 +5,28 @@ import { useDisplay } from 'vuetify'
 import truncateMiddle from 'truncate-middle'
 import { MaybeRefOrGetter } from 'vue'
 import { dateTimeInOwnTimeZone } from './format-date-logic'
+import { formatNumber } from './format-number-logic'
 
 export type ExtendedResultValue = {
   raw: number | boolean | string,
   formatted: string,
   filterable: boolean,
-  displayDetail: boolean
+  displayDetail: boolean,
+  // decoration for the columns holding an account reference: an avatar rendered before the value,
+  // captioned with the readable name that lives in the companion _*Name column
+  avatar?: string,
+  avatarTitle?: string
 }
 export type ExtendedResult = {
   _id: string,
   _thumbnail?: string,
   _geopoint?: object,
-  _owner?: string,
   _highlight?: Record<string, string[]>,
   raw: Record<string, any>,
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>) => {
+export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>, linesOwner?: MaybeRefOrGetter<string | undefined>) => {
   const { id, dataset, draft } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -53,7 +57,11 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     }
     if (toValue(indexedAt)) query.indexedAt = toValue(indexedAt)
     else query.finalizedAt = dataset.value.finalizedAt
-    return withQuery($apiPath + `/datasets/${id}/lines`, query)
+    // own-lines mode: read through own/{owner}/lines so a holder of manageOwnLines (and nothing more)
+    // sees and edits only their own lines — the route filters on _owner server-side
+    const owner = toValue(linesOwner)
+    const path = owner ? `/datasets/${id}/own/${owner}/lines` : `/datasets/${id}/lines`
+    return withQuery($apiPath + path, query)
   })
 
   const total = ref<number>()
@@ -68,14 +76,14 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (!next.value) return
     abortController = new AbortController()
     // await new Promise(resolve => setTimeout(resolve, 2000))
-    const data = await $fetch<Lines>(next.value)
+    // a failed page stops the infinite scroll, or a visible sentinel would retry it in a loop
+    const data = await $fetch<Lines>(next.value).catch(err => { next.value = undefined; throw err })
     const extendedResults = []
     for (const raw of data.results) {
       const extendedResult: ExtendedResult = {
         _id: raw._id,
         _thumbnail: raw._thumbnail,
         _geopoint: raw._geopoint,
-        _owner: raw._owner,
         _highlight: raw._highlight,
         raw: markRaw(raw),
         values: markRaw({})
@@ -99,14 +107,18 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
           if (property['x-refersTo'] === 'https://schema.org/WebPage' && raw[property.key]) {
             extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
           }
-          if (property.key === '_updatedByName' && raw._updatedBy && !raw._updatedBy.startsWith('apiKey:')) {
-            extendedValue.formatted = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`
+          // an api key writes lines under an "apiKey:<id>" identity, which has no avatar
+          if (property.key === '_updatedBy' && raw._updatedBy && !raw._updatedBy.startsWith('apiKey:')) {
+            extendedValue.avatar = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`
+            extendedValue.avatarTitle = raw._updatedByName
           }
-          if (property.key === '_ownerName' && raw._owner) {
-            extendedValue.formatted = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
+          if (property.key === '_owner' && raw._owner) {
+            extendedValue.avatar = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
+            extendedValue.avatarTitle = raw._ownerName
           }
+          // no readable name exists for this concept, so the identifier stays the visible value
           if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && raw[property.key]) {
-            extendedValue.formatted = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
+            extendedValue.avatar = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
           }
 
           extendedResult.values[property.key] = extendedValue
@@ -150,6 +162,7 @@ const prepareExtendedResultValue = (value: any, property: SchemaProperty, trunca
 const shouldDisplayDetail = (value: any, property: SchemaProperty, truncate: number): boolean => {
   if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
   if (property['x-refersTo'] === 'https://schema.org/WebPage') return false
+  if (!property.separator && value && (property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description')) return true
   return property.type === 'string' && !property.separator && value && truncate < value.length
 }
 
@@ -176,7 +189,7 @@ export const formatValue = (value: any, property: SchemaProperty, truncate: numb
     if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
     return value ? 'oui' : 'non'
   }
-  if (property.type === 'number' || property.type === 'integer') return value.toLocaleString()
+  if (property.type === 'number' || property.type === 'integer') return typeof value === 'number' ? formatNumber(value, localeDayjs.locale) : value + ''
   if (truncate) return truncateMiddle(value + '', truncate, 0, '...')
   return value
 }

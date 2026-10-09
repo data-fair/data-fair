@@ -13,7 +13,8 @@ import config from '#config'
 import mongo from '#mongo'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
-import { httpAgent, httpsAgent } from '../misc/utils/http-agents.ts'
+import { httpAgent, httpsAgent, privateHttpAgent, privateHttpsAgent } from '../misc/utils/http-agents.ts'
+import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
 import { clean, validateOpenApi, initNew, computeActions } from './operations.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
@@ -260,7 +261,10 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
 
   // merge incoming and target URL elements
   const incomingUrl = new URL('http://host' + req.url)
-  const targetUrl = new URL(remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]))
+  // a mapped url is served by our own infrastructure (private agents), any other one is requested as a public url
+  const server = /** @type {string} */(remoteService.server)
+  const privateServerUrl = applyPrivateMapping(server, config.remoteServicesPrivateMapping)
+  const targetUrl = new URL(privateServerUrl ?? server)
   const extraPath = '/' + path.join(...req.params.proxyPath)
   targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
   targetUrl.search = incomingUrl.searchParams
@@ -273,7 +277,8 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
     timeout: config.remoteTimeout,
     headers,
     lookup: cacheableLookup.lookup,
-    agent: targetUrl.protocol === 'http:' ? httpAgent : httpsAgent
+    // the public agents refuse non public addresses (SSRF protection)
+    agent: targetUrl.protocol === 'http:' ? (privateServerUrl ? privateHttpAgent : httpAgent) : (privateServerUrl ? privateHttpsAgent : httpsAgent)
   }
   await new Promise((resolve, reject) => {
     let timedout = false

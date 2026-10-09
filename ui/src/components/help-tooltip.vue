@@ -1,35 +1,54 @@
 <template>
-  <v-tooltip
+  <!-- same look and behaviour as the help messages of vjsf forms -->
+  <v-menu
+    v-model="show"
     :location="location"
-    :text="text"
+    offset="4"
     max-width="400"
+    :close-on-content-click="false"
   >
     <template #activator="{ props }">
       <v-btn
-        v-bind="props"
-        :size="small ? 'small' : 'default'"
-        :icon="mdiInformation"
-        variant="text"
+        v-bind="{ ...props, ...$attrs }"
+        color="info"
+        :icon="mdiInformationSymbol"
+        density="compact"
+        variant="flat"
+        :size="small ? 20 : 24"
+        :title="show ? '' : t('showHelp')"
       />
     </template>
-    <template
-      v-if="$slots.default"
-      #default
+    <v-alert
+      color="info"
+      density="comfortable"
     >
-      <slot />
-    </template>
-  </v-tooltip>
+      <slot>{{ text }}</slot>
+    </v-alert>
+  </v-menu>
 </template>
 
+<i18n lang="yaml">
+fr:
+  showHelp: Afficher l'aide
+en:
+  showHelp: Show help
+</i18n>
+
 <script setup lang="ts">
-import { mdiInformation } from '@mdi/js'
+import { mdiInformationSymbol } from '@mdi/js'
+
+// class and style go to the button, not to the menu overlay
+defineOptions({ inheritAttrs: false })
 
 withDefaults(defineProps<{
   small?: boolean
-  location?: 'top' | 'bottom' | 'start' | 'end' | 'left' | 'right'
+  location?: 'top end' | 'top start' | 'bottom end' | 'bottom start' | 'start' | 'end'
   text?: string
 }>(), {
   small: false,
-  location: 'start',
+  location: 'top end',
 })
+
+const { t } = useI18n()
+const show = ref(false)
 </script>

@@ -65,7 +65,7 @@ export const schema = {
       description: 'Permettez à vos utilisateurs de récupérer un grand nombre de lignes à partir d\'une règle de correspondance simple. Cette fonctionnalité permet de créer une nouvelle source d\'enrichissement.',
       items: {
         type: 'object',
-        required: ['title'],
+        required: ['title', 'input'],
         properties: {
           id: {
             type: 'string',
@@ -107,6 +107,12 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Propriété comparée',
+                    required: ['key'],
+                    properties: {
+                      key: { type: 'string' },
+                      title: { type: 'string' },
+                      'x-refersTo': { type: 'string' }
+                    },
                     layout: {
                       props: {
                         noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
@@ -129,6 +135,7 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Date à renseigner',
+                    required: ['key'],
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
                       key: { type: 'string', const: '_date' },
@@ -142,7 +149,7 @@ export const schema = {
                 }
               }, {
                 title: 'Coordonnée géographique à proximité',
-                required: ['type', 'distance'],
+                required: ['type', 'distance', 'property'],
                 properties: {
                   type: { type: 'string', const: 'geo-distance' },
                   distance: {
@@ -153,6 +160,7 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Point à renseigner',
+                    required: ['key'],
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
                       key: { type: 'string', const: '_geopoint' },
@@ -376,7 +384,8 @@ export const endpoints = (dataset) => {
   for (const bulkSearch of dataset.masterData.bulkSearchs || []) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
-      const matchingProp = dataset.schema.find(p => p.key === input.property.key && p['x-refersTo'] === input.property['x-refersTo'])
+      // equals inputs saved as a bare { key } (UI regression, see #576) take the concept from the schema
+      const matchingProp = dataset.schema.find(p => p.key === input.property.key && p['x-refersTo'] === (input.property['x-refersTo'] ?? p['x-refersTo']))
       inputProperties[input.property.key] = matchingProp ? { ...matchingProp } : { ...input.property }
       inputProperties[input.property.key].title = inputProperties[input.property.key].title || ''
       inputProperties[input.property.key].description = inputProperties[input.property.key].description || ''
@@ -471,3 +480,16 @@ export const endpoints = (dataset) => {
   }
   return endpoints
 }
+
+/**
+ * A dataset is reference data as soon as one of the master-data features is configured on it.
+ * The sub-object is often present but empty on datasets that are not reference data at all.
+ * @param {any} masterData
+ */
+export const isMasterData = (masterData) => !!masterData && !!(
+  masterData.shareOrgs?.length ||
+  masterData.singleSearchs?.length ||
+  masterData.bulkSearchs?.length ||
+  masterData.virtualDatasets?.active ||
+  masterData.standardSchema?.active
+)

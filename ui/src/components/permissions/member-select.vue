@@ -7,6 +7,7 @@
     item-value="id"
     :label="t('member', {org: organization.name})"
     :no-filter="true"
+    :no-data-text="searchInput.length >= 3 ? t('noMember') : t('typeToSearch')"
     required
     return-object
     clearable
@@ -15,10 +16,15 @@
   >
     <template #item="{ item, props: itemProps }: any">
       <v-list-item v-bind="itemProps">
+        <!--
+          item.raw is transiently undefined while Vuetify's virtual-scroll list is
+          re-measuring rows during the 0 -> N items transition (e.g. right after the
+          search results resolve): guard with optional chaining rather than crashing.
+        -->
         <template #subtitle>
-          {{ item.raw.email }}
-          <span v-if="item.raw.role"> - {{ item.raw.role }}</span>
-          <span v-if="item.raw.department"> - {{ item.raw.departmentName || item.raw.department }}</span>
+          {{ item.raw?.email }}
+          <span v-if="item.raw?.role"> - {{ item.raw.role }}</span>
+          <span v-if="item.raw?.department"> - {{ item.raw.departmentName || item.raw.department }}</span>
         </template>
       </v-list-item>
     </template>
@@ -28,8 +34,12 @@
 <i18n lang="yaml">
 fr:
   member: Membre de {org}
+  typeToSearch: Saisissez au moins 3 caractères pour rechercher un membre
+  noMember: Aucun membre trouvé
 en:
   member: Member of {org}
+  typeToSearch: Type at least 3 characters to search for a member
+  noMember: No member found
 </i18n>
 
 <script setup lang="ts">
@@ -38,6 +48,7 @@ import { $sdUrl } from '~/context'
 const props = defineProps<{
   modelValue: { id: string, name: string, email?: string } | null
   organization: { id: string, name?: string }
+  department?: string
 }>()
 
 type Member = { id: string, name: string, email?: string, role?: string, department?: string, departmentName?: string }
@@ -59,11 +70,16 @@ const filledMembers = computed(() => {
   return result.concat(members.value)
 })
 
+const searchInput = ref('')
+
 async function onSearch (search: string) {
+  searchInput.value = search ?? ''
   if (search && props.modelValue && search === props.modelValue.name) return
   loading.value = true
   if (search && search.length >= 3) {
-    const res = await fetch(`${$sdUrl}/api/organizations/${props.organization.id}/members?q=${encodeURIComponent(search)}`)
+    let url = `${$sdUrl}/api/organizations/${props.organization.id}/members?q=${encodeURIComponent(search)}`
+    if (props.department) url += `&department=${encodeURIComponent(props.department)}`
+    const res = await fetch(url)
     const data = await res.json()
     members.value = data.results
   } else {

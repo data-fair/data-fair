@@ -222,6 +222,9 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
   const response: any = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
   const resultCtx = prepareResultContext(dataset, query)
+  // these hits come straight from ES (like searchStream's), not from the buffered search(), so their
+  // _attachment_url is still raw and must be rewritten by prepareResultItem
+  resultCtx.rewriteAttachmentUrl = true
   recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten, 0, valuesFields, resultCtx)
 
   if (aggSizes[0] > 0 && response.aggs?.length === aggSizes[0]) {

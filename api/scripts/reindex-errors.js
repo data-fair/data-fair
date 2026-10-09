@@ -4,12 +4,8 @@ import * as datasetUtils from '../src/datasets/utils/index.ts'
 async function main () {
   await mongo.connect()
   const db = mongo.db
-  const cursor = await db.collection('datasets').find({})
-  while (await cursor.hasNext()) {
-    const dataset = await cursor.next()
-    if (dataset?.status === 'error') {
-      await datasetUtils.reindex(db, dataset)
-    }
+  for await (const dataset of mongo.datasets.find({ status: 'error' })) {
+    await datasetUtils.reindex(db, dataset)
   }
 }
 

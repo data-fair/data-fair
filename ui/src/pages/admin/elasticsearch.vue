@@ -534,6 +534,57 @@
       </v-sheet>
     </template>
 
+    <!-- REST datasets whose index predates the _bytes mapping: single-line writes are refused
+         until a full reindex rebuilds it (docs/architecture/storage-accounting.md) -->
+    <template v-if="data?.restDatasetsWithoutLineBytes">
+      <h3 class="text-title-large mt-6">
+        {{ t('legacyIndex.title') }}
+      </h3>
+      <p
+        v-if="data.restDatasetsWithoutLineBytes.count === 0"
+        class="text-medium-emphasis"
+      >
+        {{ t('legacyIndex.none') }}
+      </p>
+      <template v-else>
+        <p class="text-medium-emphasis">
+          {{ t('legacyIndex.help', { count: data.restDatasetsWithoutLineBytes.count }) }}
+        </p>
+        <v-sheet
+          class="my-4"
+          style="max-height:800px; overflow-y: scroll;"
+        >
+          <v-list lines="two">
+            <v-list-item
+              v-for="d in data.restDatasetsWithoutLineBytes.results"
+              :key="d.id"
+            >
+              <v-list-item-title>
+                <a
+                  :href="`/data-fair/dataset/${d.id}`"
+                  target="_top"
+                  class="simple-link"
+                >{{ d.title }} ({{ d.owner.name }})</a>
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                {{ t('legacyIndex.subtitle', { status: d.status, count: d.count ?? 0, date: d.dataUpdatedAt ? dayjs(d.dataUpdatedAt).format('lll') : '-' }) }}
+              </v-list-item-subtitle>
+              <template #append>
+                <v-btn
+                  :icon="mdiPlay"
+                  color="primary"
+                  :title="t('legacyIndex.reindex')"
+                  variant="text"
+                  :loading="reindex.loading.value"
+                  @click="reindex.execute(d.id)"
+                />
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-sheet>
+      </template>
+    </template>
+
     <v-progress-circular
       v-if="diagnoseFetch.loading.value && !data"
       indeterminate
@@ -594,6 +645,12 @@ fr:
     title: Jeux de données avec avertissements Elasticsearch
     none: Aucun jeu de données avec avertissements Elasticsearch
     reindex: Réindexer
+  legacyIndex:
+    title: Jeux de données éditables à réindexer
+    none: Aucun jeu de données éditable sur un index antérieur à la version 6.18.0
+    help: "{count} jeu(x) de données éditable(s) sur un index construit avant la version 6.18.0 : les écritures ligne à ligne y ont été perdues entre le déploiement de la 6.18.0 et son correctif, une réindexation complète reconstruit l'index à partir des données stockées."
+    subtitle: "état {status}, {count} lignes, dernière écriture {date}"
+    reindex: Réindexer
 en:
   title: Elasticsearch
   refresh: Refresh
@@ -645,6 +702,12 @@ en:
     title: Datasets with Elasticsearch warnings
     none: No datasets with Elasticsearch warnings
     reindex: Reindex
+  legacyIndex:
+    title: Editable datasets to reindex
+    none: No editable dataset on an index older than version 6.18.0
+    help: "{count} editable dataset(s) on an index built before version 6.18.0: line-by-line writes were lost there between the 6.18.0 deployment and its fix, a full reindex rebuilds the index from the stored data."
+    subtitle: "status {status}, {count} lines, last write {date}"
+    reindex: Reindex
 </i18n>
 
 <script setup lang="ts">
@@ -668,9 +731,11 @@ type DiagnoseResponse = {
   unassignedShards: any[]
   indicesSummary: any | null
   datasetsWithEsWarnings: { count: number, results: any[] }
+  restDatasetsWithoutLineBytes: { count: number, results: any[] }
   errors: Array<{ section: string, message: string }>
 }
 
+const { dayjs } = useLocaleDayjs()
 const diagnoseFetch = useFetch<DiagnoseResponse>($apiPath + '/admin/elasticsearch/diagnose')
 const data = computed(() => diagnoseFetch.data.value)
 

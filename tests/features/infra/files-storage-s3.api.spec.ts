@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
-// The S3 files-storage backend, exercised against the dev MinIO (same convention as
+// The S3 files-storage backend, exercised against the dev RustFS (same convention as
 // s3-multipart-copy.api.spec.ts: skipped when no S3 service is reachable).
 //
 // Context: on S3, `pathExists` is a ListObjectsV2 Prefix match while the fs backend
@@ -21,8 +21,8 @@ const s3Options = {
   endpoint: `http://localhost:${s3Port}`,
   bucket: 'bucketdev',
   credentials: {
-    accessKeyId: 'minioadmin',
-    secretAccessKey: 'minioadmin'
+    accessKeyId: 'rustfsadmin',
+    secretAccessKey: 'rustfsadmin'
   },
   forcePathStyle: true
 }
@@ -73,6 +73,23 @@ test.describe('S3 files-storage backend', () => {
   test('pathExists keeps prefix semantics for directories', async () => {
     assert.equal(await backend.pathExists(`${base}/attachments`), true)
     assert.equal(await backend.pathExists(`${base}/nowhere`), false)
+  })
+
+  test('directory operations do not reach sibling keys sharing the prefix', async () => {
+    const siblingKey = 'test-files-storage-s3/attachments/03kp0009-sibling/file.txt'
+    const dirKey = 'test-files-storage-s3/attachments/03kp/file.txt'
+    await rawClient.send(new PutObjectCommand({ Bucket: s3Options.bucket, Key: siblingKey, Body: 'sibling' }))
+    await rawClient.send(new PutObjectCommand({ Bucket: s3Options.bucket, Key: dirKey, Body: 'own' }))
+    try {
+      assert.deepEqual(await backend.lsr(`${base}/attachments/03kp`), ['file.txt'])
+      await backend.removeDir(`${base}/attachments/03kp`)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp/file.txt`), false)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp0009-sibling/file.txt`), true)
+      assert.equal(await backend.fileExists(`${base}/attachments/03kp0009.jpg`), true)
+    } finally {
+      await rawClient.send(new DeleteObjectCommand({ Bucket: s3Options.bucket, Key: siblingKey }))
+      await rawClient.send(new DeleteObjectCommand({ Bucket: s3Options.bucket, Key: dirKey }))
+    }
   })
 
   test('fileStats on a missing key throws a mapped 404, not "UnknownError"', async () => {

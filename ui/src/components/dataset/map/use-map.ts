@@ -1,10 +1,11 @@
-import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike, type AddLayerObject, type ExpressionSpecification } from 'maplibre-gl'
+// maplibre 6 has no default export
+import * as maplibregl from 'maplibre-gl'
+import { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike, type AddLayerObject, type DataDrivenPropertyValueSpecification, type ExpressionSpecification } from 'maplibre-gl'
 import { useMapStyle } from './use-map-style'
 import debounce from 'debounce'
 import { formatValue } from '../../../composables/dataset/lines'
-
-// @ts-ignore
-maplibregl.config.CSP_NONCE = $cspNonce
+import { buildPopupHtml } from './popup-content'
+import './maplibre-worker'
 
 const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
@@ -27,25 +28,37 @@ export const useMap = (
 
   let _map: Map
   let styleLoaded = false
+  // maplibre 6 dropped WebGL1 and now THROWS GPUInitializationError from the constructor where
+  // maplibre 5 emitted an "error" event, so a browser that cannot give us a WebGL2 context has
+  // to be caught here instead — and remembered, or every watcher tick would raise the toast again
+  let mapUnavailable = false
   const getMap = () => {
     if (!tileUrl.value || !bbox.value || !mapEl.value) return
     if (_map) return _map
-    const map = _map = new maplibregl.Map({
-      container: mapEl.value,
-      style,
-      transformRequest: (url) => {
-        if (url.startsWith($siteUrl)) {
-        // include cookies, for data-fair sessions
-          return { url, credentials: 'include' }
-        } else {
-          return { url }
-        }
-      },
-      // preserveDrawingBuffer: noInteraction, // for capture ? TODO: only apply this if in a capture context ?
-      attributionControl: false,
-    }).addControl(new maplibregl.AttributionControl({
-      compact: false
-    }))
+    if (mapUnavailable) return
+    let map: Map
+    try {
+      map = _map = new maplibregl.Map({
+        container: mapEl.value,
+        style,
+        transformRequest: (url) => {
+          if (url.startsWith($siteUrl)) {
+          // include cookies, for data-fair sessions
+            return { url, credentials: 'include' }
+          } else {
+            return { url }
+          }
+        },
+        // preserveDrawingBuffer: noInteraction, // for capture ? TODO: only apply this if in a capture context ?
+        attributionControl: false,
+      }).addControl(new maplibregl.AttributionControl({
+        compact: false
+      }))
+    } catch (error) {
+      mapUnavailable = true
+      sendUiNotif({ type: 'error', error, msg: t('mapError') })
+      return
+    }
 
     if (!noInteraction) {
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), navigationPosition ?? 'top-right')
@@ -123,15 +136,16 @@ export const useMap = (
         const item = (await $fetch(`datasets/${id}/lines`, { params })).results[0]
         if (!item) return
 
-        const htmlList = dataset.value.schema
+        // both the column titles and the cell values are user-authored, and setHTML does not
+        // sanitize — buildPopupHtml escapes them (see popup-content.ts)
+        const html = buildPopupHtml(dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
           .filter(field => !cols.length || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
-          .map(field => {
-            return `<li style="list-style-type: none;"><strong>${field.title || field['x-originalName'] || field.key}:</strong> ${formatValue(item[field.key], field, null, localeDayjs)}</li>`
-          })
-          .join('\n')
-        const html = `<ul style="padding-left: 0;">${htmlList}</ul>`
+          .map(field => ({
+            label: field.title || field['x-originalName'] || field.key,
+            value: formatValue(item[field.key], field, null, localeDayjs)
+          })))
 
         // Populate the popup and set its coordinates
         // based on the feature found.
@@ -195,7 +209,10 @@ export const useMap = (
 
   // the category expression usually arrives after the layers were added
   // (values fetch resolving later than the tile url change) — apply it live
-  const categoryPaint: Array<[string, 'fill-color' | 'line-color' | 'circle-color']> = [
+  // all three are color properties, so a single value type covers them — which matters since
+  // maplibre 6 types setPaintProperty generically on the property name
+  type CategoryPaintProp = 'fill-color' | 'line-color' | 'circle-color'
+  const categoryPaint: Array<[string, CategoryPaintProp]> = [
     ['results_polygon', 'fill-color'],
     ['results_polygon_outline', 'line-color'],
     ['results_line', 'line-color'],
@@ -207,7 +224,7 @@ export const useMap = (
       if (!map || !styleLoaded) return
       for (const [layerId, prop] of categoryPaint) {
         if (map.getLayer(layerId)) {
-          const layer = dataLayers.value.find(l => l.id === layerId) as AddLayerObject & { paint: Record<string, unknown> }
+          const layer = dataLayers.value.find(l => l.id === layerId) as AddLayerObject & { paint: Record<CategoryPaintProp, DataDrivenPropertyValueSpecification<string>> }
           map.setPaintProperty(layerId, prop, layer.paint[prop])
         }
       }

@@ -4,10 +4,11 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.ts'
 import { Transform, Writable } from 'stream'
-import stringify from 'json-stable-stringify'
+import stringify from 'fast-json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
-import axios from '../../misc/utils/axios.ts'
+import axios, { privateAxios } from '../../misc/utils/axios.ts'
+import { applyPrivateMapping } from '../../misc/utils/private-mapping.ts'
 import { fullFilePath, attachmentPath } from './files.ts'
 import { readStreams, writeExtendedStreams } from './data-streams.ts'
 import * as restDatasetsUtils from './rest.ts'
@@ -20,9 +21,10 @@ import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import debugLib from 'debug'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
+import { findAction } from '../../remote-services/operations.ts'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.ts'
-import intoStream from 'into-stream'
+import { Readable } from 'node:stream'
 import { getFlatten } from './flatten.ts'
 import type { Dataset, DatasetLine } from '#types'
 import type { AnyBulkWriteOperation, Document, Filter, WithId } from 'mongodb'
@@ -87,7 +89,7 @@ export const prepareExtensions = (locale: string, extensions: any[], oldExtensio
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-export const compileExpression = exprEval(config.defaultTimezone).compile
+export const compileExpression = exprEval(config.defaultTimeZone).compile
 // Resolve each active extension into a "detailed" descriptor that can be consumed
 // by ExtensionsStream (loads remoteService + action, prepares input mapping, compiles
 // expression, etc.). Throws on configuration errors at the dataset level.
@@ -102,7 +104,7 @@ const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
       if (!remoteService) {
         throw new Error(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
       }
-      const action = remoteService.actions.find((a: any) => a.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) {
         throw new Error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
       }
@@ -111,7 +113,7 @@ const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
       const inputMapping = await prepareInputMapping(action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find((o: any) => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find((input: any) => input.concept === 'http://schema.org/identifier')
-      if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
+      if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', { cause: action })
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
       const property = dataset.schema?.find(p => p.key === extension.property.key)
@@ -174,7 +176,7 @@ export const extend = async (
   const progress = updateMode !== 'lineIds' ? taskProgress(dataset.id, 'extend', 100) : undefined
   await progress?.inc(0)
   if (simulationLine) {
-    inputStreams = [intoStream.object([simulationLine])]
+    inputStreams = [Readable.from([simulationLine])]
   } else if (isRestDataset(dataset)) {
     let filter = {}
     if (updateMode === 'updatedLines') filter = { _needsExtending: true }
@@ -328,9 +330,11 @@ class ExtensionsStream extends Transform {
           }
         }
 
+        // a mapped url is served by our own infrastructure (private agents), any other one is requested as a public url
+        const privateServerUrl = applyPrivateMapping(extension.remoteService.server, config.remoteServicesPrivateMapping)
         const opts: any = {
           method: extension.action.operation.method,
-          url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
+          url: (privateServerUrl ?? extension.remoteService.server) + extension.action.operation.path,
           headers: {
             Accept: 'application/x-ndjson',
             'Content-Type': 'application/x-ndjson'
@@ -361,7 +365,7 @@ class ExtensionsStream extends Transform {
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
         // stringify cannot return undefined here (the input is always an array)
-        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []])!)
+        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
         const extensionCacheKey = extension.remoteService + '/' + extension.action
         // first get previous results from cache, in bulk: one $in query on the
         // {extensionKey, input} index and one lastUsed bump, instead of one
@@ -397,7 +401,7 @@ class ExtensionsStream extends Transform {
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
           const pseudoSessionState = getPseudoSessionState(this.dataset.owner, 'extension', '_master-data', 'admin')
-          const masterDataset = await mongo.db.collection('datasets').findOne({ id: masterDatasetId })
+          const masterDataset = await mongo.datasets.findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!(permissionsUtils.list('datasets', masterDataset, pseudoSessionState) as string[]).includes('readLines')) {
             throw new Error(`[noretry] permission manquante sur le jeu de données de référence "${masterDataset.slug}" (${masterDataset.id})`)
@@ -408,7 +412,7 @@ class ExtensionsStream extends Transform {
             opts.data
           )
         } else {
-          data = (await axios(opts)).data
+          data = (await (privateServerUrl ? privateAxios : axios)(opts)).data
         }
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter((line: string) => !!line).map(JSON.parse)
@@ -549,7 +553,7 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
     if (extension.type === 'remoteService') {
       const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) continue
-      const action = remoteService.actions.find((action: any) => action.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) continue
       const extensionKey = getExtensionKey(extension)
       const extensionId = `${extension.remoteService}/${extension.action}`
@@ -643,7 +647,7 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
     if (extension.type === 'remoteService') {
       const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) throw httpError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
-      const action = remoteService.actions.find((action: any) => action.id === extension.action)
+      const action = findAction(remoteService, extension.action)
       if (!action) throw httpError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
       const errorPrefix = `[noretry] erreur de validation de l'extension "${action.summary}", `
       if (!action.input.find((i: any) => i.concept && availableConcepts.has(i.concept))) {
@@ -653,7 +657,7 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
     } else if (extension.property) {
       const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
       const availableSchema = await prepareExtensionsSchema(schema, previousExtensions)
-      const exprError = exprEval(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
+      const exprError = exprEval(config.defaultTimeZone).check(extension.expr, availableSchema, fullSchema)
       if (exprError) throw httpError(400, `${errorPrefix}${exprError}`)
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])

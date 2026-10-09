@@ -185,3 +185,38 @@ export const escapeKey = (key: string, algorithm?: string): string => {
     return slug(key, { lower: true, strict: true, replacement: '_' })
   }
 }
+
+/**
+ * List the schema properties whose key would corrupt the Elasticsearch mapping, with the normalized
+ * form (see escapeKey) to suggest instead.
+ *
+ * A schema submitted through the API lands verbatim in the mapping (buildIndexMappings does
+ * `properties[prop.key] = ...`), and two kinds of key break it:
+ * - a dot, which Elasticsearch expands into an object path: the column is silently nested when it
+ *   stands alone, and index creation fails outright — leaving the dataset stuck in status 'error'
+ *   with no index — when a scalar column of the same name exists;
+ * - a leading _, reserved for data-fair's own calculated columns, which it would shadow.
+ *
+ * Any other un-normalized key (camelCase, uppercase…) is harmless to the index and widely used by
+ * API clients, so it is accepted. Offending keys are reported rather than rewritten: silently
+ * renaming a column would break the line writes of the client that declared it.
+ *
+ * Only keys absent from `existingKeys` are checked, so datasets predating this gate keep being
+ * patchable. Calculated and extension properties are exempt: they legitimately use _ prefixes and dots.
+ */
+export const unsafeKeys = (
+  schema: { key: string, 'x-calculated'?: boolean, 'x-extension'?: string }[] | null | undefined,
+  existingKeys: Iterable<string>,
+  algorithm?: string
+): { key: string, normalized: string }[] => {
+  if (!schema) return []
+  const known = new Set(existingKeys)
+  const unsafe: { key: string, normalized: string }[] = []
+  for (const prop of schema) {
+    if (!prop?.key || prop['x-calculated'] || prop['x-extension']) continue
+    if (known.has(prop.key)) continue
+    if (!prop.key.includes('.') && !prop.key.startsWith('_')) continue
+    unsafe.push({ key: prop.key, normalized: escapeKey(prop.key, algorithm) })
+  }
+  return unsafe
+}

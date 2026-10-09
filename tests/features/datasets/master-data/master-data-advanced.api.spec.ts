@@ -509,6 +509,16 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     assert.equal(lines[0]['_country.name'], 'France')
   })
 
+  test('equals input stored as a bare key still exposes the column concept', async () => {
+    const { remoteService } = await initMaster(
+      testUser1,
+      [countryProperty, { key: 'name', type: 'string' }],
+      [{ id: 'country', title: 'Fetch extra info from country', input: [{ type: 'equals', property: { key: 'country' } }] }]
+    )
+    const input = remoteService.actions.find((a: any) => a.id === 'masterData_bulkSearch_country').input
+    assert.ok(input.some((i: any) => i.name === 'country' && i.concept === countryProperty['x-refersTo']))
+  })
+
   test('should list remote services actions', async () => {
     const ax = testUser1
     const { remoteService } = await initMaster(

@@ -127,6 +127,27 @@ test.describe('settings API', () => {
     assert.equal(updated.customMetadata?.[barKey], 'bar value', 'kept custom metadata should remain')
   })
 
+  test('the AI assistant is activated at the organization level only', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+
+    // a department settings document exists alongside the organization one
+    await testUser1Org.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [] })
+    // the flag is not part of the department settings schema
+    await assert.rejects(
+      testUser1Org.patch('/api/v1/settings/organization/test_org1:dep1', { agentChat: true }),
+      (err: any) => err.status === 400
+    )
+
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1/agent-chat')).data, { agentChat: false })
+
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: true })
+
+    // a department member gets the organization activation, whether or not the path is department scoped
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1/agent-chat')).data, { agentChat: true })
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1:dep1/agent-chat')).data, { agentChat: true })
+  })
+
   test('can still re-save settings after the worker set an expiration flag on a key', async () => {
     // create a key
     const created = (await testUser1.put('/api/v1/settings/user/test_user1', {

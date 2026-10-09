@@ -27,6 +27,13 @@ export type HistorizeContextHint = {
   origin: RevisionOrigin
   reason?: string
   who?: WhoHint
+  // When the stamp was written, NOT when the relay got round to anchoring it. Carrying it on the
+  // stamp is what makes a re-anchor of the same stamp byte-identical: the relay used to generate
+  // the date at write time, so a retried line re-PUT its own key with a differing body, which the
+  // trail check correctly reads as a same-key rewrite (`version-divergence`, confirmed). It also
+  // matches what the date-skew check already assumes — that a relay retry legitimately delays the
+  // object write past the stamp date. Optional: pre-existing stamps have none, relay falls back.
+  date?: string
 }
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
@@ -90,6 +97,9 @@ export type DatasetInternal = Dataset & {
   _needsHistorizingLines?: boolean
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
+  // calculated, permission-guarded schema vocabulary (column labels and, when the owner opts in,
+  // enum values) fed to the catalog's text index; internal, stripped from every API response
+  _searchText?: string
 }
 
 export type DatasetLine = {

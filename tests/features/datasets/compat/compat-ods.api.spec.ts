@@ -506,6 +506,29 @@ val 1;val 1, val 2
     assert.deepEqual(res.data.results.map((result: any) => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
 
+  test('is activated at the organization level only, departments included', async () => {
+    const ax = testUser1Org
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+
+    // a department settings document exists alongside the organization one, and cannot carry the flag
+    await ax.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [] })
+    await assert.rejects(
+      ax.patch('/api/v1/settings/organization/test_org1:dep1', { compatODS: true }),
+      (err: any) => err.status === 400
+    )
+
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+
+    // a dataset owned by a department of that organization is served by the compat api
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser4Dep1)
+    assert.equal(dataset.owner.department, 'dep1')
+
+    const res = await testUser4Dep1.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total_count, 2)
+  })
+
   test('manages geo data', async () => {
     const ax = testUser1Org
 

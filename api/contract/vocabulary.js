@@ -1033,5 +1033,45 @@ export default [
       fr: 'Plateforme',
       en: 'Platform'
     }
+  },
+  {
+    id: 'transport-stop',
+    title: {
+      fr: 'Arrêt de transport',
+      en: 'Transport stop'
+    },
+    description: {
+      fr: "Identifiant d'un arrêt de transport en commun",
+      en: 'Identifier of a public transport stop'
+    },
+    identifiers: [
+      'http://vocab.gtfs.org/terms#Stop',
+      'https://w3id.org/transmodel/journeys#ScheduledStopPoint'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Transport',
+      en: 'Transport'
+    }
+  },
+  {
+    id: 'transport-route',
+    title: {
+      fr: 'Ligne de transport',
+      en: 'Transport route'
+    },
+    description: {
+      fr: "Identifiant ou code d'une ligne de transport en commun",
+      en: 'Identifier or code of a public transport line'
+    },
+    identifiers: [
+      'http://vocab.gtfs.org/terms#Route',
+      'https://w3id.org/transmodel/journeys#Line'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Transport',
+      en: 'Transport'
+    }
   }
 ]

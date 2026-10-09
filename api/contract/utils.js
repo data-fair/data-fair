@@ -26,7 +26,7 @@ export const ownerParams = [/* {
     required: false,
     schema: {
       type: 'boolean',
-      default: true
+      default: false
     }
   }, {
     in: 'query',
@@ -156,17 +156,18 @@ export const paginationParams = [{
     title: 'Numéro de page',
     type: 'integer',
     default: 1,
-    min: 1
+    minimum: 1
   }
 }, {
   in: 'query',
   name: 'size',
-  description: 'Taille de la page',
+  description: 'Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000.',
   required: false,
   schema: {
     title: 'Taille de la page',
     type: 'integer',
     default: 12,
-    min: 1
+    minimum: 0,
+    maximum: 10000
   }
 }]

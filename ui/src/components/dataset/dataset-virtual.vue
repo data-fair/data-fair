@@ -8,7 +8,7 @@
       <!-- Add child autocomplete -->
       <dataset-select
         v-model="selectedDatasetToAdd"
-        :extra-params="{ queryable: true }"
+        :extra-params="{ queryable: true, partOf: pickerPartOf('dataset', dataset) }"
         :owner="dataset.owner"
         :exclude-ids="[dataset.id, ...(dataset.virtual.children ?? [])]"
         :label="t('addChild')"
@@ -236,22 +236,22 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  children: Jeux de données agreges
+  children: Jeux de données agrégés
   addChild: Ajouter un jeu de données
-  noChild: Aucun jeu de données agrege.
-  selectedColumns: Colonnes selectionnees
-  noColumn: Aucune colonne selectionnee.
+  noChild: Aucun jeu de données agrégé.
+  selectedColumns: Colonnes sélectionnées
+  noColumn: Aucune colonne sélectionnée.
   addColumn: Ajouter une colonne
-  reorder: Reordonner
+  reorder: Réordonner
   delete: Supprimer
   filterType: Type de filtre
   filterValues: Valeurs
   filterTypes:
-    in: Restreindre a des valeurs
+    in: Restreindre à des valeurs
     nin: Exclure des valeurs
   filters: Filtres
   addFilter: Ajouter un filtre
-  noFilter: Aucun filtre defini.
+  noFilter: Aucun filtre défini.
   filterActiveAccount: Filtrer sur les comptes actifs
 en:
   search: Search
@@ -279,6 +279,7 @@ import { mdiDelete, mdiSort } from '@mdi/js'
 import draggable from 'vuedraggable'
 import { withQuery } from 'ufo'
 import { $apiPath, $fetch } from '../../context.js'
+import { pickerPartOf } from '~/utils/fragments'
 
 const dataset = defineModel<any>({ required: true })
 const { t } = useI18n()
@@ -358,7 +359,6 @@ async function addChild (child: any) {
   if (dataset.value.virtual.children.includes(child.id)) return
   dataset.value.virtual.children.push(child.id)
   nextTick(() => { selectedDatasetToAdd.value = null })
-  await fetchChildren()
 }
 
 function deleteChild (i: number) {
@@ -405,7 +405,11 @@ async function addFilter (key: string | null) {
 }
 
 // Initial fetch
-fetchChildren()
+// the children may also change from outside this editor (e.g. a fragment added to the sources from
+// the Fragments tab, which refreshes the form): load whichever child is not known yet
+watch(() => dataset.value?.virtual?.children?.join(','), () => {
+  if ((dataset.value?.virtual?.children ?? []).some((child: string) => !childrenById.value[child])) fetchChildren()
+}, { immediate: true })
 </script>
 
 <style>

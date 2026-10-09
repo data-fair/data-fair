@@ -145,7 +145,7 @@ const searchDatasets = useAsyncAction(async () => {
     if (refIds.length) {
       const refQuery: Record<string, any> = {
         size: 20,
-        select: datasetSelect,
+        select: extraParams?.select ?? datasetSelect,
         id: refIds.join(','),
         queryable: true
       }

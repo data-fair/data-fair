@@ -1,11 +1,12 @@
 <template>
   <v-toolbar
-    v-if="!noInteraction"
+    v-if="showToolbar"
     color="surface"
     density="compact"
     flat
   >
     <dataset-nb-results
+      v-if="can('count')"
       :limit="0"
       :total="total"
       :margin-pct="meta?.totalMarginPct"
@@ -13,8 +14,12 @@
       class="ml-2"
       style="min-width:80px;max-width:80px;"
     />
-    <search-field v-model="q" />
+    <search-field
+      v-if="can('search')"
+      v-model="q"
+    />
     <dataset-filters
+      v-if="can('filters')"
       v-model="filters"
       class="flex-grow-1"
     />
@@ -38,7 +43,7 @@
 
     <!-- Agent helpers -->
     <df-agent-chat-action
-      v-if="edit"
+      v-if="edit && showAgentActions"
       action-id="help-edit-data"
       :visible-prompt="t('helpEditDataPrompt')"
       :hidden-context="dataEntryContext"
@@ -46,6 +51,7 @@
       :title="t('helpEditDataPrompt')"
     />
     <df-agent-chat-action
+      v-if="showAgentActions"
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
       :hidden-context="filterHelpContext"
@@ -53,6 +59,7 @@
       :title="t('helpFilterPrompt')"
     />
     <df-agent-chat-action
+      v-if="showAgentActions"
       action-id="check-data-quality"
       :visible-prompt="t('checkDataQualityPrompt')"
       :hidden-context="dataQualityContext"
@@ -60,25 +67,30 @@
       :title="t('checkDataQualityPrompt')"
     />
     <v-btn-group
-      class="mx-2"
+      v-if="showBtnGroup"
+      class="mx-2 flex-shrink-0"
       density="compact"
       variant="outlined"
       divided
     >
       <dataset-table-select-display
-        v-if="display.mdAndUp.value"
+        v-if="can('display') && display.mdAndUp.value"
         v-model="displayMode"
         :edit="edit"
       />
-      <dataset-select-cols v-model="cols" />
+      <dataset-select-cols
+        v-if="can('select-cols')"
+        v-model="cols"
+        :title-overrides="colTitles"
+      />
       <dataset-download-results-menu
-        v-if="baseFetchUrl && total !== undefined"
+        v-if="can('download') && baseFetchUrl && total !== undefined"
         :base-url="baseFetchUrl"
         :selected-cols="cols"
         :total="total"
       />
       <v-btn
-        v-if="fullscreenTo"
+        v-if="fullscreenTo && can('fullscreen')"
         :title="t('fullscreen')"
         :icon="mdiOpenInNew"
         :to="fullscreenTo"
@@ -86,22 +98,6 @@
         size="large"
       />
     </v-btn-group>
-  </v-toolbar>
-  <v-toolbar
-    v-else-if="searchOnly"
-    color="surface"
-    density="compact"
-    flat
-  >
-    <dataset-nb-results
-      :limit="0"
-      :total="total"
-      :margin-pct="meta?.totalMarginPct"
-      :ignored-words="meta?.ignoredWords"
-      class="ml-2"
-      style="min-width:80px;max-width:80px;"
-    />
-    <search-field v-model="q" />
   </v-toolbar>
   <div
     class="d-sr-only"
@@ -115,7 +111,7 @@
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
       ref="tableRoot"
-      :height="pagination ? undefined : height - ((noInteraction && !searchOnly) ? 0 : 48)"
+      :height="pagination ? undefined : height - (showToolbar ? 48 : 0)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
@@ -132,7 +128,7 @@
             <th
               :id="`${instanceId}-header-${header.cssKey ?? header.key}`"
               scope="col"
-              :aria-sort="header.property && !noInteraction
+              :aria-sort="header.property && can('sort') && header.sortable
                 ? (header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none')
                 : undefined"
               :title="header.title"
@@ -147,9 +143,9 @@
               }"
               :style="{
                 'min-width': (header.property || header.synthetic) ? (colsWidths[i] ?? minColWidth) + 'px' : '',
-                cursor: header.property && !noInteraction ? 'pointer' : 'default',
+                cursor: header.property && showHeaderMenu(header) ? 'pointer' : 'default',
               }"
-              @mouseenter="hoveredHeader = noInteraction ? undefined : header"
+              @mouseenter="hoveredHeader = showHeaderMenu(header) ? header : undefined"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
@@ -170,7 +166,7 @@
                 />
               </div>
               <button
-                v-else-if="header.property && !noInteraction"
+                v-else-if="header.property && showHeaderMenu(header)"
                 :id="`${instanceId}-header-button-${header.cssKey ?? header.key}`"
                 type="button"
                 class="pr-2 header-wrapper dataset-table-th-button"
@@ -193,14 +189,17 @@
               </div>
             </th>
             <dataset-table-header-menu
-              v-if="header.property && !noInteraction"
+              v-if="header.property && showHeaderMenu(header)"
               :activator="`#${instanceId}-header-${header.cssKey ?? header.key}`"
               :trigger-selector="`#${instanceId}-header-button-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
+              :no-filter="!can('filters')"
+              :no-sort="!can('sort')"
+              :no-cols="!can('select-cols')"
               :fixed="fixed === header.key"
               :header="header as TableHeaderWithProperty"
-              :no-fix="selectable || edit"
+              :no-fix="!canFixCols"
               :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
@@ -243,9 +242,10 @@
                 :filter="header.property && findEqFilter(filters, header.property, item)"
                 :filters="filters"
                 :header="header"
-                :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+                :hovered="can('cells') && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
                 :line-height="lineHeight"
-                :no-interaction="noInteraction"
+                :no-interaction="!can('cells')"
+                :no-filter="!can('filters')"
                 :result="item"
                 :selectable="selectable"
                 :selected="selectedItem === item._id"
@@ -253,7 +253,7 @@
                 @hoverstop="hoverStop"
                 @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
-                @filter="f => !noInteraction && addFilter(f)"
+                @filter="f => can('cells') && addFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
                 @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -276,9 +276,10 @@
             :filter="header.property && findEqFilter(filters, header.property, item)"
             :filters="filters"
             :header="header"
-            :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+            :hovered="can('cells') && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
             :line-height="lineHeight"
-            :no-interaction="noInteraction"
+            :no-interaction="!can('cells')"
+            :no-filter="!can('filters')"
             :result="item"
             :selectable="selectable"
             :selected="selectedItem === item._id"
@@ -286,7 +287,7 @@
             @hoverstop="hoverStop"
             @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
-            @filter="f => !noInteraction && addFilter(f)"
+            @filter="f => can('cells') && addFilter(f)"
             @edit="showEditDialog = item"
             @delete="showDeleteDialog = item"
             @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -299,7 +300,7 @@
     <!-- card mode -->
     <div
       v-if="displayMode === 'list' && headers"
-      :style="`height: ${height - ((noInteraction && !searchOnly) ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
+      :style="`height: ${height - (showToolbar ? 48 : 0)}px; overflow-y: scroll;overflow-x: hidden;`"
       class="dataset-table-list-wrapper"
     >
       <div style="height:2px;width:100%;">
@@ -316,7 +317,7 @@
         dense
       >
         <v-col
-          v-for="result in results"
+          v-for="result in (pagination ? paginatedResults : results)"
           :key="result._id"
           cols="12"
           sm="6"
@@ -330,11 +331,19 @@
             :filters="filters"
             :headers="headersWithProperty"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
-            :no-interaction="noInteraction"
+            :no-interaction="!can('cells')"
+            :no-filter="!can('filters')"
+            :no-sort="!can('sort')"
+            :no-cols="!can('select-cols')"
             :result="result"
             :selected-fields="selectedCols"
             :truncate="truncate"
-            @filter="f => addFilter(f)"
+            :selectable="selectable"
+            :selected="selectedItem === result._id"
+            :map-preview="!!headers.some(h => h.key === '_map_preview')"
+            @select="selectedItem = selectedItem === result._id ? '' : result._id"
+            @show-map-preview="selectMapPreview(result._id)"
+            @filter="addFilter"
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
@@ -346,7 +355,7 @@
       <!-- list mode show more (infinite scroll only) -->
       <v-row
         v-if="results.length && !pagination"
-        v-intersect="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
+        v-intersect="(isIntersecting: boolean) => isIntersecting && !fetchResults.loading.value && fetchResults.execute()"
         align="center"
         class="my-0"
       >
@@ -507,6 +516,9 @@
       table: Tableau
       tableDense: Tableau dense
       list: Liste de vignettes
+    colTitles:
+      _updatedBy: Mis à jour par
+      _owner: Propriétaire de ligne
   en:
     cancel: Cancel
     delete: Delete
@@ -544,6 +556,9 @@
       table: Table
       tableDense: Dense table
       list: Card list
+    colTitles:
+      _updatedBy: Updated by
+      _owner: Line owner
 </i18n>
 
 <script setup lang="ts">
@@ -552,12 +567,19 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
+import { addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult, describeLine } from '../../../composables/dataset/agent-edit-line-logic'
+import { agentToolError } from '~/composables/agent/utils'
+import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
+import { useAgentState } from '@data-fair/lib-vue-agents'
+import { buildLineDialogState } from '~/composables/agent/host-state'
+import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { useTableAnnouncer } from './use-table-announcer'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
+import { allInteractions, type Interaction } from '../../../composables/dataset/interactions'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 
@@ -565,10 +587,16 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
+const { height, noInteraction, interactions, edit, ownLines, selectable, pagination, searchOnly, syntheticColumns, headerKeys, fullscreenTo } = defineProps({
   height: { type: Number, default: 800 },
+  // legacy all-or-nothing switch, kept for the callers that do not need per-element control
   noInteraction: { type: Boolean, default: false },
+  // explicit list of active interactive elements, takes precedence over noInteraction/searchOnly
+  interactions: { type: Array as () => Interaction[], default: undefined },
   edit: { type: Boolean, default: false },
+  // own-lines mode: list and edit only the active account's own lines, through the own/{owner}/* routes.
+  // Opt-in like edit; meant for crowd-sourcing embeds where the user holds only manageOwnLines.
+  ownLines: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   pagination: { type: Boolean, default: false },
   searchOnly: { type: Boolean, default: false },
@@ -577,8 +605,26 @@ const { height, noInteraction, edit, selectable, pagination, searchOnly, synthet
   fullscreenTo: { type: Object as () => RouteLocationRaw, default: undefined },
 })
 
+const activeInteractions = computed<Interaction[]>(() => {
+  if (interactions) return interactions
+  if (!noInteraction) return [...allInteractions]
+  return searchOnly ? ['count', 'search'] : []
+})
+const can = (interaction: Interaction) => activeInteractions.value.includes(interaction)
+const showAgentChat = useShowAgentChat()
+// an active element is not enough for the toolbar to be worth its 48px: an embed has no fullscreen
+// target and no agent chat, so those two would otherwise reserve an empty bar
+const showAgentActions = computed(() => can('agent') && showAgentChat.value)
+// fixing a column to the left is impossible when the first column is already sticky for the
+// row actions or the selection checkboxes
+const canFixCols = computed(() => can('fix-cols') && !selectable && !edit)
+const showBtnGroup = computed(() => (can('display') && display.mdAndUp.value) || can('select-cols') || can('download') || (can('fullscreen') && !!fullscreenTo))
+const showToolbar = computed(() => can('count') || can('search') || can('filters') || pagination || showAgentActions.value || showBtnGroup.value)
+// same per column: sorting only shows up on a sortable column
+const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('select-cols') || canFixCols.value
+
 const displayMode = defineModel<string>('display', { default: 'table' })
-const cols = defineModel<string[]>('cols', { default: [] })
+const cols = defineModel<string[]>('cols', { default: () => [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
@@ -594,7 +640,7 @@ const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const pageSize = computed(() => {
   if (pagination) {
     // In pagination mode, fit exactly in visible area to avoid scrollbar
-    const toolbarHeight = (noInteraction && !searchOnly) ? 0 : 48
+    const toolbarHeight = showToolbar.value ? 48 : 0
     const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
     const availableHeight = height - toolbarHeight - theadHeight
     return Math.max(5, Math.floor(availableHeight / lineHeight.value))
@@ -615,6 +661,7 @@ const sort = computed<TableSort | undefined>({
 })
 
 const display = useDisplay()
+const session = useSession()
 
 const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
@@ -627,7 +674,16 @@ const tableLabel = computed(() => dataset.value?.title
   ? t('tableCaption', { title: dataset.value.title })
   : t('tableCaptionFallback'))
 
-const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
+// in own-lines mode every read/write targets the own/{owner} routes, whose owner is the full active
+// account (department included), exactly as the own-lines embed form builds it
+const linesOwner = computed(() => {
+  if (!ownLines) return undefined
+  const account = session.account.value
+  if (!account) return undefined
+  return `${account.type}:${account.id}` + (account.department ? `:${account.department}` : '')
+})
+
+const allCols = computed(() => dataset.value?.schema?.filter(isVisibleCol).map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
 const hideHeader = (header: TableHeader) => {
@@ -646,7 +702,7 @@ const dataEntryContext = computed(() => {
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
     'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first delegate to the dataset_data subagent to search for the line _id, then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id and delegate to the editLine_form subagent it makes available.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -662,7 +718,7 @@ const filterHelpContext = computed(() => {
   if (!d) return ''
   const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
   const columns = d.schema?.filter((f: any) => !['_i', '_id', '_rand'].includes(f.key)).map((f: any) => `${f.key} (${f.title || f.key}, ${f.type})`).join(', ')
-  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent.${columns ? ` When you delegate to the dataset_data subagent, pass it these known columns so it can query directly without re-fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding select=col1,col2,col3 from the columns keys.`
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent.${columns ? ` When you delegate to the dataset_data subagent, pass it these known columns so it can query directly without re-fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding cols=col1,col2,col3 from the columns keys to choose the visible columns.`
 })
 
 const dataQualityContext = computed(() => {
@@ -678,7 +734,7 @@ const extraParams = computed(() => ({
   ...(imageField.value ? { thumbnail: '40x40' } : {})
 }))
 const indexedAt = ref<string>()
-const { baseFetchUrl, total, meta, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+const { baseFetchUrl, total, meta, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt, linesOwner)
 
 // caption under a date-time column header stating the timezone its values are displayed in
 // (the offset comes from a real cell so it is DST-correct); empty when values are shown in the
@@ -706,8 +762,11 @@ const nextPage = async () => {
   }
   paginationPage.value++
 }
-const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
-const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+// the API titles these columns from the data's point of view ("Utilisateur de mise à jour"), which is
+// verbose and imprecise as a table header ; relabel them for display rather than in the schema
+const colTitles = computed(() => Object.fromEntries(['_updatedBy', '_owner'].map(key => [key, t(`colTitles.${key}`)])))
+const { headers, headersWithProperty } = useHeaders(selectedCols, !can('cells'), edit, selectable, fixed, () => syntheticColumns, () => headerKeys, colTitles, ownLines)
+const { selectedResults, saveLine, removeLine, addLineTrigger, lineDialog } = provideDatasetEdition(baseFetchUrl, indexedAt, linesOwner)
 
 const { message: liveMessage } = useTableAnnouncer({
   q,
@@ -740,6 +799,20 @@ const { message: liveMessage } = useTableAnnouncer({
 })
 
 if (edit) {
+  // The pair the creation wizard and the schema form already have: what is true
+  // now, and — from saveLine — the transition that ends a declared wait. Inside the
+  // `edit` gate with the tools, because a read-only table has no dialog to report.
+  useAgentState('line-dialog', () => buildLineDialogState({
+    mode: lineDialog.value?.mode ?? null,
+    valid: !!lineDialog.value?.valid
+  }))
+
+  // The openers return only once the dialog's form subagent is registered: the chat
+  // offers a tool registered while a host tool runs on its very next step, so the
+  // model can delegate straight away (see lineDialogOpenedResult). Registration
+  // waits on the form's schema and layout, hence the bounded poll.
+  const untilLineFormRegistered = () => untilReady(() => hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+
   useAgentTool({
     name: 'open_add_line_dialog',
     description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
@@ -749,8 +822,12 @@ if (edit) {
       properties: {}
     },
     execute: async () => {
+      // A dataset with nothing to fill gets the reason, not an open dialog and an
+      // invitation to delegate into an empty form (see agent-edit-line-logic.ts).
+      const refusal = addLineDialogPrecondition(dataset.value?.schema)
+      if (refusal) return refusal
       addLineTrigger.value = true
-      return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
+      return lineDialogOpenedResult('add', await untilLineFormRegistered())
     }
   })
 
@@ -761,13 +838,23 @@ if (edit) {
     inputSchema: {
       type: 'object' as const,
       properties: {
-        lineId: { type: 'string' as const, description: 'The _id of the line to edit. Use search_data to find valid line IDs.' }
+        lineId: { type: 'string' as const, description: 'The _id of the line to edit. search_data returns it when `_id` is one of the keys in its `select` parameter.' }
       },
       required: ['lineId'] as const
     },
     execute: async (params: { lineId: string }) => {
+      // Fetched here, not only by the dialog's watcher, so an unknown _id is refused
+      // instead of reading as a form that is still loading.
+      let line: DatasetLine
+      try {
+        line = await $fetch(`datasets/${datasetId}/lines/${encodeURIComponent(params.lineId)}`)
+      } catch (err: any) {
+        return agentToolError('open_edit_line_dialog', `no line with _id "${params.lineId}" could be read (${err?.statusCode ?? err?.status ?? err?.message}). search_data returns each row's _id when \`_id\` is in its \`select\`.`)
+      }
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. You can now delegate to the editLine_form subagent to modify the form fields. The user will click Save when ready.'
+      // The form may still be registered for a line opened before, so wait for this one.
+      const ready = await untilReady(() => loadedLineId.value === params.lineId && hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+      return lineDialogOpenedResult('edit', ready, describeLine(dataset.value?.schema, line))
     }
   })
 }
@@ -818,12 +905,12 @@ const onScrollItem = async (index: number) => {
 const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
 const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
-  if (noInteraction) return
+  if (!can('cells')) return
   _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {
-  if (noInteraction) return
+  if (!can('cells')) return
   if (_hoverTimeout) {
     clearTimeout(_hoverTimeout)
     _hoverTimeout = undefined
@@ -850,10 +937,17 @@ const closeMapPreview = () => {
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 
 const showEditDialog = ref<ExtendedResult>()
+// The line whose data is in the form. Not editedLine._id: the form's v-model
+// rewrites editedLine with the schema's keys only.
+const loadedLineId = ref<string>()
 watch(showEditDialog, async () => {
   editedLine.value = undefined
+  loadedLineId.value = undefined
   if (!showEditDialog.value) return
-  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`, { params: { arrays: true } })
+  const lineId = showEditDialog.value._id
+  const readBase = linesOwner.value ? `datasets/${datasetId}/own/${linesOwner.value}` : `datasets/${datasetId}`
+  editedLine.value = await $fetch(`${readBase}/lines/${lineId}`, { params: { arrays: true } })
+  loadedLineId.value = lineId
   // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined
 })
@@ -861,6 +955,16 @@ const editLineValid = ref(false)
 const editLineForm = ref<VForm>()
 const editedLine = ref<DatasetLine>()
 const file = ref<File>()
+// Keep the shared dialog state in step with this dialog, so the assistant can be
+// told the Save button is live instead of asserting it. `editedLine` rather than
+// `showEditDialog` so it flips only once the row has actually loaded into the form.
+watch([editedLine, editLineValid], () => {
+  if (!editedLine.value) {
+    if (lineDialog.value?.mode === 'edit') lineDialog.value = null
+    return
+  }
+  lineDialog.value = { mode: 'edit', valid: editLineValid.value }
+}, { immediate: true })
 const editLine = useAsyncAction(async () => {
   await editLineForm.value?.validate()
   if (!editLineValid.value) return

@@ -1,0 +1,40 @@
+{
+  "_comment": "Hand-written stand-ins for what an assistant would put in a shadow-content field: synonyms, acronyms, everyday wording. Only a dozen datasets per catalog, chosen for the 'gap' and 'colText' queries, so the effect on the rest of the catalog is what a partial rollout would look like.",
+  "opendata.koumoul.com": {
+    "logements-iris-france-hors-mayotte-recensement-de-la-population": "HLM logement social habitat social résidences principales propriétaires locataires",
+    "contours-des-bureaux-de-vote": "élections scrutin vote électeurs circonscription",
+    "contours-circonscriptions-legislatives": "élections législatives scrutin députés",
+    "bornes-de-recharge-pour-vehicules-electriques-irve": "voiture électrique borne de recharge station de recharge point de charge",
+    "population-par-age": "habitants nombre d'habitants pyramide des âges démographie",
+    "communes-de-france": "habitants population mairie code INSEE",
+    "etablissements-finess-france": "hôpital clinique EHPAD maison de retraite crèche établissement médico-social",
+    "annuaire-sante-ameli": "médecin généraliste pharmacie dentiste infirmier kinésithérapeute",
+    "accessibilite-des-etablissements-recevant-du-public-erp-pour-les-personnes-en-situation-de-handicap": "fauteuil roulant PMR mobilité réduite accès handicapé",
+    "rnic": "copropriété syndic bénévole immeuble",
+    "amenagements-cyclables": "piste cyclable bande cyclable vélo voie verte"
+  },
+  "data.ademe.fr": {
+    "dpe03existant": "passoire thermique classe énergétique étiquette DPE consommation énergétique logement",
+    "dpe-france": "passoire thermique classe énergétique étiquette DPE",
+    "dpe02neuf": "classe énergétique étiquette DPE logement neuf",
+    "photovoltaique": "panneaux solaires solaire toiture",
+    "observatoire-agrivoltaisme": "panneaux solaires solaire champ photovoltaïque agriculture",
+    "tvv-leasing-social-2026": "voiture électrique location véhicule électrique aide",
+    "bonus-ecologique-score-environnemental": "voiture électrique prime aide achat",
+    "longue-vie-aux-objets-acteurs-de-leconomie-circulaire": "artisan réparateur ressourcerie recyclerie où réparer",
+    "ecolabel-hebergement-touristique": "hôtel camping gîte hébergement label",
+    "sinoe-(r)-nomenclature-regroupement-dechet": "compost biodéchets ordures ménagères catégories de déchets"
+  },
+  "opendata.enedis.fr": {
+    "frequence-moyenne-de-coupure-par-client-bt": "panne coupure de courant incident interruption qualité",
+    "duree-moyenne-de-coupure-bt": "panne coupure de courant incident interruption durée",
+    "frequence-moyenne-annuelle-de-coupure-par-client-hta": "panne coupure de courant incident interruption",
+    "duree-moyenne-de-coupure-par-client-hta": "panne coupure de courant incident interruption durée",
+    "reseau-hta": "haute tension ligne électrique aérienne pylône moyenne tension HTA",
+    "reseau-souterrain-hta": "haute tension ligne électrique enterrée moyenne tension HTA",
+    "poste-electrique": "transformateur poste de transformation poste source",
+    "nombre-total-de-points-de-charge": "voiture électrique borne de recharge IRVE",
+    "trajectoire-du-nombre-de-points-de-charge-accessibles-au-public": "voiture électrique borne de recharge IRVE prévision",
+    "registre-national-installation-production-stockage-electricite-agrege-311225": "solaire panneaux solaires éolienne centrale batterie"
+  }
+}

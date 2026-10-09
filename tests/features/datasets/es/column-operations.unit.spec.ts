@@ -14,8 +14,14 @@ test.describe('getColumnFilters', () => {
   test('a default string column gets all index + search filters (no _contains)', () => {
     assert.deepEqual(getColumnFilters({ key: 'name', type: 'string' }), DEFAULT_FILTERS)
   })
-  test('index:false drops all exact/range/exists filters but keeps _search', () => {
-    assert.deepEqual(getColumnFilters({ key: 'bio', type: 'string', 'x-capabilities': { index: false } }), ['_search'])
+  test('index:false drops the exact/range filters but keeps _exists and _search', () => {
+    assert.deepEqual(getColumnFilters({ key: 'bio', type: 'string', 'x-capabilities': { index: false } }), ['_exists', '_nexists', '_search'])
+  })
+  test('a long-text column (index + values off) stays existence-filterable through its analyzed field', () => {
+    assert.deepEqual(getColumnFilters({ key: 'bio', type: 'string', 'x-capabilities': { index: false, values: false, insensitive: false } }), ['_exists', '_nexists', '_search'])
+  })
+  test('no indexed representation at all drops _exists too', () => {
+    assert.deepEqual(getColumnFilters({ key: 'bio', type: 'string', 'x-capabilities': { index: false, values: false, insensitive: false, text: false, textStandard: false } }), [])
   })
   test('wildcard:true adds _contains', () => {
     const filters = getColumnFilters({ key: 'code', type: 'string', 'x-capabilities': { wildcard: true } })
@@ -66,7 +72,7 @@ test.describe('columnOperationsHint', () => {
     assert.ok(/groupement\s*:\s*oui/.test(hint))
   })
   test('says "aucun" when no filters are available', () => {
-    const hint = columnOperationsHint({ key: 'bio', type: 'string', 'x-capabilities': { index: false, text: false, textStandard: false } })
+    const hint = columnOperationsHint({ key: 'bio', type: 'string', 'x-capabilities': { index: false, values: false, insensitive: false, text: false, textStandard: false } })
     assert.ok(hint.includes('aucun'))
   })
 })

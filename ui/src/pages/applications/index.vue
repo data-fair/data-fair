@@ -249,7 +249,7 @@ const ownerParam = computed(() => {
 
 const applicationsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url',
+    select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url,partOf',
   }
   if (q.value) params.q = q.value
   else params.sort = sort.value

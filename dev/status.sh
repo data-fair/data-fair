@@ -66,7 +66,22 @@ echo ""
 echo -e "${BOLD}Dev processes:${RESET}"
 check_http "dev-api" "${NGINX1}/data-fair/api/v1/ping"
 check_http "dev-ui" "http://localhost:${DEV_UI_PORT}"
+# Guarded because .env is generated once per worktree and an older one predates
+# DEV_UI_HMR_PORT. A TCP check is used because the HMR server answers HTTP with 426.
+if [ -n "${DEV_UI_HMR_PORT:-}" ]; then
+  check_tcp "dev-ui hmr" "localhost" "${DEV_UI_HMR_PORT}"
+else
+  printf "%-20s n/a      (DEV_UI_HMR_PORT missing from .env — see dev/init-env.sh)\n" "dev-ui hmr"
+fi
 check_http "mock-server" "http://localhost:${MOCK_PORT}"
+# Optional: only the simulations need it, so DOWN here is not a broken dev stack.
+# Guarded because .env is generated once per worktree and an older one predates
+# BRIDGE_PORT — under `set -u` an unset var would abort this whole script.
+if [ -n "${BRIDGE_PORT:-}" ]; then
+  check_http "dev-bridge (opt)" "http://localhost:${BRIDGE_PORT}/_bridge/status"
+else
+  printf "%-20s n/a      (BRIDGE_PORT missing from .env — see dev/init-env.sh)\n" "dev-bridge (opt)"
+fi
 echo ""
 
 # --- Docker compose services ---
@@ -77,7 +92,7 @@ check_http "openapi-viewer" "http://localhost:${OAV_PORT}"
 check_tcp  "capture" "localhost" "${CAPTURE_PORT}"
 check_tcp  "mongo" "localhost" "${MONGO_PORT}"
 check_tcp  "elasticsearch" "localhost" "${ES_PORT}"
-check_tcp  "minio (s3)" "localhost" "${S3_PORT}"
+check_tcp  "rustfs (s3)" "localhost" "${S3_PORT}"
 check_tcp  "clamav" "localhost" "${CLAMAV_PORT}"
 echo ""
 

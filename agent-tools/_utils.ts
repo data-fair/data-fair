@@ -4,6 +4,27 @@ export function cleanRow (row: any): any {
 }
 
 /**
+ * Like cleanRow, but keeps `_id` — the only internal field that addresses a row.
+ *
+ * `open_edit_line_dialog` takes a line `_id` and its description says to find one
+ * with search_data; cleanRow meant that could never work, even when the caller
+ * passed `select=_id`. A judged run spent four sub-agent dispatches on that
+ * impossibility and ended up asking the person to find the row and click it.
+ *
+ * `_i` and `_rand` stay out whatever the select says: they address nothing, and a
+ * model that sees them will eventually try to use them as identifiers.
+ */
+export function cleanRowKeepingId (row: any): any {
+  const { _i, _rand, ...clean } = row
+  return clean
+}
+
+/** Whether a `select` string names the row id, tolerating the spacing a model writes. */
+export function selectsLineId (select?: string): boolean {
+  return !!select && select.split(',').map(s => s.trim()).includes('_id')
+}
+
+/**
  * Copy only the listed keys (that are defined) from an object. Used to keep
  * structuredContent in sync with output schemas declared with additionalProperties:false:
  * raw API sub-objects (e.g. license, timePeriod) may carry extra keys that MCP hosts reject.
@@ -33,9 +54,14 @@ export function toCsv (rows: Record<string, any>[]): string {
  * LLMs sometimes write sort: "_geo_distance" redundantly when a geoDistance filter is already present.
  * The API already auto-sorts by distance when a geo_distance filter is set.
  */
+/** Models copy the quotes of a quoted example ('"-count"'), which the API rejects as an unknown field. */
+export function unquoteSortKey (key: string): string {
+  return key.trim().replace(/^["'`]+|["'`]+$/g, '')
+}
+
 export function normalizeSort (sort: string): string {
   return sort.split(',').map(part => {
-    const trimmed = part.trim()
+    const trimmed = unquoteSortKey(part)
     if (/^-?_geo_distance$/.test(trimmed)) return null
     return trimmed
   }).filter(Boolean).join(',')
@@ -100,7 +126,11 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
     const normalized = normalizeSort(params.sort)
     if (normalized) searchParams.set('sort', normalized)
   }
-  if (params.select) searchParams.set('select', params.select)
+  // A filterQuery is pasted into table/map page links, and pages choose their columns
+  // with `cols`; `select` is the API's and the table page ignored it, so links promised
+  // columns the page did not hide. `_id` is not a column a page can show.
+  const cols = params.select?.split(',').map(s => s.trim()).filter(k => k && k !== '_id')
+  if (cols?.length) searchParams.set('cols', cols.join(','))
   if (params.bbox) searchParams.set('_c_bbox', params.bbox)
   if (params.geoDistance) searchParams.set('_c_geo_distance', params.geoDistance)
   if (params.dateMatch) searchParams.set('_c_date_match', params.dateMatch)
@@ -144,6 +174,9 @@ export function formatSchemaColumns (schema: any[]): string[] | undefined {
         const shown = entries.slice(0, 10).map(([k, v]) => `${k}=${v}`).join(', ')
         notes.push(entries.length > 10 ? `labels: ${shown}… (${entries.length} total)` : `labels: ${shown}`)
       }
-      return `| \`${col.key}\` | ${col.type} | ${col.title || ''} | ${notes.join(' — ')} |`
+      // The label the UI shows: a column declared by hand keeps its name in x-originalName
+      // with an empty title, and printing only `title` had the assistant tell a person their
+      // freshly declared columns had no readable labels.
+      return `| \`${col.key}\` | ${col.type} | ${col.title || col['x-originalName'] || ''} | ${notes.join(' — ')} |`
     })
 }

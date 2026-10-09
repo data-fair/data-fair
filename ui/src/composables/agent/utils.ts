@@ -7,7 +7,9 @@ export {
   csvEscape,
   toCsv,
   cleanRow,
-  buildPaginatedQuery
+  buildPaginatedQuery,
+  activeAccountScope,
+  untilStable
 } from './utils-logic'
 
 /**

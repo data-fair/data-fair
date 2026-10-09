@@ -23,10 +23,16 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
 
   const enumDense = computed(() => showEnum.value && fullEnum.value?.length && fullEnum.value?.length > 4)
 
+  // mirrors resolveExistsFields in the API: existence needs SOME indexed representation of the
+  // column — the main field (exact index or doc values), or, when both are turned off as on a long
+  // text column, one of its analyzed / case-insensitive sub-fields
   const showExists = computed(() => {
-    if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
-    if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
-    return true
+    const property = header.value.property
+    if (property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
+    const capabilities = property['x-capabilities'] ?? {}
+    if (capabilities.index !== false || capabilities.values !== false) return true
+    if (property.type !== 'string' || (property.format && property.format !== 'uri-reference')) return false
+    return capabilities.text !== false || capabilities.textStandard !== false || capabilities.insensitive !== false || !!capabilities.wildcard
   })
 
   const showEquals = computed(() => {

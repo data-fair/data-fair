@@ -2,7 +2,7 @@ import express from 'express'
 import config from '#config'
 import mongo from '#mongo'
 import * as ajv from '../misc/utils/ajv.ts'
-import { reqAdminMode, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqAdminMode, reqUserAuthenticated, secretKeyMatches } from '@data-fair/lib-express'
 import type { Limits, Request } from '#types'
 import type { Response, NextFunction, RequestHandler } from 'express'
 import type { Filter } from 'mongodb'
@@ -29,13 +29,13 @@ const validate = ajv.compile(schema)
 export const router = express.Router()
 
 const isSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.query.key === config.secretKeys.limits) return next()
+  if (secretKeyMatches(req.query.key, config.secretKeys.limits)) return next()
   reqAdminMode(req)
   next()
 }
 
 const isAccountMember = (req: Request, res: Response, next: NextFunction) => {
-  if (req.query.key === config.secretKeys.limits) return next()
+  if (secretKeyMatches(req.query.key, config.secretKeys.limits)) return next()
   const user = reqUserAuthenticated(req)
   if (user.adminMode) return next()
   if (!['organization', 'user'].includes(req.params.type)) {

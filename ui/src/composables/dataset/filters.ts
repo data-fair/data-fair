@@ -9,7 +9,13 @@ export type DatasetFilter = {
   operator: Operator,
   value: string,
   formattedValue: string,
-  hidden?: boolean
+  hidden?: boolean,
+  // operator and value of the URL param this filter was built from. addFilter normalizes a
+  // single-value "in"/"nin" into "eq"/"neq", so writing the internal operator back to the URL
+  // would rewrite an embedding parent's "_in" param into "_eq" and keep the d-frame sync
+  // bouncing. Keeping the origin lets queryParams write back the key it read.
+  queryOperator?: Operator,
+  queryValue?: string
 }
 
 export const operators: Operator[] = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts', 'exists', 'nexists']
@@ -103,16 +109,19 @@ export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>,
   const queryParams = computed(() => {
     const params: Record<string, string> = {}
     for (const filter of filters.value) {
-      params[`${filter.property.key}_${filter.operator}`] = '' + filter.value
+      params[`${filter.property.key}_${filter.queryOperator ?? filter.operator}`] = '' + (filter.queryValue ?? filter.value)
     }
     return params
   })
 
   watch(queryParamsFilters, () => {
-    // add filters newly present in the URL
+    // add filters newly present in the URL, and re-add those whose value changed. matching on
+    // (key, operator) alone would ignore a value change on a key that is already filtered, e.g. an
+    // embedding parent growing an "_in" param from 2 to 3 values: same key, same operator, new value.
     for (const filter of queryParamsFilters.value) {
-      if (filters.value.some(f => f.property.key === filter.property.key && f.operator === filter.operator)) continue
-      addFilter(filter)
+      const existing = filters.value.find(f => f.property.key === filter.property.key && matchesQueryOperator(filter.operator, f.operator))
+      if (existing && (existing.queryValue ?? existing.value) === filter.value) continue
+      addFilter({ ...filter, queryOperator: filter.operator, queryValue: filter.value })
     }
     // remove filters whose query param disappeared from the URL (e.g. an embedding parent
     // dropping a key via <d-frame>). excludeKeys are managed outside this sync, leave them be.
@@ -124,9 +133,12 @@ export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>,
   }, { immediate: true })
 
   watch(queryParams, () => {
+    // drop URL params that the internal filters no longer reproduce (filter removed, or its
+    // operator changed so it is now written under another key)
     for (const filter of queryParamsFilters.value) {
-      if (filters.value.some(f => f.property.key === filter.property.key && f.operator === filter.operator)) continue
-      delete reactiveSearchParams[`${filter.property.key}_${filter.operator}`]
+      const key = `${filter.property.key}_${filter.operator}`
+      if (key in queryParams.value) continue
+      delete reactiveSearchParams[key]
     }
     for (const [key, value] of Object.entries(queryParams.value)) {
       reactiveSearchParams[key] = value

@@ -153,3 +153,37 @@ test.describe('unicity constraint config', () => {
     assert.equal(res.status, 400)
   })
 })
+
+test.describe('dateCoherence constraint config', () => {
+  test.beforeEach(async () => { await clean() })
+
+  const conceptSchema = [
+    { key: 'deb', type: 'string', format: 'date', 'x-refersTo': 'https://schema.org/startDate' },
+    { key: 'fin', type: 'string', format: 'date', 'x-refersTo': 'https://schema.org/endDate' }
+  ]
+
+  test('accepted on a REST dataset whose schema carries both concepts', async () => {
+    const res = await testUser1.post('/api/v1/datasets/coherence-ok', {
+      isRest: true, title: 'coherence-ok', schema: conceptSchema, constraints: [{ type: 'dateCoherence' }]
+    })
+    assert.equal(res.data.constraints?.[0]?.type, 'dateCoherence')
+  })
+
+  test('rejected with 400 when the concepts are missing', async () => {
+    const res = await testUser1.post('/api/v1/datasets/coherence-ko', {
+      isRest: true, title: 'coherence-ko', schema: [{ key: 'a', type: 'string' }], constraints: [{ type: 'dateCoherence' }]
+    }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+    assert.match(JSON.stringify(res.data), /concept/)
+  })
+
+  test('a schema PATCH that drops a concept while the constraint exists is rejected', async () => {
+    await testUser1.post('/api/v1/datasets/coherence-drop', {
+      isRest: true, title: 'coherence-drop', schema: conceptSchema, constraints: [{ type: 'dateCoherence' }]
+    })
+    const res = await testUser1.patch('/api/v1/datasets/coherence-drop', {
+      schema: [conceptSchema[0], { key: 'fin', type: 'string', format: 'date' }] // endDate concept removed
+    }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+  })
+})

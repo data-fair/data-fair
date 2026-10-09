@@ -1,5 +1,7 @@
 import mongo from '#mongo'
-import axios from '../misc/utils/axios.ts'
+import config from '#config'
+import type { SiteHashes } from './operations.ts'
+import axios, { privateAxios } from '../misc/utils/axios.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 // module-private HTML response cache (keyed by cleanApplicationUrl)
@@ -15,6 +17,7 @@ export const matchApplicationKey = async (application: any, applicationKeyId: st
     if (applicationKey._id === application.id) {
       return true
     } else {
+      if (application.partOf?.type === 'application' && application.partOf.id === applicationKey._id) return true
       // ths application key can be matched to a parent application key (case of dashboards, etc)
       const isParentApplicationKey = await mongo.db.collection('applications')
         .countDocuments({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
@@ -38,7 +41,8 @@ export const getProxyBaseAppAndLimits = (application: any, applicationUrl: strin
   ])
 }
 
-export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any) => {
+// isPrivate: the target is a private mapping of the application url (our own infrastructure)
+export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any, isPrivate: boolean) => {
   const cacheEntry = htmlCache[cleanApplicationUrl]
   try {
     // search params should not be interpreted by the static application server
@@ -46,7 +50,7 @@ export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any) => 
     const headers: Record<string, string> = {}
     if (cacheEntry?.etag) headers['If-None-Match'] = cacheEntry.etag
     if (cacheEntry?.lastModified) headers['If-Modified-Since'] = cacheEntry.lastModified
-    const res = await axios.get(targetUrl.href, {
+    const res = await (isPrivate ? privateAxios : axios).get(targetUrl.href, {
       headers,
       validateStatus: function (status) {
         return status === 200 || status === 304
@@ -69,4 +73,29 @@ export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any) => 
     throw err
     // in case of failure, serve from simple cache
   }
+}
+
+const siteHashesCache: Record<string, { hashes: Promise<SiteHashes | undefined>, ts: number }> = {}
+
+// same source and same 1 minute freshness as the hashes injected in the SPAs by serve-spa
+export const getSiteHashes = (siteUrl: string): Promise<SiteHashes | undefined> => {
+  const now = Date.now()
+  if (!siteHashesCache[siteUrl] || siteHashesCache[siteUrl].ts < now - 60 * 1000) {
+    const url = new URL(siteUrl)
+    // same fallback as the hashes of the SPAs in app.js, for a deployment split from simple-directory
+    const directoryUrl = config.privateDirectoryUrl || new URL(config.directoryUrl as string).origin
+    const hashes = privateAxios.get<SiteHashes>(directoryUrl + '/simple-directory/api/sites/_hashes', {
+      headers: {
+        'x-forwarded-proto': url.protocol.slice(0, -1),
+        'x-forwarded-host': url.hostname,
+        'x-forwarded-port': url.port
+      }
+    }).then(res => res.data, err => {
+      // the application still renders, with the non-hashed resources
+      internalError('app-site-hashes', err)
+      return undefined
+    })
+    siteHashesCache[siteUrl] = { hashes, ts: now }
+  }
+  return siteHashesCache[siteUrl].hashes
 }

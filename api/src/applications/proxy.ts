@@ -10,13 +10,15 @@ import CacheableLookup from 'cacheable-lookup'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as serviceWorkers from '../misc/utils/service-workers.ts'
 import { refreshConfigDatasetsRefs } from './utils.ts'
-import { buildManifest, buildLoginHtml } from './operations.ts'
+import { buildManifest, buildLoginHtml, matchSiteResource, siteResourceHref } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
-import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache } from './proxy-service.ts'
+import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache, getSiteHashes } from './proxy-service.ts'
 import Debug from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSiteUrl, reqUserAuthenticated, getThemeParams } from '@data-fair/lib-express'
 import { reqPublicBaseUrl, reqPublicWsBaseUrl } from '../misc/utils/public-base-url.ts'
+import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
+import { httpAgent, httpsAgent, privateHttpAgent, privateHttpsAgent } from '../misc/utils/http-agents.ts'
 import type { Application, Request } from '#types'
 
 // the proxy enriches the loaded application with request-time fields that are not part of the
@@ -128,7 +130,10 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
-  const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
+  // a mapped url is served by our own infrastructure (private agents), any other one is fetched as a public url
+  const privateApplicationUrl = applyPrivateMapping(cleanApplicationUrl, config.applicationsPrivateMapping)
+  const isPrivate = !!privateApplicationUrl
+  const targetUrl = new URL(privateApplicationUrl ?? cleanApplicationUrl)
   const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
   if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
   targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
@@ -137,7 +142,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
     console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
-    await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+    await deprecatedProxy(cleanApplicationUrl, targetUrl, isPrivate, req, res)
     return
   }
   res.setHeader('x-resource', JSON.stringify({ type: permissions.reqResourceType(req), id: permissions.reqResource(req).id, title: encodeURIComponent(permissions.reqResource(req).title) }))
@@ -145,9 +150,15 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const ownerHeader: { type: string, id: string, department?: string } = { type: permissions.reqResource(req).owner.type, id: permissions.reqResource(req).owner.id }
   if (permissions.reqResource(req).owner.department) ownerHeader.department = permissions.reqResource(req).owner.department
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
-  const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
+  const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl, isPrivate)
 
-  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(application)))
+  // anchored on the assignment the contract defines, so that an application merely naming the
+  // placeholder elsewhere does not consume the substitution (app-calendar 1.3.0 names it in a
+  // comment above the script). Function replacement: the JSON is data, not a $-pattern.
+  // < and > are escaped so no title or label can close the script (`</script>`) or the comment
+  // an application may have wrapped the assignment in (`-->`); the escapes re-parse identically.
+  const applicationJson = JSON.stringify(application).replace(/</g, '\\u003C').replace(/>/g, '\\u003E')
+  const document = parse5.parse(rawHtml.replace(/window\.APPLICATION\s*=\s*%APPLICATION%/g, () => `window.APPLICATION=${applicationJson}`))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
   if (!html) throw new Error(req.__('errors.brokenHTML'))
 
@@ -178,6 +189,18 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
     else head.childNodes.push(node)
   }
 
+  // data-fair owns the title of the served document, for the same reason it owns lang: the
+  // <title> an application declares is the name of its model in the catalog — that document
+  // is fetched directly from the base application URL when importing it, never through this
+  // proxy — not the name of the visualization being served. Leaving it in place titles every
+  // page after its model ("Charts" for a chart of sports facilities), which fails WCAG 2.4.2 /
+  // RGAA 8.6 as soon as the application is opened on its own instead of embedded in a portal.
+  // Every declared title is dropped, not just the first: some applications declare several,
+  // one per language (base-applications/service.ts picks between them at import time), and
+  // leaving the extras would keep the model name in the document behind the browser's pick.
+  head.childNodes = head.childNodes.filter((c: any) => c.tagName !== 'title')
+  pushHeadNode({ nodeName: 'title', tagName: 'title', attrs: [] }, application.title)
+
   // Data-fair generates a manifest per app
   const manifestUrl = new URL(application.exposedUrl).pathname + '/manifest.json'
   const manifest = head.childNodes.find((c: any) => c.attrs && c.attrs.find((a: any) => a.name === 'rel' && a.value === 'manifest'))
@@ -192,6 +215,32 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
         { name: 'crossorigin', value: 'use-credentials' },
         { name: 'href', value: manifestUrl }
       ]
+    })
+  }
+
+  // The theme of the site is loaded by the application from simple-directory (_theme.css and
+  // _public.js). data-fair points these references to the hashed and immutable resources, or
+  // passes the _t_* parameters of the request through to apply a local override of the theme
+  // (other colors for an embedding in an external site, etc.) without the application knowing.
+  const themeParams = getThemeParams(req.query)
+  const hashes = themeParams.size ? undefined : await getSiteHashes(reqSiteUrl(req))
+  let hasPublicInfoScript = false
+  for (const node of head.childNodes as any[]) {
+    const attrName = node.tagName === 'link' ? 'href' : node.tagName === 'script' ? 'src' : undefined
+    const attr = attrName && node.attrs?.find((a: any) => a.name === attrName)
+    const resource = matchSiteResource(attr?.value)
+    if (!resource) continue
+    attr.value = siteResourceHref(resource, hashes, themeParams)
+    if (resource === '_public.js') hasPublicInfoScript = true
+  }
+  // an application that still fetches the site info itself (deprecated siteInfo option of the
+  // session) gives precedence to window.__PUBLIC_SITE_INFO, so the override reaches it too
+  if (themeParams.size && !hasPublicInfoScript) {
+    pushHeadNode({
+      nodeName: 'script',
+      tagName: 'script',
+      attrs: [{ name: 'src', value: siteResourceHref('_public.js', undefined, themeParams) }],
+      childNodes: []
     })
   }
 
@@ -293,7 +342,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   res.send(parse5.serialize(document))
 })
 
-const deprecatedProxy = async (cleanApplicationUrl: string, targetUrl: URL, req: express.Request, res: express.Response) => {
+const deprecatedProxy = async (cleanApplicationUrl: string, targetUrl: URL, isPrivate: boolean, req: express.Request, res: express.Response) => {
   // cacheable-lookup's lookup signature is structurally compatible at runtime but its overloads
   // don't unify with Node's LookupFunction type; cast the options to RequestOptions to bridge it
   const options: https.RequestOptions = {
@@ -302,7 +351,9 @@ const deprecatedProxy = async (cleanApplicationUrl: string, targetUrl: URL, req:
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
     timeout: config.remoteTimeout,
-    lookup: cacheableLookup.lookup as unknown as https.RequestOptions['lookup']
+    lookup: cacheableLookup.lookup as unknown as https.RequestOptions['lookup'],
+    // the public agents refuse non public addresses (SSRF protection)
+    agent: targetUrl.protocol === 'http:' ? (isPrivate ? privateHttpAgent : httpAgent) : (isPrivate ? privateHttpsAgent : httpsAgent)
   }
   await new Promise<void>((resolve, reject) => {
     const cacheAppReq = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {

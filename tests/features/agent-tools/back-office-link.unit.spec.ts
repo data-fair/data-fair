@@ -42,3 +42,36 @@ test.describe('describe_dataset datasetLink option', () => {
     assert.equal(structuredContent.page, 'https://secondary.example.com/data-fair/dataset/abc123')
   })
 })
+
+test.describe('describe_dataset states what inference got wrong', () => {
+  test('reports row history and updater tracking of an editable dataset', () => {
+    const { text } = describeDataset.formatResult({ id: 'r', title: 'R', isRest: true, rest: { history: true } })
+    assert.ok(text.includes('**Row history:** on; **updater tracking**'), text)
+    assert.ok(text.includes('_updatedBy): off'), text)
+    assert.ok(!describeDataset.formatResult({ id: 'f', title: 'F' }).text.includes('Row history'))
+  })
+
+  test('reports provenance', () => {
+    const { text } = describeDataset.formatResult({ id: 'd', title: 'D', origin: 'https://insee.fr', creator: 'INSEE' })
+    assert.ok(text.includes('**Origin:** https://insee.fr'))
+    assert.ok(text.includes('**Producer:** INSEE'))
+  })
+})
+
+test.describe('list_datasets points editable datasets at their data-entry page', () => {
+  const data = { count: 2, results: [{ id: 'reg', title: 'Registre', isRest: true }, { id: 'file', title: 'Fichier' }] }
+
+  test('in the back office', () => {
+    const { text } = listDatasets.formatResult(data, 1, 10, { datasetLink: backOfficeLink })
+    assert.ok(text.includes('Editable: rows are entered and corrected on https://secondary.example.com/data-fair/dataset/reg/edit-data'), text)
+    assert.equal((text.match(/Editable:/g) ?? []).length, 1, 'only the editable dataset')
+  })
+
+  test('never for portal or MCP callers, where /edit-data is no route', () => {
+    assert.ok(!listDatasets.formatResult(data, 1, 10).text.includes('Editable'))
+  })
+
+  test('asks the API for isRest', () => {
+    assert.ok(listDatasets.buildQuery({}).query.select.split(',').includes('isRest'))
+  })
+})

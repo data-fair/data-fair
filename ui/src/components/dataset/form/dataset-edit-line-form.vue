@@ -39,15 +39,16 @@
 </i18n>
 
 <script setup lang="ts">
+import { emitAgentEvent } from '@data-fair/lib-vue-agents'
+import useDatasetEdition from '~/components/dataset/table/use-dataset-edition'
 import Vjsf from '@koumoul/vjsf/webmcp'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
+const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
-  ownLines: { type: Boolean, default: false },
   extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   roPrimaryKey: { type: Boolean, default: false },
@@ -64,18 +65,29 @@ const { t } = useI18n()
 
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 
+// The dialog reports itself from here, not from the watcher that flips the
+// dialog flag, because this is the moment the form exists. It is context, not a
+// wake-up signal: the openers wait for this form's editLine_form subagent before
+// returning, so the event of a dialog the assistant opened lands in the opener's
+// own result. It was once the thing the assistant waited on, which only worked
+// when the event happened to arrive after that result — never for the add
+// dialog, whose form is bundled with it rather than loaded asynchronously.
+if (subAgent) {
+  const { lineDialog } = useDatasetEdition()
+  onMounted(() => {
+    emitAgentEvent('dataset-line-dialog-opened', { id, mode: lineDialog.value?.mode })
+  })
+}
+
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 })
 
 const editSchema = computed(() => {
   const jsonSchema = jsonSchemaFetch.data.value
-  if (!jsonSchema) return
+  // the dialog can open before the schema is fetched
+  if (!jsonSchema) return { type: 'object', properties: {} }
   const schema = v2compat(jsonSchema)
-  if (ownLines) {
-    delete schema.properties._owner
-    delete schema.properties._ownerName
-  }
   Object.keys(schema.properties).forEach(key => {
     if (typeof schema.properties[key].layout === 'string') schema.properties[key].layout = { comp: schema.properties[key].layout }
     if (readonlyCols && readonlyCols.includes(key)) {

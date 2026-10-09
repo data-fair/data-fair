@@ -58,7 +58,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const taskProgress = ref<TaskProgress>()
   watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
 
-  const jsonSchemaFetch = useFetch<Record<string, unknown>>($apiPath + `/datasets/${id}/schema`, {
+  // /schema needs readSchema; a manageOwnLines-only holder (crowd-sourcing own-lines) only has
+  // readSafeSchema, so fall back to /safe-schema — same shape minus the cardinality/enum data clues,
+  // enough to render the edit forms
+  const jsonSchemaFetch = useFetch<Record<string, unknown>>(() => {
+    const useSafe = !dataset.value?.userPermissions.includes('readSchema')
+    return $apiPath + `/datasets/${id}/${useSafe ? 'safe-schema' : 'schema'}`
+  }, {
     query: () => ({
       draft,
       mimeType: 'application/schema+json',
@@ -126,26 +132,47 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
-  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>[], count: number }>(() => {
+  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics' | 'partOf'>[], count: number }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => ({
       dataset: id,
       size: 100,
-      select: 'title,id,status,description,updatedAt,owner,topics'
+      select: 'title,id,status,description,updatedAt,owner,topics,visibility,partOf'
     })),
     immediate: false,
     watch: false
   })
 
-  const nbVirtualDatasetsFetch = useFetch<{ count: number }>(() => {
+  // the virtual datasets using this one as a child: counted, and the first ones kept so that a single
+  // virtual parent can be offered as the parent to attach this dataset to (see fragment-attach-dialog)
+  const nbVirtualDatasetsFetch = useFetch<{ count: number, results: { id: string, title: string, owner: any, partOf?: any }[] }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/datasets`
   }, {
-    query: computed(() => ({ children: id, size: 0 }))
+    query: computed(() => ({ children: id, size: 2, select: 'id,title,owner,partOf,-userPermissions,-links' }))
   })
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
+  const virtualParents = computed(() => nbVirtualDatasetsFetch.data.value?.results ?? [])
+
+  // fragments of this dataset (only a virtual dataset can have some, and only datasets can be fragments of a dataset)
+  // fragments are hidden from every other listing, so this one must reach all of them: the size grows on demand
+  const fragmentsSize = ref(100)
+  const fragmentsFetch = useFetch<{ results: any[], count: number }>(() => {
+    if (!dataset.value?.isVirtual || dataset.value.partOf) return null
+    return `${$apiPath}/datasets`
+  }, {
+    query: computed(() => ({ partOf: `dataset:${id}`, size: fragmentsSize.value, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))
+  })
+  const fragments = computed(() => ({ datasets: fragmentsFetch.data.value?.results ?? [], applications: [] as any[] }))
+  const nbFragments = computed(() => fragmentsFetch.data.value?.count ?? 0)
+  const hasMoreFragments = computed(() => (fragmentsFetch.data.value?.results.length ?? 0) < nbFragments.value)
+  const loadMoreFragments = () => { fragmentsSize.value += 100 }
+
+  const detach = async () => {
+    await patchDataset.execute({ partOf: null } as any)
+  }
 
   const dataFiles = computed(() => {
     if (!dataset.value) return []
@@ -223,6 +250,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     applicationsFetch,
     nbVirtualDatasetsFetch,
     nbVirtualDatasets,
+    virtualParents,
+    fragmentsFetch,
+    fragments,
+    nbFragments,
+    hasMoreFragments,
+    loadMoreFragments,
+    detach,
     publishedDatasetFetch,
     publishedDataset,
     dataFiles,

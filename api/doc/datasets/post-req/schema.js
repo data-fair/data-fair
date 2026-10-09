@@ -47,7 +47,7 @@ export default {
           type: 'array',
           items: {
             type: 'string',
-            enum: ['data', 'description', 'schema', 'metadataAttachments', 'primaryKey', 'extensions']
+            enum: ['data', 'schema', 'metadataAttachments', 'primaryKey', 'extensions', 'summary', 'description', 'license', 'origin', 'image', 'topics', 'keywords', 'searchTerms', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'customMetadata', 'relatedDatasets']
           }
         }
       }

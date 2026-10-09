@@ -1,5 +1,12 @@
 <template>
+  <!-- the parent of a new fragment can be unreadable from the current active account -->
+  <df-layout-fetch-error
+    v-if="partOfParentFetch.error.value"
+    :error="partOfParentFetch.error.value"
+    back-to="/applications"
+  />
   <v-container
+    v-else
     class="pa-0"
     fluid
   >
@@ -193,7 +200,6 @@
                               :src="baseApp.image"
                               :alt="baseApp.title"
                               height="150"
-                              cover
                             />
                             <v-card-text v-if="baseApp.disabled?.length">
                               <v-alert
@@ -219,7 +225,14 @@
 
         <!-- Step: Info -->
         <v-stepper-window-item value="info">
-          <df-owner-pick v-model="owner" />
+          <fragment-banner
+            v-if="partOf"
+            :part-of="partOf"
+          />
+          <df-owner-pick
+            v-else
+            v-model="owner"
+          />
           <v-text-field
             v-model="appTitle"
             max-width="500"
@@ -270,6 +283,9 @@ import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentApplicationCreationTools } from '~/composables/application/agent-creation-tools'
+import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
+import { APPLICATION_WIZARD_GUIDANCE, APPLICATION_WIZARD_GUIDANCE_KEY } from '~/composables/application/agent-application-wizard-logic'
+import { buildApplicationWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
 
@@ -334,6 +350,29 @@ const ownerFilter = computed(() => {
 // ---- Dataset context (?dataset=ID) ----
 const datasetId = computed(() => route.query.dataset as string | undefined)
 const dataset = ref<any>(null)
+
+const partOf = computed(() => {
+  const raw = route.query.partOf as string | undefined
+  if (!raw) return undefined
+  const i = raw.indexOf(':')
+  if (i === -1) return undefined
+  const type = raw.slice(0, i)
+  if (type !== 'dataset' && type !== 'application') return undefined
+  return { type: type as 'dataset' | 'application', id: raw.slice(i + 1) }
+})
+
+// a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
+const partOfParentFetch = useFetch<{ title: string, owner: any }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner' }, notifError: false })
+watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
+watch(() => [partOf.value, partOfParentFetch.data.value?.title], () => {
+  if (!partOf.value) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: partOfParentFetch.data.value?.title ?? partOf.value.id, to: `/${partOf.value.type}/${partOf.value.id}` },
+      { text: t('newFragment') }
+    ]
+  })
+}, { immediate: true })
 
 onMounted(async () => {
   if (datasetId.value) {
@@ -423,6 +462,21 @@ const importing = ref(false)
 const createError = ref<string | null>(null)
 
 // ---- Agent tools ----
+// What the wizard currently shows, so the assistant reads it from its context
+// instead of asking, and its own tool calls come back with the resulting screen.
+// Told once on arrival (or on activation if the chat opens later). It used to
+// travel only as the action button's hidden context, a channel no judged run has
+// ever used — they all navigate here themselves.
+useAgentState(APPLICATION_WIZARD_GUIDANCE_KEY, APPLICATION_WIZARD_GUIDANCE)
+
+useAgentState('wizard', () => buildApplicationWizardState({
+  step: step.value,
+  creationType: creationType.value,
+  selected: creationType.value === 'copy' ? copyApp.value?.title : selectedBaseApp.value?.title,
+  title: appTitle.value,
+  ready: !!appTitle.value && !!(creationType.value === 'copy' ? copyApp.value : selectedBaseApp.value)
+}))
+
 useAgentApplicationCreationTools(locale, {
   step,
   creationType,
@@ -434,17 +488,10 @@ useAgentApplicationCreationTools(locale, {
   dataset
 })
 
+// One source with the keyed guidance above, so the button and the arrival say the
+// same thing; the button can add what only it knows.
 const createApplicationContext = computed(() => {
-  const lines = [
-    'Help the user create a new application.',
-    'Start by asking the user what kind of visualization or application they want to create.',
-    '',
-    'Based on their description, use list_base_applications to find matching base application templates, or list_applications if they want to copy an existing one. Present the options and let the user choose.',
-    '',
-    'Once the user has decided, use select_creation_type, then select_base_application or select_copy_application, then optionally set_application_title to fill in the wizard steps.',
-    '',
-    'Do NOT create the application — the user will review and click the save button themselves.'
-  ]
+  const lines = [APPLICATION_WIZARD_GUIDANCE]
   if (datasetId.value && dataset.value) {
     lines.push('', `The application is being created in the context of dataset "${dataset.value.title}" (id: ${datasetId.value}).`)
   }
@@ -460,6 +507,7 @@ async function createApplication () {
       title: appTitle.value
     }
     if (owner.value) body.owner = owner.value
+    if (partOf.value) body.partOf = partOf.value
 
     if (creationType.value === 'copy' && copyApp.value) {
       body.url = copyApp.value.url
@@ -478,6 +526,7 @@ async function createApplication () {
     }
 
     const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+    emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
     router.push(`/application/${application.id}`)
   } catch (error: any) {
     createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')
@@ -488,6 +537,7 @@ async function createApplication () {
 
 <i18n lang="yaml">
 fr:
+  newFragment: Nouveau fragment
   apps: Applications
   breadcrumb: Créer une application
   helpCreatePrompt: Aidez-moi à créer une application
@@ -514,6 +564,7 @@ fr:
   search: Rechercher
   restrictedAccess: Application à accès restreint
 en:
+  newFragment: New fragment
   apps: Applications
   breadcrumb: Create an application
   helpCreatePrompt: Help me create an application

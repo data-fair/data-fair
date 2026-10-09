@@ -28,7 +28,8 @@ test.describe('dataset activable metadata fields', () => {
         spatial: { active: true },
         temporal: { active: true },
         frequency: { active: true },
-        modified: { active: true }
+        modified: { active: true },
+        custom: [{ title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' }]
       }
     })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -40,7 +41,7 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await expect(metadata.getByRole('combobox', { name: /Couverture spatiale/ })).toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Couverture géographique/ })).toBeVisible()
     await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Couverture temporelle/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Date de modification de la source/ })).toBeVisible()
@@ -78,5 +79,14 @@ test.describe('dataset activable metadata fields', () => {
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
     expect((await ax.get(`/api/v1/datasets/${datasetId}`)).data.temporal).toBeUndefined()
+  })
+
+  test('a custom metadata shows the help text set in the settings', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+
+    await metadata.locator('.v-input').filter({ hasText: 'Service référent' }).getByRole('button', { name: "Afficher l'aide" }).click()
+    await expect(page.locator('.v-overlay .v-alert')).toContainText('Service de la Ville qui répond aux questions sur ce jeu.')
   })
 })

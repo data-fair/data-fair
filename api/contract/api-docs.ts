@@ -1,13 +1,16 @@
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AgentRoot } from '@data-fair/openapi-mcp'
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
+import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint } from './x-agent.ts'
 
 const datasetIdParam = {
   in: 'path',
@@ -59,6 +62,7 @@ const errorResponses = {
 type RootApiDoc = {
   openapi: string
   info: Record<string, any>
+  'x-agent'?: AgentRoot
   servers: { url: string, description?: string }[]
   components: {
     schemas: Record<string, any>
@@ -77,6 +81,14 @@ type RootApiDoc = {
  * `privateDatasetAPIDocs` in `merged` mode, which produces every possible dataset route
  * with tags already prefixed for the merged drawer.
  */
+/** The dataset component with the agent hint on the column key; a clone, the resolved schema is shared. */
+const annotateDatasetSchema = (schema: any) => {
+  const out = structuredClone(schema)
+  const key = out?.properties?.schema?.items?.properties?.key
+  if (key) key['x-agent'] = datasetSchemaKeyHint
+  return out
+}
+
 export default (publicUrl: string = config.publicUrl, sessionState?: SessionStateAuthenticated) => {
   const api: RootApiDoc = {
     openapi: '3.1.0',
@@ -97,17 +109,19 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       'x-api-id': 'data-fair',
       ...config.info
     },
+    'x-agent': xAgentRoot,
     servers: [{
       url: `${publicUrl}/api/v1`,
       description: `Instance Data Fair - ${new URL(publicUrl).hostname}`
     }],
     components: {
       schemas: {
-        dataset,
+        dataset: annotateDatasetSchema(dataset),
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPost.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
+        applicationPost: applicationPostReq.properties.body,
       },
       securitySchemes: {
         apiKey: {
@@ -198,6 +212,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
+          'x-agent': xAgent.listDatasets,
           tags: ['Jeux de données (JDD)'],
           parameters: [
             utils.qParam,
@@ -265,7 +280,42 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             ...writeErrorResponses,
-            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+            413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+            429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
+          }
+        }
+      },
+      '/catalog/datasets': {
+        get: {
+          summary: 'Lister les jeux de données du portail',
+          description: "Récupérer la liste des jeux de données publiés sur le portail depuis lequel l'API est appelée. Indisponible depuis le back-office.",
+          operationId: 'listCatalogDatasets',
+          'x-agent': xAgent.listCatalogDatasets,
+          tags: ['Jeux de données (JDD)'],
+          parameters: [
+            utils.qParam,
+            utils.selectParam(Object.keys(dataset.properties)),
+            utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
+            utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
+            utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
+            ...utils.paginationParams
+          ],
+          responses: {
+            200: {
+              description: 'Les jeux de données publiés sur le portail.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      count: { type: 'number', description: 'Nombre total de jeux de données' },
+                      results: { type: 'array', items: { $ref: '#/components/schemas/dataset' } }
+                    }
+                  }
+                }
+              }
+            },
+            ...errorResponses
           }
         }
       },
@@ -303,7 +353,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             ...writeErrorResponses,
-            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
+            413: textPlainResponse('Fichier trop volumineux pour le jeu de données.'),
+            429: textPlainResponse('Quota de stockage du propriétaire dépassé, ou trop de requêtes.')
           }
         }
       },
@@ -312,6 +363,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les applications',
           description: 'Récupérer la liste des applications.',
           operationId: 'listApplications',
+          'x-agent': xAgent.listApplications,
           tags: ['Applications'],
           parameters: [
             utils.qParam,
@@ -320,7 +372,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             utils.selectParam(Object.keys(application.properties)),
             utils.filterParam('ids', 'Restreindre sur les identifiants'),
             utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
-            utils.filterParam('service', 'Restreindre sur les services distants utilisés'),
             ...utils.paginationParams,
             ...utils.visibilityParams
           ],
@@ -358,7 +409,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/application' }
+                schema: { $ref: '#/components/schemas/applicationPost' }
               }
             }
           },
@@ -381,6 +432,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: "Lire les informations d'une application",
           description: "Récupérer les informations d'une application.",
           operationId: 'getApplication',
+          'x-agent': xAgent.getApplication,
           tags: ['Applications'],
           responses: {
             200: {
@@ -404,7 +456,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/application' }
+                schema: { $ref: '#/components/schemas/applicationPost' }
               }
             }
           },
@@ -432,6 +484,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Modifier une application',
           description: "Modifier seulement certaines informations d'une application.",
           operationId: 'patchApplication',
+          'x-agent': xAgent.patchApplication,
           tags: ['Applications'],
           requestBody: {
             description: 'Informations à modifier.',
@@ -458,6 +511,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Supprimer une application',
           description: 'Supprimer cette application.',
           operationId: 'deleteApplication',
+          'x-agent': xAgent.deleteApplication,
           tags: ['Applications'],
           responses: {
             204: {

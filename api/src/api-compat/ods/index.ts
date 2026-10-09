@@ -18,6 +18,7 @@ import contentDisposition from 'content-disposition'
 import JSONStream from 'JSONStream'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
 import { compatReqCounter, logCompatODSError, prepareEsQuery, prepareResult, applyAliases, sortBuckets, prepareBucketResult } from './operations.ts'
+import { rootSettingsFilter } from '../../settings/operations.ts'
 
 const router = express.Router()
 
@@ -30,9 +31,9 @@ router.use('/v2.0/catalog/datasets', (req, res, next) => {
   next()
 })
 
-const getCompatODS = memoize(async (type: string, id: string) => {
+export const memoizedGetCompatODS = memoize(async (type: string, id: string) => {
   const settings = await mongo.db.collection('settings')
-    .findOne({ type, id }, { projection: { compatODS: 1 } })
+    .findOne(rootSettingsFilter({ type, id }), { projection: { compatODS: 1 } })
   return settings && settings.compatODS
 }, {
   profileName: 'getCompatODS',
@@ -50,7 +51,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   const query = req.query
 
   if (!config.compatODS) throw httpError(404, 'unknown API')
-  if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
+  if (!(await memoizedGetCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const { grouped, size, from, esQuery, selectAggs, selectSource, selectTransforms, aliases, sort, composite } = prepareEsQuery(dataset, query, 'records')
 
@@ -166,7 +167,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!dataset.schema) throw httpError(404, 'dataset without data')
-  if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
+  if (!(await memoizedGetCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, composite } = prepareEsQuery(dataset, query, 'exports')
 
