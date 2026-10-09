@@ -1,6 +1,9 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import Module from 'node:module'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+
+const XLSX = Module.createRequire(import.meta.url)('@e965/xlsx')
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const settingsUrl = '/api/v1/settings/user/test_user1'
@@ -110,5 +113,17 @@ test.describe('typed custom metadata', () => {
     const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: { code: 'voi' } } }))).data
     await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', type: 'date' }]))
     assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { service: { code: 'voi', label: 'Voirie' } })
+  })
+  test('the spreadsheet export prints the display text of values that fit their definition', async () => {
+    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }, ...DEFS.slice(1)]))
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Voirie', domaines: ['a', 'b'], contact: { url: 'https://a.fr', title: 'A' } } }))).data
+    await testUser1.put(settingsUrl, settingsWith(DEFS))
+    const res = await testUser1.get(`/api/v1/datasets/${ds.id}/lines`, { params: { format: 'xlsx' }, responseType: 'arraybuffer' })
+    const workbook = XLSX.read(res.data)
+    const rows: string[][] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames.at(-1)], { header: 1 })
+    const valueOf = (key: string) => rows.find(row => row[0] === key)?.[2] ?? ''
+    assert.equal(valueOf('service'), '')
+    assert.equal(valueOf('domaines'), 'a, b')
+    assert.equal(valueOf('contact'), 'A (https://a.fr)')
   })
 })
