@@ -88,9 +88,6 @@ export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJ
         delete customMedata.enum
         delete customMedata.multiple
       }
-      for (const entry of customMedata.enum ?? []) {
-        if (!entry.code) entry.code = slug.default(entry.label, { lower: true, strict: true })
-      }
     }
   }
 }
@@ -163,7 +160,7 @@ export const trimSettings = (settings: Partial<Settings>) => {
     }
     for (const custom of settings.datasetsMetadata.custom ?? []) {
       trimFields(custom, 'key', 'title', 'description')
-      for (const entry of custom.enum ?? []) trimFields(entry, 'label')
+      if (custom.enum) custom.enum = [...new Set(custom.enum.map(value => value.trim()).filter(Boolean))]
     }
     for (const group of settings.datasetsMetadata.groups ?? []) trimFields(group, 'title')
     trimFields(settings.datasetsMetadata, 'informationsTitle', 'coverageTitle')

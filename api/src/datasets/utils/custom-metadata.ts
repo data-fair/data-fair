@@ -1,7 +1,7 @@
 import equal from 'fast-deep-equal'
 import memoize from 'memoizee'
 import mongo from '#mongo'
-import { customMetadataSchema, withCurrentLabels, trimCustomMetadata, type CustomMetadataDefinition } from '#types/custom-metadata.ts'
+import { customMetadataSchema, trimCustomMetadata, type CustomMetadataDefinition } from '#types/custom-metadata.ts'
 import { compile } from '../../misc/utils/ajv.ts'
 import { rootSettingsFilter, isMainSettings } from '../../settings/operations.ts'
 
@@ -24,7 +24,4 @@ export const prepareCustomMetadata = async (owner: { type: string, id: string },
   const definitions = await getCustomMetadataDefinitions(owner)
   const changed = Object.fromEntries(Object.entries(customMetadata).filter(([key, value]) => !equal(value, previous?.[key])))
   compileCustomMetadata(JSON.stringify(definitions))(changed)
-  for (const definition of definitions) {
-    if (definition.key && definition.key in changed) customMetadata[definition.key] = withCurrentLabels(definition, customMetadata[definition.key])
-  }
 }

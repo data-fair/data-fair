@@ -19,7 +19,6 @@ import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { rootSettingsFilter } from '../../settings/operations.ts'
 import { compileCustomMetadata } from '../../datasets/utils/custom-metadata.ts'
-import { withCurrentLabels } from '#types/custom-metadata.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -131,7 +130,7 @@ export default async function (dataset: DatasetInternal) {
           value = Object.fromEntries(definitions.flatMap(definition => {
             const item = definition.key ? value[definition.key] : undefined
             if (item == null || !compileCustomMetadata(JSON.stringify([definition]), false)({ [definition.key!]: item })) return []
-            return [[definition.key, withCurrentLabels(definition, item)]]
+            return [[definition.key, item]]
           }))
         }
         patch[key] = value

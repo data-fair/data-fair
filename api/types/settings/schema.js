@@ -677,21 +677,8 @@ export default {
                 title: 'Liste de valeurs',
                 description: 'Laissez vide pour une saisie libre.',
                 type: 'array',
-                layout: {
-                  if: '(parent.data?.type ?? "string") === "string"',
-                  listEditMode: 'inline',
-                  listActions: ['add', 'delete', 'sort'],
-                  messages: { addItem: 'Ajouter une valeur' }
-                },
-                items: {
-                  type: 'object',
-                  required: ['label'],
-                  properties: {
-                    // generated from the label at first save, like the definition key: renaming keeps the stored values
-                    code: { title: 'Code', type: 'string', readOnly: true, layout: 'none' },
-                    label: { title: 'Libellé', type: 'string' }
-                  }
-                }
+                items: { type: 'string' },
+                layout: { if: '(parent.data?.type ?? "string") === "string"' }
               }
             }
           }
