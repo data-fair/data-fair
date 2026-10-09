@@ -108,6 +108,22 @@ test.describe('typed custom metadata', () => {
     assert.deepEqual((await testUser1.get(`/api/v1/datasets/${kept.id}`)).data.customMetadata, { service: { code: 'voi', label: 'Voirie et réseaux' } })
   })
 
+  test('a rename after the several values flag changed leaves the other shape alone', async () => {
+    const def = (multiple: boolean, label: string) => settingsWith([{ key: 'domaines', title: 'Domaines', multiple, enum: [{ code: 'voi', label }] }])
+    await testUser1.put(settingsUrl, def(true, 'Voirie'))
+    const arrayDs = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: [{ code: 'voi' }] } }))).data
+    await testUser1.put(settingsUrl, def(false, 'Voirie'))
+    const objectDs = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: { code: 'voi' } } }))).data
+    await testUser1.put(settingsUrl, def(false, 'Voirie et réseaux'))
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${objectDs.id}`)).data.customMetadata, { domaines: { code: 'voi', label: 'Voirie et réseaux' } })
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${arrayDs.id}`)).data.customMetadata, { domaines: [{ code: 'voi', label: 'Voirie' }] })
+    // a rename in the same save as the flag change is skipped, so switch back first
+    await testUser1.put(settingsUrl, def(true, 'Voirie et réseaux'))
+    await testUser1.put(settingsUrl, def(true, 'Voies'))
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${arrayDs.id}`)).data.customMetadata, { domaines: [{ code: 'voi', label: 'Voies' }] })
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${objectDs.id}`)).data.customMetadata, { domaines: { code: 'voi', label: 'Voirie et réseaux' } })
+  })
+
   test('a definition whose type changed keeps its stored values', async () => {
     await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', enum: [{ code: 'voi', label: 'Voirie' }] }]))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: { code: 'voi' } } }))).data
@@ -120,7 +136,7 @@ test.describe('typed custom metadata', () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     const res = await testUser1.get(`/api/v1/datasets/${ds.id}/lines`, { params: { format: 'xlsx' }, responseType: 'arraybuffer' })
     const workbook = XLSX.read(res.data)
-    const rows: string[][] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames.at(-1)], { header: 1 })
+    const rows: string[][] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[1]], { header: 1 })
     const valueOf = (key: string) => rows.find(row => row[0] === key)?.[2] ?? ''
     assert.equal(valueOf('service'), '')
     assert.equal(valueOf('domaines'), 'a, b')

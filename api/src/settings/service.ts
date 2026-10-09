@@ -234,14 +234,21 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
       const current = newMeta.enum.find(e => e.code === entry.code)
       if (current?.label === entry.label) continue
       for (const path of [`customMetadata.${newMeta.key}`, `draft.customMetadata.${newMeta.key}`]) {
-        const filter = { 'owner.type': owner.type, 'owner.id': owner.id, [`${path}.code`]: entry.code }
+        // values stored under the other shape (before a multiple change) are left alone
+        const filter = {
+          'owner.type': owner.type,
+          'owner.id': owner.id,
+          $and: [{ [`${path}.code`]: entry.code }, { [path]: newMeta.multiple ? { $type: 'array' } : { $not: { $type: 'array' } } }]
+        }
+        // customMetadata is integrity-covered content: stamp BEFORE the write, as for the definition removal above
+        if (!path.startsWith('draft.')) await stampHistorizeMany(filter)
+        // updatedAt is what the dataset cache checks for freshness
+        const updatedAt = { [path.startsWith('draft.') ? 'draft.updatedAt' : 'updatedAt']: new Date().toISOString() }
         if (current) {
-          if (newMeta.multiple) await mongo.datasets.updateMany(filter, { $set: { [`${path}.$[v].label`]: current.label } }, { arrayFilters: [{ 'v.code': entry.code }] })
-          else await mongo.datasets.updateMany(filter, { $set: { [`${path}.label`]: current.label } })
+          if (newMeta.multiple) await mongo.datasets.updateMany(filter, { $set: { [`${path}.$[v].label`]: current.label, ...updatedAt } }, { arrayFilters: [{ 'v.code': entry.code }] })
+          else await mongo.datasets.updateMany(filter, { $set: { [`${path}.label`]: current.label, ...updatedAt } })
         } else {
-          // stamp BEFORE the removal, same reason as the definition removal above
-          if (!path.startsWith('draft.')) await stampHistorizeMany(filter)
-          await mongo.datasets.updateMany(filter, newMeta.multiple ? { $pull: { [path]: { code: entry.code } } } : { $unset: { [path]: 1 } })
+          await mongo.datasets.updateMany(filter, newMeta.multiple ? { $pull: { [path]: { code: entry.code } }, $set: updatedAt } : { $unset: { [path]: 1 }, $set: updatedAt })
         }
       }
     }

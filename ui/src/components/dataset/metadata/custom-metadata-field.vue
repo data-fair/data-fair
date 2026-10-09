@@ -66,9 +66,11 @@
 fr:
   url: Adresse
   linkTitle: Titre du lien
+  invalid: Valeur invalide pour ce type
 en:
   url: Address
   linkTitle: Link title
+  invalid: Invalid value for this type
 </i18n>
 
 <script setup lang="ts">
@@ -86,7 +88,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 const { t } = useI18n()
 const { dayjs } = useLocaleDayjs()
 
-const value = computed(() => fitsDefinition(props.definition, props.modelValue) ? props.modelValue as any : undefined)
+const fits = computed(() => fitsDefinition(props.definition, props.modelValue))
+// only an untouched stale value is hidden: a value being typed stays visible, with an error until it fits
+const value = computed(() => fits.value || props.modified ? props.modelValue as any : undefined)
 const multiple = computed(() => isCustomMetadataMultiple(props.definition))
 const fieldProps = computed(() => ({
   label: props.definition.title,
@@ -94,6 +98,7 @@ const fieldProps = computed(() => ({
   baseColor: props.modified ? 'accent' : undefined,
   color: props.modified ? 'accent' : undefined,
   clearable: true,
+  errorMessages: props.modified && props.modelValue != null && !fits.value ? t('invalid') : undefined,
   class: 'mb-4'
 }))
 </script>
