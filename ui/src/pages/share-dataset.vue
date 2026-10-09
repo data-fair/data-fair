@@ -134,9 +134,20 @@
             <dataset-metadata-form
               v-model="datasetEdit"
               :server-data="datasetServer"
+              :datasets-metadata="datasetsMetadataFetch.data.value"
               :required="requiredMetadata"
               class="mt-2"
             />
+            <v-alert
+              v-if="missingMetadata.length"
+              type="warning"
+              variant="outlined"
+              density="compact"
+              class="mt-4"
+              max-width="600"
+            >
+              {{ t('missingMetadata', { fields: missingMetadata.map(metadataTitle).join(', ') }) }}
+            </v-alert>
           </v-form>
         </v-stepper-window-item>
 
@@ -206,6 +217,9 @@ fr:
   cancelMetadataTitle: Annulation des modifications des métadonnées
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
   back: Retour
+  summary: Résumé
+  description: Description
+  missingMetadata: "Métadonnées requises par ce portail et non renseignées : {fields}. Celles absentes de ce formulaire se renseignent sur la page du jeu de données."
 en:
   datasets: Datasets
   shareDataset: Share a dataset
@@ -227,11 +241,14 @@ en:
   cancelMetadataTitle: Discard metadata changes
   confirmCancelText: Do you want to discard your changes?
   back: Back
+  summary: Summary
+  description: Description
+  missingMetadata: "Metadata required by this portal and not filled: {fields}. Those missing from this form are filled on the dataset page."
 </i18n>
 
 <script setup lang="ts">
 import type { ListedDataset } from '~/components/dataset/select/utils'
-import type { PublicationSite, Permission } from '#api/types'
+import { type PublicationSite, type Permission, settingsSchema } from '#api/types'
 import { mdiCancel, mdiCheckAll, mdiDatabase, mdiFileDocument, mdiLock, mdiPublish } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -293,15 +310,11 @@ const datasetOwnerFilter = computed(() => {
   }
 })
 
-// Fetch publication site settings to get required metadata fields
-const settingsFetch = useFetch<any>(() => {
-  if (!datasetServer.value || !publicationSite.value) return null
-  const o = datasetServer.value.owner
-  return `${$apiPath}/settings/${o.type}/${o.id}`
-})
+const requiredMetadata = computed(() => publicationSite.value?.settings?.datasetsRequiredMetadata ?? [])
 
-const requiredMetadata = computed(() => {
-  return settingsFetch.data.value?.publicationSite?.settings?.datasetsRequiredMetadata ?? []
+const datasetsMetadataFetch = useFetch<Record<string, any>>(() => {
+  const o = datasetServer.value?.owner
+  return o ? `${$apiPath}/settings/${o.type}/${o.id}/datasets-metadata` : null
 })
 
 // Publication site key for comparing
@@ -332,15 +345,24 @@ const metadataValid = computed(() => {
   if (!metadataFormValid.value) return false
 
   // Then check required metadata fields against the current in-progress edits
-  if (!datasetEdit.value || !requiredMetadata.value.length) return true
-  for (const field of requiredMetadata.value) {
-    if (field.startsWith('custom.')) {
-      const key = field.replace('custom.', '')
-      if (!datasetEdit.value.customMetadata?.[key]) return false
-    } else if (!datasetEdit.value[field]) return false
-  }
-  return true
+  return !missingMetadata.value.length
 })
+
+const missingMetadata = computed(() => {
+  if (!datasetEdit.value) return []
+  return requiredMetadata.value.filter((field: string) => {
+    const value = field.startsWith('custom.') ? datasetEdit.value!.customMetadata?.[field.replace('custom.', '')] : datasetEdit.value![field]
+    // an emptied list (keywords, topics, related datasets) is not filled either
+    return !value || (Array.isArray(value) && !value.length)
+  })
+})
+
+// some required metadata (conformsTo) are not in the form, the alert names them all
+const metadataTitle = (field: string) => {
+  if (field === 'summary' || field === 'description') return t(field)
+  if (field.startsWith('custom.')) return datasetsMetadataFetch.data.value?.custom?.find((c: any) => c.key === field.replace('custom.', ''))?.title ?? field
+  return (settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)[field]?.properties?.active?.title ?? field
+}
 
 function truncate (str: string | undefined, len: number): string {
   if (!str) return ''

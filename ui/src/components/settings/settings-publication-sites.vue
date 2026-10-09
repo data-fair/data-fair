@@ -14,13 +14,9 @@
 fr:
   summary: Résumé
   description: Description
-  license: License
-  topic: Thématique
 en:
   summary: Summary
   description: Description
-  license: License
-  topic: Topic
 </i18n>
 
 <script setup lang="ts">
@@ -47,18 +43,14 @@ watchDeepDiff(editPublicationSites, () => {
   publicationSites.value = editPublicationSites.value
 }, {})
 
+// summary and description have no settings row, every other metadata shown on datasets can be required
 const context = computed(() => ({
   DatasetsMetadata: [
     { key: 'summary', title: t('summary') },
-    { key: 'description', title: t('description') },
-    { key: 'license', title: t('license') },
-    { key: 'topics', title: t('topic') }
-  ].concat(Object.keys(datasetsMetadata || {})
-    .filter(metadata => datasetsMetadata![metadata as 'spatial']!.active)
-    .map(metadata => ({
-      key: metadata,
-      title: datasetsMetadataSchema.properties[metadata].title || datasetsMetadataSchema.properties[metadata].properties.active.title
-    })))
+    { key: 'description', title: t('description') }
+  ].concat(Object.entries(datasetsMetadataSchema.properties as Record<string, any>)
+    .filter(([key, prop]) => prop.properties?.active && (prop.properties.active.readOnly || ((datasetsMetadata as any)?.[key]?.active ?? prop.properties.active.default)))
+    .map(([key, prop]) => ({ key, title: prop.properties.active.title })))
 }))
 
 const vjsfOptions = computed<VjsfOptions>(() => ({

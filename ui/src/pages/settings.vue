@@ -390,7 +390,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import type { Settings } from '#api/types'
+import { type Settings, settingsSchema } from '#api/types'
 import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet } from '@mdi/js'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
@@ -446,11 +446,9 @@ const settings = settingsEditFetch.data
 function normalizeSettings (s: any) {
   if (!s) return
   const dm = s.datasetsMetadata = s.datasetsMetadata || {}
-  for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'conformsTo']) {
-    if (!dm[key]) dm[key] = { active: false }
+  for (const [key, prop] of Object.entries(settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)) {
+    if (prop.properties?.active && !dm[key]) dm[key] = { active: prop.properties.active.default }
   }
-  // searchTerms defaults to active TRUE in the schema, unlike its neighbours
-  if (!dm.searchTerms) dm.searchTerms = { active: true }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {

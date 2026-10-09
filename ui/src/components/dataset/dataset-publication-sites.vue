@@ -122,6 +122,11 @@ fr:
     frequency: fréquence de mise à jour
     creator: producteur
     modified: date de modification de la source
+    origin: provenance
+    image: vignette
+    relatedDatasets: jeu de données lié
+    searchTerms: termes de recherche associés
+    conformsTo: schéma
   contribPermission: Permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
   publishedNotif: Le jeu de données a été publié sur le portail
   unpublishedNotif: Le jeu de données a été dépublié du portail
@@ -146,6 +151,11 @@ en:
     frequency: update frequency
     creator: producer
     modified: date of modification of the source
+    origin: origin
+    image: thumbnail
+    relatedDatasets: related dataset
+    searchTerms: search terms
+    conformsTo: schema
   contribPermission: Too broad permission granted to contribs (risk of compatibility breakage)
   publishedNotif: The dataset was published on the portal
   unpublishedNotif: The dataset was unpublished from the portal
@@ -195,10 +205,8 @@ const sitesWarnings = computed(() => {
     for (const m of requiredMetadata) {
       if (m === 'temporal') {
         if (!(dataset.value.temporal && dataset.value.temporal.start)) warnings.push(m)
-      } else if (m === 'keywords') {
-        if (!(dataset.value.keywords && dataset.value.keywords.length)) warnings.push(m)
-      } else if (m === 'topics') {
-        if (!(dataset.value.topics && dataset.value.topics.length)) warnings.push(m)
+      } else if (m === 'keywords' || m === 'topics' || m === 'relatedDatasets') {
+        if (!dataset.value[m]?.length) warnings.push(m)
       } else if (m === 'title') {
         if (!(dataset.value.title && dataset.value.title.length > 3)) warnings.push(m)
       } else if (m === 'summary') {
