@@ -20,22 +20,28 @@ test.describe('dataset activable metadata fields', () => {
   const displayed = (date: Date) => `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
   const stored = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 
+  const settings = (staleType = 'integer') => ({
+    datasetsMetadata: {
+      groups: [{ key: 'gouvernance', title: 'Gouvernance' }],
+      spatial: { active: true },
+      temporal: { active: true },
+      frequency: { active: true, group: 'gouvernance' },
+      modified: { active: true },
+      custom: [
+        { title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' },
+        { title: 'Domaine métier', group: 'gouvernance' },
+        { title: 'Direction', key: 'direction', enum: [{ code: 'VOI', label: 'Voirie' }, { code: 'URB', label: 'Urbanisme' }] },
+        { title: 'Page de contact', key: 'contact', type: 'link' },
+        { title: 'Effectif', key: 'effectif', type: 'integer' },
+        { title: 'Ancien type', key: 'ancien', type: staleType }
+      ]
+    }
+  })
+
   test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
-    await ax.put('/api/v1/settings/user/test_user1', {
-      datasetsMetadata: {
-        groups: [{ key: 'gouvernance', title: 'Gouvernance' }],
-        spatial: { active: true },
-        temporal: { active: true },
-        frequency: { active: true, group: 'gouvernance' },
-        modified: { active: true },
-        custom: [
-          { title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' },
-          { title: 'Domaine métier', group: 'gouvernance' }
-        ]
-      }
-    })
+    await ax.put('/api/v1/settings/user/test_user1', settings())
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
   })
@@ -109,5 +115,41 @@ test.describe('dataset activable metadata fields', () => {
     await expect(metadata.getByRole('textbox', { name: /Domaine métier/ })).toBeVisible()
     await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Service référent/ })).not.toBeVisible()
+  })
+  test('custom metadata inputs follow their type', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+
+    await metadata.getByRole('combobox', { name: /Direction/ }).click()
+    await page.getByRole('option', { name: 'Voirie' }).click()
+    await metadata.getByRole('textbox', { name: /Page de contact - Adresse/ }).fill('https://a.fr')
+    await metadata.getByRole('spinbutton', { name: /Effectif/ }).fill('12')
+    await metadata.getByRole('button', { name: /Enregistrer/ }).click()
+    await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
+
+    const ax = await axiosAuth('test_user1@test.com')
+    const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
+    expect(saved.customMetadata).toMatchObject({ direction: { code: 'VOI', label: 'Voirie' }, contact: { url: 'https://a.fr' }, effectif: 12 })
+  })
+
+  test('a value entered under another type is not shown and does not block saving', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'stale', schema: [{ key: 'a', type: 'string' }], customMetadata: { ancien: 3 } })).data
+    await ax.put('/api/v1/settings/user/test_user1', settings('date'))
+    try {
+      await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_user1')
+      const metadata = page.locator('#metadata')
+      await expect(metadata).toBeVisible({ timeout: 15000 })
+      await expect(metadata.getByRole('textbox', { name: /Ancien type/ })).toHaveValue('')
+      await metadata.getByRole('textbox', { name: /^Titre/ }).fill('stale renamed')
+      await metadata.getByRole('button', { name: /Enregistrer/ }).click()
+      await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
+      const saved = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+      expect(saved.title).toBe('stale renamed')
+      expect(saved.customMetadata).toEqual({ ancien: 3 })
+    } finally {
+      await ax.put('/api/v1/settings/user/test_user1', settings())
+    }
   })
 })
