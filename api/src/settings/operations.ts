@@ -83,6 +83,11 @@ export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJ
   if (datasetsMetadata.custom) {
     for (const customMedata of datasetsMetadata.custom) {
       if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
+      // a value list and several values only make sense for text
+      if (customMedata.type && customMedata.type !== 'string') {
+        delete customMedata.enum
+        delete customMedata.multiple
+      }
     }
   }
 }
@@ -153,7 +158,10 @@ export const trimSettings = (settings: Partial<Settings>) => {
     for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
       if (option) trimFields(option, 'title')
     }
-    for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title', 'description')
+    for (const custom of settings.datasetsMetadata.custom ?? []) {
+      trimFields(custom, 'key', 'title', 'description')
+      if (custom.enum) custom.enum = [...new Set(custom.enum.map(value => value.trim()).filter(Boolean))]
+    }
     for (const group of settings.datasetsMetadata.groups ?? []) trimFields(group, 'title')
     trimFields(settings.datasetsMetadata, 'informationsTitle', 'coverageTitle')
   }

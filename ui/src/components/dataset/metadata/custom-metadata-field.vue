@@ -1,0 +1,107 @@
+<template>
+  <v-select
+    v-if="definition.enum?.length && (definition.type ?? 'string') === 'string'"
+    :model-value="multiple ? (value ?? []) : value"
+    :items="definition.enum"
+    :multiple="multiple"
+    :chips="multiple"
+    :closable-chips="multiple"
+    v-bind="fieldProps"
+    @update:model-value="(v: unknown) => emit('update:modelValue', v)"
+  />
+  <v-combobox
+    v-else-if="multiple"
+    :model-value="value ?? []"
+    multiple
+    chips
+    closable-chips
+    v-bind="fieldProps"
+    @update:model-value="(v: string[]) => emit('update:modelValue', v)"
+  />
+  <v-date-input
+    v-else-if="definition.type === 'date'"
+    :model-value="value ? dayjs(value).toDate() : null"
+    prepend-icon=""
+    v-bind="fieldProps"
+    @update:model-value="(v: any) => emit('update:modelValue', v ? dayjs(v).format('YYYY-MM-DD') : null)"
+    @click:clear="emit('update:modelValue', null)"
+  />
+  <div
+    v-else-if="definition.type === 'link'"
+    class="d-flex flex-wrap flex-grow-1 column-gap-4"
+  >
+    <v-text-field
+      :model-value="value?.url"
+      v-bind="fieldProps"
+      :label="`${definition.title} - ${t('url')}`"
+      type="url"
+      style="min-width: 14rem"
+      @update:model-value="(url: string) => emit('update:modelValue', { url, title: value?.title })"
+    />
+    <v-text-field
+      :model-value="value?.title"
+      v-bind="fieldProps"
+      :label="`${definition.title} - ${t('linkTitle')}`"
+      :error-messages="[]"
+      style="min-width: 14rem"
+      :disabled="disabled || !value?.url"
+      @update:model-value="(title: string) => emit('update:modelValue', { url: value?.url, title: title || undefined })"
+    />
+  </div>
+  <v-text-field
+    v-else-if="definition.type === 'integer' || definition.type === 'number'"
+    :model-value="value"
+    type="number"
+    v-bind="fieldProps"
+    @update:model-value="(v: any) => emit('update:modelValue', v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v))"
+  />
+  <v-text-field
+    v-else
+    :model-value="value"
+    v-bind="fieldProps"
+    @update:model-value="(v: string) => emit('update:modelValue', v)"
+  />
+</template>
+
+<i18n lang="yaml">
+fr:
+  url: Adresse
+  linkTitle: Titre du lien
+  invalid: Valeur invalide pour ce type
+en:
+  url: Address
+  linkTitle: Link title
+  invalid: Invalid value for this type
+</i18n>
+
+<script setup lang="ts">
+import { isCustomMetadataMultiple, type CustomMetadataDefinition } from '#api/types'
+import { fitsDefinition } from '~/utils/custom-metadata'
+
+const props = defineProps<{
+  definition: CustomMetadataDefinition
+  modelValue: unknown
+  disabled: boolean
+  modified: boolean
+}>()
+const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
+
+const { t } = useI18n()
+const { dayjs } = useLocaleDayjs()
+
+const fits = computed(() => fitsDefinition(props.definition, props.modelValue))
+// only an untouched stale value is hidden: a value being typed stays visible, with an error until it fits
+const value = computed(() => fits.value || props.modified ? props.modelValue as any : undefined)
+const multiple = computed(() => isCustomMetadataMultiple(props.definition))
+const fieldProps = computed(() => ({
+  label: props.definition.title,
+  disabled: props.disabled,
+  baseColor: props.modified ? 'accent' : undefined,
+  color: props.modified ? 'accent' : undefined,
+  clearable: true,
+  errorMessages: props.modified && props.modelValue != null && !fits.value ? t('invalid') : undefined,
+  // the form hides details globally, the error must still show
+  hideDetails: 'auto' as const,
+  class: 'mb-4'
+}))
+</script>

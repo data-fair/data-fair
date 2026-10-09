@@ -248,7 +248,7 @@ en:
 
 <script setup lang="ts">
 import type { ListedDataset } from '~/components/dataset/select/utils'
-import { type PublicationSite, type Permission, settingsSchema } from '#api/types'
+import { type PublicationSite, type Permission, settingsSchema, isCustomMetadataEmpty } from '#api/types'
 import { mdiCancel, mdiCheckAll, mdiDatabase, mdiFileDocument, mdiLock, mdiPublish } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -351,7 +351,8 @@ const metadataValid = computed(() => {
 const missingMetadata = computed(() => {
   if (!datasetEdit.value) return []
   return requiredMetadata.value.filter((field: string) => {
-    const value = field.startsWith('custom.') ? datasetEdit.value!.customMetadata?.[field.replace('custom.', '')] : datasetEdit.value![field]
+    if (field.startsWith('custom.')) return isCustomMetadataEmpty(datasetEdit.value!.customMetadata?.[field.replace('custom.', '')])
+    const value = datasetEdit.value![field]
     // an emptied list (keywords, topics, related datasets) is not filled either
     return !value || (Array.isArray(value) && !value.length)
   })

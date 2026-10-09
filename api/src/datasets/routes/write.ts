@@ -35,6 +35,7 @@ import * as uploadUtils from '../utils/upload.ts'
 import { updateStorage } from '../utils/storage.ts'
 import { clearTaskProgress } from '../utils/task-progress.ts'
 import * as datasetUtils from '../utils/index.ts'
+import { prepareCustomMetadata } from '../utils/custom-metadata.ts'
 
 const clean = datasetUtils.clean
 const debugLimits = debugModule('limits')
@@ -65,6 +66,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', sessionState)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
+    if (body.customMetadata) await prepareCustomMetadata(owner, body.customMetadata)
     if ((await limits.remaining(owner)).nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
       throw httpError(429, req.__('errors.exceedLimitNbDatasets'))
@@ -167,6 +169,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     }
 
     const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+    if (patch.customMetadata) await prepareCustomMetadata(dataset.owner, patch.customMetadata, dataset.customMetadata)
 
     // same fragment write guard as the three other write routes, applied here rather than in the
     // route chain because this route also accepts multipart bodies: `req.body` is only the write
