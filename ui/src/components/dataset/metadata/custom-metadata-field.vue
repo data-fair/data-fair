@@ -30,19 +30,22 @@
   />
   <div
     v-else-if="definition.type === 'link'"
-    class="d-flex flex-wrap ga-2"
+    class="d-flex flex-wrap flex-grow-1 column-gap-4"
   >
     <v-text-field
       :model-value="value?.url"
       v-bind="fieldProps"
       :label="`${definition.title} - ${t('url')}`"
       type="url"
+      style="min-width: 14rem"
       @update:model-value="(url: string) => emit('update:modelValue', { url, title: value?.title })"
     />
     <v-text-field
       :model-value="value?.title"
       v-bind="fieldProps"
       :label="`${definition.title} - ${t('linkTitle')}`"
+      :error-messages="[]"
+      style="min-width: 14rem"
       :disabled="disabled || !value?.url"
       @update:model-value="(title: string) => emit('update:modelValue', { url: value?.url, title })"
     />
@@ -99,6 +102,8 @@ const fieldProps = computed(() => ({
   color: props.modified ? 'accent' : undefined,
   clearable: true,
   errorMessages: props.modified && props.modelValue != null && !fits.value ? t('invalid') : undefined,
+  // the form hides details globally, the error must still show
+  hideDetails: 'auto' as const,
   class: 'mb-4'
 }))
 </script>

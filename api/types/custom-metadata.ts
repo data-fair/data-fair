@@ -13,24 +13,30 @@ const typeOf = (definition: CustomMetadataDefinition) => definition.type ?? 'str
 const isList = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.enum?.length
 export const isMultiple = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.multiple
 
+// read by ajv-errors on the API, ignored by the UI fit check
+const expected = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
+
 const itemSchema = (definition: CustomMetadataDefinition) => {
   if (isList(definition)) {
     return {
       type: 'object',
       required: ['code'],
       additionalProperties: false,
-      properties: { code: { type: 'string', enum: definition.enum!.map(e => e.code) }, label: { type: 'string' } }
+      properties: { code: { type: 'string', enum: definition.enum!.map(e => e.code) }, label: { type: 'string' } },
+      errorMessage: `${definition.title} : valeur absente de la liste`
     }
   }
+  const errorMessage = `${definition.title} : ${expected[typeOf(definition)]}`
   switch (typeOf(definition)) {
-    case 'date': return { type: 'string', format: 'date' }
+    case 'date': return { type: 'string', format: 'date', errorMessage }
     case 'link': return {
       type: 'object',
       required: ['url'],
       additionalProperties: false,
-      properties: { url: { type: 'string', pattern: '^https?://\\S+$' }, title: { type: 'string' } }
+      properties: { url: { type: 'string', pattern: '^https?://\\S+$' }, title: { type: 'string' } },
+      errorMessage
     }
-    default: return { type: typeOf(definition) }
+    default: return { type: typeOf(definition), errorMessage }
   }
 }
 
