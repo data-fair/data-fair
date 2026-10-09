@@ -17,7 +17,6 @@ export const METADATA_FIELDS: { key: string, label: string }[] = [
   { key: 'topics', label: 'thématiques' },
   { key: 'keywords', label: 'mots-clés' },
   { key: 'searchTerms', label: 'termes de recherche associés' },
-  { key: 'attachmentsAsImage', label: 'pièces jointes affichées comme images' },
   { key: 'origin', label: 'provenance' },
   { key: 'creator', label: 'producteur' },
   { key: 'frequency', label: 'fréquence' },
@@ -139,6 +138,9 @@ function diffStructure (server: any, edited: any): string[] {
   }
   if (!equal(server.projection, edited.projection)) {
     lines.push(`- **projection cartographique** : ${short(server.projection)} → ${short(edited.projection)}`)
+  }
+  if (!!server.attachmentsAsImage !== !!edited.attachmentsAsImage) {
+    lines.push(`- **pièces jointes affichées comme images** : ${server.attachmentsAsImage ? 'oui' : 'non'} → ${edited.attachmentsAsImage ? 'oui' : 'non'}`)
   }
 
   return lines

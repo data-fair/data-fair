@@ -852,7 +852,7 @@ import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
-import { modifiedGroups, usedGroups } from '~/utils/metadata-groups'
+import { fieldGroup, modifiedGroups, usedGroups } from '~/utils/metadata-groups'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metadata-tools'
@@ -898,6 +898,11 @@ const store = useDatasetStore()
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
+// only needed when the topics left the first tab, always shown
+const ownerTopicsFetch = useFetch<any[]>(() => {
+  const o = dataset.value?.owner
+  return o && fieldGroup(datasetsMetadata.value, 'topics') !== 'informations' ? `${$apiPath}/settings/${o.type}/${o.id}/topics` : null
+})
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -1311,15 +1316,21 @@ const sections = computedDeepDiff(() => {
   }
 
   // Metadata section: two default tabs, then the categories of the owner's settings
-  const modifiedMetadataGroups = metadataEditFetch.hasDiff.value
+  const modifiedMetadataGroups = metadataEditFetch.hasDiff.value && !d.partOf
     ? modifiedGroups(datasetsMetadata.value, metadataEditFetch.data.value, metadataEditFetch.serverData.value)
     : new Set<string>()
+  // a diff no tab holds (an emptied custom metadata object) or a fragment's single tab
+  if (metadataEditFetch.hasDiff.value && !modifiedMetadataGroups.size) modifiedMetadataGroups.add('informations')
   const groupColor = (key: string) => modifiedMetadataGroups.has(key) ? 'accent' : undefined
   const metadataTabs: any[] = [
     { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
   ]
   // a tab holding no metadata shown on datasets is left out
-  const metadataGroupsInUse = usedGroups(datasetsMetadata.value)
+  // same conditions as the metadata form, which hides these fields
+  const metadataGroupsInUse = usedGroups(datasetsMetadata.value, [
+    ...(ownerTopicsFetch.data.value?.length ? [] : ['topics']),
+    ...(d.finalizedAt || d.isMetaOnly ? [] : ['relatedDatasets'])
+  ])
   if (!d.partOf) {
     if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: datasetsMetadata.value?.coverageTitle || t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, image, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
     for (const group of datasetsMetadata.value?.groups ?? []) {

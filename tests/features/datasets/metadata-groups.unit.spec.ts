@@ -35,6 +35,10 @@ test.describe('metadata groups', () => {
     // image, related datasets and search terms (active by default) moved out: the coverage tab is empty
     const moved = { image: { group: 'informations' }, relatedDatasets: { group: 'informations' }, searchTerms: { active: false } }
     assert.deepEqual([...usedGroups(moved)], ['informations'])
+    // a category holding only metadata the form hides on this dataset is not used either
+    const classement = { groups: [{ key: 'classement', title: 'Classement' }], topics: { group: 'classement' } }
+    assert.ok(usedGroups(classement).has('classement'))
+    assert.ok(!usedGroups(classement, ['topics']).has('classement'))
   })
 
   test('the modified categories are the ones holding a changed field', () => {

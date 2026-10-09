@@ -24,26 +24,25 @@ export const customGroup = (datasetsMetadata: DatasetsMetadata, key: string): st
 }
 
 // the tabs holding at least one active metadata, informations always holds the title
-export const usedGroups = (datasetsMetadata: DatasetsMetadata) => new Set([
+// hidden: the metadata the form does not show on this dataset (topics without any topic defined...)
+export const usedGroups = (datasetsMetadata: DatasetsMetadata, hidden: string[] = []) => new Set([
   'informations',
   ...Object.entries(fixedMetadata)
-    .filter(([key, prop]) => prop.properties?.group && (datasetsMetadata?.[key]?.active ?? prop.properties.active.default))
+    .filter(([key, prop]) => prop.properties?.group && !hidden.includes(key) && (datasetsMetadata?.[key]?.active ?? prop.properties.active.default))
     .map(([key]) => fieldGroup(datasetsMetadata, key)),
   ...(datasetsMetadata?.custom ?? []).map(c => customGroup(datasetsMetadata, c.key))
 ])
 
+const tabFields = ['title', 'summary', 'description', ...Object.keys(fixedMetadata).filter(key => fixedMetadata[key].properties?.group)]
+
 // the tabs holding a field changed between the edited dataset and the saved one
 export const modifiedGroups = (datasetsMetadata: DatasetsMetadata, data: any, serverData: any) => {
   const groups = new Set<string>()
-  const keys = (a: any, b: any) => new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})])
-  for (const field of keys(data, serverData)) {
-    if (field === 'customMetadata') {
-      for (const key of keys(data?.customMetadata, serverData?.customMetadata)) {
-        if (!equal(data?.customMetadata?.[key], serverData?.customMetadata?.[key])) groups.add(customGroup(datasetsMetadata, key))
-      }
-    } else if (!equal(data?.[field], serverData?.[field])) {
-      groups.add(fieldGroup(datasetsMetadata, field))
-    }
+  for (const field of tabFields) {
+    if (!equal(data?.[field], serverData?.[field])) groups.add(fieldGroup(datasetsMetadata, field))
+  }
+  for (const key of new Set([...Object.keys(data?.customMetadata ?? {}), ...Object.keys(serverData?.customMetadata ?? {})])) {
+    if (!equal(data?.customMetadata?.[key], serverData?.customMetadata?.[key])) groups.add(customGroup(datasetsMetadata, key))
   }
   return groups
 }

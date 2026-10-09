@@ -49,7 +49,7 @@ const context = computed(() => ({
     { key: 'summary', title: t('summary') },
     { key: 'description', title: t('description') }
   ].concat(Object.entries(datasetsMetadataSchema.properties as Record<string, any>)
-    .filter(([key, prop]) => prop.properties?.active && (prop.properties.active.readOnly || (datasetsMetadata as any)?.[key]?.active))
+    .filter(([key, prop]) => prop.properties?.active && (prop.properties.active.readOnly || ((datasetsMetadata as any)?.[key]?.active ?? prop.properties.active.default)))
     .map(([key, prop]) => ({ key, title: prop.properties.active.title })))
 }))
 
