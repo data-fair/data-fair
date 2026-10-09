@@ -1,10 +1,5 @@
 <template>
   <v-container v-if="application">
-    <fragment-banner
-      v-if="application.partOf"
-      :part-of="application.partOf"
-    />
-
     <v-alert
       v-if="upgradeAvailable && can('writeConfig')"
       type="info"
@@ -609,7 +604,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiFileTree, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
@@ -780,7 +775,7 @@ const sections = computedDeepDiff(() => {
   result.informations = {
     title: t('info'),
     subtitle: t('informationsSubtitle'),
-    agentDesc: 'Read-only overview of the application: owner, application model (base app) and version, key dates. No edit controls here — descriptive metadata is edited in the Metadata section below.'
+    agentDesc: 'Read-only overview of the application: owner, application model (base app) and version, key dates. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent application.'
   }
 
   // Metadata section
@@ -802,7 +797,7 @@ const sections = computedDeepDiff(() => {
   const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }]
   // fragments are hidden from every listing, this tab is where they are found
   if (!application.value.partOf) {
-    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiFileTree, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })
+    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })
   }
   result.render = {
     title: t('render'),

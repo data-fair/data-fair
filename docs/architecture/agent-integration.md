@@ -378,7 +378,8 @@ currently tell a fragment from a standalone resource through these tools. The "F
 shown on a virtual dataset's page (Structure section) or
 an application's own page (Render section) carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
 `ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
-fragment" action within it.
+fragment" action within it. On a fragment's own page, the Informations section's `agentDesc`
+mentions the link to the parent and, for a dataset fragment, the "Add to the sources" button.
 
 ## 5. Tool Reference
 

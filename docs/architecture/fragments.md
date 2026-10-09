@@ -463,17 +463,20 @@ All fragment-specific hiding in the UI is a `!resource.partOf` check next to the
 gates in the page's `sections` computed and danger-zone template — there is no fragment-specific
 permission model on the client, it is purely presentational.
 
-- **`fragment-banner.vue`** (`ui/src/components/common/fragment-banner.vue`): shown at the top of a
-  fragment's own page ("Cette ressource est un fragment de: *{parent title}*"), linking to the
-  parent. The parent title is fetched with `notifError: false` and falls back to the parent id:
-  holding a derived management entry on the fragment does **not** imply `readDescription` on the
-  parent, so a 403/404 there is an ordinary case, not something to toast on every page load.
+- **`fragment-info.vue`** (`ui/src/components/common/fragment-info.vue`): a "Fragment de
+  *{parent title}*" item of the Informations grid on a fragment's own page, linking to the parent
+  (the "Utilisée par" / "Jeux de données virtuels" items are dropped when the parent is their only
+  user, they would only repeat it; a sibling picked through `pickerPartOf` keeps them). The creation
+  pages show it in place of the owner picker. The parent title is fetched with `notifError: false`
+  and falls back to the parent id: holding a derived management entry on the fragment does **not**
+  imply `readDescription` on the parent, so a 403/404 there is an ordinary case, not something to
+  toast on every page load.
 - **Cards and list items** (`dataset-card`, `application-card`, `dataset-list-item`,
   `application-list-item`): wherever a fragment is still listed — a dataset's Applications tab (the
   `dataset=` query pins resources, §6), an application's datasets and sub-applications tabs, the
-  virtual children, the Fragments tab, the pickers — `resource-visibility.vue` shows the banner's
+  virtual children, the Fragments tab, the pickers — `resource-visibility.vue` shows the same
   puzzle icon instead of the visibility lock, given `partOf`. Its tooltip names the parent ("Fragment
-  de l'application « … »", title fetched on first open with the banner's `notifError: false`
+  de l'application « … »", title fetched on first open with the same `notifError: false`
   fallback) and keeps the visibility as a second line. A private fragment is the normal case, so the icon is not warning-colored
   like a private lock. The listing queries behind those cards select `partOf` for this.
 - **Hidden on a fragment's own page, to keep it minimal** (both `dataset/[id]/index.vue` and
@@ -495,7 +498,7 @@ permission model on the client, it is purely presentational.
   `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. The sub-application button is
   only offered when the parent's base app declares `<meta name="df:use-apps" content="true">` (it
   embeds other applications, typically a dashboard), and `writeConfig` on the parent. On those creation pages the owner
-  picker is replaced by the fragment banner and the owner is taken from the parent (a fragment has
+  picker is replaced by the parent link (`fragment-info.vue`) and the owner is taken from the parent (a fragment has
   exactly its parent's owner), a metadata-only dataset is not offered, the breadcrumb leads back to
   the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
   owner's standalone datasets. For a virtual parent exposing columns, the initialization step starts
@@ -509,7 +512,7 @@ permission model on the client, it is purely presentational.
 - **Sources of a virtual parent.** On a virtual parent, each fragment card of the Fragments tab
   says whether it is one of the parent's sources, and offers "Ajouter aux sources" when it is not
   (finalized fragment, `writeDescriptionBreaking` on the parent, no pending change in the structure
-  form). The fragment's own banner (`fragment-banner.vue`) says the same and offers the same action,
+  form). The fragment's own Informations item (`fragment-info.vue`) says the same and offers the same action,
   since that is where the user is while preparing it.
 - **Pickers opened from a parent offer its fragments.** `pickerPartOf` (`ui/src/utils/fragments.ts`)
   builds `partOf=false,<parent>` — the resource's own family, or its siblings when it is itself a
@@ -637,7 +640,7 @@ work:
 | Application-context middleware (§5) | `api/src/misc/utils/application-key.ts` |
 | Proxy `partOf` reachability edge (§5) | `api/src/applications/proxy-service.ts`, `api/src/applications/middlewares.ts` |
 | Websocket application-context (§5) | `api/src/app.js` (`canSubscribe` callback) |
-| UI: banner, fragments tab, attach dialog (datasets and applications) | `ui/src/components/common/fragment-banner.vue`, `fragments-list.vue`, `fragment-attach-dialog.vue` |
+| UI: fragment info, fragments tab, attach dialog (datasets and applications) | `ui/src/components/common/fragment-info.vue`, `fragments-list.vue`, `fragment-attach-dialog.vue` |
 | UI: fragment page gates, delete dialog loop | `ui/src/pages/dataset/[id]/index.vue`, `ui/src/pages/application/[id]/index.vue` |
 | UI: new-resource `partOf` prefill | `ui/src/pages/new-dataset.vue`, `ui/src/pages/new-application.vue` |
 | Tests | `tests/features/fragments/*.spec.ts`, `tests/features/ui/fragments.e2e.spec.ts`, `tests/features/datasets/virtual/virtual-member-deletion.api.spec.ts` |

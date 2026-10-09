@@ -31,7 +31,7 @@ test.describe('fragments UI', () => {
     fragmentId = (await sendDataset('datasets/dataset1.csv', ax, {}, { partOf: { type: 'dataset', id: virtualId } })).id
   })
 
-  test('fragment page shows the banner and hides what the parent covers', async ({ page, goToWithAuth }) => {
+  test('fragment page links to its parent and hides what the parent covers', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
     await pastActiveAccountGate(page, page.getByText(/fragment de/i))
     await expect(page.getByText(/fragment de/i)).toBeVisible({ timeout: 15000 })
@@ -99,7 +99,7 @@ test.describe('fragments UI', () => {
     await page.getByRole('button', { name: 'Continuer' }).click()
     await page.getByLabel('Titre').fill('my rest fragment')
     await page.getByRole('button', { name: 'Continuer' }).click()
-    // the owner is the parent's: the banner replaces the owner picker
+    // the owner is the parent's: the parent link replaces the owner picker
     await expect(page.getByText(/fragment de/i)).toBeVisible()
   })
 
