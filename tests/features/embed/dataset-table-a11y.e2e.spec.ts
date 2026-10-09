@@ -82,6 +82,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     await expect(page.locator('.v-overlay--active.v-menu').first()).toBeVisible({ timeout: 2000 })
     // Closing the menu must return focus to the trigger button so keyboard users
     // don't get dropped on <body> after Escape (RGAA 7.3 / 12.8)
+    // Vuetify only honors Escape on the top overlay, a flag it updates in a setTimeout after
+    // opening: let that timer run first, a human can't press Escape within the same few ms
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve)))
     await page.keyboard.press('Escape')
     await expect(page.locator('.v-overlay--active.v-menu')).toHaveCount(0)
     await expect(firstSortButton).toBeFocused()
