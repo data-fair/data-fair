@@ -89,4 +89,35 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     await expect(page.locator('.v-overlay--active.v-menu')).toHaveCount(0)
     await expect(firstSortButton).toBeFocused()
   })
+
+  test('sort and column visibility states are exposed without relying on color (7.1 / 3.1)', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
+    const firstHeader = page.locator('thead th button').first()
+    const menu = page.locator('.v-overlay--active.v-menu')
+
+    // the active sort option carries aria-current, not only the visual active style
+    await firstHeader.click()
+    // reopening the menu while the sorted lines are still loading is not reliable, wait for them
+    const sortedLines = page.waitForResponse(r => r.url().includes('/lines') && r.url().includes('sort='))
+    await menu.getByRole('listitem').filter({ hasText: /tri ascendant|ascending sort/i }).click()
+    await sortedLines
+    // picking a sort closes the menu
+    await expect(menu).toHaveCount(0)
+    await expect(page.locator('thead th[aria-sort="ascending"]')).toHaveCount(1)
+    await expect(page.locator('thead th[aria-sort]')).toHaveCount(1)
+    await firstHeader.click()
+    await expect(menu).toBeVisible()
+    await expect(menu.locator('[aria-current="true"]')).toContainText(/tri ascendant|ascending sort/i)
+    await expect(menu.locator('[aria-current="true"]')).toHaveCount(1)
+
+    // hiding a column shows a count on the column selector and names it for assistive technologies
+    await menu.getByRole('listitem').filter({ hasText: /masquer|hide/i }).first().click()
+    const selectCols = page.getByRole('button', { name: /colonnes? masquées?|columns? hidden/i })
+    await expect(selectCols).toHaveAccessibleName(/1 colonne masquée|1 column hidden/i)
+    await expect(selectCols.locator('.v-badge__badge')).toHaveText('1')
+  })
 })

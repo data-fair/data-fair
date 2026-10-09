@@ -67,6 +67,7 @@
         <template v-if="header.sortable && !noSort">
           <v-list-item
             :active="sort === 1"
+            :aria-current="sort === 1 ? 'true' : undefined"
             :title="t('sortAsc')"
             class="pl-2"
             @click="toggleSort(1)"
@@ -80,6 +81,7 @@
           </v-list-item>
           <v-list-item
             :active="sort === -1"
+            :aria-current="sort === -1 ? 'true' : undefined"
             :title="t('sortDesc')"
             class="pl-2"
             @click="toggleSort(-1)"

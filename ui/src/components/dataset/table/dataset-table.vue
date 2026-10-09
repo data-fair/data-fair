@@ -941,7 +941,6 @@ const deleteLine = useAsyncAction(async () => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   overflow: hidden;
 }
 .dataset-table th.selectable-header {
@@ -952,7 +951,6 @@ const deleteLine = useAsyncAction(async () => {
   cursor: text;
   display: block;
   -webkit-line-clamp: unset;
-  line-clamp: unset;
   overflow: visible;
   white-space: normal;
   word-break: break-all;
