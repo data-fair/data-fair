@@ -10,13 +10,12 @@ export const getCustomMetadataDefinitions = async (owner: { type: string, id: st
   return (settings && isMainSettings(settings) ? settings.datasetsMetadata?.custom : undefined) ?? []
 }
 
-// memoized: ajv.compile is codegen and the definitions rarely change
+// memoized without maxAge: keyed on the definitions themselves, and each recompile would stay in ajv's own cache
 export const compileCustomMetadata = memoize((definitionsJson: string, throws: boolean = true) => compile(customMetadataSchema(JSON.parse(definitionsJson)), throws), {
   profileName: 'compileCustomMetadata',
   primitive: true,
   length: 2,
-  max: 1000,
-  maxAge: 1000 * 60
+  max: 1000
 })
 
 // only the values this write changes are checked, so a definition change never blocks the other fields

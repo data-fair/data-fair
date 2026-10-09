@@ -121,7 +121,7 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await metadata.getByRole('combobox', { name: /Direction/ }).click()
+    await metadata.locator('.v-select').filter({ hasText: 'Direction' }).click()
     await page.getByRole('option', { name: 'Voirie' }).click()
     await metadata.getByRole('textbox', { name: /Page de contact - Adresse/ }).fill('https://a.fr')
     await metadata.getByRole('spinbutton', { name: /Effectif/ }).fill('12')
@@ -131,6 +131,20 @@ test.describe('dataset activable metadata fields', () => {
     const ax = await axiosAuth('test_user1@test.com')
     const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
     expect(saved.customMetadata).toMatchObject({ direction: { code: 'VOI', label: 'Voirie' }, contact: { url: 'https://a.fr' }, effectif: 12 })
+  })
+
+  test('a typed field keeps what is typed while it is not valid yet', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+    const url = metadata.getByRole('textbox', { name: /Page de contact - Adresse/ })
+    await url.clear()
+    await url.pressSequentially('https://b.fr')
+    await expect(url).toHaveValue('https://b.fr')
+    const effectif = metadata.getByRole('spinbutton', { name: /Effectif/ })
+    await effectif.clear()
+    await effectif.pressSequentially('12.5')
+    await expect(effectif).toHaveValue('12.5')
   })
 
   test('a value entered under another type is not shown and does not block saving', async ({ page, goToWithAuth }) => {
