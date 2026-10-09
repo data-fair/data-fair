@@ -1,6 +1,7 @@
 // pure functions for the datasets module — no I/O. The unit-test surface.
 import type { Dataset, Permission } from '#types'
 import trimFields from '../misc/utils/trim-fields.ts'
+import { trimCustomMetadata } from '#types/custom-metadata.ts'
 import { operationsClasses } from '@data-fair/data-fair-shared/permissions/operations.ts'
 
 // matches the separator used by memoizee's built-in `primitive` normalizer
@@ -163,7 +164,7 @@ export function computeSearchText (
 export const trimDataset = (dataset: Partial<Dataset>) => {
   trimFields(dataset, 'title', 'summary', 'description', 'origin', 'image', 'creator', 'spatial')
   if (dataset.keywords) dataset.keywords = [...new Set(dataset.keywords.map(keyword => keyword.trim()).filter(Boolean))]
-  if (dataset.customMetadata) trimFields(dataset.customMetadata, ...Object.keys(dataset.customMetadata))
+  if (dataset.customMetadata) trimCustomMetadata(dataset.customMetadata)
   if (dataset.conformsTo) trimFields(dataset.conformsTo, 'title', 'version', 'url')
   // the generated attachment types lose the fields shared by the oneOf branches
   const attachments = (dataset.attachments ?? []) as { type?: string, title?: string, description?: string, name?: string, url?: string, targetUrl?: string }[]
