@@ -5,8 +5,18 @@
 import Module from 'node:module'
 import { prepareResultItem, prepareResultContext } from '../es/commons.ts'
 import { getFlatten } from '../utils/flatten.ts'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
+import { customMetadataDefinitionSchema, formatCustomMetadata } from '../../../types/custom-metadata.ts'
 const require = Module.createRequire(import.meta.url)
 const XLSX = require('@e965/xlsx')
+
+// one compile per definition: each ajv.compile call stays in ajv's own cache for the worker's life
+const validators = new Map()
+const fitsDefinition = (/** @type {any} */ definition, /** @type {unknown} */ value) => {
+  const key = JSON.stringify(definition)
+  if (!validators.has(key)) validators.set(key, ajv.compile(customMetadataDefinitionSchema(definition)))
+  return validators.get(key)(value)
+}
 
 // Excel hard limit: a cell may not hold more than 32767 characters.
 export const MAX_CELL_LENGTH = 32767
@@ -133,8 +143,9 @@ export default ({ rawBuffer, bookType, query, dataset, publicBaseUrl, downloadUr
   if (datasetsMetadata.custom && datasetsMetadata.custom.length) {
     for (const custom of datasetsMetadata.custom) {
       if (!custom.key) continue
-      const value = dataset.customMetadata ? dataset.customMetadata[custom.key] : undefined
-      metadataArray.push([custom.key, custom.title || custom.key, value || ''])
+      const value = dataset.customMetadata?.[custom.key]
+      const fits = value != null && fitsDefinition(custom, value)
+      metadataArray.push([custom.key, custom.title || custom.key, fits ? formatCustomMetadata(value) : ''])
     }
   }
 
