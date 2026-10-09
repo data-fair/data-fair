@@ -4,7 +4,7 @@ export type CustomMetadataDefinition = {
   title: string
   type?: CustomMetadataType
   multiple?: boolean
-  enum?: { code?: string, label: string }[]
+  enum?: string[]
   group?: string
   description?: string
 }
@@ -17,15 +17,7 @@ export const isMultiple = (definition: CustomMetadataDefinition) => typeOf(defin
 const expected = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
 
 const itemSchema = (definition: CustomMetadataDefinition) => {
-  if (isList(definition)) {
-    return {
-      type: 'object',
-      required: ['code'],
-      additionalProperties: false,
-      properties: { code: { type: 'string', enum: definition.enum!.map(e => e.code) }, label: { type: 'string' } },
-      errorMessage: `${definition.title} : valeur absente de la liste`
-    }
-  }
+  if (isList(definition)) return { type: 'string', enum: definition.enum, errorMessage: `${definition.title} : valeur absente de la liste` }
   const errorMessage = `${definition.title} : ${expected[typeOf(definition)]}`
   switch (typeOf(definition)) {
     case 'date': return { type: 'string', format: 'date', errorMessage }
@@ -52,15 +44,8 @@ export const customMetadataSchema = (definitions: CustomMetadataDefinition[]) =>
   properties: Object.fromEntries(definitions.filter(d => d.key).map(d => [d.key, customMetadataDefinitionSchema(d)]))
 })
 
-// a list value is stored whole, with the label the definition has when it is written
-export const withCurrentLabels = (definition: CustomMetadataDefinition, value: any): unknown => {
-  if (!isList(definition)) return value
-  const labelled = (item: { code: string }) => ({ code: item.code, label: definition.enum!.find(e => e.code === item.code)?.label ?? '' })
-  return Array.isArray(value) ? value.map(labelled) : labelled(value)
-}
-
 const formatItem = (item: any): string =>
-  item?.code !== undefined ? item.label : item?.url ? (item.title ? `${item.title} (${item.url})` : item.url) : String(item)
+  item?.url ? (item.title ? `${item.title} (${item.url})` : item.url) : String(item)
 
 /** Display text of a value already known to fit its definition. */
 export const formatCustomMetadata = (value: unknown): string =>
@@ -74,7 +59,8 @@ const trimItem = (item: any) => {
   if (typeof item === 'string') return item.trim()
   if (item && typeof item === 'object') {
     for (const key of ['url', 'title']) if (typeof item[key] === 'string') item[key] = item[key].trim()
-    if (item.title === '') delete item.title
+    // a cleared title field sends null
+    if (item.title === '' || item.title === null) delete item.title
   }
   return item
 }

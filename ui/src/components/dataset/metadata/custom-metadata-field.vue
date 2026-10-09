@@ -1,15 +1,13 @@
 <template>
   <v-select
     v-if="definition.enum?.length && (definition.type ?? 'string') === 'string'"
-    :model-value="multiple ? (value ?? []).map((v: any) => v.code) : value?.code"
+    :model-value="multiple ? (value ?? []) : value"
     :items="definition.enum"
-    item-title="label"
-    item-value="code"
     :multiple="multiple"
     :chips="multiple"
     :closable-chips="multiple"
     v-bind="fieldProps"
-    @update:model-value="(codes: any) => emit('update:modelValue', multiple ? codes.map((code: string) => ({ code })) : codes && { code: codes })"
+    @update:model-value="(v: unknown) => emit('update:modelValue', v)"
   />
   <v-combobox
     v-else-if="multiple"
@@ -47,7 +45,7 @@
       :error-messages="[]"
       style="min-width: 14rem"
       :disabled="disabled || !value?.url"
-      @update:model-value="(title: string) => emit('update:modelValue', { url: value?.url, title })"
+      @update:model-value="(title: string) => emit('update:modelValue', { url: value?.url, title: title || undefined })"
     />
   </div>
   <v-text-field

@@ -983,7 +983,7 @@ const datasetProperties = {
   },
   customMetadata: {
     type: 'object',
-    description: 'Values of the custom metadata defined in the owner settings (datasetsMetadata.custom), by key. A value follows the type of its definition: a text, a number, a date "YYYY-MM-DD", a link { url, title }, a value { code, label } from the definition value list, or an array of texts or values when the definition allows several values.',
+    description: 'Values of the custom metadata defined in the owner settings (datasetsMetadata.custom), by key. A value follows the type of its definition: a text, a number, a date "YYYY-MM-DD", a link { url, title }, a text from the definition value list, or an array of texts when the definition allows several values.',
     patternProperties: {
       '^(.*)$': {
         type: ['string', 'number', 'object', 'array']

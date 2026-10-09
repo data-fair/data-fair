@@ -30,7 +30,7 @@ test.describe('dataset activable metadata fields', () => {
       custom: [
         { title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' },
         { title: 'Domaine métier', group: 'gouvernance' },
-        { title: 'Direction', key: 'direction', enum: [{ code: 'VOI', label: 'Voirie' }, { code: 'URB', label: 'Urbanisme' }] },
+        { title: 'Direction', key: 'direction', enum: ['Voirie', 'Urbanisme'] },
         { title: 'Page de contact', key: 'contact', type: 'link' },
         { title: 'Effectif', key: 'effectif', type: 'integer' },
         { title: 'Ancien type', key: 'ancien', type: staleType }
@@ -130,7 +130,7 @@ test.describe('dataset activable metadata fields', () => {
 
     const ax = await axiosAuth('test_user1@test.com')
     const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
-    expect(saved.customMetadata).toMatchObject({ direction: { code: 'VOI', label: 'Voirie' }, contact: { url: 'https://a.fr' }, effectif: 12 })
+    expect(saved.customMetadata).toMatchObject({ direction: 'Voirie', contact: { url: 'https://a.fr' }, effectif: 12 })
   })
 
   test('a typed field keeps what is typed while it is not valid yet', async ({ page, goToWithAuth }) => {

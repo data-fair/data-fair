@@ -9,7 +9,7 @@ export type { Dataset, DatasetExt, DatasetInternal, RestDataset, DatasetLine, Da
 export type { Event } from './event/index.js'
 export { type Settings, resolvedSchema as settingsSchema } from './settings/index.js'
 export type { Topic } from './topic/index.js'
-export { type CustomMetadataDefinition, customMetadataSchema, customMetadataDefinitionSchema, withCurrentLabels, formatCustomMetadata, isCustomMetadataEmpty, trimCustomMetadata, isMultiple as isCustomMetadataMultiple } from './custom-metadata.ts'
+export { type CustomMetadataDefinition, customMetadataSchema, customMetadataDefinitionSchema, formatCustomMetadata, isCustomMetadataEmpty, trimCustomMetadata, isMultiple as isCustomMetadataMultiple } from './custom-metadata.ts'
 export type { Vocabulary } from './vocabulary/index.js'
 export type { Limits, Limit } from './limits/index.js'
 export type { Permission } from './permissions/index.js'

@@ -183,15 +183,6 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       if (existing) throw httpError(400, `Les catégories "${existing}" et "${group.title}" ont le même identifiant`)
       seenKeys.set(group.key!, group.title)
     }
-    // list codes are hidden in the form, so the message names the labels
-    for (const custom of settings.datasetsMetadata.custom ?? []) {
-      const seenCodes = new Map<string, string>()
-      for (const entry of custom.enum ?? []) {
-        const existing = seenCodes.get(entry.code!)
-        if (existing) throw httpError(400, `Les valeurs "${existing}" et "${entry.label}" de "${custom.title}" sont trop proches`)
-        seenCodes.set(entry.code!, entry.label)
-      }
-    }
   }
 
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
@@ -223,34 +214,6 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
-    }
-  }
-  // list values are stored whole: a renamed or deleted entry reaches the datasets, like a topic
-  for (const newMeta of newDatasetsMetadata.custom ?? []) {
-    const oldMeta = oldDatasetsMetadata.custom?.find(oc => oc.key === newMeta.key)
-    // a type or multiple change keeps the values as they are (hidden until reverted)
-    if (!oldMeta?.enum?.length || !newMeta.enum?.length || !!oldMeta.multiple !== !!newMeta.multiple) continue
-    for (const entry of oldMeta.enum) {
-      const current = newMeta.enum.find(e => e.code === entry.code)
-      if (current?.label === entry.label) continue
-      for (const path of [`customMetadata.${newMeta.key}`, `draft.customMetadata.${newMeta.key}`]) {
-        // values stored under the other shape (before a multiple change) are left alone
-        const filter = {
-          'owner.type': owner.type,
-          'owner.id': owner.id,
-          $and: [{ [`${path}.code`]: entry.code }, { [path]: newMeta.multiple ? { $type: 'array' } : { $not: { $type: 'array' } } }]
-        }
-        // customMetadata is integrity-covered content: stamp BEFORE the write, as for the definition removal above
-        if (!path.startsWith('draft.')) await stampHistorizeMany(filter)
-        // updatedAt is what the dataset cache checks for freshness
-        const updatedAt = { [path.startsWith('draft.') ? 'draft.updatedAt' : 'updatedAt']: new Date().toISOString() }
-        if (current) {
-          if (newMeta.multiple) await mongo.datasets.updateMany(filter, { $set: { [`${path}.$[v].label`]: current.label, ...updatedAt } }, { arrayFilters: [{ 'v.code': entry.code }] })
-          else await mongo.datasets.updateMany(filter, { $set: { [`${path}.label`]: current.label, ...updatedAt } })
-        } else {
-          await mongo.datasets.updateMany(filter, newMeta.multiple ? { $pull: { [path]: { code: entry.code } }, $set: updatedAt } : { $unset: { [path]: 1 }, $set: updatedAt })
-        }
-      }
     }
   }
 }
