@@ -1,15 +1,13 @@
 <template>
-  <v-alert
-    type="info"
-    variant="tonal"
-    density="compact"
-    class="mb-4"
-    :icon="mdiPuzzle"
-  >
-    {{ t('fragmentOf') }}
-    <router-link :to="`/${partOf.type}/${partOf.id}`">
-      {{ parentFetch.data.value?.title ?? partOf.id }}
-    </router-link>
+  <v-list-item :prepend-icon="mdiPuzzle">
+    <div class="text-body-small text-medium-emphasis">
+      {{ t('fragmentOf') }}
+    </div>
+    <div>
+      <router-link :to="`/${partOf.type}/${partOf.id}`">
+        {{ parentFetch.data.value?.title ?? partOf.id }}
+      </router-link>
+    </div>
     <!-- a dataset fragment is not one of its virtual parent's sources until the user judges it ready -->
     <div
       v-if="notSourceYet"
@@ -28,17 +26,17 @@
         {{ t('addSource') }}
       </v-btn>
     </div>
-  </v-alert>
+  </v-list-item>
 </template>
 
 <i18n lang="yaml">
 fr:
-  fragmentOf: "Cette ressource est un fragment de :"
+  fragmentOf: Fragment de
   notSource: Ce jeu de données n'est pas encore une source du jeu de données parent.
   addSource: Ajouter aux sources
   addedToSources: Le jeu de données a été ajouté aux sources du jeu de données parent.
 en:
-  fragmentOf: "This resource is a fragment of:"
+  fragmentOf: Fragment of
   notSource: This dataset is not a source of the parent dataset yet.
   addSource: Add to the sources
   addedToSources: The dataset was added to the sources of the parent dataset.
@@ -49,7 +47,7 @@ import { mdiPlus, mdiPuzzle } from '@mdi/js'
 
 const { partOf, fragment } = defineProps<{
   partOf: { type: 'dataset' | 'application', id: string },
-  // the dataset fragment whose page shows the banner, to tell whether it is a source of its virtual parent
+  // the dataset fragment whose page shows this item, to tell whether it is a source of its virtual parent
   fragment?: { id: string, status?: string }
 }>()
 const { t } = useI18n()
