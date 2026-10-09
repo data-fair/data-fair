@@ -93,7 +93,8 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await metadata.locator('.v-input').filter({ hasText: 'Service référent' }).getByRole('button', { name: "Afficher l'aide" }).click()
+    // the help button sits next to the field, in the help-tooltip wrapper
+    await metadata.locator('.v-input').filter({ hasText: 'Service référent' }).locator('xpath=..').getByRole('button', { name: "Afficher l'aide" }).click()
     await expect(page.locator('.v-overlay .v-alert')).toContainText('Service de la Ville qui répond aux questions sur ce jeu.')
   })
 

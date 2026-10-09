@@ -103,20 +103,20 @@
             clearable
           />
 
-          <v-text-field
+          <help-tooltip
             v-if="inTab('origin')"
-            v-model="dataset.origin"
-            :disabled="!can('writeDescription')"
-            :label="t('origin')"
-            :base-color="fieldColor('origin')"
-            :color="fieldColor('origin')"
-            class="mb-4"
-            clearable
+            :text="t('originHelp')"
           >
-            <template #append>
-              <help-tooltip :text="t('originHelp')" />
-            </template>
-          </v-text-field>
+            <v-text-field
+              v-model="dataset.origin"
+              :disabled="!can('writeDescription')"
+              :label="t('origin')"
+              :base-color="fieldColor('origin')"
+              :color="fieldColor('origin')"
+              class="mb-4"
+              clearable
+            />
+          </help-tooltip>
 
           <v-text-field
             v-if="inTab('image')"
@@ -169,23 +169,23 @@
             clearable
           />
 
-          <v-date-input
+          <help-tooltip
             v-if="inTab('modified') && datasetsMetadata?.modified?.active"
-            :model-value="dataset.modified ? dayjs(dataset.modified).toDate() : null"
-            :label="datasetsMetadata.modified.title || t('modified')"
-            :disabled="!can('writeDescription')"
-            :base-color="fieldColor('modified')"
-            :color="fieldColor('modified')"
-            prepend-icon=""
-            class="mb-4"
-            clearable
-            @update:model-value="v => { dataset.modified = v ? dayjs(v).format('YYYY-MM-DD') : null }"
-            @click:clear="dataset.modified = null"
+            :text="t('modifiedHelp')"
           >
-            <template #append>
-              <help-tooltip :text="t('modifiedHelp')" />
-            </template>
-          </v-date-input>
+            <v-date-input
+              :model-value="dataset.modified ? dayjs(dataset.modified).toDate() : null"
+              :label="datasetsMetadata.modified.title || t('modified')"
+              :disabled="!can('writeDescription')"
+              :base-color="fieldColor('modified')"
+              :color="fieldColor('modified')"
+              prepend-icon=""
+              class="mb-4"
+              clearable
+              @update:model-value="v => { dataset.modified = v ? dayjs(v).format('YYYY-MM-DD') : null }"
+              @click:clear="dataset.modified = null"
+            />
+          </help-tooltip>
 
           <v-select
             v-if="inTab('topics') && topicsFetch.data.value?.length"
@@ -225,21 +225,18 @@
             v-if="inTab('searchTerms') && datasetsMetadata?.searchTerms?.active !== false"
             class="d-flex align-start gap-1 mb-4"
           >
-            <v-textarea
-              v-model="dataset.searchTerms"
-              :disabled="!can('writeDescription')"
-              :label="datasetsMetadata?.searchTerms?.title || t('searchTerms')"
-              :base-color="fieldColor('searchTerms')"
-              :color="fieldColor('searchTerms')"
-              :counter="1000"
-              :rules="[(val: string) => !val || val.length <= 1000]"
-              rows="1"
-              class="flex-grow-1"
-            >
-              <template #append>
-                <help-tooltip :text="t('searchTermsHelp')" />
-              </template>
-            </v-textarea>
+            <help-tooltip :text="t('searchTermsHelp')">
+              <v-textarea
+                v-model="dataset.searchTerms"
+                :disabled="!can('writeDescription')"
+                :label="datasetsMetadata?.searchTerms?.title || t('searchTerms')"
+                :base-color="fieldColor('searchTerms')"
+                :color="fieldColor('searchTerms')"
+                :counter="1000"
+                :rules="[(val: string) => !val || val.length <= 1000]"
+                rows="1"
+              />
+            </help-tooltip>
             <df-agent-chat-action
               v-if="can('writeDescription')"
               action-id="suggest-search-terms"
@@ -251,54 +248,51 @@
           </div>
 
           <!-- Related datasets -->
-          <v-autocomplete
+          <help-tooltip
             v-if="inTab('relatedDatasets') && (dataset.finalizedAt || dataset.isMetaOnly)"
-            v-model:search="relatedDatasetsSearch"
-            :model-value="dataset.relatedDatasets ?? []"
-            :disabled="!can('writeDescription')"
-            :label="t('relatedDatasets')"
-            :items="relatedDatasetsItems"
-            :loading="relatedDatasetsFetch.loading.value"
-            :base-color="fieldColor('relatedDatasets')"
-            :color="fieldColor('relatedDatasets')"
-            item-title="title"
-            item-value="id"
-            class="mb-4"
-            multiple
-            no-filter
-            chips
-            closable-chips
-            clearable
-            return-object
-            @update:model-value="v => { dataset.relatedDatasets = v.map((d: any) => ({ id: d.id, title: d.title })) }"
+            :text="t('seeAlsoDescription')"
           >
-            <template #append>
-              <help-tooltip :text="t('seeAlsoDescription')" />
-            </template>
-          </v-autocomplete>
+            <v-autocomplete
+              v-model:search="relatedDatasetsSearch"
+              :model-value="dataset.relatedDatasets ?? []"
+              :disabled="!can('writeDescription')"
+              :label="t('relatedDatasets')"
+              :items="relatedDatasetsItems"
+              :loading="relatedDatasetsFetch.loading.value"
+              :base-color="fieldColor('relatedDatasets')"
+              :color="fieldColor('relatedDatasets')"
+              item-title="title"
+              item-value="id"
+              class="mb-4"
+              multiple
+              no-filter
+              chips
+              closable-chips
+              clearable
+              return-object
+              @update:model-value="v => { dataset.relatedDatasets = v.map((d: any) => ({ id: d.id, title: d.title })) }"
+            />
+          </help-tooltip>
         </template>
 
         <template v-if="!dataset.partOf">
           <template v-if="datasetsMetadata?.custom?.length">
-            <v-text-field
+            <help-tooltip
               v-for="cm of datasetsMetadata.custom.filter((c: any) => !props.group || customGroup(datasetsMetadata, c.key) === props.group)"
               :key="cm.key"
-              :model-value="dataset.customMetadata?.[cm.key]"
-              :disabled="!can('writeDescription')"
-              :label="cm.title"
-              :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
-              :color="isCustomModified(cm.key) ? 'accent' : undefined"
-              class="mb-4"
-              clearable
-              @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+              :text="cm.description"
             >
-              <template
-                v-if="cm.description"
-                #append
-              >
-                <help-tooltip :text="cm.description" />
-              </template>
-            </v-text-field>
+              <v-text-field
+                :model-value="dataset.customMetadata?.[cm.key]"
+                :disabled="!can('writeDescription')"
+                :label="cm.title"
+                :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
+                :color="isCustomModified(cm.key) ? 'accent' : undefined"
+                class="mb-4"
+                clearable
+                @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+              />
+            </help-tooltip>
           </template>
         </template>
       </v-defaults-provider>
