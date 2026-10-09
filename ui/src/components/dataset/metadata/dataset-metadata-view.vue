@@ -123,16 +123,24 @@
               <div>{{ t(`frequencyItems.${dataset.frequency}`) }}</div>
             </v-list-item>
 
-            <template v-if="datasetsMetadata?.custom?.length">
+            <template v-if="customItems.length">
               <v-list-item
-                v-for="cm of datasetsMetadata.custom.filter((c: any) => dataset?.customMetadata?.[c.key])"
+                v-for="{ cm, value } of customItems"
                 :key="cm.key"
                 :prepend-icon="mdiTag"
               >
                 <div class="text-body-small text-medium-emphasis">
                   {{ cm.title }}
                 </div>
-                <div>{{ dataset?.customMetadata?.[cm.key] }}</div>
+                <a
+                  v-if="cm.type === 'link'"
+                  :href="value.url"
+                  target="_blank"
+                  rel="noopener"
+                >{{ value.title || value.url }}</a>
+                <div v-else>
+                  {{ formatCustomMetadata(value) }}
+                </div>
               </v-list-item>
             </template>
           </v-list>
@@ -237,10 +245,17 @@ import {
   mdiUpdate
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
+import { formatCustomMetadata, type CustomMetadataDefinition } from '#api/types'
+import { fitsDefinition } from '~/utils/custom-metadata'
 
 const { dataset, can, datasetsMetadataFetch } = useDatasetStore()
 if (!datasetsMetadataFetch.initialized.value) datasetsMetadataFetch.refresh()
 const datasetsMetadata = datasetsMetadataFetch.data
+
+// values entered under an older shape of their definition are not shown
+const customItems = computed(() => ((datasetsMetadata.value?.custom ?? []) as CustomMetadataDefinition[])
+  .map(cm => ({ cm, value: dataset.value?.customMetadata?.[cm.key!] as any }))
+  .filter(({ cm, value }) => fitsDefinition(cm, value)))
 
 const { t, locale } = useI18n()
 

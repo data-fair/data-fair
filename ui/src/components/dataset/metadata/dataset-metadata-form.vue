@@ -282,15 +282,12 @@
               :key="cm.key"
               :text="cm.description"
             >
-              <v-text-field
+              <custom-metadata-field
+                :definition="cm"
                 :model-value="dataset.customMetadata?.[cm.key]"
                 :disabled="!can('writeDescription')"
-                :label="cm.title"
-                :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
-                :color="isCustomModified(cm.key) ? 'accent' : undefined"
-                class="mb-4"
-                clearable
-                @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+                :modified="isCustomModified(cm.key)"
+                @update:model-value="(v: unknown) => setCustomMetadata(cm.key, v)"
               />
             </help-tooltip>
           </template>
@@ -393,6 +390,7 @@ import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import equal from 'fast-deep-equal'
 import { fieldGroup, customGroup } from '~/utils/metadata-groups'
+import { isCustomMetadataEmpty } from '#api/types'
 const dataset = defineModel<any>({ required: true })
 
 const { t, locale } = useI18n()
@@ -425,7 +423,7 @@ const fieldColor = (field: string): string | undefined => {
 
 const isCustomModified = (key: string): boolean => {
   if (!props.serverData) return false
-  return dataset.value?.customMetadata?.[key] !== props.serverData?.customMetadata?.[key]
+  return !equal(dataset.value?.customMetadata?.[key], props.serverData?.customMetadata?.[key])
 }
 
 // --- Frequencies ---
@@ -468,8 +466,9 @@ const setTemporalDates = (dates: Date[]) => {
 
 const setCustomMetadata = (key: string, value: any) => {
   if (!dataset.value.customMetadata) dataset.value.customMetadata = {}
-  if (value) dataset.value.customMetadata[key] = value
-  else delete dataset.value.customMetadata[key]
+  // an emptied value (blank text, no chip, link without url) removes the key, 0 stays
+  if (isCustomMetadataEmpty(value)) delete dataset.value.customMetadata[key]
+  else dataset.value.customMetadata[key] = value
 }
 
 // --- AI summarize ---

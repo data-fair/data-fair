@@ -64,6 +64,8 @@
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
     "@data-fair/lib-vuetify-events": "^0.3.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "tinycolor2": "^1.6.0"
   }
 }
