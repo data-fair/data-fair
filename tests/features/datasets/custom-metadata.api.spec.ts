@@ -74,8 +74,10 @@ test.describe('typed custom metadata', () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     await assert.rejects(testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { effectif: 1.5 } })), { status: 400 })
     const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data
-    await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { service: { code: 'XXX' } } }), { status: 400 })
+    await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { service: { code: 'XXX' } } }), (err: any) => err.status === 400 && err.data.includes('Service : valeur absente de la liste'))
     await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { contact: { title: 'no url' } } }), { status: 400 })
+    await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { contact: { url: 'a.fr' } } }), (err: any) => err.status === 400 && err.data.includes('Contact : adresse web attendue'))
+    await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { effectif: 1.5 } }), (err: any) => err.status === 400 && err.data.includes('Effectif : nombre entier attendu'))
     await assert.rejects(testUser1.put(`/api/v1/datasets/${ds.id}`, { ...restDataset(), customMetadata: { effectif: 1.5 } }), { status: 400 })
   })
 
