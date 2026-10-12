@@ -74,8 +74,8 @@
             color="accent"
             variant="flat"
             :disabled="!topicsValid"
-            :loading="topicsEdit.save.loading.value"
-            @click="topicsEdit.save.execute()"
+            :loading="topicsEdit.save.loading.value || checkingRisks"
+            @click="saveWithConfirm(topicsEdit, topicsRisks)"
           >
             {{ t('save') }}
           </v-btn>
@@ -115,8 +115,8 @@
             color="accent"
             variant="flat"
             :disabled="!qualityValid"
-            :loading="qualityEdit.save.loading.value"
-            @click="qualityEdit.save.execute()"
+            :loading="qualityEdit.save.loading.value || checkingRisks"
+            @click="saveWithConfirm(qualityEdit, customMetadataRisks)"
           >
             {{ t('save') }}
           </v-btn>
@@ -291,6 +291,55 @@
       <!-- Table of contents -->
       <df-toc :sections="tocSections" />
     </df-navigation-right>
+
+    <!-- a save that removes values from datasets or applications asks for confirmation first -->
+    <v-dialog
+      :model-value="!!confirmation"
+      max-width="600"
+      @update:model-value="confirmation = null"
+    >
+      <v-card
+        v-if="confirmation"
+        :title="t('confirmSaveTitle')"
+      >
+        <v-card-text>
+          <v-alert
+            type="warning"
+            variant="outlined"
+            :title="t('risksTitle')"
+          >
+            <p class="mb-2">
+              {{ t('risksText') }}
+            </p>
+            <ul class="pl-6">
+              <li
+                v-for="warning of confirmation.warnings"
+                :key="warning"
+              >
+                {{ warning }}
+              </li>
+            </ul>
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="confirmation = null"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="flat"
+            :loading="confirmation.edit.save.loading.value"
+            @click="confirmSave()"
+          >
+            {{ t('save') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -312,6 +361,15 @@ fr:
   privateVocabWarning: Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
   agentChatToggle: Activer l'assistant IA
   compatODS: Activer la compatibilité ODS
+  confirmSaveTitle: Confirmer l'enregistrement
+  datasetsCount: "{n} jeu de données | {n} jeu de données | {n} jeux de données"
+  applicationsCount: "{n} visualisation | {n} visualisation | {n} visualisations"
+  and: " et "
+  risksTitle: Des valeurs vont être retirées
+  risksText: "Ces modifications s'appliquent aussi au contenu existant et ne pourront pas être annulées :"
+  customDeleted: "Métadonnée « {title} » supprimée : elle sera retirée de {usage}."
+  customTypeChanged: "Métadonnée « {title} » changée de type : ses valeurs seront vidées dans {usage}."
+  topicDeleted: "Thématique « {title} » supprimée : elle sera retirée de {usage}."
   sections:
     info:
       title: Informations de contact
@@ -358,6 +416,15 @@ en:
   privateVocabWarning: Warning, if you delete a concept referenced in datasets you may cause malfunctions.
   agentChatToggle: Enable AI assistant
   compatODS: Enable ODS compatibility
+  confirmSaveTitle: Confirm the save
+  datasetsCount: "{n} dataset | {n} dataset | {n} datasets"
+  applicationsCount: "{n} application | {n} application | {n} applications"
+  and: " and "
+  risksTitle: Values will be removed
+  risksText: "These changes also apply to the existing content and cannot be undone:"
+  customDeleted: "Metadata \"{title}\" deleted: it will be removed from {usage}."
+  customTypeChanged: "Metadata \"{title}\" type changed: its values will be emptied in {usage}."
+  topicDeleted: "Topic \"{title}\" deleted: it will be removed from {usage}."
   sections:
     info:
       title: Contact information
@@ -490,6 +557,69 @@ const anyDirty = computed(() =>
 )
 
 const qualityTab = ref('datasetsMetadata')
+
+// Saves that would remove values from datasets or applications ask for confirmation first
+type SubEdit = typeof topicsEdit
+const checkingRisks = ref(false)
+const confirmation = ref<{ warnings: string[], edit: SubEdit } | null>(null)
+
+// topics and custom metadata are org-level settings, the API propagates them to every department
+const fetchUsage = async (resource: 'datasets' | 'applications', facet: string) => {
+  const owner = `${settingsAccount.value.type}:${settingsAccount.value.id}`
+  const res = await $fetch<{ facets: Record<string, { value: any, count: number }[]> }>(`/${resource}`, { query: { size: 0, facets: facet, owner } })
+  return res.facets[facet] ?? []
+}
+const usageText = (datasets = 0, applications = 0) => [
+  datasets && t('datasetsCount', { n: datasets }, datasets),
+  applications && t('applicationsCount', { n: applications }, applications)
+].filter(Boolean).join(t('and'))
+
+const customMetadataRisks = async () => {
+  const newCustom = settings.value?.datasetsMetadata?.custom ?? []
+  const changes = (settingsEditFetch.serverData.value?.datasetsMetadata?.custom ?? []).flatMap(oldMeta => {
+    const newMeta = newCustom.find(c => c.key === oldMeta.key)
+    if (!newMeta) return [{ meta: oldMeta, message: 'customDeleted' }]
+    // same rule as the API: a new type or multiple flag empties the stored values
+    if ((newMeta.type ?? 'string') !== (oldMeta.type ?? 'string') || !!newMeta.multiple !== !!oldMeta.multiple) return [{ meta: oldMeta, message: 'customTypeChanged' }]
+    return []
+  })
+  if (!changes.length) return []
+  const usage = await fetchUsage('datasets', 'customMetadata')
+  return changes.flatMap(({ meta, message }) => {
+    const count = usage.find(u => u.value === meta.key)?.count
+    return count ? [t(message, { title: meta.title, usage: usageText(count) })] : []
+  })
+}
+
+const topicsRisks = async () => {
+  const removed = (settingsEditFetch.serverData.value?.topics ?? []).filter(o => !settings.value?.topics?.some(n => n.id === o.id))
+  if (!removed.length) return []
+  const [datasetsUsage, applicationsUsage] = await Promise.all([
+    fetchUsage('datasets', 'topics'),
+    $uiConfig.disableApplications ? [] : fetchUsage('applications', 'topics')
+  ])
+  return removed.flatMap(topic => {
+    const count = (usage: { value: any, count: number }[]) => usage.find(u => u.value?.id === topic.id)?.count
+    const text = usageText(count(datasetsUsage), count(applicationsUsage))
+    return text ? [t('topicDeleted', { title: topic.title, usage: text })] : []
+  })
+}
+
+async function saveWithConfirm (edit: SubEdit, risks: () => Promise<string[]>) {
+  checkingRisks.value = true
+  try {
+    const warnings = await risks()
+    if (warnings.length) confirmation.value = { warnings, edit }
+    else await edit.save.execute()
+  } finally {
+    checkingRisks.value = false
+  }
+}
+
+async function confirmSave () {
+  await confirmation.value!.edit.save.execute()
+  confirmation.value = null
+}
 
 // Validation state from child components
 const topicsValid = ref(true)

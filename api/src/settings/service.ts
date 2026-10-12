@@ -207,8 +207,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
   if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
-    // clean up the metadata off datasets when its definition was removed from the settings
-    if (!newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
+    // clean up the metadata off datasets when its definition was removed, or its values changed shape
+    const newMeta = newDatasetsMetadata.custom?.find(nc => nc.key === oldMeta.key)
+    if (!newMeta || (newMeta.type ?? 'string') !== (oldMeta.type ?? 'string') || !!newMeta.multiple !== !!oldMeta.multiple) {
       const customMetadataFilter = { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } }
       // stamp BEFORE the $unset: the unset removes the very key this filter's $exists checks,
       // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)

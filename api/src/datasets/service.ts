@@ -64,7 +64,8 @@ const filterFields = {
 const facetFields = {
   ...filterFields,
   topics: 'topics',
-  conformsTo: 'conformsTo'
+  conformsTo: 'conformsTo',
+  customMetadata: 'customMetadata'
 }
 const sumsFields = { count: 'count' }
 const nullFacetFields = ['publicationSites']
@@ -156,6 +157,14 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
 
   const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters, textFilter)
   if (statusBreachOr) (query.$and ||= []).push(statusBreachOr)
+  // customMetadata=a,b keeps the datasets where any of these custom metadata holds a value
+  const facetFilters: Record<string, any> = {}
+  if (reqQuery.customMetadata) {
+    const keys = reqQuery.customMetadata.split(',')
+    if (keys.some(k => !/^[a-z0-9-]+$/.test(k))) throw httpError(400, 'invalid customMetadata filter')
+    facetFilters.customMetadata = { $or: keys.map(k => ({ [`customMetadata.${k}`]: { $exists: true } })) }
+    ;(query.$and ||= []).push(facetFilters.customMetadata)
+  }
   const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q, datasetsTextSearch.sortSpec())
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
@@ -193,7 +202,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   })
   // custom-<key> facets the values of a custom metadata, used as input suggestions
   const customFacetFields = Object.fromEntries((reqQuery.facets?.split(',') ?? []).filter((f: string) => /^custom-[a-z0-9-]+$/.test(f)).map((f: string) => [f, `customMetadata.${f.slice(7)}`]))
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', { ...facetFields, ...customFacetFields }, filterFields, nullFacetFields, extraFilters, textFilter)).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', { ...facetFields, ...customFacetFields }, filterFields, nullFacetFields, extraFilters, textFilter, facetFilters)).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })

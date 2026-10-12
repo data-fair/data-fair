@@ -338,7 +338,8 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
  *
  * @returns
  */
-export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[], textFilter?: any) => {
+// facetFilters: filters bound to a facet name, applied everywhere except on their own facet
+export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[], textFilter?: any, facetFilters: Record<string, any> = {}) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
   const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters, textFilter)
@@ -354,6 +355,9 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
   }
   if (reqQuery.owner && !fields.includes('owner')) {
     pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
+  }
+  for (const [name, filter] of Object.entries(facetFilters)) {
+    if (!fields.includes(name)) pipeline.push({ $match: filter })
   }
   if (!fields.includes('visibility')) {
     const visibilityFilters = visibility.filters(reqQuery)
@@ -372,6 +376,9 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
       }
       if (reqQuery.owner && fields.includes('owner') && f !== 'owner') {
         facet.push({ $match: { $and: ownerFilters(reqQuery) } })
+      }
+      for (const [name, filter] of Object.entries(facetFilters)) {
+        if (fields.includes(name) && name !== f) facet.push({ $match: filter })
       }
       if (fields.includes('visibility') && f !== 'visibility') {
         const visibilityFilters = visibility.filters(reqQuery)
@@ -408,6 +415,11 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
           }
         })
         facet.push({ $sort: { count: -1 } })
+      } else if (f === 'customMetadata') {
+        // one count per custom metadata: the datasets where it holds a value
+        facet.push({ $project: { keys: { $objectToArray: { $cond: [{ $eq: [{ $type: '$customMetadata' }, 'object'] }, '$customMetadata', {}] } } } })
+        facet.push({ $unwind: '$keys' })
+        facet.push({ $sortByCount: '$keys.k' })
       } else if (f === 'topics') {
         facet.push({
           $unwind: {

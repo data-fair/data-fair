@@ -108,13 +108,13 @@ test.describe('dataset activable metadata fields', () => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
-    await expect(metadata.getByRole('textbox', { name: /Service référent/ })).toBeVisible()
-    await expect(metadata.getByRole('textbox', { name: /Domaine métier/ })).not.toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Service référent/ })).toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Domaine métier/ })).not.toBeVisible()
 
     await metadata.getByRole('tab', { name: 'Gouvernance' }).click()
-    await expect(metadata.getByRole('textbox', { name: /Domaine métier/ })).toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Domaine métier/ })).toBeVisible()
     await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
-    await expect(metadata.getByRole('textbox', { name: /Service référent/ })).not.toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Service référent/ })).not.toBeVisible()
   })
   test('custom metadata inputs follow their type', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
@@ -123,7 +123,7 @@ test.describe('dataset activable metadata fields', () => {
 
     await metadata.locator('.v-select').filter({ hasText: 'Direction' }).click()
     await page.getByRole('option', { name: 'Voirie' }).click()
-    await metadata.getByRole('textbox', { name: /Page de contact - Adresse/ }).fill('https://a.fr')
+    await metadata.getByRole('textbox', { name: /Page de contact - URL/ }).fill('https://a.fr')
     await metadata.getByRole('textbox', { name: /Effectif/ }).fill('12')
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
@@ -137,13 +137,13 @@ test.describe('dataset activable metadata fields', () => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
-    const url = metadata.getByRole('textbox', { name: /Page de contact - Adresse/ })
+    const url = metadata.getByRole('textbox', { name: /Page de contact - URL/ })
     await url.clear()
     await url.pressSequentially('https://b.fr')
     await expect(url).toHaveValue('https://b.fr')
   })
 
-  test('a value entered under another type is not shown and does not block saving', async ({ page, goToWithAuth }) => {
+  test('a type change empties the value and the form still saves', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'stale', schema: [{ key: 'a', type: 'string' }], customMetadata: { ancien: 3 } })).data
     await ax.put('/api/v1/settings/user/test_user1', settings('date'))
@@ -157,7 +157,7 @@ test.describe('dataset activable metadata fields', () => {
       await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
       const saved = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
       expect(saved.title).toBe('stale renamed')
-      expect(saved.customMetadata).toEqual({ ancien: 3 })
+      expect(saved.customMetadata ?? {}).toEqual({})
     } finally {
       await ax.put('/api/v1/settings/user/test_user1', settings())
     }
