@@ -332,7 +332,7 @@
           <v-btn
             color="warning"
             variant="flat"
-            :loading="confirmation.edit.save.loading.value"
+            :loading="confirmation.edit.save.loading"
             @click="confirmSave()"
           >
             {{ t('save') }}
