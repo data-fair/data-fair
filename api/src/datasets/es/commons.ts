@@ -739,7 +739,7 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   if (query.thumbnail) {
     if (!ctx.imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[ctx.imageField.key]) {
-      let imageUrl = res[ctx.imageField.key]
+      let imageUrl = String(res[ctx.imageField.key])
       if (dataset.attachmentsAsImage) {
         imageUrl = imageUrl.replace(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
         imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
@@ -754,14 +754,14 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   if (query.html === 'true' || query.html === 'vuetify') {
     for (const field of ctx.markdownFields) {
       if (res[field.key]) {
-        if (query.html === 'vuetify') res[field.key] = (vuetifyMarked.parse(res[field.key]) as string).trim()
-        else res[field.key] = (defaultMarked.parse(res[field.key]) as string).trim()
+        if (query.html === 'vuetify') res[field.key] = (vuetifyMarked.parse(String(res[field.key])) as string).trim()
+        else res[field.key] = (defaultMarked.parse(String(res[field.key])) as string).trim()
         res[field.key] = sanitizeHtml(res[field.key])
       }
     }
     if (ctx.descriptionFieldKey && !ctx.markdownFields.some((f: any) => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
-      if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = (vuetifyMarked.parse(res[ctx.descriptionFieldKey]) as string).trim()
-      else res[ctx.descriptionFieldKey] = (defaultMarked.parse(res[ctx.descriptionFieldKey]) as string).trim()
+      if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = (vuetifyMarked.parse(String(res[ctx.descriptionFieldKey])) as string).trim()
+      else res[ctx.descriptionFieldKey] = (defaultMarked.parse(String(res[ctx.descriptionFieldKey])) as string).trim()
       res[ctx.descriptionFieldKey] = sanitizeHtml(res[ctx.descriptionFieldKey])
     }
   }
