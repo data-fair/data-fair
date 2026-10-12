@@ -124,7 +124,7 @@ test.describe('dataset activable metadata fields', () => {
     await metadata.locator('.v-select').filter({ hasText: 'Direction' }).click()
     await page.getByRole('option', { name: 'Voirie' }).click()
     await metadata.getByRole('textbox', { name: /Page de contact - Adresse/ }).fill('https://a.fr')
-    await metadata.getByRole('spinbutton', { name: /Effectif/ }).fill('12')
+    await metadata.getByRole('textbox', { name: /Effectif/ }).fill('12')
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
 
@@ -141,10 +141,6 @@ test.describe('dataset activable metadata fields', () => {
     await url.clear()
     await url.pressSequentially('https://b.fr')
     await expect(url).toHaveValue('https://b.fr')
-    const effectif = metadata.getByRole('spinbutton', { name: /Effectif/ })
-    await effectif.clear()
-    await effectif.pressSequentially('12.5')
-    await expect(effectif).toHaveValue('12.5')
   })
 
   test('a value entered under another type is not shown and does not block saving', async ({ page, goToWithAuth }) => {

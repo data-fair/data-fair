@@ -31,14 +31,13 @@
   />
   <div
     v-else-if="definition.type === 'link'"
-    class="d-flex flex-wrap flex-grow-1 column-gap-4"
+    class="d-flex flex-column flex-grow-1"
   >
     <v-text-field
       :model-value="value?.url"
       v-bind="fieldProps"
       :label="`${definition.title} - ${t('url')}`"
       type="url"
-      style="min-width: 14rem"
       @update:model-value="(url: string) => emit('update:modelValue', { url, title: value?.title })"
     />
     <v-text-field
@@ -46,17 +45,16 @@
       v-bind="fieldProps"
       :label="`${definition.title} - ${t('linkTitle')}`"
       :error-messages="[]"
-      style="min-width: 14rem"
       :disabled="disabled || !value?.url"
       @update:model-value="(title: string) => emit('update:modelValue', { url: value?.url, title: title || undefined })"
     />
   </div>
-  <v-text-field
+  <v-number-input
     v-else-if="definition.type === 'integer' || definition.type === 'number'"
-    :model-value="value"
-    type="number"
+    :model-value="value ?? null"
+    :precision="definition.type === 'integer' ? 0 : null"
     v-bind="fieldProps"
-    @update:model-value="(v: any) => emit('update:modelValue', v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v))"
+    @update:model-value="(v: number | null) => emit('update:modelValue', v)"
   />
   <v-combobox
     v-else
