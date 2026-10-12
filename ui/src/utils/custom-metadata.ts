@@ -6,7 +6,7 @@ const ajv = new Ajv({ strict: false })
 addFormats(ajv)
 const validators = new Map<string, ReturnType<typeof ajv.compile>>()
 
-// a value entered under an older shape of its definition is kept but neither shown nor edited
+// a value being typed shows an error until it fits its definition
 export const fitsDefinition = (definition: CustomMetadataDefinition, value: unknown) => {
   if (value == null) return false
   const key = JSON.stringify(definition)

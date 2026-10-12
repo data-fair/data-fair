@@ -218,6 +218,21 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
+    } else if (newMeta.enum?.length && !equal(newMeta.enum, oldMeta.enum)) {
+      // values no longer in the list are removed, a list left empty goes with them
+      for (const path of [`customMetadata.${oldMeta.key}`, `draft.customMetadata.${oldMeta.key}`]) {
+        const ownerFilter = { 'owner.type': owner.type, 'owner.id': owner.id }
+        const staleFilter = { ...ownerFilter, [path]: newMeta.multiple ? { $elemMatch: { $nin: newMeta.enum } } : { $exists: true, $nin: newMeta.enum } }
+        const updatedAt = { [path.startsWith('draft.') ? 'draft.updatedAt' : 'updatedAt']: new Date().toISOString() }
+        // stamp BEFORE the write, as for the removal above
+        if (!path.startsWith('draft.')) await stampHistorizeMany(staleFilter)
+        if (newMeta.multiple) {
+          await mongo.datasets.updateMany(staleFilter, { $pull: { [path]: { $nin: newMeta.enum } }, $set: updatedAt })
+          await mongo.datasets.updateMany({ ...ownerFilter, [path]: { $size: 0 } }, { $unset: { [path]: 1 } })
+        } else {
+          await mongo.datasets.updateMany(staleFilter, { $unset: { [path]: 1 }, $set: updatedAt })
+        }
+      }
     }
   }
 }

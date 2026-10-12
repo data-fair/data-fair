@@ -98,15 +98,27 @@ test.describe('typed custom metadata', () => {
     })
     assert.deepEqual(res.data.customMetadata, { domaines: ['a'], other: 'x' })
   })
-  test('a value removed from the list stays stored, hidden until it fits again', async () => {
+  test('a value removed from the list is removed from the datasets', async () => {
     const defs = (values: string[]) => settingsWith([
       { key: 'service', title: 'Service', enum: values },
-      { key: 'domaines', title: 'Domaines', multiple: true, enum: values }
+      { key: 'domaines', title: 'Domaines', multiple: true, enum: values },
+      { key: 'themes', title: 'Thèmes', multiple: true, enum: values }
     ])
     await testUser1.put(settingsUrl, defs(['Voirie', 'Urbanisme']))
-    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Urbanisme', domaines: ['Voirie', 'Urbanisme'] } }))).data
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Urbanisme', domaines: ['Voirie', 'Urbanisme'], themes: ['Urbanisme'] } }))).data
+    const kept = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Voirie' } }))).data
     await testUser1.put(settingsUrl, defs(['Voirie']))
-    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { service: 'Urbanisme', domaines: ['Voirie', 'Urbanisme'] })
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { domaines: ['Voirie'] })
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${kept.id}`)).data.customMetadata, { service: 'Voirie' })
+  })
+
+  test('a free text metadata turned into a list keeps only the listed values', async () => {
+    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }]))
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Autre' } }))).data
+    const kept = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Voirie' } }))).data
+    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', enum: ['Voirie'] }]))
+    assert.equal((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata?.service, undefined)
+    assert.equal((await testUser1.get(`/api/v1/datasets/${kept.id}`)).data.customMetadata.service, 'Voirie')
   })
 
   test('a definition whose type or multiple flag changed is emptied on the datasets', async () => {
@@ -128,7 +140,7 @@ test.describe('typed custom metadata', () => {
     // like the other facets, its own filter does not narrow its counts
     assert.deepEqual(filtered.data.facets.customMetadata, res.data.facets.customMetadata)
   })
-  test('the spreadsheet export prints the display text of values that fit their definition', async () => {
+  test('the spreadsheet export prints the display text of the values', async () => {
     await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }, ...DEFS.slice(1)]))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Autre', domaines: ['a', 'b'], contact: { url: 'https://a.fr', title: 'A' } } }))).data
     await testUser1.put(settingsUrl, settingsWith(DEFS))

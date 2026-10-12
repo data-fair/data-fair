@@ -94,9 +94,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 const { t } = useI18n()
 const { dayjs } = useLocaleDayjs()
 
-const fits = computed(() => fitsDefinition(props.definition, props.modelValue))
-// only an untouched stale value is hidden: a value being typed stays visible, with an error until it fits
-const value = computed(() => fits.value || props.modified ? props.modelValue as any : undefined)
+const value = computed(() => props.modelValue as any)
 const multiple = computed(() => isCustomMetadataMultiple(props.definition))
 
 // values already entered on the owner's other datasets, fetched once like the keywords
@@ -124,7 +122,7 @@ const fieldProps = computed(() => ({
   baseColor: props.modified ? 'accent' : undefined,
   color: props.modified ? 'accent' : undefined,
   clearable: true,
-  errorMessages: props.modified && props.modelValue != null && !fits.value ? t('invalid') : undefined,
+  errorMessages: props.modified && props.modelValue != null && !fitsDefinition(props.definition, props.modelValue) ? t('invalid') : undefined,
   // the form hides details globally, the error must still show
   hideDetails: 'auto' as const,
   class: 'mb-4'

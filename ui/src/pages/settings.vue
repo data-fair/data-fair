@@ -369,6 +369,7 @@ fr:
   risksText: "Ces modifications s'appliquent aussi au contenu existant et ne pourront pas être annulées :"
   customDeleted: "Métadonnée « {title} » supprimée : elle sera retirée de {usage}."
   customTypeChanged: "Métadonnée « {title} » changée de type : ses valeurs seront vidées dans {usage}."
+  customValueRemoved: "Valeur « {value} » retirée de la liste « {title} » : elle sera retirée de {usage}."
   topicDeleted: "Thématique « {title} » supprimée : elle sera retirée de {usage}."
   sections:
     info:
@@ -424,6 +425,7 @@ en:
   risksText: "These changes also apply to the existing content and cannot be undone:"
   customDeleted: "Metadata \"{title}\" deleted: it will be removed from {usage}."
   customTypeChanged: "Metadata \"{title}\" type changed: its values will be emptied in {usage}."
+  customValueRemoved: "Value \"{value}\" removed from the \"{title}\" list: it will be removed from {usage}."
   topicDeleted: "Topic \"{title}\" deleted: it will be removed from {usage}."
   sections:
     info:
@@ -581,14 +583,21 @@ const customMetadataRisks = async () => {
     if (!newMeta) return [{ meta: oldMeta, message: 'customDeleted' }]
     // same rule as the API: a new type or multiple flag empties the stored values
     if ((newMeta.type ?? 'string') !== (oldMeta.type ?? 'string') || !!newMeta.multiple !== !!oldMeta.multiple) return [{ meta: oldMeta, message: 'customTypeChanged' }]
+    if (newMeta.enum?.length && JSON.stringify(newMeta.enum) !== JSON.stringify(oldMeta.enum)) return [{ meta: newMeta, message: 'customValueRemoved' }]
     return []
   })
   if (!changes.length) return []
   const usage = await fetchUsage('datasets', 'customMetadata')
-  return changes.flatMap(({ meta, message }) => {
-    const count = usage.find(u => u.value === meta.key)?.count
-    return count ? [t(message, { title: meta.title, usage: usageText(count) })] : []
-  })
+  const warnings = await Promise.all(changes.map(async ({ meta, message }) => {
+    if (message !== 'customValueRemoved') {
+      const count = usage.find(u => u.value === meta.key)?.count
+      return count ? [t(message, { title: meta.title, usage: usageText(count) })] : []
+    }
+    // same rule as the API: values no longer in the list are removed
+    const values = await fetchUsage('datasets', `custom-${meta.key}`)
+    return values.filter(v => !meta.enum!.includes(v.value)).map(v => t(message, { value: v.value, title: meta.title, usage: usageText(v.count) }))
+  }))
+  return warnings.flat()
 }
 
 const topicsRisks = async () => {
