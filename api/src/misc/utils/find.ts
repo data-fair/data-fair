@@ -441,6 +441,8 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
             preserveNullAndEmptyArrays: nullFacetFields.includes(f)
           }
         })
+        // a multiple custom metadata holds its values one level down
+        if ((facetFields[f] || f).startsWith('customMetadata.')) facet.push({ $unwind: '$' + facetFields[f] })
         facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
         facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
         facet.push({ $sortByCount: '$' + f })

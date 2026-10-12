@@ -42,6 +42,14 @@ test.describe('typed custom metadata', () => {
     assert.equal(def.enum, undefined)
     assert.equal(def.multiple, undefined)
   })
+  test('a custom-<key> facet lists the values entered, one per item', async () => {
+    await testUser1.put(settingsUrl, settingsWith(DEFS))
+    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a', 'b'] } }))
+    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'] } }))
+    const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'custom-domaines', owner: 'user:test_user1' } })
+    assert.deepEqual(res.data.facets['custom-domaines'], [{ count: 2, value: 'a' }, { count: 1, value: 'b' }])
+  })
+
   test('typed values are stored as sent', async () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data

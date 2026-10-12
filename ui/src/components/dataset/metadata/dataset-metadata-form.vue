@@ -284,6 +284,7 @@
             >
               <custom-metadata-field
                 :definition="cm"
+                :owner="dataset.owner"
                 :model-value="dataset.customMetadata?.[cm.key]"
                 :disabled="!can('writeDescription')"
                 :modified="isCustomModified(cm.key)"
