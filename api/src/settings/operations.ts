@@ -81,8 +81,15 @@ export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJ
     if (!group.key) group.key = nanoid()
   }
   if (datasetsMetadata.custom) {
+    const keys = new Set(datasetsMetadata.custom.map(c => c.key))
     for (const customMedata of datasetsMetadata.custom) {
-      if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
+      if (!customMedata.key) {
+        const base = slug.default(customMedata.title, { lower: true, strict: true })
+        let key = base
+        for (let i = 2; keys.has(key); i++) key = `${base}-${i}`
+        keys.add(key)
+        customMedata.key = key
+      }
       // a value list and several values only make sense for text
       if (customMedata.type && customMedata.type !== 'string') {
         delete customMedata.enum

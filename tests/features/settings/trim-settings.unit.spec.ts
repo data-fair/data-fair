@@ -52,4 +52,10 @@ test.describe('cleanDatasetsMetadata', () => {
     assert.equal(datasetsMetadata.groups[0].key, 'gouv')
     assert.ok(datasetsMetadata.groups[1].key)
   })
+
+  test('gives a duplicated custom metadata a key of its own', () => {
+    const datasetsMetadata: any = { custom: [{ key: 'budget', title: 'Budget' }, { title: 'Budget' }, { title: 'Budget' }] }
+    cleanDatasetsMetadata(datasetsMetadata)
+    assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.key), ['budget', 'budget-2', 'budget-3'])
+  })
 })

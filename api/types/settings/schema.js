@@ -623,6 +623,8 @@ export default {
                 fr: 'Ajouter une métadonnée'
               }
             },
+            // a copy gets its own key, generated from its title on save
+            itemCopy: '{ ...item, key: undefined }',
             itemTitle: 'item.title',
             itemSubtitle: `[item.key && "Clé : " + item.key, ({ string: "Texte", integer: "Nombre entier", number: "Nombre", date: "Date", link: "Lien" })[item.type ?? "string"] + (item.enum?.length ? ", liste de valeurs" : "") + (item.multiple ? ", plusieurs valeurs" : ""), "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
           },
