@@ -31,7 +31,7 @@
   />
   <div
     v-else-if="definition.type === 'link'"
-    class="d-flex flex-column flex-grow-1"
+    class="link-fields d-flex flex-column flex-grow-1"
   >
     <v-text-field
       :model-value="value?.url"
@@ -69,12 +69,12 @@
 
 <i18n lang="yaml">
 fr:
-  url: Adresse
-  linkTitle: Titre du lien
+  url: URL
+  linkTitle: Libellé du lien
   invalid: Valeur invalide pour ce type
 en:
-  url: Address
-  linkTitle: Link title
+  url: URL
+  linkTitle: Link label
   invalid: Invalid value for this type
 </i18n>
 

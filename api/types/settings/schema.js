@@ -660,7 +660,7 @@ export default {
                   { const: 'integer', title: 'Nombre entier' },
                   { const: 'number', title: 'Nombre' },
                   { const: 'date', title: 'Date' },
-                  { const: 'link', title: 'Lien (adresse et titre)' }
+                  { const: 'link', title: 'Lien (URL et libellé)' }
                 ]
               },
               group: metadataGroup(informationsGroup, false, 3),

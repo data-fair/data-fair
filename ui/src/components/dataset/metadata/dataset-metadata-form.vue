@@ -556,5 +556,14 @@ const relatedDatasetsItems = computed(() =>
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 24px;
   }
+  /* a link takes a whole row, url and label side by side on the grid columns */
+  .metadata-grid > :has(> .link-fields) {
+    grid-column: 1 / -1;
+  }
+  .metadata-grid .link-fields {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
 }
 </style>
