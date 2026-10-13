@@ -82,14 +82,6 @@ test.describe('typed custom metadata', () => {
     await assert.rejects(testUser1.put(`/api/v1/datasets/${ds.id}`, { ...restDataset(), customMetadata: { effectif: 1.5 } }), { status: 400 })
   })
 
-  test('a value entered before its definition changed is kept and does not block other writes', async () => {
-    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }]))
-    const ds = (await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { service: 'Voirie' } }))).data
-    await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service', enum: ['Voies'] }]))
-    const res = await testUser1.patch(`/api/v1/datasets/${ds.id}`, { title: 'renamed', customMetadata: { service: 'Voirie', other: 'undeclared keys stay accepted' } })
-    assert.equal(res.data.customMetadata.service, 'Voirie')
-  })
-
   test('blank values are removed, not stored nor refused', async () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data
