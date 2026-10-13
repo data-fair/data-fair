@@ -36,19 +36,21 @@ export const uiScenarios: UiScenario[] = [
   },
   {
     name: 'scroll',
-    description: 'about 2,000 rows of wheel scrolling (200 steps of 400px)',
+    description: 'about 400 rows of wheel scrolling (40 steps of 400px)',
     async run (h, tableUrl) {
       await openTable(h, tableUrl)
       const box = await h.page.locator('.dataset-table').boundingBox()
       if (!box) throw new Error('table not visible')
       await h.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
       const start = await beginSpan(h)
-      for (let i = 0; i < 200; i++) {
+      for (let i = 0; i < 40; i++) {
         await h.page.mouse.wheel(0, 400)
-        await h.page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
-        // wait for a page of lines before scrolling on, so the number of fetches is deterministic
-        if (h.lines.inFlight > 0) await settle(h)
+        // the next page is fetched from an intersection callback, a little after the wheel:
+        // settling after every step keeps the number of fetches deterministic
+        await settle(h)
       }
+      // leave the table, so no hovered cell's buttons depend on timing
+      await h.page.mouse.move(0, 0)
       await settle(h)
       return endSpan(h, start)
     }
@@ -73,7 +75,9 @@ export const uiScenarios: UiScenario[] = [
     description: 'open and close the header menu of the first 10 columns',
     async run (h, tableUrl) {
       await openTable(h, tableUrl)
-      const buttons = h.page.locator('.dataset-table thead th button')
+      // the clickable part of a column header: a <div> inside the <th> menu activator on
+      // older versions, a <button> since the accessibility work; .two-lines skips the actions column
+      const buttons = h.page.locator('.dataset-table thead th .header-wrapper:has(.two-lines)')
       const menu = h.page.locator('.v-overlay--active.v-menu')
       const start = await beginSpan(h)
       for (let i = 0; i < 10; i++) {

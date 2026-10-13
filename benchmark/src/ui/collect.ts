@@ -70,6 +70,11 @@ export async function beginSpan (h: Instrumented, fromNavigation = false): Promi
 
 export async function endSpan (h: Instrumented, start: SpanStart): Promise<RunRecord> {
   const metrics = await getMetrics(h.cdp)
+  // the heap is read after a forced GC (and after the other metrics, which it would inflate):
+  // without it the value mostly says when the last GC happened
+  await h.cdp.send('HeapProfiler.collectGarbage')
+  const { metrics: afterGc } = await h.cdp.send('Performance.getMetrics')
+  const heapUsed = afterGc.find(m => m.name === 'JSHeapUsedSize')?.value ?? 0
   const delta = (name: string) => ((metrics[name] ?? 0) - (start.metrics[name] ?? 0)) * 1000
   const page = await h.page.evaluate(() => {
     const perf = (window as any).__perf as { longTasks: [number, number][], frames: number[] }
@@ -94,6 +99,6 @@ export async function endSpan (h: Instrumented, start: SpanStart): Promise<RunRe
     domNodes: page.domNodes,
     renderedRows: page.renderedRows,
     linesRequests: h.lines.count - start.linesCount,
-    heapMB: (metrics.JSHeapUsedSize ?? 0) / 1024 / 1024
+    heapMB: heapUsed / 1024 / 1024
   }
 }

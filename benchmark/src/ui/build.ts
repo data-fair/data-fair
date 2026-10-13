@@ -20,11 +20,20 @@ const git = (...args: string[]) => execFileSync('git', args, { cwd: repoRoot, en
 // trimmed: git() output loses the file's trailing newline
 export const lockfileHash = (content: string) => createHash('sha256').update(content.trimEnd()).digest('hex')
 
+// build tools are verbose: keep their output, print it only when they fail
+const quietly = (command: string, args: string[], opts: { cwd: string, env?: NodeJS.ProcessEnv }) => {
+  try {
+    execFileSync(command, args, { ...opts, stdio: 'pipe', encoding: 'utf8' })
+  } catch (err: any) {
+    process.stderr.write(`${err.stdout ?? ''}${err.stderr ?? ''}`)
+    throw err
+  }
+}
+
 const viteBuild = (uiDir: string, outDir: string) => {
   console.log(`[ui-table] building ${path.relative(repoRoot, uiDir) || '.'} → ${path.relative(repoRoot, outDir)}`)
-  execFileSync('npx', ['vite', 'build', '--outDir', outDir, '--emptyOutDir', '--logLevel', 'warn'], {
+  quietly('npx', ['vite', 'build', '--outDir', outDir, '--emptyOutDir', '--logLevel', 'warn'], {
     cwd: uiDir,
-    stdio: 'inherit',
     env: { ...process.env, NODE_ENV: 'production' }
   })
   if (!existsSync(path.join(outDir, 'index.html'))) throw new Error(`build produced no index.html in ${outDir}`)
@@ -67,11 +76,11 @@ export async function buildVariant (variant: { kind: 'current' } | { kind: 'ref'
       }
     } else {
       console.log(`[ui-table] ${label}: lockfile differs from the current one, installing its dependencies`)
-      execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: worktree, stdio: 'inherit' })
+      quietly('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: worktree })
     }
     // vite.config.ts bundles api/src/ui-config.ts, which needs the generated (gitignored) api types;
     // --no-cache: the builder's hash cache lives in the (symlinked, shared) node_modules
-    execFileSync('npx', ['df-build-types', './api/', '--no-cache'], { cwd: worktree, stdio: 'inherit' })
+    quietly('npx', ['df-build-types', './api/', '--no-cache'], { cwd: worktree })
     viteBuild(path.join(worktree, 'ui'), dir)
   } catch (err) {
     rmSync(dir, { recursive: true, force: true })
