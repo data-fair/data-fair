@@ -44,6 +44,35 @@
       }
     },
     {
+      "name": "datafair_create_dataset_from_file",
+      "description": "Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (list_account_datasets shows it).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "uri",
+            "description": "Le fichier de données. Son type est déduit de l'extension de son nom (.csv, .tsv, .xlsx, .ods, .geojson, .zip d'un shapefile…). Le champ peut aussi s'appeler `dataset`.\n\nURL of the file to send, from the file store this server is configured for: the server downloads it and names it after the last path segment, extension included.",
+            "x-mcp-file": {
+              "maxSize": 104857600
+            }
+          },
+          "title": {
+            "type": "string",
+            "description": "Short title of the dataset"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "file"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
       "name": "datafair_describe_dataset",
       "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.",
       "inputSchema": {
@@ -71,6 +100,36 @@
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_replace_dataset_file",
+      "description": "Replace the data file of a file dataset with a new file; all its rows are replaced, its metadata, permissions and publications are kept. If the new file removes or changes the type of a column, the update waits as a draft for a person to validate it in the back-office; otherwise it is applied once indexed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+          },
+          "file": {
+            "type": "string",
+            "format": "uri",
+            "description": "Le fichier de données.\n\nURL of the file to send, from the file store this server is configured for: the server downloads it and names it after the last path segment, extension included.",
+            "x-mcp-file": {
+              "maxSize": 104857600
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "file"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -118,6 +177,86 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 100,
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of column keys to sort by, one per element. Prefix a key with - for descending."
+          },
+          "select": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned."
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search across all columns. Prefer filters for structured criteria."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_export_data",
+      "description": "Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and search_data to read rows yourself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+          },
+          "size": {
+            "default": 10000,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
             "description": "Le nombre de résultats à retourner (taille de la pagination)."
           },
           "sort": {
@@ -436,6 +575,48 @@
           "datasetId",
           "metric",
           "fieldKey"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_download_dataset_file",
+      "description": "Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use export_data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_download_dataset_converted_file",
+      "description": "Get the data file of a file dataset in the format data-fair converted it to for indexing: CSV for spreadsheets and text files, GeoJSON for geographic files. Returns a link to the file, not its content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
         ]
       },
       "annotations": {

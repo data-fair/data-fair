@@ -39,13 +39,18 @@ const adminSession: any = {
 }
 
 const datasetReads = ['datafair_aggregate_data', 'datafair_calculate_metric', 'datafair_describe_dataset', 'datafair_get_field_values', 'datafair_search_data']
+const datasetFileReads = ['datafair_download_dataset_file', 'datafair_download_dataset_converted_file', 'datafair_export_data']
+const datasetFileWrites = ['datafair_create_dataset_from_file', 'datafair_replace_dataset_file']
 
-/** The tools each declared profile yields, `includes` applied. */
+/** A file store, as the MCP server is configured once the agents service has one: the upload tools exist only then. */
+const FILES = { urlPrefixes: ['https://files.example.test/agent-files/'] }
+
+/** The tools each declared profile yields with a file store, `includes` applied. */
 const expectedTools: Record<string, string[]> = {
   catalog: [...datasetReads, 'datafair_list_datasets'],
-  read_datasets: [...datasetReads, 'datafair_list_account_datasets'],
-  write_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset'],
-  manage_datasets: [...datasetReads, 'datafair_list_account_datasets', 'datafair_update_dataset', 'datafair_publish_dataset', 'datafair_delete_dataset', 'datafair_get_dataset_permissions', 'datafair_set_dataset_permissions'],
+  read_datasets: [...datasetReads, ...datasetFileReads, 'datafair_list_account_datasets'],
+  write_datasets: [...datasetReads, ...datasetFileReads, ...datasetFileWrites, 'datafair_list_account_datasets', 'datafair_update_dataset'],
+  manage_datasets: [...datasetReads, ...datasetFileReads, ...datasetFileWrites, 'datafair_list_account_datasets', 'datafair_update_dataset', 'datafair_publish_dataset', 'datafair_delete_dataset', 'datafair_get_dataset_permissions', 'datafair_set_dataset_permissions'],
   read_applications: ['datafair_list_account_applications', 'datafair_describe_application'],
   write_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application'],
   manage_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application', 'datafair_publish_application', 'datafair_delete_application']
@@ -81,7 +86,7 @@ test.describe('agent surface of the root document', () => {
   for (const [profile, tools] of Object.entries(expectedTools)) {
     test(`${profile}: loads without a lint error and matches its golden`, async () => {
       const { apiDocs } = await generators()
-      const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: [profile], lint: 'error' })
+      const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: [profile], files: FILES, lint: 'error' })
       assert.deepEqual(toolSet.tools.map(t => t.name).sort(), [...tools].sort())
       // Through JSON: the golden is a file, and an `enum: undefined` left by the generator is not.
       const snapshot = JSON.parse(JSON.stringify(toolSetSnapshot(toolSet)))
@@ -93,7 +98,7 @@ test.describe('agent surface of the root document', () => {
   test('every profile combines with every other: one tool set, no name twice', async () => {
     const { apiDocs } = await generators()
     const doc = apiDocs(PUBLIC_URL)
-    const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), lint: 'error' })
+    const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), files: FILES, lint: 'error' })
     const names = toolSet.tools.map(t => t.name)
     assert.equal(new Set(names).size, names.length)
     assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
@@ -209,6 +214,47 @@ test.describe('agent surface of the root document', () => {
     const profiles = Object.keys(anonymous['x-agent']!.profiles!)
     const [a, b] = await Promise.all([anonymous, admin].map(doc => load(doc, { profiles, lint: 'error' })))
     assert.deepEqual(toolSetSnapshot(a), toolSetSnapshot(b))
+  })
+
+  test('without a file store, the upload tools are not offered and the downloads are', async () => {
+    const { apiDocs } = await generators()
+    const names = (await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['write_datasets'], lint: 'error' })).tools.map(t => t.name)
+    for (const name of datasetFileWrites) assert.ok(!names.includes(name), `${name} would have no file argument`)
+    for (const name of datasetFileReads) assert.ok(names.includes(name), name)
+  })
+
+  test('the upload tools take one required file URL, and replacing is destructive', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['write_datasets'], files: FILES, lint: 'error' })
+    const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
+    const create = tool('datafair_create_dataset_from_file')
+    assert.deepEqual(Object.keys(create.inputSchema.properties), ['file', 'title'])
+    assert.deepEqual(create.inputSchema.required, ['file'])
+    assert.ok(create.inputSchema.properties.file['x-mcp-file'])
+    const replace = tool('datafair_replace_dataset_file')
+    assert.deepEqual(Object.keys(replace.inputSchema.properties), ['datasetId', 'file'])
+    assert.deepEqual(replace.inputSchema.required, ['datasetId', 'file'])
+    assert.equal(replace.annotations.destructiveHint, true)
+  })
+
+  test('the download and export tools return a link without calling the API', async () => {
+    const { apiDocs } = await generators()
+    const noFetch = (async () => { throw new Error('a file tool must not call the API') }) as typeof fetch
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: noFetch, profiles: ['read_datasets'], lint: 'error' })
+    const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
+    const raw = await tool('datafair_download_dataset_file').execute({ datasetId: 'ds1' })
+    assert.deepEqual(raw.resourceLink, { uri: `${PUBLIC_URL}/api/v1/datasets/ds1/raw`, name: 'ds1-raw', mimeType: 'application/octet-stream' })
+    const converted = await tool('datafair_download_dataset_converted_file').execute({ datasetId: 'ds1' })
+    assert.equal(converted.resourceLink!.uri, `${PUBLIC_URL}/api/v1/datasets/ds1/convert`)
+    const exported = await tool('datafair_export_data').execute({ datasetId: 'ds1', query: 'paris' })
+    const url = new URL(exported.resourceLink!.uri)
+    assert.equal(url.pathname, '/data-fair/api/v1/datasets/ds1/lines')
+    assert.equal(url.searchParams.get('format'), 'csv')
+    assert.equal(url.searchParams.get('q'), 'paris')
+    assert.equal(url.searchParams.get('size'), '10000', 'one file holds up to the page size limit by default')
+    assert.equal(exported.resourceLink!.name, 'ds1-lines.csv')
+    assert.equal(exported.resourceLink!.mimeType, 'text/csv')
+    assert.match(tool('datafair_export_data').description, /10,000 rows/)
   })
 
   test('the per-dataset document carries the same annotations, with real column keys', async () => {

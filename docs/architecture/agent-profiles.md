@@ -195,7 +195,9 @@ Specified in its own repository; this document only depends on the result.
 
 Done in step 2, except what needs API work first: the portal-scoped `list_applications` (data-fair
 has no `/catalog/applications` route), `PUT /owner`, application permissions and settings (not in
-the root document yet), and creation tools, whose bodies deserve their own design.
+the root document yet), and creation tools, whose bodies deserve their own design. The first
+creation tool is file-based: `create_dataset_from_file` (`write_datasets`) takes a data file and a
+title; the file tools are described in [agent-integration.md](./agent-integration.md) §11.
 
 ### metrics
 
@@ -276,6 +278,9 @@ there is nothing to keep compatible. A request naming it is refused like any und
 Release order: a consumer must run `@data-fair/openapi-mcp` 0.4.0 or later before data-fair
 publishes the step 2 document — older versions refuse its views (`x-agent` arrays) and its linked
 skills, and drop the whole data-fair service. The `mcp` server moves to `^0.4.0` first.
+
+The file tools (`response.file`, `bodyRequired`) need `@data-fair/openapi-mcp` 0.5.0 in the same
+way: the `mcp` server moves to `^0.5.0` before data-fair publishes them.
 
 1. openapi-mcp: views, body allow-list, vocabulary check. — done
 2. data-fair index and annotations, metrics moved to `read_metrics`. — done

@@ -177,6 +177,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       summary: 'Mettre à jour les données',
       description: "Mettre à jour le fichier de données du jeu de données. La nouvelle version est d'abord chargée en brouillon, puis validée selon le paramètre `draft`.",
       operationId: 'writeData',
+      'x-agent': xAgent.writeData,
       'x-permissionClass': 'write',
       tags: ['Données'],
       parameters: [{

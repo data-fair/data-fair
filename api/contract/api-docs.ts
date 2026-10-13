@@ -99,6 +99,7 @@ const annotateDatasetSchema = (schema: any) => {
 const datasetPostMultipart = {
   type: 'object',
   properties: {
+    // First on purpose: the metadata `attachments` property would otherwise shadow the zip `attachments` part below.
     ...datasetPost.properties.body.properties,
     file: {
       type: 'string',
@@ -282,6 +283,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         post: {
           summary: 'Créer un jeu de données',
           description: 'Créer un nouveau jeu de données.',
+          'x-agent': xAgent.postDataset,
           operationId: 'postDataset',
           tags: ['Jeux de données (JDD)'],
           requestBody: {

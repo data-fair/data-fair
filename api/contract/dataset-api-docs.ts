@@ -1174,6 +1174,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Télécharger',
           description: "Télécharger le jeu de données dans son format d'origine.",
           operationId: 'downloadOriginalData',
+          'x-agent': xAgent.downloadOriginalData,
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
@@ -1192,6 +1193,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Télécharger (format converti)',
           description: 'Télécharger le jeu de données après conversion automatique vers un format standard (CSV typiquement).',
           operationId: 'downloadConvertedData',
+          'x-agent': xAgent.downloadConvertedData,
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {

@@ -811,3 +811,60 @@ permissions) are annotated in the `manage_*` profiles and present for every sess
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
 accepts it. The distance sort is described in the `workflow` skill, not in the parameter.
+
+### File tools
+
+Five tools move files without their bytes passing through the model or the MCP protocol: an
+upload takes a URL the MCP server fetches, a download returns a link the client fetches. The
+mechanics are openapi-mcp's ([`docs/x-agent.md#files`](https://github.com/data-fair/openapi-mcp/blob/main/docs/x-agent.md#files));
+the consumer is the agents service's file store (autonomous agents only).
+
+| Tool | Operation | Profile | Returns |
+| --- | --- | --- | --- |
+| `datafair_create_dataset_from_file` | `POST /datasets` | `write_datasets` | the created dataset |
+| `datafair_replace_dataset_file` | `POST /datasets/{id}` (`writeData`) | `write_datasets` | the dataset, its new file pending |
+| `datafair_download_dataset_file` | `GET /datasets/{id}/raw` | `read_datasets` | a link |
+| `datafair_download_dataset_converted_file` | `GET /datasets/{id}/convert` | `read_datasets` | a link |
+| `datafair_export_data` | `GET /datasets/{id}/lines?format=csv` | `read_datasets` | a link |
+
+- **Uploads take a URL.** A file argument is a `{ type: string, format: uri, x-mcp-file }` input
+  (the keyword of the MCP file-input proposals, [SEP-2631](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2631);
+  ChatGPT's Apps SDK passes files to MCP servers the same way, [`openai/fileParams`](https://developers.openai.com/apps-sdk/reference)).
+  The MCP server fetches it from the agents' file store only (its `FILE_URL_PREFIXES`), never with
+  the caller's credentials, and streams it here with an exact `Content-Length`, which
+  `checkStorage` requires (411 otherwise). The file is typed by its name's extension
+  (`mime.lookup(originalname)`), the URL's last path segment.
+- **No file store, no upload tool.** The multipart body is honestly optional about the file
+  (`initFrom`, editable and virtual datasets are created without one, and a multipart update
+  without a file changes metadata), so both upload views declare `bodyRequired: [file]`. A
+  required file part makes openapi-mcp leave the tool out when no file store is configured,
+  instead of offering a tool that could only send metadata.
+- **Downloads return a link.** `response: { file: true }` tools send no request: they return an
+  MCP `resource_link` ([MCP 2026-07-28, tools](https://modelcontextprotocol.io/specification/latest/server/tools)),
+  which the client fetches with its own credentials. The link is built on the base URL the tools
+  were composed with; `data-fair/mcp` moves it onto the site the call came through, as it does
+  for every request. `/raw` and `/convert` declare `application/octet-stream` (their type depends
+  on the dataset), so their link has no extension: the client types the file from the response.
+  `/lines` declares one media type per `format`, which gives the export its `text/csv` type and
+  its `<id>-lines.csv` name. One export holds at most 10,000 rows (`elasticsearch.maxPageSize`).
+- **Placement** ([agent-profiles.md](./agent-profiles.md) §3-4). Creating and replacing change
+  content: `write`, like their permission classes (`writeData`, dataset creation). Downloads
+  change nothing: `read`. None is in `catalog`, the short end-user set served to every MCP
+  client by default: a link is of use only to a client that keeps files.
+- **Replacing never breaks silently.** `replace_dataset_file` always sends `draft=compatible`: a
+  file whose columns stay compatible is validated automatically; one that removes or retypes a
+  column stays a draft until a person validates it ([dataset-drafts.md](./dataset-drafts.md)).
+  The route's default, `always`, needs `writeDescriptionBreaking`. The tool is
+  `destructiveHint: true`, since every row is replaced, so approval policies gate it.
+- **Document fixes made for these tools only.** The `datasetPost` multipart component now
+  declares `file`, `attachments` (binary) and `body` (JSON text — deliberately without
+  `contentMediaType`, which OpenAPI 3.1 reads as a file part) beside the metadata parts. `/lines`
+  declares its file media types.
+- **Not offered:** `/full` (the converted file plus extension columns) and `/data-files/{filePath}`;
+  added when an agent needs them.
+- **Tests.** `api-docs-agent-surface.unit.spec.ts` loads the goldens with a file store, checks the
+  upload inputs and the link shapes offline; `file-tools.api.spec.ts` drives the tools against the
+  API with a local file server standing in for the store.
+- **Rollout.** Every consumer must run `@data-fair/openapi-mcp` 0.5.0 or later before data-fair
+  serves these annotations: 0.4.0 refuses `response.file` and `bodyRequired` and drops the whole
+  data-fair service.

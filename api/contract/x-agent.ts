@@ -27,6 +27,23 @@ const queryParams: Record<string, AgentParamOverride> = {
   filters: { description: filtersDescription }
 }
 
+/** The row selection search_data and export_data share. */
+const linesSelection: Record<string, AgentParamOverride> = {
+  id: datasetId,
+  q: { name: 'query', description: 'Full-text search across all columns. Prefer filters for structured criteria.' },
+  page: { exclude: true },
+  highlight: { exclude: true },
+  thumbnail: { exclude: true },
+  sampling: { exclude: true },
+  html: { exclude: true },
+  count: { exclude: true },
+  hint: { exclude: true },
+  collapse: { exclude: true },
+  sort: { description: 'Array of column keys to sort by, one per element. Prefix a key with - for descending.' },
+  select: { description: 'Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned.' },
+  ...queryParams
+}
+
 /** The root block of a single dataset's document: names and profiles, no cross-dataset workflow. */
 export const datasetRoot: AgentRoot = {
   namePrefix: 'datafair_',
@@ -119,30 +136,32 @@ export const operations = {
       detailed: true
     }
   },
-  readLines: {
-    profiles: ['catalog', 'read_datasets'],
-    name: 'search_data',
-    description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the "after" value returned as next.',
-    params: {
-      id: datasetId,
-      q: { name: 'query', description: 'Full-text search across all columns. Prefer filters for structured criteria.' },
-      size: { default: 12, maximum: 100 },
-      page: { exclude: true },
-      highlight: { exclude: true },
-      thumbnail: { exclude: true },
-      sampling: { exclude: true },
-      format: { exclude: true },
-      html: { exclude: true },
-      count: { exclude: true },
-      hint: { exclude: true },
-      collapse: { exclude: true },
-      sort: { description: 'Array of column keys to sort by, one per element. Prefix a key with - for descending.' },
-      select: { description: 'Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned.' },
-      ...queryParams
+  readLines: [
+    {
+      profiles: ['catalog', 'read_datasets'],
+      name: 'search_data',
+      description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the "after" value returned as next.',
+      params: {
+        ...linesSelection,
+        size: { default: 12, maximum: 100 },
+        format: { exclude: true }
+      },
+      fixed: { hint: 'true' },
+      response: { rows: '/results', hints: true }
     },
-    fixed: { hint: 'true' },
-    response: { rows: '/results', hints: true }
-  },
+    {
+      profiles: ['read_datasets'],
+      name: 'export_data',
+      description: 'Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and search_data to read rows yourself.',
+      params: {
+        ...linesSelection,
+        after: { exclude: true },
+        size: { default: 10000, maximum: 10000 }
+      },
+      fixed: { format: 'csv' },
+      response: { file: true }
+    }
+  ],
   getValues: {
     profiles: ['catalog', 'read_datasets'],
     name: 'get_field_values',
@@ -194,6 +213,37 @@ export const operations = {
       ...queryParams
     },
     response: { rows: '/metric' }
+  },
+  downloadOriginalData: {
+    profiles: ['read_datasets'],
+    name: 'download_dataset_file',
+    description: 'Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use export_data.',
+    params: { id: datasetId },
+    response: { file: true }
+  },
+  downloadConvertedData: {
+    profiles: ['read_datasets'],
+    name: 'download_dataset_converted_file',
+    description: 'Get the data file of a file dataset in the format data-fair converted it to for indexing: CSV for spreadsheets and text files, GeoJSON for geographic files. Returns a link to the file, not its content.',
+    params: { id: datasetId },
+    response: { file: true }
+  },
+  postDataset: {
+    profiles: ['write_datasets'],
+    name: 'create_dataset_from_file',
+    description: 'Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (list_account_datasets shows it).',
+    bodyFields: ['file', 'title'],
+    bodyRequired: ['file']
+  },
+  writeData: {
+    profiles: ['write_datasets'],
+    name: 'replace_dataset_file',
+    description: 'Replace the data file of a file dataset with a new file; all its rows are replaced, its metadata, permissions and publications are kept. If the new file removes or changes the type of a column, the update waits as a draft for a person to validate it in the back-office; otherwise it is applied once indexed.',
+    params: { id: datasetId },
+    fixed: { draft: 'compatible' },
+    bodyFields: ['file'],
+    bodyRequired: ['file'],
+    annotations: { destructiveHint: true }
   },
   writeDescription: [
     {
