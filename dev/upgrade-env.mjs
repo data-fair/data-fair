@@ -9,7 +9,12 @@ import { readFileSync, appendFileSync } from 'node:fs'
 import { renderUsers } from './render-users.mjs'
 
 const raw = readFileSync('.env', 'utf8')
-const env = Object.fromEntries(raw.split('\n').map(line => line.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map(m => [m[1], m[2]]))
+/** @type {Record<string, string>} */
+const env = {}
+for (const line of raw.split('\n')) {
+  const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+  if (m) env[m[1]] = m[2]
+}
 if (!env.DEV_HOST || !env.NGINX_PORT1) {
   console.error('.env has no DEV_HOST or NGINX_PORT1: run ./dev/init-env.sh')
   process.exit(1)

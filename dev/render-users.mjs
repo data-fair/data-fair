@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
+/** @param {Record<string, string | number>} values */
 export function renderUsers (values) {
   let raw = readFileSync('dev/resources/users.template.json', 'utf8')
   for (const [key, value] of Object.entries(values)) {
@@ -29,7 +30,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     renderUsers(JSON.parse(process.env.RENDER_VALUES ?? '{}'))
   } catch (err) {
-    console.error(err.message)
+    console.error(err instanceof Error ? err.message : err)
     process.exit(1)
   }
 }
