@@ -108,7 +108,9 @@ component. When a change touches it, or what it relies on
    `benchmark/README.md`, "UI table harness").
 2. Give the user the fixture's table URL on the dev stack,
    `/data-fair/embed/dataset/fixtures-table-perf/table`, for a manual look at
-   scrolling, search and menus.
+   scrolling, search and menus. It needs a dev session, since the dataset is private
+   on purpose: never make a dev fixture public, because the test suites count every
+   dataset a user can read.
 
 ### Linting & Type Checking
 

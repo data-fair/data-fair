@@ -989,8 +989,10 @@ async function seedBrouillonErreur () {
   console.log(`${id}: seeded (file-new draft in error, retry will succeed)`)
 }
 
-/** Wide and long dataset for the table's performance (benchmark/src/ui). Public, so
- * its table URL opens without login.
+/** Wide and long dataset for the table's performance (benchmark/src/ui). Private to the
+ * dev_fixtures org: a public dataset would break the test suites, which run against the
+ * same API and count every dataset a user can read. Permissions are reset on every run
+ * (envs seeded while the fixture was public get repaired).
  * The dev config caps every request body at 160KB per dataset and every account at 200KB:
  * the lines go in CSV chunks to a REST dataset, and the dev_fixtures org gets unlimited
  * storage (re-applied on every run: the simulations' clean() wipes all limits).
@@ -1020,7 +1022,7 @@ async function seedTablePerf () {
     }
     console.log(`\n${id}: seeded (REST, ${rows} lines x 50 columns)`)
   }
-  await dfAx.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['list', 'read'] }])
+  await dfAx.put(`/api/v1/datasets/${id}/permissions`, [])
 }
 
 async function main () {
@@ -1080,7 +1082,7 @@ async function main () {
     console.log(`  application:     ${dfBaseURL}/application/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')
-  console.log(`  table perf:      ${dfBaseURL}/embed/dataset/${TABLE_PERF_ID}/table  (public, see benchmark/README.md)`)
+  console.log(`  table perf:      ${dfBaseURL}/embed/dataset/${TABLE_PERF_ID}/table  (see benchmark/README.md)`)
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
   console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
 }

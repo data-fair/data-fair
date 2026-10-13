@@ -50,8 +50,10 @@ requests through, so only the bundle differs. `ui/dist` is never written.
 Prerequisites:
 - the dev stack is up (`bash dev/status.sh`);
 - the `fixtures-table-perf` dataset exists (`npm run dev-fixtures`). It has 50 columns and
-  10,000 rows and is public, so `/data-fair/embed/dataset/fixtures-table-perf/table` opens
-  without login.
+  10,000 rows, and belongs to the `dev_fixtures` org: open
+  `/data-fair/embed/dataset/fixtures-table-perf/table` in your dev session. The harness
+  signs in as the dev user itself. The dataset is not public on purpose: the test suites run
+  against the same API and count every dataset a user can read.
 
     npm run benchmark -- ui-table --base=master                    # all scenarios, ~10 minutes
     npm run benchmark -- ui-table --scenarios=hover,search --runs=3   # targeted, a few minutes
