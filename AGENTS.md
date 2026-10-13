@@ -53,7 +53,7 @@ npm run test-e2e                  # e2e tests only
 npx playwright test path/to/file  # specific file
 ```
 
-The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
+The test suite is very long — when iterating on changes always run only the related test cases. Pushing runs a light gate (type ratchet, unit tests, the `@smoke` set and the api/e2e spec files the push changes); the full suite runs on pull requests and nightly on master. See [Quality gates](docs/architecture/testing.md#quality-gates).
 
 ### Simulations
 

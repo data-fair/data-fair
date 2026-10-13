@@ -114,7 +114,7 @@ test.describe('datasets - upload', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 429)
   })
 
-  test('Upload new dataset in user zone', async () => {
+  test('Upload new dataset in user zone', { tag: '@smoke' }, async () => {
     const ax = testUser1
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
@@ -161,7 +161,7 @@ test.describe('datasets - upload', () => {
     await waitForFinalize(ax, res.data.id)
   })
 
-  test('Upload new dataset in organization zone', async () => {
+  test('Upload new dataset in organization zone', { tag: '@smoke' }, async () => {
     const ax = testUser1Org
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
@@ -258,7 +258,7 @@ test.describe('datasets - upload', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 401)
   })
 
-  test('Upload dataset - full test with webhooks', async () => {
+  test('Upload dataset - full test with webhooks', { tag: '@smoke' }, async () => {
     const ax = testUser3
 
     // Set up mock route to accept webhook POSTs
@@ -377,7 +377,7 @@ test.describe('datasets - upload', () => {
     assert.ok(res.data.store_bytes.consumption < 300)
   })
 
-  test('Upload new dataset and detect types', async () => {
+  test('Upload new dataset and detect types', { tag: '@smoke' }, async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset-types.csv', ax)
     assert.equal(dataset.schema[0].key, 'string1')

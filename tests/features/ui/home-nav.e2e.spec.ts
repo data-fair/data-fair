@@ -3,7 +3,7 @@ import { axiosAuth } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
 test.describe('home dashboard', () => {
-  test('shows account space header', async ({ page, goToWithAuth }) => {
+  test('shows account space header', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user1')
     await expect(page.getByRole('heading', { name: /Test User1/ })).toBeVisible({ timeout: 10000 })
   })
@@ -37,7 +37,7 @@ test.describe('home dashboard', () => {
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 
-  test('unauthenticated home shows login button', async ({ page }) => {
+  test('unauthenticated home shows login button', { tag: '@smoke' }, async ({ page }) => {
     const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
     await page.goto(`${baseUrl}/data-fair/`)
     await expect(page.getByRole('button', { name: /Se connecter/ })).toBeVisible({ timeout: 10000 })
@@ -97,7 +97,7 @@ test.describe('navigation drawer', () => {
     await expect(page.locator('nav').getByText('Administration')).not.toBeVisible()
   })
 
-  test('navigation from drawer to datasets works', async ({ page, goToWithAuth }) => {
+  test('navigation from drawer to datasets works', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user1')
     await page.locator('nav').getByText('Jeux de données').click()
     await page.waitForURL(/datasets/, { timeout: 10000 })

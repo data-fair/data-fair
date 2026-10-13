@@ -7,7 +7,7 @@ test.describe('embed dataset table page', () => {
     await clean()
   })
 
-  test('displays dataset table with data', async ({ page, goToWithAuth }) => {
+  test('displays dataset table with data', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
