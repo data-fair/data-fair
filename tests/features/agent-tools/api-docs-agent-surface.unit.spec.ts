@@ -243,7 +243,7 @@ test.describe('agent surface of the root document', () => {
     const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: noFetch, profiles: ['read_datasets'], lint: 'error' })
     const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
     const raw = await tool('datafair_download_dataset_file').execute({ datasetId: 'ds1' })
-    assert.deepEqual(raw.resourceLink, { uri: `${PUBLIC_URL}/api/v1/datasets/ds1/raw`, name: 'ds1-raw', mimeType: 'application/octet-stream' })
+    assert.deepEqual(raw.resourceLink, { uri: `${PUBLIC_URL}/api/v1/datasets/ds1/raw`, name: 'ds1-raw' })
     const converted = await tool('datafair_download_dataset_converted_file').execute({ datasetId: 'ds1' })
     assert.equal(converted.resourceLink!.uri, `${PUBLIC_URL}/api/v1/datasets/ds1/convert`)
     const exported = await tool('datafair_export_data').execute({ datasetId: 'ds1', query: 'paris' })
