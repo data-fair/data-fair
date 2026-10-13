@@ -80,6 +80,10 @@ jobs:
     - name: Build parquet-writer
       run: npm -w parquet-writer run build
 
+    # the generated .type modules are imported by the API and by the UI build
+    - name: Build types
+      run: npm run build-types
+
     # the API reads ui/dist/index.html at startup (lib-express createSpaMiddleware) and dies
     # without it, even though the pages themselves come from the dev UI
     - name: Build UI
