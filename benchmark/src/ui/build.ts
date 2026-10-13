@@ -2,7 +2,7 @@
 // never to ui/dist (watched by the dev-api nodemon: writing it restarts the API).
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, rmSync, symlinkSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, symlinkSync, mkdirSync, readdirSync, lstatSync, readlinkSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..')
@@ -39,8 +39,50 @@ const viteBuild = (uiDir: string, outDir: string) => {
   if (!existsSync(path.join(outDir, 'index.html'))) throw new Error(`build produced no index.html in ${outDir}`)
 }
 
-// node_modules directories of the workspaces involved in a UI build
-const nodeModulesDirs = ['node_modules', 'ui/node_modules', 'api/node_modules']
+/**
+ * Give a worktree the current install of dependencies without its workspace packages:
+ * a real node_modules where every package is a symlink to the shared install, except the
+ * workspace links (relative links back into the repo, e.g. @data-fair/data-fair-shared ->
+ * ../../shared), which point at the worktree's own directories. Symlinking node_modules as
+ * a whole would build the base ref with the current tree's workspace code.
+ */
+export function linkDependencies (sourceNodeModules: string, worktree: string): void {
+  const target = path.join(worktree, 'node_modules')
+  const linkDir = (sourceDir: string, targetDir: string, depth: number) => {
+    mkdirSync(targetDir, { recursive: true })
+    for (const name of readdirSync(sourceDir)) {
+      const source = path.join(sourceDir, name)
+      const dest = path.join(targetDir, name)
+      if (lstatSync(source).isSymbolicLink()) {
+        const link = readlinkSync(source)
+        // a workspace link: same relative target, resolved inside the worktree
+        if (!path.isAbsolute(link) && path.resolve(sourceDir, link).startsWith(path.resolve(sourceNodeModules, '..') + path.sep) &&
+          !path.resolve(sourceDir, link).startsWith(sourceNodeModules)) {
+          symlinkSync(link, dest)
+          continue
+        }
+      }
+      // scopes are walked one level down so their workspace links can be redirected
+      if (depth === 0 && name.startsWith('@') && lstatSync(source).isDirectory()) linkDir(source, dest, 1)
+      else symlinkSync(source, dest)
+    }
+  }
+  linkDir(sourceNodeModules, target, 0)
+}
+
+/** Run fn, then put the file back as it was (or remove it if it did not exist). */
+export async function withFileRestored (file: string, fn: () => Promise<void> | void): Promise<void> {
+  const saved = existsSync(file) ? readFileSync(file) : undefined
+  try {
+    await fn()
+  } finally {
+    if (saved === undefined) rmSync(file, { force: true })
+    else writeFileSync(file, saved)
+  }
+}
+
+// node_modules directories of workspaces with dependencies of their own (no workspace links inside)
+const workspaceNodeModulesDirs = ['ui/node_modules', 'api/node_modules']
 
 export async function buildVariant (variant: { kind: 'current' } | { kind: 'ref', ref: string }): Promise<{ dir: string, label: string }> {
   mkdirSync(buildsDir, { recursive: true })
@@ -71,7 +113,8 @@ export async function buildVariant (variant: { kind: 'current' } | { kind: 'ref'
       lockfileHash(readFileSync(path.join(repoRoot, 'package-lock.json'), 'utf8'))
     )
     if (strategy === 'symlink') {
-      for (const d of nodeModulesDirs) {
+      linkDependencies(path.join(repoRoot, 'node_modules'), worktree)
+      for (const d of workspaceNodeModulesDirs) {
         if (existsSync(path.join(repoRoot, d))) symlinkSync(path.join(repoRoot, d), path.join(worktree, d), 'dir')
       }
     } else {
@@ -79,8 +122,11 @@ export async function buildVariant (variant: { kind: 'current' } | { kind: 'ref'
       quietly('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: worktree })
     }
     // vite.config.ts bundles api/src/ui-config.ts, which needs the generated (gitignored) api types;
-    // --no-cache: the builder's hash cache lives in the (symlinked, shared) node_modules
-    quietly('npx', ['df-build-types', './api/', '--no-cache'], { cwd: worktree })
+    // --no-cache: the builder's hash cache lives in the shared node_modules, which it still
+    // writes: restore it so the current tree's next build-types does not trust the base's hashes
+    await withFileRestored(path.join(repoRoot, 'node_modules/.cache/@data-fair/lib-types-builder/hashes.json'), () => {
+      quietly('npx', ['df-build-types', './api/', '--no-cache'], { cwd: worktree })
+    })
     viteBuild(path.join(worktree, 'ui'), dir)
   } catch (err) {
     rmSync(dir, { recursive: true, force: true })
