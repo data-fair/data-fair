@@ -225,7 +225,7 @@
 
         <!-- Step: Info -->
         <v-stepper-window-item value="info">
-          <fragment-banner
+          <fragment-info
             v-if="partOf"
             :part-of="partOf"
           />

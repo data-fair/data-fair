@@ -2,6 +2,7 @@ import express from 'express'
 import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.ts'
 import { agentsIndex } from '../../../contract/agents-index.ts'
+import { readAgentSkill } from '../../../contract/agent-skills.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
@@ -26,6 +27,14 @@ router.get('/api-docs.json', (req, res) => {
 router.get('/agents/index.json', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300')
   res.json(agentsIndex(reqPublicBaseUrl(req), config))
+})
+
+// The bodies of the root document's skills, linked from its x-agent.skills; public like the document.
+router.get('/agents/skills/:file', (req, res) => {
+  const body = req.params.file.endsWith('.md') ? readAgentSkill(req.params.file.slice(0, -3)) : undefined
+  if (!body) return res.status(404).send('unknown skill')
+  res.set('Cache-Control', 'public, max-age=300')
+  res.type('text/markdown').send(body)
 })
 
 router.get('/vocabulary', async (req, res) => {

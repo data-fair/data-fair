@@ -174,8 +174,8 @@ const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetBaseApplication = useStringsArraySearchParam('base-application')
 
 const selectFields: Record<string, string> = {
-  datasets: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity',
-  applications: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url'
+  datasets: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf',
+  applications: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url,partOf'
 }
 
 const auditQuery = computed(() => {

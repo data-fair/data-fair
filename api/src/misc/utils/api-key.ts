@@ -53,6 +53,8 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
     if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
       throw httpError(403, 'Cette clé d\'API est expirée.')
     }
+    // a super-admin key (adminMode, impersonating an account or not) is only accepted from inside the infrastructure
+    if (apiKey.adminMode && req) assertReqInternal(req)
     // every branch below (scopeless single-user, adminMode+asAccount, plain user/org key) resolves
     // through this settings-backed apiKey — record its opaque id for integrity `.who` attribution
     // (T7, design §5.1). The resource-scoped `_readApiKey` pseudo-user above never reaches this
@@ -166,8 +168,6 @@ export const middleware = (scopes: string[] | string) => {
     const asAccountStr = req.get('x-account') || req.query.account
     if (typeof reqApiKey === 'string') {
       const sessionState = await readApiKey(reqApiKey, scopes, asAccountStr, req)
-      // only use superadmin api key from inside the infrastructure
-      if (sessionState.user?.adminMode) assertReqInternal(req)
       setReqSession(req, sessionState)
     }
     next()

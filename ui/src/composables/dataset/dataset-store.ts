@@ -58,7 +58,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const taskProgress = ref<TaskProgress>()
   watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
 
-  const jsonSchemaFetch = useFetch<Record<string, unknown>>($apiPath + `/datasets/${id}/schema`, {
+  // /schema needs readSchema; a manageOwnLines-only holder (crowd-sourcing own-lines) only has
+  // readSafeSchema, so fall back to /safe-schema — same shape minus the cardinality/enum data clues,
+  // enough to render the edit forms
+  const jsonSchemaFetch = useFetch<Record<string, unknown>>(() => {
+    const useSafe = !dataset.value?.userPermissions.includes('readSchema')
+    return $apiPath + `/datasets/${id}/${useSafe ? 'safe-schema' : 'schema'}`
+  }, {
     query: () => ({
       draft,
       mimeType: 'application/schema+json',
@@ -126,14 +132,14 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
-  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>[], count: number }>(() => {
+  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics' | 'partOf'>[], count: number }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => ({
       dataset: id,
       size: 100,
-      select: 'title,id,status,description,updatedAt,owner,topics'
+      select: 'title,id,status,description,updatedAt,owner,topics,visibility,partOf'
     })),
     immediate: false,
     watch: false

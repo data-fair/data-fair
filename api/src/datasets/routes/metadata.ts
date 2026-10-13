@@ -12,6 +12,7 @@ import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
+import { safeDescription, safeSchema } from '../operations.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
 import { getAsVisitorContext } from '../../misc/utils/as-visitor.ts'
@@ -152,9 +153,12 @@ export const registerMetadataRoutes = (router: Router) => {
   }))
 
   // retrieve a dataset by its id
-  router.get('/:datasetId', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+  // a readSafeDescription holder (e.g. a crowd-sourcing contributor) gets the metadata without what reflects the data
+  router.get('/:datasetId', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware(['readDescription', 'readSafeDescription'], 'read'), cacheHeaders.noCache, (req, res, next) => {
     const dataset = clone(reqDataset(req))
-    res.status(200).send(clean(req as DfRequest, dataset))
+    const full = can('datasets', dataset, 'readDescription', reqSession(req), permissions.reqBypassPermissions(req))
+    const cleaned = clean(req as DfRequest, dataset)
+    res.status(200).send(full ? cleaned : safeDescription(cleaned))
   })
 
   // fillDescendants is required by prepareQuery when the contextual maxCardinality filter
@@ -164,12 +168,7 @@ export const registerMetadataRoutes = (router: Router) => {
   })
   // alternate read schema route that does not return clues about the data (cardinality and enums)
   router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, async (req, res) => {
-    const schema = clone(reqDataset(req).schema ?? [])
-    for (const p of schema) {
-      delete p['x-cardinality']
-      delete p.enum
-    }
-    await sendSchema(req, res, schema)
+    await sendSchema(req, res, safeSchema(clone(reqDataset(req).schema ?? [])))
   })
 
   // Update a dataset's metadata

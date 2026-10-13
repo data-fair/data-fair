@@ -207,3 +207,28 @@ export const trimDataset = (dataset: Partial<Dataset>) => {
 export const blockingValidationErrors = <E extends { keyword: string, params?: Record<string, any> }>(errors: E[] | null | undefined): E[] => {
   return (errors ?? []).filter(e => e.keyword === 'type' || (e.keyword === 'format' && (e.params?.format === 'date' || e.params?.format === 'date-time')))
 }
+
+/** A schema without the clues about the data (cardinality and enums), as served to readSafeSchema holders. */
+export const safeSchema = (schema: any[]): any[] => schema.map(({ enum: _enum, 'x-cardinality': _cardinality, ...prop }) => prop)
+
+// a whitelist rather than a blocklist: a field later added to datasets, possibly computed from the data
+// (count, bbox, timePeriod, storage...), stays out of the safe description until deliberately listed here
+const safeDescriptionKeys = [
+  'id', 'slug', 'title', 'summary', 'description', 'keywords', 'topics', 'license', 'image', 'owner',
+  'createdAt', 'updatedAt', 'isRest', 'isVirtual', 'isMetaOnly', 'rest', 'primaryKey', 'attachmentsAsImage',
+  'status', 'draftReason', 'partOf', 'public', 'visibility', 'userPermissions', 'href', 'page'
+]
+
+/**
+ * The description served to a readSafeDescription holder: the metadata and the safe schema, without anything
+ * that reflects the data. `safe: true` tells the consumer that the object was purged.
+ */
+export const safeDescription = (dataset: Record<string, any>): Record<string, any> => {
+  const safe: Record<string, any> = {}
+  for (const key of safeDescriptionKeys) {
+    if (key in dataset) safe[key] = dataset[key]
+  }
+  if (dataset.schema) safe.schema = safeSchema(dataset.schema)
+  safe.safe = true
+  return safe
+}

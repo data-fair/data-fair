@@ -1,4 +1,5 @@
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AgentRoot } from '@data-fair/openapi-mcp'
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
@@ -61,7 +62,7 @@ const errorResponses = {
 type RootApiDoc = {
   openapi: string
   info: Record<string, any>
-  'x-agent'?: unknown
+  'x-agent'?: AgentRoot
   servers: { url: string, description?: string }[]
   components: {
     schemas: Record<string, any>
@@ -284,6 +285,40 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         }
       },
+      '/catalog/datasets': {
+        get: {
+          summary: 'Lister les jeux de données du portail',
+          description: "Récupérer la liste des jeux de données publiés sur le portail depuis lequel l'API est appelée. Indisponible depuis le back-office.",
+          operationId: 'listCatalogDatasets',
+          'x-agent': xAgent.listCatalogDatasets,
+          tags: ['Jeux de données (JDD)'],
+          parameters: [
+            utils.qParam,
+            utils.selectParam(Object.keys(dataset.properties)),
+            utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
+            utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
+            utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
+            ...utils.paginationParams
+          ],
+          responses: {
+            200: {
+              description: 'Les jeux de données publiés sur le portail.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      count: { type: 'number', description: 'Nombre total de jeux de données' },
+                      results: { type: 'array', items: { $ref: '#/components/schemas/dataset' } }
+                    }
+                  }
+                }
+              }
+            },
+            ...errorResponses
+          }
+        }
+      },
       '/datasets/{id}': {
         parameters: [datasetIdParam],
         put: {
@@ -328,6 +363,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les applications',
           description: 'Récupérer la liste des applications.',
           operationId: 'listApplications',
+          'x-agent': xAgent.listApplications,
           tags: ['Applications'],
           parameters: [
             utils.qParam,
@@ -396,6 +432,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: "Lire les informations d'une application",
           description: "Récupérer les informations d'une application.",
           operationId: 'getApplication',
+          'x-agent': xAgent.getApplication,
           tags: ['Applications'],
           responses: {
             200: {
@@ -447,6 +484,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Modifier une application',
           description: "Modifier seulement certaines informations d'une application.",
           operationId: 'patchApplication',
+          'x-agent': xAgent.patchApplication,
           tags: ['Applications'],
           requestBody: {
             description: 'Informations à modifier.',
@@ -473,6 +511,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Supprimer une application',
           description: 'Supprimer cette application.',
           operationId: 'deleteApplication',
+          'x-agent': xAgent.deleteApplication,
           tags: ['Applications'],
           responses: {
             204: {

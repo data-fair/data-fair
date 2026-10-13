@@ -102,8 +102,9 @@
       <!-- Visibility + Updated at -->
       <div class="d-flex align-center flex-wrap">
         <resource-visibility
-          v-if="dataset.visibility"
+          v-if="dataset.visibility || dataset.partOf"
           :visibility="dataset.visibility"
+          :part-of="dataset.partOf"
           size="small"
         />
         <capability-chip

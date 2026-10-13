@@ -46,10 +46,9 @@ import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
+const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
-  ownLines: { type: Boolean, default: false },
   extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   roPrimaryKey: { type: Boolean, default: false },
@@ -89,10 +88,6 @@ const editSchema = computed(() => {
   // the dialog can open before the schema is fetched
   if (!jsonSchema) return { type: 'object', properties: {} }
   const schema = v2compat(jsonSchema)
-  if (ownLines) {
-    delete schema.properties._owner
-    delete schema.properties._ownerName
-  }
   Object.keys(schema.properties).forEach(key => {
     if (typeof schema.properties[key].layout === 'string') schema.properties[key].layout = { comp: schema.properties[key].layout }
     if (readonlyCols && readonlyCols.includes(key)) {

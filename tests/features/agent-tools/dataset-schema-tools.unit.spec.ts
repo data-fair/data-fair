@@ -220,6 +220,13 @@ test.describe('diffDataset', () => {
     assert.ok(out.includes('libellés de valeurs'))
   })
 
+  test('reports attachmentsAsImage, edited in the structure section', () => {
+    const server = { schema: makeSchema() }
+    const edited = { ...JSON.parse(JSON.stringify(server)), attachmentsAsImage: true }
+    const out = diffDataset({ structureServer: server, structureEdited: edited })
+    assert.ok(out.includes('**pièces jointes affichées comme images** : non → oui'))
+  })
+
   test('reports a pure reorder, which the column chips alone would not show', () => {
     const server = { schema: makeSchema() }
     const edited = { schema: [server.schema[1], server.schema[0], ...server.schema.slice(2)] }

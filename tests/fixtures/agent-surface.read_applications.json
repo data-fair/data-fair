@@ -1,0 +1,76 @@
+{
+  "profiles": [
+    "read_applications"
+  ],
+  "tools": [
+    {
+      "name": "datafair_list_account_applications",
+      "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Returns id, title, status and last update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Keywords for full-text search."
+          },
+          "dataset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Restrict to the applications using these datasets (ids from list_account_datasets)."
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, status, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "datafair_describe_application",
+      "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    }
+  ],
+  "skills": []
+}

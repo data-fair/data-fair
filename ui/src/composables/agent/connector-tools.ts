@@ -3,6 +3,18 @@ import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $uiConfig, $sitePath } from '~/context'
 import { createAgentTranslator, agentToolError, buildPaginatedQuery } from './utils'
 
+/** The fields of a catalogs service catalog the tools read. */
+interface CatalogSummary {
+  _id: string
+  title?: string
+  plugin: string
+  importsCount?: number
+  importsErrorCount?: number
+  publicationsCount?: number
+  publicationsErrorCount?: number
+  updated?: { date: string }
+}
+
 const messages: Record<string, Record<string, string>> = {
   fr: {
     listProcessings: 'Lister les traitements',
@@ -110,7 +122,7 @@ export function useAgentConnectorTools (locale: Ref<string>) {
 
     useAgentTool({
       name: 'list_catalogs',
-      description: 'List catalogs accessible to the current user with optional text search. Returns id, title, type, and URL.',
+      description: 'List the remote catalogs of the current account with optional text search on their title and description. Returns id, title, plugin (the type of remote catalog), and import and publication counts.',
       annotations: { title: t('listCatalogs'), readOnlyHint: true },
       inputSchema: {
         type: 'object' as const,
@@ -124,13 +136,13 @@ export function useAgentConnectorTools (locale: Ref<string>) {
         try {
           const { query, page, size } = buildPaginatedQuery(params)
 
-          const data = await serviceFetch<{ count: number, results: { _id: string, title?: string, type?: string, url?: string, updatedAt?: string }[] }>(catalogsBase, query)
+          const data = await serviceFetch<{ count: number, results: CatalogSummary[] }>(catalogsBase, query)
 
           const lines = data.results.map((c) => {
             const parts = [`- **${c.title || c._id}** (id: \`${c._id}\`)`,
-              `  Type: ${c.type || '?'}`]
-            if (c.url) parts.push(`  URL: ${c.url}`)
-            if (c.updatedAt) parts.push(`  Updated: ${c.updatedAt}`)
+              `  Plugin: ${c.plugin}`,
+              `  Imports: ${c.importsCount ?? 0}${c.importsErrorCount ? ` (${c.importsErrorCount} in error)` : ''}, publications: ${c.publicationsCount ?? 0}${c.publicationsErrorCount ? ` (${c.publicationsErrorCount} in error)` : ''}`]
+            if (c.updated?.date) parts.push(`  Updated: ${c.updated.date}`)
             return parts.join('\n')
           })
 
@@ -140,14 +152,14 @@ export function useAgentConnectorTools (locale: Ref<string>) {
             ...lines
           ].join('\n')
         } catch (err) {
-          return agentToolError('Catalogs service unavailable', err)
+          return agentToolError('Catalogs request failed', err)
         }
       }
     })
 
     useAgentTool({
       name: 'describe_catalog',
-      description: 'Get detailed metadata for a catalog. Returns title, type, URL, owner, and configuration.',
+      description: 'Get detailed metadata for a catalog. Returns title, plugin (the type of remote catalog), owner, capabilities and description.',
       annotations: { title: t('describeCatalog'), readOnlyHint: true },
       inputSchema: {
         type: 'object' as const,
@@ -165,17 +177,17 @@ export function useAgentConnectorTools (locale: Ref<string>) {
           const meta: string[] = [
             `# ${c.title}`,
             `- **ID:** \`${c._id}\``,
-            `- **Type:** ${c.type || '?'}`,
+            `- **Plugin:** ${c.plugin}`,
             `- **Owner:** ${c.owner?.name || '?'}`
           ]
-          if (c.url) meta.push(`- **URL:** ${c.url}`)
+          if (c.capabilities?.length) meta.push(`- **Capabilities:** ${c.capabilities.join(', ')}`)
           if (c.description) meta.push(`- **Description:** ${c.description.length > 2000 ? c.description.slice(0, 2000) + '…' : c.description}`)
-          if (c.updatedAt) meta.push(`- **Updated:** ${c.updatedAt}`)
-          if (c.createdAt) meta.push(`- **Created:** ${c.createdAt}`)
+          if (c.updated?.date) meta.push(`- **Updated:** ${c.updated.date}`)
+          if (c.created?.date) meta.push(`- **Created:** ${c.created.date}`)
 
           return meta.join('\n')
         } catch (err) {
-          return agentToolError('Catalogs service unavailable', err)
+          return agentToolError('Catalogs request failed', err)
         }
       }
     })

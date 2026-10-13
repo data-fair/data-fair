@@ -38,8 +38,9 @@
       <!-- Visibility + Updated at -->
       <div class="d-flex align-center flex-wrap">
         <resource-visibility
-          v-if="application.visibility"
+          v-if="application.visibility || application.partOf"
           :visibility="application.visibility"
+          :part-of="application.partOf"
           size="small"
         />
         <capability-chip

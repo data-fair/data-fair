@@ -127,6 +127,17 @@ test.describe('settings API', () => {
     assert.equal(updated.customMetadata?.[barKey], 'bar value', 'kept custom metadata should remain')
   })
 
+  test('metadata categories get a key and reject reserved or duplicate keys', async () => {
+    const ax = testUser1Org
+    const settings = (await ax.put('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { groups: [{ title: 'Classement' }] }
+    })).data
+    assert.ok(settings.datasetsMetadata.groups[0].key)
+    for (const groups of [[{ key: 'attachments', title: 'Annexes' }], [{ key: 'abc', title: 'Une' }, { key: 'abc', title: 'Deux' }]]) {
+      await assert.rejects(ax.put('/api/v1/settings/organization/test_org1', { datasetsMetadata: { groups } }), (err: any) => err.status === 400)
+    }
+  })
+
   test('the AI assistant is activated at the organization level only', async () => {
     const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
     testUser4Dep1.setOrg('test_org1', 'dep1')

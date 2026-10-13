@@ -7,7 +7,7 @@
       {{ t('notEditable') }}
     </v-alert>
     <v-alert
-      v-else-if="dataset && !dataset.userPermissions.includes('createLine')"
+      v-else-if="dataset && !canCreate"
       type="error"
     >
       {{ t('noPermission') }}
@@ -21,7 +21,6 @@
       >
         <dataset-edit-line-form
           v-model="line"
-          :own-lines="ownLinesMode"
           :readonly-cols="readonlyCols"
           :extension="extension"
           :loading="saveLine.loading.value"
@@ -67,6 +66,14 @@ const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.para
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const ownLinesMode = computed(() => dataset.value?.rest?.lineOwnership)
+// in ownLinesMode the line is posted on own/{owner}/lines, gated by createOwnLine, not createLine
+const canCreate = computed(() => dataset.value?.userPermissions.includes(ownLinesMode.value ? 'createOwnLine' : 'createLine'))
+// the own/{owner} routes match the full active account, department included
+const linesOwner = computed(() => {
+  const account = session.account.value
+  if (!account) return
+  return `${account.type}:${account.id}` + (account.department ? `:${account.department}` : '')
+})
 const valid = ref(false)
 const sent = ref(false)
 const initialized = ref(false)
@@ -110,10 +117,14 @@ const queryContext = computed(() => {
 
 const readonlyCols = computed(() => queryContext.value && Object.keys(queryContext.value.data))
 
-watch(queryContext, async () => {
+watch([queryContext, linesOwner], async () => {
   if (initialized.value || !queryContext.value) return
+  // in ownLinesMode the lookup goes through own/{owner}/lines: readLines is not part of the
+  // manageOwnLines class, and the user must only ever edit one of their own lines
+  if (ownLinesMode.value && !linesOwner.value) return
   if (Object.keys(queryContext.value.data).length) {
-    const existingLines = await $fetch<{ results: any[] }>(`/datasets/${route.params.id}/lines`, {
+    const linesPath = ownLinesMode.value ? `/datasets/${route.params.id}/own/${linesOwner.value}/lines` : `/datasets/${route.params.id}/lines`
+    const existingLines = await $fetch<{ results: any[] }>(linesPath, {
       query: {
         ...queryContext.value.filters,
         t: new Date().getTime(),
@@ -130,10 +141,11 @@ const form = useTemplateRef('form')
 const saveLine = useAsyncAction(async () => {
   await form.value?.validate()
   if (!valid.value || !restDataset.value || !queryContext.value) return
+  if (ownLinesMode.value && !linesOwner.value) return
   if (ownLinesMode.value) {
     const body = { ...line.value }
     if (existingLine.value) body._id = existingLine.value._id
-    await $fetch(`datasets/${route.params.id}/own/${session.account.value?.type}:${session.account.value?.id}/lines`, { method: 'POST', body })
+    await $fetch(`datasets/${route.params.id}/own/${linesOwner.value}/lines`, { method: 'POST', body })
   } else {
     const formData = new FormData()
     if (file.value) formData.append('attachment', file.value)

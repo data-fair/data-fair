@@ -346,7 +346,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 
 | | |
 |---|---|
-| **Trigger** | Action button next to the search terms field, on the metadata form |
+| **Trigger** | Action button next to the search terms field, on the metadata form (in the « Informations complémentaires » tab unless the owner settings move it) |
 | **Action ID** | `suggest-search-terms` |
 | **Subagent** | `search_terms_writer` (model: `summarizer`) — reads metadata, schema and samples, returns a newline-separated list of hidden search terms (synonyms, acronyms with expansion, everyday wording) |
 | **Pattern** | The lead agent presents the list to the user and asks for approval, then applies it on approval via `set_dataset_metadata` (searchTerms field, one line of terms separated by commas or newlines). Nothing is saved — the user still clicks Enregistrer. |
@@ -378,7 +378,8 @@ currently tell a fragment from a standalone resource through these tools. The "F
 shown on a virtual dataset's page (Structure section) or
 an application's own page (Render section) carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
 `ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
-fragment" action within it.
+fragment" action within it. On a fragment's own page, the Informations section's `agentDesc`
+mentions the link to the parent and, for a dataset fragment, the "Add to the sources" button.
 
 ## 5. Tool Reference
 
@@ -748,20 +749,30 @@ still builds the absolute URLs, and the reported `location.url` uses it.
 ## 11. The API-facing agent surface
 
 Independently of the browser tools above, the served OpenAPI document carries `x-agent`
-annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into the `explore`
-tools — the same six read tools as `agent-tools/`, generated from the document instead of
-hand-written. They are consumed by the stack's MCP server (`data-fair/mcp`), by coding agents
-and by the agents service's autonomous runs; the browser assistant does not use them yet.
+annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into tools, grouped by
+the profiles of [agent-profiles.md](./agent-profiles.md): `catalog` (what a portal publishes),
+and `read`/`write`/`manage` for datasets and applications. They are consumed by the stack's MCP
+server (`data-fair/mcp`), by coding agents and by the agents service's autonomous runs; the
+browser assistant does not use them yet.
 
 `GET /api/v1/agents/index.json` lists the deployment's service-level documents
 (`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
 configured, at the site origin and its conventional mount path. A consumer is configured with
-that one URL.
+that one URL. The metrics service (`privateMetricsUrl`) contributes `metrics_aggregate_requests`
+and a `metrics-review` skill, so an agent can review the audience of the active account's
+datasets and applications.
+
+How tools are grouped into profiles across the stack — the `read`/`write`/`manage` grid per
+resource family, the `catalog` profile, and the stability rules agent configurations rely on —
+is described in [agent-profiles.md](./agent-profiles.md).
 
 The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
-loads the generator with `lint: 'error'` and diffs `tests/fixtures/agent-surface.explore.json`.
-Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is what the reviewer reads.
-Admin-only routes carry no annotation, so the surface does not vary with the session.
+loads the generator with `lint: 'error'` and diffs one golden per profile
+(`tests/fixtures/agent-surface.<profile>.json`); `agents-composition.unit.spec.ts` composes the
+index with the document. Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is
+what the reviewer reads. Superadmin routes (only documented in admin mode) carry no annotation,
+so the surface does not vary with the session; routes of the owner's admin class (deletion,
+permissions) are annotated in the `manage_*` profiles and present for every session.
 
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and

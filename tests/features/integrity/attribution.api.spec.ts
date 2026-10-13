@@ -307,9 +307,10 @@ test('an adminMode+asAccount API key write (the processings path) attaches who.a
     apiKeys: [{ title: 'processing-admin-key', scopes: ['datasets'], adminMode: true, asAccount: true }]
   })
   const key = res.data.apiKeys[0]
-  // only usable from inside the infrastructure (assertReqInternal) — the dev/test harness satisfies
-  // this the same way tests/features/auth/api-keys.api.spec.ts's own adminMode/asAccount test does
+  // only usable from inside the infrastructure (assertReqInternal): call the API directly, not through
+  // the reverse proxy, the same way tests/features/auth/api-keys.api.spec.ts's own adminMode/asAccount test does
   const axKey = axios({
+    baseURL: apiUrl,
     headers: {
       'x-apiKey': key.clearKey,
       'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1') })

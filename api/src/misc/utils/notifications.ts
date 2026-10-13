@@ -1,6 +1,7 @@
 import config from '#config'
 import mongo from '#mongo'
-import axios from './axios.ts'
+// the events service is part of our own infrastructure (configured url, not user input)
+import { privateAxios as axios } from './axios.ts'
 import debugLib from 'debug'
 import i18n from 'i18n'
 import { nanoid } from 'nanoid'

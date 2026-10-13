@@ -103,29 +103,29 @@
         />
 
         <template v-if="type === 'dataset' && editType === 'remoteFile'">
-          <v-text-field
-            v-model="editName"
-            :label="t('fileName')"
-            variant="outlined"
-            density="compact"
-            class="mb-4"
-            hide-details
+          <help-tooltip
+            :text="t('fileNameHelp')"
           >
-            <template #append>
-              <help-tooltip :text="t('fileNameHelp')" />
-            </template>
-          </v-text-field>
-          <v-text-field
-            v-model="editTargetUrl"
-            :label="t('targetUrl')"
-            variant="outlined"
-            density="compact"
-            hide-details
+            <v-text-field
+              v-model="editName"
+              :label="t('fileName')"
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+              hide-details
+            />
+          </help-tooltip>
+          <help-tooltip
+            :text="t('targetUrlHelp')"
           >
-            <template #append>
-              <help-tooltip :text="t('targetUrlHelp')" />
-            </template>
-          </v-text-field>
+            <v-text-field
+              v-model="editTargetUrl"
+              :label="t('targetUrl')"
+              variant="outlined"
+              density="compact"
+              hide-details
+            />
+          </help-tooltip>
         </template>
       </v-card-text>
 

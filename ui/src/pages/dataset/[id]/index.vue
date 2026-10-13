@@ -3,12 +3,6 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
-    <fragment-banner
-      v-if="dataset.partOf"
-      :part-of="dataset.partOf"
-      :fragment="{ id: dataset.id, status: dataset.status }"
-    />
-
     <!-- Metadata details -->
     <df-section-tabs
       v-if="sections.informations"
@@ -74,9 +68,11 @@
             :original-conforms-to="structureEditFetch.serverData.value?.conformsTo ?? null"
             :owner="dataset?.owner ?? null"
             :conforms-to-active="!!datasetsMetadata?.conformsTo?.active"
+            :attachments-as-image="structureEditFetch.data.value.attachmentsAsImage"
             @update:primary-key="pk => { if (structureEditFetch.data.value) structureEditFetch.data.value.primaryKey = pk }"
             @update:projection="p => { if (structureEditFetch.data.value) structureEditFetch.data.value.projection = p }"
             @update:conforms-to="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.conformsTo = c }"
+            @update:attachments-as-image="v => { if (structureEditFetch.data.value) structureEditFetch.data.value.attachmentsAsImage = v }"
           />
         </v-tabs-window-item>
 
@@ -193,11 +189,17 @@
       </template>
 
       <template #windows>
-        <v-tabs-window-item value="informations">
+        <v-tabs-window-item
+          v-for="tab of sections.metadata.tabs?.filter((tab: any) => tab.key !== 'attachments')"
+          :key="tab.key"
+          :value="tab.key"
+        >
           <dataset-metadata-form
             v-if="metadataEditFetch.data.value"
             v-model="metadataEditFetch.data.value"
             :server-data="metadataEditFetch.serverData.value"
+            :datasets-metadata="datasetsMetadata"
+            :group="tab.key"
           />
         </v-tabs-window-item>
 
@@ -682,6 +684,8 @@ fr:
   permissionsUpdated: Les permissions ont été mises à jour
   metadata: Métadonnées
   informations: Informations
+  generalInformations: Informations générales
+  coverage: Informations complémentaires
   schema: Schéma
   constraints: Contraintes
   attachments: Pièces jointes
@@ -755,6 +759,8 @@ en:
   permissionsUpdated: Permissions were updated
   metadata: Metadata
   informations: Information
+  generalInformations: General information
+  coverage: Additional information
   schema: Schema
   constraints: Constraints
   attachments: Attachments
@@ -830,7 +836,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFileTree, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTableColumnPlusAfter, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -840,6 +846,7 @@ import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
+import { fieldGroup, modifiedGroups, usedGroups } from '~/utils/metadata-groups'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metadata-tools'
@@ -885,6 +892,11 @@ const store = useDatasetStore()
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
+// only needed when the topics left the first tab, always shown
+const ownerTopicsFetch = useFetch<any[]>(() => {
+  const o = dataset.value?.owner
+  return o && fieldGroup(datasetsMetadata.value, 'topics') !== 'informations' ? `${$apiPath}/settings/${o.type}/${o.id}/topics` : null
+})
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -1124,7 +1136,8 @@ const schemaHasDiff = computed(() => {
   return !equal(d.schema, s.schema) ||
     !equal(d.primaryKey, s.primaryKey) ||
     !equal(d.projection, s.projection) ||
-    !equal(d.conformsTo, s.conformsTo)
+    !equal(d.conformsTo, s.conformsTo) ||
+    !!d.attachmentsAsImage !== !!s.attachmentsAsImage
 })
 
 const constraintsHasDiff = computed(() => {
@@ -1221,7 +1234,7 @@ const sections = computedDeepDiff(() => {
   result.informations = {
     title: t('informations'),
     subtitle: t('informationsSubtitle'),
-    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below.'
+    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent virtual dataset, with an "Add to the sources" button while it is not yet one of the parent\'s sources.'
   }
 
   // Structure section (new)
@@ -1245,7 +1258,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'extensions',
         title: t('extensions'),
-        icon: mdiPuzzle,
+        icon: mdiTableColumnPlusAfter,
         color: extensionsHasDiff.value ? 'accent' : undefined,
         agentDesc: '**Column-value transformations and row enrichments live here.** Two extension types: (a) remote-service extensions calling external REST APIs (geocoding, SIRENE lookup, geo enrichment, etc.); (b) expr-eval calculated columns (PAD_LEFT, CONCAT, SUBSTRING, REPLACE, TRANSFORM_DATE, MD5, JSON_PARSE, …). Add via the "Add extension" menu. For expr-eval, opening an extension card\'s edit dialog reveals the expression input with a help button next to it → `expression_helper` subagent (writes and tests the expression against sample data).'
       })
@@ -1266,7 +1279,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'fragments',
         title: t('fragments'),
-        icon: mdiFileTree,
+        icon: mdiPuzzle,
         agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }
@@ -1296,10 +1309,28 @@ const sections = computedDeepDiff(() => {
     result.structure = { title: t('structure'), tabs: structureTabs, agentDesc: 'Structural definition of the dataset: column schema, calculated-column / remote-service extensions, and storage-mode configuration. Saving structural changes may trigger a reindex.' }
   }
 
-  // Metadata section
+  // Metadata section: two default tabs, then the categories of the owner's settings
+  const modifiedMetadataGroups = metadataEditFetch.hasDiff.value && !d.partOf
+    ? modifiedGroups(datasetsMetadata.value, metadataEditFetch.data.value, metadataEditFetch.serverData.value)
+    : new Set<string>()
+  // a diff no tab holds (an emptied custom metadata object) or a fragment's single tab
+  if (metadataEditFetch.hasDiff.value && !modifiedMetadataGroups.size) modifiedMetadataGroups.add('informations')
+  const groupColor = (key: string) => modifiedMetadataGroups.has(key) ? 'accent' : undefined
   const metadataTabs: any[] = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, hidden search terms (searchTerms, never displayed), creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Three in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown); next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' }
+    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
   ]
+  // a tab holding no metadata shown on datasets is left out
+  // same conditions as the metadata form, which hides these fields
+  const metadataGroupsInUse = usedGroups(datasetsMetadata.value, [
+    ...(ownerTopicsFetch.data.value?.length ? [] : ['topics']),
+    ...(d.finalizedAt || d.isMetaOnly ? [] : ['relatedDatasets'])
+  ])
+  if (!d.partOf) {
+    if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: datasetsMetadata.value?.coverageTitle || t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, image, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
+    for (const group of datasetsMetadata.value?.groups ?? []) {
+      if (metadataGroupsInUse.has(group.key)) metadataTabs.push({ key: group.key, title: group.title, icon: group.icon?.svgPath ?? mdiShapeOutline, color: groupColor(group.key), agentDesc: 'Metadata category defined in the owner settings: holds the metadata (mostly custom ones) the settings assign to it.' })
+    }
+  }
   if (!d.draftReason && !d.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
   }
@@ -1313,7 +1344,8 @@ const sections = computedDeepDiff(() => {
     if (d.bbox) {
       explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap, agentDesc: 'Interactive map of geolocalized rows. Accepts the same filter query params as the table tab (including `_c_bbox` and `_c_geo_distance`).' })
     }
-    if (digitalDocumentField.value) {
+    // attachments shown as images already have the thumbnails tab, searching their text makes no sense
+    if (digitalDocumentField.value && !d.attachmentsAsImage) {
       explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy, agentDesc: 'Browse the digital-document files attached to rows (when the schema has a documentURI / file field).' })
     }
     if (imageField.value) {

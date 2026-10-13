@@ -9,6 +9,7 @@ import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.ts'
 import { datasetOperationGrantedBy } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
+import { operations as xAgent } from './x-agent.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
@@ -132,6 +133,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       description: 'Mettre à jour les informations du jeu de données.',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
+      'x-agent': xAgent.writeDescription,
       tags: ['Métadonnées'],
       requestBody: {
         description: 'Les informations à modifier sur le jeu de données.',
@@ -159,6 +161,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       description: 'Supprimer ce jeu de données.',
       operationId: 'delete',
       'x-permissionClass': 'admin',
+      'x-agent': xAgent.deleteDataset,
       tags: ['Métadonnées'],
       responses: {
         204: {
@@ -760,6 +763,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   // Clone permissionsDoc: the imported object is a module-level singleton shared with the
   // application doc and mutated by the merged-mode tag remapping below.
   api.paths['/permissions'] = structuredClone(permissionsDoc)
+  // Annotated here rather than in permissionsDoc: the application documents share that object.
+  api.paths['/permissions'].get['x-agent'] = xAgent.getDatasetPermissions
+  api.paths['/permissions'].put['x-agent'] = xAgent.setDatasetPermissions
 
   // Admin routes are gated by adminMode (in both normal and merged mode).
   // Order: read-only diagnostics → force-actions → resync (rest-only) → destructive lock cleanup.

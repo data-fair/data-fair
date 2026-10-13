@@ -4,11 +4,12 @@
     lines="two"
   >
     <template
-      v-if="dataset.visibility"
+      v-if="dataset.visibility || dataset.partOf"
       #prepend
     >
       <resource-visibility
         :visibility="dataset.visibility"
+        :part-of="dataset.partOf"
         class="mr-2"
         size="small"
       />

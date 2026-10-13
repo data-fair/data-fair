@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { validateIndex } from '@data-fair/openapi-mcp'
 import { agentsIndex } from '../../../api/contract/agents-index.ts'
 
-const cfg = { publicUrl: 'http://localhost:8080/data-fair', directoryUrl: 'https://host.test/simple-directory', privateProcessingsUrl: null }
+const cfg = { publicUrl: 'http://localhost:8080/data-fair', directoryUrl: 'https://host.test/simple-directory', privateProcessingsUrl: null, privateMetricsUrl: null }
 
 test.describe('agentsIndex', () => {
   test('lists data-fair and simple-directory at the request public base URL, validating against the contract', () => {
@@ -19,13 +19,50 @@ test.describe('agentsIndex', () => {
       { id: 'data-fair', openapi: 'https://host.test/data-fair/api/v1/api-docs.json' },
       { id: 'simple-directory', openapi: 'https://host.test/simple-directory/api/api-docs.json' }
     ])
-    assert.deepEqual(Object.keys(index.profiles!), ['explore'])
-    assert.deepEqual(index.profiles!.explore.title, { fr: 'Explorer', en: 'Explore' })
   })
+  const silos = ['datasets', 'applications', 'portals', 'processings', 'catalogs', 'notifications', 'metrics', 'account']
+
+  test('declares the whole profile vocabulary: catalog first, umbrellas, every cell', () => {
+    const profiles = agentsIndex('https://host.test/data-fair', cfg).profiles!
+    assert.equal(Object.keys(profiles)[0], 'catalog')
+    for (const tier of ['read', 'write', 'manage']) {
+      assert.deepEqual(profiles[tier].includes, silos.map(s => `${tier}_${s}`))
+    }
+    assert.equal(profiles.read_portals.includes, undefined)
+    assert.deepEqual(profiles.write_portals.includes, ['read_portals'])
+    assert.deepEqual(profiles.manage_portals.includes, ['write_portals'])
+    assert.equal(profiles.explore, undefined, 'no deprecated alias: explore never shipped')
+    assert.deepEqual(profiles.manage_metrics.title, { fr: "Administrer — métriques d'audience", en: 'Manage — audience metrics' })
+    assert.equal(profiles.platform, undefined, 'superadmin operations get a profile when the first one is annotated')
+  })
+
+  test('describes every profile in French and English, each cell naming its scope', () => {
+    const profiles = agentsIndex('https://host.test/data-fair', cfg).profiles!
+    for (const [name, profile] of Object.entries(profiles)) {
+      const description = profile.description as Record<string, string> | undefined
+      assert.ok(description?.fr && description?.en, `${name} has a fr and an en description`)
+    }
+    assert.deepEqual(profiles.write_portals.description, {
+      fr: 'Créer et modifier le contenu des ressources. Périmètre : portails.',
+      en: 'Create and edit the content of resources. Scope: portals.'
+    })
+  })
+
+  test('pins the vocabulary: names are only ever appended', () => {
+    const cells = silos.flatMap(s => ['read', 'write', 'manage'].map(t => `${t}_${s}`))
+    assert.deepEqual(Object.keys(agentsIndex('https://host.test/data-fair', cfg).profiles!), ['catalog', 'read', 'write', 'manage', ...cells])
+  })
+
   test('lists processings at the site origin when its integration is configured', () => {
     const index = agentsIndex('https://host.test/data-fair', { ...cfg, privateProcessingsUrl: 'http://processings:8080' })
     assert.deepEqual(index.services.map(s => s.id), ['data-fair', 'processings', 'simple-directory'])
     assert.equal(index.services[1].openapi, 'https://host.test/processings/api/v1/admin/api-docs.json')
+  })
+  test('lists metrics at the site origin when its integration is configured', () => {
+    const index = agentsIndex('https://host.test/data-fair', { ...cfg, privateProcessingsUrl: 'http://processings:8080', privateMetricsUrl: 'http://metrics:8080' })
+    assert.doesNotThrow(() => validateIndex(index))
+    assert.deepEqual(index.services.map(s => s.id), ['data-fair', 'processings', 'metrics', 'simple-directory'])
+    assert.equal(index.services[2].openapi, 'https://host.test/metrics/api/api-docs.json')
   })
   test('derives the site base from the public base URL minus data-fair\'s own mount path', () => {
     const index = agentsIndex('https://other.test/site/data-fair', { ...cfg, publicUrl: 'https://host.test/data-fair', privateProcessingsUrl: 'x' })
