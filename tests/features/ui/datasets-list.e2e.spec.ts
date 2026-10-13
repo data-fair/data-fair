@@ -16,7 +16,7 @@ test.describe('datasets list page', () => {
     await checkPendingTasks()
   })
 
-  test('initial page state: cards, count, controls, facets and contributor action all visible', async ({ page, goToWithAuth }) => {
+  test('initial page state: cards, count, controls, facets and contributor action all visible', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
 
     // Dataset cards rendered

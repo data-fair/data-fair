@@ -1,1 +1,1 @@
-npm run quality
+bash dev/pre-push.sh

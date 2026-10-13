@@ -78,7 +78,7 @@ test.describe('REST datasets - CRUD', () => {
     assert.equal(res.data.title, 'a rest dataset updated')
   })
 
-  test('Perform CRUD operations on REST datasets', async () => {
+  test('Perform CRUD operations on REST datasets', { tag: '@smoke' }, async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
@@ -202,7 +202,7 @@ test.describe('REST datasets - CRUD', () => {
     })
   })
 
-  test('Perform CRUD operations in bulks', async () => {
+  test('Perform CRUD operations in bulks', { tag: '@smoke' }, async () => {
     const ax = testUser1
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
@@ -323,7 +323,7 @@ test.describe('REST datasets - CRUD', () => {
     assert.equal(journal[0].type, 'finalize-end')
   })
 
-  test('Use dataset schema to validate inputs', async () => {
+  test('Use dataset schema to validate inputs', { tag: '@smoke' }, async () => {
     const ax = testUser1
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,

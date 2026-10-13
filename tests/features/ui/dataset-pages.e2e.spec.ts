@@ -12,7 +12,7 @@ test.describe('dataset detail pages', () => {
     datasetId = dataset.id
   })
 
-  test('dataset home page shows all sections, tabs, record count and editable metadata', async ({ page, goToWithAuth }) => {
+  test('dataset home page shows all sections, tabs, record count and editable metadata', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
 
     // Top-level sections
@@ -36,7 +36,7 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible()
   })
 
-  test('dataset /table route loads table view', async ({ page, goToWithAuth }) => {
+  test('dataset /table route loads table view', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
@@ -155,7 +155,7 @@ test.describe('dataset detail pages', () => {
   })
 
   // Mutating tests last — these modify the dataset
-  test('editing title shows save button and persists changes', async ({ page, goToWithAuth }) => {
+  test('editing title shows save button and persists changes', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 

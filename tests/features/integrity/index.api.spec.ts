@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../support/workers.ts'
-import { ensureIntegrityBucket, waitForLinesDrained, waitForFlagCleared, aimSeedAt, aimSeedAway } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, waitForLinesDrained, waitForFlagCleared, waitForIndexSettled, aimSeedAt, aimSeedAway } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -28,7 +28,7 @@ const enrolledRestDataset = async (ax: any) => {
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForLinesDrained(dataset.id)
   await waitForFlagCleared(dataset.id)
-  await waitForFinalize(ax, dataset.id).catch(() => {}) // backfill may re-run indexing
+  await waitForIndexSettled(dataset.id) // the enrollment backfill may re-run indexing
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/es-refresh/${dataset.id}`)
   return dataset
 }
