@@ -33,11 +33,12 @@ jobs:
     - name: Lint
       run: npm run lint
 
-    - name: Type check ratchet
-      run: npm run check-types-ratchet
-
     - name: Build types
       run: npm run build-types
+
+    # after build-types: the ratchet counts errors against the generated .type modules
+    - name: Type check ratchet
+      run: npm run check-types-ratchet
 
     - name: Build UI
       run: npm -w ui run build
