@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { generateTablePerfCsv, tablePerfColumns, tablePerfUploadBody, TABLE_PERF_SEARCH_WORD } from '../../../dev/table-perf-fixture.ts'
+import { generateTablePerfCsv, tablePerfColumns, tablePerfDatasetBody, chunkCsv, TABLE_PERF_SEARCH_WORD } from '../../../dev/table-perf-fixture.ts'
 
 const parseLine = (line: string): string[] => {
   const cells: string[] = []
@@ -50,8 +50,29 @@ test.describe('table perf fixture generator', () => {
     assert.ok(hits > 10 && hits < 300, `hits=${hits}`)
   })
 
-  test('the upload body declares the separator of multi-valued columns', () => {
-    const multiKeys = tablePerfColumns.filter(c => c.kind === 'multi').map(c => c.key)
-    assert.deepEqual(tablePerfUploadBody().schema.filter(p => p.separator === ';').map(p => p.key), multiKeys)
+  test('the dataset body is a REST dataset typing every column', () => {
+    const body = tablePerfDatasetBody()
+    assert.equal(body.isRest, true)
+    assert.deepEqual(body.schema.map(p => p.key), tablePerfColumns.map(c => c.key))
+    const byKey = Object.fromEntries(body.schema.map(p => [p.key, p]))
+    assert.equal(byKey.numero.type, 'integer')
+    assert.equal(byKey.prix.type, 'number')
+    assert.equal(byKey.actif.type, 'boolean')
+    assert.deepEqual([byKey.date_creation.type, byKey.date_creation.format], ['string', 'date'])
+    assert.deepEqual([byKey.horodatage.type, byKey.horodatage.format], ['string', 'date-time'])
+    assert.equal(byKey.etiquettes.separator, ';')
+    assert.equal(byKey.site_web['x-refersTo'], 'https://schema.org/WebPage')
+  })
+
+  test('chunkCsv keeps the header in every chunk and stays under the byte limit', () => {
+    const csv = generateTablePerfCsv(300)
+    const [header, ...rows] = csv.trimEnd().split('\n')
+    const chunks = chunkCsv(csv, 20000)
+    assert.ok(chunks.length > 1)
+    for (const c of chunks) {
+      assert.ok(Buffer.byteLength(c) <= 20000, `chunk of ${Buffer.byteLength(c)} bytes`)
+      assert.equal(c.split('\n')[0], header)
+    }
+    assert.deepEqual(chunks.flatMap(c => c.trimEnd().split('\n').slice(1)), rows)
   })
 })

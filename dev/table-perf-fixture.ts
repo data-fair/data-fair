@@ -96,11 +96,48 @@ export function generateTablePerfCsv (rows: number, seed = 42): string {
   return out.join('\n') + '\n'
 }
 
-export function tablePerfUploadBody () {
+const schemaFor = (key: string, kind: ColumnKind): Record<string, any> => {
+  switch (kind) {
+    case 'id':
+    case 'integer': return { key, type: 'integer' }
+    case 'decimal': return { key, type: 'number' }
+    case 'boolean': return { key, type: 'boolean' }
+    case 'date': return { key, type: 'string', format: 'date' }
+    case 'dateTime': return { key, type: 'string', format: 'date-time' }
+    case 'url': return { key, type: 'string', 'x-refersTo': 'https://schema.org/WebPage' }
+    case 'multi': return { key, type: 'string', separator: ';' }
+    default: return { key, type: 'string' }
+  }
+}
+
+/** A REST dataset: the dev config caps every request body at 160KB per dataset, so the
+ * lines are sent in CSV chunks (see chunkCsv) instead of one file upload. */
+export function tablePerfDatasetBody () {
   return {
+    isRest: true,
     title: 'Tableau — performance',
     description: 'Jeu de données large (50 colonnes) et long (10 000 lignes) pour vérifier les performances du tableau. ' +
       'Utilisé par `npm run benchmark -- ui-table` (voir benchmark/README.md).',
-    schema: tablePerfColumns.filter(c => c.kind === 'multi').map(c => ({ key: c.key, separator: ';' }))
+    schema: tablePerfColumns.map(c => schemaFor(c.key, c.kind))
   }
+}
+
+/** Split a CSV into chunks of at most maxBytes, each starting with the header line. */
+export function chunkCsv (csv: string, maxBytes: number): string[] {
+  const [header, ...rows] = csv.trimEnd().split('\n')
+  const chunks: string[] = []
+  let current: string[] = []
+  let size = Buffer.byteLength(header) + 1
+  for (const row of rows) {
+    const rowSize = Buffer.byteLength(row) + 1
+    if (current.length && size + rowSize > maxBytes) {
+      chunks.push([header, ...current].join('\n') + '\n')
+      current = []
+      size = Buffer.byteLength(header) + 1
+    }
+    current.push(row)
+    size += rowSize
+  }
+  if (current.length) chunks.push([header, ...current].join('\n') + '\n')
+  return chunks
 }

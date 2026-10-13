@@ -15,6 +15,7 @@
  */
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import FormData from 'form-data'
+import { generateTablePerfCsv, tablePerfDatasetBody, chunkCsv, TABLE_PERF_ID } from './table-perf-fixture.ts'
 
 const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
 const directoryUrl = `${root}/simple-directory`
@@ -988,6 +989,40 @@ async function seedBrouillonErreur () {
   console.log(`${id}: seeded (file-new draft in error, retry will succeed)`)
 }
 
+/** Wide and long dataset for the table's performance (benchmark/src/ui). Public, so
+ * its table URL opens without login.
+ * The dev config caps every request body at 160KB per dataset and every account at 200KB:
+ * the lines go in CSV chunks to a REST dataset, and the dev_fixtures org gets unlimited
+ * storage (re-applied on every run: the simulations' clean() wipes all limits).
+ * An incomplete dataset (interrupted run) is deleted and seeded again. */
+async function seedTablePerf () {
+  const id = TABLE_PERF_ID
+  const unlimited = { limit: -1, consumption: 0 }
+  await dfAdminAx.post('/api/v1/limits/organization/dev_fixtures', {
+    store_bytes: unlimited, indexed_bytes: unlimited, nb_datasets: unlimited, lastUpdate: new Date().toISOString()
+  })
+  const rows = 10000
+  if (await datasetExists(id)) {
+    const { data } = await dfAx.get(`/api/v1/datasets/${id}/lines`, { params: { size: 0 } })
+    if (data.total === rows) {
+      console.log(`${id}: skipped (exists)`)
+    } else {
+      console.log(`${id}: incomplete (${data.total} lines), seeding again`)
+      await dfAx.delete(`/api/v1/datasets/${id}`)
+    }
+  }
+  if (!(await datasetExists(id))) {
+    await dfAx.put(`/api/v1/datasets/${id}`, tablePerfDatasetBody())
+    const chunks = chunkCsv(generateTablePerfCsv(rows), 140000)
+    for (const [i, chunk] of chunks.entries()) {
+      await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, chunk, { headers: { 'Content-Type': 'text/csv' } })
+      process.stdout.write(`\r${id}: ${i + 1}/${chunks.length} chunks`)
+    }
+    console.log(`\n${id}: seeded (REST, ${rows} lines x 50 columns)`)
+  }
+  await dfAx.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['list', 'read'] }])
+}
+
 async function main () {
   try {
     dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
@@ -1029,6 +1064,7 @@ async function main () {
   await seedDateCoherenceRest()
   await seedDateCoherenceFichier()
   await seedBrouillonErreur()
+  await seedTablePerf()
   await seedFragments()
   await seedFragmentApplications()
 
@@ -1044,6 +1080,7 @@ async function main () {
     console.log(`  application:     ${dfBaseURL}/application/${id}`)
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')
+  console.log(`  table perf:      ${dfBaseURL}/embed/dataset/${TABLE_PERF_ID}/table  (public, see benchmark/README.md)`)
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
   console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
 }
