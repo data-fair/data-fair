@@ -6,12 +6,6 @@
         "playwright",
         "run-test-mcp-server"
       ]
-    },
-    "vuetify": {
-      "command": "npx",
-      "args": [
-        "@vuetify/mcp"
-      ]
     }
   }
 }
