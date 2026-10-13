@@ -6,35 +6,20 @@ Data FAIR (Findable, Accessible, Interoperable, Reusable Data) is an open-source
 
 ## Dev environment
 
-The dev environment is managed by zellij (terminal multiplexer) and docker compose. **Never start, stop, or restart dev processes yourself** — the user manages them through zellij panes.
-
-### Checking status
+The user starts the dev environment of a checkout with `npm run dev-zellij` (zellij >= 0.44, session named after the checkout directory). Agents never start or kill the session, and act on processes and containers only through `df-dev`:
 
 ```bash
-bash dev/status.sh
+npx --no df-dev status                     # containers (health, memory), panes (running / exited + code, readiness), dev processes memory
+npx --no df-dev logs api -n 100            # last lines of a pane: api, ui, mock, bridge
+npx --no df-dev restart api                # Ctrl+C, rerun, wait for /api/v1/ping
+npx --no df-dev up agents events           # optional containers (compose profiles), added to the running env
+npx --no df-dev down events
 ```
 
-This shows the health of all services (nginx, API, UI, mock server, docker services, databases) and lists log files with sizes and timestamps.
-
-### Log files
-
-All dev processes write to `dev/logs/`:
-- `dev-api.log` — API server
-- `dev-ui.log` — UI dev server (Vite)
-- `dev-mock.log` — mock server (simple-directory, events, etc.)
-- `docker-compose.log` — all docker compose services
-
-### Troubleshooting
-
-1. Run `bash dev/status.sh` to identify which services are down
-2. Read the relevant log file in `dev/logs/` for error details
-3. Report findings to the user — do not attempt to fix infrastructure issues yourself
-
-If `dev-api` flaps between `UP` and `ERROR (HTTP 502)` every few seconds, tests
-started in that window fail on `ECONNREFUSED` or on stray error toasts, not on
-anything they assert. Wait for three consecutive 200s from the ping endpoint
-before trusting a failure. `dev/run-api.sh` explains the restart loop this used
-to come from.
+- Read the logs before restarting: nodemon (api) and vite (ui) already reload on file changes. Restart only a pane that exited, hangs, or needs new env.
+- If `restart` answers "not ready", report to the user with the logs instead of retrying.
+- Never use `docker compose restart`, `kill` or `zellij action` directly.
+- Core containers: elasticsearch, mongo, s3, simple-directory, nginx. Optional: `clamav` (~1 GB, upload scanning), `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). The user starts them with the env: `npm run dev-zellij -- --services clamav,events`. When clamav, events, agents or registry does not run as the api pane starts, its config entry is overridden (`optional` in `dev/dev.json`, exported as `NODE_CONFIG`): after `npx --no df-dev up <service>`, run `npx --no df-dev restart api`.
 
 ### Port assignments
 
@@ -68,9 +53,8 @@ never dispatched will report the old verdict as if it were this one's. The skill
 does all of that in order; the npm scripts below are just the pieces it drives.
 
 The bridge must already be running. It has a `bridge` pane in the zellij layout,
-so it usually is — if not, the maintainer starts it with `npm run dev-bridge`,
-never an agent, because it is a long-running foreground process.
-`bash dev/status.sh` reports it as `dev-bridge (opt)`.
+suspended until the maintainer presses Enter in it — never an agent, because it is
+a long-running foreground process. `npx --no df-dev status` shows the pane running.
 
 The underlying scripts, for reference:
 

@@ -9,22 +9,17 @@ Switch to the appropriate nodejs version:
 
     nvm use
 
-Install nodejs dependencies:
+Install nodejs dependencies and set the checkout up (`.env` with free ports, native modules, types, UI build):
 
-    npm install
+    npm ci
+    npx --no df-dev setup
 
-If you use [zellij](https://zellij.dev/) you can replace all the following steps with `npm run dev-zellij`, otherwise follow the next instructions.
+Start the development environment (zellij >= 0.44; core containers + ui, api, mock):
 
-Run the services dependencies:
+    npm run dev-zellij
+    npm run dev-zellij -- --services clamav,events,agents   # with optional containers
 
-    npm run dev-deps
-
-Run the 2 development servers with these commands in separate shells:
-
-    npm run dev-server
-    npm run dev-client
-
-When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `dev/resources/users.json` to login with its email.
+The footer shows the dev URL; log in with an account of `dev/resources/users.json`. From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
 
 Run test suite:
 
@@ -34,7 +29,7 @@ npm run test
 
 ## Working with Git Worktrees
 
-This project supports git worktrees with fully isolated port allocations, allowing multiple branches to run concurrently (useful for AI agents or parallel development). Run `./dev/worktree.sh <branch-name>` to create a new worktree with its own `.env`, Docker Compose project, and randomized port range. When setting up for the first time, not in a worktree, you can run `./dev/init-env.sh`.
+From the main checkout, `npx --no df-worktree <branch-name>` creates `../data-fair_<branch-name>` with its own `.env`, docker compose project and ports; `npx --no df-worktree-delete <branch-name>` removes it with its containers and volumes. Branch names: letters, digits, `.`, `_`, `-`, at most 60 characters, no `/`.
 
 ## Docker image
 

@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/login.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../support/axios.ts'
 
-const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 async function goToSettings (page: any, goToWithAuth: any, user = 'test_user1') {
   await goToWithAuth('/data-fair/', user)

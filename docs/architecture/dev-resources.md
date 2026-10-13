@@ -32,7 +32,7 @@ dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ## The caps
 
-### vite dev server — `dev/with-memory-cap.sh`, wired into `ui/package.json`
+### vite dev server — `df-mem-cap` (`@data-fair/lib-dev`), used by the ui pane of `.zellij.kdl`
 
 The dev server runs inside a transient systemd user scope with `MemoryMax=4G`
 (override with `DEV_MEMORY_MAX`). When it is exceeded the *cgroup* OOM killer kills
@@ -80,8 +80,9 @@ pushing 1.7 GiB each into swap. `mem_limit` bounds the off-heap side (direct mem
 metaspace, thread stacks) so a runaway ES is killed *inside its container* rather
 than contributing to a host-wide OOM.
 
-For a heavier workload (large benchmark datasets, say) start the stack with
-`ES_HEAP=1g npm run dev-deps` — 1g still fits in the 2g limit. Remember the
+For a heavier workload (large benchmark datasets, say) set `ES_HEAP=1g` in `.env`
+(df-dev never overwrites it) and recreate ES with `docker compose up -d elasticsearch` — 1g
+still fits in the 2g limit. Remember the
 multiplier is the number of environments you have up.
 
 ### MongoDB — `docker-compose.yaml`
@@ -107,8 +108,8 @@ The cheapest saving of all: a worktree you stopped working on leaves its whole
 compose stack up, ~2.5–4.5 GiB of RAM + swap holding nothing useful.
 `bash dev/idle-stacks.sh` lists every running compose project with its memory and
 whether its dev API is running (listening, or its nodemon supervisor up while it boots), and the command to stop it
-(`docker compose -p <project> stop` keeps the volumes; `npm run dev-deps` brings it
-back). Read-only, like `dev/status.sh`.
+(`docker compose -p <project> stop` keeps the volumes; `npx --no df-dev zellij` brings it
+back). Read-only, like `npx --no df-dev status`.
 
 ### MCP servers — `.mcp.json`
 

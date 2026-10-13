@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv'
 
 dotenv.config({ path: '.env', quiet: true })
 
-const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 const outDir = 'docs/presentation-integrite-fr/img'
 mkdirSync(outDir, { recursive: true })
 

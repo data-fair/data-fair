@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'child_process'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { test as setup } from '@playwright/test'
 import { apiUrl } from './support/axios.ts'
@@ -26,22 +25,12 @@ setup('Stateful tests setup', async () => {
     }
   }
   assert.equal(lastErr, undefined, `Dev API server did not become available at ${apiUrl} within ${apiReadyTimeoutMs}ms.
-If you are an agent do not try to start it. Instead check for a startup failure at the end of dev/logs/dev-api.log and report this problem to your user.
+If you are an agent, read its logs with "npx --no df-dev logs api" and report the problem to your user (or "npx --no df-dev restart api" if the pane exited).
 Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
 
   // Check that the mock server is up
   await assert.doesNotReject(
     ax.get(`${mockUrl}/geocoder/api-docs.json`),
-    `Mock server seems to be unavailable at ${mockUrl}. Start it with: node --experimental-strip-types dev/mock-server.ts`
+    `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read its logs with "npx --no df-dev logs mock" (or "npx --no df-dev restart mock" if the pane exited).`
   )
-
-  // More visible dev server logs straight in the test output
-  try {
-    const { existsSync, mkdirSync } = await import('node:fs')
-    if (!existsSync('dev/logs')) mkdirSync('dev/logs', { recursive: true })
-    const tailApi = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-api.log'], { stdio: 'inherit', detached: true })
-    process.env.TAIL_PIDS = [tailApi.pid].filter(Boolean).join(',')
-  } catch {
-    // log tailing is optional
-  }
 })

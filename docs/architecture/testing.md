@@ -53,8 +53,7 @@ tests/
 ├── support/           # Shared utilities (axios, events, workers)
 ├── fixtures/          # Playwright fixtures
 ├── resources/         # Test data files
-├── state-setup.ts     # Global state setup (runs before api/e2e tests)
-└── state-teardown.ts  # Global state teardown
+└── state-setup.ts     # Global state setup (runs before api/e2e tests)
 ```
 
 ## Conventions

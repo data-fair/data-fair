@@ -13,9 +13,9 @@ const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => st
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */
 
-export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`
+export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
-export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`
+export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`
 export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
@@ -60,7 +60,7 @@ export const clean = async () => {
 export const config = {
   publicUrl: baseURL,
   directoryUrl,
-  secretKeys: { identities: 'identities-test-key', limits: 'limits-test-key' },
+  secretKeys: { identities: 'secret-identities', limits: 'secret-limits' },
   cache: { publicMaxAge: 1, timestampedPublicMaxAge: 604800 },
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }

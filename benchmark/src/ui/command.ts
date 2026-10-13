@@ -60,7 +60,7 @@ export async function uiTableCommand (argv: string[]): Promise<void> {
   const runs = parseInt(values.runs!)
   const scenarios = values.scenarios === 'all' ? uiScenarios : uiScenarios.filter(s => values.scenarios!.split(',').includes(s.name))
   if (!scenarios.length) throw new Error(`no scenario matches "${values.scenarios}" (${uiScenarios.map(s => s.name).join(', ')})`)
-  const origin = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+  const origin = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
   const tableUrl = `${origin}/data-fair/embed/dataset/${TABLE_PERF_ID}/table`
 
   let probe: Parameters<typeof preflightMessage>[0]

@@ -1,5 +1,5 @@
 // A simple mock HTTP server that serves responses for external services
-// used during development and testing. Started as part of dev-deps.
+// used during development and testing. Started by the mock pane of the zellij layout.
 // Replaces the in-process nock mocks from the old test setup.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'

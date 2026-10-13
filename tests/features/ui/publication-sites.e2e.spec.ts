@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
 import type { AxiosInstance } from 'axios'
 
-const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 async function createPublicationSite (ax: AxiosInstance, opts?: {
   id?: string

@@ -8,7 +8,7 @@ const test = base.extend<{
   goToAsAdmin: (path: string) => Promise<void>
 }>({
       page: async ({ page }, use) => {
-        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
         await page.context().addCookies([{
           name: 'i18n_lang',
           value: 'fr',
@@ -21,7 +21,7 @@ const test = base.extend<{
         await use(page)
       },
       goToAsAdmin: async ({ page }, use) => {
-        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
         let loggedIn = false
         const goToAsAdmin = async (path: string) => {
           if (!loggedIn) {

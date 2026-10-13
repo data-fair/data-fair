@@ -13,7 +13,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
 
   use: {
-    baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
+    baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`,
     actionTimeout: 5_000,
     navigationTimeout: 10_000,
   },
@@ -22,11 +22,6 @@ export default defineConfig({
     {
       name: 'state-setup',
       testMatch: /state-setup\.ts/,
-      teardown: 'state-teardown'
-    },
-    {
-      name: 'state-teardown',
-      testMatch: /state-teardown\.ts/,
     },
     {
       name: 'unit',

@@ -14,7 +14,7 @@ From the repository root, in separate terminals:
     npm run dev-benchmark  # API server + worker, benchmark config (relaxed limits)
 
 The harness auto-discovers the dev environment from the repo `.env` (`DEV_HOST`,
-`NGINX_PORT1`, `ES_PORT`). Override with the `BENCHMARK_URL`, `BENCHMARK_DIRECTORY_URL`
+`NGINX_PORT`, `ES_PORT`). Override with the `BENCHMARK_URL`, `BENCHMARK_DIRECTORY_URL`
 and `BENCHMARK_ES_NODES` environment variables if needed.
 
 ## Commands

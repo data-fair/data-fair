@@ -11,7 +11,7 @@ const testUser1 = await axiosAuth('test_user1@test.com')
 const alban = await axiosAuth('alban.mouton@koumoul.com', undefined, true)
 const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
-const captureUrl = `http://localhost:${process.env.NGINX_PORT1}/capture`
+const captureUrl = `http://localhost:${process.env.NGINX_PORT}/capture`
 
 const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
   const attachmentForm = new FormData()

@@ -4,7 +4,7 @@
  */
 import { seedAgentsSettings } from '@data-fair/lib-agents-sim'
 
-export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 /** An org rather than a user: it is the account shape most Data Fair users work
  *  in, and `clean()` resets anything matching /^test_/ between runs. */

@@ -397,7 +397,7 @@ test.describe('permissions editor', () => {
     // goToWithAuth does not reliably switch the active account on a first login, so use the
     // personal menu — otherwise the dataset renders the "wrong active account" error page.
     async function goToDepPermissions (page: any, goToWithAuth: any) {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       await goToWithAuth('/data-fair/', 'test_user4')
       await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
       await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
@@ -511,7 +511,7 @@ test.describe('permissions editor', () => {
     // in goToWithAuth: contributor-role tests have shown intermittent failures in
     // the full e2e suite when relying on the cookie alone for first-time login.
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       await goToWithAuth('/data-fair/', 'test_user5')
       await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
       await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
@@ -526,7 +526,7 @@ test.describe('permissions editor', () => {
     // read-api-key tab (managing the key needs setReadApiKey, admin-only) and
     // must not request /task-progress or /journal (readAdvanced) on load.
     test('basic-read user: no read-api-key tab, no readJournal request', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       // Share the dataset with the whole org so test_user8 (role "user") can read it.
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
         { type: 'organization', id: 'test_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
@@ -578,7 +578,7 @@ test.describe('permissions editor', () => {
     })
 
     test('the department scope and labels hold on an application too', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       await goToWithAuth('/data-fair/', 'test_user4')
       await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
       await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
