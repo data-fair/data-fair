@@ -456,6 +456,8 @@ test('out-of-band deletion of the stored file is reported as a breach', async ()
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('breach')
   expect(check.breach).toContain('file')
+  // no source left to compare the index against: unknown, not a read of the missing file
+  expect(check.index?.status).toBe('unknown')
 })
 
 test('breach notification fires once per transition, not on every re-check', async () => {

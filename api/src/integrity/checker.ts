@@ -293,12 +293,19 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   // verdict 3 (A1): the projection users actually read. ES unavailability degrades to
   // 'unknown' (fail-open on availability — check-stale bounds accumulation), never a crash
   // that would abort the whole check.
+  // A file dataset whose stored file is gone has no source to compare the index against: the
+  // file verdict above already carries the breach. Reading it anyway would go through the
+  // indexer's readStreams, which sleeps 10s on a missing file before failing.
   let indexResult: IndexCheckResult
-  try {
-    indexResult = await checkIndexConsistency(dataset, { deep: opts?.deep, seed: opts?.seed })
-  } catch (err) {
-    internalError('integrity-index-check', err)
+  if (isFileDataset(dataset) && actualFileHash === undefined) {
     indexResult = { status: 'unknown' }
+  } else {
+    try {
+      indexResult = await checkIndexConsistency(dataset, { deep: opts?.deep, seed: opts?.seed })
+    } catch (err) {
+      internalError('integrity-index-check', err)
+      indexResult = { status: 'unknown' }
+    }
   }
   if (indexResult.status === 'diverged') breach.push('index')
 
