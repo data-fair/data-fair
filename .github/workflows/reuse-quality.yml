@@ -80,6 +80,11 @@ jobs:
     - name: Build parquet-writer
       run: npm -w parquet-writer run build
 
+    # the API reads ui/dist/index.html at startup (lib-express createSpaMiddleware) and dies
+    # without it, even though the pages themselves come from the dev UI
+    - name: Build UI
+      run: npm -w ui run build
+
     - name: Install playwright browser
       run: npx playwright install --with-deps chromium
 
@@ -118,7 +123,7 @@ jobs:
         set -a; . ./.env; set +a
         for url in "http://localhost:$NGINX_PORT1/data-fair/api/v1/ping" "http://localhost:$NGINX_PORT1/data-fair/"; do
           for _ in $(seq 120); do curl -sf -o /dev/null "$url" && break; sleep 1; done
-          curl -sf -o /dev/null "$url" || { echo "not ready: $url"; exit 1; }
+          curl -sf -o /dev/null "$url" || { echo "not ready: $url"; tail -n 50 dev/logs/*.log; exit 1; }
         done
 
     - name: Run tests
