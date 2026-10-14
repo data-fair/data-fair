@@ -126,17 +126,13 @@ test.describe('typed custom metadata', () => {
     assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { kept: 'b' })
   })
 
-  test('a customMetadata facet counts the datasets using each definition, and filters on it', async () => {
+  test('a customMetadata facet counts the datasets using each definition', async () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a', 'b'], service: 'Voirie' } }))
     await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'] } }))
     await testUser1.post('/api/v1/datasets', restDataset())
     const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'customMetadata', owner: 'user:test_user1' } })
     assert.deepEqual(res.data.facets.customMetadata, [{ count: 2, value: 'domaines' }, { count: 1, value: 'service' }])
-    const filtered = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'customMetadata', customMetadata: 'service', owner: 'user:test_user1' } })
-    assert.equal(filtered.data.count, 1)
-    // like the other facets, its own filter does not narrow its counts
-    assert.deepEqual(filtered.data.facets.customMetadata, res.data.facets.customMetadata)
   })
   test('the spreadsheet export prints the display text of the values', async () => {
     await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }, ...DEFS.slice(1)]))

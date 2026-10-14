@@ -159,7 +159,6 @@
         v-model:requested-publication-sites="facetRequestedPublicationSites"
         v-model:services="facetServices"
         v-model:concepts="facetConcepts"
-        v-model:custom-metadata="facetCustomMetadata"
         v-model:type="facetType"
         :facets="catalog.facets.value"
         :show-all="showAll === 'true'"
@@ -232,7 +231,6 @@ const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 const facetServices = useStringsArraySearchParam('services')
 const facetConcepts = useStringsArraySearchParam('concepts')
-const facetCustomMetadata = useStringsArraySearchParam('customMetadata')
 const facetType = useStringsArraySearchParam('type')
 
 // Virtual datasets filter (children of a specific dataset)
@@ -275,7 +273,6 @@ const datasetsQuery = computed(() => {
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
   if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
-  if (facetCustomMetadata.value?.length) params.customMetadata = facetCustomMetadata.value.join(',')
   if (facetType.value?.length) params.type = facetType.value.join(',')
   if (children.value) params.children = children.value
   if (shared.value) params.shared = shared.value
@@ -286,7 +283,7 @@ const datasetsQuery = computed(() => {
 const catalog = useCatalogList<Dataset>({
   fetchUrl: computed(() => $apiPath + '/datasets'),
   query: datasetsQuery,
-  facetsFields: 'status,visibility,topics,keywords,publicationSites,requestedPublicationSites,services,concepts,customMetadata,owner,draftStatus',
+  facetsFields: 'status,visibility,topics,keywords,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
 })
 
 // Breadcrumb updates

@@ -111,17 +111,6 @@
       multiple
     />
     <v-autocomplete
-      v-if="customMetadataItems.length"
-      v-model="customMetadata"
-      :items="customMetadataItems"
-      :label="t('customMetadata')"
-      density="compact"
-      variant="outlined"
-      hide-details
-      clearable
-      multiple
-    />
-    <v-autocomplete
       v-model="type"
       :items="typeItems"
       :label="t('type')"
@@ -154,7 +143,6 @@ const publicationSites = defineModel<string[]>('publicationSites', { default: ()
 const requestedPublicationSites = defineModel<string[]>('requestedPublicationSites', { default: () => [] })
 const services = defineModel<string[]>('services', { default: () => [] })
 const concepts = defineModel<string[]>('concepts', { default: () => [] })
-const customMetadata = defineModel<string[]>('customMetadata', { default: () => [] })
 const type = defineModel<string[]>('type', { default: () => [] })
 
 const typeItems = computed(() => [
@@ -255,13 +243,6 @@ const publicationSitesItems = facetToItems('publicationSites', publicationSitesL
 const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
 const servicesItems = facetToItems('services', (f) => typeof f.value === 'string' ? f.value.replace('koumoul-', '').replace('-koumoul', '') : f.value)
 const { vocabulary } = useStore()
-// labels come from the current account's definitions, keys of other accounts are left out
-const customMetadataFetch = useFetch<{ custom?: { key: string, title: string }[] }>(() => {
-  const a = session.account.value
-  return a ? `${$apiPath}/settings/${a.type}/${a.id}/datasets-metadata` : null
-})
-const customMetadataTitle = (key: string) => customMetadataFetch.data.value?.custom?.find(c => c.key === key)?.title
-const customMetadataItems = facetToItems('customMetadata', (f) => customMetadataTitle(f.value)!, undefined, (f) => !!customMetadataTitle(f.value))
 const conceptsItems = facetToItems(
   'concepts',
   (f) => vocabulary.value[f.value]?.title || f.value,
@@ -283,7 +264,6 @@ fr:
   requestedPublicationSites: Publications demandées
   services: Enrichissement
   concepts: Concepts
-  customMetadata: Métadonnées personnalisées
   type: Type
   typeValues:
     file: Fichier
@@ -335,7 +315,6 @@ en:
   requestedPublicationSites: Requested publications
   services: Extensions
   concepts: Concepts
-  customMetadata: Custom metadata
   type: Type
   typeValues:
     file: File

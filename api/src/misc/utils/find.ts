@@ -338,8 +338,7 @@ const basePipeline = (reqQuery: Record<string, string>, sessionState: SessionSta
  *
  * @returns
  */
-// facetFilters: filters bound to a facet name, applied everywhere except on their own facet
-export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[], textFilter?: any, facetFilters: Record<string, any> = {}) => {
+export const facetsQuery = (reqQuery: Record<string, string>, sessionState: SessionState, resourceType: string, facetFields: Record<string, string> = {}, filterFields: Record<string, string>, nullFacetFields: string[] = [], extraFilters?: any[], textFilter?: any) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
   const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters, textFilter)
@@ -355,9 +354,6 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
   }
   if (reqQuery.owner && !fields.includes('owner')) {
     pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
-  }
-  for (const [name, filter] of Object.entries(facetFilters)) {
-    if (!fields.includes(name)) pipeline.push({ $match: filter })
   }
   if (!fields.includes('visibility')) {
     const visibilityFilters = visibility.filters(reqQuery)
@@ -376,9 +372,6 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
       }
       if (reqQuery.owner && fields.includes('owner') && f !== 'owner') {
         facet.push({ $match: { $and: ownerFilters(reqQuery) } })
-      }
-      for (const [name, filter] of Object.entries(facetFilters)) {
-        if (fields.includes(name) && name !== f) facet.push({ $match: filter })
       }
       if (fields.includes('visibility') && f !== 'visibility') {
         const visibilityFilters = visibility.filters(reqQuery)

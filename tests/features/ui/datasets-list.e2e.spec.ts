@@ -383,38 +383,3 @@ test.describe('topics facet display', () => {
     await expect(page.getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
   })
 })
-
-test.describe('custom metadata facet', () => {
-  test.beforeAll(async () => {
-    await clean()
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: [{ key: 'service', title: 'Service référent' }, { key: 'unused', title: 'Jamais renseignée' }] } })
-    const rest = { isRest: true, schema: [{ key: 'a', type: 'string' }] }
-    await ax.post('/api/v1/datasets', { ...rest, title: 'With service', customMetadata: { service: 'Voirie' } })
-    await ax.post('/api/v1/datasets', { ...rest, title: 'Without service' })
-  })
-
-  test.afterAll(async () => {
-    await checkPendingTasks()
-  })
-
-  test('counts the datasets using each custom metadata and filters on it', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.getByText('2 jeux de données')).toBeVisible({ timeout: 10000 })
-
-    const facet = page.locator('#navigation-right-local').getByRole('combobox', { name: 'Métadonnées personnalisées' })
-    const listbox = page.getByRole('listbox', { name: 'Métadonnées personnalisées' })
-    // same retried open-and-select as the topics facet, the menu can close on its own while the page settles
-    await expect(async () => {
-      if (await listbox.count() === 0) await facet.click()
-      const option = listbox.getByRole('option').first()
-      await expect(listbox.getByRole('option')).toHaveText(['Service référent (1)'], { timeout: 2000 })
-      if (await option.getAttribute('aria-selected') !== 'true') await option.click({ timeout: 2000 })
-      await expect(option).toHaveAttribute('aria-selected', 'true', { timeout: 2000 })
-    }).toPass({ timeout: 15000 })
-    await page.keyboard.press('Escape')
-
-    await expect(page).toHaveURL(/customMetadata=service/)
-    await expect(page.getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
-  })
-})
