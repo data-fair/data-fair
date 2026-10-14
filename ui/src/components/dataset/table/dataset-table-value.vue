@@ -3,6 +3,7 @@
     <!-- attachment_url is empty if the value is an external link -->
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
+      tabindex="-1"
       :href="extendedValue.raw"
       :title="t('download', { name: extendedValue.formatted })"
       target="_blank"
@@ -12,6 +13,7 @@
   <template v-else-if="property['x-refersTo'] === 'https://schema.org/WebPage'">
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
+      tabindex="-1"
       target="_blank"
       rel="noopener"
       :href="extendedValue.raw"
@@ -70,6 +72,7 @@
     >
       <v-btn
         v-if="extendedValue.displayDetail"
+        tabindex="-1"
         :icon="dense ? mdiLoupe : mdiMagnifyPlus"
         :density="dense ? 'comfortable' : 'default'"
         size="x-small"
@@ -80,6 +83,7 @@
       />
       <v-btn
         v-if="!noFilter && !filtered && extendedValue.filterable"
+        tabindex="-1"
         :icon="mdiFilterVariant"
         :loading="filterLoading"
         :density="dense ? 'comfortable' : 'default'"

@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 test.describe('embed dataset table — accessibility (RGAA)', () => {
   test.beforeEach(async () => {
@@ -61,16 +61,12 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     await expect(liveRegion).toContainText(/(aucune|no)\s+(ligne|line)/i, { timeout: 5000 })
   })
 
-  test('scrollable table wrapper is focusable and sort is keyboard-activable (7.3)', async ({ page, goToWithAuth }) => {
+  test('the header menu opens from the keyboard and gives focus back on close (7.3)', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
     await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
-
-    // 7.3 — scrollable wrapper must be reachable by Tab so keyboard users can scroll rows
-    const scrollWrapper = page.locator('.dataset-table .v-table__wrapper').first()
-    await expect(scrollWrapper).toHaveAttribute('tabindex', '0')
 
     // Each sortable column header exposes a real focusable button
     const firstSortButton = page.locator('thead th button[aria-haspopup="menu"]').first()
@@ -119,5 +115,92 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     const selectCols = page.getByRole('button', { name: /colonnes? masquées?|columns? hidden/i })
     await expect(selectCols).toHaveAccessibleName(/1 colonne masquée|1 column hidden/i)
     await expect(selectCols.locator('.v-badge__badge')).toHaveText('1')
+  })
+
+  test.describe('keyboard navigation between cells (7.3)', () => {
+    const activeCell = (page: any) => page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null
+      const cell = el?.closest('[data-row]') as HTMLElement | null
+      return {
+        inTable: !!el?.closest('.dataset-table'),
+        isCell: !!el?.matches('[data-row]'),
+        row: cell ? Number(cell.dataset.row) : null,
+        col: cell ? Number(cell.dataset.col) : null
+      }
+    })
+    const colOf = async (page: any, title: string) => page.locator('.dataset-table thead th').evaluateAll(
+      (ths: HTMLElement[], t: string) => ths.findIndex(th => th.textContent?.trim() === t), title)
+
+    test('the table is a single Tab stop and arrows move between cells', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+
+      await page.locator('[role="search"] input').first().focus()
+      for (let i = 0; i < 15 && !(await activeCell(page)).inTable; i++) await page.keyboard.press('Tab')
+      expect(await activeCell(page)).toMatchObject({ inTable: true, isCell: true, row: 1, col: 0 })
+
+      await page.keyboard.press('ArrowRight')
+      await page.keyboard.press('ArrowDown')
+      expect(await activeCell(page)).toMatchObject({ isCell: true, row: 2, col: 1 })
+
+      // one Tab leaves the table, Shift+Tab comes back to the same cell
+      await page.keyboard.press('Tab')
+      expect((await activeCell(page)).inTable).toBe(false)
+      await page.keyboard.press('Shift+Tab')
+      expect(await activeCell(page)).toMatchObject({ isCell: true, row: 2, col: 1 })
+    })
+
+    test('Enter reaches the controls of a cell, Escape returns to the cell', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'adr')
+      const cell = page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`)
+      await cell.focus()
+
+      // a focused cell shows the buttons a mouse hover shows
+      const filterButton = cell.getByRole('button', { name: /filtrer|filter/i })
+      await expect(filterButton).toBeVisible()
+      await page.keyboard.press('Enter')
+      await expect(filterButton).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(cell).toBeFocused()
+
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1)
+    })
+
+    test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'adr')
+      await page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`).focus()
+
+      await page.keyboard.press('ArrowUp')
+      expect(await activeCell(page)).toMatchObject({ isCell: true, row: 0, col })
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.v-overlay--active.v-menu')).toBeVisible()
+    })
+
+    test('Ctrl+End reaches the last loaded row, outside the rendered range', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-rows', schema: [{ key: 'n', type: 'integer' }] })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, Array.from({ length: 300 }, (_, n) => ({ n })))
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const renderedRows = await page.locator('.dataset-table tbody tr').count()
+      await page.locator('.dataset-table td[data-row="1"][data-col="0"]').focus()
+
+      await page.keyboard.press('Control+End')
+      await expect.poll(async () => (await activeCell(page)).row).toBeGreaterThan(renderedRows)
+      expect((await activeCell(page)).isCell).toBe(true)
+    })
   })
 })

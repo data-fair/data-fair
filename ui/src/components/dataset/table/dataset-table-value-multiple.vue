@@ -6,6 +6,7 @@
     <v-chip
       v-for="(value, i) in extendedValues"
       :key="i"
+      tabindex="-1"
       class="my-0"
       :text="value.formatted"
       :base-color="hovered === value ? 'primary' : 'default'"

@@ -6,6 +6,7 @@
       height: lineHeight + 'px',
     }"
     @mouseenter="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
+    @focusin="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
     @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.synthetic">
@@ -28,6 +29,7 @@
     <template v-else-if="header.key === '_map_preview'">
       <v-btn
         v-if="result._geopoint"
+        tabindex="-1"
         :icon="mdiMap"
         :title="t('showMapPreview')"
         :density="dense ? 'comfortable' : 'default'"
@@ -43,6 +45,7 @@
       <template v-if="selectable">
         <v-btn
           v-if="selected"
+          tabindex="-1"
           :icon="mdiCheckboxMarked"
           :size="dense ? 'md' : 'large'"
           :title="t('unselectLine')"
@@ -53,6 +56,7 @@
         />
         <v-btn
           v-else
+          tabindex="-1"
           :icon="mdiCheckboxBlankOutline"
           :size="dense ? 'md' : 'large'"
           :title="t('selectLine')"
