@@ -37,8 +37,8 @@ test('toolMatches accepts the bare name and server-prefixed forms only', () => {
   assert.equal(toolMatches('xdatafair_search_data', 'datafair_search_data'), false)
 })
 
-test('the default agent uses the read server only', () => {
-  assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [{ serverId: 'datafair-read' }])
+test('the default agent reads only, through the read profile', () => {
+  assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [{ serverId: 'datafair', profiles: ['read'] }])
 })
 
 test.describe('question-sur-un-jeu-du-compte premise', () => {

@@ -45,6 +45,8 @@ Two families of consumers ask very different things of the same APIs.
 - The agents service (branch `feat-autonomous-agents`) selects tools per MCP server with a
   `toolFilter` of tool names, and its spec treats a server catalog entry as "a URL plus a
   profile".
+  Since 2026-10-14 it selects profiles instead, on a *profiled* catalog entry (see "The agents
+  service" below); `toolFilter` remains for servers that declare no profiles.
 
 ## 3. The vocabulary
 
@@ -242,15 +244,22 @@ tool, so it can stay in the index meanwhile.
 
 ### The agents service
 
-- An autonomous agent selects `profiles: string[]` on the stack's server entry; `toolFilter`
-  goes away. The selection is checked against the server's declared profiles when the agent is
-  saved and when it runs.
+Implemented on the agents branch `feat-autonomous-agents` (its design:
+`docs/superpowers/specs/2026-10-14-mcp-profile-selection-design.md` there).
+
+- The stack's server is one catalog entry with a `profilesUrl` (the mcp server's
+  `/mcp-server/profiles`, the whole vocabulary with `includes`). An autonomous agent, and each of
+  the two personal assistants, selects `profiles: string[]` on it, sent as the `profiles` query
+  parameter; `toolFilter` is refused there and kept for servers that declare no profiles. The
+  selection is checked against the server's vocabulary when the agent is saved and by the server
+  when it runs. `catalog` combines with anything: an agent with back-office tools may also query
+  what a portal publishes. The personal assistants are configured on `catalog`.
 - The configuration UI is a small tree derived from the index's `includes`: roots `catalog`,
   `read`, `write`, `manage`; each grid root selectable as a whole or unfolded into its silos;
   cells implied by a selection shown as such (`write_portals` implies `read_portals`).
-- The selectable roots may follow the role of the agent's identity in the account (`user`:
-  `read`; `contrib`: up to `write`; `admin`: everything). This narrows the offer; the APIs
-  enforce the rights either way.
+- The selectable roots follow the role of the agent's identity in the account (`user`:
+  `catalog`, `read`; `contrib`: up to `write`; `admin`: everything). This narrows the offer; the
+  APIs enforce the rights either way.
 
 ### The browser back-office assistant
 

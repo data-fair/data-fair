@@ -236,9 +236,11 @@ services:
       - SSRF_PUBLIC_IPS=127.0.0.1,::1
       # the agents repo's development signing key, public by design: it only signs dev NHI assertions
       - 'NHI_SIGNING_KEY={"kty":"EC","crv":"P-256","x":"iuGRxiUsSj4YmAvrp3XpXGnvttc6ruQIYakEVp-B4Ig","y":"nF0kPlKpzNztlqKozkb9T4sHl_sCD1M6ngrpwEnTL-M","d":"Hv71PS5oK6z6bqiRT-nq62cmgauiaCreaO-zmS30-6Q","kid":"dev-1","alg":"ES256"}'
-      # the operator catalog: the stack's mcp server, as the agent (one entry per profile set until
-      # the agents service selects profiles itself)
-      - 'MCP_SERVERS=[{"id":"datafair-read","name":"Data Fair (read)","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/mcp?profiles=read","auth":"nhi-session"},{"id":"datafair-write","name":"Data Fair (read, write)","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/mcp?profiles=read,write","auth":"nhi-session"}]'
+      # the operator catalog: the stack's mcp server as ONE profiled entry, as the agent; each agent selects
+      # its profiles (catalog, read, write…) from the vocabulary at profilesUrl
+      - 'MCP_SERVERS=[{"id":"datafair","name":"Data Fair","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/mcp","profilesUrl":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/profiles","auth":"nhi-session"}]'
+      # the two built-in personal assistants read what the portal publishes, nothing more
+      - 'PERSONAL_ASSISTANTS={"portal":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]},"backOffice":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]}}'
 
   # the MCP server composed from the services' agent annotations (/data-fair/api/v1/agents/index.json)
   mcp:

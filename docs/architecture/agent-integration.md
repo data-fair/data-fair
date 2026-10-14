@@ -642,8 +642,8 @@ drawer and its in-page tools are not involved.
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.
 - The agent reaches the mcp server through the operator catalog (`MCP_SERVERS` in
-  `docker-compose.yaml`): `datafair-read` (`/mcp-server/mcp?profiles=read`) and
-  `datafair-write` (`…?profiles=read,write`), both as the agent's own session.
+  `docker-compose.yaml`): one profiled entry, `datafair`, on which the simulated agent selects
+  `profiles: ['read']` (sent as `/mcp-server/mcp?profiles=read`), as the agent's own session.
 - Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
   `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
 - Before any model call the runner asks the agent's tool diagnostic for the tools the
