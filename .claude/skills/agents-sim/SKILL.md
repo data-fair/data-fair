@@ -84,12 +84,15 @@ while someone is relying on that data.
    fix it. Capture the pid and watch that instead:
 
    ```bash
-   nohup npm run simulate > sim.log 2>&1 &
+   nohup npm run simulate > simulations/tmp/sim-run.log 2>&1 &
    SIMPID=$!
    while kill -0 "$SIMPID" 2>/dev/null; do sleep 20; done
    ```
 
    For the same reason, never `pkill -f` a pattern taken from your own script.
+
+   The log goes with the rest of the evidence: `simulations/tmp/` is ignored by git, and step 2
+   clears it with the previous run's files.
 
 4. **Ignore the runner's own account of how it went.** The transcript at
    `simulations/tmp/sim-<case>.json` is the evidence. A Playwright `passed` line
