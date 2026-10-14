@@ -577,6 +577,89 @@ test.describe('permissions editor', () => {
       expect(application.owner.department).toBe('dep1')
     })
 
+    // an organization-level application for the editor branches that do not depend on a department
+    let orgAppId: string
+    let orgAppDefaultPermissions: any
+    const orgAppPermissions = async () => (await ax.get(`/api/v1/applications/${orgAppId}/permissions`)).data
+
+    test.beforeAll(async () => {
+      orgAppId = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'permissions app' })).data.id
+      orgAppDefaultPermissions = await orgAppPermissions()
+    })
+
+    test.beforeEach(async () => {
+      if (orgAppId) await ax.put(`/api/v1/applications/${orgAppId}/permissions`, orgAppDefaultPermissions)
+    })
+
+    async function goToAppPermissions (page: any, goToWithAuth: any) {
+      await goToWithAuth(`/data-fair/application/${orgAppId}`, 'test_user1', { org: 'test_org1' })
+      await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+      await page.locator('#share').scrollIntoViewIfNeeded()
+      await page.getByRole('tab', { name: /Permissions/i }).click()
+      await expect(page.locator('#share .v-select').first()).toBeVisible({ timeout: 10000 })
+    }
+
+    async function openPartnerSelect (page: any) {
+      await page.getByLabel(/Édition détaillée/i).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
+      await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
+      await page.locator('.v-dialog .v-select').nth(1).click()
+      await page.getByRole('option', { name: /partenaires/ }).click()
+      await page.locator('.v-dialog .v-select').filter({ hasText: /Partenaire/ }).click()
+    }
+
+    test('the contributor profile only offers what an application can express', async ({ page, goToWithAuth }) => {
+      await goToAppPermissions(page, goToWithAuth)
+      const profile = page.locator('#share .v-select').nth(1)
+      await profile.click()
+      // no data-only nor no-breaking-change profile: an application has no data operations
+      await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(2)
+      await page.getByRole('option', { name: /peuvent tout modifier et supprimer/i }).click()
+      await expect.poll(async () => (await orgAppPermissions()).find((p: any) =>
+        p.type === 'organization' && p.roles?.[0] === 'contrib' && p.classes?.includes('write') && p.operations?.includes('delete')
+      ), { timeout: 5000 }).toBeTruthy()
+    })
+
+    test('the dialog lists application operations, not dataset ones, and stores a partner permission', async ({ page, goToWithAuth }) => {
+      await goToAppPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      await page.getByRole('button', { name: /Ajouter une permission/ }).click()
+      await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
+      await page.locator('.v-dialog .v-select').filter({ hasText: /Actions détaillées/i }).click()
+      await expect(page.getByRole('option', { name: /Modifier la configuration/ })).toBeVisible()
+      await expect(page.getByRole('option', { name: /Créer une ligne|Lire les lignes/ })).toHaveCount(0)
+      await page.keyboard.press('Escape')
+
+      await page.locator('.v-dialog .v-select').nth(1).click()
+      await page.getByRole('option', { name: /partenaires/ }).click()
+      await page.locator('.v-dialog .v-select').filter({ hasText: /Partenaire/ }).click()
+      await page.getByRole('option', { name: /Test Org 2/ }).click()
+      await page.locator('.v-dialog').getByRole('button', { name: /Valider/ }).click()
+      await expect.poll(async () => (await orgAppPermissions()).find((p: any) => p.type === 'organization' && p.id === 'test_org2'), { timeout: 5000 }).toBeTruthy()
+    })
+
+    test('a pending partner is not offered', async ({ page, goToWithAuth }) => {
+      await page.route('**/simple-directory/api/organizations/test_org1', async (route: any) => {
+        const org = await (await route.fetch()).json()
+        org.partners = [{ name: 'Partenaire En Attente', contactEmail: 'pending@test.com', partnerId: 'pending-partner' }, ...(org.partners ?? [])]
+        await route.fulfill({ json: org })
+      })
+      await goToAppPermissions(page, goToWithAuth)
+      await openPartnerSelect(page)
+      await expect(page.getByRole('option', { name: /Test Org 2/ })).toBeVisible({ timeout: 5000 })
+      await expect(page.getByRole('option', { name: /Partenaire En Attente/ })).toHaveCount(0)
+    })
+
+    test('a non-standard permission opens the editor in detailed mode', async ({ page, goToWithAuth }) => {
+      await ax.put(`/api/v1/applications/${orgAppId}/permissions`, [
+        ...orgAppDefaultPermissions,
+        { type: 'user', email: 'someone@test.com', operations: ['readConfig'], classes: [] }
+      ])
+      await goToAppPermissions(page, goToWithAuth)
+      await expect(page.getByLabel(/Édition détaillée/i)).toBeChecked()
+      await expect(page.locator('#share').getByText('someone@test.com')).toBeVisible()
+    })
+
     test('the department scope and labels hold on an application too', async ({ page, goToWithAuth }) => {
       const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       await goToWithAuth('/data-fair/', 'test_user4')

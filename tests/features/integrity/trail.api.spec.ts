@@ -2,7 +2,7 @@
 // Round 3: the trail-coherence verdict — the check's second result, proving the revision trail
 // itself was not altered. Attacks simulated with raw store credentials (shadow versions, delete
 // markers): object-lock preserves the original versions, and the verdict reads that evidence.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 import {

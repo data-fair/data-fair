@@ -1,7 +1,7 @@
 // tests/features/integrity/lines.api.spec.ts
 // Target 3: per-line locked revisions for editable (REST) datasets — store layout, write-path
 // stamping, relay, enable/gate, check, restore/fix.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axios, axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix, putShadowVersion

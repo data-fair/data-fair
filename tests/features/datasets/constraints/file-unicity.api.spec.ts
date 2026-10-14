@@ -1,8 +1,8 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
-import { axiosAuth, clean } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, doAndWaitForFinalize } from '../../../support/workers.ts'
+import { axiosAuth, clean, waitForWorkerIdle } from '../../../support/axios.ts'
+import { waitForFinalize, waitForDatasetError, doAndWaitForFinalize, waitForJournalEvent } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -216,20 +216,16 @@ test.describe('file dataset unique constraint', () => {
     const badCsv = 'a,b\nx,1\ny,2\nx,1\n'
     const form = new FormData()
     form.append('file', Buffer.from(badCsv), 'data.csv')
-    await testUser1.post(`/api/v1/datasets/${ds.id}`, form, {
-      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
-      params: { draft: 'compatibleOrCancel' }
-    })
-
-    // poll for the draft-cancelled event (same pattern as the validation-diagnostic spec)
-    let cancelEvent: any
-    for (let i = 0; i < 60; i++) {
-      const journal = (await testUser1.get(`/api/v1/datasets/${ds.id}/journal`)).data
-      cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
-      if (cancelEvent) break
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
+    const [cancelEvent] = await Promise.all([
+      waitForJournalEvent(ds.id, 'draft-cancelled'),
+      testUser1.post(`/api/v1/datasets/${ds.id}`, form, {
+        headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+        params: { draft: 'compatibleOrCancel' }
+      })
+    ])
     assert.ok(cancelEvent, 'expected draft-cancelled event after a unicity violation under compatibleOrCancel')
+    // the cancellation restores the published version in a follow-up task
+    await waitForWorkerIdle()
     assert.equal(cancelEvent.hasDiagnosticFile, true)
     assert.ok((cancelEvent.unicityErrorCount ?? 0) > 0, `expected unicityErrorCount > 0, got ${JSON.stringify(cancelEvent)}`)
 

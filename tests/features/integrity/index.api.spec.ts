@@ -1,7 +1,7 @@
 // tests/features/integrity/index.api.spec.ts
 // A1: index-consistency verdict — the ES projection users read (through the alias) is compared
 // against the verified source. REST datasets here; file datasets in the same file, Task 5.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForLinesDrained, waitForFlagCleared, waitForIndexSettled, aimSeedAt, aimSeedAway } from '../../support/integrity.ts'

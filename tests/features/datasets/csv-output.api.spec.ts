@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
@@ -51,6 +51,9 @@ test.describe('CSV output (JIT serializer end-to-end)', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
+  // Smoke test: proves the serializer is wired into the endpoint. Byte-level
+  // behavior (types, nulls, quoting, delimiter, header, unicode...) is pinned
+  // in csv-jit.unit.spec.ts against the pure compileCsv/getCsvSerializer functions.
   test('all primitive types: string/integer/number/boolean, plus null cells', async () => {
     const ax = testUser1
     const id = await seedRestDataset(ax, 'csvtypes', [
@@ -74,76 +77,8 @@ test.describe('CSV output (JIT serializer end-to-end)', () => {
     assertEqualBodies(csv, expected)
   })
 
-  test('strings with CSV-significant chars: comma, quote, newline, CRLF', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvquotes', [{ key: 's', type: 'string' }], [
-      { _id: '1', s: 'plain' },
-      { _id: '2', s: 'has,comma' },
-      { _id: '3', s: 'has "quote"' },
-      { _id: '4', s: 'has\nlinefeed' },
-      { _id: '5', s: 'has\r\ncrlf' },
-      { _id: '6', s: 'mixed, "quoted"\nand newline' }
-    ])
-
-    const csv = await csvBody(ax, id)
-    const expected =
-      BOM + '"s"\n' +
-      '"plain"\n' +
-      '"has,comma"\n' +
-      '"has ""quote"""\n' +
-      '"has\nlinefeed"\n' +
-      '"has\r\ncrlf"\n' +
-      '"mixed, ""quoted""\nand newline"\n'
-    assertEqualBodies(csv, expected)
-  })
-
-  test('null character in string values is stripped from CSV output', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvnullchar', [{ key: 's', type: 'string' }], [
-      { _id: '1', s: 'before\0after' },
-      { _id: '2', s: '\0\0just nulls\0\0' },
-      { _id: '3', s: 'clean' }
-    ])
-
-    const csv = await csvBody(ax, id)
-    const expected =
-      BOM + '"s"\n' +
-      '"beforeafter"\n' +
-      '"just nulls"\n' +
-      '"clean"\n'
-    assertEqualBodies(csv, expected)
-  })
-
-  test('custom separator: ?sep=; with values containing both , and ;', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvsep', [
-      { key: 'a', type: 'string' },
-      { key: 'b', type: 'string' }
-    ], [
-      { _id: '1', a: 'has,comma', b: 'has;semicolon' },
-      { _id: '2', a: 'both, and;', b: 'plain' }
-    ])
-
-    const csv = await csvBody(ax, id, 'sep=;')
-    const expected =
-      BOM + '"a";"b"\n' +
-      '"has,comma";"has;semicolon"\n' +
-      '"both, and;";"plain"\n'
-    assertEqualBodies(csv, expected)
-  })
-
-  test('?header=false suppresses the header row but keeps the BOM', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvnoheader', [{ key: 's', type: 'string' }], [
-      { _id: '1', s: 'one' },
-      { _id: '2', s: 'two' }
-    ])
-
-    const csv = await csvBody(ax, id, 'header=false')
-    const expected = BOM + '"one"\n' + '"two"\n'
-    assertEqualBodies(csv, expected)
-  })
-
+  // Smoke test: proves ?select= is wired into the endpoint (column subset/order
+  // itself is unit-tested against getCsvSerializer).
   test('?select= controls column subset and ordering', async () => {
     const ax = testUser1
     const id = await seedRestDataset(ax, 'csvselect', [
@@ -162,40 +97,12 @@ test.describe('CSV output (JIT serializer end-to-end)', () => {
       '"C1","A1"\n' +
       '"C2","A2"\n'
     assertEqualBodies(csv, expected)
-  })
 
-  test('unicode (BMP + emoji) survives round-trip unchanged', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvunicode', [{ key: 's', type: 'string' }], [
-      { _id: '1', s: 'éàü' },
-      { _id: '2', s: '中文' },
-      { _id: '3', s: '🚀' },
-      { _id: '4', s: 'mixed éàü 中文 🚀' }
-    ])
-
-    const csv = await csvBody(ax, id)
-    const expected =
-      BOM + '"s"\n' +
-      '"éàü"\n' +
-      '"中文"\n' +
-      '"🚀"\n' +
-      '"mixed éàü 中文 🚀"\n'
-    assertEqualBodies(csv, expected)
-  })
-
-  test('empty result set still emits BOM + header row', async () => {
-    const ax = testUser1
-    const id = await seedRestDataset(ax, 'csvempty', [
-      { key: 'a', type: 'string' },
-      { key: 'b', type: 'integer' }
-    ], [
-      { _id: '1', a: 'x', b: 1 }
-    ])
-
-    // filter that matches no rows
-    const csv = await csvBody(ax, id, 'a_eq=nonexistent')
-    const expected = BOM + '"a","b"\n'
-    assertEqualBodies(csv, expected)
+    // ?sep= and ?header= reach the serializer too, their output is unit-tested
+    assertEqualBodies(await csvBody(ax, id, 'select=c,a&sep=;'),
+      BOM + '"c";"a"\n' + '"C1";"A1"\n' + '"C2";"A2"\n')
+    assertEqualBodies(await csvBody(ax, id, 'select=c,a&header=false'),
+      BOM + '"C1","A1"\n' + '"C2","A2"\n')
   })
 
   test('streaming path (/raw) on REST dataset produces same CSV', async () => {

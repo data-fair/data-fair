@@ -1,8 +1,8 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, waitForJournalEvent } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -321,23 +321,15 @@ test.describe('validation diagnostic file', () => {
     const draftCsv = 'id,n\nc,7\nd,0\n'
     const form2 = new FormData()
     form2.append('file', Buffer.from(draftCsv), 'simple.csv')
-    const draftRes = (await testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
-      headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
-      params: { draft: 'compatibleOrCancel' }
-    })).data
+    // subscribe before the upload: the journal is not replayed
+    const [, draftRes] = await Promise.all([
+      waitForJournalEvent(dataset.id, 'draft-cancelled'),
+      testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
+        headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+        params: { draft: 'compatibleOrCancel' }
+      }).then((r: any) => r.data)
+    ])
     assert.equal(draftRes.draftReason.validationMode, 'compatibleOrCancel')
-
-    // Poll for the draft-cancelled event (the worker may take a moment to process).
-    let cancelled = false
-    for (let i = 0; i < 60; i++) {
-      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-      if (journal.find((e: any) => e.type === 'draft-cancelled')) {
-        cancelled = true
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    assert.ok(cancelled, 'expected draft-cancelled event after a mandatory extension failed under compatibleOrCancel')
 
     // The draft-cancelled event must carry breakdown counts proving extension failed.
     const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -376,19 +368,13 @@ test.describe('validation diagnostic file', () => {
     const draftCsv = 'id,n\nc,7\nd,0\n'
     const form2 = new FormData()
     form2.append('file', Buffer.from(draftCsv), 'simple.csv')
-    await testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
-      headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
-      params: { draft: 'compatibleOrCancel' }
-    })
-
-    // poll for the draft-cancelled event
-    let cancelEvent: any
-    for (let i = 0; i < 60; i++) {
-      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-      cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
-      if (cancelEvent) break
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
+    const [cancelEvent] = await Promise.all([
+      waitForJournalEvent(dataset.id, 'draft-cancelled'),
+      testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
+        headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+        params: { draft: 'compatibleOrCancel' }
+      })
+    ])
     assert.ok(cancelEvent, 'expected draft-cancelled event')
     assert.equal(cancelEvent.hasDiagnosticFile, true)
     assert.ok((cancelEvent.diagnosticErrorCount ?? 0) > 0)
@@ -428,17 +414,15 @@ test.describe('validation diagnostic file', () => {
     // failing contribution -> draft cancelled, diagnostic relocated
     const badForm = new FormData()
     badForm.append('file', Buffer.from('id,n\nc,7\nd,0\n'), 'simple.csv')
-    await testUser1.post(`/api/v1/datasets/${dataset.id}`, badForm, {
-      headers: { 'Content-Length': badForm.getLengthSync(), ...badForm.getHeaders() },
-      params: { draft: 'compatibleOrCancel' }
-    })
-    let cancelled = false
-    for (let i = 0; i < 60; i++) {
-      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-      if (journal.find((e: any) => e.type === 'draft-cancelled')) { cancelled = true; break }
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    assert.ok(cancelled, 'expected draft-cancelled event before re-contribution')
+    await Promise.all([
+      waitForJournalEvent(dataset.id, 'draft-cancelled'),
+      testUser1.post(`/api/v1/datasets/${dataset.id}`, badForm, {
+        headers: { 'Content-Length': badForm.getLengthSync(), ...badForm.getHeaders() },
+        params: { draft: 'compatibleOrCancel' }
+      })
+    ])
+    // the cancellation still holds the dataset lock, the re-contribution below would 409
+    await waitForWorkerIdle()
     assert.equal((await fetchCancelledDiagnostic(dataset.id)).status, 200)
 
     // good contribution -> draft validated/promoted, relocated diagnostic removed

@@ -53,7 +53,13 @@ export const waitForWorkerIdle = async (timeoutMs = 5000): Promise<boolean> => {
 }
 
 export const clean = async () => {
-  await waitForWorkerIdle()
+  // wiping datasets and indices under a busy worker crashes its tasks and takes the next test
+  // down with them: better fail here, naming the leak, than cascade. 20s keeps this message
+  // ahead of the 30s test timeout that also covers beforeEach.
+  if (!await waitForWorkerIdle(20000)) {
+    const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
+    throw new Error(`clean() refused: the worker is still busy after 20s, the previous test left tasks running: ${JSON.stringify(res.data)}`)
+  }
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
 }
 
@@ -65,7 +71,8 @@ export const config = {
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }
 
-export const checkPendingTasks = async (timeoutMs = 30000) => {
+// 10s: this runs in afterEach, inside the test's own 30s budget
+export const checkPendingTasks = async (timeoutMs = 10000) => {
   // some test paths legitimately leave a finalize task in-flight (e.g. a successful REST line POST
   // sets _partialRestStatus: 'indexed' which the shortProcessor picks up asynchronously). A task that
   // is still running is not a leak, so keep polling for the whole window and only report what is

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { clearPublicationSitesCache, waitForFinalize } from '../../support/workers.ts'
 

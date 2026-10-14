@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, setupMockRoute, clearMockRoutes, getRawDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
