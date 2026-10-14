@@ -916,13 +916,14 @@ const onTableFocusout = (event: FocusEvent) => {
   hoveredHeader.value = undefined
 }
 
-// focus anywhere in a cell (keyboard or click) makes it the tab stop; the cells
-// themselves show their hover buttons on focus (dataset-table-cell, @focusin)
+// The tab stop moves with keyboard navigation only (focusCell): updating it on every
+// focus, a click included, re-rendered the whole table template each time (measured
+// with the ui-table harness, header-menu scenario). The cells show their hover buttons
+// on focus themselves (dataset-table-cell, @focusin).
 const onTableFocusin = (event: FocusEvent) => {
   const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-row]')
   if (!cell) return
   const pos = cellPosition(cell)
-  activeCell.value = pos
   const header = headers.value?.[pos.col]
   if (pos.row === 0 && header && showHeaderMenu(header)) hoveredHeader.value = header
 }
