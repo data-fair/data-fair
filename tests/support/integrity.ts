@@ -1,6 +1,7 @@
 import { S3Client, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { IntegrityStore } from '../../api/src/integrity/store.ts'
 import { getRawDataset } from './workers.ts'
+import { anonymousAx, apiUrl } from './axios.ts'
 import { samplePivots } from '../../api/src/integrity/index-operations.ts'
 
 export const integrityEndpoint = `http://localhost:${process.env.S3_PORT}`
@@ -94,6 +95,25 @@ export const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000): 
   }
   if (raw._needsHistorizing !== undefined) throw new Error('relay did not clear _needsHistorizing within timeout')
   return raw
+}
+
+// Wait until the index projection of a REST dataset has caught up with the source, by the same
+// definition the index check uses for "pending" (index-check.ts pendingState): no
+// _partialRestStatus on the dataset and no line left with _needsIndexing. Waiting for a
+// finalize-end journal event instead hangs for its whole timeout whenever nothing needed
+// reindexing, which is the common case.
+export const waitForIndexSettled = async (datasetId: string, timeoutMs = 15000): Promise<void> => {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const raw = await getRawDataset(datasetId)
+    if (!raw._partialRestStatus) {
+      const pending = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`,
+        { params: { filter: JSON.stringify({ _needsIndexing: true }), projection: JSON.stringify({ _id: 1 }) } })).data
+      if (!pending) return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error('timed out waiting for the index projection to settle')
 }
 
 // --- round 3 (trail coherence) attack helpers -------------------------------------------------

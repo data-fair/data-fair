@@ -3,6 +3,7 @@ import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid a
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User } from '@data-fair/lib-express'
 import trimFields from '../misc/utils/trim-fields.ts'
+import nanoid from '../misc/utils/nanoid.ts'
 
 export function validateSettings (settings: any): asserts settings is Settings | DepartmentSettings {
   if ((settings as DepartmentSettings).department) {
@@ -76,6 +77,9 @@ export const fillSettings = (owner: AccountKeys, user: User, settings: any): Set
 }
 
 export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+  for (const group of datasetsMetadata.groups ?? []) {
+    if (!group.key) group.key = nanoid()
+  }
   if (datasetsMetadata.custom) {
     for (const customMedata of datasetsMetadata.custom) {
       if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
@@ -150,6 +154,8 @@ export const trimSettings = (settings: Partial<Settings>) => {
       if (option) trimFields(option, 'title')
     }
     for (const custom of settings.datasetsMetadata.custom ?? []) trimFields(custom, 'key', 'title', 'description')
+    for (const group of settings.datasetsMetadata.groups ?? []) trimFields(group, 'title')
+    trimFields(settings.datasetsMetadata, 'informationsTitle', 'coverageTitle')
   }
   if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
 }

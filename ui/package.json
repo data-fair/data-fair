@@ -9,7 +9,7 @@
     "prepare-webfont-css": "",
     "preview": "vite preview",
     "check-types": "vue-tsc",
-    "lint": "eslint .",
+    "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ .",
     "lint-fix": "eslint --fix ."
   },
   "imports": {

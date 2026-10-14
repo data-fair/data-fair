@@ -25,7 +25,7 @@ test.describe('permissions', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
-  test('apply permissions to datasets', async () => {
+  test('apply permissions to datasets', { tag: '@smoke' }, async () => {
     // A dataset with restricted permissions
     let res = await testUser1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
@@ -407,7 +407,7 @@ test.describe('permissions', () => {
     assert.deepEqual(application.owner, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep2' })
   })
 
-  test('user can do everything in his own account', async () => {
+  test('user can do everything in his own account', { tag: '@smoke' }, async () => {
     const dataset = (await testUser1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Test User1')
     await testUser1.get(`/api/v1/datasets/${dataset.id}`)
@@ -431,7 +431,7 @@ test.describe('permissions', () => {
     await testUser1Org.delete(`/api/v1/applications/${application.id}`)
   })
 
-  test('organization contrib has limited capabilities', async () => {
+  test('organization contrib has limited capabilities', { tag: '@smoke' }, async () => {
     // can create a dataset and use it, but not administrate it
     const dataset = (await testUser5Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Test Org 1')
@@ -450,7 +450,7 @@ test.describe('permissions', () => {
     await assert.rejects(testUser5Org.put('/api/v1/settings/organization/test_org1', { topics: [] }), { status: 403 })
   })
 
-  test('organization user has even more limited capabilities', async () => {
+  test('organization user has even more limited capabilities', { tag: '@smoke' }, async () => {
     await assert.rejects(testUser8Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err: any) => err.status === 403)
     const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Test Org 1')

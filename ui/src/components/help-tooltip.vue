@@ -1,30 +1,36 @@
 <template>
-  <!-- same look and behaviour as the help messages of vjsf forms -->
-  <v-menu
-    v-model="show"
-    :location="location"
-    offset="4"
-    max-width="400"
-    :close-on-content-click="false"
-  >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="{ ...props, ...$attrs }"
-        color="info"
-        :icon="mdiInformationSymbol"
-        density="compact"
-        variant="flat"
-        :size="small ? 20 : 24"
-        :title="show ? '' : t('showHelp')"
-      />
-    </template>
-    <v-alert
-      color="info"
-      density="comfortable"
+  <!-- wraps the field it explains, help beside it at the top like the agent buttons -->
+  <div class="d-flex align-start flex-grow-1">
+    <slot />
+    <!-- same look and behaviour as the help messages of vjsf forms -->
+    <v-menu
+      v-if="text"
+      v-model="show"
+      :location="location"
+      offset="4"
+      max-width="400"
+      :close-on-content-click="false"
     >
-      <slot>{{ text }}</slot>
-    </v-alert>
-  </v-menu>
+      <template #activator="{ props }">
+        <v-btn
+          v-bind="{ ...props, ...$attrs }"
+          class="ml-1"
+          color="info"
+          :icon="mdiInformationSymbol"
+          density="compact"
+          variant="flat"
+          :size="small ? 20 : 28"
+          :title="show ? '' : t('showHelp')"
+        />
+      </template>
+      <v-alert
+        color="info"
+        density="comfortable"
+      >
+        {{ text }}
+      </v-alert>
+    </v-menu>
+  </div>
 </template>
 
 <i18n lang="yaml">

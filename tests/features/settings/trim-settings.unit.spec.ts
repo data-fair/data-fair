@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { trimSettings } from '../../../api/src/settings/operations.ts'
+import { trimSettings, cleanDatasetsMetadata } from '../../../api/src/settings/operations.ts'
 
 test.describe('trimSettings', () => {
   test('trims topics, licenses, vocabulary, api keys and webhooks', () => {
@@ -24,13 +24,17 @@ test.describe('trimSettings', () => {
     const settings: any = {
       datasetsMetadata: {
         spatial: { active: true, title: ' Zone ' },
-        custom: [{ key: ' ref ', title: ' Référence ', description: ' Référence interne du jeu. ' }]
+        custom: [{ key: ' ref ', title: ' Référence ', description: ' Référence interne du jeu. ' }],
+        groups: [{ key: 'g', title: ' Gouvernance ' }],
+        informationsTitle: ' Général '
       },
       info: { contact: { name: ' Koumoul ', url: ' https://koumoul.com ', email: ' contact@koumoul.com ' } }
     }
     trimSettings(settings)
     assert.equal(settings.datasetsMetadata.spatial.title, 'Zone')
     assert.deepEqual(settings.datasetsMetadata.custom[0], { key: 'ref', title: 'Référence', description: 'Référence interne du jeu.' })
+    assert.deepEqual(settings.datasetsMetadata.groups[0], { key: 'g', title: 'Gouvernance' })
+    assert.equal(settings.datasetsMetadata.informationsTitle, 'Général')
     assert.deepEqual(settings.info.contact, { name: 'Koumoul', url: 'https://koumoul.com', email: 'contact@koumoul.com' })
   })
 
@@ -38,5 +42,14 @@ test.describe('trimSettings', () => {
     const settings: any = { id: 'org' }
     trimSettings(settings)
     assert.deepEqual(settings, { id: 'org' })
+  })
+})
+
+test.describe('cleanDatasetsMetadata', () => {
+  test('gives a key to the categories created without one and keeps the existing keys', () => {
+    const datasetsMetadata: any = { groups: [{ key: 'gouv', title: 'Gouvernance' }, { title: 'Qualité' }] }
+    cleanDatasetsMetadata(datasetsMetadata)
+    assert.equal(datasetsMetadata.groups[0].key, 'gouv')
+    assert.ok(datasetsMetadata.groups[1].key)
   })
 })

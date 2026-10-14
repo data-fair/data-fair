@@ -2,6 +2,7 @@
   <v-row v-if="dataset">
     <!-- Left column: primary fields -->
     <v-col
+      v-if="inTab('title')"
       cols="12"
       :md="dataset.partOf ? 12 : 6"
       :lg="dataset.partOf ? 12 : 7"
@@ -67,13 +68,15 @@
     <!-- Right column: secondary metadata fields -->
     <v-col
       cols="12"
-      md="6"
-      lg="5"
+      :md="inTab('title') ? 6 : 12"
+      :lg="inTab('title') ? 5 : 12"
+      :class="{ 'metadata-grid': !inTab('title') }"
     >
       <v-defaults-provider :defaults="{ global: { hideDetails: true, density: 'comfortable' } }">
         <!-- a fragment is never published: the catalog metadata would describe nothing anyone sees -->
         <template v-if="!dataset.partOf">
           <v-select
+            v-if="inTab('license')"
             v-model="dataset.license"
             :items="licensesFetch.data.value ?? []"
             :disabled="!can('writeDescription')"
@@ -87,17 +90,36 @@
             clearable
           />
 
+          <!-- Conditional metadata fields based on owner settings -->
           <v-text-field
-            v-model="dataset.origin"
+            v-if="inTab('creator') && datasetsMetadata?.creator?.active"
+            v-model="dataset.creator"
+            :rules="props.required.includes('creator') ? [(val: string) => !!val] : []"
             :disabled="!can('writeDescription')"
-            :label="t('origin')"
-            :base-color="fieldColor('origin')"
-            :color="fieldColor('origin')"
+            :label="datasetsMetadata.creator.title || t('creator')"
+            :base-color="fieldColor('creator')"
+            :color="fieldColor('creator')"
             class="mb-4"
             clearable
           />
 
+          <help-tooltip
+            v-if="inTab('origin')"
+            :text="t('originHelp')"
+          >
+            <v-text-field
+              v-model="dataset.origin"
+              :disabled="!can('writeDescription')"
+              :label="t('origin')"
+              :base-color="fieldColor('origin')"
+              :color="fieldColor('origin')"
+              class="mb-4"
+              clearable
+            />
+          </help-tooltip>
+
           <v-text-field
+            v-if="inTab('image')"
             v-model="dataset.image"
             :disabled="!can('writeDescription')"
             :label="t('image')"
@@ -107,8 +129,66 @@
             clearable
           />
 
+          <v-combobox
+            v-if="inTab('spatial') && datasetsMetadata?.spatial?.active"
+            v-model="dataset.spatial"
+            :items="spatialSuggestions"
+            :disabled="!can('writeDescription')"
+            :label="datasetsMetadata.spatial.title || t('spatial')"
+            :base-color="fieldColor('spatial')"
+            :color="fieldColor('spatial')"
+            :loading="loadingSpatial"
+            class="mb-4"
+            clearable
+            @update:search="fetchSpatialFacets"
+          />
+
+          <v-date-input
+            v-if="inTab('temporal') && datasetsMetadata?.temporal?.active"
+            :model-value="temporalDates"
+            :label="datasetsMetadata.temporal.title || t('temporal')"
+            :disabled="!can('writeDescription')"
+            :base-color="fieldColor('temporal')"
+            :color="fieldColor('temporal')"
+            prepend-icon=""
+            multiple="range"
+            class="mb-4"
+            clearable
+            @update:model-value="setTemporalDates"
+          />
+
           <v-select
-            v-if="topicsFetch.data.value?.length"
+            v-if="inTab('frequency') && datasetsMetadata?.frequency?.active"
+            v-model="dataset.frequency"
+            :items="frequencies"
+            :disabled="!can('writeDescription')"
+            :label="datasetsMetadata.frequency.title || t('frequency')"
+            :base-color="fieldColor('frequency')"
+            :color="fieldColor('frequency')"
+            class="mb-4"
+            clearable
+          />
+
+          <help-tooltip
+            v-if="inTab('modified') && datasetsMetadata?.modified?.active"
+            :text="t('modifiedHelp')"
+          >
+            <v-date-input
+              :model-value="dataset.modified ? dayjs(dataset.modified).toDate() : null"
+              :label="datasetsMetadata.modified.title || t('modified')"
+              :disabled="!can('writeDescription')"
+              :base-color="fieldColor('modified')"
+              :color="fieldColor('modified')"
+              prepend-icon=""
+              class="mb-4"
+              clearable
+              @update:model-value="v => { dataset.modified = v ? dayjs(v).format('YYYY-MM-DD') : null }"
+              @click:clear="dataset.modified = null"
+            />
+          </help-tooltip>
+
+          <v-select
+            v-if="inTab('topics') && topicsFetch.data.value?.length"
             v-model="dataset.topics"
             :items="topicsFetch.data.value ?? []"
             :disabled="!can('writeDescription')"
@@ -124,9 +204,8 @@
             closable-chips
           />
 
-          <!-- Conditional metadata fields based on owner settings -->
           <v-combobox
-            v-if="datasetsMetadata?.keywords?.active"
+            v-if="inTab('keywords') && datasetsMetadata?.keywords?.active"
             v-model="dataset.keywords"
             :items="keywordsSuggestions"
             :disabled="!can('writeDescription')"
@@ -143,26 +222,21 @@
 
           <!-- hidden search vocabulary: indexed, never displayed -->
           <div
-            v-if="datasetsMetadata?.searchTerms?.active !== false"
+            v-if="inTab('searchTerms') && datasetsMetadata?.searchTerms?.active !== false"
             class="d-flex align-start gap-1 mb-4"
           >
-            <v-textarea
-              v-model="dataset.searchTerms"
-              :disabled="!can('writeDescription')"
-              :label="datasetsMetadata?.searchTerms?.title || t('searchTerms')"
-              :base-color="fieldColor('searchTerms')"
-              :color="fieldColor('searchTerms')"
-              :counter="1000"
-              :rules="[(val: string) => !val || val.length <= 1000]"
-              rows="3"
-              variant="outlined"
-              density="compact"
-              class="flex-grow-1"
-            >
-              <template #append>
-                <help-tooltip :text="t('searchTermsHelp')" />
-              </template>
-            </v-textarea>
+            <help-tooltip :text="t('searchTermsHelp')">
+              <v-textarea
+                v-model="dataset.searchTerms"
+                :disabled="!can('writeDescription')"
+                :label="datasetsMetadata?.searchTerms?.title || t('searchTerms')"
+                :base-color="fieldColor('searchTerms')"
+                :color="fieldColor('searchTerms')"
+                :counter="1000"
+                :rules="[(val: string) => !val || val.length <= 1000]"
+                rows="1"
+              />
+            </help-tooltip>
             <df-agent-chat-action
               v-if="can('writeDescription')"
               action-id="suggest-search-terms"
@@ -173,134 +247,53 @@
             />
           </div>
 
-          <v-text-field
-            v-if="datasetsMetadata?.creator?.active"
-            v-model="dataset.creator"
-            :rules="props.required.includes('creator') ? [(val: string) => !!val] : []"
-            :disabled="!can('writeDescription')"
-            :label="datasetsMetadata.creator.title || t('creator')"
-            :base-color="fieldColor('creator')"
-            :color="fieldColor('creator')"
-            class="mb-4"
-            clearable
-          />
-
-          <v-select
-            v-if="datasetsMetadata?.frequency?.active"
-            v-model="dataset.frequency"
-            :items="frequencies"
-            :disabled="!can('writeDescription')"
-            :label="datasetsMetadata.frequency.title || t('frequency')"
-            :base-color="fieldColor('frequency')"
-            :color="fieldColor('frequency')"
-            class="mb-4"
-            clearable
-          />
-
-          <v-combobox
-            v-if="datasetsMetadata?.spatial?.active"
-            v-model="dataset.spatial"
-            :items="spatialSuggestions"
-            :disabled="!can('writeDescription')"
-            :label="datasetsMetadata.spatial.title || t('spatial')"
-            :base-color="fieldColor('spatial')"
-            :color="fieldColor('spatial')"
-            :loading="loadingSpatial"
-            class="mb-4"
-            clearable
-            @update:search="fetchSpatialFacets"
-          />
-
-          <v-date-input
-            v-if="datasetsMetadata?.temporal?.active"
-            :model-value="temporalDates"
-            :label="datasetsMetadata.temporal.title || t('temporal')"
-            :disabled="!can('writeDescription')"
-            :base-color="fieldColor('temporal')"
-            :color="fieldColor('temporal')"
-            prepend-icon=""
-            multiple="range"
-            class="mb-4"
-            clearable
-            @update:model-value="setTemporalDates"
-          />
-
-          <v-date-input
-            v-if="datasetsMetadata?.modified?.active"
-            :model-value="dataset.modified ? dayjs(dataset.modified).toDate() : null"
-            :label="datasetsMetadata.modified.title || t('modified')"
-            :disabled="!can('writeDescription')"
-            :base-color="fieldColor('modified')"
-            :color="fieldColor('modified')"
-            prepend-icon=""
-            class="mb-4"
-            clearable
-            @update:model-value="v => { dataset.modified = v ? dayjs(v).format('YYYY-MM-DD') : null }"
-            @click:clear="dataset.modified = null"
-          />
+          <!-- Related datasets -->
+          <help-tooltip
+            v-if="inTab('relatedDatasets') && (dataset.finalizedAt || dataset.isMetaOnly)"
+            :text="t('seeAlsoDescription')"
+          >
+            <v-autocomplete
+              v-model:search="relatedDatasetsSearch"
+              :model-value="dataset.relatedDatasets ?? []"
+              :disabled="!can('writeDescription')"
+              :label="t('relatedDatasets')"
+              :items="relatedDatasetsItems"
+              :loading="relatedDatasetsFetch.loading.value"
+              :base-color="fieldColor('relatedDatasets')"
+              :color="fieldColor('relatedDatasets')"
+              item-title="title"
+              item-value="id"
+              class="mb-4"
+              multiple
+              no-filter
+              chips
+              closable-chips
+              clearable
+              return-object
+              @update:model-value="v => { dataset.relatedDatasets = v.map((d: any) => ({ id: d.id, title: d.title })) }"
+            />
+          </help-tooltip>
         </template>
-
-        <!-- on virtual datasets attachmentsAsImage is derived from the children (see prepareSchema) -->
-        <v-checkbox
-          v-if="!dataset.isVirtual && dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
-          v-model="dataset.attachmentsAsImage"
-          :disabled="!can('writeDescriptionBreaking')"
-          :label="t('attachmentsAsImage')"
-          :base-color="fieldColor('attachmentsAsImage')"
-          :color="fieldColor('attachmentsAsImage')"
-          density="compact"
-          class="mb-4"
-        />
 
         <template v-if="!dataset.partOf">
           <template v-if="datasetsMetadata?.custom?.length">
-            <v-text-field
-              v-for="cm of datasetsMetadata.custom"
+            <help-tooltip
+              v-for="cm of datasetsMetadata.custom.filter((c: any) => !props.group || customGroup(datasetsMetadata, c.key) === props.group)"
               :key="cm.key"
-              :model-value="dataset.customMetadata?.[cm.key]"
-              :disabled="!can('writeDescription')"
-              :label="cm.title"
-              :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
-              :color="isCustomModified(cm.key) ? 'accent' : undefined"
-              class="mb-4"
-              clearable
-              @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+              :text="cm.description"
             >
-              <template
-                v-if="cm.description"
-                #append
-              >
-                <help-tooltip :text="cm.description" />
-              </template>
-            </v-text-field>
+              <v-text-field
+                :model-value="dataset.customMetadata?.[cm.key]"
+                :disabled="!can('writeDescription')"
+                :label="cm.title"
+                :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
+                :color="isCustomModified(cm.key) ? 'accent' : undefined"
+                class="mb-4"
+                clearable
+                @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+              />
+            </help-tooltip>
           </template>
-
-          <!-- Related datasets -->
-          <v-autocomplete
-            v-if="dataset.finalizedAt || dataset.isMetaOnly"
-            v-model:search="relatedDatasetsSearch"
-            :model-value="dataset.relatedDatasets ?? []"
-            :disabled="!can('writeDescription')"
-            :label="t('relatedDatasets')"
-            :items="relatedDatasetsItems"
-            :loading="relatedDatasetsFetch.loading.value"
-            :base-color="fieldColor('relatedDatasets')"
-            :color="fieldColor('relatedDatasets')"
-            item-title="title"
-            item-value="id"
-            class="mb-4"
-            multiple
-            no-filter
-            chips
-            closable-chips
-            clearable
-            return-object
-            @update:model-value="v => { dataset.relatedDatasets = v.map((d: any) => ({ id: d.id, title: d.title })) }"
-          >
-            <template #append>
-              <help-tooltip :text="t('seeAlsoDescription')" />
-            </template>
-          </v-autocomplete>
         </template>
       </v-defaults-provider>
     </v-col>
@@ -317,6 +310,7 @@ fr:
   license: Licence
   topics: Thématiques
   origin: Provenance
+  originHelp: Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.
   image: Adresse d'une image utilisée comme vignette
   keywords: Mots-clés
   searchTerms: Termes de recherche associés
@@ -346,7 +340,7 @@ fr:
   spatial: Couverture géographique
   temporal: Couverture temporelle
   modified: Date de modification de la source
-  attachmentsAsImage: Afficher les pièces jointes de lignes comme des images
+  modifiedHelp: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée."
   relatedDatasets: Jeux de données liés
   seeAlsoDescription: Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.
 en:
@@ -358,6 +352,7 @@ en:
   license: License
   topics: Topics
   origin: Origin
+  originHelp: Address of the page where the original data is published, for example on the producer's website.
   image: URL of an image used as thumbnail
   keywords: Keywords
   searchTerms: Search terms
@@ -387,7 +382,7 @@ en:
   spatial: Geographic coverage
   temporal: Temporal coverage
   modified: Source modification date
-  attachmentsAsImage: Display row attachments as images
+  modifiedHelp: "Date the data was modified at its source, when it differs from the date it was loaded into Data Fair. It is used to sort datasets by update date, on portals in particular: left empty, the date of the last data update is used."
   relatedDatasets: Related datasets
   seeAlsoDescription: Select other related datasets (same topic, similar structure, or other criteria) to suggest to portal users.
 </i18n>
@@ -397,6 +392,7 @@ import { withQuery } from 'ufo'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import equal from 'fast-deep-equal'
+import { fieldGroup, customGroup } from '~/utils/metadata-groups'
 const dataset = defineModel<any>({ required: true })
 
 const { t, locale } = useI18n()
@@ -407,13 +403,16 @@ const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? fals
 const props = withDefaults(defineProps<{
   required?: string[]
   serverData?: any
+  // owner settings, fetched once by the page rather than by each tab
+  datasetsMetadata?: Record<string, any> | null
+  // tab of the metadata section, every field is shown without it
+  group?: string
 }>(), { required: () => [] })
 
 const owner = computed(() => dataset.value?.owner)
-const licensesFetch = useFetch<any[]>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/licenses` : null)
-const topicsFetch = useFetch<any[]>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/topics` : null)
-const datasetsMetadataFetch = useFetch<Record<string, any>>(() => owner.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/datasets-metadata` : null)
-const datasetsMetadata = datasetsMetadataFetch.data
+const inTab = (field: string) => !props.group || fieldGroup(props.datasetsMetadata, field) === props.group
+const licensesFetch = useFetch<any[]>(() => owner.value && inTab('license') ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/licenses` : null)
+const topicsFetch = useFetch<any[]>(() => owner.value && inTab('topics') ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/topics` : null)
 
 // --- Modified field detection ---
 
@@ -534,7 +533,7 @@ const fetchSpatialFacets = async (search: string) => {
 const relatedDatasetsSearch = ref('')
 
 const relatedDatasetsUrl = computed(() => {
-  if (!dataset.value?.owner) return null
+  if (!dataset.value?.owner || !inTab('relatedDatasets')) return null
   const query: Record<string, any> = {
     owner: `${dataset.value.owner.type}:${dataset.value.owner.id}`,
     size: 20
@@ -549,3 +548,13 @@ const relatedDatasetsItems = computed(() =>
   (relatedDatasetsFetch.data.value?.results ?? []).filter((d: any) => d.id !== dataset.value?.id)
 )
 </script>
+
+<style scoped>
+@media (min-width: 960px) {
+  .metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+}
+</style>

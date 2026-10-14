@@ -95,7 +95,7 @@ test.describe('dataset draft mode - file-new', () => {
 
     // Metadata section with editable form
     await expect(page.locator('#metadata')).toBeVisible()
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('tab', { name: 'Informations générales' })).toBeVisible()
 
     // Validate button present, cancel button absent
     await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible()
@@ -233,7 +233,7 @@ test.describe('dataset draft mode - file-updated', () => {
 
     // Metadata section with editable form
     await expect(page.locator('#metadata')).toBeVisible()
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('tab', { name: 'Informations générales' })).toBeVisible()
 
     // Both validate and cancel buttons present
     await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible()

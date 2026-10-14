@@ -25,11 +25,15 @@ test.describe('dataset activable metadata fields', () => {
     const ax = await axiosAuth('test_user1@test.com')
     await ax.put('/api/v1/settings/user/test_user1', {
       datasetsMetadata: {
+        groups: [{ key: 'gouvernance', title: 'Gouvernance' }],
         spatial: { active: true },
         temporal: { active: true },
-        frequency: { active: true },
+        frequency: { active: true, group: 'gouvernance' },
         modified: { active: true },
-        custom: [{ title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' }]
+        custom: [
+          { title: 'Service référent', description: 'Service de la Ville qui répond aux questions sur ce jeu.' },
+          { title: 'Domaine métier', group: 'gouvernance' }
+        ]
       }
     })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -41,8 +45,8 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
+    await metadata.getByRole('tab', { name: 'Informations complémentaires' }).click()
     await expect(metadata.getByRole('combobox', { name: /Couverture géographique/ })).toBeVisible()
-    await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Couverture temporelle/ })).toBeVisible()
     await expect(metadata.getByRole('textbox', { name: /Date de modification de la source/ })).toBeVisible()
   })
@@ -52,6 +56,8 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
+    const coverageTab = metadata.getByRole('tab', { name: 'Informations complémentaires' })
+    await coverageTab.click()
     const temporal = metadata.getByRole('textbox', { name: /Couverture temporelle/ })
     const start = dayOfCurrentMonth(6)
     const end = dayOfCurrentMonth(20)
@@ -73,6 +79,7 @@ test.describe('dataset activable metadata fields', () => {
 
     // and clearing the field unsets it
     await page.reload()
+    await coverageTab.click({ timeout: 15000 })
     await expect(temporal).toHaveValue(`${displayed(start)} - ${displayed(end)}`, { timeout: 15000 })
     await metadata.getByRole('button', { name: /Vider Couverture temporelle/ }).click()
     await expect(temporal).toHaveValue('')
@@ -86,7 +93,21 @@ test.describe('dataset activable metadata fields', () => {
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
-    await metadata.locator('.v-input').filter({ hasText: 'Service référent' }).getByRole('button', { name: "Afficher l'aide" }).click()
+    // the help button sits next to the field, in the help-tooltip wrapper
+    await metadata.locator('.v-input').filter({ hasText: 'Service référent' }).locator('xpath=..').getByRole('button', { name: "Afficher l'aide" }).click()
     await expect(page.locator('.v-overlay .v-alert')).toContainText('Service de la Ville qui répond aux questions sur ce jeu.')
+  })
+
+  test('a category from the owner settings gets its own tab', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+    await expect(metadata.getByRole('textbox', { name: /Service référent/ })).toBeVisible()
+    await expect(metadata.getByRole('textbox', { name: /Domaine métier/ })).not.toBeVisible()
+
+    await metadata.getByRole('tab', { name: 'Gouvernance' }).click()
+    await expect(metadata.getByRole('textbox', { name: /Domaine métier/ })).toBeVisible()
+    await expect(metadata.getByRole('combobox', { name: /Fréquence de mise à jour/ })).toBeVisible()
+    await expect(metadata.getByRole('textbox', { name: /Service référent/ })).not.toBeVisible()
   })
 })

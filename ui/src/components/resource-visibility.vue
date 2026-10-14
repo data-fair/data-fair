@@ -48,7 +48,7 @@ import { mdiLockOpen, mdiLock, mdiPuzzle } from '@mdi/js'
 
 const { partOf } = defineProps<{
   visibility?: 'public' | 'private' | 'protected'
-  // a fragment shows the puzzle icon of the fragment banner instead of the lock, its visibility moves to the tooltip
+  // a fragment shows the puzzle icon of fragment-info instead of the lock, its visibility moves to the tooltip
   partOf?: { type: 'dataset' | 'application', id: string }
   size?: string
 }>()
@@ -56,7 +56,7 @@ const { t } = useI18n()
 
 // the parent title is only fetched when the tooltip is first opened, not once per card of a list;
 // notifError: false — whoever can read the fragment does not necessarily hold readDescription on its
-// parent (see fragment-banner), the parent id is shown instead
+// parent (see fragment-info), the parent id is shown instead
 const tooltipOpen = ref(false)
 const parentRequested = ref(false)
 watch(tooltipOpen, (open) => { if (open) parentRequested.value = true })
