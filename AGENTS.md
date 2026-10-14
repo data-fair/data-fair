@@ -97,6 +97,21 @@ and settings, but also an unfiltered wipe of the `limits`, `applicationsKeys`,
 Cases live in `simulations/cases/index.ts`. See
 [docs/architecture/agent-integration.md](docs/architecture/agent-integration.md).
 
+### Table performance
+
+The dataset table (`ui/src/components/dataset/table/`) is a critical, optimized
+component. When a change touches it, or what it relies on
+(`ui/src/composables/dataset/lines.ts`, the filters composables, `use-headers.ts`):
+
+1. Run `npm run benchmark -- ui-table --base=master`. It takes about 10 minutes, so run
+   it in the background. Put the verdict and any flagged lines in your summary (see
+   `benchmark/README.md`, "UI table harness").
+2. Give the user the fixture's table URL on the dev stack,
+   `/data-fair/embed/dataset/fixtures-table-perf/table`, for a manual look at
+   scrolling, search and menus. It needs a dev session, since the dataset is private
+   on purpose: never make a dev fixture public, because the test suites count every
+   dataset a user can read.
+
 ### Linting & Type Checking
 
 ```bash

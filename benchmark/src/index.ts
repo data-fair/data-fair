@@ -27,6 +27,9 @@ Commands:
               --dataset=<id>  --params=<querystring>  --runs=<n>
   throughput  Autocannon concurrency test over GET /lines
               --scenarios=<all|name,...>  --duration=<s>  --connections=<n>  --warmup=<s>  --no-save
+  ui-table    A/B of the dataset table UI: production builds of --base and of the working tree
+              --base=<ref>  --runs=<n>  --scenarios=<all|load,scroll,search,header-menu,hover>
+              --no-throttle  --headed  --no-save
 
 Presets: ${Object.keys(presets).join(', ')}`
 
@@ -159,6 +162,8 @@ async function main (): Promise<void> {
     case 'experiment': await experimentCommand(rest); break
     case 'query': await queryCommand(rest); break
     case 'throughput': await runThroughput(rest); break
+    // lazy import: playwright is only loaded for this command
+    case 'ui-table': await (await import('./ui/command.ts')).uiTableCommand(rest); break
     default: console.log(USAGE)
   }
 }
