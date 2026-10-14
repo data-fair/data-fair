@@ -83,12 +83,18 @@ test.describe('typed custom metadata', () => {
   })
 
   test('blank values are removed, not stored nor refused', async () => {
-    await testUser1.put(settingsUrl, settingsWith(DEFS))
+    await testUser1.put(settingsUrl, settingsWith([...DEFS, { key: 'other', title: 'Other' }]))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data
     const res = await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
       customMetadata: { service: '', domaines: [' a ', '  '], contact: { url: '  ' }, other: ' x ' }
     })
     assert.deepEqual(res.data.customMetadata, { domaines: ['a'], other: 'x' })
+  })
+
+  test('a key without a definition is refused', async () => {
+    await testUser1.put(settingsUrl, settingsWith(DEFS))
+    const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data
+    await assert.rejects(testUser1.patch(`/api/v1/datasets/${ds.id}`, { customMetadata: { undeclared: 'x' } }), { status: 400 })
   })
   test('a value removed from the list is removed from the datasets', async () => {
     const defs = (values: string[]) => settingsWith([
