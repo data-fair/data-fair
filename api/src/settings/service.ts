@@ -52,9 +52,8 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   for (let i = 0; i < settings.apiKeys.length; i++) {
     const apiKey = settings.apiKeys[i]
 
-    // this check should not be necessary as later on we check adminMode at creation then immutability
-    // this is just here as an extra safety
-    if (apiKey.adminMode && !user.isAdmin) {
+    // extra safety on top of the creation and immutability checks below; an unchanged existing key can be re-sent
+    if (apiKey.adminMode && !user.isAdmin && !existingApiKeys.some(k => k.id === apiKey.id)) {
       eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { ...ctx.logCtx, account: owner })
       throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
     }

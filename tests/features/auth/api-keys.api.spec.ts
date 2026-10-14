@@ -226,13 +226,15 @@ test.describe('API keys', () => {
     assert.equal(dataset.owner.id, 'test_org1')
     assert.equal(dataset.owner.name, 'Test Org 1 testé')
 
-    // user cannot delete the key
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
-      apiKeys: [
-        { ...res.data.apiKeys[0], scopes: ['stats'] }
-      ]
-    }), { status: 403 })
+    // user can still save the other settings, the admin key re-sent unchanged
+    const { apiKeys } = (await testUser1.get('/api/v1/settings/user/test_user1')).data
+    await testUser1.put('/api/v1/settings/user/test_user1', { apiKeys, topics: [{ title: 'Topic 1' }] })
+    await testUser1.patch('/api/v1/settings/user/test_user1', { topics: [] })
     // user cannot mutate the key
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+      apiKeys: [{ ...apiKeys[0], scopes: ['stats'] }]
+    }), { status: 400 })
+    // user cannot delete the key
     await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
       apiKeys: []
     }), { status: 403 })
