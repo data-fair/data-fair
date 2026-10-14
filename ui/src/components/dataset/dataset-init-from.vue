@@ -99,7 +99,7 @@
 
 <script setup lang="ts">
 import type { AccountKeys } from '@data-fair/lib-vue/session'
-import { fitsCustomMetadata, type CustomMetadataDefinition } from '#api/types'
+import { type CustomMetadataDefinition } from '#api/types'
 
 interface InitFrom {
   dataset: string
@@ -150,7 +150,8 @@ const isCopyable = (part: string) => {
   const ds = initFromDataset.value
   if (part === 'topics') return ds.topics.some((topic: { id: string }) => ownerTopicsFetch.data.value?.some(t => t.id === topic.id))
   if (part === 'customMetadata') {
-    return ownerDatasetsMetadataFetch.data.value?.custom?.some(c => !!c.key && fitsCustomMetadata(c, ds.customMetadata[c.key]))
+    // the worker then keeps only the values valid for the target definitions
+    return ownerDatasetsMetadataFetch.data.value?.custom?.some(c => !!c.key && ds.customMetadata?.[c.key] != null)
   }
   return true
 }

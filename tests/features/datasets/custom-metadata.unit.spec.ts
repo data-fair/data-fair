@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { fitsCustomMetadata, formatCustomMetadata, trimCustomMetadata } from '../../../api/types/custom-metadata.ts'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
+import { customMetadataSchema, formatCustomMetadata, trimCustomMetadata } from '../../../api/types/custom-metadata.ts'
 
 const DEFS = [
   { key: 'text', title: 'Text' },
@@ -12,11 +13,9 @@ const DEFS = [
   { key: 'validation', title: 'Validation', type: 'date' as const },
   { key: 'contact', title: 'Contact', type: 'link' as const }
 ]
-// same rule as the API: every key has a definition and its value fits it
-const valid = (value: object) => Object.entries(value).every(([key, item]) => {
-  const definition = DEFS.find(d => d.key === key)
-  return !!definition && fitsCustomMetadata(definition, item)
-})
+// the schema the API validates with: every key has a definition and its value fits it
+const validate = ajv.compile(customMetadataSchema(DEFS))
+const valid = (value: object) => validate(value)
 
 test.describe('custom metadata check', () => {
   test('a definition without type is text, legacy strings stay valid', () => {
@@ -53,11 +52,16 @@ test.describe('custom metadata check', () => {
     assert.ok(valid({ tags: ['a', 'b'], domaines: ['Circulation'] }))
     assert.ok(!valid({ tags: 'a' }))
     assert.ok(!valid({ domaines: ['Autre'] }))
-    assert.ok(fitsCustomMetadata({ key: 'n', title: 'N', type: 'integer', multiple: true }, 3))
+    assert.ok(ajv.validate(customMetadataSchema([{ key: 'n', title: 'N', type: 'integer', multiple: true }]), { n: 3 }))
   })
 
   test('keys without a definition are refused', () => {
     assert.ok(!valid({ unknown: 'anything' }))
+  })
+
+  test('errors are readable', () => {
+    validate({ effectif: 1.5 })
+    assert.equal(validate.errors?.[0].message, 'nombre entier attendu')
   })
 
   test('display text per shape', () => {

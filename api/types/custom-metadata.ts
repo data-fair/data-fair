@@ -9,30 +9,41 @@ export type CustomMetadataDefinition = {
   description?: string
 }
 
-export const typeOf = (definition: CustomMetadataDefinition) => definition.type ?? 'string'
-export const isList = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.enum?.length
-export const isMultiple = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.multiple
+const typeOf = (definition: CustomMetadataDefinition) => definition.type ?? 'string'
+const isList = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.enum?.length
+const isMultiple = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.multiple
 
-// a real calendar day, so 2026-02-31 is refused
-const isDate = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().startsWith(value)
+const expected = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
 
-const isLink = (value: any) => !!value && typeof value === 'object' && !Array.isArray(value) &&
-  typeof value.url === 'string' && /^https?:\/\/\S+$/.test(value.url) && (value.title === undefined || typeof value.title === 'string') &&
-  Object.keys(value).every(key => key === 'url' || key === 'title')
-
-const fitsItem = (definition: CustomMetadataDefinition, item: unknown) => {
+const itemSchema = (definition: CustomMetadataDefinition): Record<string, any> => {
   switch (typeOf(definition)) {
-    case 'integer': return Number.isInteger(item)
-    case 'number': return Number.isFinite(item)
-    case 'date': return isDate(item)
-    case 'link': return isLink(item)
-    default: return typeof item === 'string' && (!isList(definition) || definition.enum!.includes(item))
+    case 'integer': return { type: 'integer' }
+    case 'number': return { type: 'number' }
+    case 'date': return { type: 'string', format: 'date' }
+    case 'link': return {
+      type: 'object',
+      required: ['url'],
+      additionalProperties: false,
+      properties: { url: { type: 'string', pattern: '^https?://\\S+$', errorMessage: expected.link }, title: { type: 'string' } }
+    }
+    default: return isList(definition) ? { type: 'string', enum: definition.enum } : { type: 'string' }
   }
 }
 
-/** Whether a value fits its custom metadata definition, shared by the API check and the UI form. */
-export const fitsCustomMetadata = (definition: CustomMetadataDefinition, value: unknown) =>
-  isMultiple(definition) ? Array.isArray(value) && value.every(item => fitsItem(definition, item)) : fitsItem(definition, value)
+/** JSON schema of dataset.customMetadata, shared by the API validation (ajv) and the UI form (vjsf). */
+export const customMetadataSchema = (definitions: CustomMetadataDefinition[]) => ({
+  type: 'object',
+  additionalProperties: false,
+  properties: Object.fromEntries(definitions.filter(d => d.key).map(definition => [definition.key, {
+    title: definition.title,
+    ...(definition.description && { description: definition.description }),
+    ...(isMultiple(definition) ? { type: 'array', items: itemSchema(definition) } : itemSchema(definition)),
+    // object form: json-layout adds its own per-property required messages to it
+    errorMessage: typeOf(definition) === 'link'
+      ? { type: expected.link, required: { url: expected.link }, additionalProperties: expected.link }
+      : isList(definition) ? 'valeur absente de la liste' : expected[typeOf(definition)]
+  }]))
+} as Record<string, any>)
 
 const formatItem = (item: any): string =>
   item?.url ? (item.title ? `${item.title} (${item.url})` : item.url) : String(item)

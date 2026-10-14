@@ -18,7 +18,7 @@ import type { DatasetInternal, DatasetLineAction, Settings } from '#types'
 import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { rootSettingsFilter } from '../../settings/operations.ts'
-import { fitsCustomMetadata } from '#types/custom-metadata.ts'
+import { compileCustomMetadata } from '../../datasets/utils/custom-metadata.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -126,12 +126,8 @@ export default async function (dataset: DatasetInternal) {
         }
         if (!sameAccount && key === 'customMetadata') {
           // keep the values that fit a definition of the target account
-          const definitions = settings?.datasetsMetadata?.custom ?? []
-          value = Object.fromEntries(definitions.flatMap(definition => {
-            const item = definition.key ? value[definition.key] : undefined
-            if (item == null || !fitsCustomMetadata(definition, item)) return []
-            return [[definition.key, item]]
-          }))
+          const validate = compileCustomMetadata(settings?.datasetsMetadata?.custom ?? [])
+          value = Object.fromEntries(Object.entries(value).filter(([key, item]) => item != null && validate({ [key]: item })))
         }
         patch[key] = value
       }

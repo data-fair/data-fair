@@ -77,13 +77,14 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="constraints">
-          <dataset-constraints
-            v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly"
-            :model-value="structureEditFetch.data.value.constraints"
-            :dataset-schema="structureEditFetch.data.value.schema"
-            :editable="true"
-            @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
-          />
+          <v-form v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly">
+            <dataset-constraints
+              :model-value="structureEditFetch.data.value.constraints"
+              :dataset-schema="structureEditFetch.data.value.schema"
+              :editable="true"
+              @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
+            />
+          </v-form>
         </v-tabs-window-item>
 
         <v-tabs-window-item value="extensions">
@@ -194,13 +195,14 @@
           :key="tab.key"
           :value="tab.key"
         >
-          <dataset-metadata-form
-            v-if="metadataEditFetch.data.value"
-            v-model="metadataEditFetch.data.value"
-            :server-data="metadataEditFetch.serverData.value"
-            :datasets-metadata="datasetsMetadata"
-            :group="tab.key"
-          />
+          <v-form v-if="metadataEditFetch.data.value">
+            <dataset-metadata-form
+              v-model="metadataEditFetch.data.value"
+              :server-data="metadataEditFetch.serverData.value"
+              :datasets-metadata="datasetsMetadata"
+              :group="tab.key"
+            />
+          </v-form>
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
