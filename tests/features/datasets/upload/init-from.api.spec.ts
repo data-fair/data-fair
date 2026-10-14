@@ -402,6 +402,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
 
   test('Create REST and file datasets from a metadata-only dataset', async () => {
     const ax = testUser1
+    await ax.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] } })
     const metadata = {
       summary: 'A summary',
       description: 'A description',
@@ -433,6 +434,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Only copy the topics and custom metadata known to the target account', async () => {
+    await testUser1.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: ['foo', 'bar', 'num', 'svc', 'svc2'].map(key => ({ title: key, key })) } })
     const source = (await testUser1.post('/api/v1/datasets', {
       isMetaOnly: true,
       title: 'meta only',

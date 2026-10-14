@@ -41,6 +41,7 @@ export const customMetadataDefinitionSchema = (definition: CustomMetadataDefinit
 /** JSON schema of a dataset's customMetadata, built from the owner's definitions. */
 export const customMetadataSchema = (definitions: CustomMetadataDefinition[]) => ({
   type: 'object',
+  additionalProperties: false,
   properties: Object.fromEntries(definitions.filter(d => d.key).map(d => [d.key, customMetadataDefinitionSchema(d)]))
 })
 

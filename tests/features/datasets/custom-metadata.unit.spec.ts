@@ -54,8 +54,8 @@ test.describe('custom metadata schema', () => {
     assert.ok(intMultiple({ n: 3 }))
   })
 
-  test('keys without a definition are not checked', () => {
-    assert.ok(valid({ unknown: { anything: true } }))
+  test('keys without a definition are refused', () => {
+    assert.ok(!valid({ unknown: 'anything' }))
   })
 
   test('display text per shape', () => {
