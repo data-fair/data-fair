@@ -686,7 +686,7 @@ export const prepareCalculations = (dataset: Dataset) => {
 
     // Add base64 content of attachments
     if (attachmentField && flatItem?.[attachmentField.key]) {
-      const attachmentValue = flatItem[attachmentField.key]
+      const attachmentValue = String(flatItem[attachmentField.key])
       const isURL = !!parseURL(attachmentValue).host
       if (!isURL) {
         item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`

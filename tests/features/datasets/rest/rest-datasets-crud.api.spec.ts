@@ -716,6 +716,30 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(!res.data.results[0].attr2)
   })
 
+  test('Reindex survives numbers stored before a column became a string', async () => {
+    const ax = testUser1
+    const keys = ['tel', 'desc', 'img', 'doc']
+    await ax.post('/api/v1/datasets/resttypechange', { isRest: true, title: 'resttypechange', schema: keys.map(key => ({ key, type: 'integer' })) })
+    await ax.post('/api/v1/datasets/resttypechange/lines', { tel: 549123456, desc: 1, img: 2, doc: 3 })
+    await waitForFinalize(ax, 'resttypechange')
+    // REST reindex reads mongo raw, so the stored numbers reach every string-typed code path
+    await doAndWaitForFinalize(ax, 'resttypechange', () => ax.patch('/api/v1/datasets/resttypechange', {
+      schema: [
+        { key: 'tel', type: 'string' },
+        { key: 'desc', type: 'string', 'x-refersTo': 'http://schema.org/description' },
+        { key: 'img', type: 'string', 'x-refersTo': 'http://schema.org/image' },
+        { key: 'doc', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    }))
+    const dataset = (await ax.get('/api/v1/datasets/resttypechange')).data
+    assert.equal(dataset.status, 'finalized')
+    const csv = (await ax.get('/api/v1/datasets/resttypechange/lines', { params: { format: 'csv' } })).data
+    assert.ok(csv.includes('549123456'))
+    const lines = (await ax.get('/api/v1/datasets/resttypechange/lines', { params: { html: true, thumbnail: true } })).data
+    assert.ok(lines.results[0].desc.includes('1'))
+    assert.ok(lines.results[0]._thumbnail)
+  })
+
   test('Activating/deactivating storeUpdatedBy', async () => {
     const ax = testUser1Org
     let res = await ax.post('/api/v1/datasets/updatedby', {

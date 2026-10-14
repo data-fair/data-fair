@@ -84,10 +84,9 @@ export interface CompiledCsv {
 
 const escapeJsString = (s: string) => JSON.stringify(s)
 
-// Per-column expression, fully inlined based on schema type. data-fair
-// enforces the schema upstream (in the indexing / extension pipeline) so by
-// the time results reach this serializer, values are guaranteed to match
-// their declared type — no runtime typeof check needed for primitives.
+// Per-column expression, fully inlined based on schema type. Values usually
+// match their declared type, but not always (stored data predating a type
+// change), so the string path checks typeof before calling .replace.
 // Columns without a known type (e.g. geometry with type='object') fall
 // through to fmt(), which handles the generic case.
 const cellExpr = (col: CsvJitColumn): string => {
@@ -95,8 +94,9 @@ const cellExpr = (col: CsvJitColumn): string => {
   switch (col.type) {
     case 'string':
       // always-quoted string (matches quoted_string: true). Strip null
-      // chars; escape internal double quotes.
-      return `(${v}==null?'':'"'+${v}.replace(/"/g,'""').replace(/\\0/g,'')+'"')`
+      // chars; escape internal double quotes. Off-type values (e.g. numbers
+      // stored before a column became a string) go through fmt().
+      return `(typeof ${v}==='string'?'"'+${v}.replace(/"/g,'""').replace(/\\0/g,'')+'"':fmt(${v}))`
     case 'integer':
     case 'number':
       return `(${v}==null?'':''+${v})`

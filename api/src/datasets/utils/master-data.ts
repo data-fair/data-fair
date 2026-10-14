@@ -74,11 +74,11 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
         const startDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
         const endDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
         if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
-        const date = line[input.property.key].replace(/:/g, '\\:')
+        const date = String(line[input.property.key]).replace(/:/g, '\\:')
         qs.push(`${endDate.key}:[${date} TO *]`)
         qs.push(`${startDate.key}:[* TO ${date}]`)
       } else if (input.type === 'geo-distance') {
-        const [lat, lon] = line[input.property.key].split(',')
+        const [lat, lon] = String(line[input.property.key]).split(',')
         params.geo_distance = `${lon},${lat},${input.distance}`
       } else {
         // the contract's three matching methods are exhausted here, so `input` is `never`:

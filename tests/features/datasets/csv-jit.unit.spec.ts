@@ -259,9 +259,8 @@ test.describe('csv-jit byte-equivalence with csv-stringify', () => {
 })
 
 test.describe('csv-jit fast-path specialization (schema types)', () => {
-  // data-fair enforces the schema upstream, so by the time results reach
-  // the serializer values match their declared type. These tests cover the
-  // inlined fast paths for that guaranteed-in-spec case.
+  // Inlined fast paths for values matching their declared type, plus the
+  // fallback for off-type stored values.
 
   const typedColumns = [
     { key: 's', header: 'S', type: 'string' as const },
@@ -301,6 +300,15 @@ test.describe('csv-jit fast-path specialization (schema types)', () => {
       { s: 'has "quote"', i: 1, n: 1, b: true },
       { s: 'has\nnewline', i: 1, n: 1, b: true },
       { s: 'has\0null', i: 1, n: 1, b: true }
+    ])
+  })
+
+  test('off-type values in a string column do not throw', () => {
+    // e.g. numbers stored in mongo before a REST column switched from integer to string
+    assertEqualTyped([
+      { s: 549123456, i: 1, n: 1, b: true },
+      { s: true, i: 1, n: 1, b: true },
+      { s: ['a', 'b'], i: 1, n: 1, b: true }
     ])
   })
 
