@@ -2,6 +2,7 @@ import equal from 'fast-deep-equal'
 import memoize from 'memoizee'
 import mongo from '#mongo'
 import { customMetadataSchema, trimCustomMetadata, type CustomMetadataDefinition } from '#types/custom-metadata.ts'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import { compile } from '../../misc/utils/ajv.ts'
 import { rootSettingsFilter, isMainSettings } from '../../settings/operations.ts'
 
@@ -10,12 +11,16 @@ export const getCustomMetadataDefinitions = async (owner: { type: string, id: st
   return (settings && isMainSettings(settings) ? settings.datasetsMetadata?.custom : undefined) ?? []
 }
 
-// memoized without maxAge: keyed on the definitions themselves, and each recompile would stay in ajv's own cache
-export const compileCustomMetadata = memoize((definitionsJson: string, throws: boolean = true) => compile(customMetadataSchema(JSON.parse(definitionsJson)), throws), {
+// ajv caches every compiled schema by object, so an evicted validator must leave that cache too
+export const compileCustomMetadata = memoize((definitionsJson: string, throws: boolean = true) => {
+  const schema = customMetadataSchema(JSON.parse(definitionsJson))
+  return Object.assign(compile(schema, throws), { schema })
+}, {
   profileName: 'compileCustomMetadata',
   primitive: true,
   length: 2,
-  max: 1000
+  max: 1000,
+  dispose: (validate: { schema: object }) => { ajv.removeSchema(validate.schema) }
 })
 
 // only the values this write changes are checked, so a definition change never blocks the other fields
