@@ -104,6 +104,22 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
   })
 
+  test('every tool has a title in French and in English, for the person who sees it called', async () => {
+    // An MCP client shows the title where it shows the call: without one the agents chat chip read
+    // « datafair_list_account_datasets » to a person a judged run had told nothing about tools.
+    const { apiDocs } = await generators()
+    const doc = apiDocs(PUBLIC_URL)
+    for (const locale of ['fr', 'en']) {
+      const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), files: FILES, locale })
+      const untitled = toolSet.tools.filter(t => !t.title).map(t => t.name)
+      assert.deepEqual(untitled, [], `untitled in ${locale}`)
+      const titles = toolSet.tools.map(t => t.title)
+      assert.equal(new Set(titles).size, titles.length, `two tools share a title in ${locale}`)
+    }
+    const fr = await load(doc, { fetch: skillFetch, profiles: ['read_datasets'], files: FILES, locale: 'fr' })
+    assert.equal(fr.tools.find(t => t.name === 'datafair_list_account_datasets')?.title, 'Lister les jeux de données du compte')
+  })
+
   test('places every dataset PATCH body field in exactly one view', async () => {
     const { apiDocs, xAgent } = await generators()
     const body = apiDocs(PUBLIC_URL).paths['/datasets/{id}'].patch.requestBody.content['application/json'].schema

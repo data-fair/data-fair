@@ -790,6 +790,12 @@ and `read`/`write`/`manage` for datasets and applications. They are consumed by 
 server (`data-fair/mcp`), by coding agents and by the agents service's autonomous runs; the
 browser assistant does not use them yet.
 
+Every operation also declares a `title` in French and English: it is the MCP tool's display name,
+which a client shows to the person where the call appears (the agents chat's tool chips), while
+the model reads the name and description. The mcp server renders it in its `LOCALE`. The French
+titles follow the browser assistant's for the same action (« Lister les jeux de données »,
+« Agréger des données »…); a test requires one per tool, in both languages, none shared.
+
 `GET /api/v1/agents/index.json` lists the deployment's service-level documents
 (`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
 configured, at the site origin and its conventional mount path. A consumer is configured with
