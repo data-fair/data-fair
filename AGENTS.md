@@ -53,7 +53,7 @@ npm run test-e2e                  # e2e tests only
 npx playwright test path/to/file  # specific file
 ```
 
-The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
+The test suite is very long — when iterating on changes always run only the related test cases. Pushing runs a light gate (type ratchet, unit tests, the `@smoke` set and the api/e2e spec files the push changes); the full suite runs on pull requests and nightly on master. See [Quality gates](docs/architecture/testing.md#quality-gates).
 
 ### Simulations
 
@@ -143,7 +143,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Map base layer & tileserver](docs/architecture/map-tiles.md) — where dataset maps get their MapLibre style (`map.style`, the same-origin `/tileserver` convention) and the 302 redirect keeping legacy `tileserver-koumoul` remote-service URLs alive, with its removal conditions
 - [Application Keys](docs/architecture/application-keys.md) — intermediate-security tier for un-connected access to applications and the datasets they embed: data model, URL shapes, the two enforcement points (proxy + dataset middleware), permission scoping, owner boundary, and the anti-spam stack for anonymous writes
 - [Fragments](docs/architecture/fragments.md) — datasets and applications declared `partOf` another resource: derived ACL and its sync points, application-context read for dataset fragments, default hiding in listings, attach/detach and delete cascade. **Read before touching permissions, listing filters or the application-key middleware.**
-- [Dev environment resource limits](docs/architecture/dev-resources.md) — why the vite dev server and Elasticsearch are memory-capped: running several dev stacks side by side can exhaust host RAM and swap, and the resulting global OOM kill destroys the desktop session while leaving the containers running
+- [Dev environment resource limits](docs/architecture/dev-resources.md) — why the vite dev server and Elasticsearch are memory-capped: running several dev stacks side by side can exhaust host RAM and swap, and the resulting global OOM kill destroys the desktop session while leaving the containers running. Also covers the ES / MongoDB / ClamAV caps and `dev/idle-stacks.sh` for spotting stacks left running
 - [Code conventions](docs/architecture/code-conventions.md) — module file roles (router/middlewares/service/operations), request-context accessors, typing ratchet. **Read before refactoring or adding API code.**
 - [Date management](docs/architecture/date-management.md) — the date / date-time strategy end to end: French-first sniffing, offset-preserving storage, timezone-aware filters & aggregations, and display in the data's own timezone (not the viewer's). **Read before touching date parsing, storage, or display.**
 - [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**

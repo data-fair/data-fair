@@ -101,7 +101,7 @@ test.describe('Applications', () => {
     )
   })
 
-  test('Post an application configuration, read it, update it and delete it', async () => {
+  test('Post an application configuration, read it, update it and delete it', { tag: '@smoke' }, async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     assert.equal(res.status, 201)
@@ -189,7 +189,7 @@ test.describe('Applications', () => {
     assert.equal(res.data.results.length, 0)
   })
 
-  test('Use an application through the application proxy', async () => {
+  test('Use an application through the application proxy', { tag: '@smoke' }, async () => {
     const ax = testUser1
     const adminAx = alban
 

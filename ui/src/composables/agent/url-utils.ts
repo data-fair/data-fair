@@ -68,3 +68,18 @@ export function suggestRoutes (routePaths: string[], attemptedPath: string): str
 
   return [...new Set(chosen.map(template))].sort().slice(0, MAX_ROUTE_SUGGESTIONS)
 }
+
+/**
+ * What a navigation did to the tools the agent can call. It used to say only « this page's
+ * agent tools are registered »: a judged run took that to mean its page form's sub-agent was
+ * still there after leaving the editor, and told the person its tools were broken.
+ */
+export function toolsChangeNote (before: string[], after: string[]): string {
+  const removed = before.filter(name => !after.includes(name))
+  const added = after.filter(name => !before.includes(name))
+  if (!removed.length && !added.length) return 'same tools as before the navigation'
+  const parts: string[] = []
+  if (removed.length) parts.push(`no longer available here: ${removed.join(', ')}`)
+  if (added.length) parts.push(`now available: ${added.join(', ')}`)
+  return parts.join('; ')
+}

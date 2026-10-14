@@ -10,7 +10,7 @@ test.describe('new dataset stepper', () => {
     await clean()
   })
 
-  test('file dataset creation: full stepper flow', async ({ page, goToWithAuth }) => {
+  test('file dataset creation: full stepper flow', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
 
     // Step 1: Type selection
@@ -58,7 +58,7 @@ test.describe('new dataset stepper', () => {
     await expect(titleInput).toHaveValue('Meta sheet')
   })
 
-  test('REST dataset creation', async ({ page, goToWithAuth }) => {
+  test('REST dataset creation', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
 
     // Select REST type

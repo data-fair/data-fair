@@ -36,6 +36,15 @@ router.delete('/', async (req, res, next) => {
         config.indicesPrefix + '_draft-' + d.id + '*'
       ])
       await es.client.indices.delete({ index: indexPatterns.join(','), ignore_unavailable: true }).catch(() => {})
+
+      // REST datasets also own per-dataset mongo collections (lines and revisions); left
+      // behind, every e2e run or simulation against the dev env leaks them into its db,
+      // where each one and its indexes cost mongod an open file handle
+      const testIds = new Set(testDatasets.map(d => d.id))
+      const restCollections = await mongo.db.listCollections({ name: { $regex: /^dataset-(data|revisions)-/ } }, { nameOnly: true }).toArray()
+      for (const { name } of restCollections) {
+        if (testIds.has(name.replace(/^dataset-(data|revisions)-/, ''))) await mongo.db.collection(name).drop()
+      }
     }
 
     await Promise.all([
