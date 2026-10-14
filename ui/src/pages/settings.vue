@@ -74,8 +74,8 @@
             color="accent"
             variant="flat"
             :disabled="!topicsValid"
-            :loading="topicsEdit.save.loading.value || checkingRisks"
-            @click="saveWithConfirm(topicsEdit, topicsRisks)"
+            :loading="topicsEdit.save.loading.value || saveWithConfirm.loading.value"
+            @click="saveWithConfirm.execute(topicsEdit, topicsRisks)"
           >
             {{ t('save') }}
           </v-btn>
@@ -115,8 +115,8 @@
             color="accent"
             variant="flat"
             :disabled="!qualityValid"
-            :loading="qualityEdit.save.loading.value || checkingRisks"
-            @click="saveWithConfirm(qualityEdit, customMetadataRisks)"
+            :loading="qualityEdit.save.loading.value || saveWithConfirm.loading.value"
+            @click="saveWithConfirm.execute(qualityEdit, customMetadataRisks)"
           >
             {{ t('save') }}
           </v-btn>
@@ -562,7 +562,6 @@ const qualityTab = ref('datasetsMetadata')
 
 // Saves that would remove values from datasets or applications ask for confirmation first
 type SubEdit = typeof topicsEdit
-const checkingRisks = ref(false)
 const confirmation = ref<{ warnings: string[], edit: SubEdit } | null>(null)
 
 // topics and custom metadata are org-level settings, the API propagates them to every department
@@ -614,16 +613,11 @@ const topicsRisks = async () => {
   })
 }
 
-async function saveWithConfirm (edit: SubEdit, risks: () => Promise<string[]>) {
-  checkingRisks.value = true
-  try {
-    const warnings = await risks()
-    if (warnings.length) confirmation.value = { warnings, edit }
-    else await edit.save.execute()
-  } finally {
-    checkingRisks.value = false
-  }
-}
+const saveWithConfirm = useAsyncAction(async (edit: SubEdit, risks: () => Promise<string[]>) => {
+  const warnings = await risks()
+  if (warnings.length) confirmation.value = { warnings, edit }
+  else await edit.save.execute()
+})
 
 async function confirmSave () {
   await confirmation.value!.edit.save.execute()
