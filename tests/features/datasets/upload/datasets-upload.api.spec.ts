@@ -261,7 +261,10 @@ test.describe('datasets - upload', () => {
   test('Upload dataset - full test with webhooks', { tag: '@smoke' }, async () => {
     const ax = testUser3
 
-    // Set up mock route to accept webhook POSTs
+    // Set up mock route to accept webhook POSTs. The mock keeps every request made to its
+    // dynamic routes until cleared, and clean() does not clear it (npm run dev-fixtures, for
+    // one, leaves geocoder calls in it)
+    await clearMockRoutes()
     await setupMockRoute({ path: '/webhook', status: 200, body: { ok: true } })
 
     // Configure webhook for dataset-finalize-end events
