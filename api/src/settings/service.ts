@@ -227,8 +227,8 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
         // stamp BEFORE the write, as for the removal above
         if (!path.startsWith('draft.')) await stampHistorizeMany(staleFilter)
         if (newMeta.multiple) {
-          await mongo.datasets.updateMany(staleFilter, { $pull: { [path]: { $nin: newMeta.enum } }, $set: updatedAt })
-          await mongo.datasets.updateMany({ ...ownerFilter, [path]: { $size: 0 } }, { $unset: { [path]: 1 } })
+          const kept = { $filter: { input: '$' + path, cond: { $in: ['$$this', newMeta.enum] } } }
+          await mongo.datasets.updateMany(staleFilter, [{ $set: { [path]: { $cond: [{ $eq: [{ $size: kept }, 0] }, '$$REMOVE', kept] }, ...updatedAt } }])
         } else {
           await mongo.datasets.updateMany(staleFilter, { $unset: { [path]: 1 }, $set: updatedAt })
         }
