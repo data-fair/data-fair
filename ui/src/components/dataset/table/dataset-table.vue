@@ -868,7 +868,16 @@ const focusCell = async (pos: CellPosition) => {
       cell = root.querySelector<HTMLElement>(selector)
     }
   }
-  cell?.focus()
+  if (!cell) return
+  cell.focus()
+  // focus() does not account for the sticky header: bring a cell hidden under it back
+  // into view (a scroll-padding on the wrapper did it, but disturbed wheel scrolling)
+  if (pos.row > 0) {
+    const headBottom = thead.value?.getBoundingClientRect().bottom
+    const wrapper = root.querySelector<HTMLElement>('.v-table__wrapper')
+    const top = cell.getBoundingClientRect().top
+    if (wrapper && headBottom !== undefined && top < headBottom) wrapper.scrollTop -= headBottom - top
+  }
 }
 
 const onTableKeydown = (event: KeyboardEvent) => {
@@ -1021,10 +1030,7 @@ const deleteLine = useAsyncAction(async () => {
   outline: 2px solid rgb(var(--v-theme-primary));
   outline-offset: -2px;
 }
-/* keep a cell focused by the keyboard out from under the sticky header */
-.dataset-table .v-table__wrapper {
-  scroll-padding-top: 50px;
-}
+
 .dataset-table .header-wrapper {
   position: relative;
   width: 100%;

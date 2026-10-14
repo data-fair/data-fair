@@ -192,6 +192,34 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(page.locator('.v-overlay--active.v-menu')).toBeVisible()
     })
 
+    test('a cell reached with ArrowUp is not hidden under the sticky header', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-up', schema: [{ key: 'n', type: 'integer' }] })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, Array.from({ length: 100 }, (_, n) => ({ n })))
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      await page.locator('.dataset-table td[data-row="1"][data-col="0"]').focus()
+
+      // go down far enough to scroll, then scroll by hand so the next row up sits under the header
+      for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowDown')
+      const row = (await activeCell(page)).row!
+      // rows are 40px high under a sticky header: row r-1 (index r-2) is half under the header
+      // once scrollTop passes (r-2) * 40
+      await page.locator('.dataset-table .v-table__wrapper').evaluate((wrapper: HTMLElement, r: number) => {
+        wrapper.scrollTop = (r - 2) * 40 + 20
+      }, row)
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+      await page.keyboard.press('ArrowUp')
+      expect((await activeCell(page)).row).toBe(row - 1)
+      const covered = await page.evaluate(() => {
+        const cell = (document.activeElement as HTMLElement).getBoundingClientRect()
+        const head = (document.querySelector('.dataset-table thead') as HTMLElement).getBoundingClientRect()
+        return cell.top < head.bottom - 1
+      })
+      expect(covered).toBe(false)
+    })
+
     test('Ctrl+End reaches the last loaded row, outside the rendered range', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-rows', schema: [{ key: 'n', type: 'integer' }] })).data
