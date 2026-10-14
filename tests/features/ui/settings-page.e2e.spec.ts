@@ -60,7 +60,7 @@ test.describe('settings topics save/cancel', () => {
 
     // Add a topic via VJSF
     await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).first().fill('Test Topic')
+    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('Test Topic')
 
     // Save button appears
     await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
@@ -84,7 +84,7 @@ test.describe('settings topics save/cancel', () => {
 
     // Add a topic
     await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).first().fill('To Cancel')
+    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('To Cancel')
 
     // Cancel button should be visible
     await expect(page.locator('#topics').getByRole('button', { name: /Annuler/i })).toBeVisible({ timeout: 5000 })
@@ -114,8 +114,8 @@ test.describe('settings quality tabs save/cancel', () => {
 
     // Add a license in the Licences tab
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).first().fill('MIT License')
-    await page.locator('#quality').getByLabel(/URL/i).first().fill('https://mit.edu/license')
+    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('MIT License')
+    await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://mit.edu/license')
 
     // Save button appears
     await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
@@ -143,7 +143,7 @@ test.describe('settings quality tabs save/cancel', () => {
 
     // Add a license
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).first().fill('To Cancel')
+    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('To Cancel')
 
     // Cancel and confirm
     await page.locator('#quality').getByRole('button', { name: /Annuler/i }).click()
@@ -194,14 +194,14 @@ test.describe('settings cross-subEdit interference', () => {
     // Add a topic (don't save)
     await page.locator('#topics').scrollIntoViewIfNeeded()
     await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).first().fill('Pending Topic')
+    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('Pending Topic')
 
     // Add a license and save
     await page.locator('#quality').scrollIntoViewIfNeeded()
     await page.getByRole('tab', { name: /Licences/i }).click()
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).first().fill('Saved License')
-    await page.locator('#quality').getByLabel(/URL/i).first().fill('https://example.com/license')
+    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('Saved License')
+    await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://example.com/license')
     await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
 
     // Wait for save to complete
