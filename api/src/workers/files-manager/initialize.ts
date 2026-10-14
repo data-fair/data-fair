@@ -18,7 +18,7 @@ import type { DatasetInternal, DatasetLineAction, Settings } from '#types'
 import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { rootSettingsFilter } from '../../settings/operations.ts'
-import { compileCustomMetadata } from '../../datasets/utils/custom-metadata.ts'
+import { fitsCustomMetadata } from '#types/custom-metadata.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -129,7 +129,7 @@ export default async function (dataset: DatasetInternal) {
           const definitions = settings?.datasetsMetadata?.custom ?? []
           value = Object.fromEntries(definitions.flatMap(definition => {
             const item = definition.key ? value[definition.key] : undefined
-            if (item == null || !compileCustomMetadata(JSON.stringify([definition]), false)({ [definition.key!]: item })) return []
+            if (item == null || !fitsCustomMetadata(definition, item)) return []
             return [[definition.key, item]]
           }))
         }

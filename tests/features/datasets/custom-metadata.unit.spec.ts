@@ -1,7 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { ajv } from '@data-fair/data-fair-shared/ajv.js'
-import { customMetadataSchema, formatCustomMetadata, trimCustomMetadata } from '../../../api/types/custom-metadata.ts'
+import { fitsCustomMetadata, formatCustomMetadata, trimCustomMetadata } from '../../../api/types/custom-metadata.ts'
 
 const DEFS = [
   { key: 'text', title: 'Text' },
@@ -13,10 +12,13 @@ const DEFS = [
   { key: 'validation', title: 'Validation', type: 'date' as const },
   { key: 'contact', title: 'Contact', type: 'link' as const }
 ]
-const validate = ajv.compile(customMetadataSchema(DEFS))
-const valid = (value: object) => validate(value)
+// same rule as the API: every key has a definition and its value fits it
+const valid = (value: object) => Object.entries(value).every(([key, item]) => {
+  const definition = DEFS.find(d => d.key === key)
+  return !!definition && fitsCustomMetadata(definition, item)
+})
 
-test.describe('custom metadata schema', () => {
+test.describe('custom metadata check', () => {
   test('a definition without type is text, legacy strings stay valid', () => {
     assert.ok(valid({ text: 'Voirie' }))
     assert.ok(!valid({ text: 12 }))
@@ -39,6 +41,7 @@ test.describe('custom metadata schema', () => {
     assert.ok(valid({ contact: { url: 'https://a.fr' } }))
     assert.ok(!valid({ contact: { title: 'A' } }))
     assert.ok(!valid({ contact: { url: 'javascript:alert(1)' } }))
+    assert.ok(!valid({ contact: { url: 'https://a.fr', other: 'x' } }))
   })
 
   test('a list value is one of the list', () => {
@@ -50,8 +53,7 @@ test.describe('custom metadata schema', () => {
     assert.ok(valid({ tags: ['a', 'b'], domaines: ['Circulation'] }))
     assert.ok(!valid({ tags: 'a' }))
     assert.ok(!valid({ domaines: ['Autre'] }))
-    const intMultiple = ajv.compile(customMetadataSchema([{ key: 'n', title: 'N', type: 'integer', multiple: true }]))
-    assert.ok(intMultiple({ n: 3 }))
+    assert.ok(fitsCustomMetadata({ key: 'n', title: 'N', type: 'integer', multiple: true }, 3))
   })
 
   test('keys without a definition are refused', () => {

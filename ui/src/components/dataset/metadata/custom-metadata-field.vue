@@ -79,8 +79,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { isCustomMetadataMultiple, type CustomMetadataDefinition } from '#api/types'
-import { fitsDefinition } from '~/utils/custom-metadata'
+import { fitsCustomMetadata, isCustomMetadataMultiple, type CustomMetadataDefinition } from '#api/types'
 
 const props = defineProps<{
   definition: CustomMetadataDefinition
@@ -122,7 +121,7 @@ const fieldProps = computed(() => ({
   baseColor: props.modified ? 'accent' : undefined,
   color: props.modified ? 'accent' : undefined,
   clearable: true,
-  errorMessages: props.modified && props.modelValue != null && !fitsDefinition(props.definition, props.modelValue) ? t('invalid') : undefined,
+  errorMessages: props.modified && props.modelValue != null && !fitsCustomMetadata(props.definition, props.modelValue) ? t('invalid') : undefined,
   // the form hides details globally, the error must still show
   hideDetails: 'auto' as const,
   class: 'mb-4'
