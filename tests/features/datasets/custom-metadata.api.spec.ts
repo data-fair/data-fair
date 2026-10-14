@@ -42,14 +42,6 @@ test.describe('typed custom metadata', () => {
     assert.equal(def.enum, undefined)
     assert.equal(def.multiple, undefined)
   })
-  test('a custom-<key> facet lists the values entered, one per item', async () => {
-    await testUser1.put(settingsUrl, settingsWith(DEFS))
-    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a', 'b'] } }))
-    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'] } }))
-    const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'custom-domaines', owner: 'user:test_user1' } })
-    assert.deepEqual(res.data.facets['custom-domaines'], [{ count: 2, value: 'a' }, { count: 1, value: 'b' }])
-  })
-
   test('typed values are stored as sent', async () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     const ds = (await testUser1.post('/api/v1/datasets', restDataset())).data
@@ -126,13 +118,20 @@ test.describe('typed custom metadata', () => {
     assert.deepEqual((await testUser1.get(`/api/v1/datasets/${ds.id}`)).data.customMetadata, { kept: 'b' })
   })
 
-  test('a customMetadata facet counts the datasets using each definition', async () => {
+  test('a customMetadata facet counts the datasets using each definition and each text value', async () => {
     await testUser1.put(settingsUrl, settingsWith(DEFS))
     await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a', 'b'], service: 'Voirie' } }))
-    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'] } }))
+    await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'], contact: { url: 'https://a.fr' } } }))
     await testUser1.post('/api/v1/datasets', restDataset())
     const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'customMetadata', owner: 'user:test_user1' } })
-    assert.deepEqual(res.data.facets.customMetadata, [{ count: 2, value: 'domaines' }, { count: 1, value: 'service' }])
+    const facet = res.data.facets.customMetadata
+    // a dataset with several values counts once for the metadata, once per value
+    assert.equal(facet.domaines.count, 2)
+    assert.deepEqual(facet.domaines.values, [{ value: 'a', count: 2 }, { value: 'b', count: 1 }])
+    assert.equal(facet.service.count, 1)
+    assert.deepEqual(facet.service.values, [{ value: 'Voirie', count: 1 }])
+    // only text values are listed, the other types keep their datasets count
+    assert.deepEqual(facet.contact, { count: 1 })
   })
   test('the spreadsheet export prints the display text of the values', async () => {
     await testUser1.put(settingsUrl, settingsWith([{ key: 'service', title: 'Service' }, ...DEFS.slice(1)]))

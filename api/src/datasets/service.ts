@@ -192,9 +192,7 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  // custom-<key> facets the values of a custom metadata, used as input suggestions; the key becomes a mongo path, so no '.' nor '$'
-  const customFacetFields = Object.fromEntries((reqQuery.facets?.split(',') ?? []).filter((f: string) => /^custom-[\w-]+$/.test(f)).map((f: string) => [f, `customMetadata.${f.slice(7)}`]))
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', { ...facetFields, ...customFacetFields }, filterFields, nullFacetFields, extraFilters, textFilter)).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters, textFilter)).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })

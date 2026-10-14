@@ -104,12 +104,11 @@ const fetchSuggestions = async (search: string) => {
   if (suggestionsFetched || !search) return
   suggestionsFetched = true
   loadingSuggestions.value = true
-  const facet = `custom-${props.definition.key}`
   try {
     const response = await $fetch<any>(`${$apiPath}/datasets`, {
-      query: { size: 0, facets: facet, owner: `${props.owner.type}:${props.owner.id}` }
+      query: { size: 0, facets: 'customMetadata', owner: `${props.owner.type}:${props.owner.id}` }
     })
-    suggestions.value = (response?.facets?.[facet] ?? []).map((f: any) => f.value).filter((v: unknown) => typeof v === 'string')
+    suggestions.value = (response?.facets?.customMetadata?.[props.definition.key ?? '']?.values ?? []).map((v: any) => v.value)
   } catch (e) {
     console.error('Failed to fetch custom metadata suggestions', e)
   }

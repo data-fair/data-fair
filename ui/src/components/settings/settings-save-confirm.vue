@@ -66,10 +66,11 @@ const { t } = useI18n()
 const confirmation = ref<{ warnings: string[], edit: Edit } | null>(null)
 
 // topics and custom metadata are org-level settings, the API propagates them to every department
-const fetchUsage = async (resource: 'datasets' | 'applications', facet: string) => {
+type Usage = { value: any, count: number }
+async function fetchFacet<T> (resource: 'datasets' | 'applications', facet: string, fallback: T): Promise<T> {
   const owner = `${account.type}:${account.id}`
-  const res = await $fetch<{ facets: Record<string, { value: any, count: number }[]> }>(`/${resource}`, { query: { size: 0, facets: facet, owner } })
-  return res.facets[facet] ?? []
+  const res = await $fetch<{ facets: Record<string, T> }>(`/${resource}`, { query: { size: 0, facets: facet, owner } })
+  return res.facets[facet] ?? fallback
 }
 const usageText = (datasets = 0, applications = 0) => [
   datasets && t('datasetsCount', { n: datasets }, datasets),
@@ -87,25 +88,22 @@ const customMetadataRisks = async () => {
     return []
   })
   if (!changes.length) return []
-  const usage = await fetchUsage('datasets', 'customMetadata')
-  const warnings = await Promise.all(changes.map(async ({ meta, message }) => {
-    if (message !== 'customValueRemoved') {
-      const count = usage.find(u => u.value === meta.key)?.count
-      return count ? [t(message, { title: meta.title, usage: usageText(count) })] : []
-    }
+  const usage = await fetchFacet<Record<string, { count: number, values?: Usage[] }>>('datasets', 'customMetadata', {})
+  return changes.flatMap(({ meta, message }) => {
+    const keyUsage = meta.key ? usage[meta.key] : undefined
+    if (!keyUsage) return []
+    if (message !== 'customValueRemoved') return [t(message, { title: meta.title, usage: usageText(keyUsage.count) })]
     // same rule as the API: values no longer in the list are removed
-    const values = await fetchUsage('datasets', `custom-${meta.key}`)
-    return values.filter(v => !meta.enum!.includes(v.value)).map(v => t(message, { value: v.value, title: meta.title, usage: usageText(v.count) }))
-  }))
-  return warnings.flat()
+    return (keyUsage.values ?? []).filter(v => !meta.enum!.includes(v.value)).map(v => t(message, { value: v.value, title: meta.title, usage: usageText(v.count) }))
+  })
 }
 
 const topicsRisks = async () => {
   const removed = (previous?.topics ?? []).filter(o => !current?.topics?.some(n => n.id === o.id))
   if (!removed.length) return []
   const [datasetsUsage, applicationsUsage] = await Promise.all([
-    fetchUsage('datasets', 'topics'),
-    $uiConfig.disableApplications ? [] : fetchUsage('applications', 'topics')
+    fetchFacet<Usage[]>('datasets', 'topics', []),
+    $uiConfig.disableApplications ? [] : fetchFacet<Usage[]>('applications', 'topics', [])
   ])
   return removed.flatMap(topic => {
     const count = (usage: { value: any, count: number }[]) => usage.find(u => u.value?.id === topic.id)?.count

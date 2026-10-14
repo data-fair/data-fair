@@ -409,10 +409,16 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
         })
         facet.push({ $sort: { count: -1 } })
       } else if (f === 'customMetadata') {
-        // one count per custom metadata: the datasets where it holds a value
+        // per custom metadata: the datasets holding it, and the datasets per text value (a single value is a one item list)
         facet.push({ $project: { keys: { $objectToArray: { $cond: [{ $eq: [{ $type: '$customMetadata' }, 'object'] }, '$customMetadata', {}] } } } })
         facet.push({ $unwind: '$keys' })
-        facet.push({ $sortByCount: '$keys.k' })
+        const items = { $cond: [{ $isArray: '$keys.v' }, '$keys.v', ['$keys.v']] }
+        facet.push({ $group: { _id: '$keys.k', count: { $sum: 1 }, values: { $push: { $setUnion: [{ $filter: { input: items, cond: { $eq: [{ $type: '$$this' }, 'string'] } } }] } } } })
+        // a metadata without text values (number, date, link) keeps its datasets count
+        facet.push({ $unwind: '$values' }, { $unwind: { path: '$values', preserveNullAndEmptyArrays: true } })
+        facet.push({ $group: { _id: { key: '$_id', value: '$values' }, count: { $sum: 1 }, datasets: { $first: '$count' } } })
+        facet.push({ $sort: { count: -1 } })
+        facet.push({ $group: { _id: '$_id.key', count: { $first: '$datasets' }, values: { $push: { value: '$_id.value', count: '$count' } } } })
       } else if (f === 'topics') {
         facet.push({
           $unwind: {
@@ -446,8 +452,6 @@ export const facetsQuery = (reqQuery: Record<string, string>, sessionState: Sess
             preserveNullAndEmptyArrays: nullFacetFields.includes(f)
           }
         })
-        // a multiple custom metadata holds its values one level down
-        if ((facetFields[f] || f).startsWith('customMetadata.')) facet.push({ $unwind: '$' + facetFields[f] })
         facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
         facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
         facet.push({ $sortByCount: '$' + f })
@@ -499,6 +503,12 @@ export const parseFacets = (facets: any, nullFacetFields: string[] = []) => {
             title: r._id.title || (r._id.meta && r._id.meta.title)
           }
         }))
+    } else if (k === 'customMetadata') {
+      // an object with one entry per custom metadata, values only when some are text
+      res[k] = Object.fromEntries(values.map((r: any) => {
+        const textValues = r.values.filter((v: any) => v.value != null)
+        return [r._id, textValues.length ? { count: r.count, values: textValues } : { count: r.count }]
+      }))
     } else {
       res[k] = values
         .filter((r: any) => r._id || nullFacetFields.includes(k))
@@ -506,6 +516,7 @@ export const parseFacets = (facets: any, nullFacetFields: string[] = []) => {
     }
   }
   for (const facetKey of Object.keys(res)) {
+    if (!Array.isArray(res[facetKey])) continue
     res[facetKey].sort((a: any, b: any) => {
       if (a.count < b.count) return 1
       if (a.count > b.count) return -1
