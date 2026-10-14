@@ -70,10 +70,12 @@ test.describe('bridge provider settings', () => {
     }
   })
 
-  test('stores traces, so a run can be read back through the conversation export', () => {
-    // the export route sits behind the review gate, which needs stored traces: without them every
-    // run would have no evidence and be recorded invalid
-    assert.equal(bridgeSettings('sonnet', 'haiku').org.storeTraces, true)
+  test('enables review of the personal assistant, so its runs can be read back through the conversation export', () => {
+    // the back-office cases talk to the personal assistant, whose threads the export only serves when the
+    // organization enabled review (and the person consented: the runner sets the consent cookie); without it
+    // every such run would have no evidence and be recorded invalid. An autonomous agent's are always reviewable.
+    assert.equal(bridgeSettings('sonnet', 'haiku').org.reviewPersonalAssistant, true)
+    assert.equal('storeTraces' in bridgeSettings('sonnet', 'haiku').org, false, 'the agents API refuses the old name')
   })
 
   test('gives the admin role unlimited quota', () => {

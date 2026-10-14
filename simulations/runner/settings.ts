@@ -74,9 +74,9 @@ export function bridgeSettings (assistantModelId: string, toolsModelId: string) 
         MODEL_ROLES.map(role => [role, { provider: bridge.id, id: modelFor(role), name: modelFor(role) }])
       ) as Record<typeof MODEL_ROLES[number], { provider: string, id: string, name: string }>,
       quotas,
-      // ON: a run is read back through the conversation export, and that route sits behind the
-      // review gate, which needs stored traces
-      storeTraces: true
+      // ON: a run is read back through the conversation export, which serves the personal assistant's
+      // threads only when the organization enabled review (an autonomous agent's are always reviewable)
+      reviewPersonalAssistant: true
     }
   }
 }
