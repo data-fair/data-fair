@@ -234,6 +234,10 @@ test.describe('API keys', () => {
     await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
       apiKeys: [{ ...apiKeys[0], scopes: ['stats'] }]
     }), { status: 400 })
+    // nor duplicate it, a copy would outlive its deletion
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+      apiKeys: [apiKeys[0], apiKeys[0]]
+    }), { status: 400 })
     // user cannot delete the key
     await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
       apiKeys: []

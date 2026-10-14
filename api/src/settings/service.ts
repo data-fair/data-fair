@@ -46,6 +46,10 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   settings.apiKeys = settings.apiKeys ?? []
   const existingApiKeys = existingSettings?.apiKeys ?? []
 
+  // a duplicate would survive the removal of its twin
+  const apiKeyIds = settings.apiKeys.map((k: any) => k.id).filter(Boolean)
+  if (new Set(apiKeyIds).size !== apiKeyIds.length) throw httpError(400, 'duplicate API key id')
+
   // a copy of the api keys where the clearKey is returned for the user that created a new key
   const returnedApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
 
@@ -53,7 +57,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     const apiKey = settings.apiKeys[i]
 
     // extra safety on top of the creation and immutability checks below; an unchanged existing key can be re-sent
-    if (apiKey.adminMode && !user.isAdmin && !existingApiKeys.some(k => k.id === apiKey.id)) {
+    if (apiKey.adminMode && !user.isAdmin && !(apiKey.id && existingApiKeys.some(k => k.id === apiKey.id))) {
       eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { ...ctx.logCtx, account: owner })
       throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
