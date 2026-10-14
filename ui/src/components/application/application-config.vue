@@ -63,7 +63,7 @@
                 :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
                 item-value="url"
                 class="mb-2"
-                @update:model-value="patch({urlDraft: $event})"
+                @update:model-value="changeVersion"
               />
 
               <v-checkbox
@@ -199,7 +199,9 @@ const hasModification = computed(() => {
   if (application.value?.urlDraft && editUrl.value !== application.value.urlDraft) return true
   return false
 })
-const hasDraft = computed(() => application.value?.status === 'configured-draft')
+// a version change alone is a draft too: it does not touch the status
+const hasDraft = computed(() => application.value?.status === 'configured-draft' ||
+  (!!application.value?.urlDraft && application.value.urlDraft !== application.value.url))
 
 const showForm = ref(false)
 const draftSchema = ref<any>()
@@ -313,6 +315,12 @@ const onMessage = async (msg: any) => {
 }
 window.addEventListener('message', onMessage)
 onUnmounted(() => window.removeEventListener('message', onMessage))
+
+// the preview runs the code of the previous version until it reloads
+const changeVersion = async (urlDraft: string) => {
+  await patch({ urlDraft })
+  draftPreviewInc.value++
+}
 
 const cancelDraft = useAsyncAction(async () => {
   if (!canWriteConfig.value) return
