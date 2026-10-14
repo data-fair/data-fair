@@ -31,7 +31,7 @@ test.describe('fragments UI', () => {
     fragmentId = (await sendDataset('datasets/dataset1.csv', ax, {}, { partOf: { type: 'dataset', id: virtualId } })).id
   })
 
-  test('fragment page shows the banner and hides what the parent covers', async ({ page, goToWithAuth }) => {
+  test('fragment page links to its parent and hides what the parent covers', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
     await pastActiveAccountGate(page, page.getByText(/fragment de/i))
     await expect(page.getByText(/fragment de/i)).toBeVisible({ timeout: 15000 })
@@ -42,7 +42,7 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#structure').getByRole('tab', { name: 'Fragments' })).toHaveCount(0)
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes/ })).toHaveCount(0)
     await expect(page.locator('#metadata').getByLabel('Licence')).toHaveCount(0)
-    await expect(page.locator('#metadata').getByText('Description', { exact: true })).toHaveCount(0)
+    await expect(page.locator('#metadata').getByText('Description', { exact: true }).first()).toBeVisible()
     await expect(page.locator('#danger-zone').getByText(/Détacher/).first()).toBeVisible()
   })
 
@@ -94,12 +94,12 @@ test.describe('fragments UI', () => {
     await expect(stepWindow.getByText('virtual parent')).toBeVisible()
     // copying the parent's rows into its own fragment would duplicate them
     await expect(stepWindow.getByText('Copier la donnée')).toHaveCount(0)
-    // nor its description: a fragment is described by its parent
+    // nor its catalog metadata: a fragment is not catalogued
     await expect(stepWindow.getByText(/Copier le résumé/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continuer' }).click()
     await page.getByLabel('Titre').fill('my rest fragment')
     await page.getByRole('button', { name: 'Continuer' }).click()
-    // the owner is the parent's: the banner replaces the owner picker
+    // the owner is the parent's: the parent link replaces the owner picker
     await expect(page.getByText(/fragment de/i)).toBeVisible()
   })
 

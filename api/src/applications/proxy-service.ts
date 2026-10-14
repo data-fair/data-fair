@@ -1,4 +1,6 @@
 import mongo from '#mongo'
+import config from '#config'
+import type { SiteHashes } from './operations.ts'
 import axios, { privateAxios } from '../misc/utils/axios.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
@@ -71,4 +73,29 @@ export const fetchHTML = async (cleanApplicationUrl: string, targetUrl: any, isP
     throw err
     // in case of failure, serve from simple cache
   }
+}
+
+const siteHashesCache: Record<string, { hashes: Promise<SiteHashes | undefined>, ts: number }> = {}
+
+// same source and same 1 minute freshness as the hashes injected in the SPAs by serve-spa
+export const getSiteHashes = (siteUrl: string): Promise<SiteHashes | undefined> => {
+  const now = Date.now()
+  if (!siteHashesCache[siteUrl] || siteHashesCache[siteUrl].ts < now - 60 * 1000) {
+    const url = new URL(siteUrl)
+    // same fallback as the hashes of the SPAs in app.js, for a deployment split from simple-directory
+    const directoryUrl = config.privateDirectoryUrl || new URL(config.directoryUrl as string).origin
+    const hashes = privateAxios.get<SiteHashes>(directoryUrl + '/simple-directory/api/sites/_hashes', {
+      headers: {
+        'x-forwarded-proto': url.protocol.slice(0, -1),
+        'x-forwarded-host': url.hostname,
+        'x-forwarded-port': url.port
+      }
+    }).then(res => res.data, err => {
+      // the application still renders, with the non-hashed resources
+      internalError('app-site-hashes', err)
+      return undefined
+    })
+    siteHashesCache[siteUrl] = { hashes, ts: now }
+  }
+  return siteHashesCache[siteUrl].hashes
 }

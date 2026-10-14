@@ -10,12 +10,12 @@ import CacheableLookup from 'cacheable-lookup'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as serviceWorkers from '../misc/utils/service-workers.ts'
 import { refreshConfigDatasetsRefs } from './utils.ts'
-import { buildManifest, buildLoginHtml } from './operations.ts'
+import { buildManifest, buildLoginHtml, matchSiteResource, siteResourceHref } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
-import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache } from './proxy-service.ts'
+import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache, getSiteHashes } from './proxy-service.ts'
 import Debug from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSiteUrl, reqUserAuthenticated, getThemeParams } from '@data-fair/lib-express'
 import { reqPublicBaseUrl, reqPublicWsBaseUrl } from '../misc/utils/public-base-url.ts'
 import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
 import { httpAgent, httpsAgent, privateHttpAgent, privateHttpsAgent } from '../misc/utils/http-agents.ts'
@@ -215,6 +215,32 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
         { name: 'crossorigin', value: 'use-credentials' },
         { name: 'href', value: manifestUrl }
       ]
+    })
+  }
+
+  // The theme of the site is loaded by the application from simple-directory (_theme.css and
+  // _public.js). data-fair points these references to the hashed and immutable resources, or
+  // passes the _t_* parameters of the request through to apply a local override of the theme
+  // (other colors for an embedding in an external site, etc.) without the application knowing.
+  const themeParams = getThemeParams(req.query)
+  const hashes = themeParams.size ? undefined : await getSiteHashes(reqSiteUrl(req))
+  let hasPublicInfoScript = false
+  for (const node of head.childNodes as any[]) {
+    const attrName = node.tagName === 'link' ? 'href' : node.tagName === 'script' ? 'src' : undefined
+    const attr = attrName && node.attrs?.find((a: any) => a.name === attrName)
+    const resource = matchSiteResource(attr?.value)
+    if (!resource) continue
+    attr.value = siteResourceHref(resource, hashes, themeParams)
+    if (resource === '_public.js') hasPublicInfoScript = true
+  }
+  // an application that still fetches the site info itself (deprecated siteInfo option of the
+  // session) gives precedence to window.__PUBLIC_SITE_INFO, so the override reaches it too
+  if (themeParams.size && !hasPublicInfoScript) {
+    pushHeadNode({
+      nodeName: 'script',
+      tagName: 'script',
+      attrs: [{ name: 'src', value: siteResourceHref('_public.js', undefined, themeParams) }],
+      childNodes: []
     })
   }
 

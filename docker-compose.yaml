@@ -27,18 +27,21 @@ services:
     image: ghcr.io/data-fair/elasticsearch:8.19.9
     ports:
       - ${ES_PORT}:9200
-    # dev/test datasets are small, so a 1g heap is plenty. The point of the cap
-    # is that several dev environments run side by side on one laptop: at the
-    # old -Xmx2g each stack reserved 2g of ES heap alone. mem_limit bounds the
-    # off-heap side too, so a runaway ES is killed inside its container instead
-    # of pushing the host into a global OOM (which takes the desktop session
-    # down with it, see docs/architecture/dev-resources.md).
+    # dev/test datasets are small, so a 512m heap is plenty (set ES_HEAP=1g in
+    # the environment for heavier workloads such as benchmarks). The point of
+    # the cap is that several dev environments run side by side on one laptop,
+    # and ES pre-touches its whole heap at boot: every stack pays it even idle.
+    # mem_limit bounds the off-heap side too, and memswap_limit equal to it
+    # forbids swap, so a runaway ES is killed inside its container instead of
+    # pushing the host into a global OOM (which takes the desktop session down
+    # with it, see docs/architecture/dev-resources.md).
     mem_limit: 2g
+    memswap_limit: 2g
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ingest.geoip.downloader.enabled=false
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
@@ -52,6 +55,9 @@ services:
       - dev
       - test
     image: mongo:8.0.17
+    # the WiredTiger cache defaults to half the host RAM per instance, and every
+    # dev stack runs its own mongod; the minimum is ample for dev/test data
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
     ports:
       - ${MONGO_PORT}:27017
     volumes:
@@ -277,18 +283,21 @@ services:
       - test
     healthcheck:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
+    # the official signature database costs ~1g resident per stack; dev and
+    # tests only ever scan the EICAR test file, so clamd loads a single
+    # signature instead (~30m). Real-world detection is not exercised here.
     volumes:
-      - clamav-data:/var/lib/clamav
+      - ./dev/resources/clamav-db:/var/lib/clamav-dev:ro
       - clamav-tmp:/tmp
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
+      - CLAMD_CONF_DatabaseDirectory=/var/lib/clamav-dev
     ports:
       - ${CLAMAV_PORT}:3310
 
 volumes:
   elasticsearch-data:
   mongodb-data:
-  clamav-data:
   clamav-tmp:
   s3-data:

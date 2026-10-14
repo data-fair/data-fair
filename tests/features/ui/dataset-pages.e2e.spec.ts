@@ -12,7 +12,7 @@ test.describe('dataset detail pages', () => {
     datasetId = dataset.id
   })
 
-  test('dataset home page shows all sections, tabs, record count and editable metadata', async ({ page, goToWithAuth }) => {
+  test('dataset home page shows all sections, tabs, record count and editable metadata', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
 
     // Top-level sections
@@ -24,7 +24,7 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#activity')).toBeVisible()
 
     // Metadata section: informations + attachments tabs, editable title
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('tab', { name: 'Informations générales' })).toBeVisible()
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
     await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toBeVisible()
 
@@ -36,7 +36,7 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible()
   })
 
-  test('dataset /table route loads table view', async ({ page, goToWithAuth }) => {
+  test('dataset /table route loads table view', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
@@ -155,7 +155,7 @@ test.describe('dataset detail pages', () => {
   })
 
   // Mutating tests last — these modify the dataset
-  test('editing title shows save button and persists changes', async ({ page, goToWithAuth }) => {
+  test('editing title shows save button and persists changes', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
@@ -217,6 +217,7 @@ test.describe('dataset detail pages', () => {
     await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
     await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await page.locator('#metadata').getByRole('tab', { name: 'Informations complémentaires' }).click()
     const field = page.locator('#metadata').getByLabel('Termes de recherche associés')
     await expect(field).toBeVisible()
     await field.fill('élections scrutin')

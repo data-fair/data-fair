@@ -24,8 +24,10 @@ gnome-shell: Shutting down GNOME Shell
 systemd-logind: Session 2 logged out.
 ```
 
-The number of containers is not the problem — a 16-container, two-environment setup
-accounts for roughly 4 GiB. The memory goes to the **user session side**: the vite
+The number of containers is not the problem as such, but some containers are
+heavy: before the caps below, one data-fair stack held ~4.6 GiB of RAM + swap
+(ES 2.2, clamd 0.95, mongo 0.5, S3 0.35), and stacks left running for worktrees
+nobody was working on held as much. The memory goes to the **user session side**: the vite
 dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ## The caps
@@ -64,18 +66,63 @@ unidentified; the cap is what makes it survivable meanwhile.
 ### Elasticsearch — `docker-compose.yaml`
 
 ```
-ES_JAVA_OPTS=-Xms1g -Xmx1g
+ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
 mem_limit: 2g
+memswap_limit: 2g
 ```
 
-Dev and test datasets are small, so 1 GiB of heap is ample — the previous `-Xmx2g`
-reserved twice that per running stack. `mem_limit` bounds the off-heap side (direct
-memory, metaspace, thread stacks) so a runaway ES is killed *inside its container*
-rather than contributing to a host-wide OOM.
+Dev and test datasets are small, so 512 MiB of heap is ample. ES pre-touches its
+whole heap at boot (`-XX:+AlwaysPreTouch`), so the heap is resident in every running
+stack even when idle: at the earlier 1g a stack's ES sat around 1.5 GiB resident,
+at 512m around 1 GiB. `memswap_limit` equal to `mem_limit` forbids swap — without it
+docker allows as much swap again as `mem_limit`, and idle ES containers were seen
+pushing 1.7 GiB each into swap. `mem_limit` bounds the off-heap side (direct memory,
+metaspace, thread stacks) so a runaway ES is killed *inside its container* rather
+than contributing to a host-wide OOM.
 
-Raise both if a workload genuinely needs it (large benchmark datasets, say) — but
-raise them deliberately, and remember the multiplier is the number of environments
-you have up.
+For a heavier workload (large benchmark datasets, say) start the stack with
+`ES_HEAP=1g npm run dev-deps` — 1g still fits in the 2g limit. Remember the
+multiplier is the number of environments you have up.
+
+### MongoDB — `docker-compose.yaml`
+
+`--wiredTigerCacheSizeGB 0.25`, the minimum. The default is half of (host RAM − 1 GiB)
+*per mongod*, about 15 GiB on a 30 GiB machine, and every stack runs its own. Usage
+was 0.4–0.6 GiB per stack when this was set; the cap keeps it from growing toward
+that ceiling over days of uptime.
+
+### ClamAV — `docker-compose.yaml` + `dev/resources/clamav-db/`
+
+The official signature database costs about 0.95 GiB per clamd, nearly all of it
+sitting in swap since nothing scans in between. Dev and the tests only ever scan the
+EICAR test file, so clamd points at `dev/resources/clamav-db/` (`DatabaseDirectory`
+via `CLAMD_CONF_DatabaseDirectory`), which holds a single EICAR body signature:
+~30 MiB resident, and clamd starts in seconds. Detections report as
+`Eicar-Test-Signature.UNOFFICIAL FOUND`, which the API treats like any other `FOUND`.
+Real-world malware detection is therefore **not** exercised in dev or CI.
+
+### Idle stacks — `dev/idle-stacks.sh`
+
+The cheapest saving of all: a worktree you stopped working on leaves its whole
+compose stack up, ~2.5–4.5 GiB of RAM + swap holding nothing useful.
+`bash dev/idle-stacks.sh` lists every running compose project with its memory and
+whether its dev API is running (listening, or its nodemon supervisor up while it boots), and the command to stop it
+(`docker compose -p <project> stop` keeps the volumes; `npm run dev-deps` brings it
+back). Read-only, like `dev/status.sh`.
+
+### MCP servers — `.mcp.json`
+
+Each Claude Code session starts its own copy of every project MCP server, and
+`npx`-launched ones cost two processes (the `npm exec` wrapper plus the server).
+The Vuetify docs server was dropped from the shared `.mcp.json` for that reason;
+add it to your own local config when you need it:
+
+```bash
+claude mcp add vuetify -s local -- npx @vuetify/mcp
+```
+
+Closing Claude sessions you are done with frees ~0.3–0.5 GiB each, MCP servers
+included.
 
 ## If it happens anyway
 

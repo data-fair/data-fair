@@ -175,6 +175,14 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
+    // category keys are tab values on the dataset page, next to the fixed tabs
+    const seenKeys = new Map<string, string>()
+    for (const group of settings.datasetsMetadata.groups ?? []) {
+      if (['informations', 'coverage', 'attachments'].includes(group.key!)) throw httpError(400, `La catégorie "${group.title}" utilise un identifiant réservé`)
+      const existing = seenKeys.get(group.key!)
+      if (existing) throw httpError(400, `Les catégories "${existing}" et "${group.title}" ont le même identifiant`)
+      seenKeys.set(group.key!, group.title)
+    }
   }
 
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))

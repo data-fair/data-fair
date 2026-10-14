@@ -22,7 +22,7 @@ test.describe('search - basic', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
-  test('Get lines in dataset', async () => {
+  test('Get lines in dataset', { tag: '@smoke' }, async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const locProp = dataset.schema.find((p: any) => p.key === 'loc')
@@ -333,7 +333,7 @@ test.describe('search - basic', () => {
     })
   })
 
-  test('Search in dataset using all supported query modes', async () => {
+  test('Search in dataset using all supported query modes', { tag: '@smoke' }, async () => {
     const ax = testUser1
     let dataset = (await ax.put('/api/v1/datasets/qmodes', {
       isRest: true,

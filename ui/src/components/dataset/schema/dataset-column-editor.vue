@@ -14,34 +14,36 @@
       md="6"
       lg="7"
     >
-      <v-text-field
-        v-model="column.title"
-        :placeholder="column['x-originalName'] || ''"
-        :label="t('label')"
-        :disabled="!editable"
-        variant="outlined"
-        density="comfortable"
-        class="mb-2"
-        hide-details
-        autofocus
+      <help-tooltip
+        :text="t('labelHelp')"
       >
-        <template #append>
-          <help-tooltip :text="t('labelHelp')" />
-        </template>
-      </v-text-field>
+        <v-text-field
+          v-model="column.title"
+          :placeholder="column['x-originalName'] || ''"
+          :label="t('label')"
+          :disabled="!editable"
+          variant="outlined"
+          density="comfortable"
+          class="mb-2"
+          hide-details
+          autofocus
+        />
+      </help-tooltip>
 
-      <markdown-editor
-        v-model="column.description"
-        :label="t('description')"
-        :disabled="!editable"
-        :easy-mde-options="{ minHeight: '150px' }"
-        :locale="locale"
-        :csp-nonce="$cspNonce"
+      <help-tooltip
+        :text="t('descriptionHelp')"
+        class="mt-6"
       >
-        <template #append>
-          <help-tooltip>{{ t('descriptionHelp') }}</help-tooltip>
-        </template>
-      </markdown-editor>
+        <markdown-editor
+          v-model="column.description"
+          :label="t('description')"
+          :disabled="!editable"
+          :easy-mde-options="{ minHeight: '150px' }"
+          :locale="locale"
+          :csp-nonce="$cspNonce"
+          :input-props="{ class: 'flex-grow-1' }"
+        />
+      </help-tooltip>
     </v-col>
 
     <!-- Right column: actions, info, concept -->
@@ -111,9 +113,10 @@
         >
           <span class="text-medium-emphasis">{{ t('distinctValues') }}:&nbsp;</span>
           {{ column['x-cardinality'].toLocaleString() }}
-          <help-tooltip small>
-            {{ t('distinctValuesHelp') }}
-          </help-tooltip>
+          <help-tooltip
+            :text="t('distinctValuesHelp')"
+            small
+          />
         </div>
 
         <div
@@ -126,83 +129,96 @@
       </div>
 
       <!-- Concept / vocabulary autocomplete -->
-      <v-autocomplete
+      <help-tooltip
         v-if="column"
-        :model-value="column['x-refersTo'] ?? undefined"
-        :label="t('concept')"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
-        :items="filteredVocabularyItems"
-        :custom-filter="conceptFilter"
-        item-value="value"
-        class="mb-2"
-        density="comfortable"
-        clearable
-        hide-details
-        @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
+        :text="conceptHelp"
       >
-        <template #item="{ internalItem, props: itemProps }">
-          <v-list-item v-bind="itemProps">
-            <v-list-item-subtitle v-if="(internalItem.raw as VocabItem).description">
-              {{ (internalItem.raw as VocabItem).description }}
-            </v-list-item-subtitle>
-          </v-list-item>
-        </template>
-        <template #append>
-          <help-tooltip :text="conceptHelp" />
-        </template>
-      </v-autocomplete>
+        <v-autocomplete
+          :model-value="column['x-refersTo'] ?? undefined"
+          :label="t('concept')"
+          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
+          :items="filteredVocabularyItems"
+          :custom-filter="conceptFilter"
+          item-value="value"
+          class="mb-2"
+          density="comfortable"
+          clearable
+          hide-details
+          @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
+        >
+          <template #item="{ internalItem, props: itemProps }">
+            <v-list-item v-bind="itemProps">
+              <v-list-item-subtitle v-if="(internalItem.raw as VocabItem).description">
+                {{ (internalItem.raw as VocabItem).description }}
+              </v-list-item-subtitle>
+            </v-list-item>
+          </template>
+        </v-autocomplete>
+      </help-tooltip>
+
+      <!-- stored on the dataset, shown on the column holding the attachments; derived from the children on virtual datasets -->
+      <v-checkbox
+        v-if="column?.['x-refersTo'] === 'http://schema.org/DigitalDocument' && !dataset?.isVirtual"
+        :model-value="!!attachmentsAsImage"
+        :label="t('attachmentsAsImage')"
+        :disabled="!editable || !dataset?.userPermissions?.includes('writeDescriptionBreaking')"
+        density="compact"
+        class="mb-2"
+        hide-details
+        @update:model-value="v => emit('update:attachmentsAsImage', !!v)"
+      />
 
       <!-- Separator select -->
-      <v-select
+      <help-tooltip
         v-if="column && column.type === 'string'"
-        :model-value="(column as any).separator ?? undefined"
-        :label="t('sep')"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
-        :items="[', ', '; ', ' - ', ' / ', ' | ']"
-        density="comfortable"
-        class="mb-2"
-        hide-details
-        clearable
-        @update:model-value="val => { if (column) (column as any).separator = val; }"
+        :text="t('separatorHelp')"
       >
-        <template #append>
-          <help-tooltip :text="t('separatorHelp')" />
-        </template>
-      </v-select>
+        <v-select
+          :model-value="(column as any).separator ?? undefined"
+          :label="t('sep')"
+          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
+          :items="[', ', '; ', ' - ', ' / ', ' | ']"
+          density="comfortable"
+          class="mb-2"
+          hide-details
+          clearable
+          @update:model-value="val => { if (column) (column as any).separator = val; }"
+        />
+      </help-tooltip>
 
       <!-- Display format select -->
-      <v-select
+      <help-tooltip
         v-if="column && showDisplayFormat"
-        v-model="displayFormat"
-        :label="t('xDisplay')"
-        :disabled="!editable || !columnEditable"
-        :items="displayFormatItems"
-        class="mb-2"
-        density="comfortable"
-        hide-details
+        :text="t('xDisplayHelp')"
       >
-        <template #append>
-          <help-tooltip :text="t('xDisplayHelp')" />
-        </template>
-      </v-select>
+        <v-select
+          v-model="displayFormat"
+          :label="t('xDisplay')"
+          :disabled="!editable || !columnEditable"
+          :items="displayFormatItems"
+          class="mb-2"
+          density="comfortable"
+          hide-details
+        />
+      </help-tooltip>
 
       <!-- Group combobox -->
-      <v-combobox
+      <help-tooltip
         v-if="column"
-        :model-value="(column as any)['x-group'] ?? undefined"
-        :label="t('group')"
-        :disabled="!(editable ?? false)"
-        :items="groups"
-        class="mb-2"
-        density="comfortable"
-        hide-details
-        clearable
-        @update:model-value="val => { if (column) { if (val) (column as any)['x-group'] = val; else delete (column as any)['x-group'] } }"
+        :text="t('groupHelp')"
       >
-        <template #append>
-          <help-tooltip :text="t('groupHelp')" />
-        </template>
-      </v-combobox>
+        <v-combobox
+          :model-value="(column as any)['x-group'] ?? undefined"
+          :label="t('group')"
+          :disabled="!(editable ?? false)"
+          :items="groups"
+          class="mb-2"
+          density="comfortable"
+          hide-details
+          clearable
+          @update:model-value="val => { if (column) { if (val) (column as any)['x-group'] = val; else delete (column as any)['x-group'] } }"
+        />
+      </help-tooltip>
     </v-col>
   </v-row>
 </template>
@@ -210,6 +226,7 @@
 <i18n lang="yaml">
 fr:
   noColumnSelected: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
+  attachmentsAsImage: Afficher les pièces jointes de lignes comme des images
   sourceKey: Clé source
   type: Type
   label: Libellé
@@ -235,6 +252,7 @@ fr:
   privateVocabulary: Vocabulaire privé
 en:
   noColumnSelected: Click on a column title to display its detailed information.
+  attachmentsAsImage: Display row attachments as images
   sourceKey: Source key
   type: Type
   label: Label
@@ -276,10 +294,12 @@ const props = defineProps<{
   column: SchemaProperty | null
   allColumns: SchemaProperty[]
   editable?: boolean
+  attachmentsAsImage?: boolean
 }>()
 
 const emit = defineEmits<{
   remove: [key: string]
+  'update:attachmentsAsImage': [value: boolean]
 }>()
 
 const currentFileColumn = computed(() => {

@@ -181,7 +181,7 @@ test.describe('datasets - features', () => {
   })
 
   // this test is skipped because it relies on a shared volume that cannot be mounted during docker build
-  test('anitivirus reject upload of infected file in dataset', async () => {
+  test('anitivirus reject upload of infected file in dataset', { tag: '@smoke' }, async () => {
     const ax = testUser1
     await assert.rejects(sendDataset('antivirus/eicar.com.csv', ax), (err: any) => {
       assert.ok(err.data.includes('malicious file detected'))

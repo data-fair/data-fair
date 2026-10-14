@@ -134,6 +134,10 @@ export function saveExperimentResults (results: ExperimentResult[]): void {
   })
 }
 
+export function saveUiTableResults (payload: object): void {
+  saveJson('ui-table', { timestamp: new Date().toISOString(), git: gitInfo(), node: process.version, ...payload })
+}
+
 // ---- formatting helpers ----------------------------------------------------
 
 function fmtMs (v: number): string {

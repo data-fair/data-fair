@@ -40,7 +40,7 @@
       @update:model-value="togglePart('extensions')"
     />
 
-    <!-- a fragment has neither its own attachments nor a description of its own to inherit: it is described by its parent -->
+    <!-- a fragment is not catalogued: copying the parent's attachments and catalog metadata would only duplicate them -->
     <v-checkbox
       v-if="initFromDataset.attachments?.length && !fragment"
       :model-value="modelValue.parts.includes('metadataAttachments')"
@@ -241,11 +241,11 @@ fr:
     frequency: Fréquence de mise à jour
     creator: Producteur
     modified: Date de modification de la source
-    customMetadata: Métadonnées spécifiques
+    customMetadata: Métadonnées personnalisées
     relatedDatasets: Jeux de données liés
   notCopyable:
     topics: Aucune de ces thématiques n'existe dans votre compte
-    customMetadata: Aucune de ces métadonnées spécifiques n'existe dans votre compte
+    customMetadata: Aucune de ces métadonnées personnalisées n'existe dans votre compte
   sourceHasNoData: Le jeu de données sélectionné ne contient aucune ligne, la copie des données n'est pas possible.
   sourceNotFinalized: Le jeu de données sélectionné n'est pas finalisé, la copie des données n'est pas possible.
 en:

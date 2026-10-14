@@ -41,11 +41,7 @@
         />
       </div>
 
-      <!-- a fragment is described by its parent: title and summary are enough -->
-      <div
-        v-if="!application.partOf"
-        class="d-flex align-start gap-1 mb-3"
-      >
+      <div class="d-flex align-start gap-1 mb-3">
         <markdown-editor
           v-model="application.description"
           :read-only="!can('writeDescription')"

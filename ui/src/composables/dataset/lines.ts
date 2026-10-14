@@ -76,7 +76,8 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (!next.value) return
     abortController = new AbortController()
     // await new Promise(resolve => setTimeout(resolve, 2000))
-    const data = await $fetch<Lines>(next.value)
+    // a failed page stops the infinite scroll, or a visible sentinel would retry it in a loop
+    const data = await $fetch<Lines>(next.value).catch(err => { next.value = undefined; throw err })
     const extendedResults = []
     for (const raw of data.results) {
       const extendedResult: ExtendedResult = {
@@ -161,6 +162,7 @@ const prepareExtendedResultValue = (value: any, property: SchemaProperty, trunca
 const shouldDisplayDetail = (value: any, property: SchemaProperty, truncate: number): boolean => {
   if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
   if (property['x-refersTo'] === 'https://schema.org/WebPage') return false
+  if (!property.separator && value && (property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description')) return true
   return property.type === 'string' && !property.separator && value && truncate < value.length
 }
 

@@ -6,8 +6,9 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: 'dot',
+  retries: process.env.CI ? Number(process.env.TEST_RETRIES || 1) : 0,
+  // the json report keeps the per-test durations of the last run, used to size the smoke set and the CI shards
+  reporter: [['dot'], ['json', { outputFile: 'dev/logs/test-timings.json' }]],
   timeout: 30_000,
   expect: { timeout: 5_000 },
 
