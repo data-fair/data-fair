@@ -40,9 +40,14 @@ const superAdmin = async () => {
   return axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
 }
 
-/** Create (or replace) the agent, enrolled with the fixture NHI, instructed by OWNER_USER. */
+/**
+ * Create the agent afresh, enrolled with the fixture NHI, instructed by OWNER_USER. Deleted first, which takes
+ * its conversations with it: the agents page reopens the agent's latest thread, so a kept history would carry
+ * an earlier run's conversation into this one (and clean() resets data-fair, not the agents service).
+ */
 export async function seedAutonomousAgent (agent: SimulatedAgentConfig = {}) {
   const admin = await superAdmin()
+  await admin.delete(`/agents/api/autonomous-agents/${OWNER.type}/${OWNER.id}/${SIM_AGENT_ID}`, { validateStatus: status => status < 300 || status === 404 })
   await admin.post('/agents/api/test-env/autonomous-agent', {
     id: SIM_AGENT_ID,
     owner: OWNER,
