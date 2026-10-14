@@ -26,7 +26,7 @@
         />
 
         <template v-if="digitalDocumentField">
-          <p class="text-body-2 mb-2">
+          <p class="text-body-medium mb-2">
             {{ t('attachmentsMsg') }}
           </p>
           <v-file-input

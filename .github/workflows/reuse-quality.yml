@@ -1,8 +1,10 @@
 name: Quality checks
 
-# The full gate: static checks in one job, and the whole test suite (unit, api, e2e)
-# split over parallel shards. Each shard is a fresh runner with its own services, so the
-# suite's single-worker constraint (tests share one dev env state) holds inside each one.
+# The full gate. One build job (types, UI, parquet-writer) shared as an artifact; static checks
+# and unit tests in one job; api and e2e tests in two parallel jobs. Each test job is a fresh
+# runner with its own services, so the suite's single-worker constraint (tests share one dev env
+# state) holds inside each one. Splitting by project and not by --shard: shards follow the file
+# order and came out unbalanced (16 s / 2.6 min / 23.9 min), the api and e2e halves are close.
 # Used by pull requests, releases and the nightly check of master; the pre-push hook only
 # runs a light subset (see docs/architecture/testing.md).
 
@@ -16,7 +18,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  static:
+  build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout git repository
@@ -24,24 +26,69 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 24
+        node-version-file: .nvmrc
         cache: 'npm'
 
     - name: Install dependencies
       run: npm ci
 
-    - name: Lint
-      run: npm run lint
+    # a cold release build of the rust module is the most expensive build step (~1.5 min);
+    # the cache only rebuilds it when the rust sources change
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: parquet-writer
 
+    - name: Build parquet-writer
+      run: npm -w parquet-writer run build
+
+    # the generated .type modules are imported by the API, the tests and the UI build
     - name: Build types
       run: npm run build-types
 
-    # after build-types: the ratchet counts errors against the generated .type modules
-    - name: Type check ratchet
-      run: npm run check-types-ratchet
-
+    # the API reads ui/dist/index.html at startup (lib-express createSpaMiddleware) and dies
+    # without it, even though the pages themselves come from the dev UI; ui/dts feeds the UI type check
     - name: Build UI
       run: npm -w ui run build
+
+    - name: Upload build outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: build
+        include-hidden-files: true # the .type directories
+        retention-days: 1
+        path: |
+          **/.type/
+          !**/node_modules/**
+          ui/dist/
+          ui/dts/
+          parquet-writer/*.node
+
+  static:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout git repository
+      uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Download build outputs
+      uses: actions/download-artifact@v4
+      with:
+        name: build
+
+    - name: Lint
+      run: npm run lint
+
+    # the ratchet counts errors against the generated .type modules
+    - name: Type check ratchet
+      run: npm run check-types-ratchet
 
     - name: Type check UI
       run: npm -w ui run check-types
@@ -49,12 +96,17 @@ jobs:
     - name: Audit
       run: npm audit --omit=dev --audit-level=critical
 
+    # no server needed
+    - name: Unit tests
+      run: npx playwright test --project=unit
+
   tests:
+    needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        project: [api, e2e]
     env:
       OGR2OGR_SKIP: 'true'
       # empty on workflow_dispatch, where playwright.config.ts falls back to 1
@@ -65,32 +117,39 @@ jobs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 24
+        node-version-file: .nvmrc
         cache: 'npm'
 
     - name: Install dependencies
       run: npm ci
 
-    # a cold release build of the rust module is the most expensive setup step (~1.5 min),
-    # paid again in every shard; the cache only rebuilds it when the rust sources change
-    - uses: Swatinem/rust-cache@v2
+    - name: Download build outputs
+      uses: actions/download-artifact@v4
       with:
-        workspaces: parquet-writer
+        name: build
 
-    - name: Build parquet-writer
-      run: npm -w parquet-writer run build
+    # only the browser binaries are cached, keyed on the installed playwright version;
+    # the system packages they need are installed on every run
+    - name: Read the playwright version
+      if: matrix.project == 'e2e'
+      id: playwright
+      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-    # the generated .type modules are imported by the API and by the UI build
-    - name: Build types
-      run: npm run build-types
-
-    # the API reads ui/dist/index.html at startup (lib-express createSpaMiddleware) and dies
-    # without it, even though the pages themselves come from the dev UI
-    - name: Build UI
-      run: npm -w ui run build
+    - name: Cache playwright browsers
+      if: matrix.project == 'e2e'
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
     - name: Install playwright browser
+      if: matrix.project == 'e2e' && steps.playwright-cache.outputs.cache-hit != 'true'
       run: npx playwright install --with-deps chromium
+
+    - name: Install playwright system dependencies
+      if: matrix.project == 'e2e' && steps.playwright-cache.outputs.cache-hit == 'true'
+      run: npx playwright install-deps chromium
 
     - name: Init .env
       run: ./node_modules/.bin/df-dev init-env # local bin only: a bare npx would fetch an unrelated "df-dev" from the registry if the dependency were missing
@@ -124,11 +183,14 @@ jobs:
         export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd api && MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error sh ../dev/run-api.sh > ../dev/logs/api.log 2>&1 &
 
+    # vite hashes the API's ui-config to link it: same absent-config as the API
     - name: Start dev UI
-      run: cd ui && NODE_CONFIG_DIR=../api/config/ ../node_modules/.bin/vite --port $DEV_UI_PORT > ../dev/logs/ui.log 2>&1 &
+      run: |
+        export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
+        cd ui && NODE_CONFIG_DIR=../api/config/ ../node_modules/.bin/vite --port $DEV_UI_PORT > ../dev/logs/ui.log 2>&1 &
 
     # vite compiles on first request: without a warm-up the first e2e page load of the
-    # shard spends its navigation timeout on dependency optimization
+    # job spends its navigation timeout on dependency optimization
     - name: Wait for API and UI
       run: |
         for url in "http://localhost:$NGINX_PORT/data-fair/api/v1/ping" "http://localhost:$NGINX_PORT/data-fair/"; do
@@ -137,13 +199,13 @@ jobs:
         done
 
     - name: Run tests
-      run: npx playwright test --shard=${{ matrix.shard }}/3
+      run: npx playwright test --project=${{ matrix.project }}
 
     - name: Upload test results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.shard }}
+        name: test-results-${{ matrix.project }}
         path: |
           test-results/
           dev/logs/

@@ -29,9 +29,9 @@
     "build-parser-refine": "peggy --dts --format es --output api/src/api-compat/ods/refine.peg.js api/src/api-compat/ods/refine.pegjs api/src/api-compat/ods/lexic.pegjs && sed -i '1i // @ts-nocheck' api/src/api-compat/ods/refine.peg.js",
     "postinstall": "patch-package",
     "prepare": "husky || true",
-    "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w ui run check-types",
+    "check-types": "tsc && npm -w ui run check-types",
     "check-types-ratchet": "bash dev/check-types-ratchet.sh",
-    "quality": "npm run lint && npm run check-types-ratchet && npm run build-types && npm -w ui run check-types && npm -w ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
+    "quality": "npm run lint && npm run build-types && npm -w ui run build && npm -w parquet-writer run build && npm run check-types-ratchet && npm -w ui run check-types && npm test && npm audit --omit=dev --audit-level=critical",
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning benchmark/src/index.ts"
   },
   "engines": {
@@ -42,8 +42,8 @@
   "type": "module",
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.270",
-    "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@data-fair/lib-agents-sim": "^0.11.0",
     "@data-fair/lib-dev": "file:../lib_feat-dev-env/packages/dev",
     "@data-fair/lib-types-builder": "^1.7.0",
@@ -66,15 +66,17 @@
     "ajv": "^8.17.1",
     "dotenv": "^17.3.1",
     "dotenv-cli": "^11.0.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.12.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "eslint-plugin-vuetify": "^2.7.3",
     "husky": "^9.1.7",
-    "neostandard": "^0.13.0",
+    "neostandard": "^0.14.1",
     "nock": "^14.0.11",
     "nodemon": "^3.1.14",
     "patch-package": "^8.0.0",
     "peggy": "^4.2.0",
     "tableschema": "^1.12.6",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "workspaces": [
     "api",

@@ -48,7 +48,7 @@ browser, a Playwright route answers the build's files from disk and lets API and
 requests through, so only the bundle differs. `ui/dist` is never written.
 
 Prerequisites:
-- the dev stack is up (`bash dev/status.sh`);
+- the dev stack is up (`npx --no df-dev status`);
 - the `fixtures-table-perf` dataset exists (`npm run dev-fixtures`). It has 50 columns and
   10,000 rows, and belongs to the `dev_fixtures` org: open
   `/data-fair/embed/dataset/fixtures-table-perf/table` in your dev session. The harness

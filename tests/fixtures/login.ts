@@ -64,60 +64,60 @@ async function performLogin (page: any, context: any, baseUrl: string, url: stri
 export const test = base.extend<{
   goToWithAuth: (url: string, user: string, opts?: { org?: string, dep?: string }) => Promise<void>
 }>({
-      page: async ({ page }, use) => {
-        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-        await page.context().addCookies([{
-          name: 'i18n_lang',
-          value: 'fr',
-          url: baseUrl
-        }, {
-          name: 'cache_bypass',
-          value: '1',
-          url: baseUrl
-        }])
-        await use(page)
-      },
+  page: async ({ page }, use) => {
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
+    await page.context().addCookies([{
+      name: 'i18n_lang',
+      value: 'fr',
+      url: baseUrl
+    }, {
+      name: 'cache_bypass',
+      value: '1',
+      url: baseUrl
+    }])
+    await use(page)
+  },
 
-      goToWithAuth: async ({ page, context }, use) => {
-        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-        let lastKey: string | undefined
-        const goToWithAuth = async (url: string, user: string, opts: AccountOpts = {}) => {
-          const key = cacheKey(user, opts)
-          lastKey = key
-          const cached = cookieCache.get(key)
-          if (!cached) {
-            // log in straight to the target: no intermediate page whose own navigations could
-            // interrupt the next goto
-            await performLogin(page, context, baseUrl, url, user, opts)
-            return
-          }
-          // the cached set carries its own id_token_org/id_token_dep (or none for a personal account)
-          await context.clearCookies({ name: 'id_token_org' })
-          await context.clearCookies({ name: 'id_token_dep' })
-          await context.addCookies(cached)
-          const keepalive = waitForKeepalive(page)
-          await page.goto(url)
-          // Safety: the cache was stale (redirected to login) or the session was destroyed server
-          // side (consumed exchange token replayed — the app then silently renders as anonymous).
-          if (page.url().includes('/simple-directory/login') || !((await keepalive)?.ok() ?? true)) {
-            cookieCache.delete(key)
-            await performLogin(page, context, baseUrl, url, user, opts)
-          }
-        }
-        await use(goToWithAuth)
-
-        // Hand the rotated cookies to the next test rather than the ones this test already consumed.
-        if (lastKey) {
-          const cookies = await context.cookies()
-          const cookie = (name: string) => cookies.find(c => c.name === name)?.value || undefined
-          // a test that switched account through the UI leaves a session whose active account is no
-          // longer the one this cache key logged in with (simple-directory keeps it): do not reuse it
-          const [, org, dep] = lastKey.split('|')
-          const sameAccount = cookie('id_token_org') === (org || undefined) && cookie('id_token_dep') === (dep || undefined)
-          if (sameAccount && cookie('id_token')) cookieCache.set(lastKey, cookies)
-          else cookieCache.delete(lastKey)
-        }
+  goToWithAuth: async ({ page, context }, use) => {
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
+    let lastKey: string | undefined
+    const goToWithAuth = async (url: string, user: string, opts: AccountOpts = {}) => {
+      const key = cacheKey(user, opts)
+      lastKey = key
+      const cached = cookieCache.get(key)
+      if (!cached) {
+        // log in straight to the target: no intermediate page whose own navigations could
+        // interrupt the next goto
+        await performLogin(page, context, baseUrl, url, user, opts)
+        return
       }
-    })
+      // the cached set carries its own id_token_org/id_token_dep (or none for a personal account)
+      await context.clearCookies({ name: 'id_token_org' })
+      await context.clearCookies({ name: 'id_token_dep' })
+      await context.addCookies(cached)
+      const keepalive = waitForKeepalive(page)
+      await page.goto(url)
+      // Safety: the cache was stale (redirected to login) or the session was destroyed server
+      // side (consumed exchange token replayed — the app then silently renders as anonymous).
+      if (page.url().includes('/simple-directory/login') || !((await keepalive)?.ok() ?? true)) {
+        cookieCache.delete(key)
+        await performLogin(page, context, baseUrl, url, user, opts)
+      }
+    }
+    await use(goToWithAuth)
+
+    // Hand the rotated cookies to the next test rather than the ones this test already consumed.
+    if (lastKey) {
+      const cookies = await context.cookies()
+      const cookie = (name: string) => cookies.find(c => c.name === name)?.value || undefined
+      // a test that switched account through the UI leaves a session whose active account is no
+      // longer the one this cache key logged in with (simple-directory keeps it): do not reuse it
+      const [, org, dep] = lastKey.split('|')
+      const sameAccount = cookie('id_token_org') === (org || undefined) && cookie('id_token_dep') === (dep || undefined)
+      if (sameAccount && cookie('id_token')) cookieCache.set(lastKey, cookies)
+      else cookieCache.delete(lastKey)
+    }
+  }
+})
 
 export { expect }

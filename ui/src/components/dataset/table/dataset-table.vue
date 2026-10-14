@@ -319,7 +319,7 @@
 
       <v-row
         class="ma-0"
-        dense
+        density="compact"
       >
         <v-col
           v-for="(result, index) in (pagination ? paginatedResults : results)"
@@ -363,8 +363,7 @@
       <v-row
         v-if="results.length && !pagination"
         v-intersect="(isIntersecting: boolean) => isIntersecting && !fetchResults.loading.value && fetchResults.execute()"
-        align="center"
-        class="my-0"
+        class="my-0 align-center"
       >
         &nbsp;
       </v-row>

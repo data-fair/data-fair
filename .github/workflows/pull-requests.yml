@@ -4,6 +4,12 @@ name: Check pull requests
 
 on: pull_request
 
+# a new push on the pull request cancels its running checks; only here, so runs on master,
+# release tags and the nightly are never cancelled
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     uses: ./.github/workflows/reuse-quality.yml

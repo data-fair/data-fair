@@ -66,8 +66,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
         },
         { key: 'extraFilter', type: 'string' },
         { key: 'extraMulti', type: 'string', separator: ', ' }
-      ]
-      ,
+      ],
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',

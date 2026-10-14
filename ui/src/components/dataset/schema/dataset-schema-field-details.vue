@@ -5,10 +5,10 @@
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('title') }}
         </div>
-        <div class="text-body-2">
+        <div class="text-body-medium">
           {{ field.title || field['x-originalName'] || field.key }}
         </div>
       </v-col>
@@ -17,19 +17,19 @@
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('originalName') }}
         </div>
-        <code class="text-body-2">{{ field['x-originalName'] }}</code>
+        <code class="text-body-medium">{{ field['x-originalName'] }}</code>
       </v-col>
       <v-col
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('type') }}
         </div>
-        <div class="text-body-2">
+        <div class="text-body-medium">
           {{ propTypeTitle(field) }}<span
             v-if="field.format"
             class="text-medium-emphasis"
@@ -41,10 +41,10 @@
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('cardinality') }}
         </div>
-        <div class="text-body-2">
+        <div class="text-body-medium">
           {{ field['x-cardinality'].toLocaleString() }}
         </div>
       </v-col>
@@ -53,14 +53,14 @@
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('concept') }}
         </div>
-        <div class="text-body-2">
+        <div class="text-body-medium">
           {{ conceptTitle }}
           <span
             v-if="field['x-refersTo']"
-            class="text-medium-emphasis text-caption ml-1"
+            class="text-medium-emphasis text-body-small ml-1"
           >
             <a
               :href="field['x-refersTo']"
@@ -76,12 +76,12 @@
         v-if="descriptionHtml"
         cols="12"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('description') }}
         </div>
         <p
           v-safe-html="descriptionHtml"
-          class="text-body-2 mb-0"
+          class="text-body-medium mb-0"
         />
       </v-col>
       <v-col
@@ -89,10 +89,10 @@
         cols="12"
         sm="6"
       >
-        <div class="text-caption text-medium-emphasis">
+        <div class="text-body-small text-medium-emphasis">
           {{ t('display') }}
         </div>
-        <div class="text-body-2">
+        <div class="text-body-medium">
           {{ field['x-display'] }}
         </div>
       </v-col>
@@ -100,7 +100,7 @@
         v-if="capabilityFlags.length"
         cols="12"
       >
-        <div class="text-caption text-medium-emphasis mb-1">
+        <div class="text-body-small text-medium-emphasis mb-1">
           {{ t('capabilities') }}
         </div>
         <v-chip
@@ -118,7 +118,7 @@
         v-if="valueEntries.length"
         cols="12"
       >
-        <div class="text-caption text-medium-emphasis mb-1">
+        <div class="text-body-small text-medium-emphasis mb-1">
           {{ hasLabels ? t('valuesWithLabels') : t('values') }}
         </div>
         <v-data-table

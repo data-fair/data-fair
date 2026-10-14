@@ -32,11 +32,11 @@
         >{{ filename(item) }}</a>
         <span
           v-if="item.raw['_file.content_length']"
-          class="text-caption text-medium-emphasis ml-2"
+          class="text-body-small text-medium-emphasis ml-2"
         >— {{ formatBytes(item.raw['_file.content_length'], locale) }}</span>
         <p
           v-if="showPath(item)"
-          class="text-caption text-medium-emphasis font-italic mb-0"
+          class="text-body-small text-medium-emphasis font-italic mb-0"
           style="word-break:break-all;"
         >
           {{ item.raw[digitalDocumentField!.key] }}

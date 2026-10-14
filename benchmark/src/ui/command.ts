@@ -13,10 +13,10 @@ import { loginCookies, cookieHeader } from './auth.ts'
 import { TABLE_PERF_ID } from '../../../dev/table-perf-fixture.ts'
 
 export function preflightMessage (probe: { reachable: false } | { reachable: true, status: number, body?: { status?: string } }): string | null {
-  if (!probe.reachable) return 'the dev stack is not reachable — check it with `bash dev/status.sh`'
+  if (!probe.reachable) return 'the dev stack is not reachable — check it with `npx --no df-dev status`'
   if (probe.status === 404) return `the ${TABLE_PERF_ID} dataset is missing — run \`npm run dev-fixtures\``
   if (probe.status === 401 || probe.status === 403) return `the dev user cannot read ${TABLE_PERF_ID} — run \`npm run dev-fixtures\``
-  if (probe.status !== 200) return `unexpected HTTP ${probe.status} reading the ${TABLE_PERF_ID} dataset — check \`bash dev/status.sh\``
+  if (probe.status !== 200) return `unexpected HTTP ${probe.status} reading the ${TABLE_PERF_ID} dataset — check \`npx --no df-dev status\``
   if (probe.body?.status !== 'finalized') return `${TABLE_PERF_ID} is still indexing (status: ${probe.body?.status}) — retry later`
   return null
 }

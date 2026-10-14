@@ -327,7 +327,7 @@
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('changeOwner') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -350,7 +350,7 @@
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('detach') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -374,7 +374,7 @@
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('attach') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -399,7 +399,7 @@
             :prepend-icon="mdiDelete"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('deleteApp') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">

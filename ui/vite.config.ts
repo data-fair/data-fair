@@ -11,8 +11,15 @@ import microTemplate from '@data-fair/lib-utils/micro-template.js'
 import { autoImports, settingsPath } from '@data-fair/lib-vuetify/vite.js'
 import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
+// ports come from the .env written by df-dev (see dev/dev.json), checked so a missing variable never becomes NaN
+const envPort = (name: string) => {
+  const port = Number(process.env[name])
+  if (!Number.isInteger(port) || port <= 0) throw new Error(`missing or invalid ${name}, run "npx --no df-dev setup"`)
+  return port
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
   base: '/data-fair',
   // maplibre 6 ships its worker as an ES module and starts it with `new Worker(url, { type: 'module' })`.
   // Vite's default worker format is iife, which in dev serves that module source as a classic script
@@ -44,9 +51,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, 'src/'),
-      '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(__dirname, 'src/components/df-local/navigation-right-local.vue'),
-      '@data-fair/lib-vue/edit-fetch.js': path.resolve(__dirname, 'src/composables/df-local/edit-fetch-local.ts'),
+      '~': path.resolve(import.meta.dirname, 'src/'),
+      '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(import.meta.dirname, 'src/components/df-local/navigation-right-local.vue'),
+      '@data-fair/lib-vue/edit-fetch.js': path.resolve(import.meta.dirname, 'src/composables/df-local/edit-fetch-local.ts'),
     },
   },
   html: {
@@ -55,7 +62,8 @@ export default defineConfig({
   plugins: [
     VueRouter({
       dts: './dts/route-map.d.ts',
-      // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
+      // dev pages are never bundled; the vite command is reliable where an inherited NODE_ENV is not
+      exclude: command === 'build' ? ['src/pages/dev.vue', 'src/pages/dev/**'] : []
     }),
     Vue({ template: { compilerOptions: { isCustomElement: (tag) => ['d-frame'].includes(tag) } } }),
     VueI18nPlugin({ strictMessage: false }),
@@ -113,5 +121,7 @@ export default defineConfig({
       return { relative: true }
     }
   },
-  server: { hmr: { port: Number(process.env.DEV_UI_HMR_PORT) || 7200 } }
-})
+  server: command === 'serve' && !isPreview
+    ? { port: envPort('DEV_UI_PORT'), strictPort: true, hmr: { port: envPort('DEV_UI_HMR_PORT') } }
+    : undefined
+}))

@@ -62,8 +62,8 @@ npm run prepare
 npx husky add .husky/pre-commit "npm run lint"
 
 npm i -D @commitlint/config-conventional @commitlint/cli
-echo "module.exports = { extends: ['@commitlint/config-conventional'] }" > commitlint.config.js
-npx husky add .husky/commit-msg 'npx --no-install commitlint --edit ""'
+echo "export default { extends: ['@commitlint/config-conventional'] }" > commitlint.config.ts
+echo 'npx --no -- commitlint --edit "$1"' > .husky/commit-msg
 ```
 
 ## Documentation

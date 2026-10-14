@@ -58,8 +58,7 @@
     <v-row
       v-if="datasets.length"
       v-intersect:quiet="(intersect: boolean) => intersect && !fetchDatasets.loading.value && next && fetchDatasets.execute()"
-      align="center"
-      class="my-0"
+      class="my-0 align-center"
     >
     &nbsp;
     </v-row>
