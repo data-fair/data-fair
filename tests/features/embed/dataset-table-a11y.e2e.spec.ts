@@ -97,20 +97,16 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
 
     // the active sort option carries aria-current, not only the visual active style
     await firstHeader.click()
-    // reopening the menu while the sorted lines are still loading is not reliable, wait for them
-    const sortedLines = page.waitForResponse(r => r.url().includes('/lines') && r.url().includes('sort='))
     await menu.getByRole('listitem').filter({ hasText: /tri ascendant|ascending sort/i }).click()
-    await sortedLines
     // picking a sort closes the menu
     await expect(menu).toHaveCount(0)
     await expect(page.locator('thead th[aria-sort="ascending"]')).toHaveCount(1)
     await expect(page.locator('thead th[aria-sort]')).toHaveCount(1)
-    // known bug, on master too: a header click right after a sort often does not open its
-    // menu (the click reaches the button, the menu does not toggle); retry until it opens
-    await expect(async () => {
-      await firstHeader.click()
-      await expect(menu).toBeVisible({ timeout: 1000 })
-    }).toPass({ timeout: 10000 })
+    // Vuetify ignores activator clicks for 50ms after a menu closes (reopenLock in
+    // useActivator), a human can't click again that fast but the test can
+    await page.waitForTimeout(100)
+    await firstHeader.click()
+    await expect(menu).toBeVisible()
     await expect(menu.locator('[aria-current="true"]')).toContainText(/tri ascendant|ascending sort/i)
     await expect(menu.locator('[aria-current="true"]')).toHaveCount(1)
 
