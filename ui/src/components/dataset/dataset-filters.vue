@@ -1,7 +1,10 @@
 <template>
+  <!-- the chips are Tab stops themselves: the group's container would be one more, an
+       invisible one when there is no filter -->
   <v-slide-group
     show-arrows
     class="dataset-filters"
+    tabindex="-1"
   >
     <v-slide-group-item
       v-for="(filter,i) in filters"

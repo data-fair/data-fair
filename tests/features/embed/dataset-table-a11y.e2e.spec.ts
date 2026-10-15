@@ -46,6 +46,8 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     await page.keyboard.press('Tab')
     await expect(submit).not.toBeFocused()
     await expect(searchLandmark.locator('input')).not.toBeFocused()
+    // nor does an empty element catch it (the filters bar, with no filter)
+    expect(await page.evaluate(() => document.activeElement!.getBoundingClientRect().height)).toBeGreaterThan(0)
   })
 
   test('search results are announced via aria-live (7.5)', async ({ page, goToWithAuth }) => {
@@ -202,6 +204,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(second).toHaveText('vert')
       await page.keyboard.press('Enter')
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
+
+      // the filters bar is no Tab stop of its own, Tab goes from the search field to the filter
+      await page.locator('[role="search"] input').first().focus()
+      await page.keyboard.press('Tab')
+      await expect(page.locator('.dataset-filters .v-chip').first()).toBeFocused()
     })
 
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {
