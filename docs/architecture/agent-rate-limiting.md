@@ -62,10 +62,12 @@ only a trusted forwarder may set it — or declare that there is none — on som
   It still throws on a value that is not an IP. One function answers "what is the client IP"; a
   call site says whether "none" is acceptable.
 - **`X-Forwarded-For` holds exactly one IP.** The edge proxy overwrites it, and the layers behind
-  it pass it on unchanged; `reqIp` throws on several entries, which mean a layer appended to it
-  (`$proxy_add_x_forwarded_for`) and that the first one is whatever the client chose. A layer that
-  passes the client's own header through untouched cannot be detected by a service: that is what
-  the production check below is for.
+  it pass it on unchanged. `reqIp` reads the first entry, the origin; several entries mean a layer
+  appended to it (`$proxy_add_x_forwarded_for`), so that first entry may be what the client chose.
+  `reqIp` still uses it, so a live deployment keeps working, and flags the environment with an
+  internal error (`x-forwarded-for-several`, once per process then at most hourly) until its proxy
+  is fixed. A layer that passes the client's own header through untouched cannot be detected by a
+  service: that is what the check below is for.
 - **The ingress** overwrites `X-Forwarded-For` with the client address and limits on it, except
   for a request carrying a valid *trusted forwarder* secret (`X-Trusted-Forwarder`):
   - with a single well-formed IP in `X-Forwarded-For`: that IP is the client, for nginx's limit
@@ -144,7 +146,7 @@ supported.
 
 Order: 1, then 2–5 released together; 6 and 7 after.
 
-**Check before 1 and 2 reach production** (a prerequisite of the lib-express release: simple-directory, agents and backup already use strict `reqIp`, and would refuse every request of an environment that sends several entries). data-fair's limiter reads `X-Client-IP` today, which the
+**Check each environment** (no `x-forwarded-for-several` internal errors is the first sign; this is the rest). data-fair's limiter reads `X-Client-IP` today, which the
 ingress sets to the client address: a client cannot choose it. From 2 on it reads the leftmost
 `X-Forwarded-For`, which a client can choose wherever a layer appends to the header instead of
 overwriting it (`$proxy_add_x_forwarded_for`, as the dev nginx does). simple-directory already
