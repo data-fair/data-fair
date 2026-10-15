@@ -116,8 +116,11 @@ our servers' addresses refused for everyone. The tool is limited where it calls 
 
 - **global**, per `mcp` instance, under IGN's limit divided by the number of replicas: the total we
   send;
-- **per caller** (its identity — a hash of its session cookie or API key — else its client IP), well
-  under the global one: no single caller can fill the global bucket and starve the others.
+- **per caller**, well under the global one, so no single caller can fill the global bucket and starve
+  the others: its forwarded client IP (an IPv6 one as its /64), else its identity (a hash of its
+  session cookie or API key). The IP comes first because the identity is not verified by `mcp`: a
+  fresh made-up credential per call must not buy a fresh budget. A call with neither (stdio, one
+  process and one caller; a relay acting for nobody's address) is charged to the global budget only.
 
 A call that finds either bucket empty does not wait: it returns a tool error saying the geocoder is
 busy and when to retry, which an agent can act on. Both are configuration
