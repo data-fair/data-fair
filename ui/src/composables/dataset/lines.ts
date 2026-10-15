@@ -104,7 +104,8 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
               extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
             }
           }
-          if (property['x-refersTo'] === 'https://schema.org/WebPage' && raw[property.key]) {
+          // the API skips truncating these concepts to keep the raw value usable, so truncate the display here
+          if (untruncatedConcepts.has(property['x-refersTo'] as string) && typeof raw[property.key] === 'string') {
             extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
           }
           // an api key writes lines under an "apiKey:<id>" identity, which has no avatar
@@ -149,6 +150,8 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
 
 // FieldValue is kept as `any` because dataset field values come from dynamic API responses
 // with heterogeneous types determined by the schema at runtime
+
+const untruncatedConcepts = new Set(['https://schema.org/WebPage', 'http://schema.org/image', 'https://www.w3.org/2006/vcard/ns#email'])
 
 const prepareExtendedResultValue = (value: any, property: SchemaProperty, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
   return {
