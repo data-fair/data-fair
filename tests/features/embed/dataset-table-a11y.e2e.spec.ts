@@ -174,6 +174,31 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1)
     })
 
+    test('each chip of a multi-valued cell filters from the keyboard', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-chips', schema: [{ key: 'tags', type: 'string', separator: ',' }] })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ tags: 'rouge,vert' }, { tags: 'vert' }, { tags: 'bleu' }])
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'tags')
+      const row = await page.locator('.dataset-table tbody tr').filter({ hasText: 'rouge' }).locator('td').first().getAttribute('data-row')
+      const cell = page.locator(`.dataset-table td[data-row="${row}"][data-col="${col}"]`)
+      // the chips add no Tab stop of their own, the table stays a single one
+      await expect(page.locator('.dataset-table tbody [tabindex="0"]')).toHaveCount(1)
+      await cell.focus()
+
+      // Enter reaches the first chip, Tab the second one, Enter filters on the focused chip
+      await page.keyboard.press('Enter')
+      await expect(cell.locator('.v-chip').first()).toBeFocused()
+      await page.keyboard.press('Tab')
+      const second = cell.locator('.v-chip').nth(1)
+      await expect(second).toBeFocused()
+      await expect(second).toHaveText('vert')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
+    })
+
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)

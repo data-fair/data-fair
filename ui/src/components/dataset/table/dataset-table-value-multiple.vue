@@ -1,22 +1,25 @@
 <template>
-  <v-chip-group
-    class="py-0"
+  <!-- not a v-chip-group: its container is a Tab stop of its own and it handles the arrow
+       keys, both against the table's keyboard navigation (RGAA 7.3) -->
+  <div
+    class="dataset-table-chips"
     style="max-width:500px;"
   >
     <v-chip
       v-for="(value, i) in extendedValues"
       :key="i"
       tabindex="-1"
-      class="my-0"
+      class="my-0 mr-2"
       :text="value.formatted"
       :base-color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
-      :append-icon="!noInteraction && !noFilter && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value ? mdiFilterVariant : undefined"
-      @click="!noInteraction && !noFilter && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value &&emit('filter', value)"
+      :append-icon="canFilter(value) && hovered === value ? mdiFilterVariant : undefined"
+      @click="(e: MouseEvent | KeyboardEvent) => onChipClick(value, e)"
       @mouseenter="emit('hoverstart', markRaw(value))"
+      @focus="emit('hoverstart', markRaw(value))"
       @mouseleave="emit('hoverstop')"
     />
-  </v-chip-group>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -25,7 +28,7 @@ import type { DatasetFilter } from '../../../composables/dataset/filters'
 import type { ExtendedResultValue } from '../../../composables/dataset/lines'
 import { mdiFilterVariant } from '@mdi/js'
 
-const { values: extendedValues } = defineProps({
+const { values: extendedValues, hovered, noInteraction, noFilter, filter } = defineProps({
   values: { type: Array as () => ExtendedResultValue[], required: true },
   property: { type: Object as () => SchemaProperty, required: true },
   filter: { type: Object as () => DatasetFilter, default: null },
@@ -41,4 +44,21 @@ const emit = defineEmits<{
   hoverstart: [value: ExtendedResultValue],
   hoverstop: []
 }>()
+
+const canFilter = (value: ExtendedResultValue) => !noInteraction && !noFilter && value.filterable && !value.displayDetail && filter?.value !== value.raw
+
+// a mouse click filters once the filter icon shows on the hovered chip; Enter or Space on
+// the focused chip (v-chip passes the keyboard event) filters right away
+const onChipClick = (value: ExtendedResultValue, e: MouseEvent | KeyboardEvent) => {
+  if (canFilter(value) && (hovered === value || e instanceof KeyboardEvent)) emit('filter', value)
+}
 </script>
+
+<style>
+.dataset-table-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+</style>
