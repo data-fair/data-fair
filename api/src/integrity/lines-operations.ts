@@ -152,3 +152,121 @@ export const classifyLine = (line: { _i?: number } & Record<string, any>, anchor
   if (anchor.sha256 !== lineSha256(line, excludedKeys) || anchor.i !== line._i) return 'edited'
   return 'ok'
 }
+
+export type LiveLine = { _id: string, _i?: number } & Record<string, any>
+export type LineDivergence = { lineId: string, kind: 'edited' | 'inserted' | 'missing', anchor?: { key: string, i: number } }
+export type LineCompareIO = {
+  // live (non-_deleted) lines among `ids`
+  lookupLive: (ids: string[]) => Promise<LiveLine[]>
+  countLive: () => Promise<number>
+  iterateLiveIds: () => AsyncIterable<string>
+}
+export type LineCompareResult = { checked: number, diverged: number }
+
+// 8 bytes of sha256: only used to NAME inserted lines once the count proved some exist — a
+// collision can drop one id from the sample, never change the verdict or the diverged count
+export const lineIdFingerprint = (lineId: string): bigint =>
+  createHash('sha256').update(lineId).digest().readBigUInt64BE(0)
+
+// growable typed array: ~8 bytes per accounted line instead of a Set of strings
+class FingerprintSet {
+  private values = new BigUint64Array(1024)
+  private size = 0
+  add (fp: bigint) {
+    if (this.size === this.values.length) {
+      const grown = new BigUint64Array(this.values.length * 2)
+      grown.set(this.values)
+      this.values = grown
+    }
+    this.values[this.size++] = fp
+  }
+
+  // sorts in place, removes duplicates, returns how many were removed
+  seal (): number {
+    const sorted = this.values.subarray(0, this.size).sort()
+    let unique = 0
+    for (let n = 0; n < sorted.length; n++) {
+      if (n === 0 || sorted[n] !== sorted[unique - 1]) sorted[unique++] = sorted[n]
+    }
+    const removed = this.size - unique
+    this.values = sorted.slice(0, unique)
+    this.size = unique
+    return removed
+  }
+
+  sizeOf (): number { return this.size }
+
+  has (fp: bigint): boolean {
+    let lo = 0
+    let hi = this.size - 1
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1
+      const v = this.values[mid]
+      if (v === fp) return true
+      if (v < fp) lo = mid + 1
+      else hi = mid - 1
+    }
+    return false
+  }
+}
+
+// Streamed lines compare (design 2026-10-15 §3). Pass A: anchors arrive one per line (group
+// fold), are looked up in Mongo in batches and classified with classifyLine — edited / inserted
+// (tombstone latest) / missing. Pass B: `_id` is unique, so every live line holding an anchor is
+// found exactly once in pass A — out-of-band inserts exist iff the live count exceeds the lines
+// pass A found (counted DISTINCT: a forged non-canonical key can emit one lineId twice, and must
+// not inflate the count to hide an insert). Only then are live ids streamed to name them.
+export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch: LineDivergence[]) => Promise<void>, excluded?: Set<string>, batchSize?: number }) => {
+  const batchSize = opts.batchSize ?? 1000
+  const accounted = new FingerprintSet()
+  let pending: LineAnchorGroup[] = []
+  let diverged = 0
+
+  const flush = async () => {
+    if (!pending.length) return
+    const groups = pending
+    pending = []
+    const live = new Map((await io.lookupLive(groups.map((g) => g.lineId))).map((l) => [l._id, l]))
+    const batch: LineDivergence[] = []
+    for (const g of groups) {
+      const line = live.get(g.lineId)
+      if (!line) {
+        // a tombstone with no live line is a legitimately deleted line
+        if (!g.deleted) batch.push({ lineId: g.lineId, kind: 'missing', anchor: { key: g.key, i: g.i } })
+        continue
+      }
+      accounted.add(lineIdFingerprint(g.lineId))
+      const verdict = classifyLine(line, g, opts.excluded)
+      if (verdict !== 'ok') batch.push({ lineId: g.lineId, kind: verdict, anchor: { key: g.key, i: g.i } })
+    }
+    if (batch.length) {
+      diverged += batch.length
+      await opts.onDiverged(batch)
+    }
+  }
+
+  return {
+    push: async (group: LineAnchorGroup): Promise<void> => {
+      pending.push(group)
+      if (pending.length >= batchSize) await flush()
+    },
+    finish: async (): Promise<LineCompareResult> => {
+      await flush()
+      accounted.seal()
+      const checked = await io.countLive()
+      const unaccounted = checked - accounted.sizeOf()
+      if (unaccounted > 0) {
+        // exact even if a fingerprint collision leaves one insert unnamed below
+        diverged += unaccounted
+        let batch: LineDivergence[] = []
+        for await (const id of io.iterateLiveIds()) {
+          if (accounted.has(lineIdFingerprint(id))) continue
+          batch.push({ lineId: id, kind: 'inserted' })
+          if (batch.length >= batchSize) { await opts.onDiverged(batch); batch = [] }
+        }
+        if (batch.length) await opts.onDiverged(batch)
+      }
+      return { checked, diverged }
+    }
+  }
+}

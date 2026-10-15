@@ -1,0 +1,124 @@
+import { test, expect } from '@playwright/test'
+import * as lops from '../../../api/src/integrity/lines-operations.ts'
+
+const owner = { type: 'organization', id: 'acme' }
+const key = (lineId: string, i: number, shaOrDeleted: string) => lops.lineRevisionKey(owner, 'ds1', lineId, i, shaOrDeleted)
+const anchorOf = (line: lops.LiveLine) => key(line._id, line._i!, lops.lineSha256(line))
+const tomb = (lineId: string, i: number) => key(lineId, i, lops.DELETED_MARKER)
+
+// the pre-streaming algorithm, verbatim in spirit (checker.ts compareDatasetLines before this change)
+const referenceCompare = (keys: string[], lines: lops.LiveLine[]) => {
+  const anchors = lops.latestLineAnchors(keys)
+  const unvisited = new Set(anchors.keys())
+  const edited: string[] = []
+  const inserted: string[] = []
+  for (const line of lines) {
+    unvisited.delete(line._id)
+    const verdict = lops.classifyLine(line, anchors.get(line._id))
+    if (verdict === 'edited') edited.push(line._id)
+    else if (verdict === 'inserted') inserted.push(line._id)
+  }
+  const missing = [...unvisited].filter((id) => !anchors.get(id)!.deleted)
+  return { checked: lines.length, diverged: edited.length + inserted.length + missing.length, edited: edited.sort(), inserted: inserted.sort(), missing: missing.sort() }
+}
+
+const streamedCompare = async (keys: string[], lines: lops.LiveLine[], batchSize: number, pageSize: number) => {
+  const byId = new Map(lines.map((l) => [l._id, l]))
+  const io: lops.LineCompareIO = {
+    lookupLive: async (ids) => ids.map((id) => byId.get(id)).filter((l): l is lops.LiveLine => !!l),
+    countLive: async () => lines.length,
+    iterateLiveIds: async function * () { for (const l of lines) yield l._id }
+  }
+  const found: lops.LineDivergence[] = []
+  const comparer = lops.createLineComparer(io, { batchSize, onDiverged: async (batch) => { found.push(...batch) } })
+  const fold = lops.newLineGroupFold()
+  const sorted = [...keys].sort()
+  for (let n = 0; n < sorted.length; n += pageSize) {
+    for (const g of lops.pushLineGroupKeys(fold, sorted.slice(n, n + pageSize).map((k) => ({ key: k })))) await comparer.push(g)
+  }
+  for (const g of lops.finishLineGroupFold(fold)) await comparer.push(g)
+  const result = await comparer.finish()
+  const ids = (kind: string) => found.filter((d) => d.kind === kind).map((d) => d.lineId).sort()
+  return { ...result, edited: ids('edited'), inserted: ids('inserted'), missing: ids('missing'), found }
+}
+
+const line = (_id: string, _i: number, attr: string): lops.LiveLine => ({ _id, _i, attr })
+
+// every divergence shape the checker distinguishes, plus ordering traps
+const fixture = () => {
+  const ok = line('ok', 10, 'x')
+  const edited = line('edited', 11, 'tampered')
+  const rewound = line('rewound', 3, 'y') // _i rewind: anchor at 12
+  const inserted = line('inserted', 13, 'z')
+  const tombLive = line('tomb-live', 14, 'w')
+  const prefixA = line('a', 15, 'p')
+  const prefixAB = line('a-b', 16, 'q')
+  const unsafe = line('a/b é', 17, 'r')
+  const lines = [ok, edited, rewound, inserted, tombLive, prefixA, prefixAB, unsafe]
+  const keys = [
+    key('ok', 2, 'old'), anchorOf(ok), anchorOf(ok) + '.who',
+    key('edited', 11, lops.lineSha256({ _id: 'edited', attr: 'original' })),
+    key('rewound', 12, lops.lineSha256(rewound)),
+    key('missing', 20, 'gone'),
+    tomb('tomb-dead', 21),
+    tomb('tomb-live', 22),
+    anchorOf(prefixA), anchorOf(prefixAB), anchorOf(unsafe)
+  ]
+  return { keys, lines }
+}
+
+for (const batchSize of [1, 2, 1000]) {
+  for (const pageSize of [1, 3, 1000]) {
+    test(`streamed compare equals the reference (batch ${batchSize}, page ${pageSize})`, async () => {
+      const { keys, lines } = fixture()
+      const expected = referenceCompare(keys, lines)
+      const actual = await streamedCompare(keys, lines, batchSize, pageSize)
+      expect({ checked: actual.checked, diverged: actual.diverged, edited: actual.edited, inserted: actual.inserted, missing: actual.missing })
+        .toEqual({ checked: expected.checked, diverged: expected.diverged, edited: expected.edited, inserted: expected.inserted, missing: expected.missing })
+    })
+  }
+}
+
+test('delete X then insert Y out-of-band: both reported', async () => {
+  const x = line('x', 1, 'a')
+  const y = line('y', 2, 'b')
+  const actual = await streamedCompare([anchorOf(x)], [y], 1000, 1000)
+  expect(actual.missing).toEqual(['x'])
+  expect(actual.inserted).toEqual(['y'])
+  expect(actual.diverged).toBe(2)
+})
+
+test('divergences carry the anchor key and index needed by the repairs', async () => {
+  const { keys, lines } = fixture()
+  const actual = await streamedCompare(keys, lines, 1000, 1000)
+  const missing = actual.found.find((d) => d.lineId === 'missing')!
+  expect(missing.anchor).toEqual({ key: key('missing', 20, 'gone'), i: 20 })
+  const insertedNoAnchor = actual.found.find((d) => d.lineId === 'inserted')!
+  expect(insertedNoAnchor.anchor).toBeUndefined()
+  const tombLive = actual.found.find((d) => d.lineId === 'tomb-live')!
+  expect(tombLive).toMatchObject({ kind: 'inserted', anchor: { key: tomb('tomb-live', 22), i: 22 } })
+})
+
+test('duplicate group cannot hide an insert (forged non-canonical key decoding to an existing id)', async () => {
+  const a = line('a', 5, 'v')
+  const zero = line('0', 7, 'u')
+  const y = line('y', 6, 'w')
+  // `%61` decodes to 'a' but sorts before `0/` and `a/` ('%' < '0' < 'a'): with line '0' in
+  // between, the group fold emits 'a' twice (non-adjacent groups)
+  const forged = `${lops.linesPrefix(owner, 'ds1')}%61/${lops.padLineIndex(5)}-${lops.lineSha256(a)}`
+  const actual = await streamedCompare([anchorOf(a), forged, anchorOf(zero)], [a, zero, y], 1000, 1000)
+  expect(actual.found.filter((d) => d.lineId === 'a')).toEqual([]) // both 'a' groups classify ok
+  expect(actual.inserted).toEqual(['y'])
+  expect(actual.diverged).toBeGreaterThanOrEqual(1)
+})
+
+test('no live lines and only tombstones: clean', async () => {
+  const actual = await streamedCompare([tomb('t1', 1), tomb('t2', 2)], [], 2, 2)
+  expect(actual).toMatchObject({ checked: 0, diverged: 0 })
+})
+
+test('lineIdFingerprint is stable and 64-bit', () => {
+  expect(lops.lineIdFingerprint('abc')).toBe(lops.lineIdFingerprint('abc'))
+  expect(lops.lineIdFingerprint('abc')).not.toBe(lops.lineIdFingerprint('abd'))
+  expect(lops.lineIdFingerprint('abc') < 2n ** 64n).toBe(true)
+})
