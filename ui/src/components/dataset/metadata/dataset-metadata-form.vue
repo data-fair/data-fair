@@ -41,97 +41,17 @@
 
 <i18n lang="yaml">
 fr:
-  title: Titre
-  summary: Résumé
   summarizePrompt: Aide-moi à rédiger un résumé pour ce jeu de données
-  description: Description
   describePrompt: Aide-moi à rédiger une description pour ce jeu de données
-  license: Licence
-  topics: Thématiques
-  origin: Provenance
-  originHelp: Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.
-  image: Adresse d'une image utilisée comme vignette
-  keywords: Mots-clés
-  searchTerms: Termes de recherche associés
-  searchTermsHelp: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel."
   searchTermsPrompt: Aide-moi à trouver des termes de recherche pour ce jeu de données
-  projection: Système de coordonnées
-  creator: Producteur
-  frequency: Fréquence de mise à jour
-  frequencyItems:
-    triennial: Tous les 3 ans
-    biennial: Tous les 2 ans
-    annual: Tous les ans
-    semiannual: 2 fois par an
-    threeTimesAYear: 3 fois par an
-    quarterly: Chaque trimestre
-    bimonthly: Tous les 2 mois
-    monthly: Tous les mois
-    semimonthly: 2 fois par mois
-    biweekly: Toutes les 2 semaines
-    threeTimesAMonth: 3 fois par mois
-    weekly: Chaque semaine
-    semiweekly: 2 fois par semaine
-    threeTimesAWeek: 3 fois par semaine
-    daily: Tous les jours
-    continuous: En continu
-    irregular: Irrégulière
-  spatial: Couverture géographique
-  temporal: Couverture temporelle
-  modified: Date de modification de la source
-  modifiedHelp: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée."
-  relatedDatasets: Jeux de données liés
-  start: début
-  end: fin
   url: URL
   linkTitle: Libellé du lien
-  seeAlsoDescription: Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.
 en:
-  title: Title
-  summary: Summary
   summarizePrompt: Help me write a summary for this dataset
-  description: Description
   describePrompt: Help me write a description for this dataset
-  license: License
-  topics: Topics
-  origin: Origin
-  originHelp: Address of the page where the original data is published, for example on the producer's website.
-  image: URL of an image used as thumbnail
-  keywords: Keywords
-  searchTerms: Search terms
-  searchTermsHelp: "Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. Not shown anywhere, but present in the dataset's public API response — do not put anything confidential here."
   searchTermsPrompt: Help me find search terms for this dataset
-  projection: Coordinate reference system
-  creator: Producer
-  frequency: Update frequency
-  frequencyItems:
-    triennial: Every 3 years
-    biennial: Every 2 years
-    annual: Every year
-    semiannual: Twice a year
-    threeTimesAYear: 3 times a year
-    quarterly: Every quarter
-    bimonthly: Every 2 months
-    monthly: Every month
-    semimonthly: Twice a month
-    biweekly: Every 2 weeks
-    threeTimesAMonth: 3 times a month
-    weekly: Every week
-    semiweekly: Twice a week
-    threeTimesAWeek: 3 times a week
-    daily: Every day
-    continuous: Continuous
-    irregular: Irregular
-  spatial: Geographic coverage
-  temporal: Temporal coverage
-  modified: Source modification date
-  modifiedHelp: "Date the data was modified at its source, when it differs from the date it was loaded into Data Fair. It is used to sort datasets by update date, on portals in particular: left empty, the date of the last data update is used."
-  relatedDatasets: Related datasets
-  start: start
-  end: end
   url: URL
   linkTitle: Link label
-  seeAlsoDescription: Select other related datasets (same topic, similar structure, or other criteria) to suggest to portal users.
 </i18n>
 
 <script setup lang="ts">
@@ -141,6 +61,8 @@ import equal from 'fast-deep-equal'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { fieldGroup, customGroup } from '~/utils/metadata-groups'
 import { customMetadataSchema, isCustomMetadataEmpty } from '#api/types'
+import datasetSchema from '~/../../api/types/dataset/schema.js'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const dataset = defineModel<any>({ required: true })
 // custom metadata are flat "customMetadata.<key>" properties, so they share the 2 columns grid of the fixed ones
@@ -191,83 +113,72 @@ const facet = (name: string, results = '') => ({
   url: `api/v1/datasets?size=0&facets=${name}&owner=${owner.value?.type}:${owner.value?.id}`,
   itemsResults: `data.facets.${name}${results} ?? []`
 })
-// https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
-const frequencyKeys = [
-  'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
-  'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly',
-  'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular'
-].reverse()
+const mainFields = ['title', 'summary', 'description']
+const showAgentChat = useShowAgentChat()
+// an empty slot would still reserve its room next to the field
+const appendSlot = (name: string) => can('writeDescription') && showAgentChat.value ? { slots: { append: { name } } } : {}
+const localized = (prop: any) => prop['x-i18n-title']?.[locale.value] ?? prop.title
 
+// titles, help texts and static layout come from the dataset schema, this adds the owner's choices and the page's actions
 const fixedProperties = () => {
   const dm = props.datasetsMetadata
   const ownerPath = `${owner.value?.type}/${owner.value?.id}`
-  const properties: Record<string, any> = {
-    license: {
-      type: 'object',
-      title: t('license'),
-      layout: { comp: 'select', getItems: { url: `api/v1/settings/${ownerPath}/licenses`, itemKey: 'item.href', itemTitle: 'item.title', itemValue: '({ title: item.title, href: item.href })' }, ...accent('.license') }
-    },
-    creator: dm?.creator?.active && { type: 'string', title: dm.creator.title || t('creator'), layout: accent('.creator') },
-    origin: { type: 'string', title: t('origin'), description: t('originHelp'), layout: accent('.origin') },
-    image: { type: 'string', title: t('image'), layout: accent('.image') },
-    spatial: dm?.spatial?.active && {
-      type: 'string',
-      title: dm.spatial.title || t('spatial'),
-      layout: { comp: 'combobox', getItems: facet('spatial'), ...accent('.spatial') }
-    },
-    temporal: dm?.temporal?.active && {
-      type: 'object',
-      properties: {
-        start: { type: 'string', format: 'date', title: `${dm.temporal.title || t('temporal')} - ${t('start')}`, layout: { cols: { sm: 6 }, ...accent('.temporal?.start') } },
-        end: { type: 'string', format: 'date', title: `${dm.temporal.title || t('temporal')} - ${t('end')}`, layout: { cols: { sm: 6 }, ...accent('.temporal?.end') } }
-      }
-    },
-    frequency: dm?.frequency?.active && {
-      type: 'string',
-      title: dm.frequency.title || t('frequency'),
-      oneOf: frequencyKeys.map(key => ({ const: key, title: t(`frequencyItems.${key}`) })),
-      layout: accent('.frequency')
-    },
-    modified: dm?.modified?.active && { type: 'string', format: 'date', title: dm.modified.title || t('modified'), description: t('modifiedHelp'), layout: accent('.modified') },
-    topics: !!topicsFetch.data.value?.length && {
-      type: 'array',
-      title: t('topics'),
-      items: { type: 'object' },
-      layout: { getItems: { expr: 'context.topics', returnObjects: true, itemKey: 'item.id', itemTitle: 'item.title', itemIcon: "item.icon?.svgPath && 'svg:' + item.icon.svgPath" }, ...accent('.topics') }
-    },
-    keywords: dm?.keywords?.active && {
-      type: 'array',
-      title: t('keywords'),
-      items: { type: 'string' },
-      layout: { comp: 'combobox', getItems: facet('keywords'), ...accent('.keywords') }
-    },
-    searchTerms: dm?.searchTerms?.active !== false && {
-      type: 'string',
-      title: dm?.searchTerms?.title || t('searchTerms'),
-      description: t('searchTermsHelp'),
-      maxLength: 1000,
-      layout: { comp: 'textarea', props: { rows: 1, counter: 1000 }, ...accent('.searchTerms'), ...(can('writeDescription') && { slots: { append: { name: 'search-terms-action' } } }) }
-    },
+  const fields: Record<string, any> = {
+    title: {},
+    summary: appendSlot('summary-action'),
+    description: appendSlot('describe-action'),
+    license: { comp: 'select', getItems: { url: `api/v1/settings/${ownerPath}/licenses`, itemKey: 'item.href', itemTitle: 'item.title', itemValue: '({ title: item.title, href: item.href })' } },
+    creator: dm?.creator?.active && {},
+    origin: {},
+    image: {},
+    spatial: dm?.spatial?.active && { comp: 'combobox', getItems: facet('spatial') },
+    temporal: dm?.temporal?.active && {},
+    frequency: dm?.frequency?.active && {},
+    modified: dm?.modified?.active && {},
+    topics: !!topicsFetch.data.value?.length && { getItems: { expr: 'context.topics', returnObjects: true, itemKey: 'item.id', itemTitle: 'item.title', itemIcon: "item.icon?.svgPath && 'svg:' + item.icon.svgPath" } },
+    keywords: dm?.keywords?.active && { comp: 'combobox', getItems: facet('keywords') },
+    searchTerms: dm?.searchTerms?.active !== false && appendSlot('search-terms-action'),
     relatedDatasets: (dataset.value?.finalizedAt || dataset.value?.isMetaOnly) && {
-      type: 'array',
-      title: t('relatedDatasets'),
-      description: t('seeAlsoDescription'),
-      items: { type: 'object' },
-      layout: {
-        comp: 'autocomplete',
-        getItems: {
-          url: `api/v1/datasets?owner=${owner.value?.type}:${owner.value?.id}&size=20&select=id,title`,
-          qSearchParam: 'q',
-          itemsResults: 'data.results.filter(d => d.id !== context.datasetId)',
-          itemKey: 'item.id',
-          itemTitle: 'item.title',
-          itemValue: '({ id: item.id, title: item.title })'
-        },
-        ...accent('.relatedDatasets')
+      comp: 'autocomplete',
+      getItems: {
+        url: `api/v1/datasets?owner=${owner.value?.type}:${owner.value?.id}&size=20&select=id,title`,
+        qSearchParam: 'q',
+        itemsResults: 'data.results.filter(d => d.id !== context.datasetId)',
+        itemKey: 'item.id',
+        itemTitle: 'item.title',
+        itemValue: '({ id: item.id, title: item.title })'
       }
     }
   }
-  return Object.fromEntries(Object.entries(properties).filter(([key, prop]) => prop && inTab(key)))
+  const properties: Record<string, any> = {}
+  for (const [key, layout] of Object.entries(fields)) {
+    // a fragment is never published: the catalog metadata would describe nothing anyone sees
+    if (!layout || !inTab(key) || (dataset.value?.partOf && !mainFields.includes(key))) continue
+    const prop = properties[key] = structuredClone((datasetSchema as any).properties[key])
+    // the main fields' descriptions only document the API, their labels say enough in the form
+    if (mainFields.includes(key)) delete prop.description
+    // the owner settings can rename a field
+    if (dm?.[key]?.title) {
+      prop.title = dm[key].title
+      delete prop['x-i18n-title']
+    }
+    if (key === 'temporal') {
+      // no section heading: each date names the coverage it bounds, as its accessible label must
+      prop.layout = { title: null }
+      for (const bound of ['start', 'end']) {
+        const date = prop.properties[bound]
+        date.title = `${localized(prop)} - ${localized(date).toLowerCase()}`
+        delete date['x-i18n-title']
+        Object.assign(date.layout, accent(`.temporal?.${bound}`))
+      }
+    }
+    prop.layout = { ...prop.layout, ...layout, ...(!['temporal', 'description'].includes(key) && accent('.' + key)) }
+  }
+  // the topic $ref cannot be resolved here, the choices come from getItems
+  if (properties.topics) properties.topics.items = { type: 'object' }
+  // '' stays valid for the API, the form clears a frequency with null
+  if (properties.frequency) properties.frequency.oneOf = properties.frequency.oneOf.filter((o: any) => o.const)
+  return properties
 }
 
 const customProperties = () => {
@@ -298,27 +209,17 @@ const customProperties = () => {
 }
 
 const schema = computed(() => {
-  const main = inTab('title')
-  const properties: Record<string, any> = {}
-  if (main) {
-    properties.title = { type: 'string', title: t('title'), layout: { props: { variant: 'outlined' }, ...accent('.title') } }
-    properties.summary = { type: 'string', title: t('summary'), layout: { comp: 'textarea', props: { rows: 3, variant: 'outlined' }, ...accent('.summary'), ...(can('writeDescription') && { slots: { append: { name: 'summary-action' } } }) } }
-    properties.description = { type: 'string', title: t('description'), layout: { comp: 'markdown', props: { centerAffix: false }, ...(can('writeDescription') && { slots: { append: { name: 'describe-action' } } }) } }
-  }
-  // a fragment is never published: the catalog metadata would describe nothing anyone sees
-  const secondary = dataset.value?.partOf ? {} : fixedProperties()
-  if (!dataset.value?.partOf) Object.assign(secondary, customProperties())
-  Object.assign(properties, secondary)
-  const fullRow = (key: string) => key === 'temporal' || secondary[key].layout?.cols === 12
-  const secondaryKeys = Object.keys(secondary)
+  const properties: Record<string, any> = { ...fixedProperties(), ...(!dataset.value?.partOf && customProperties()) }
+  const fullRow = (key: string) => key === 'temporal' || properties[key].layout?.cols === 12
+  const secondaryKeys = Object.keys(properties).filter(key => !mainFields.includes(key))
   return {
     type: 'object',
     required: props.required.map(r => r.startsWith('custom.') ? prefix + r.slice(7) : r).filter(r => r in properties),
     properties,
     // informations: main fields on the left, the others on the right; other tabs: a 2 columns grid
-    layout: main
+    layout: inTab('title')
       ? [
-          { children: ['title', 'summary', 'description'], cols: secondaryKeys.length ? { sm: 7 } : 12 },
+          { children: mainFields, cols: secondaryKeys.length ? { sm: 7 } : 12 },
           ...(secondaryKeys.length ? [{ children: secondaryKeys, cols: { sm: 5 } }] : [])
         ]
       : secondaryKeys.map(key => ({ key, cols: fullRow(key) ? 12 : { sm: 6 } }))
@@ -329,6 +230,7 @@ const fetched: Record<string, Promise<any>> = {}
 const vjsfOptions = computed<VjsfOptions>(() => ({
   density: 'comfortable',
   locale: locale.value,
+  xI18n: true,
   readOnly: !can('writeDescription'),
   fetchBaseURL: $sitePath + '/data-fair/',
   // the facets feeding several suggestion lists are fetched once
