@@ -532,6 +532,16 @@ const datasetProperties = {
         required: ['i'],
         properties: { i: { type: 'number' } }
       },
+      // display-only: a synchronous admin action exceeded its budget and is finishing in-process.
+      // Nothing gates on it; GET _integrity drops it when the dataset lock is no longer held.
+      running: {
+        type: 'object',
+        required: ['action', 'startedAt'],
+        properties: {
+          action: { type: 'string' },
+          startedAt: { type: 'string', format: 'date-time' }
+        }
+      },
       // per-event-key date of the last sent alert (realert cadence dedup, cleared on recovery)
       alerts: {
         type: 'object',

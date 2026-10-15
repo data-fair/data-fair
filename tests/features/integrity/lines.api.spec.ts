@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test'
 import { axios, axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import {
-  ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix
+  ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix, putShadowVersion
 } from '../../support/integrity.ts'
 import { waitForFinalize, waitForDatasetError } from '../../support/workers.ts'
 import * as lops from '../../../api/src/integrity/lines-operations.ts'
@@ -174,6 +174,8 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   const integrity = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(integrity.active).toBe(true)
   expect(integrity.lines).toMatchObject({ anchored: 2, pending: 0 })
+  // the deployment's windows, quoted by the panel's help (dev config: 2 days / 1 day)
+  expect(integrity.policy).toEqual({ retentionDays: 2, attributionRetentionDays: 1, maxLines: 100000, maxUnknownDays: 7 })
   const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   // the enabling admin's session attributes the backfill (T4): each anchor also gets a `.who`
@@ -577,6 +579,74 @@ test('a due lines horizon renews every live line anchor on a passing check', asy
   // the real S3 lock advanced, not merely the mongo mirror
   const after = await integrityTestStore.getRetention(keys[0])
   expect(after!.getTime()).toBeGreaterThan(before!.getTime())
+})
+
+test('an acked shadow on one line key refuses its renewal, and the failure keeps the gate due so renewal retries', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+  const keys = await linesAnchorKeys(ax, dataset.id)
+  expect(keys).toHaveLength(2)
+
+  const original = await integrityTestStore.getRevision(keys[0])
+  await putShadowVersion(keys[0], { ...original, hash: { ...original.hash, metadata: 'attacker' } })
+  const altered = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(altered.trail.status).toBe('altered')
+  // ack the anomaly: the trail verdict is clean again, but the key itself stays unclean
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/trail/_ack`, { reason: 'investigated: test shadow' })
+
+  const makeDue = async () => await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+  await makeDue()
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  const first = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal
+  expect(first.status).toBe('failed')
+  expect(first.renewed).toBe(1)
+  expect(first.failed).toBe(1)
+
+  // the failure must not have dropped the horizon: the next pass retries
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  const second = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal
+  expect(second.status).toBe('failed')
+  expect(second.failed).toBe(1)
+  expect(second.date > first.date).toBe(true)
+})
+
+test('_fix re-anchors a line whose acked latest key is unclean, so lines renewal succeeds again', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+  const keys = await linesAnchorKeys(ax, dataset.id)
+  const original = await integrityTestStore.getRevision(keys[0])
+  await putShadowVersion(keys[0], { ...original, hash: { ...original.hash, metadata: 'attacker' } })
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/trail/_ack`, { reason: 'investigated: test shadow' })
+  const makeDue = async () => await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+  await makeDue()
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  expect((await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal.failed).toBe(1)
+
+  // the remedy: a fresh anchor supersedes the shadowed key as the line's latest
+  const fix = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'supersede the shadowed line key' })).data
+  expect(fix.status).toBe('ok')
+  expect(fix.trail.status).toBe('ok') // the shadow stays acked, not cleared
+  const shadowed = lops.parseLineRevisionKey(keys[0])!
+  const latest = lops.latestLineAnchors(await linesAnchorKeys(ax, dataset.id)).get(shadowed.lineId)!
+  expect(latest.key).not.toBe(keys[0])
+  expect(latest.i).toBeGreaterThan(shadowed.i)
+
+  await makeDue()
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const renewal = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal
+  expect(renewal.status).toBe('ok')
+  expect(renewal.failed).toBe(0)
+  expect(renewal.renewed).toBe(2)
 })
 
 test('a fresh lines horizon is not renewed, and a breach skips lines renewal entirely', async () => {

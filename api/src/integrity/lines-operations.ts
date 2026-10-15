@@ -40,8 +40,10 @@ export const parseLineRevisionKey = (key: string): ParsedLineKey | undefined => 
   if (parts.length < 3 || parts[parts.length - 3] !== 'lines') return undefined
   const last = parts[parts.length - 1]
   // explicit sibling exclusion (not lexical luck): a `‹i›-‹sha›.who` key must never parse as a
-  // revision — this is what makes foldLatestLineAnchors/latestLineAnchors and lines renewal
-  // sibling-blind by construction (README.md invariant 9).
+  // revision. Every consumer parses through here — the streamed line group fold used by the
+  // compare, lines renewal and _fix (pushLineGroupKeys), and foldLatestLineAnchors/
+  // latestLineAnchors, kept as reference oracles for tests — so all are sibling-blind by
+  // construction (README.md invariant 5).
   if (last.endsWith(WHO_SUFFIX)) return undefined
   const dash = last.indexOf('-')
   if (dash === -1) return undefined
@@ -109,6 +111,39 @@ export const foldLatestLineAnchors = (latest: Map<string, LatestLineAnchor>, key
 export const latestLineAnchors = (keys: string[]): Map<string, LatestLineAnchor> =>
   foldLatestLineAnchors(new Map(), keys)
 
+// A line's latest anchor, emitted once its whole key group has been seen (streamed compare).
+export type LineAnchorGroup = LatestLineAnchor & { lineId: string, clean: boolean }
+export type LineGroupFold = { open?: LineAnchorGroup }
+
+export const newLineGroupFold = (): LineGroupFold => ({})
+
+// Keys must arrive in listing order. Every key of a lineId shares the `lines/‹enc›/` prefix, so
+// the group is contiguous in that order and complete as soon as a key of another lineId arrives —
+// memory O(1) instead of O(distinct lines). Same latest-anchor rule as foldLatestLineAnchors
+// (strict >: the lexically-first key wins an equal-i tie) and the same sibling blindness
+// (parseLineRevisionKey drops `.who`).
+export const pushLineGroupKeys = (acc: LineGroupFold, entries: Array<{ key: string, clean?: boolean }>): LineAnchorGroup[] => {
+  const done: LineAnchorGroup[] = []
+  for (const entry of entries) {
+    const parsed = parseLineRevisionKey(entry.key)
+    if (!parsed) continue
+    if (acc.open && acc.open.lineId !== parsed.lineId) {
+      done.push(acc.open)
+      acc.open = undefined
+    }
+    if (!acc.open || parsed.i > acc.open.i) {
+      acc.open = { lineId: parsed.lineId, key: entry.key, i: parsed.i, sha256: parsed.sha256, deleted: parsed.deleted, clean: entry.clean ?? true }
+    }
+  }
+  return done
+}
+
+export const finishLineGroupFold = (acc: LineGroupFold): LineAnchorGroup[] => {
+  const done = acc.open ? [acc.open] : []
+  acc.open = undefined
+  return done
+}
+
 export type LineVerdict = 'ok' | 'edited' | 'inserted'
 
 // a live line against its latest anchor: no live anchor at all → out-of-band insert;
@@ -118,4 +153,134 @@ export const classifyLine = (line: { _i?: number } & Record<string, any>, anchor
   if (!anchor || anchor.deleted) return 'inserted'
   if (anchor.sha256 !== lineSha256(line, excludedKeys) || anchor.i !== line._i) return 'edited'
   return 'ok'
+}
+
+export type LiveLine = { _id: string, _i?: number } & Record<string, any>
+// `lineI`: the live line's `_i` as compared (edited/inserted only). Repairs apply after the compare
+// and skip a line whose live `_i` moved since — a legitimate write landed in between and anchored
+// itself through the relay; overwriting/deleting it would undo that write.
+export type LineDivergence = { lineId: string, kind: 'edited' | 'inserted' | 'missing', anchor?: { key: string, i: number }, lineI?: number }
+export type LineCompareIO = {
+  // live (non-_deleted) lines among `ids`
+  lookupLive: (ids: string[]) => Promise<LiveLine[]>
+  countLive: () => Promise<number>
+  // true when a covered write hit the dataset since the compare began (the count is then untrustworthy)
+  changedDuringCompare: () => Promise<boolean>
+  iterateLiveIds: () => AsyncIterable<{ _id: string, _i?: number }>
+}
+export type LineCompareResult = { checked: number, diverged: number }
+
+// 8 bytes of sha256, used to count accounted lines and to name inserted ones. A collision between
+// two accounted ids makes `unaccounted` one too high (a spurious breach with nothing named), never
+// a hidden one; a collision between an unaccounted and an accounted id leaves one insert unnamed
+// while the count still reports it.
+export const lineIdFingerprint = (lineId: string): bigint =>
+  createHash('sha256').update(lineId).digest().readBigUInt64BE(0)
+
+// growable typed array: ~8 bytes per accounted line instead of a Set of strings
+class FingerprintSet {
+  private values = new BigUint64Array(1024)
+  private size = 0
+  add (fp: bigint) {
+    if (this.size === this.values.length) {
+      const grown = new BigUint64Array(this.values.length * 2)
+      grown.set(this.values)
+      this.values = grown
+    }
+    this.values[this.size++] = fp
+  }
+
+  // sorts in place and removes duplicates: one synchronous sort per large check (~50 ms at 1M
+  // lines), accepted
+  seal (): void {
+    const sorted = this.values.subarray(0, this.size).sort()
+    let unique = 0
+    for (let n = 0; n < sorted.length; n++) {
+      if (n === 0 || sorted[n] !== sorted[unique - 1]) sorted[unique++] = sorted[n]
+    }
+    this.values = sorted.slice(0, unique)
+    this.size = unique
+  }
+
+  sizeOf (): number { return this.size }
+
+  has (fp: bigint): boolean {
+    let lo = 0
+    let hi = this.size - 1
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1
+      const v = this.values[mid]
+      if (v === fp) return true
+      if (v < fp) lo = mid + 1
+      else hi = mid - 1
+    }
+    return false
+  }
+}
+
+// Streamed lines compare (design 2026-10-15 §3). Pass A: anchors arrive one per line (group
+// fold), are looked up in Mongo in batches and classified with classifyLine — edited / inserted
+// (tombstone latest) / missing. Pass B: `_id` is unique, so every live line holding an anchor is
+// found exactly once in pass A — out-of-band inserts exist iff the live count exceeds the lines
+// pass A found (counted DISTINCT: a forged non-canonical key can emit one lineId twice, and must
+// not inflate the count to hide an insert). Only then are live ids streamed to name them.
+// A covered write during the compare (changedDuringCompare) means the count cannot be trusted
+// (a legitimate delete of an accounted line plus an out-of-band insert nets to zero), so the
+// naming pass also runs then: it restores the old full-scan behavior, and the checker's
+// pending-flag re-read then downgrades the verdict to 'unknown'.
+export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch: LineDivergence[]) => Promise<void>, excluded?: Set<string>, batchSize?: number }) => {
+  const batchSize = opts.batchSize ?? 1000
+  const accounted = new FingerprintSet()
+  let pending: LineAnchorGroup[] = []
+  let diverged = 0
+
+  const flush = async () => {
+    if (!pending.length) return
+    const groups = pending
+    pending = []
+    const live = new Map((await io.lookupLive(groups.map((g) => g.lineId))).map((l) => [l._id, l]))
+    const batch: LineDivergence[] = []
+    for (const g of groups) {
+      const line = live.get(g.lineId)
+      if (!line) {
+        // a tombstone with no live line is a legitimately deleted line
+        if (!g.deleted) batch.push({ lineId: g.lineId, kind: 'missing', anchor: { key: g.key, i: g.i } })
+        continue
+      }
+      accounted.add(lineIdFingerprint(g.lineId))
+      const verdict = classifyLine(line, g, opts.excluded)
+      if (verdict !== 'ok') batch.push({ lineId: g.lineId, kind: verdict, anchor: { key: g.key, i: g.i }, lineI: line._i })
+    }
+    if (batch.length) {
+      diverged += batch.length
+      await opts.onDiverged(batch)
+    }
+  }
+
+  return {
+    push: async (group: LineAnchorGroup): Promise<void> => {
+      pending.push(group)
+      if (pending.length >= batchSize) await flush()
+    },
+    finish: async (): Promise<LineCompareResult> => {
+      await flush()
+      accounted.seal()
+      const checked = await io.countLive()
+      const unaccounted = checked - accounted.sizeOf()
+      if (unaccounted > 0 || await io.changedDuringCompare()) {
+        let named = 0
+        let batch: LineDivergence[] = []
+        for await (const live of io.iterateLiveIds()) {
+          if (accounted.has(lineIdFingerprint(live._id))) continue
+          named++
+          batch.push({ lineId: live._id, kind: 'inserted', lineI: live._i })
+          if (batch.length >= batchSize) { await opts.onDiverged(batch); batch = [] }
+        }
+        if (batch.length) await opts.onDiverged(batch)
+        // the count stays exact if a fingerprint collision leaves one insert unnamed
+        diverged += Math.max(unaccounted, named)
+      }
+      return { checked, diverged }
+    }
+  }
 }

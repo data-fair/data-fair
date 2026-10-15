@@ -1,7 +1,7 @@
 ---
 title: "data-fair — Contrôle d'intégrité des données"
-version: "1.0"
-date: "2026-07-22"
+version: "1.1"
+date: "2026-10-15"
 description: "Garanties, périmètre, fonctionnement et conformité du contrôle d'intégrité des jeux de données de la plateforme data-fair."
 toc: true
 tocLevels: 2
