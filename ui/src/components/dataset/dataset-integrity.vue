@@ -1,6 +1,41 @@
 <template>
   <div class="pa-4">
     <template v-if="state">
+      <!-- what the guarantee is, and is not, stated once for every reader of the panel (the
+           client-facing presentation says the same at length). Closable; the "i" brings it back -->
+      <df-tutorial-alert
+        v-if="state.active"
+        id="integrity-guarantees"
+        persistent
+      >
+        <p class="mb-2">
+          {{ t('guaranteeIntro') }}
+        </p>
+        <p class="mb-2">
+          <strong>{{ t('guaranteeDetectTitle') }}</strong> {{ t('guaranteeDetect') }}
+        </p>
+        <p class="mb-2">
+          <strong>{{ t('guaranteeRepairTitle') }}</strong> {{ t('guaranteeRepair', { days: policy.retentionDays }) }}
+        </p>
+        <p>
+          <strong>{{ t('guaranteeLimitsTitle') }}</strong> {{ t('guaranteeLimits') }}
+        </p>
+      </df-tutorial-alert>
+      <!-- before enabling: what it seals, for how long, and what it costs the owner -->
+      <df-tutorial-alert
+        v-if="adminMode && !state.active"
+        id="integrity-enable"
+        persistent
+      >
+        <p>{{ t('enableHelp', { days: policy.retentionDays, maxLines: policy.maxLines.toLocaleString(locale) }) }}</p>
+        <p
+          v-if="policy.attributionRetentionDays"
+          class="mt-2"
+        >
+          {{ t('enableHelpWho', { days: policy.attributionRetentionDays }) }}
+        </p>
+      </df-tutorial-alert>
+
       <!-- the switch that decides everything below it comes first (disabling clears the verdicts
            and stops lock renewal — anchors then age out at retention — so it is confirmed, unlike
            the additive enable which needs no guard) -->
@@ -34,8 +69,16 @@
           variant="outlined"
           density="compact"
           :title="t('breachTitle')"
-          :text="(state.lastCheck.breach ?? []).map(p => t('part_' + p)).join(', ') + ' — ' + t('breachBody')"
-        />
+        >
+          {{ (state.lastCheck.breach ?? []).map(p => t('part_' + p)).join(', ') }} — {{ t('breachBody') }}
+          <!-- owner admins read this panel without any of the remedies below: say who acts -->
+          <div
+            v-if="!adminMode"
+            class="mt-1"
+          >
+            {{ t('breachReaderNext') }}
+          </div>
+        </v-alert>
         <v-alert
           v-else-if="state.lastCheck?.status === 'ok'"
           type="success"
@@ -81,13 +124,46 @@
           density="compact"
           class="mt-1"
           :title="t('renewalFailedTitle')"
-          :text="t('renewalFailedBody')"
+          :text="state.lastRevision?.retainUntil ? t('renewalFailedBodyDate', { date: formatDate(state.lastRevision.retainUntil) }) : t('renewalFailedBody')"
+        />
+        <!-- an 'ok' reads the same at 6 hours and at 3 weeks: the nightly sweep checks a bounded
+             batch oldest-first and a failing sweep leaves the old verdict in place, so its age is
+             part of the verdict -->
+        <v-alert
+          v-if="staleVerdict"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mt-1"
+          :text="t('staleVerdict', { age: dayjs(state.lastCheck!.date).fromNow(true) })"
         />
         <div
           v-if="state.lastCheck"
           class="text-body-small text-medium-emphasis mt-1"
         >
-          {{ t('lastCheck') }} : {{ formatDate(state.lastCheck.date) }}
+          <help-tooltip
+            :text="t('checkFrequencyHelp', { days: policy.maxUnknownDays })"
+            small
+          >
+            <span>{{ t('lastCheck') }} : {{ formatDate(state.lastCheck.date) }} ({{ dayjs(state.lastCheck.date).fromNow() }})</span>
+          </help-tooltip>
+          <!-- after an inconclusive check, the last conclusive one is what still stands -->
+          <div v-if="state.lastCheck.status === 'unknown' && state.lastDefinitiveCheck">
+            {{ t('noDefinitiveSince', { date: formatDate(state.lastDefinitiveCheck) }) }}
+          </div>
+        </div>
+        <div
+          v-if="state.lastRevision"
+          class="text-body-small text-medium-emphasis mt-1"
+        >
+          <help-tooltip
+            :text="t('lockHelp')"
+            small
+          >
+            <span>
+              {{ t('lastRevisionInfo', { i: state.lastRevision.i, date: formatDate(state.lastRevision.date) }) }}<template v-if="state.lastRevision.retainUntil">, {{ t('lockedUntil', { date: formatDate(state.lastRevision.retainUntil) }) }}</template>
+            </span>
+          </help-tooltip>
         </div>
       </template>
 
@@ -105,16 +181,28 @@
           v-for="part of verdictParts"
           :key="part.key"
         >
-          <div class="d-flex align-center ga-2 mb-2">
-            <span class="text-body-medium">{{ t('part_' + part.key) }}</span>
-            <v-chip
-              size="small"
-              label
-              :color="part.status === 'ok' ? 'success' : (part.status === 'unknown' ? 'warning' : 'error')"
-            >
-              {{ t('partStatus_' + part.status) }}
-            </v-chip>
-          </div>
+          <!-- "verified" does not carry the same strength for every part (exhaustive hash compare,
+               per-line compare, sampled index, history coherence): each row says which -->
+          <help-tooltip
+            :text="t('partHelp_' + part.key)"
+            location="end"
+            small
+          >
+            <div class="d-flex align-center flex-wrap ga-2 mb-2">
+              <span class="text-body-medium">{{ t('part_' + part.key) }}</span>
+              <v-chip
+                size="small"
+                label
+                :color="part.status === 'ok' ? 'success' : (part.status === 'unknown' ? 'warning' : 'error')"
+              >
+                {{ t('partStatus_' + part.status) }}
+              </v-chip>
+              <span
+                v-if="partDetail(part.key)"
+                class="text-body-small text-medium-emphasis"
+              >{{ partDetail(part.key) }}</span>
+            </div>
+          </help-tooltip>
 
           <!-- lines: the diverging ids, with a per-line history shortcut and the bulk restore -->
           <v-alert
@@ -145,6 +233,12 @@
                   @click="openLineRevisions(lineId)"
                 />
               </div>
+            </div>
+            <div
+              v-if="(state.lastCheck!.lines!.sample?.length ?? 0) < state.lastCheck!.lines!.diverged!"
+              class="text-body-small mt-1"
+            >
+              {{ t('sampleNote', { shown: state.lastCheck!.lines!.sample?.length ?? 0, total: state.lastCheck!.lines!.diverged }) }}
             </div>
             <div
               v-if="adminMode"
@@ -262,9 +356,15 @@
       <!-- per-line anchoring progress (enrolled REST datasets): backfill state, not a verdict —
            it is reported even before any check has run -->
       <template v-if="state.active && dataset?.isRest">
-        <div class="text-body-medium mt-4">
-          {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
-        </div>
+        <help-tooltip
+          :text="t('linesAnchoredHelp')"
+          small
+          class="mt-4"
+        >
+          <div class="text-body-medium mt-4">
+            {{ state.lines?.anchored ?? 0 }} {{ t('linesAnchored') }}
+          </div>
+        </help-tooltip>
         <template v-if="(state.lines?.pending ?? 0) > 0">
           <div class="text-body-small mt-1">
             {{ state.lines!.pending }} {{ t('linesPending') }}
@@ -340,9 +440,15 @@
       </div>
 
       <template v-if="state.active">
-        <h4 class="text-title-medium mb-2 mt-6">
-          {{ t('historyTitle') }}
-        </h4>
+        <help-tooltip
+          :text="historyHelp"
+          small
+          class="mt-6"
+        >
+          <h4 class="text-title-medium mb-2 mt-6">
+            {{ t('historyTitle') }}
+          </h4>
+        </help-tooltip>
         <v-data-table-server
           :headers="headers"
           :items="revisions"
@@ -766,15 +872,44 @@
 <i18n lang="yaml">
 fr:
   disabledInfo: Le contrôle d'intégrité n'est pas activé pour ce jeu de données.
+  guaranteeIntro: "Chaque écriture légitime de ce jeu de données est scellée sous forme de révision dans un entrepôt verrouillé. Une révision ne peut être ni modifiée ni supprimée avant son échéance, par personne, administrateurs de la plateforme compris. Le contrôle compare l'état courant à la dernière révision scellée."
+  guaranteeDetectTitle: Détection.
+  guaranteeDetect: Une modification faite hors de la plateforme (accès direct au fichier, à la base de données ou à l'index de recherche) apparaît comme une divergence au contrôle suivant, et les administrateurs de la plateforme sont alertés. Une manipulation de l'historique lui-même est aussi détectée.
+  guaranteeRepairTitle: Réparation.
+  guaranteeRepair: L'état vérifié peut être restauré depuis n'importe quelle révision des {days} derniers jours. L'état courant, lui, reste protégé tant que le contrôle est actif.
+  guaranteeLimitsTitle: Limites.
+  guaranteeLimits: "Le contrôle n'empêche pas une altération, il la rend visible et réparable. Une altération qui imite le circuit d'écriture interne entre dans l'historique comme une écriture ordinaire et datée : c'est la comparaison avec le journal d'activité qui la révèle."
+  enableHelp: "L'activation scelle l'état courant (fichier, métadonnées et, pour un jeu éditable, chaque ligne) puis chaque écriture suivante. Les révisions complètes sont conservées {days} jours et comptent dans le quota de stockage du propriétaire. L'activation est refusée au-delà de {maxLines} lignes."
+  enableHelpWho: L'identité des auteurs d'écritures (identifiant, adresse IP, pays) est scellée à part et conservée {days} jours, par protection des données personnelles.
+  checkFrequencyHelp: Un contrôle automatique a lieu chaque nuit, par lots. Quand de nombreux jeux de données sont protégés, chacun n'est contrôlé que tous les quelques jours. Une alerte est émise si un jeu protégé reste {days} jours sans verdict concluant.
+  staleVerdict: "Ce verdict a {age} : l'état actuel n'a pas été contrôlé depuis."
+  noDefinitiveSince: Aucun verdict concluant depuis le {date}.
+  lastRevisionInfo: Dernière révision scellée n°{i} du {date}
+  lockedUntil: verrouillée jusqu'au {date}
+  lockHelp: "Une révision verrouillée ne peut être ni modifiée ni supprimée avant cette date. Tant que les contrôles sont sans anomalie, le verrou de la dernière révision est prolongé automatiquement : l'état courant reste protégé sans limite de durée."
+  renewalFailedBodyDate: Le renouvellement de la protection anti-altération échoue. La garantie expirera le {date} si le problème n'est pas résolu.
+  breachReaderNext: Les administrateurs de la plateforme sont alertés ; eux seuls peuvent restaurer ou réconcilier ce jeu de données. Contactez-les si cette modification vous semble légitime.
+  partHelp_file: L'empreinte SHA-256 du fichier de données est comparée à celle de la dernière révision, tout octet modifié est détecté.
+  partHelp_metadata: Couvre les informations éditables (titre, description, schéma, licence, permissions, publications, extensions…). Ne couvre ni les compteurs et dates techniques, ni le contenu des pièces jointes.
+  partHelp_lines: "Chaque ligne est scellée individuellement à chaque écriture. Le contrôle compare toutes les lignes une par une à leur dernière révision : modification, insertion et suppression hors circuit sont détectées."
+  partHelp_index: "L'index de recherche est ce que lisent les utilisateurs du jeu de données. Le contrôle compare le nombre de lignes et un échantillon tiré au hasard à la source vérifiée : une altération massive est détectée, une altération isolée peut échapper à un contrôle donné. Un contrôle exhaustif peut être demandé aux administrateurs de la plateforme."
+  partHelp_trail: "Vérifie que l'historique des révisions est bien celui écrit par la plateforme : aucune révision masquée, réécrite, antidatée ou manquante. Ce contrôle s'appuie sur les versions d'origine et les dates apposées par le fournisseur de stockage, que même un détenteur des accès à l'entrepôt ne peut falsifier."
+  linesChecked: "{n} lignes contrôlées"
+  indexChecked: "{n} lignes comparées"
+  trailAcked: anomalies acquittées (révision n°{i})
+  sampleNote: "{shown} lignes affichées sur {total}"
+  linesAnchoredHelp: Une ligne ancrée a au moins une révision scellée. Les lignes en attente le seront dès que la file d'historisation sera traitée ; d'ici là, les contrôles ne peuvent pas conclure.
+  historyHelp: "Chaque écriture légitime ajoute une révision verrouillée, restaurable pendant {days} jours puis purgée. La colonne Auteur donne la catégorie d'écriture (utilisateur, traitement interne…). L'empreinte est le début du hash SHA-256 scellé. « Non restaurable » désigne une révision qui ne porte pas de données (acquittement, désactivation…)."
+  historyHelpWho: L'identité de l'auteur (identifiant, adresse IP, pays) n'est conservée que {days} jours, par protection des données personnelles.
   part_file: Fichier de données
   part_metadata: Métadonnées
   part_lines: Lignes
   part_index: Index de recherche
-  part_trail: Historique verrouillé
+  part_trail: Cohérence de l'historique
   partStatus_ok: vérifié
   partStatus_diverged: divergent
   partStatus_altered: altéré
-  partStatus_unknown: en attente
+  partStatus_unknown: non concluant
   breachTitle: Intégrité compromise
   breachBody: modifié(es) en dehors du circuit d'écriture légitime
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
@@ -879,15 +1014,44 @@ fr:
   ackOk: Anomalies acquittées
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
+  guaranteeIntro: Every legitimate write to this dataset is sealed as a revision in a locked store. A revision cannot be altered or deleted before it expires, by anyone, platform administrators included. The check compares the current state with the latest sealed revision.
+  guaranteeDetectTitle: Detection.
+  guaranteeDetect: A change made outside the platform (direct access to the file, the database or the search index) shows as a divergence at the next check, and the platform administrators are alerted. Tampering with the history itself is detected too.
+  guaranteeRepairTitle: Repair.
+  guaranteeRepair: The verified state can be restored from any revision of the last {days} days. The current state itself stays protected as long as checking is enabled.
+  guaranteeLimitsTitle: Limits.
+  guaranteeLimits: "Checking does not prevent tampering, it makes it visible and repairable. Tampering that imitates the internal write path enters the history as an ordinary, dated write: comparing with the activity journal is what reveals it."
+  enableHelp: Enabling seals the current state (file, metadata and, for an editable dataset, every line), then every later write. Full revisions are kept {days} days and count towards the owner's storage quota. Enabling is refused above {maxLines} lines.
+  enableHelpWho: The identity of write authors (id, IP address, country) is sealed separately and kept {days} days, for personal data protection.
+  checkFrequencyHelp: An automatic check runs every night, in batches. When many datasets are protected, each one is only checked every few days. An alert is raised when a protected dataset goes {days} days without a conclusive verdict.
+  staleVerdict: "This verdict is {age} old: the current state has not been checked since."
+  noDefinitiveSince: No conclusive verdict since {date}.
+  lastRevisionInfo: Latest sealed revision n°{i} of {date}
+  lockedUntil: locked until {date}
+  lockHelp: "A locked revision cannot be altered or deleted before this date. As long as checks find no anomaly, the latest revision's lock is extended automatically: the current state stays protected with no time limit."
+  renewalFailedBodyDate: Renewal of the tamper-protection lock is failing. The guarantee will lapse on {date} unless resolved.
+  breachReaderNext: The platform administrators are alerted; only they can restore or reconcile this dataset. Contact them if this change looks legitimate to you.
+  partHelp_file: The SHA-256 hash of the data file is compared with the latest revision's, any changed byte is detected.
+  partHelp_metadata: Covers the editable information (title, description, schema, license, permissions, publications, extensions…). Does not cover technical counters and dates, nor attachment contents.
+  partHelp_lines: "Every line is sealed individually on every write. The check compares every line, one by one, with its latest revision: out-of-band edits, inserts and deletes are detected."
+  partHelp_index: "The search index is what the dataset's users read. The check compares the line count and a randomly drawn sample with the verified source: mass tampering is detected, an isolated change may escape a given check. An exhaustive check can be requested from the platform administrators."
+  partHelp_trail: "Verifies that the revision history is the one the platform wrote: no hidden, rewritten, backdated or missing revision. It relies on the original versions and on dates stamped by the storage provider, which even someone holding the store credentials cannot forge."
+  linesChecked: "{n} lines checked"
+  indexChecked: "{n} lines compared"
+  trailAcked: anomalies acknowledged (revision n°{i})
+  sampleNote: "{shown} lines shown out of {total}"
+  linesAnchoredHelp: An anchored line has at least one sealed revision. Pending lines will be once the historization queue is processed; until then, checks cannot conclude.
+  historyHelp: Every legitimate write adds a locked revision, restorable for {days} days then purged. The Author column gives the write category (user, internal worker…). The hash is the start of the sealed SHA-256. "Not restorable" means a revision that carries no data (acknowledgement, disable…).
+  historyHelpWho: The author's identity (id, IP address, country) is only kept {days} days, for personal data protection.
   part_file: Data file
   part_metadata: Metadata
   part_lines: Lines
   part_index: Search index
-  part_trail: Locked history
+  part_trail: History coherence
   partStatus_ok: verified
   partStatus_diverged: diverged
   partStatus_altered: altered
-  partStatus_unknown: pending
+  partStatus_unknown: inconclusive
   breachTitle: Integrity breach
   breachBody: modified outside the legitimate write path
   okBody: Integrity verified, no divergence detected.
@@ -1006,7 +1170,13 @@ const adminMode = computed(() => !!session.state.user?.adminMode)
 
 // `lines` (anchored/pending/overGate) is computed on the fly by GET _integrity for enrolled REST
 // datasets — it is not part of the stored/public Dataset schema, hence the local extension
-type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean }, running?: { action: string, startedAt: string } }
+type IntegrityState = NonNullable<Dataset['integrity']> & {
+  lines?: { anchored: number, pending: number, overGate?: boolean },
+  running?: { action: string, startedAt: string },
+  // the deployment's windows, quoted by the help texts (attributionRetentionDays absent when
+  // attribution is off)
+  policy?: { retentionDays: number, attributionRetentionDays?: number, maxLines: number, maxUnknownDays: number }
+}
 type RevisionEntry = { i: number, hash: { file?: string, metadata?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number, who?: WhoHint }
 type RevisionDetail = { i: number, hash: { file?: string, metadata?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any>, who?: WhoHint }
 type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean, who?: WhoHint }
@@ -1023,6 +1193,33 @@ const formatWho = (who?: WhoHint): string => {
 }
 
 const state = ref<IntegrityState | null>(null)
+const { dayjs } = useLocaleDayjs()
+
+// defaults mirror api/config/default.cjs, for an API that predates the `policy` field
+const policy = computed(() => state.value?.policy ?? { retentionDays: 365, attributionRetentionDays: 180, maxLines: 100000, maxUnknownDays: 7 })
+
+// an 'ok' older than this is shown with a warning: the nightly sweep checks a bounded batch
+// oldest-first, so a few days of age is normal on a busy platform, more means checks stalled
+const STALE_VERDICT_DAYS = 3
+const staleVerdict = computed(() => {
+  const lastCheck = state.value?.lastCheck
+  if (!state.value?.active || lastCheck?.status !== 'ok') return false
+  return Date.now() - new Date(lastCheck.date).getTime() > STALE_VERDICT_DAYS * 24 * 3600 * 1000
+})
+
+// the context shown beside a part's chip: how much the check covered, or an acknowledgement
+const partDetail = (key: string): string | undefined => {
+  const lastCheck = state.value?.lastCheck
+  if (key === 'lines' && typeof lastCheck?.lines?.checked === 'number') return t('linesChecked', { n: lastCheck.lines.checked.toLocaleString(locale.value) })
+  if (key === 'index' && lastCheck?.index?.status === 'ok' && typeof lastCheck.index.checked === 'number') return t('indexChecked', { n: lastCheck.index.checked.toLocaleString(locale.value) })
+  if (key === 'trail' && state.value?.trailAck) return t('trailAcked', { i: state.value.trailAck.i })
+}
+
+const historyHelp = computed(() => {
+  const parts = [t('historyHelp', { days: policy.value.retentionDays })]
+  if (policy.value.attributionRetentionDays) parts.push(t('historyHelpWho', { days: policy.value.attributionRetentionDays }))
+  return parts.join(' ')
+})
 
 const anyBreach = computed(() => state.value?.lastCheck?.status === 'breach')
 // enrolled, a check has run, and yet no anchor is recorded: the store holds no revision for this
