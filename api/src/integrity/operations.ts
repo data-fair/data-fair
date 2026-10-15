@@ -333,13 +333,6 @@ export const newAnomalyCollector = (ackedFingerprints: string[], cap: number): A
   }
 }
 
-// removed in Task 4 (checker switches to newAnomalyCollector)
-export const filterAckedAnomalies = (anomalies: TrailAnomaly[], ackedFingerprints: string[]): TrailAnomaly[] => {
-  const c = newAnomalyCollector(ackedFingerprints, Infinity)
-  for (const a of anomalies) c.push(a)
-  return c.kept
-}
-
 // Persistent-state re-alert gate (round 3 §S3): alert on entry into a bad state, then re-alert
 // once per window while it persists. The dedup date is Mongo-resident (attacker territory), so a
 // pre-written bad state can suppress at most one window — sustained suppression requires

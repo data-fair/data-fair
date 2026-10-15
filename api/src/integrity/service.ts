@@ -206,6 +206,23 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
   await historizeLines(fresh as unknown as RestDataset)
 }
 
+// replaced in Task 5: collects the streamed divergences back into the old whole-set shape
+const compareLinesCollected = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>) => {
+  const edited: string[] = []
+  const inserted: string[] = []
+  const missing: string[] = []
+  const anchors = new Map<string, { key: string, i: number }>()
+  await compareDatasetLines(dataset, store, async (batch) => {
+    for (const d of batch) {
+      if (d.kind === 'edited') edited.push(d.lineId)
+      else if (d.kind === 'inserted') inserted.push(d.lineId)
+      else missing.push(d.lineId)
+      if (d.anchor) anchors.set(d.lineId, d.anchor)
+    }
+  })
+  return { edited, inserted, missing, anchors }
+}
+
 export const fixIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason, who))
 
@@ -221,7 +238,7 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, w
   if (isRestDataset(dataset)) {
     const store = integrityStore()
     await historizeLines(dataset)
-    const compare = await compareDatasetLines(dataset, store)
+    const compare = await compareLinesCollected(dataset, store)
     const hint: HistorizeContextHint = { operation: 'fixIntegrity', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }
     // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
     // re-writing it through the standard transaction pipeline (the same mechanism
@@ -253,7 +270,7 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, w
     // (still 'edited' with live _i below the anchor index) and correct the line's _i explicitly
     // past the stale anchor — stamped and reindexed in the same single-document write — then
     // drain again so the final verdict below proves convergence.
-    const recompare = await compareDatasetLines(dataset, store)
+    const recompare = await compareLinesCollected(dataset, store)
     const stillEdited = recompare.edited.length
       ? await restUtils.collection(dataset).find({ _id: { $in: recompare.edited } }).toArray()
       : []
@@ -326,7 +343,7 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, w
   const store = integrityStore()
   // drain any pending organic stamps first so the comparison sees anchored truth
   await historizeLines(dataset)
-  const compare = await compareDatasetLines(dataset, store)
+  const compare = await compareLinesCollected(dataset, store)
   const transacs: any[] = []
   // edited lines and out-of-band-deleted lines: rewrite from the latest revision's payload
   const fetchIds = [...compare.edited, ...compare.missing]
