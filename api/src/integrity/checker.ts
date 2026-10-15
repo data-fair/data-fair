@@ -61,12 +61,15 @@ const liveLinesIO = (dataset: DatasetInternal): lops.LineCompareIO => {
   }
 }
 
+const newComparer = (dataset: DatasetInternal, onDiverged: (batch: lops.LineDivergence[]) => Promise<void>) =>
+  lops.createLineComparer(liveLinesIO(dataset), { excluded: lops.extensionOwnedKeys(dataset.extensions), onDiverged })
+
 // Compare live Mongo lines against the latest anchors recovered from LIST alone (the sha256 is
 // embedded in each key), streamed: memory is one lookup batch plus ~8 bytes per live line, never
 // the whole anchor set. Repairs (fix/restore) walk the current view — they target data, not the
 // trail — and act on each divergence batch as it is reported.
 export const compareDatasetLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, onDiverged: (batch: lops.LineDivergence[]) => Promise<void>): Promise<lops.LineCompareResult> => {
-  const comparer = lops.createLineComparer(liveLinesIO(dataset), { excluded: lops.extensionOwnedKeys(dataset.extensions), onDiverged })
+  const comparer = newComparer(dataset, onDiverged)
   const fold = lops.newLineGroupFold()
   for await (const page of store.iterateRevisionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
     for (const group of lops.pushLineGroupKeys(fold, page)) await comparer.push(group)
@@ -84,8 +87,9 @@ const readAckedFingerprints = async (dataset: DatasetInternal, store: ReturnType
   try {
     const ackRev = await store.getRevision(ops.revisionKey(dataset.owner, dataset.id, trailAck.i))
     if (ackRev.context.operation === 'ackTrail' && ackRev.ack?.fingerprints) return ackRev.ack.fingerprints
-  } catch (err) {
-    internalError('integrity-trail-ack-read', err)
+  } catch (err: any) {
+    // a purged ack revision simply means no acks; anything else is worth logging
+    if (err.name !== 'NoSuchKey' && err.$metadata?.httpStatusCode !== 404) internalError('integrity-trail-ack-read', err)
   }
   return []
 }
@@ -177,8 +181,18 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
   await take(lops.pushLineGroupKeys(fold, [...acc.current.values()]))
   await take(lops.finishLineGroupFold(fold))
   await renewQueue()
+  // set the subfields individually: a failure must KEEP the previous retainUntil. Replacing the
+  // whole subdocument would drop it, needsRenewal(undefined) is false, and renewal would go quiet
+  // forever (never retried, alert never re-fired) while the locks silently lapse. Only a full
+  // success advances the horizon.
   await mongo.datasets.updateOne({ id: dataset.id }, {
-    $set: { 'integrity.linesRenewal': { date, status: failed ? 'failed' : 'ok', renewed, failed, ...(failed ? {} : { retainUntil: retainUntil.toISOString() }) } }
+    $set: {
+      'integrity.linesRenewal.date': date,
+      'integrity.linesRenewal.status': failed ? 'failed' : 'ok',
+      'integrity.linesRenewal.renewed': renewed,
+      'integrity.linesRenewal.failed': failed,
+      ...(failed ? {} : { 'integrity.linesRenewal.retainUntil': retainUntil.toISOString() })
+    }
   })
   // same posture as the dataset-level renewal, separate dedup cadence (see alerts.ts)
   await maybeAlert(dataset, 'integrity-renewal-failed', failed > 0, 'lines-renewal-failed')
@@ -224,10 +238,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
   const groupFold = lops.newLineGroupFold()
   const linesSample: string[] = []
   const comparer = isRestDataset(dataset as any)
-    ? lops.createLineComparer(liveLinesIO(dataset), {
-      excluded: lops.extensionOwnedKeys(dataset.extensions),
-      onDiverged: async (batch) => { for (const d of batch) if (linesSample.length < 20) linesSample.push(d.lineId) }
-    })
+    ? newComparer(dataset, async (batch) => { for (const d of batch) if (linesSample.length < 20) linesSample.push(d.lineId) })
     : undefined
   const drainLineKeys = async (groups: lops.LineAnchorGroup[]) => {
     if (comparer) for (const group of groups) await comparer.push(group)
