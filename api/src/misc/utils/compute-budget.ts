@@ -41,6 +41,12 @@ export class ComputeBucket {
     return this.content > 0
   }
 
+  /** ms until the budget is positive again (0 when it is): what a 429's Retry-After says. */
+  msUntilBudget (now = Date.now()): number {
+    this.drip(now)
+    return this.content > 0 ? 0 : Math.ceil(-this.content * this.windowMs / this.budgetMs) + 1
+  }
+
   debit (ms: number, now = Date.now()): void {
     this.drip(now)
     this.content = Math.max(-this.budgetMs, this.content - Math.max(0, ms))

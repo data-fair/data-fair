@@ -26,8 +26,8 @@ shape:
 |---|---|---|---|
 | Production ingress-nginx | `$binary_remote_addr` (real client, PROXY protocol) | per portal host: 1200 req/min, burst ×1, 8 MB/s; tileserver 120 req/min | annotations per Ingress; data-fair, `mcp`, simple-directory and the portal UI share the host's budget; no exemption |
 | Staging2 haproxy (L1) → nginx (L2) | L2: `$binary_remote_addr` from `X-Forwarded-For` set by L1 | 1200 req/min, burst 1200, 200 concurrent, 16 MB/s; tileserver 120 req/min | L1 overwrites `X-Forwarded-For` with the client address; L2 exempts requests carrying the ignore secret (literal in a ConfigMap) |
-| data-fair | authenticated: user id (API keys: their pseudo-user); anonymous: client IP | anonymous 600 req/min, 20 s ES compute/min, 500 kB/s dynamic, 8 MB/s static; user 1200 req/min, 60 s compute/min, 1 MB/s, 16 MB/s | in memory per pod (ingress hashes on the client address for stickiness); client IP from the `request-ip` library: `X-Client-IP` first, then the leftmost `X-Forwarded-For`; the ignore secret bypasses everything |
-| `mcp` | client IP (lib-express `reqIp`: leftmost `X-Forwarded-For`) | 100 req/min | until step 3: public mode only |
+| data-fair | authenticated: user id (API keys: their pseudo-user); anonymous: client IP | anonymous 600 req/min, 20 s ES compute/min, 500 kB/s dynamic, 8 MB/s static; user 1200 req/min, 60 s compute/min, 1 MB/s, 16 MB/s | in memory per pod (ingress hashes on the client address for stickiness); client: the user, else lib-express `ipRateLimitKey(reqIp(req))` (the forwarded IP, an IPv6 one as its /64); a request with neither fails; 429s carry `Retry-After`; the ignore secret bypasses everything until step 7 |
+| `mcp` | — (the geocoding tool: identity, else forwarded IP) | none of its own; geocoder 40/s per instance, 10/s per caller | forwards its caller's IP and the forwarder secret |
 
 The ingress also sets `X-Client-IP: $remote_addr` "to ensure proper IP rate-limiting in our
 services" — which is what makes a relay's own address win in data-fair today.
