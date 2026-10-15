@@ -124,6 +124,11 @@ invariants are the ones whose violation does exactly that.
     lines renewal never clears `linesRenewal.retainUntil`**: the previous horizon stays so the
     next pass retries; clearing or advancing it on failure goes quiet forever (the line anchors
     lapse unrepairable with nothing left to alert on).
+    The remedy for a refused (unclean, typically acked) latest line key is `_fix`: it re-anchors
+    those live lines through the pipeline (fresh higher `_i` → a clean latest key supersedes the
+    shadowed one), found with the SAME versions walk as renewal (`checker.ts`
+    `iterateLineAnchorGroupsWithVersions`) so the two cannot disagree. It never clears the trail
+    anomaly itself.
 19. **The lines compare counts DISTINCT accounted lines**: a lineId emitted twice (forged
     non-canonical key) must not inflate the count and hide an insert. Insert-by-count is exact
     only on a stable live set, so the comparer names inserts by scan whenever a covered write

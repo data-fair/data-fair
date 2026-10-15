@@ -132,11 +132,39 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
   }
 }
 
+// The lines versions walk shared by lines renewal and _fix's re-anchoring of unclean keys (one
+// implementation, so the two cannot disagree on which key is a line's latest or whether it is
+// clean): each line's latest anchor group, with `clean` read from that key's own versions in the
+// current view. Anomalies are not collected here (the check's own walk does that).
+export const iterateLineAnchorGroupsWithVersions = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, onGroups: (groups: lops.LineAnchorGroup[]) => Promise<void>): Promise<void> => {
+  const acc = ops.newTrailFold(() => {})
+  const fold = lops.newLineGroupFold()
+  for await (const page of store.iterateVersionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
+    ops.foldTrailVersions(acc, page)
+    await onGroups(lops.pushLineGroupKeys(fold, [...acc.current.values()]))
+    acc.current.clear()
+  }
+  ops.finishTrailFold(acc)
+  await onGroups(lops.pushLineGroupKeys(fold, [...acc.current.values()]))
+  await onGroups(lops.finishLineGroupFold(fold))
+}
+
+// lineIds whose latest anchor is not a tombstone and whose key's versions are unclean (shadow
+// version / delete marker): exactly the keys maybeRenewLines refuses to renew. O(unclean) memory.
+export const uncleanLatestLineIds = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>): Promise<string[]> => {
+  const ids: string[] = []
+  await iterateLineAnchorGroupsWithVersions(dataset, store, async (groups) => {
+    for (const group of groups) if (!group.deleted && !group.clean) ids.push(group.lineId)
+  })
+  return ids
+}
+
 // Per-line lock renewal (target 3), streamed (design 2026-10-15 §3.5): runs only after a fully
 // clean check, then walks the lines versions itself and extends each line's latest live anchor —
 // ONLY if that key's own versions are clean. PutObjectRetention carries no version id: a shadow
 // version slipped in after the check would otherwise get the attacker's version extended. An
-// unclean key counts as a failure (loud). Exhaustive by necessity (§3.5); tombstones age out.
+// unclean key counts as a failure (loud) until _fix re-anchors that line past it (a fresh, clean
+// latest key — service.ts). Exhaustive by necessity (§3.5); tombstones age out.
 const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>): Promise<void> => {
   const retentionDays = config.integrity?.retention?.days ?? 365
   if (!ops.needsRenewal(dataset.integrity?.linesRenewal?.retainUntil, Date.now(), retentionDays)) return
@@ -169,17 +197,7 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
       if (queue.length >= RENEW_CONCURRENCY) await renewQueue()
     }
   }
-  // anomalies are not collected here: per-key cleanliness is read from the current view
-  const acc = ops.newTrailFold(() => {})
-  const fold = lops.newLineGroupFold()
-  for await (const page of store.iterateVersionPages(lops.linesPrefix(dataset.owner, dataset.id))) {
-    ops.foldTrailVersions(acc, page)
-    await take(lops.pushLineGroupKeys(fold, [...acc.current.values()]))
-    acc.current.clear()
-  }
-  ops.finishTrailFold(acc)
-  await take(lops.pushLineGroupKeys(fold, [...acc.current.values()]))
-  await take(lops.finishLineGroupFold(fold))
+  await iterateLineAnchorGroupsWithVersions(dataset, store, take)
   await renewQueue()
   // set the subfields individually: a failure must KEEP the previous retainUntil. Replacing the
   // whole subdocument would drop it, needsRenewal(undefined) is false, and renewal would go quiet

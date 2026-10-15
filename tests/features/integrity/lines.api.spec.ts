@@ -612,6 +612,41 @@ test('an acked shadow on one line key refuses its renewal, and the failure keeps
   expect(second.date > first.date).toBe(true)
 })
 
+test('_fix re-anchors a line whose acked latest key is unclean, so lines renewal succeeds again', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
+  await waitForFinalize(ax, dataset.id)
+  await enableAndDrain(ax, dataset.id)
+  const keys = await linesAnchorKeys(ax, dataset.id)
+  const original = await integrityTestStore.getRevision(keys[0])
+  await putShadowVersion(keys[0], { ...original, hash: { ...original.hash, metadata: 'attacker' } })
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/trail/_ack`, { reason: 'investigated: test shadow' })
+  const makeDue = async () => await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    'integrity.linesRenewal.retainUntil': new Date(Date.now() + 3600 * 1000).toISOString()
+  })
+  await makeDue()
+  await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
+  expect((await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal.failed).toBe(1)
+
+  // the remedy: a fresh anchor supersedes the shadowed key as the line's latest
+  const fix = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`, { reason: 'supersede the shadowed line key' })).data
+  expect(fix.status).toBe('ok')
+  expect(fix.trail.status).toBe('ok') // the shadow stays acked, not cleared
+  const shadowed = lops.parseLineRevisionKey(keys[0])!
+  const latest = lops.latestLineAnchors(await linesAnchorKeys(ax, dataset.id)).get(shadowed.lineId)!
+  expect(latest.key).not.toBe(keys[0])
+  expect(latest.i).toBeGreaterThan(shadowed.i)
+
+  await makeDue()
+  const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('ok')
+  const renewal = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.linesRenewal
+  expect(renewal.status).toBe('ok')
+  expect(renewal.failed).toBe(0)
+  expect(renewal.renewed).toBe(2)
+})
+
 test('a fresh lines horizon is not renewed, and a breach skips lines renewal entirely', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])

@@ -808,7 +808,12 @@ fixtures also feed the screenshots of the client-facing presentation
   anchors, **batch-concurrent** (100 in flight, like the relay's PUTs) — `PutObjectRetention`
   carries no version id, so renewing an unverified key could extend an attacker's shadow. A failed
   renewal keeps the previous `retainUntil` so the next pass retries (it used to go quiet
-  forever); acked unclean line keys are refused and keep failing loudly. Failures aggregate into `integrity.linesRenewal: { date, status, renewed, failed }`, loud, never
+  forever); acked unclean line keys are refused and keep failing loudly until **`_fix`** re-anchors
+  those lines: such a key still matches its line by key name, so the compare never names it, and
+  `_fix` finds them with the same versions walk as renewal (`iterateLineAnchorGroupsWithVersions`)
+  and blesses each live line through the pipeline — the fresh, higher `_i` makes a clean anchor
+  the line's latest, so the shadowed key is no longer the one renewal must extend. The trail
+  anomaly itself stays acked/visible as before (`_fix` never clears trail anomalies). Failures aggregate into `integrity.linesRenewal: { date, status, renewed, failed }`, loud, never
   thrown. Per §3.5 this coverage must be exhaustive — a missed renewal permanently loses that
   line's repairability — so the *number* of operations is irreducible (one `PutObjectRetention` per
   live line per window) and **level 2 on a large editable dataset remains an inevitable scalability

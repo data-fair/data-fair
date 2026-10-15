@@ -27,7 +27,7 @@ import * as lops from './lines-operations.ts'
 import { rootSettingsFilter } from '../settings/operations.ts'
 import { anchorDataset } from './relay.ts'
 import { historizeLines, anchorLine } from './lines-relay.ts'
-import { checkDataset, compareDatasetLines, type Check } from './checker.ts'
+import { checkDataset, compareDatasetLines, uncleanLatestLineIds, type Check } from './checker.ts'
 import { resetPurgeWatermark } from './purge.ts'
 import { sha256OfStorageFile, md5Tee } from './hash.ts'
 
@@ -323,6 +323,12 @@ export const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: st
     // out-of-band insert. Memory is O(diverged lines), large only under mass tampering.
     const divergences: lops.LineDivergence[] = []
     await compareDatasetLines(dataset, store, async (batch) => { divergences.push(...batch) })
+    const blessLiveLines = async (ids: string[]) => {
+      if (!ids.length) return
+      const liveLines = await restUtils.collection(dataset).find({ _id: { $in: ids }, _deleted: { $ne: true } }).toArray()
+      const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line, excluded) }))
+      await rewriteLinesThroughPipeline(dataset, transacs, hint)
+    }
     for (let start = 0; start < divergences.length; start += LINE_REPAIR_CHUNK) {
       const batch = await stillAsCompared(dataset, divergences.slice(start, start + LINE_REPAIR_CHUNK))
       // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
@@ -334,18 +340,24 @@ export const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: st
       // stale anchor, and an out-of-band-inserted line can be shadowed by a higher-i tombstone.
       // The pipeline always mints a fresh `_i` strictly greater than any prior anchor's, so the
       // blessed anchor deterministically becomes latest.
-      const blessIds = batch.filter((d) => d.kind !== 'missing').map((d) => d.lineId)
-      if (blessIds.length) {
-        const liveLines = await restUtils.collection(dataset).find({ _id: { $in: blessIds } }).toArray()
-        const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line, excluded) }))
-        await rewriteLinesThroughPipeline(dataset, transacs, hint)
-      }
+      await blessLiveLines(batch.filter((d) => d.kind !== 'missing').map((d) => d.lineId))
       // tombstone revisions for vanished lines: continue each sequence past its stale anchor
       const missing = batch.filter((d) => d.kind === 'missing' && d.anchor)
       for (let offset = 0; offset < missing.length; offset += LINE_IO_CONCURRENCY) {
         await Promise.all(missing.slice(offset, offset + LINE_IO_CONCURRENCY).map((d) =>
           anchorLine(dataset, { _id: d.lineId, _i: d.anchor!.i + 1, _deleted: true }, store, retainUntil, hint)))
       }
+    }
+    // Unclean latest keys (a shadow version or delete marker on a line's latest anchor, usually
+    // acked): the line still matches by key name, so the compare above never names it, yet
+    // lines renewal refuses that key every pass (PutObjectRetention carries no version id) and
+    // keeps re-alerting. Bless the live line through the pipeline: it mints a fresh higher `_i`,
+    // so a clean anchor becomes the latest and the shadowed key is no longer renewed. The trail
+    // anomaly itself stays as it was (acked or visible) — _fix never clears trail anomalies.
+    // Same versions walk as renewal (checker.ts); collected, then applied; vanished lines skipped.
+    const unclean = await uncleanLatestLineIds(dataset, store)
+    for (let start = 0; start < unclean.length; start += LINE_REPAIR_CHUNK) {
+      await blessLiveLines(unclean.slice(start, start + LINE_REPAIR_CHUNK))
     }
     // Adversarial _i inflation (§S4): the bless above mints a time-derived _i — a forged anchor
     // index above any clock-derived value can therefore never be outranked by it, wedging the
