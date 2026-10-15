@@ -52,4 +52,14 @@ test.describe('ComputeBucket', () => {
     b.debit(-50, 0)
     assert.equal(b.content, 1000)
   })
+
+  test('says how long until the budget is positive again, for Retry-After', () => {
+    const b = new ComputeBucket(1000, 60000, 0)
+    b.debit(1500, 0)
+    assert.equal(b.msUntilBudget(0), 30001)
+    assert.equal(b.msUntilBudget(31000), 0)
+    const empty = new ComputeBucket(1000, 60000, 0)
+    empty.debit(1000, 0)
+    assert.ok(empty.msUntilBudget(0) > 0, 'an empty bucket is not available either')
+  })
 })

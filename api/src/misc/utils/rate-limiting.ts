@@ -1,10 +1,9 @@
 import config from '#config'
 import { Transform, PassThrough, Readable, pipeline } from 'node:stream'
-import requestIp from 'request-ip'
 import debug from 'debug'
 import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
-import { reqUser, reqSession, secretKeyMatches, type SessionState } from '@data-fair/lib-express'
+import { reqUser, reqSession, reqIp, ipRateLimitKey, secretKeyMatches, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
 import { TokenBucket } from './token-bucket.ts'
 import { SweptStore } from './swept-store.ts'
@@ -41,9 +40,13 @@ const rateLimitUser = (req: Request) => {
   return (reqSession(req) as SessionState & { isApplicationKey?: boolean }).isApplicationKey ? undefined : user
 }
 
-const rateLimitClientId = (req: Request) => {
+// The client a request is limited as: its user, else its IP as the reverse proxy forwards it (an IPv6
+// one as its /64). A request with neither is a misconfiguration (an unauthenticated caller whose IP
+// nobody forwarded) and fails here; a pod's own address is never a client
+// (docs/architecture/agent-rate-limiting.md §4).
+const rateLimitClientId = (req: Request): string => {
   const user = rateLimitUser(req)
-  return user ? user.id : requestIp.getClientIp(req)
+  return user ? user.id : ipRateLimitKey(reqIp(req))
 }
 
 // IMPORTANT NOTE: all rate limiting is based on memory only, to be strictly applied when scaling the service
@@ -83,14 +86,27 @@ const throttleQueueFullCounter = new promClient.Counter({
 })
 
 /** Consume one request-count token for this client, false when the tier's request rate is exhausted. */
-export const consume = (req: Request, limitType: string, throttlingKey = '') => {
+const requestBucket = (req: Request, limitType: string, throttlingKey = '') => {
   const key = throttlingKey + '_' + rateLimitClientId(req) + '_' + limitType
   const limit = config.defaultLimits.apiRate[limitType]
-  const { bucket } = rateLimiters.getOrCreate(key, () => ({
+  return rateLimiters.getOrCreate(key, () => ({
     lastUsed: 0, // stamped by the store
     bucket: new TokenBucket(limit.nb, limit.nb / limit.duration)
-  }))
-  return bucket.tryTake(1)
+  })).bucket
+}
+
+export const consume = (req: Request, limitType: string, throttlingKey = '') => {
+  return requestBucket(req, limitType, throttlingKey).tryTake(1)
+}
+
+/** ms until this client's request-count bucket grants a request again: what a 429's Retry-After says. */
+export const retryAfterMs = (req: Request, limitType: string, throttlingKey = '') => {
+  return requestBucket(req, limitType, throttlingKey).msUntil(1)
+}
+
+/** Retry-After, in whole seconds and at least 1 (RFC 6585): when the refusing bucket has room again. */
+export const setRetryAfter = (res: Response, ms: number) => {
+  res.set('Retry-After', String(Math.max(1, Math.ceil(ms / 1000))))
 }
 
 // time-weighted ("compute budget") rate limiting: a second bucket alongside the request-count one,
@@ -188,11 +204,13 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
 
   const ignoreRateLimiting = secretKeyMatches(req.get('x-ignore-rate-limiting'), config.secretKeys.ignoreRateLimiting)
   if (!ignoreRateLimiting && !consume(req, limitType)) {
-    debugLimits('exceedRateLimiting', limitType, user, requestIp.getClientIp(req))
+    debugLimits('exceedRateLimiting', limitType, user, rateLimitClientId(req))
+    setRetryAfter(res, retryAfterMs(req, limitType))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
   if (!ignoreRateLimiting && !hasComputeBudget(req, limitType)) {
-    debugLimits('exceedComputeBudget', limitType, user, requestIp.getClientIp(req))
+    debugLimits('exceedComputeBudget', limitType, user, rateLimitClientId(req))
+    setRetryAfter(res, getComputeBucket(req, limitType)!.msUntilBudget())
     computeBudgetExceededCounter.labels(limitType).inc()
     // GET only: the compute bucket can also block a write request from a client that previously did
     // heavy reads, where query-shape advice would be off-context. req.dataset isn't loaded at this
@@ -214,7 +232,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
   // responses on one saturated per-IP bucket). One policy shared by throttle/end/endParts.
   const acquireSendSlotOrDestroy = (tokenBucket: TokenBucketWrapper): boolean => {
     if (acquireSendSlot(tokenBucket)) return true
-    debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
+    debugLimits('throttleQueueFull', limitType, user, rateLimitClientId(req))
     throttleQueueFullCounter.labels(limitType).inc()
     res.destroy()
     return false
