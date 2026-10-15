@@ -189,7 +189,11 @@ export const formatValue = (value: any, property: SchemaProperty, truncate: numb
     if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
     return value ? 'oui' : 'non'
   }
-  if (property.type === 'number' || property.type === 'integer') return typeof value === 'number' ? formatNumber(value, localeDayjs.locale) : value + ''
+  if (property.type === 'number' || property.type === 'integer') {
+    // a number can come as a string, from the URL of a filter
+    const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value
+    return typeof n === 'number' && Number.isFinite(n) ? formatNumber(n, localeDayjs.locale) : value + ''
+  }
   if (truncate) return truncateMiddle(value + '', truncate, 0, '...')
   return value
 }
