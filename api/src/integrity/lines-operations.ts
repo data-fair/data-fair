@@ -159,12 +159,16 @@ export type LineCompareIO = {
   // live (non-_deleted) lines among `ids`
   lookupLive: (ids: string[]) => Promise<LiveLine[]>
   countLive: () => Promise<number>
+  // true when a covered write hit the dataset since the compare began (the count is then untrustworthy)
+  changedDuringCompare: () => Promise<boolean>
   iterateLiveIds: () => AsyncIterable<string>
 }
 export type LineCompareResult = { checked: number, diverged: number }
 
-// 8 bytes of sha256: only used to NAME inserted lines once the count proved some exist — a
-// collision can drop one id from the sample, never change the verdict or the diverged count
+// 8 bytes of sha256, used to count accounted lines and to name inserted ones. A collision between
+// two accounted ids makes `unaccounted` one too high (a spurious breach with nothing named), never
+// a hidden one; a collision between an unaccounted and an accounted id leaves one insert unnamed
+// while the count still reports it.
 export const lineIdFingerprint = (lineId: string): bigint =>
   createHash('sha256').update(lineId).digest().readBigUInt64BE(0)
 
@@ -182,16 +186,14 @@ class FingerprintSet {
   }
 
   // sorts in place, removes duplicates, returns how many were removed
-  seal (): number {
+  seal (): void {
     const sorted = this.values.subarray(0, this.size).sort()
     let unique = 0
     for (let n = 0; n < sorted.length; n++) {
       if (n === 0 || sorted[n] !== sorted[unique - 1]) sorted[unique++] = sorted[n]
     }
-    const removed = this.size - unique
     this.values = sorted.slice(0, unique)
     this.size = unique
-    return removed
   }
 
   sizeOf (): number { return this.size }
@@ -216,6 +218,10 @@ class FingerprintSet {
 // found exactly once in pass A — out-of-band inserts exist iff the live count exceeds the lines
 // pass A found (counted DISTINCT: a forged non-canonical key can emit one lineId twice, and must
 // not inflate the count to hide an insert). Only then are live ids streamed to name them.
+// A covered write during the compare (changedDuringCompare) means the count cannot be trusted
+// (a legitimate delete of an accounted line plus an out-of-band insert nets to zero), so the
+// naming pass also runs then: it restores the old full-scan behavior, and the checker's
+// pending-flag re-read then downgrades the verdict to 'unknown'.
 export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch: LineDivergence[]) => Promise<void>, excluded?: Set<string>, batchSize?: number }) => {
   const batchSize = opts.batchSize ?? 1000
   const accounted = new FingerprintSet()
@@ -255,16 +261,18 @@ export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch
       accounted.seal()
       const checked = await io.countLive()
       const unaccounted = checked - accounted.sizeOf()
-      if (unaccounted > 0) {
-        // exact even if a fingerprint collision leaves one insert unnamed below
-        diverged += unaccounted
+      if (unaccounted > 0 || await io.changedDuringCompare()) {
+        let named = 0
         let batch: LineDivergence[] = []
         for await (const id of io.iterateLiveIds()) {
           if (accounted.has(lineIdFingerprint(id))) continue
+          named++
           batch.push({ lineId: id, kind: 'inserted' })
           if (batch.length >= batchSize) { await opts.onDiverged(batch); batch = [] }
         }
         if (batch.length) await opts.onDiverged(batch)
+        // the count stays exact if a fingerprint collision leaves one insert unnamed
+        diverged += Math.max(unaccounted, named)
       }
       return { checked, diverged }
     }

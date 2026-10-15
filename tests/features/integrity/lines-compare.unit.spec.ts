@@ -7,14 +7,14 @@ const anchorOf = (line: lops.LiveLine) => key(line._id, line._i!, lops.lineSha25
 const tomb = (lineId: string, i: number) => key(lineId, i, lops.DELETED_MARKER)
 
 // the pre-streaming algorithm, verbatim in spirit (checker.ts compareDatasetLines before this change)
-const referenceCompare = (keys: string[], lines: lops.LiveLine[]) => {
+const referenceCompare = (keys: string[], lines: lops.LiveLine[], excluded?: Set<string>) => {
   const anchors = lops.latestLineAnchors(keys)
   const unvisited = new Set(anchors.keys())
   const edited: string[] = []
   const inserted: string[] = []
   for (const line of lines) {
     unvisited.delete(line._id)
-    const verdict = lops.classifyLine(line, anchors.get(line._id))
+    const verdict = lops.classifyLine(line, anchors.get(line._id), excluded)
     if (verdict === 'edited') edited.push(line._id)
     else if (verdict === 'inserted') inserted.push(line._id)
   }
@@ -22,15 +22,16 @@ const referenceCompare = (keys: string[], lines: lops.LiveLine[]) => {
   return { checked: lines.length, diverged: edited.length + inserted.length + missing.length, edited: edited.sort(), inserted: inserted.sort(), missing: missing.sort() }
 }
 
-const streamedCompare = async (keys: string[], lines: lops.LiveLine[], batchSize: number, pageSize: number) => {
+const streamedCompare = async (keys: string[], lines: lops.LiveLine[], batchSize: number, pageSize: number, excluded?: Set<string>, changed = false, liveAfter?: lops.LiveLine[]) => {
   const byId = new Map(lines.map((l) => [l._id, l]))
   const io: lops.LineCompareIO = {
     lookupLive: async (ids) => ids.map((id) => byId.get(id)).filter((l): l is lops.LiveLine => !!l),
-    countLive: async () => lines.length,
-    iterateLiveIds: async function * () { for (const l of lines) yield l._id }
+    countLive: async () => (liveAfter ?? lines).length,
+    changedDuringCompare: async () => changed,
+    iterateLiveIds: async function * () { for (const l of liveAfter ?? lines) yield l._id }
   }
   const found: lops.LineDivergence[] = []
-  const comparer = lops.createLineComparer(io, { batchSize, onDiverged: async (batch) => { found.push(...batch) } })
+  const comparer = lops.createLineComparer(io, { batchSize, excluded, onDiverged: async (batch) => { found.push(...batch) } })
   const fold = lops.newLineGroupFold()
   const sorted = [...keys].sort()
   for (let n = 0; n < sorted.length; n += pageSize) {
@@ -54,7 +55,8 @@ const fixture = () => {
   const prefixA = line('a', 15, 'p')
   const prefixAB = line('a-b', 16, 'q')
   const unsafe = line('a/b é', 17, 'r')
-  const lines = [ok, edited, rewound, inserted, tombLive, prefixA, prefixAB, unsafe]
+  const inserted2 = line('inserted2', 18, 'z2')
+  const lines = [ok, edited, rewound, inserted, inserted2, tombLive, prefixA, prefixAB, unsafe]
   const keys = [
     key('ok', 2, 'old'), anchorOf(ok), anchorOf(ok) + '.who',
     key('edited', 11, lops.lineSha256({ _id: 'edited', attr: 'original' })),
@@ -109,7 +111,7 @@ test('duplicate group cannot hide an insert (forged non-canonical key decoding t
   const actual = await streamedCompare([anchorOf(a), forged, anchorOf(zero)], [a, zero, y], 1000, 1000)
   expect(actual.found.filter((d) => d.lineId === 'a')).toEqual([]) // both 'a' groups classify ok
   expect(actual.inserted).toEqual(['y'])
-  expect(actual.diverged).toBeGreaterThanOrEqual(1)
+  expect(actual.diverged).toBe(1)
 })
 
 test('no live lines and only tombstones: clean', async () => {
@@ -121,4 +123,35 @@ test('lineIdFingerprint is stable and 64-bit', () => {
   expect(lops.lineIdFingerprint('abc')).toBe(lops.lineIdFingerprint('abc'))
   expect(lops.lineIdFingerprint('abc')).not.toBe(lops.lineIdFingerprint('abd'))
   expect(lops.lineIdFingerprint('abc') < 2n ** 64n).toBe(true)
+})
+
+test('excluded columns are ignored by both compares', async () => {
+  const l = { _id: 'e1', _i: 1, attr: 'x', volatile: 'changed' }
+  const keys = [anchorOf({ _id: 'e1', _i: 1, attr: 'x' })]
+  const excluded = new Set(['volatile'])
+  const expected = referenceCompare(keys, [l], excluded)
+  const actual = await streamedCompare(keys, [l], 1000, 1000, excluded)
+  expect(expected.diverged).toBe(0)
+  expect(actual).toMatchObject({ checked: 1, diverged: 0 })
+})
+
+test('delete accounted X + insert Y during the compare: Y named when changedDuringCompare', async () => {
+  const x = line('x', 1, 'a')
+  const y = line('y', 2, 'b')
+  // pass A sees x live; by the time the count is taken x is gone and y is there
+  const byId = new Map([[x._id, x]])
+  const io: lops.LineCompareIO = {
+    lookupLive: async (ids) => ids.map((id) => byId.get(id)).filter((l): l is lops.LiveLine => !!l),
+    countLive: async () => 1,
+    changedDuringCompare: async () => true,
+    iterateLiveIds: async function * () { yield y._id }
+  }
+  const found: lops.LineDivergence[] = []
+  const comparer = lops.createLineComparer(io, { onDiverged: async (b) => { found.push(...b) } })
+  const fold = lops.newLineGroupFold()
+  for (const g of lops.pushLineGroupKeys(fold, [{ key: anchorOf(x) }])) await comparer.push(g)
+  for (const g of lops.finishLineGroupFold(fold)) await comparer.push(g)
+  const result = await comparer.finish()
+  expect(found.filter((d) => d.kind === 'inserted').map((d) => d.lineId)).toEqual(['y'])
+  expect(result.diverged).toBeGreaterThanOrEqual(1)
 })
