@@ -154,14 +154,17 @@ export const classifyLine = (line: { _i?: number } & Record<string, any>, anchor
 }
 
 export type LiveLine = { _id: string, _i?: number } & Record<string, any>
-export type LineDivergence = { lineId: string, kind: 'edited' | 'inserted' | 'missing', anchor?: { key: string, i: number } }
+// `lineI`: the live line's `_i` as compared (edited/inserted only). Repairs apply after the compare
+// and skip a line whose live `_i` moved since — a legitimate write landed in between and anchored
+// itself through the relay; overwriting/deleting it would undo that write.
+export type LineDivergence = { lineId: string, kind: 'edited' | 'inserted' | 'missing', anchor?: { key: string, i: number }, lineI?: number }
 export type LineCompareIO = {
   // live (non-_deleted) lines among `ids`
   lookupLive: (ids: string[]) => Promise<LiveLine[]>
   countLive: () => Promise<number>
   // true when a covered write hit the dataset since the compare began (the count is then untrustworthy)
   changedDuringCompare: () => Promise<boolean>
-  iterateLiveIds: () => AsyncIterable<string>
+  iterateLiveIds: () => AsyncIterable<{ _id: string, _i?: number }>
 }
 export type LineCompareResult = { checked: number, diverged: number }
 
@@ -243,7 +246,7 @@ export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch
       }
       accounted.add(lineIdFingerprint(g.lineId))
       const verdict = classifyLine(line, g, opts.excluded)
-      if (verdict !== 'ok') batch.push({ lineId: g.lineId, kind: verdict, anchor: { key: g.key, i: g.i } })
+      if (verdict !== 'ok') batch.push({ lineId: g.lineId, kind: verdict, anchor: { key: g.key, i: g.i }, lineI: line._i })
     }
     if (batch.length) {
       diverged += batch.length
@@ -264,10 +267,10 @@ export const createLineComparer = (io: LineCompareIO, opts: { onDiverged: (batch
       if (unaccounted > 0 || await io.changedDuringCompare()) {
         let named = 0
         let batch: LineDivergence[] = []
-        for await (const id of io.iterateLiveIds()) {
-          if (accounted.has(lineIdFingerprint(id))) continue
+        for await (const live of io.iterateLiveIds()) {
+          if (accounted.has(lineIdFingerprint(live._id))) continue
           named++
-          batch.push({ lineId: id, kind: 'inserted' })
+          batch.push({ lineId: live._id, kind: 'inserted', lineI: live._i })
           if (batch.length >= batchSize) { await opts.onDiverged(batch); batch = [] }
         }
         if (batch.length) await opts.onDiverged(batch)

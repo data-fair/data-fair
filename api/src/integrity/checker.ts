@@ -56,7 +56,7 @@ const liveLinesIO = (dataset: DatasetInternal): lops.LineCompareIO => {
       return !!(flags?._needsHistorizing || flags?._needsHistorizingLines)
     },
     iterateLiveIds: async function * () {
-      for await (const line of c.find({ _deleted: { $ne: true } }).project<{ _id: string }>({ _id: 1 })) yield line._id
+      for await (const line of c.find({ _deleted: { $ne: true } }).project<{ _id: string, _i?: number }>({ _id: 1, _i: 1 })) yield line
     }
   }
 }

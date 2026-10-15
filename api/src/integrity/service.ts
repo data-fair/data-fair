@@ -282,6 +282,25 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
   await historizeLines(fresh as unknown as RestDataset)
 }
 
+// Repairs apply divergences collected by a compare that may have run for minutes: a legitimate
+// API write landing in between is not tampering, and repairing it would undo it (restore would
+// overwrite or delete it, _fix would re-anchor a line since deleted or tombstone one since
+// re-created). Re-read
+// the chunk's live lines just before applying and keep only the divergences still in the state
+// the compare saw: edited/inserted lines whose live `_i` is the compared one (every legitimate
+// write mints a fresh `_i`), missing lines still absent. Skipped lines are left to the final
+// re-check — the legitimate write produced its own anchor through the relay. The residual race
+// shrinks to one chunk's re-read-to-write window.
+const stillAsCompared = async (dataset: DatasetInternal & RestDataset, batch: lops.LineDivergence[]): Promise<lops.LineDivergence[]> => {
+  if (!batch.length) return batch
+  const live = new Map((await restUtils.collection(dataset)
+    .find({ _id: { $in: batch.map((d) => d.lineId) }, _deleted: { $ne: true } })
+    .project<{ _id: string, _i?: number }>({ _id: 1, _i: 1 }).toArray()).map((l) => [l._id, l._i]))
+  return batch.filter((d) => d.kind === 'missing'
+    ? !live.has(d.lineId)
+    : live.has(d.lineId) && live.get(d.lineId) === d.lineI)
+}
+
 export const fixIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason, who))
 
@@ -305,7 +324,7 @@ export const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: st
     const divergences: lops.LineDivergence[] = []
     await compareDatasetLines(dataset, store, async (batch) => { divergences.push(...batch) })
     for (let start = 0; start < divergences.length; start += LINE_REPAIR_CHUNK) {
-      const batch = divergences.slice(start, start + LINE_REPAIR_CHUNK)
+      const batch = await stillAsCompared(dataset, divergences.slice(start, start + LINE_REPAIR_CHUNK))
       // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
       // re-writing it through the standard transaction pipeline (the same mechanism
       // lines/_restore uses) rather than anchoring directly at the line's current `_i`.
@@ -340,7 +359,7 @@ export const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: st
     })
     let corrected = false
     for (let start = 0; start < wedged.length; start += LINE_REPAIR_CHUNK) {
-      const edited = wedged.slice(start, start + LINE_REPAIR_CHUNK)
+      const edited = await stillAsCompared(dataset, wedged.slice(start, start + LINE_REPAIR_CHUNK))
       const anchorI = new Map(edited.map((d) => [d.lineId, d.anchor!.i]))
       const stillEdited = await restUtils.collection(dataset).find({ _id: { $in: [...anchorI.keys()] } }).toArray()
       for (const line of stillEdited) {
@@ -418,7 +437,7 @@ export const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: st
   const divergences: lops.LineDivergence[] = []
   await compareDatasetLines(dataset, store, async (batch) => { divergences.push(...batch) })
   for (let start = 0; start < divergences.length; start += LINE_REPAIR_CHUNK) {
-    const batch = divergences.slice(start, start + LINE_REPAIR_CHUNK)
+    const batch = await stillAsCompared(dataset, divergences.slice(start, start + LINE_REPAIR_CHUNK))
     const transacs: any[] = []
     // edited lines and out-of-band-deleted lines: rewrite from the latest revision's payload
     const fetch = batch.filter((d) => (d.kind === 'edited' || d.kind === 'missing') && d.anchor)

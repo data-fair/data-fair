@@ -28,7 +28,7 @@ const streamedCompare = async (keys: string[], lines: lops.LiveLine[], batchSize
     lookupLive: async (ids) => ids.map((id) => byId.get(id)).filter((l): l is lops.LiveLine => !!l),
     countLive: async () => (liveAfter ?? lines).length,
     changedDuringCompare: async () => changed,
-    iterateLiveIds: async function * () { for (const l of liveAfter ?? lines) yield l._id }
+    iterateLiveIds: async function * () { for (const l of liveAfter ?? lines) yield { _id: l._id, _i: l._i } }
   }
   const found: lops.LineDivergence[] = []
   const comparer = lops.createLineComparer(io, { batchSize, excluded, onDiverged: async (batch) => { found.push(...batch) } })
@@ -101,6 +101,18 @@ test('divergences carry the anchor key and index needed by the repairs', async (
   expect(tombLive).toMatchObject({ kind: 'inserted', anchor: { key: tomb('tomb-live', 22), i: 22 } })
 })
 
+test('edited/inserted divergences carry the compared live _i, missing ones none (repairs skip lines rewritten since)', async () => {
+  const { keys, lines } = fixture()
+  const actual = await streamedCompare(keys, lines, 2, 3)
+  const lineI = (id: string) => actual.found.find((d) => d.lineId === id)!.lineI
+  expect(lineI('edited')).toBe(11)
+  expect(lineI('rewound')).toBe(3) // the live _i, not the anchor's 12
+  expect(lineI('tomb-live')).toBe(14) // pass-A insert (tombstone latest)
+  expect(lineI('inserted')).toBe(13) // pass-B insert (no anchor at all)
+  expect(lineI('inserted2')).toBe(18)
+  expect(lineI('missing')).toBeUndefined()
+})
+
 test('duplicate group cannot hide an insert (forged non-canonical key decoding to an existing id)', async () => {
   const a = line('a', 5, 'v')
   const zero = line('0', 7, 'u')
@@ -144,7 +156,7 @@ test('delete accounted X + insert Y during the compare: Y named when changedDuri
     lookupLive: async (ids) => ids.map((id) => byId.get(id)).filter((l): l is lops.LiveLine => !!l),
     countLive: async () => 1,
     changedDuringCompare: async () => true,
-    iterateLiveIds: async function * () { yield y._id }
+    iterateLiveIds: async function * () { yield { _id: y._id, _i: y._i } }
   }
   const found: lops.LineDivergence[] = []
   const comparer = lops.createLineComparer(io, { onDiverged: async (b) => { found.push(...b) } })
