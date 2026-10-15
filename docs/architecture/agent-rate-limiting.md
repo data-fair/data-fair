@@ -61,6 +61,11 @@ only a trusted forwarder may set it — or declare that there is none — on som
   worker's in-cluster call with an API key logs events too) and a relay deciding what to forward.
   It still throws on a value that is not an IP. One function answers "what is the client IP"; a
   call site says whether "none" is acceptable.
+- **`X-Forwarded-For` holds exactly one IP.** The edge proxy overwrites it, and the layers behind
+  it pass it on unchanged; `reqIp` throws on several entries, which mean a layer appended to it
+  (`$proxy_add_x_forwarded_for`) and that the first one is whatever the client chose. A layer that
+  passes the client's own header through untouched cannot be detected by a service: that is what
+  the production check below is for.
 - **The ingress** overwrites `X-Forwarded-For` with the client address and limits on it, except
   for a request carrying a valid *trusted forwarder* secret (`X-Trusted-Forwarder`):
   - with a single well-formed IP in `X-Forwarded-For`: that IP is the client, for nginx's limit
@@ -139,9 +144,9 @@ supported.
 
 Order: 1, then 2–5 released together; 6 and 7 after.
 
-**Check before 2 reaches production.** data-fair's limiter reads `X-Client-IP` today, which the
+**Check before 1 and 2 reach production** (a prerequisite of the lib-express release: simple-directory, agents and backup already use strict `reqIp`, and would refuse every request of an environment that sends several entries). data-fair's limiter reads `X-Client-IP` today, which the
 ingress sets to the client address: a client cannot choose it. From 2 on it reads the leftmost
 `X-Forwarded-For`, which a client can choose wherever a layer appends to the header instead of
 overwriting it (`$proxy_add_x_forwarded_for`, as the dev nginx does). simple-directory already
 relies on that entry, so it is likely fine, but confirm it per environment: a request sent with
-`X-Forwarded-For: 192.0.2.1` must reach the service with the client's real address leftmost.
+`X-Forwarded-For: 192.0.2.1` must reach the service with the client's real address, alone.
