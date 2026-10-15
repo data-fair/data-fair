@@ -895,7 +895,6 @@ fr:
   partHelp_index: "L'index de recherche est ce que lisent les utilisateurs du jeu de données. Le contrôle compare le nombre de lignes et un échantillon tiré au hasard à la source vérifiée : une altération massive est détectée, une altération isolée peut échapper à un contrôle donné. Un contrôle exhaustif peut être demandé aux administrateurs de la plateforme."
   partHelp_trail: "Vérifie que l'historique des révisions est bien celui écrit par la plateforme : aucune révision masquée, réécrite, antidatée ou manquante. Ce contrôle s'appuie sur les versions d'origine et les dates apposées par le fournisseur de stockage, que même un détenteur des accès à l'entrepôt ne peut falsifier."
   linesChecked: "{n} lignes contrôlées"
-  indexChecked: "{n} lignes comparées"
   trailAcked: anomalies acquittées (révision n°{i})
   sampleNote: "{shown} lignes affichées sur {total}"
   linesAnchoredHelp: Une ligne ancrée a au moins une révision scellée. Les lignes en attente le seront dès que la file d'historisation sera traitée ; d'ici là, les contrôles ne peuvent pas conclure.
@@ -1037,7 +1036,6 @@ en:
   partHelp_index: "The search index is what the dataset's users read. The check compares the line count and a randomly drawn sample with the verified source: mass tampering is detected, an isolated change may escape a given check. An exhaustive check can be requested from the platform administrators."
   partHelp_trail: "Verifies that the revision history is the one the platform wrote: no hidden, rewritten, backdated or missing revision. It relies on the original versions and on dates stamped by the storage provider, which even someone holding the store credentials cannot forge."
   linesChecked: "{n} lines checked"
-  indexChecked: "{n} lines compared"
   trailAcked: anomalies acknowledged (revision n°{i})
   sampleNote: "{shown} lines shown out of {total}"
   linesAnchoredHelp: An anchored line has at least one sealed revision. Pending lines will be once the historization queue is processed; until then, checks cannot conclude.
@@ -1207,11 +1205,12 @@ const staleVerdict = computed(() => {
   return Date.now() - new Date(lastCheck.date).getTime() > STALE_VERDICT_DAYS * 24 * 3600 * 1000
 })
 
-// the context shown beside a part's chip: how much the check covered, or an acknowledgement
+// the context shown beside a part's chip: how much the check covered, or an acknowledgement.
+// Nothing for the index: its `checked` counts window comparisons, and windows overlap on small
+// datasets, so it is not a number of distinct rows — the part's help explains the sampling instead
 const partDetail = (key: string): string | undefined => {
   const lastCheck = state.value?.lastCheck
   if (key === 'lines' && typeof lastCheck?.lines?.checked === 'number') return t('linesChecked', { n: lastCheck.lines.checked.toLocaleString(locale.value) })
-  if (key === 'index' && lastCheck?.index?.status === 'ok' && typeof lastCheck.index.checked === 'number') return t('indexChecked', { n: lastCheck.index.checked.toLocaleString(locale.value) })
   if (key === 'trail' && state.value?.trailAck) return t('trailAcked', { i: state.value.trailAck.i })
 }
 
