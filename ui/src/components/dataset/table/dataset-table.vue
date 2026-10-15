@@ -491,7 +491,7 @@
     fullscreen: Afficher en plein écran
     tableCaption: "Tableau de données : {title}"
     tableCaptionFallback: Tableau de données
-    keyboardHint: Utilisez les flèches pour passer d'une cellule à l'autre et Entrée pour atteindre les actions d'une cellule.
+    keyboardHint: Utilisez les flèches pour passer d'une cellule à l'autre et Entrée pour utiliser les actions d'une cellule.
     colTitles:
       _updatedBy: Mis à jour par
       _owner: Propriétaire de ligne
@@ -508,7 +508,7 @@
     fullscreen: Show fullscreen
     tableCaption: "Data table: {title}"
     tableCaptionFallback: Data table
-    keyboardHint: Use the arrow keys to move between cells and Enter to reach the actions of a cell.
+    keyboardHint: Use the arrow keys to move between cells and Enter to use the actions of a cell.
     colTitles:
       _updatedBy: Updated by
       _owner: Line owner
@@ -906,8 +906,9 @@ const onTableKeydown = (event: KeyboardEvent) => {
     const controls = cellControls(cell)
     if (!controls.length) return
     event.preventDefault()
-    // a header cell has a single control, its menu: open it directly
-    if (cell.tagName === 'TH') controls[0].click()
+    // Enter activates a single control directly (a header's menu, a value's filter button,
+    // a link); F2, or Enter on several controls, reaches them first (Tab cycles them)
+    if (event.key === 'Enter' && controls.length === 1) controls[0].click()
     else controls[0].focus()
     return
   }

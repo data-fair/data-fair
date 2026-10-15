@@ -159,7 +159,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       expect(await activeCell(page)).toMatchObject({ isCell: true, row: 2, col: 1 })
     })
 
-    test('Enter reaches the controls of a cell, Escape returns to the cell', async ({ page, goToWithAuth }) => {
+    test('Enter on a cell with a single control activates it', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
       await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
@@ -168,17 +168,18 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       const cell = page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`)
       await cell.focus()
 
-      // a focused cell shows the buttons a mouse hover shows
+      // a focused cell shows the buttons a mouse hover shows, its only one filters on Enter
       const filterButton = cell.getByRole('button', { name: /filtrer|filter/i })
       await expect(filterButton).toBeVisible()
-      await page.keyboard.press('Enter')
+      // F2 only reaches it
+      await page.keyboard.press('F2')
       await expect(filterButton).toBeFocused()
       await page.keyboard.press('Escape')
       await expect(cell).toBeFocused()
-
-      await page.keyboard.press('Enter')
       await page.keyboard.press('Enter')
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1)
+      // focus stays in the table, on the same cell
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: 1, col })
     })
 
     test('each chip of a multi-valued cell filters from the keyboard', async ({ page, goToWithAuth }) => {
@@ -195,9 +196,13 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(page.locator('.dataset-table tbody [tabindex="0"]')).toHaveCount(1)
       await cell.focus()
 
-      // Enter reaches the first chip, Tab the second one, Enter filters on the focused chip
+      // a cell with several controls: Enter reaches the first one, Escape returns to the cell,
+      // Tab goes to the next chip, Enter filters on the focused chip
       await page.keyboard.press('Enter')
       await expect(cell.locator('.v-chip').first()).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(cell).toBeFocused()
+      await page.keyboard.press('Enter')
       await page.keyboard.press('Tab')
       const second = cell.locator('.v-chip').nth(1)
       await expect(second).toBeFocused()
