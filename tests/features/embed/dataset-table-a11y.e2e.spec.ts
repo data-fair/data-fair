@@ -273,4 +273,86 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       expect((await activeCell(page)).isCell).toBe(true)
     })
   })
+
+  test.describe('column selector', () => {
+    const openSelector = async (page: any) => {
+      const button = page.getByRole('button', { name: /choisir les colonnes|chose visible columns/i })
+      await button.focus()
+      await page.keyboard.press('Enter')
+      const menu = page.getByRole('menu')
+      await expect(menu).toBeVisible()
+      return menu
+    }
+    const focused = (page: any) => page.evaluate(() => {
+      const a = document.activeElement as HTMLElement
+      return { role: a.getAttribute('role'), name: a.textContent?.trim(), checked: a.getAttribute('aria-checked'), outline: getComputedStyle(a).outlineStyle }
+    })
+
+    test('arrows move between the columns, Space toggles one, the focus is visible (7.3 / 10.7)', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      await openSelector(page)
+
+      await page.keyboard.press('ArrowDown')
+      const first = await focused(page)
+      expect(first).toMatchObject({ role: 'menuitemcheckbox', checked: 'false' })
+      expect(first.outline).not.toBe('none')
+      await page.keyboard.press('ArrowDown')
+      const second = await focused(page)
+      expect(second.role).toBe('menuitemcheckbox')
+      expect(second.name).not.toBe(first.name)
+
+      // checking columns shows only the checked ones
+      await page.keyboard.press('Space')
+      expect((await focused(page)).checked).toBe('true')
+      await expect(page.locator('.dataset-table thead th').filter({ hasText: second.name })).toHaveCount(1)
+      await expect(page.locator('.dataset-table thead th').filter({ hasText: first.name })).toHaveCount(0)
+      await page.keyboard.press('ArrowUp')
+      expect((await focused(page)).name).toBe(first.name)
+
+      // Escape closes the menu and gives the focus back to its button
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('menu')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /choisir les colonnes|chose visible columns/i })).toBeFocused()
+    })
+
+    test('a group folds and unfolds with the arrows, Space toggles all its columns', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', {
+        isRest: true,
+        title: 'keyboard-groups',
+        schema: [{ key: 'a', type: 'string', 'x-group': 'G' }, { key: 'b', type: 'string', 'x-group': 'G' }, { key: 'c', type: 'string' }]
+      })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ a: 'x', b: 'y', c: 'z' }])
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const menu = await openSelector(page)
+
+      await page.keyboard.press('ArrowDown')
+      expect(await focused(page)).toMatchObject({ name: 'G', checked: 'false' })
+      await expect(menu.getByRole('menuitemcheckbox', { name: 'a', exact: true })).toHaveCount(0)
+      await page.keyboard.press('ArrowRight')
+      await expect(menu.getByRole('menuitemcheckbox', { name: 'a', exact: true })).toBeVisible()
+      await page.keyboard.press('ArrowDown')
+      expect((await focused(page)).name).toBe('a')
+      // from a column of the group, ArrowLeft goes back to the group, then folds it
+      await page.keyboard.press('ArrowLeft')
+      expect((await focused(page)).name).toBe('G')
+      await page.keyboard.press('ArrowLeft')
+      await expect(menu.getByRole('menuitemcheckbox', { name: 'a', exact: true })).toHaveCount(0)
+
+      await page.keyboard.press('Space')
+      expect((await focused(page)).checked).toBe('true')
+      await expect(page.locator('.dataset-table thead th').filter({ hasText: /^c$/ })).toHaveCount(0)
+      await page.keyboard.press('ArrowRight')
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Space')
+      // one column of the group left: the group is partly checked
+      await page.keyboard.press('ArrowLeft')
+      expect((await focused(page)).checked).toBe('mixed')
+    })
+  })
 })
