@@ -1,5 +1,4 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
-import requestIp from 'request-ip'
 import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
@@ -9,7 +8,7 @@ import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type Resource, type BypassPermissions } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
 import type { SessionState } from '@data-fair/lib-express'
-import { reqSession } from '@data-fair/lib-express'
+import { reqSession, reqIp } from '@data-fair/lib-express'
 import { reqResource, setReqBypassPermissions } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
 import { can } from './permissions.ts'
@@ -245,7 +244,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
     // 3rd level of anti-spam protection, simple rate limiting based on ip
     if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
-      console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
+      console.warn('Rate limit error for application key', reqIp(req), req.originalUrl)
+      rateLimiting.setRetryAfter(res, rateLimiting.retryAfterMs(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat))
       return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
     }
   }
