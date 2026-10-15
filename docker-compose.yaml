@@ -252,6 +252,8 @@ services:
       - TRANSPORT=http
       - PORT=${MCP_PORT}
       - MAIN_SITE_URL=http://${DEV_HOST}:${NGINX_PORT1}
+      # sent as in production; the dev nginx has no request limiting and does not read it
+      - TRUSTED_FORWARDER=dev-trusted-forwarder
       - SSRF_PUBLIC_IPS=127.0.0.1,::1
       # tool and profile titles are shown to people (chat chips, the agent form's profile tree)
       - LOCALE=fr
