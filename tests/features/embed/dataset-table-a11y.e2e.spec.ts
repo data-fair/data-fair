@@ -214,6 +214,62 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await page.locator('[role="search"] input').first().focus()
       await page.keyboard.press('Tab')
       await expect(page.locator('.dataset-filters .v-chip').first()).toBeFocused()
+
+      // the filtered chip removes its filter the same way
+      const filteredCell = page.locator(`.dataset-table td[data-row="${await page.locator('.dataset-table tbody tr').filter({ hasText: 'rouge' }).locator('td').first().getAttribute('data-row')}"][data-col="${col}"]`)
+      await filteredCell.focus()
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Tab')
+      await expect(filteredCell.locator('.v-chip').nth(1)).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
+    })
+
+    test('a number filter keeps its formatted label, and the cell removes it the way it added it', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-numbers', schema: [{ key: 'n', type: 'integer' }] })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ n: 10000 }, { n: 20000 }, { n: 10000 }])
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'n')
+      const cellWith = async (text: RegExp) => page.locator(`.dataset-table td[data-row="${await page.locator('.dataset-table tbody tr').filter({ hasText: text }).first().locator('td').first().getAttribute('data-row')}"][data-col="${col}"]`)
+      const filterChip = page.locator('.dataset-filters .v-chip')
+
+      const cell = await cellWith(/10\s000/)
+      await cell.focus()
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
+      await expect(page).toHaveURL(/n_eq=10000/)
+      // the label stays formatted once the filter went through the URL
+      await expect(filterChip).toHaveText(/10\s000/)
+      await expect(filterChip).not.toHaveText(/10000/)
+
+      // the filtered value offers to remove the filter, not to add it again
+      const filtered = await cellWith(/10\s000/)
+      await filtered.focus()
+      await expect(filtered.getByRole('button', { name: /filtrer|filter the/i })).toHaveCount(0)
+      await expect(filtered.getByRole('button', { name: /retirer le filtre|remove the filter/i })).toBeVisible()
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
+      await expect(filterChip).toHaveCount(0)
+
+      // with the mouse: the pointer stays on the cell after the click, it offers the removal at once
+      const hoveredCell = await cellWith(/10\s000/)
+      await hoveredCell.hover()
+      await hoveredCell.getByRole('button', { name: /filtrer|filter the/i }).click()
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
+      await expect(page.locator('.dataset-table tbody td').filter({ hasText: /10\s000/ }).first().getByRole('button', { name: /retirer le filtre|remove the filter/i })).toBeVisible()
+      await page.locator('.dataset-table tbody td').filter({ hasText: /10\s000/ }).first().getByRole('button', { name: /retirer le filtre|remove the filter/i }).click()
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
+
+      // a filter read from the URL gets the same label and the same remove button
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?n_eq=10000`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
+      await expect(filterChip).toHaveText(/10\s000/)
+      const reloaded = await cellWith(/10\s000/)
+      await reloaded.focus()
+      await expect(reloaded.getByRole('button', { name: /retirer le filtre|remove the filter/i })).toBeVisible()
     })
 
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {

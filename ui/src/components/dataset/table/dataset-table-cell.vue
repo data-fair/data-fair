@@ -6,7 +6,7 @@
       height: lineHeight + 'px',
     }"
     @mouseenter="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
-    @focusin="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
+    @focusin="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue, true)"
     @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.synthetic">
@@ -86,7 +86,8 @@
       :property="header.property"
       :values="result.values[header.key] as ExtendedResultValue[]"
       @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw, formattedValue: v.formatted})"
-      @hoverstart="v => emit('hoverstart', result, v)"
+      @remove-filter="emit('removeFilter', filter)"
+      @hoverstart="(v, immediate) => emit('hoverstart', result, v, immediate)"
       @hoverstop="emit('hoverstop')"
     />
 
@@ -100,6 +101,7 @@
       :value="result.values[header.key] as ExtendedResultValue"
       :dense="dense"
       @filter="filterValue(result, header)"
+      @remove-filter="emit('removeFilter', filter)"
       @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
     />
   </td>
@@ -160,7 +162,9 @@ const syntheticCell = computed(() => props.header.synthetic?.render(props.result
 
 const emit = defineEmits<{
   filter: [filter: any],
-  hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
+  // immediate: on keyboard focus, the mouse hover waits a little (a sweep over many cells)
+  hoverstart: [result: ExtendedResult, value: ExtendedResultValue, immediate?: boolean],
+  removeFilter: [filter: DatasetFilter],
   hoverstop: [],
   showMapPreview: [],
   showDetailDialog: [value: ExtendedResultValue],

@@ -82,16 +82,16 @@
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-if="!noFilter && !filtered && extendedValue.filterable"
+        v-if="!noFilter && extendedValue.filterable"
         tabindex="-1"
-        :icon="mdiFilterVariant"
+        :icon="filtered ? mdiFilterRemove : mdiFilterVariant"
         :loading="filterLoading"
         :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
-        :title="t('filterValue')"
-        @click="emit('filter')"
+        :title="filtered ? t('removeFilter') : t('filterValue')"
+        @click="filtered ? emit('removeFilter') : emit('filter')"
       />
     </div>
   </div>
@@ -100,6 +100,7 @@
 <i18n lang="yaml">
 fr:
   filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
+  removeFilter: Retirer le filtre sur cette valeur
   showFullValue: Afficher la valeur entière
   download: "Télécharger {name} (nouvelle fenêtre)"
   dtSource: Source
@@ -107,6 +108,7 @@ fr:
   dtLocal: Votre fuseau
 en:
   filterValue: Filter the lines that have the same value in this column
+  removeFilter: Remove the filter on this value
   showFullValue: Show full value
   download: "Download {name} (new window)"
   dtSource: Source
@@ -118,7 +120,7 @@ en:
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResultValue } from '../../../composables/dataset/lines'
 import { dateTimeBreakdown } from '../../../composables/dataset/format-date-logic'
-import { mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
+import { mdiFilterRemove, mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({
   value: { type: Object as () => ExtendedResultValue, required: true },
@@ -132,6 +134,7 @@ const { value: extendedValue, property } = defineProps({
 
 const emit = defineEmits<{
   filter: [],
+  removeFilter: [],
   showDetailDialog: []
 }>()
 

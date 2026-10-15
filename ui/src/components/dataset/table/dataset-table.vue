@@ -250,6 +250,7 @@
                 @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
                 @filter="f => can('cells') && addFilter(f)"
+                @remove-filter="f => can('cells') && removeFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
                 @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -287,6 +288,7 @@
             @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
             @filter="f => can('cells') && addFilter(f)"
+            @remove-filter="f => can('cells') && removeFilter(f)"
             @edit="showEditDialog = item"
             @delete="showDeleteDialog = item"
             @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -665,7 +667,7 @@ const dataEntryContext = computed(() => {
   return lines.join(' ')
 })
 
-const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
+const { filters, addFilter, removeFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
 const filterHelpContext = computed(() => {
   const d = dataset.value
   if (!d) return ''
@@ -816,9 +818,11 @@ const onScrollItem = async (index: number) => {
 
 const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
-const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
+const hoverStart = (result: ExtendedResult, value: ExtendedResultValue, immediate = false) => {
   if (!can('cells')) return
-  _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
+  if (_hoverTimeout) clearTimeout(_hoverTimeout)
+  if (immediate) hovered.value = [result, value]
+  else _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {
@@ -838,6 +842,21 @@ const hoveredHeader = ref<TableHeader>()
 // to the page.
 const activeCell = ref<CellPosition>({ row: 1, col: 0 })
 const rowResults = computed(() => pagination ? paginatedResults.value : results.value)
+// new results (a filter added or removed from a cell) replace the hovered line object while
+// the focus or the pointer stays on the same cell, which then loses its buttons: show them
+// again, for the focused cell first
+watch(rowResults, async () => {
+  await nextTick()
+  const root = tableRoot.value?.$el as HTMLElement | undefined
+  if (!root) return
+  const active = document.activeElement as HTMLElement | null
+  if (active && active !== root && root.contains(active) && active.closest('[data-row]')) {
+    active.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    active.dispatchEvent(new FocusEvent('focus'))
+    return
+  }
+  root.querySelector('tbody td:hover')?.dispatchEvent(new MouseEvent('mouseenter'))
+})
 const gridBounds = computed<GridBounds>(() => ({
   rows: rowResults.value.length + 1,
   cols: headers.value?.length ?? 0,
