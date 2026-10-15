@@ -1146,31 +1146,42 @@ onUnmounted(stopLinesPoll)
 // Also resumes on load when another session left an action running.
 const { sendUiNotif } = useUiNotif()
 let runningTimer: ReturnType<typeof setTimeout> | undefined
+let unmounted = false
 const stopRunningPoll = () => {
-  if (runningTimer) {
-    clearTimeout(runningTimer)
-    runningTimer = undefined
-  }
+  if (runningTimer) clearTimeout(runningTimer)
+  runningTimer = undefined
 }
 const pollRunning = async () => {
-  if (!dataset.value) return
-  const fresh = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
-  if (fresh.running) {
-    if (state.value) state.value.running = fresh.running
+  runningTimer = undefined
+  if (unmounted) return
+  if (!dataset.value) return stopRunningPoll()
+  let fresh: IntegrityState | undefined
+  try {
+    fresh = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  } catch {
+    // transient error: keep polling, the marker is still set server-side as far as we know
+  }
+  if (unmounted) return
+  if (!fresh || fresh.running) {
+    if (fresh && state.value) state.value.running = fresh.running
     runningTimer = setTimeout(pollRunning, 3000)
     return
   }
-  stopRunningPoll()
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
 }
 const startRunningPoll = () => {
   stopRunningPoll()
   sendUiNotif({ type: 'info', msg: t('runningInBackground') })
+  // local marker so the progress chip shows at once; the first poll replaces it with the server's
+  if (state.value) state.value.running = { action: 'pending', startedAt: new Date().toISOString() }
   runningTimer = setTimeout(pollRunning, 3000)
 }
 watch(() => state.value?.running, (running) => { if (running && !runningTimer) runningTimer = setTimeout(pollRunning, 3000) }, { immediate: true })
-onUnmounted(stopRunningPoll)
+onUnmounted(() => {
+  unmounted = true
+  stopRunningPoll()
+})
 
 // A check that runs while a write is still being historized cannot conclude, and the checker
 // deliberately records NOTHING in that case (it returns a bare `{status:'unknown'}`, no date —
