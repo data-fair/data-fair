@@ -876,11 +876,11 @@ fixtures also feed the screenshots of the client-facing presentation
   put back the owner a tamper changed) is a possible later addition — the refusals are what keep the
   *stated* guarantee true until then.
 
-  A dataset **above the gate has no lines integrity at all** — the accepted coverage cliff of
-  skipping the fold (§10, §12): sensitive editable datasets are bet to be modest-cardinality
-  reference tables. Enrollment above the gate is likewise refused (`409`), so this cliff is never
-  silently entered either; only *growth past the gate after* enrollment continues anchoring, with a
-  loud `overGate` warning rather than silent partial protection.
+  The gate bounds **enrollment**, not checking: enabling integrity above it is refused (`409`) —
+  sensitive editable datasets are bet to be modest-cardinality reference tables. A dataset that
+  *grows past the gate after* enrollment keeps full coverage (anchoring, nightly check, renewal)
+  with a loud `overGate` warning that its checks and renewals now cost more than the gate was
+  sized for; nothing is silently dropped.
 
 - **ES index consistency verdict (A1, delivered).** The lines verdict above guards Mongo, the
   source of truth — but users read datasets through ES (`/lines`), and a direct write into the

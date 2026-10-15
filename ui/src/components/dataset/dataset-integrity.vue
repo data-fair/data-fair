@@ -1304,7 +1304,7 @@ const linesRestoreReason = ref('')
 const linesRestore = useAsyncAction(async () => {
   const body: any = {}
   if (linesRestoreReason.value) body.reason = linesRestoreReason.value
-  const res = await $fetch<NonNullable<IntegrityState['lastCheck']> & { status?: string }>(`datasets/${dataset.value!.id}/_integrity/lines/_restore`, { method: 'POST', body })
+  const res = await $fetch<NonNullable<IntegrityState['lastCheck']> | { status: 'running' }>(`datasets/${dataset.value!.id}/_integrity/lines/_restore`, { method: 'POST', body })
   linesRestoreDialog.value = false
   linesRestoreReason.value = ''
   if (res.status === 'running') { startRunningPoll(); return res }
