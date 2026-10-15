@@ -31,6 +31,7 @@ import { resetPurgeWatermark } from './purge.ts'
 import { sha256OfStorageFile, md5Tee } from './hash.ts'
 
 const LINE_IO_CONCURRENCY = 100
+const LINE_REPAIR_CHUNK = 1000
 
 export const ATTACHMENT_CONCEPT = 'http://schema.org/DigitalDocument'
 export const hasAttachmentField = (dataset: DatasetInternal): boolean =>
@@ -206,23 +207,6 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
   await historizeLines(fresh as unknown as RestDataset)
 }
 
-// replaced in Task 5: collects the streamed divergences back into the old whole-set shape
-const compareLinesCollected = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>) => {
-  const edited: string[] = []
-  const inserted: string[] = []
-  const missing: string[] = []
-  const anchors = new Map<string, { key: string, i: number }>()
-  await compareDatasetLines(dataset, store, async (batch) => {
-    for (const d of batch) {
-      if (d.kind === 'edited') edited.push(d.lineId)
-      else if (d.kind === 'inserted') inserted.push(d.lineId)
-      else missing.push(d.lineId)
-      if (d.anchor) anchors.set(d.lineId, d.anchor)
-    }
-  })
-  return { edited, inserted, missing, anchors }
-}
-
 export const fixIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason, who))
 
@@ -238,63 +222,73 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, w
   if (isRestDataset(dataset)) {
     const store = integrityStore()
     await historizeLines(dataset)
-    const compare = await compareLinesCollected(dataset, store)
     const hint: HistorizeContextHint = { operation: 'fixIntegrity', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }
-    // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
-    // re-writing it through the standard transaction pipeline (the same mechanism
-    // lines/_restore uses) rather than anchoring directly at the line's current `_i`.
-    // A direct anchor there is nondeterministic/broken: an equal-`_i` tie against the still-live
-    // stale anchor can lose (latestLineAnchors keeps the lexically-first key on a tie between
-    // the old and new sha at the same i), an `_i`-rewind tamper can never outrank the stale
-    // anchor, and an out-of-band-inserted line can be shadowed by a higher-i tombstone. The
-    // pipeline always mints a fresh `_i` strictly greater than any prior anchor's, so the
-    // blessed anchor deterministically becomes latest.
-    const blessIds = [...compare.edited, ...compare.inserted]
-    if (blessIds.length) {
-      const liveLines = await restUtils.collection(dataset).find({ _id: { $in: blessIds } }).toArray()
-      const excluded = lops.extensionOwnedKeys(dataset.extensions)
-      const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line, excluded) }))
-      await rewriteLinesThroughPipeline(dataset, transacs, hint)
-    }
-    // tombstone revisions for vanished lines: continue each sequence past its stale anchor
+    const excluded = lops.extensionOwnedKeys(dataset.extensions)
     const retainUntil = retentionWindow()
-    for (let offset = 0; offset < compare.missing.length; offset += LINE_IO_CONCURRENCY) {
-      await Promise.all(compare.missing.slice(offset, offset + LINE_IO_CONCURRENCY).map((lineId) => {
-        const anchor = compare.anchors.get(lineId)!
-        return anchorLine(dataset, { _id: lineId, _i: anchor.i + 1, _deleted: true }, store, retainUntil, hint)
-      }))
+    // collected, then applied: mutating lines mid-stream would make a restored line read as an
+    // out-of-band insert. Memory is O(diverged lines), large only under mass tampering.
+    const divergences: lops.LineDivergence[] = []
+    await compareDatasetLines(dataset, store, async (batch) => { divergences.push(...batch) })
+    for (let start = 0; start < divergences.length; start += LINE_REPAIR_CHUNK) {
+      const batch = divergences.slice(start, start + LINE_REPAIR_CHUNK)
+      // edited + inserted lines: bless the CURRENT content as the new legitimate truth by
+      // re-writing it through the standard transaction pipeline (the same mechanism
+      // lines/_restore uses) rather than anchoring directly at the line's current `_i`.
+      // A direct anchor there is nondeterministic/broken: an equal-`_i` tie against the still-live
+      // stale anchor can lose (the latest-anchor tie-break is strict >, lexically-first key wins,
+      // between the old and new sha at the same i), an `_i`-rewind tamper can never outrank the
+      // stale anchor, and an out-of-band-inserted line can be shadowed by a higher-i tombstone.
+      // The pipeline always mints a fresh `_i` strictly greater than any prior anchor's, so the
+      // blessed anchor deterministically becomes latest.
+      const blessIds = batch.filter((d) => d.kind !== 'missing').map((d) => d.lineId)
+      if (blessIds.length) {
+        const liveLines = await restUtils.collection(dataset).find({ _id: { $in: blessIds } }).toArray()
+        const transacs = liveLines.map((line) => ({ _action: 'createOrUpdate' as const, _id: line._id, ...lops.cleanedLineBody(line, excluded) }))
+        await rewriteLinesThroughPipeline(dataset, transacs, hint)
+      }
+      // tombstone revisions for vanished lines: continue each sequence past its stale anchor
+      const missing = batch.filter((d) => d.kind === 'missing' && d.anchor)
+      for (let offset = 0; offset < missing.length; offset += LINE_IO_CONCURRENCY) {
+        await Promise.all(missing.slice(offset, offset + LINE_IO_CONCURRENCY).map((d) =>
+          anchorLine(dataset, { _id: d.lineId, _i: d.anchor!.i + 1, _deleted: true }, store, retainUntil, hint)))
+      }
     }
     // Adversarial _i inflation (§S4): the bless above mints a time-derived _i — a forged anchor
     // index above any clock-derived value can therefore never be outranked by it, wedging the
     // remediation (the fresh anchor never becomes latest). Detect the non-convergent shape
     // (still 'edited' with live _i below the anchor index) and correct the line's _i explicitly
     // past the stale anchor — stamped and reindexed in the same single-document write — then
-    // drain again so the final verdict below proves convergence.
-    const recompare = await compareLinesCollected(dataset, store)
-    const stillEdited = recompare.edited.length
-      ? await restUtils.collection(dataset).find({ _id: { $in: recompare.edited } }).toArray()
-      : []
+    // drain again so the final verdict below proves convergence. Collected, then applied (see above).
+    const wedged: lops.LineDivergence[] = []
+    await compareDatasetLines(dataset, store, async (batch) => {
+      for (const d of batch) if (d.kind === 'edited' && d.anchor) wedged.push(d)
+    })
     let corrected = false
-    for (const line of stillEdited) {
-      const anchor = recompare.anchors.get(line._id)
-      if (!anchor || (line._i ?? 0) >= anchor.i) continue // not the wedge shape
-      let targetI = anchor.i + 1
-      if (!lops.lineIndexInRange(targetI)) continue // unfixable without corrupting the key layout — stays a breach, loudly
-      if (!corrected) {
-        // hint FIRST (outbox ordering), like every lines writer
-        await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
-        corrected = true
-      }
-      while (true) {
-        try {
-          await restUtils.collection(dataset).updateOne(
-            { _id: line._id },
-            { $set: { _i: targetI, _hash: null, _needsIndexing: true, _needsHistorizing: { context: hint } } }
-          )
-          break
-        } catch (err: any) {
-          if (err.code === 11000 && lops.lineIndexInRange(targetI + 1)) { targetI++; continue } // another line holds this _i
-          throw err
+    for (let start = 0; start < wedged.length; start += LINE_REPAIR_CHUNK) {
+      const edited = wedged.slice(start, start + LINE_REPAIR_CHUNK)
+      const anchorI = new Map(edited.map((d) => [d.lineId, d.anchor!.i]))
+      const stillEdited = await restUtils.collection(dataset).find({ _id: { $in: [...anchorI.keys()] } }).toArray()
+      for (const line of stillEdited) {
+        const staleI = anchorI.get(line._id)!
+        if ((line._i ?? 0) >= staleI) continue // not the wedge shape
+        let targetI = staleI + 1
+        if (!lops.lineIndexInRange(targetI)) continue // unfixable without corrupting the key layout — stays a breach, loudly
+        if (!corrected) {
+          // hint FIRST (outbox ordering), like every lines writer
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _needsHistorizingLines: true } })
+          corrected = true
+        }
+        while (true) {
+          try {
+            await restUtils.collection(dataset).updateOne(
+              { _id: line._id },
+              { $set: { _i: targetI, _hash: null, _needsIndexing: true, _needsHistorizing: { context: hint } } }
+            )
+            break
+          } catch (err: any) {
+            if (err.code === 11000 && lops.lineIndexInRange(targetI + 1)) { targetI++; continue } // another line holds this _i
+            throw err
+          }
         }
       }
     }
@@ -343,23 +337,27 @@ const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, w
   const store = integrityStore()
   // drain any pending organic stamps first so the comparison sees anchored truth
   await historizeLines(dataset)
-  const compare = await compareLinesCollected(dataset, store)
-  const transacs: any[] = []
-  // edited lines and out-of-band-deleted lines: rewrite from the latest revision's payload
-  const fetchIds = [...compare.edited, ...compare.missing]
-  for (let offset = 0; offset < fetchIds.length; offset += LINE_IO_CONCURRENCY) {
-    await Promise.all(fetchIds.slice(offset, offset + LINE_IO_CONCURRENCY).map(async (lineId) => {
-      const anchor = compare.anchors.get(lineId)!
-      const rev: any = await store.getRevision(anchor.key)
-      if (!rev.payload) return // defensive: tombstone anchors are never in edited/missing
-      transacs.push({ _action: 'createOrUpdate', _id: lineId, ...rev.payload })
-    }))
+  const hint: HistorizeContextHint = { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) }
+  // collected, then applied: mutating lines mid-stream would make a restored line read as an
+  // out-of-band insert (and be deleted again). Memory is O(diverged lines).
+  const divergences: lops.LineDivergence[] = []
+  await compareDatasetLines(dataset, store, async (batch) => { divergences.push(...batch) })
+  for (let start = 0; start < divergences.length; start += LINE_REPAIR_CHUNK) {
+    const batch = divergences.slice(start, start + LINE_REPAIR_CHUNK)
+    const transacs: any[] = []
+    // edited lines and out-of-band-deleted lines: rewrite from the latest revision's payload
+    const fetch = batch.filter((d) => (d.kind === 'edited' || d.kind === 'missing') && d.anchor)
+    for (let offset = 0; offset < fetch.length; offset += LINE_IO_CONCURRENCY) {
+      await Promise.all(fetch.slice(offset, offset + LINE_IO_CONCURRENCY).map(async (d) => {
+        const rev: any = await store.getRevision(d.anchor!.key)
+        if (!rev.payload) return // defensive: tombstone anchors are never in edited/missing
+        transacs.push({ _action: 'createOrUpdate', _id: d.lineId, ...rev.payload })
+      }))
+    }
+    // out-of-band-inserted lines have no verified state: restoring means deleting them
+    for (const d of batch) if (d.kind === 'inserted') transacs.push({ _action: 'delete', _id: d.lineId })
+    await rewriteLinesThroughPipeline(dataset, transacs, hint)
   }
-  // out-of-band-inserted lines have no verified state: restoring means deleting them
-  for (const lineId of compare.inserted) {
-    transacs.push({ _action: 'delete', _id: lineId })
-  }
-  await rewriteLinesThroughPipeline(dataset, transacs, { operation: 'restore', origin: 'superadmin', ...(reason ? { reason } : {}), ...(who ? { who } : {}) })
   const freshAfter = await mongo.datasets.findOne({ id: dataset.id })
   return await checkDataset(freshAfter as unknown as DatasetInternal)
 }
