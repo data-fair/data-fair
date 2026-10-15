@@ -75,6 +75,10 @@ module.exports = {
       __name: 'INTEGRITY_LOCK_WAIT_MS',
       __format: 'json'
     },
+    adminSyncBudgetMs: {
+      __name: 'INTEGRITY_ADMIN_SYNC_BUDGET_MS',
+      __format: 'json'
+    },
     trail: {
       dateSkewHours: {
         __name: 'INTEGRITY_TRAIL_DATE_SKEW_HOURS',

@@ -1,6 +1,6 @@
 // Thin adapters for the integrity admin API (conventions §1): input extraction + service calls
 // + response streaming only — the orchestration lives in api/src/integrity/service.ts.
-import { type Router, type Request } from 'express'
+import { type Router, type Request, type Response } from 'express'
 import contentDisposition from 'content-disposition'
 import { reqAdminMode, reqSessionAuthenticated } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -25,6 +25,11 @@ const reqPagination = (req: Request): { page: number, size: number } => ({
   page: parseInt(String(req.query.page ?? '1'), 10) || 1
 })
 
+// 202 when the action outlived its budget and finishes in the background (design 2026-10-15 §4)
+const sendAdminResult = (res: Response, result: any) => {
+  res.status(result?.status === 'running' ? 202 : 200).json(result)
+}
+
 export const registerIntegrityRoutes = (router: Router) => {
   router.put('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
@@ -41,19 +46,22 @@ export const registerIntegrityRoutes = (router: Router) => {
 
   router.post('/:datasetId/_integrity/_fix', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.fixIntegrity(reqDataset(req), reqReason(req), whoFromReq(req)))
+    const dataset = reqDataset(req)
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'fix', () => integrityService.fixIntegrity(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/_restore', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const i = req.body?.i
     if (!Number.isInteger(i) || i < 0) throw httpError(400, 'missing or invalid revision index "i"')
-    res.json(await integrityService.restoreRevision(req.app, reqDataset(req), i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req)))
+    const dataset = reqDataset(req)
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'restore', () => integrityService.restoreRevision(req.app, dataset, i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/lines/_restore', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.restoreLines(reqDataset(req), reqReason(req), whoFromReq(req)))
+    const dataset = reqDataset(req)
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'lines-restore', () => integrityService.restoreLines(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/index/_reindex', readDataset({ noCache: true }), async (req, res) => {
@@ -63,7 +71,8 @@ export const registerIntegrityRoutes = (router: Router) => {
 
   router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
-    res.json(await integrityService.ackTrailAnomalies(reqDataset(req), reqReason(req), whoFromReq(req)))
+    const dataset = reqDataset(req)
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'ack', () => integrityService.ackTrailAnomalies(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
@@ -86,7 +95,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     // body.seed (superadmin-only route) pins the sampled windows for deterministic tests;
     // nightly runs never pass one — the engine draws a fresh crypto-random seed per run
     const seed = typeof req.body?.seed === 'string' ? req.body.seed : undefined
-    res.json(await integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true', seed })))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'check', () => integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true', seed }))))
   })
 
   router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {

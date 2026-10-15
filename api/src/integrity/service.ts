@@ -7,6 +7,7 @@ import mime from 'mime-types'
 import clone from '@data-fair/lib-utils/clone.js'
 import locks from '@data-fair/lib-node/locks.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
@@ -81,6 +82,28 @@ export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>
   } finally {
     await locks.release(lockKey)
   }
+}
+
+export type AdminAction = 'check' | 'fix' | 'restore' | 'lines-restore' | 'ack'
+
+// Time budget for synchronous admin actions (design 2026-10-15 §4). The work is started exactly as
+// before (it acquires the dataset lock itself, so a busy 409 still surfaces within the budget);
+// past the budget the route answers {status:'running'} and the work finishes in THIS process.
+// Deliberately not a worker task triggered by a Mongo flag: a Mongo-writing adversary could set
+// that flag and have a worker bless their own tampering. `integrity.running` is display-only.
+export const withAdminBudget = async <T>(datasetId: string, action: AdminAction, work: () => Promise<T>): Promise<T | { status: 'running' }> => {
+  const running = work()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const budget = new Promise<'timeout'>((resolve) => { timer = setTimeout(() => resolve('timeout'), config.integrity?.adminSyncBudgetMs ?? 20000) })
+  const first = await Promise.race([running, budget]).finally(() => clearTimeout(timer))
+  if (first !== 'timeout') return first as T
+  await mongo.datasets.updateOne({ id: datasetId }, { $set: { 'integrity.running': { action, startedAt: new Date().toISOString() } } })
+  // attached after the $set: if the work already settled, this cleanup still runs after it
+  running
+    .catch((err) => internalError('integrity-admin-background', err))
+    .finally(() => mongo.datasets.updateOne({ id: datasetId }, { $unset: { 'integrity.running': '' } })
+      .catch((err) => internalError('integrity-admin-background', err)))
+  return { status: 'running' }
 }
 
 export const enableIntegrity = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> =>
@@ -182,6 +205,12 @@ export const getIntegrityState = async (dataset: DatasetInternal): Promise<Recor
       c.countDocuments({ _needsHistorizing: { $exists: true }, _deleted: { $ne: true } }) // live lines only — tombstones pending their deletion revision would make anchored undercount
     ])
     integrity.lines = { anchored: Math.max(0, total - pending), pending, ...(total > maxLines ? { overGate: true } : {}) }
+  }
+  // display-only marker: real only while the dataset lock is held (a pod that died mid-action
+  // releases its lock by TTL but never reaches the $unset) — drop it otherwise
+  if (integrity.running && !(await locks.collection.findOne({ _id: `datasets:${dataset.id}` } as any))) {
+    delete integrity.running
+    await mongo.datasets.updateOne({ id: dataset.id }, { $unset: { 'integrity.running': '' } })
   }
   return integrity
 }
