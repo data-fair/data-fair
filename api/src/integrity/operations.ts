@@ -214,39 +214,53 @@ export type TrailAnomaly = {
   versionIds?: string[]
 }
 
-export type CurrentViewEntry = { key: string, versionId?: string, lastModified?: Date }
+export type CurrentViewEntry = { key: string, versionId?: string, lastModified?: Date, clean: boolean }
 
 export type TrailFoldAcc = {
   current: Map<string, CurrentViewEntry>
   anomalies: TrailAnomaly[]
+  // when set, anomalies stream to this sink instead of accumulating (bounded memory, see
+  // newAnomalyCollector)
+  onAnomaly?: (anomaly: TrailAnomaly) => void
   pendingKey?: string
   pendingEntries: TrailVersionEntry[]
 }
 
-export const newTrailFold = (): TrailFoldAcc => ({ current: new Map(), anomalies: [], pendingEntries: [] })
+export const newTrailFold = (onAnomaly?: (anomaly: TrailAnomaly) => void): TrailFoldAcc =>
+  ({ current: new Map(), anomalies: [], pendingEntries: [], onAnomaly })
+
+const pushAnomaly = (acc: TrailFoldAcc, anomaly: TrailAnomaly): void => {
+  if (acc.onAnomaly) acc.onAnomaly(anomaly)
+  else acc.anomalies.push(anomaly)
+}
 
 const flushTrailKey = (acc: TrailFoldAcc): void => {
   if (!acc.pendingKey || !acc.pendingEntries.length) return
   const key = acc.pendingKey
   const markers = acc.pendingEntries.filter((e) => e.deleteMarker)
   const versions = acc.pendingEntries.filter((e) => !e.deleteMarker)
+  let clean = true
   if (markers.length) {
     // no code path of ours issues a versionless DELETE: a marker is attacker-made by definition
-    acc.anomalies.push({ kind: 'delete-marker', key, confidence: 'confirmed', versionIds: markers.map((m) => m.versionId ?? '') })
+    pushAnomaly(acc, { kind: 'delete-marker', key, confidence: 'confirmed', versionIds: markers.map((m) => m.versionId ?? '') })
+    clean = false
   }
   if (versions.length) {
-    // versions arrive newest-first within a key (S3 order, preserved by the store's stable page
-    // sort): the first one is the current view — resurfaced even when a marker hides it
-    acc.current.set(key, { key, versionId: versions[0].versionId, lastModified: versions[0].lastModified })
     if (versions.length > 1) {
       // legitimate multiplicity (crash-retry re-PUTs) is byte-identical: same size, same
       // md5-based ETag (single PUT, or multipart with fixed deterministic chunking). Anything
       // else is a same-key rewrite — the shadowing attack.
       const shapes = new Set(versions.map((e) => `${e.size ?? ''}|${e.etag ?? ''}`))
       if (shapes.size > 1) {
-        acc.anomalies.push({ kind: 'version-divergence', key, confidence: 'confirmed', versionIds: versions.map((e) => e.versionId ?? '') })
+        pushAnomaly(acc, { kind: 'version-divergence', key, confidence: 'confirmed', versionIds: versions.map((e) => e.versionId ?? '') })
+        clean = false
       }
     }
+    // versions arrive newest-first within a key (S3 order, preserved by the store's stable page
+    // sort): the first one is the current view — resurfaced even when a marker hides it. `clean`
+    // lets per-key consumers (lines renewal) refuse to act on a tampered key without holding the
+    // anomaly list.
+    acc.current.set(key, { key, versionId: versions[0].versionId, lastModified: versions[0].lastModified, clean })
   }
   acc.pendingEntries = []
 }
@@ -299,9 +313,31 @@ export const dateSkewAnomaly = (key: string, contextDate: string, lastModified: 
 export const anomalyFingerprint = (anomaly: TrailAnomaly): string =>
   `${anomaly.kind}:${anomaly.key}:${[...(anomaly.versionIds ?? [])].sort().join(',')}`
 
-export const filterAckedAnomalies = (anomalies: TrailAnomaly[], ackedFingerprints: string[]): TrailAnomaly[] => {
+// Ack filtering happens AS anomalies are produced, BEFORE the cap: capping first would let acked
+// anomalies fill the cap and push an unacked one out — a false 'ok' trail verdict. `total`
+// counts every unacked anomaly, `kept` holds at most `cap` of them (what gets persisted).
+export type AnomalyCollector = { push: (anomaly: TrailAnomaly) => void, kept: TrailAnomaly[], total: () => number }
+
+export const newAnomalyCollector = (ackedFingerprints: string[], cap: number): AnomalyCollector => {
   const acked = new Set(ackedFingerprints)
-  return anomalies.filter((a) => !acked.has(anomalyFingerprint(a)))
+  const kept: TrailAnomaly[] = []
+  let total = 0
+  return {
+    kept,
+    total: () => total,
+    push: (anomaly) => {
+      if (acked.has(anomalyFingerprint(anomaly))) return
+      total++
+      if (kept.length < cap) kept.push(anomaly)
+    }
+  }
+}
+
+// removed in Task 4 (checker switches to newAnomalyCollector)
+export const filterAckedAnomalies = (anomalies: TrailAnomaly[], ackedFingerprints: string[]): TrailAnomaly[] => {
+  const c = newAnomalyCollector(ackedFingerprints, Infinity)
+  for (const a of anomalies) c.push(a)
+  return c.kept
 }
 
 // Persistent-state re-alert gate (round 3 §S3): alert on entry into a bad state, then re-alert
