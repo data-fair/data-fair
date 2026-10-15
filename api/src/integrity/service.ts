@@ -243,9 +243,17 @@ const disableIntegrityUnlocked = async (dataset: DatasetInternal, reason?: strin
 
 export const getIntegrityState = async (dataset: DatasetInternal): Promise<Record<string, any>> => {
   const integrity: Record<string, any> = { ...(dataset.integrity ?? { active: false }) }
+  const maxLines = config.integrity?.lines?.maxLines ?? 100000
+  // the deployment's integrity policy, so the panel's help states the real windows rather than
+  // the defaults (also when inactive: the enable help quotes them before anything is sealed)
+  integrity.policy = {
+    retentionDays: config.integrity?.retention?.days ?? 365,
+    ...(config.integrity?.attribution?.active !== false ? { attributionRetentionDays: config.integrity?.attribution?.retentionDays ?? 180 } : {}),
+    maxLines,
+    maxUnknownDays: config.integrity?.maxUnknownDays ?? 7
+  }
   if (integrity.active && isRestDataset(dataset)) {
     const c = restUtils.collection(dataset)
-    const maxLines = config.integrity?.lines?.maxLines ?? 100000
     const [total, pending] = await Promise.all([
       restUtils.count(dataset, { _deleted: { $ne: true } }),
       c.countDocuments({ _needsHistorizing: { $exists: true }, _deleted: { $ne: true } }) // live lines only — tombstones pending their deletion revision would make anchored undercount

@@ -174,6 +174,8 @@ test('enable on a REST dataset backfills every live line and GET reports progres
   const integrity = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(integrity.active).toBe(true)
   expect(integrity.lines).toMatchObject({ anchored: 2, pending: 0 })
+  // the deployment's windows, quoted by the panel's help (dev config: 2 days / 1 day)
+  expect(integrity.policy).toEqual({ retentionDays: 2, attributionRetentionDays: 1, maxLines: 100000, maxUnknownDays: 7 })
   const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   const keys = (await integrityTestStore.listRevisions(`data-fair/${raw.owner.type}-${raw.owner.id}/${dataset.id}/lines/`)).map(r => r.key)
   // the enabling admin's session attributes the backfill (T4): each anchor also gets a `.who`
