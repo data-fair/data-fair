@@ -790,6 +790,8 @@ fr:
   refresh: Rafraîchir
   running: Action en cours
   runningInBackground: L'action continue en arrière-plan sur ce jeu volumineux, l'état se mettra à jour à la fin.
+  runningDone: "L'action en arrière-plan est terminée, l'état est à jour."
+  runningEndedNoVerdict: "L'action en arrière-plan s'est terminée sans nouveau verdict. Consultez les journaux du serveur ou relancez-la."
   refreshHelp: Relit l'état d'intégrité et l'historique des révisions.
   fix: Réconcilier
   fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
@@ -901,6 +903,8 @@ en:
   refresh: Refresh
   running: Action in progress
   runningInBackground: The action continues in the background on this large dataset, the status will update when it ends.
+  runningDone: "The background action has completed, the status is up to date."
+  runningEndedNoVerdict: "The background action ended without a fresh verdict. Check the server logs or retry it."
   refreshHelp: Re-reads the integrity status and the revision history.
   fix: Reconcile
   fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
@@ -1147,6 +1151,9 @@ onUnmounted(stopLinesPoll)
 const { sendUiNotif } = useUiNotif()
 let runningTimer: ReturnType<typeof setTimeout> | undefined
 let unmounted = false
+// lastCheck.date when this session's action went to the background (undefined: not tracking, e.g.
+// a poll resumed on load for another session's action)
+let runningBaseline: { lastCheckDate?: string } | undefined
 const stopRunningPoll = () => {
   if (runningTimer) clearTimeout(runningTimer)
   runningTimer = undefined
@@ -1169,9 +1176,19 @@ const pollRunning = async () => {
   }
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+  // an action this session started: every one of them ends with a check, so a lastCheck.date
+  // that did not advance means it failed in the background (the server only logs it)
+  if (runningBaseline) {
+    const before = runningBaseline.lastCheckDate
+    runningBaseline = undefined
+    const after = state.value?.lastCheck?.date
+    const advanced = !!after && (!before || after > before)
+    sendUiNotif(advanced ? { type: 'success', msg: t('runningDone') } : { type: 'warning', msg: t('runningEndedNoVerdict') })
+  }
 }
 const startRunningPoll = () => {
   stopRunningPoll()
+  runningBaseline = { lastCheckDate: state.value?.lastCheck?.date }
   sendUiNotif({ type: 'info', msg: t('runningInBackground') })
   // local marker so the progress chip shows at once; the first poll replaces it with the server's
   if (state.value) state.value.running = { action: 'pending', startedAt: new Date().toISOString() }
