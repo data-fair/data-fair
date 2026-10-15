@@ -47,7 +47,7 @@ export const registerIntegrityRoutes = (router: Router) => {
   router.post('/:datasetId/_integrity/_fix', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const dataset = reqDataset(req)
-    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'fix', () => integrityService.fixIntegrity(dataset, reqReason(req), whoFromReq(req))))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'fix', () => integrityService.fixIntegrityUnlocked(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/_restore', readDataset({ noCache: true }), async (req, res) => {
@@ -55,13 +55,13 @@ export const registerIntegrityRoutes = (router: Router) => {
     const i = req.body?.i
     if (!Number.isInteger(i) || i < 0) throw httpError(400, 'missing or invalid revision index "i"')
     const dataset = reqDataset(req)
-    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'restore', () => integrityService.restoreRevision(req.app, dataset, i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req))))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'restore', () => integrityService.restoreRevisionUnlocked(req.app, dataset, i, reqReason(req), reqSessionAuthenticated(req), req.getLocale(), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/lines/_restore', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const dataset = reqDataset(req)
-    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'lines-restore', () => integrityService.restoreLines(dataset, reqReason(req), whoFromReq(req))))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'lines-restore', () => integrityService.restoreLinesUnlocked(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.post('/:datasetId/_integrity/index/_reindex', readDataset({ noCache: true }), async (req, res) => {
@@ -72,7 +72,7 @@ export const registerIntegrityRoutes = (router: Router) => {
   router.post('/:datasetId/_integrity/trail/_ack', readDataset({ noCache: true }), async (req, res) => {
     reqAdminMode(req)
     const dataset = reqDataset(req)
-    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'ack', () => integrityService.ackTrailAnomalies(dataset, reqReason(req), whoFromReq(req))))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'ack', () => integrityService.ackTrailAnomaliesUnlocked(dataset, reqReason(req), whoFromReq(req))))
   })
 
   router.get('/:datasetId/_integrity/lines/:lineId/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
@@ -95,7 +95,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     // body.seed (superadmin-only route) pins the sampled windows for deterministic tests;
     // nightly runs never pass one — the engine draws a fresh crypto-random seed per run
     const seed = typeof req.body?.seed === 'string' ? req.body.seed : undefined
-    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'check', () => integrityService.withDatasetLock(dataset.id, () => checkDataset(dataset, { deep: req.query.deep === 'true', seed }))))
+    sendAdminResult(res, await integrityService.withAdminBudget(dataset.id, 'check', () => checkDataset(dataset, { deep: req.query.deep === 'true', seed })))
   })
 
   router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {

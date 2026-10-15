@@ -360,6 +360,12 @@ export const stop = async () => {
     }
   }
 
+  // bounded wait for integrity admin actions finishing in the background (202 running): a rolling
+  // deploy otherwise deletes the dataset lock (locks.stop) under a running repair
+  if (config.mode.includes('server') && config.integrity?.active) {
+    await (await import('./integrity/service.ts')).drainAdminBackgroundWork(60000)
+  }
+
   await locks.stop()
 
   if (config.observer.active) {

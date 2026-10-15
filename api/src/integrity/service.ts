@@ -70,13 +70,18 @@ const requireActive = (dataset: DatasetInternal): void => {
 // trail loss). Bounded wait then 409: admin actions are rare, a busy dataset answers quickly
 // rather than queueing.
 const LOCK_RETRY_MS = 250
-export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>): Promise<T> => {
+const acquireDatasetLock = async (datasetId: string): Promise<string> => {
   const lockKey = `datasets:${datasetId}`
   const deadline = Date.now() + (config.integrity?.lockWaitMs ?? 10000)
   while (!(await locks.acquire(lockKey, 'integrity-admin'))) {
     if (Date.now() >= deadline) throw httpError(409, 'dataset is busy (a background task is processing it), retry later')
     await sleep(LOCK_RETRY_MS)
   }
+  return lockKey
+}
+
+export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>): Promise<T> => {
+  const lockKey = await acquireDatasetLock(datasetId)
   try {
     return await fn()
   } finally {
@@ -86,24 +91,65 @@ export const withDatasetLock = async <T>(datasetId: string, fn: () => Promise<T>
 
 export type AdminAction = 'check' | 'fix' | 'restore' | 'lines-restore' | 'ack'
 
-// Time budget for synchronous admin actions (design 2026-10-15 §4). The work is started exactly as
-// before (it acquires the dataset lock itself, so a busy 409 still surfaces within the budget);
-// past the budget the route answers {status:'running'} and the work finishes in THIS process.
-// Deliberately not a worker task triggered by a Mongo flag: a Mongo-writing adversary could set
-// that flag and have a worker bless their own tampering. `integrity.running` is display-only.
+// admin actions that outlived their budget and are finishing in this process (see withAdminBudget)
+const backgroundWork = new Set<Promise<void>>()
+
+// Expected client errors (4xx: "no trail anomalies to acknowledge", a refused restore...) are an
+// outcome of the action, not a server fault: logged, not reported as internal errors.
+const logBackgroundError = (action: AdminAction, datasetId: string, err: any) => {
+  if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
+    console.warn(`integrity admin action ${action} on dataset ${datasetId} ended with ${err.status}: ${err.message}`)
+  } else {
+    internalError('integrity-admin-background', err)
+  }
+}
+
+// Time budget for synchronous admin actions (design 2026-10-15 §4). The dataset lock is acquired
+// FIRST (same bounded wait / 409 as withDatasetLock) and only then does the budget start: a busy
+// dataset answers 409, never a 202 masking a wait. Past the budget the route answers
+// {status:'running'} and the work finishes in THIS process, still holding the lock (released when
+// it settles). `work` must therefore be an UNLOCKED variant. Deliberately not a worker task
+// triggered by a Mongo flag: a Mongo-writing adversary could set that flag and have a worker
+// bless their own tampering. `integrity.running` is display-only.
 export const withAdminBudget = async <T>(datasetId: string, action: AdminAction, work: () => Promise<T>): Promise<T | { status: 'running' }> => {
-  const running = work()
+  const lockKey = await acquireDatasetLock(datasetId)
+  const running = (async () => {
+    try {
+      return await work()
+    } finally {
+      await locks.release(lockKey)
+    }
+  })()
   let timer: ReturnType<typeof setTimeout> | undefined
   const budget = new Promise<'timeout'>((resolve) => { timer = setTimeout(() => resolve('timeout'), config.integrity?.adminSyncBudgetMs ?? 20000) })
   const first = await Promise.race([running, budget]).finally(() => clearTimeout(timer))
   if (first !== 'timeout') return first as T
-  await mongo.datasets.updateOne({ id: datasetId }, { $set: { 'integrity.running': { action, startedAt: new Date().toISOString() } } })
+  try {
+    await mongo.datasets.updateOne({ id: datasetId }, { $set: { 'integrity.running': { action, startedAt: new Date().toISOString() } } })
+  } catch (err) {
+    // display-only marker: losing it must not turn a running action into a 500
+    internalError('integrity-admin-background', err)
+  }
   // attached after the $set: if the work already settled, this cleanup still runs after it
-  running
-    .catch((err) => internalError('integrity-admin-background', err))
+  const background: Promise<void> = running
+    .then(() => {}, (err) => logBackgroundError(action, datasetId, err))
     .finally(() => mongo.datasets.updateOne({ id: datasetId }, { $unset: { 'integrity.running': '' } })
-      .catch((err) => internalError('integrity-admin-background', err)))
+      .then(() => {}, (err) => internalError('integrity-admin-background', err)))
+  backgroundWork.add(background)
+  background.finally(() => backgroundWork.delete(background))
   return { status: 'running' }
+}
+
+// Shutdown hook (app.js stop, BEFORE locks.stop()): give background admin actions a bounded time
+// to settle. A rolling deploy otherwise stops the locks module — deleting the dataset lock — under
+// a repair still writing anchors, letting a relay race it to the same revision index.
+export const drainAdminBackgroundWork = async (timeoutMs: number): Promise<void> => {
+  if (!backgroundWork.size) return
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([
+    Promise.allSettled([...backgroundWork]),
+    new Promise<void>((resolve) => { timer = setTimeout(resolve, timeoutMs) })
+  ]).finally(() => clearTimeout(timer))
 }
 
 export const enableIntegrity = async (dataset: DatasetInternal, who?: WhoHint): Promise<void> =>
@@ -239,7 +285,7 @@ const rewriteLinesThroughPipeline = async (dataset: DatasetInternal & RestDatase
 export const fixIntegrity = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => fixIntegrityUnlocked(dataset, reason, who))
 
-const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
+export const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   // synchronous re-anchor + verify: the reconcile action responds with a fresh verdict
   await anchorDataset(dataset, { operation: 'fixIntegrity', origin: 'superadmin', reason, who })
@@ -360,7 +406,7 @@ const fixIntegrityUnlocked = async (dataset: DatasetInternal, reason?: string, w
 export const restoreLines = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => restoreLinesUnlocked(dataset, reason, who))
 
-const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
+export const restoreLinesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   if (!isRestDataset(dataset)) throw httpError(400, 'lines restore only applies to an editable (rest) dataset')
   const store = integrityStore()
@@ -429,7 +475,7 @@ const reindexForIntegrityUnlocked = async (dataset: DatasetInternal, reason?: st
 export const ackTrailAnomalies = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> =>
   await withDatasetLock(dataset.id, () => ackTrailAnomaliesUnlocked(dataset, reason, who))
 
-const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
+export const ackTrailAnomaliesUnlocked = async (dataset: DatasetInternal, reason?: string, who?: WhoHint): Promise<Check> => {
   requireActive(dataset)
   const store = integrityStore()
   const before = await checkDataset(dataset)
@@ -460,7 +506,7 @@ export type RestoreResult = { status: 'restoring' } | (Check & { restored: strin
 export const restoreRevision = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> =>
   await withDatasetLock(dataset.id, () => restoreRevisionUnlocked(app, dataset, i, reason, sessionState, locale, who))
 
-const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> => {
+export const restoreRevisionUnlocked = async (app: any, dataset: DatasetInternal, i: number, reason: string | undefined, sessionState: SessionStateAuthenticated, locale: string, who?: WhoHint): Promise<RestoreResult> => {
   requireActive(dataset)
   const store = integrityStore()
   const revision = await getRevisionOr404(ops.revisionKey(dataset.owner, dataset.id, i))

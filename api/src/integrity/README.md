@@ -130,8 +130,10 @@ invariants are the ones whose violation does exactly that.
     landed during the compare (`changedDuringCompare`).
 20. **Admin work is never triggered from a Mongo flag**, and `integrity.running` is display-only
     (design 2026-10-15 §4): a flag-driven worker would let a Mongo writer bless their own tamper.
-    `integrity.adminSyncBudgetMs` must exceed `lockWaitMs`, so a busy dataset's 409 surfaces
-    within the budget instead of being masked by a 202.
+    `withAdminBudget` acquires the dataset lock BEFORE starting the budget (a busy dataset
+    answers 409, never a 202) and releases it only when the work settles, background included —
+    so routes pass the `*Unlocked` service variants. Shutdown drains background work
+    (`drainAdminBackgroundWork`) before `locks.stop()`.
 21. **Repairs run after the compare, never during it** (`_fix`, `lines/_restore`): divergences
     are collected (memory O(diverged)) and repaired in chunks once the stream ends. Mutating a
     line mid-stream would make a freshly restored line read as an out-of-band insert.

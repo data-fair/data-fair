@@ -56,3 +56,19 @@ test('running without a held lock is dropped (pod died mid-action)', async () =>
   const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
   expect(state.running).toBeUndefined()
 })
+
+test('a busy dataset answers 409 even with a tiny budget: the budget starts after the lock', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await enrolledRest(ax)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.adminSyncBudgetMs', value: 1 })
+  const ack = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/lock/datasets:${dataset.id}`)).data.ack
+  expect(ack).toBe(true)
+  try {
+    await expect(ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).rejects.toMatchObject({ status: 409 })
+    await expect(ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).rejects.toMatchObject({ status: 409 })
+  } finally {
+    await anonymousAx.delete(`${apiUrl}/api/v1/test-env/lock/datasets:${dataset.id}`)
+  }
+  const state = (await ax.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(state.running).toBeUndefined()
+})

@@ -294,10 +294,13 @@ where async is genuinely needed: `applyPatch`, finalize, and the bulk propagatio
   version id) would extend the attacker's current version while the original's lock runs out.
 - **Admin actions have a time budget.** `_check`, `_fix`, `lines/_restore`, `trail/_ack` and the
   metadata `_restore` run at least one full check under the dataset lock — minutes at 1M lines.
-  `service.ts` (`withAdminBudget`) awaits the work for `integrity.adminSyncBudgetMs` (default
-  20 000, which must exceed `lockWaitMs` so a busy dataset's 409 surfaces inside the budget); a
-  finished action answers as before, otherwise `202 { status: 'running' }` and the work continues
-  in the same process with the lock held. `integrity.running` is **display-only** (the panel
+  `service.ts` (`withAdminBudget`) first acquires the dataset lock (bounded `lockWaitMs` wait,
+  then 409 — a busy dataset never answers 202), then awaits the work for
+  `integrity.adminSyncBudgetMs` (default 20 000); a finished action answers as before, otherwise
+  `202 { status: 'running' }` and the work continues in the same process with the lock held
+  until it settles. On shutdown, `drainAdminBackgroundWork` gives such work up to 60 s before
+  `locks.stop()` (a rolling deploy would otherwise delete the lock under a running repair);
+  a 4xx outcome of background work is logged, not reported as an internal error. `integrity.running` is **display-only** (the panel
   polls it until it disappears and `lastCheck.date` advances; `GET _integrity` drops it when the
   dataset lock is not held, so a crashed pod cannot leave a stuck chip). Work is deliberately
   **not** a worker task triggered by a Mongo flag: a Mongo writer could set the flag and have
