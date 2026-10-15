@@ -74,6 +74,13 @@ binary search in the fingerprint array. A fingerprint collision can only drop an
 Concurrency is unchanged from today: the scan was never a snapshot; legitimate writes are
 stamped and the existing post-breach pending-flag re-read downgrades to `unknown`.
 
+**Implementation ruling — naming falls back to a scan when the live set moved.** Insert-by-count
+is exact only on a stable live set: a covered write landing between pass A and the count would
+make the count disagree for a legitimate reason, or hide an insert behind a concurrent delete.
+The comparer therefore also runs the naming pass whenever `changedDuringCompare()` reports a
+covered write during the compare (not only when `unaccounted > 0`), so the sample and the
+verdict are computed from a scan rather than from a count taken on a moving set.
+
 ### 3.3 Output shape
 
 `compareDatasetLines(dataset, store, opts)` stops returning full lists. It takes an
@@ -127,9 +134,12 @@ even for a single diverged line.
 - **Crash mid-action** leaves nothing inconsistent: every rewritten line went through the
   transaction pipeline and gets its own anchor; the verdict stays `breach`/`unknown` and the
   superadmin re-runs the action, which converges.
-- **Repairs stream.** `_fix` and `lines/_restore` consume `onDiverged` batches: restore fetches
-  payloads by `anchor.key`, fix blesses through `rewriteLinesThroughPipeline` per batch,
-  tombstones use `anchor.i`; the `_i`-wedge re-compare uses the same callback.
+- **Repairs collect, then apply.** `_fix` and `lines/_restore` collect the `onDiverged` batches
+  during the compare (memory O(diverged lines), not O(lines)) and repair **after** the stream
+  ends, in chunks of 1000: restore fetches payloads by `anchor.key`, fix blesses through
+  `rewriteLinesThroughPipeline` per chunk, tombstones use `anchor.i`; the `_i`-wedge re-compare
+  uses the same callback. Repairing inside the callback was rejected: mutating a line
+  mid-stream makes a just-restored line read as an out-of-band insert in the same compare.
 - **UI.** The panel extends its existing `'restoring'` handling to `'running'`: it polls
   `GET _integrity` until `integrity.running` disappears and `lastCheck.date` has advanced.
 
@@ -154,8 +164,9 @@ duration once a night. Documented, not engineered around.
 ## 6. Measurement (gates the default change)
 
 Local MinIO latency is not Scaleway's: the portable figures are **request counts and peak
-memory**; wall time is extrapolated with a per-request latency measured on Scaleway. A script
-under `benchmark/`:
+memory**; wall time is extrapolated with a per-request latency measured on Scaleway. The opt-in
+spec `tests/features/integrity/lines-scale.api.spec.ts` (skipped unless `INTEGRITY_SCALE_LINES`
+is set) does:
 
 1. seed a 1M-line REST dataset on the dev stack, enable integrity — backfill duration, PUT count;
 2. apply churn so the retention window holds several revisions per line;

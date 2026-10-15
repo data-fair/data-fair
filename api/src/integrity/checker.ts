@@ -199,6 +199,8 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
 }
 
 export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boolean, seed?: string }): Promise<Check> => {
+  const startedAt = Date.now()
+  let peakHeap = 0 // sampled while draining line keys: the streamed compare must keep it flat
   // a relay is pending: the hot state legitimately differs from the latest anchor until the relay
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing || dataset._needsHistorizingLines) return { status: 'unknown' }
@@ -244,6 +246,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     if (comparer) for (const group of groups) await comparer.push(group)
   }
   const drainCurrentLineKeys = async () => {
+    peakHeap = Math.max(peakHeap, process.memoryUsage().heapUsed)
     if (!linesAcc.current.size) return
     const groups = lops.pushLineGroupKeys(groupFold, [...linesAcc.current.values()])
     linesAcc.current.clear()
@@ -402,6 +405,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     await maybeRenew(dataset, store, latest, latestRevision)
     if (isRestDataset(dataset as any)) await maybeRenewLines(dataset, store)
   }
+  debug('check done', { datasetId: dataset.id, durationMs: Date.now() - startedAt, lines: linesResult?.checked, peakHeapMB: Math.round(peakHeap / 1e6) })
   return { status, date, ...(breach.length ? { breach } : {}), ...(linesResult ? { lines: linesResult } : {}), trail, index: indexResult }
 }
 

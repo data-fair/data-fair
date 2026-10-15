@@ -292,6 +292,19 @@ where async is genuinely needed: `applyPatch`, finalize, and the bulk propagatio
   `_fix` never clears trail anomalies (blessing data cannot un-shadow a key), and **renewal
   runs only on a fully clean pass** — under a shadow attack, `PutObjectRetention` (keyed, no
   version id) would extend the attacker's current version while the original's lock runs out.
+- **Admin actions have a time budget.** `_check`, `_fix`, `lines/_restore`, `trail/_ack` and the
+  metadata `_restore` run at least one full check under the dataset lock — minutes at 1M lines.
+  `service.ts` (`withAdminBudget`) awaits the work for `integrity.adminSyncBudgetMs` (default
+  20 000, which must exceed `lockWaitMs` so a busy dataset's 409 surfaces inside the budget); a
+  finished action answers as before, otherwise `202 { status: 'running' }` and the work continues
+  in the same process with the lock held. `integrity.running` is **display-only** (the panel
+  polls it until it disappears and `lastCheck.date` advances; `GET _integrity` drops it when the
+  dataset lock is not held, so a crashed pod cannot leave a stuck chip). Work is deliberately
+  **not** a worker task triggered by a Mongo flag: a Mongo writer could set the flag and have
+  the worker bless their own tamper. Accepted cost: the nightly check holds `datasets:‹id›` for
+  its whole duration, so worker tasks for that dataset (REST indexing included) wait; API writes
+  still land in Mongo and the ES projection lags by up to the check duration once a night.
+  Design: [2026-10-15-integrity-lines-scale-design.md](../plans/2026-10-15-integrity-lines-scale-design.md) §4.
 - **Sliding scheduled checker:** data-fair runs a scheduled job that walks protected
   resources in batches and emits an alert on divergence through its normal alerting/events
   path. At scale we cannot check everything all the time, hence "sliding" coverage.
@@ -756,7 +769,10 @@ fixtures also feed the screenshots of the client-facing presentation
   optionally re-enable.
 - **Enable, gate, and lifecycle.** `PUT …/_integrity {active: true}` on a REST dataset first
   counts live lines and **refuses above the gate** (`config.integrity.lines.maxLines`, default
-  100 000) with a `409`; on success it anchors the joint metadata revision inline as today, then
+  100 000 — the streamed check below is built for 1M, but the default stays until the
+  measurement spec `tests/features/integrity/lines-scale.api.spec.ts` has been run at 1M and
+  its figures recorded here; design `docs/plans/2026-10-15-integrity-lines-scale-design.md` §6)
+  with a `409`; on success it anchors the joint metadata revision inline as today, then
   stamps every live line (`operation: 'enable'`) and sets the hint — the relay backfills
   asynchronously, and `GET …/_integrity` exposes `lines: { anchored, pending }` for progress until
   it drains. Growth past the gate after enrollment never blocks writes; anchoring continues with a
@@ -769,25 +785,36 @@ fixtures also feed the screenshots of the client-facing presentation
   check after re-enable reports every still-anchored-but-now-absent line as an out-of-band delete;
   `_fix` reconciles by writing the tombstone the gap never produced.
 - **Check and renewal.** The nightly `checkDataset` gains a lines part for enrolled REST datasets:
-  LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names — **folded page by
-  page** (`foldLatestLineAnchors`) rather than materialized, so the checker's memory is
-  O(**distinct lines within the retention window**) — live lines plus not-yet-aged-out deleted
-  ones, so a high-churn dataset can hold more anchors than the gate's live-line count — even
-  though the prefix holds every revision in the retention window — a live-Mongo scan recomputes each line's sha256 and compares — content-hash mismatch, `_i` mismatch, a live line
-  with no revision (out-of-band insert), or a latest revision with no live line (out-of-band
-  delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
+  LIST recovers every line's latest `{ _i, sha256 | deleted }` from key names and **streams** it:
+  each key group is folded to one latest anchor as soon as its contiguous run ends (the listing is
+  key-ordered) and pushed to `createLineComparer`, which resolves them in batches of 1000 with
+  `$in` lookups on `_id` against live Mongo and recomputes each line's sha256 — so checker memory
+  is O(batch + diverged lines), no longer O(distinct lines within the retention window).
+  Out-of-band inserts are found **by count** (`countDocuments` of live lines > matched lookups),
+  exact because `_id` is unique and the count is over *distinct* accounted lines; only when
+  the count disagrees — or a covered write landed during the compare (`changedDuringCompare`,
+  because the count is exact only on a stable live set) — a second Mongo `_id` scan names them
+  against 64-bit fingerprints of the accounted ids (a collision can only drop an id from the
+  ≤20-line sample, never change the verdict or the count). Content-hash mismatch, `_i` mismatch,
+  a live line with no revision (out-of-band insert), or a latest revision with no live line
+  (out-of-band delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
   gains a `'lines'` breach member and `integrity.lastCheck.lines = { checked, diverged, sample:
-  [≤20 lineIds] }`. **Renewal rides the check** (verify-then-renew, §3.4 Option B): when the
-  dataset's lines-renewal horizon is due and the check passes, every live line's anchor retention
-  is extended in the same pass, **batch-concurrent** (100 in flight, like the relay's PUTs);
-  failures aggregate into `integrity.linesRenewal: { date, status, renewed, failed }`, loud, never
+  [≤20 lineIds] }`. **Renewal rides the check** (verify-then-renew, §3.4 Option B), as its own
+  second streamed walk: when the dataset's lines-renewal horizon is due and the check passes, the
+  walk re-verifies **each key** (`clean` on the current view) and extends only clean latest
+  anchors, **batch-concurrent** (100 in flight, like the relay's PUTs) — `PutObjectRetention`
+  carries no version id, so renewing an unverified key could extend an attacker's shadow. A failed
+  renewal keeps the previous `retainUntil` so the next pass retries (it used to go quiet
+  forever); acked unclean line keys are refused and keep failing loudly. Failures aggregate into `integrity.linesRenewal: { date, status, renewed, failed }`, loud, never
   thrown. Per §3.5 this coverage must be exhaustive — a missed renewal permanently loses that
   line's repairability — so the *number* of operations is irreducible (one `PutObjectRetention` per
   live line per window) and **level 2 on a large editable dataset remains an inevitable scalability
   bottleneck**: accepted, not engineered away, and exactly why the cardinality gate exists. Only
   their serialization was avoidable, and is avoided.
-- **Repair.** `POST …/_integrity/lines/_restore` (superadmin, synchronous) re-runs the per-line
-  comparison and, for each diverged line, rewrites it from its latest revision payload through the
+- **Repair.** `POST …/_integrity/lines/_restore` (superadmin, time-budgeted — §3.3) re-runs the
+  per-line comparison, **collects** the divergences while it streams (memory O(diverged lines)) and
+  applies the repairs **after** the compare in chunks of 1000 — repairing mid-stream would make a
+  just-restored line read as an out-of-band insert in the same compare. For each diverged line it rewrites it from its latest revision payload through the
   standard transaction pipeline (`operation: 'restore'`), re-inserts out-of-band-deleted lines,
   and **deletes out-of-band-inserted lines** (no verified state to restore to) — then re-checks
   and returns the fresh verdict, bounded by the gate. `POST …/_integrity/_fix` extends naturally:
@@ -1103,6 +1130,7 @@ plan → build, test-first), not here.
 | Security round 3 | trail-coherence verdict, terminal revisions + scope audit, realerts, `_i` wedge | `2026-07-22-integrity-trail-coherence-design.md` |
 | A1 — ES index consistency | third `'index'` verdict (count + seeded sampled windows nightly, exhaustive on `?deep=true`), both dataset families, through the alias; panel reindex journals evidence first | `2026-07-22-integrity-index-consistency-design.md` |
 | A2 — bounded attribution | `.who` sibling (user id / apiKey id / ip / geo, own short retention), `who.apiKey.id` capture | `2026-07-22-integrity-attribution-design.md` |
+| Lines at scale | streamed lines compare (insert-by-count, batched `$in`), per-key verified renewal walk, ack-before-cap anomalies, chunked repairs, admin time budget (202 `running`); gate default **unchanged at 100 000** until the 1M measurement is recorded | `2026-10-15-integrity-lines-scale-design.md` |
 | Per-verdict freshness clock | `integrity.lastDefinitiveIndexCheck` bounds a pinned-`unknown` index verdict (closed the A1 residual limit) | `2026-07-23-integrity-per-verdict-freshness-design.md` |
 
 **Deliberately not built yet** (each is additive; the enrollment refusals of §5 keep the stated
@@ -1111,6 +1139,11 @@ guarantee honest until they land):
 - applications and settings metadata (the joint anchor covers **datasets** only);
 - attachment bytes (dataset or line level) — enrollment refused meanwhile;
 - lines-owner attribution coverage — enrollment refused meanwhile;
+- the measured 1M figures (peak heap/RSS, durations, storage-measurement and purge timings on the
+  same data) and the move of the lines gate default to 1 000 000: run
+  `INTEGRITY_SCALE_LINES=1000000 INTEGRITY_SCALE_API_PID=<pid> npx playwright test --project=api tests/features/integrity/lines-scale.api.spec.ts`
+  (bucket-wide walks include other data on a shared dev bucket), record the figures in §5 and §9,
+  then change `integrity.lines.maxLines` and the reset value in `lines.api.spec.ts`;
 - a fold-based level 1 for datasets **above** the lines gate (a possible later, separate level);
 - everything in §14 (generalization, log posture, central service).
 
@@ -1261,6 +1294,10 @@ non-repudiation against the operator/provider).
 Parked deliberately to keep this iteration focused on data-fair's three dataset targets. None
 is precluded by the design above; each is an additive step.
 
+- **Beyond 1M lines.** The streamed compare is linear in lines; past 1M the direction is sampled
+  `_i` windows nightly (as the index verdict already does) plus a monthly full streamed pass, with
+  renewal staying exhaustive (§3.5: one `PutObjectRetention` per live line per window is
+  irreducible).
 - **Generalization to `@data-fair/lib-node`.** The capability is factored as a self-contained
   module (§4) but kept inside data-fair for now. Promoting it to a shared package — so events,
   processings, catalogs, … can adopt it — is a packaging change, not a redesign. The `‹service›`
