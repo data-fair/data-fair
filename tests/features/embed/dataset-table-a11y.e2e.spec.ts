@@ -41,6 +41,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     // Submit button must expose an explicit accessible name
     const submit = searchLandmark.getByRole('button').first()
     await expect(submit).toHaveAccessibleName(/recherche|search/i)
+    // but it is no Tab stop: Enter in the field already submits
+    await searchLandmark.locator('input').focus()
+    await page.keyboard.press('Tab')
+    await expect(submit).not.toBeFocused()
+    await expect(searchLandmark.locator('input')).not.toBeFocused()
   })
 
   test('search results are announced via aria-live (7.5)', async ({ page, goToWithAuth }) => {

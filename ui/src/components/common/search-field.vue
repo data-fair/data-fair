@@ -19,7 +19,10 @@
       @click:clear="q = ''"
     >
       <template #append-inner>
+        <!-- no Tab stop: Enter in the field already submits, the button is for the mouse
+             (and stays a named button for assistive technologies) -->
         <v-btn
+          tabindex="-1"
           :icon="mdiMagnify"
           :title="t('searchSubmit')"
           density="comfortable"
