@@ -94,6 +94,20 @@ data-fair's limits did not apply to its traffic (section 3). What it serves itse
 (`/v0/servers`, `/profiles`, `tools/list`) comes from memory; every tool that costs anything is a
 data-fair call, limited there. The one exception is below.
 
+### Keys and answers
+
+- **IPv6 clients are keyed on their /64.** A host usually controls a whole /64 and can pick a new
+  address in it per request, so a per-IP limit keyed on the full address limits nothing.
+  lib-express `ipRateLimitKey(ip)` returns an IPv4 address as is and an IPv6 one as its /64
+  (`2001:db8:1:2::/64`, an IPv4-mapped address as its IPv4); every per-IP limiter keys on it. nginx
+  does the same with a `map` on `$remote_addr`, which covers addresses whose first four groups are
+  written out (no `::` inside the prefix) and keys the others per address — a known limit of doing
+  it in nginx configuration alone.
+- **A 429 says when to retry.** data-fair's limiter sends `Retry-After` (whole seconds, at least
+  1) computed from the bucket that refused the request; nginx sends `Retry-After: 1` with its
+  429s (its buckets refill continuously). RFC 6585 recommends it, and it is what lets a client —
+  an agent especially — back off for the right time instead of retrying blindly.
+
 ### The geocoding tool
 
 `geocode_address` calls IGN's Géoplateforme (`data.geopf.fr/geocodage`), not data-fair: no
@@ -114,10 +128,10 @@ busy and when to retry, which an agent can act on. Both are configuration
 The `mcp` and agents releases ship together, with data-fair: no intermediate state between them is
 supported.
 
-1. **lib-express** — `reqIp` gains the `optional` flag, typed by overloads: `reqIp(req)` is
+1. **lib-express** — `ipRateLimitKey`, and `reqIp` gains the `optional` flag, typed by overloads: `reqIp(req)` is
    unchanged (`string`); `reqIp(req, { optional: true })` is `string | undefined`. `events-log`
    reads the IP it logs with it instead of `X-Client-IP`. A minor release.
-2. **data-fair** — the limiter keys on the user, else on `reqIp(req)`, instead of the `request-ip`
+2. **data-fair** — the limiter keys on the user, else on `ipRateLimitKey(reqIp(req))`, and answers its 429s with `Retry-After`, instead of the `request-ip`
    library (which reads `X-Client-IP` first); `request-ip` is removed. The audit-log context
    (`reqEventLogContext`) reads the IP with the optional form, the application-key log line with
    the strict one (it runs after the limiter accepted the request).
@@ -131,20 +145,25 @@ supported.
      caller's IP when it has one (`reqIp(req, { optional: true })` on its incoming request);
    - it stops sending `x-ignore-rate-limiting`;
    - `geocode_address` gets its two buckets.
-5. **Ingress** — the rule above, at every layer that sets or trusts `X-Forwarded-For`:
+5. **portals SSR** — a page render's calls forward the visitor's IP (`X-Forwarded-For`) and
+   the forwarder secret instead of the ignore secret, and can reach the sites through the
+   in-cluster L2 nginx (`upstreamProxyHost`, as `mcp` does) rather than back through the public
+   load balancer, whose edge would overwrite the forwarded IP with the pod's.
+6. **Ingress** — the rule above, at every layer that sets or trusts `X-Forwarded-For`:
    - staging3 nginx L2 (`manifests/data-fair/ingress-haproxy1/configmap-nginx.yaml`): it already
      trusts `X-Forwarded-For` from L1 and from the `mcp` pod (NetworkPolicy, `real_ip_header`); the
      limit key map changes from the ignore secret to the forwarder secret with an empty forwarded
      IP, and the secret header is stripped upstream;
    - production ingress-nginx (`koumoul/infrastructure`): custom snippet or template, since the
      controller manages `X-Forwarded-For` itself;
-   - the secret in a new `trusted-forwarder` Kubernetes secret, mounted in `mcp` (and later portals);
+   - the secret in a new `trusted-forwarder` Kubernetes secret, mounted in `mcp` and the portals;
+   - the /64 key map and `Retry-After` on 429s;
    - `X-Client-IP` is no longer read by anything; stop setting it.
-6. **portals SSR** — the same as `mcp` in its local fetch. Separate.
 7. **Retire the ignore secret** once no relay sends it: data-fair's configuration, the ingress maps
-   and the deployments. Separate.
+   and the deployments; rotate it anywhere it was really used (it sits in git in places). Separate.
 
-Order: 1, then 2–5 released together; 6 and 7 after.
+Order: 1, then 2–6 released together; 7 after. simple-directory's per-IP limiters adopt
+`ipRateLimitKey` at their next lib-express upgrade (a one-line change each, outside this work).
 
 **Check each environment** (no `x-forwarded-for-several` internal errors is the first sign; this is the rest). data-fair's limiter reads `X-Client-IP` today, which the
 ingress sets to the client address: a client cannot choose it. From 2 on it reads the leftmost
