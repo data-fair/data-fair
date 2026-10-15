@@ -109,6 +109,39 @@ export const foldLatestLineAnchors = (latest: Map<string, LatestLineAnchor>, key
 export const latestLineAnchors = (keys: string[]): Map<string, LatestLineAnchor> =>
   foldLatestLineAnchors(new Map(), keys)
 
+// A line's latest anchor, emitted once its whole key group has been seen (streamed compare).
+export type LineAnchorGroup = LatestLineAnchor & { lineId: string, clean: boolean }
+export type LineGroupFold = { open?: LineAnchorGroup }
+
+export const newLineGroupFold = (): LineGroupFold => ({})
+
+// Keys must arrive in listing order. Every key of a lineId shares the `lines/‹enc›/` prefix, so
+// the group is contiguous in that order and complete as soon as a key of another lineId arrives —
+// memory O(1) instead of O(distinct lines). Same latest-anchor rule as foldLatestLineAnchors
+// (strict >: the lexically-first key wins an equal-i tie) and the same sibling blindness
+// (parseLineRevisionKey drops `.who`).
+export const pushLineGroupKeys = (acc: LineGroupFold, entries: Array<{ key: string, clean?: boolean }>): LineAnchorGroup[] => {
+  const done: LineAnchorGroup[] = []
+  for (const entry of entries) {
+    const parsed = parseLineRevisionKey(entry.key)
+    if (!parsed) continue
+    if (acc.open && acc.open.lineId !== parsed.lineId) {
+      done.push(acc.open)
+      acc.open = undefined
+    }
+    if (!acc.open || parsed.i > acc.open.i) {
+      acc.open = { lineId: parsed.lineId, key: entry.key, i: parsed.i, sha256: parsed.sha256, deleted: parsed.deleted, clean: entry.clean ?? true }
+    }
+  }
+  return done
+}
+
+export const finishLineGroupFold = (acc: LineGroupFold): LineAnchorGroup[] => {
+  const done = acc.open ? [acc.open] : []
+  acc.open = undefined
+  return done
+}
+
 export type LineVerdict = 'ok' | 'edited' | 'inserted'
 
 // a live line against its latest anchor: no live anchor at all → out-of-band insert;
