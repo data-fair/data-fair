@@ -51,9 +51,13 @@ traffic** until section 5 lands.
 One rule for the whole stack: **the client IP travels in `X-Forwarded-For`, set by the ingress, and
 only a trusted forwarder may set it on someone else's behalf.**
 
-- Every rate limiter reads the client IP the same way: lib-express `reqIp`, the leftmost
-  `X-Forwarded-For` entry, falling back to the socket address for in-cluster requests that carry
-  none.
+- Every rate limiter reads the client IP the same way: lib-express `reqIp(req, { optional: true })`,
+  the leftmost `X-Forwarded-For` entry. An in-cluster request (one that did not come through the
+  reverse proxy: no `X-Forwarded-Host`) has **no** client IP: its socket address is a pod's, and
+  throttling on it would put every caller behind that pod in one budget. The limiter then limits
+  the request by its user when it has one, and not by IP otherwise; an in-cluster caller that acts
+  for someone forwards that someone's IP instead. A request that came through the proxy without
+  `X-Forwarded-For` is a misconfigured proxy and fails, rather than silently escaping IP limits.
 - The ingress overwrites `X-Forwarded-For` with the client address — it never appends to or keeps a
   value it did not set — **except** when the request carries a valid *trusted forwarder* secret: it
   then keeps the forwarded value, if it is a single well-formed IP.
@@ -73,11 +77,21 @@ ConfigMap, and it is distinct from the ignore secret, which disappears.
 
 ## 5. Work to reach the target
 
-1. **lib-express** — a `reqClientIp(req)` helper: leftmost `X-Forwarded-For`, socket address when
-   absent (`reqIp` throws then, which a limiter must not).
-2. **data-fair** — the limiter's client id uses that helper instead of `request-ip` (which reads
-   `X-Client-IP` first); same for the other services with an IP-keyed limiter (`mcp`,
-   simple-directory — check each).
+1. **lib-express** — `reqIp` gains an `optional` flag, typed by overloads: `reqIp(req)` is
+   unchanged (`string`, throws without the header); `reqIp(req, { optional: true })` returns
+   `string | undefined`, `undefined` for an in-cluster request without `X-Forwarded-For`, and still
+   throws for a proxied one without it or for a value that is not an IP. No second helper: one
+   function answers "what is the client IP", and a call site says whether "none" is acceptable.
+   `events-log` reads the IP it logs the same way instead of `X-Client-IP`.
+2. **data-fair** — the limiter's client id is the user, else `reqIp(req, { optional: true })`,
+   instead of the `request-ip` library (which reads `X-Client-IP` first); with neither, the
+   request is not limited (in-cluster and anonymous). The audit-log context
+   (`reqEventLogContext`) and the application-key log line read the IP the same way, and
+   `request-ip` is removed. **mcp** — its inline fallback to the socket address becomes
+   `reqIp(req, { optional: true })`: no per-IP ceiling without a client IP, the per-identity
+   budget unchanged, and no limit for an in-cluster caller with neither. Other services with an
+   IP-keyed limiter keep strict `reqIp` while all their traffic comes through the proxy
+   (simple-directory, agents, backup).
 3. **Ingress** (`koumoul/infrastructure`):
    - stop setting `X-Client-IP`, or set it to the resolved client IP;
    - a `map` from the forwarder secret header to the resolved client IP (forwarded value when the
@@ -95,5 +109,19 @@ ConfigMap, and it is distinct from the ignore secret, which disappears.
    the ingress maps and the deployments. A caller that is truly internal with no caller to
    represent (if one appears) gets an explicit, separately named exemption.
 
-Order: 1 and 2 can ship first (they change nothing while the ingress still overwrites); 3 next;
+Order: 1 and 2 can ship first (they change nothing while the ingress still overwrites — check that
+it does, see below); 3 next;
 then 4 and 5 together with removing the ignore header from each relay; 6 last.
+
+**Check before step 2 reaches production.** data-fair's limiter reads `X-Client-IP` today, which
+the ingress sets to `$remote_addr`: a client cannot choose it. After step 2 it reads the leftmost
+`X-Forwarded-For`, which a client can choose wherever a layer appends to the header instead of
+overwriting it (`$proxy_add_x_forwarded_for`, as the dev nginx does), and an anonymous client could
+then pick a fresh IP per request. simple-directory already relies on that entry, so this is likely
+fine, but confirm it per environment first: a request sent with `X-Forwarded-For: 192.0.2.1` must
+reach the service with the client's real address leftmost.
+
+**The agents service is a relay too.** It calls `mcp` in-cluster (no `X-Forwarded-Host`), so after
+step 2 `mcp` sees no client IP for it: an authenticated agent keeps its per-identity budget, an
+anonymous one (a personal assistant on `catalog` for a visitor) is not limited by `mcp` at all.
+Forwarding the person's IP from the agents service to `mcp` (`X-Forwarded-For`) belongs with step 4.
