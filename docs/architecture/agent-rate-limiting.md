@@ -161,6 +161,9 @@ supported.
      controller manages `X-Forwarded-For` itself;
    - the secret in a new `trusted-forwarder` Kubernetes secret, mounted in `mcp` and the portals;
    - the /64 key map and `Retry-After` on 429s;
+   - only callers whose `X-Forwarded-For` is trustworthy reach `mcp` (a NetworkPolicy: the ingress
+     controllers, L2, the agents service): it forwards that header with the secret, so any other pod
+     could choose its client IP, or declare none;
    - `X-Client-IP` is no longer read by anything; stop setting it.
 7. **Retire the ignore secret** once no relay sends it: data-fair's configuration, the ingress maps
    and the deployments; rotate it anywhere it was really used (it sits in git in places). Separate.
