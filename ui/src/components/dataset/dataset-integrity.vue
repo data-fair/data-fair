@@ -299,6 +299,21 @@
         >
           {{ t('refresh') }}
         </v-btn>
+        <v-chip
+          v-if="state?.running"
+          size="small"
+          color="info"
+          variant="tonal"
+          class="ml-2"
+        >
+          <v-progress-circular
+            indeterminate
+            size="14"
+            width="2"
+            class="mr-2"
+          />
+          {{ t('running') }}
+        </v-chip>
         <v-btn
           v-if="adminMode && state.active"
           :prepend-icon="mdiShieldRefresh"
@@ -773,6 +788,8 @@ fr:
   lastCheck: Dernier contrôle
   checkNow: Contrôler maintenant
   refresh: Rafraîchir
+  running: Action en cours
+  runningInBackground: L'action continue en arrière-plan sur ce jeu volumineux, l'état se mettra à jour à la fin.
   refreshHelp: Relit l'état d'intégrité et l'historique des révisions.
   fix: Réconcilier
   fixHelp: Ancre l'état courant du fichier, des métadonnées et, pour un jeu de données éditable, de chaque ligne comme référence légitime.
@@ -882,6 +899,8 @@ en:
   lastCheck: Last check
   checkNow: Check now
   refresh: Refresh
+  running: Action in progress
+  runningInBackground: The action continues in the background on this large dataset, the status will update when it ends.
   refreshHelp: Re-reads the integrity status and the revision history.
   fix: Reconcile
   fixHelp: Anchors the current state of the file, metadata and, for an editable dataset, each line as the legitimate reference.
@@ -983,7 +1002,7 @@ const adminMode = computed(() => !!session.state.user?.adminMode)
 
 // `lines` (anchored/pending/overGate) is computed on the fly by GET _integrity for enrolled REST
 // datasets — it is not part of the stored/public Dataset schema, hence the local extension
-type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean } }
+type IntegrityState = NonNullable<Dataset['integrity']> & { lines?: { anchored: number, pending: number, overGate?: boolean }, running?: { action: string, startedAt: string } }
 type RevisionEntry = { i: number, hash: { file?: string, metadata?: string }, date: string, operation: string, origin: string, reason?: string, hasPayload?: boolean, fileSize?: number, who?: WhoHint }
 type RevisionDetail = { i: number, hash: { file?: string, metadata?: string }, context: any, payload: { metadata: Record<string, any>, file?: { size: number } }, current?: Record<string, any>, who?: WhoHint }
 type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: string, operation: string, origin: string, reason?: string, hasPayload: boolean, who?: WhoHint }
@@ -1122,14 +1141,45 @@ watch(() => state.value?.lines?.pending, (pending) => {
 }, { immediate: true })
 onUnmounted(stopLinesPoll)
 
+// An admin action that outlived its server-side budget answers {status:'running'} and finishes in
+// the background (large lines datasets): poll the state until the marker clears, then reload.
+// Also resumes on load when another session left an action running.
+const { sendUiNotif } = useUiNotif()
+let runningTimer: ReturnType<typeof setTimeout> | undefined
+const stopRunningPoll = () => {
+  if (runningTimer) {
+    clearTimeout(runningTimer)
+    runningTimer = undefined
+  }
+}
+const pollRunning = async () => {
+  if (!dataset.value) return
+  const fresh = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  if (fresh.running) {
+    if (state.value) state.value.running = fresh.running
+    runningTimer = setTimeout(pollRunning, 3000)
+    return
+  }
+  stopRunningPoll()
+  await load.execute()
+  datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+}
+const startRunningPoll = () => {
+  stopRunningPoll()
+  sendUiNotif({ type: 'info', msg: t('runningInBackground') })
+  runningTimer = setTimeout(pollRunning, 3000)
+}
+watch(() => state.value?.running, (running) => { if (running && !runningTimer) runningTimer = setTimeout(pollRunning, 3000) }, { immediate: true })
+onUnmounted(stopRunningPoll)
+
 // A check that runs while a write is still being historized cannot conclude, and the checker
 // deliberately records NOTHING in that case (it returns a bare `{status:'unknown'}`, no date —
 // the relay will drain and the next check gets a real verdict). Reporting that as a plain
 // "check completed" leaves the panel showing the previous verdict unchanged, which reads as a
 // button that does nothing: name the two outcomes apart instead.
-const { sendUiNotif } = useUiNotif()
 const check = useAsyncAction(async () => {
   const res = await $fetch<{ status: string, date?: string }>(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
+  if (res.status === 'running') return startRunningPoll()
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
   const recorded = res.status !== 'unknown' || !!res.date
@@ -1143,12 +1193,14 @@ const fixReason = ref('')
 const fix = useAsyncAction(async () => {
   const body: any = {}
   if (fixReason.value) body.reason = fixReason.value
-  await $fetch(`datasets/${dataset.value!.id}/_integrity/_fix`, { method: 'POST', body })
+  const res = await $fetch<{ status?: string }>(`datasets/${dataset.value!.id}/_integrity/_fix`, { method: 'POST', body })
   fixDialog.value = false
   fixReason.value = ''
+  if (res.status === 'running') return startRunningPoll()
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
-}, { success: t('fixOk') })
+  sendUiNotif({ type: 'success', msg: t('fixOk') })
+})
 
 // trail-anomaly acknowledgement (round 3): trail-recorded, reasoned, fingerprint-pinned — new
 // tampering after the ack changes the fingerprints and resurfaces
@@ -1157,12 +1209,14 @@ const ackReason = ref('')
 const ackTrail = useAsyncAction(async () => {
   const body: any = {}
   if (ackReason.value) body.reason = ackReason.value
-  await $fetch(`datasets/${dataset.value!.id}/_integrity/trail/_ack`, { method: 'POST', body })
+  const res = await $fetch<{ status?: string }>(`datasets/${dataset.value!.id}/_integrity/trail/_ack`, { method: 'POST', body })
   ackDialog.value = false
   ackReason.value = ''
+  if (res.status === 'running') return startRunningPoll()
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
-}, { success: t('ackOk') })
+  sendUiNotif({ type: 'success', msg: t('ackOk') })
+})
 
 const disableDialog = ref(false)
 const toggle = useAsyncAction(async (active: boolean) => {
@@ -1199,6 +1253,7 @@ const restore = useAsyncAction(async () => {
   if (restoreReason.value) body.reason = restoreReason.value
   const res = await $fetch<{ status: string, restored?: string[] }>(`datasets/${dataset.value!.id}/_integrity/_restore`, { method: 'POST', body })
   restoreTarget.value = null
+  if (res.status === 'running') { startRunningPoll(); return res }
   await load.execute()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
   // an empty `restored` means the revision matched the live state and nothing was rewritten —
@@ -1221,14 +1276,16 @@ const linesRestoreReason = ref('')
 const linesRestore = useAsyncAction(async () => {
   const body: any = {}
   if (linesRestoreReason.value) body.reason = linesRestoreReason.value
-  const res = await $fetch<NonNullable<IntegrityState['lastCheck']>>(`datasets/${dataset.value!.id}/_integrity/lines/_restore`, { method: 'POST', body })
+  const res = await $fetch<NonNullable<IntegrityState['lastCheck']> & { status?: string }>(`datasets/${dataset.value!.id}/_integrity/lines/_restore`, { method: 'POST', body })
   linesRestoreDialog.value = false
   linesRestoreReason.value = ''
+  if (res.status === 'running') { startRunningPoll(); return res }
   if (state.value) state.value.lastCheck = res
   await pollLinesSummary()
   datasetStore.datasetFetch.refresh() // the breach badge and tab color derive from the dataset doc
+  sendUiNotif({ type: 'success', msg: t('linesRestoreOk') })
   return res
-}, { success: t('linesRestoreOk') })
+})
 
 // Index reindex (round A1): the served ES index is rebuilt from the verified source. Unlike the
 // lines restore above, the endpoint only acks (the divergence evidence is already recorded in the
