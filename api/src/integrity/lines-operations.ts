@@ -40,8 +40,10 @@ export const parseLineRevisionKey = (key: string): ParsedLineKey | undefined => 
   if (parts.length < 3 || parts[parts.length - 3] !== 'lines') return undefined
   const last = parts[parts.length - 1]
   // explicit sibling exclusion (not lexical luck): a `‹i›-‹sha›.who` key must never parse as a
-  // revision — this is what makes foldLatestLineAnchors/latestLineAnchors and lines renewal
-  // sibling-blind by construction (README.md invariant 9).
+  // revision. Every consumer parses through here — the streamed line group fold used by the
+  // compare, lines renewal and _fix (pushLineGroupKeys), and foldLatestLineAnchors/
+  // latestLineAnchors, kept as reference oracles for tests — so all are sibling-blind by
+  // construction (README.md invariant 5).
   if (last.endsWith(WHO_SUFFIX)) return undefined
   const dash = last.indexOf('-')
   if (dash === -1) return undefined
@@ -188,7 +190,8 @@ class FingerprintSet {
     this.values[this.size++] = fp
   }
 
-  // sorts in place, removes duplicates, returns how many were removed
+  // sorts in place and removes duplicates: one synchronous sort per large check (~50 ms at 1M
+  // lines), accepted
   seal (): void {
     const sorted = this.values.subarray(0, this.size).sort()
     let unique = 0

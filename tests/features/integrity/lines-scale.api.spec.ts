@@ -41,10 +41,11 @@ test('lines integrity at scale', async () => {
   test.setTimeout(6 * 3600 * 1000)
   await ensureIntegrityBucket()
   // the dev config caps storage at a few hundred KB: lift it for the run, restore the dev values after
-  await setConfig('integrity.lines.maxLines', LINES)
-  await setConfig('defaultLimits.totalStorage', -1)
-  await setConfig('defaultLimits.datasetStorage', -1)
   try {
+    // inside the try: a failure midway through the lifts still restores the dev values
+    await setConfig('integrity.lines.maxLines', LINES)
+    await setConfig('defaultLimits.totalStorage', -1)
+    await setConfig('defaultLimits.datasetStorage', -1)
     await run()
   } finally {
     await setConfig('integrity.lines.maxLines', 100000)
@@ -66,7 +67,7 @@ const run = async () => {
     await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
     await waitForLinesDrained(dataset.id, 6 * 3600 * 1000)
   })
-  // churn: a second revision on 10% of the lines
+  // churn: a second revision on 10 000 lines (1% at 1M)
   await measure('churn', async () => {
     const ids = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 10000, select: '_id' } })).data.results.map((r: any) => r._id)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, ids.map((_id: string) => ({ _action: 'patch', _id, label: 'churned' })))

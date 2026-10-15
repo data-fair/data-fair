@@ -792,13 +792,20 @@ fixtures also feed the screenshots of the client-facing presentation
   each key group is folded to one latest anchor as soon as its contiguous run ends (the listing is
   key-ordered) and pushed to `createLineComparer`, which resolves them in batches of 1000 with
   `$in` lookups on `_id` against live Mongo and recomputes each line's sha256 — so checker memory
-  is O(batch + diverged lines), no longer O(distinct lines within the retention window).
+  is O(batch) plus 8 bytes per live line (the accounted-id fingerprints), no longer O(distinct
+  lines within the retention window); diverged lines are held only by the repairs (`_fix`,
+  `lines/_restore`, O(diverged)). Sealing the fingerprints costs one synchronous sort per large
+  check (~50 ms at 1M lines) — accepted.
   Out-of-band inserts are found **by count** (`countDocuments` of live lines > matched lookups),
   exact because `_id` is unique and the count is over *distinct* accounted lines; only when
   the count disagrees — or a covered write landed during the compare (`changedDuringCompare`,
   because the count is exact only on a stable live set) — a second Mongo `_id` scan names them
-  against 64-bit fingerprints of the accounted ids (a collision can only drop an id from the
-  ≤20-line sample, never change the verdict or the count). Content-hash mismatch, `_i` mismatch,
+  against 64-bit fingerprints of the accounted ids. Fingerprint collisions are not free but stay
+  loud: two accounted ids colliding yield a spurious one-line breach with nothing named (≈1e-8 at
+  1M lines); an unaccounted id colliding with an accounted one leaves that insert unnamed while
+  the count still reports it. A forged non-canonical duplicate key group (a key whose encoded
+  lineId decodes to an existing id) is counted once, but `_fix`/`lines/_restore` act per group
+  and do not converge on it — loud (the breach persists), stricter than before. Content-hash mismatch, `_i` mismatch,
   a live line with no revision (out-of-band insert), or a latest revision with no live line
   (out-of-band delete) are all breaches; a live tombstone (both anchor and doc absent) is `ok`. The verdict
   gains a `'lines'` breach member and `integrity.lastCheck.lines = { checked, diverged, sample:
