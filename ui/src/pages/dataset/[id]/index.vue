@@ -1398,6 +1398,9 @@ const sections = computedDeepDiff(() => {
     if (can('setPermissions').value && !d.isMetaOnly) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
+  }
+  // the journal is data-fair's own: the section must not depend on the events integration
+  if (activityTabs.length) {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
   // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.
