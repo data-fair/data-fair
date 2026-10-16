@@ -1,6 +1,8 @@
 <template>
+  <!-- role=status: screen readers announce the new count after a search or filter (RGAA 7.5) -->
   <div
     v-if="total !== null"
+    role="status"
     class="text-body-small"
     style="line-height: 1;"
   >

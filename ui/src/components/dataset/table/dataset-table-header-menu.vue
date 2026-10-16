@@ -8,6 +8,7 @@
     @update:model-value="toggleMenu"
   >
     <v-sheet
+      ref="sheet"
       class="pa-1"
       rounded="0"
       style="max-width: 450px"
@@ -67,6 +68,7 @@
         <template v-if="header.sortable && !noSort">
           <v-list-item
             :active="sort === 1"
+            :aria-current="sort === 1 ? 'true' : undefined"
             :title="t('sortAsc')"
             class="pl-2"
             @click="toggleSort(1)"
@@ -80,6 +82,7 @@
           </v-list-item>
           <v-list-item
             :active="sort === -1"
+            :aria-current="sort === -1 ? 'true' : undefined"
             :title="t('sortDesc')"
             class="pl-2"
             @click="toggleSort(-1)"
@@ -711,7 +714,7 @@ import { type DatasetFilter } from '~/composables/dataset/filters'
 import { formatValue } from '~/composables/dataset/lines'
 import useHeaderFilters from './use-header-filters'
 
-const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols } = defineProps({
+const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols, activator } = defineProps({
   header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
@@ -743,6 +746,18 @@ const localeDayjs = useLocaleDayjs()
 const { t } = useI18n()
 
 const showMenu = ref(false)
+// Vuetify gives the focus back to the activator on Escape only: closed by one of its actions
+// (a sort, a filter), the menu kept the focus on its hidden content, out of the table. A hidden
+// column has no activator any more, the table handles that one (hideHeader)
+const sheet = useTemplateRef('sheet')
+watch(showMenu, async (open) => {
+  if (open) return
+  const active = document.activeElement
+  const content = sheet.value?.$el as HTMLElement | undefined
+  if (active !== document.body && !content?.contains(active)) return
+  await nextTick()
+  document.querySelector<HTMLElement>(activator)?.focus()
+})
 const equals = ref<string[]>([])
 const nEquals = ref<string[]>([])
 const startsWith = ref('')

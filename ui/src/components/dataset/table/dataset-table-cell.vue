@@ -6,6 +6,7 @@
       height: lineHeight + 'px',
     }"
     @mouseenter="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
+    @focusin="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue, true)"
     @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.synthetic">
@@ -28,6 +29,7 @@
     <template v-else-if="header.key === '_map_preview'">
       <v-btn
         v-if="result._geopoint"
+        tabindex="-1"
         :icon="mdiMap"
         :title="t('showMapPreview')"
         :density="dense ? 'comfortable' : 'default'"
@@ -43,6 +45,7 @@
       <template v-if="selectable">
         <v-btn
           v-if="selected"
+          tabindex="-1"
           :icon="mdiCheckboxMarked"
           :size="dense ? 'md' : 'large'"
           :title="t('unselectLine')"
@@ -53,6 +56,7 @@
         />
         <v-btn
           v-else
+          tabindex="-1"
           :icon="mdiCheckboxBlankOutline"
           :size="dense ? 'md' : 'large'"
           :title="t('selectLine')"
@@ -82,13 +86,13 @@
       :property="header.property"
       :values="result.values[header.key] as ExtendedResultValue[]"
       @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw, formattedValue: v.formatted})"
-      @hoverstart="v => emit('hoverstart', result, v)"
+      @remove-filter="emit('removeFilter', filter)"
+      @hoverstart="(v, immediate) => emit('hoverstart', result, v, immediate)"
       @hoverstop="emit('hoverstop')"
     />
 
     <dataset-table-value
       v-else-if="header.property && result.values[header.key]"
-      :filter-loading="filterLoading"
       :filtered="!!filter"
       :no-filter="noFilter"
       :hovered="hovered === result.values[header.key]"
@@ -96,6 +100,7 @@
       :value="result.values[header.key] as ExtendedResultValue"
       :dense="dense"
       @filter="filterValue(result, header)"
+      @remove-filter="emit('removeFilter', filter)"
       @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
     />
   </td>
@@ -118,25 +123,10 @@ import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset/lines'
 import { type DatasetFilter } from '../../../composables/dataset/filters'
 
-const { id } = useDatasetStore()
-const filterLoading = ref(false)
-const filterValue = async (result: ExtendedResult, header: TableHeader) => {
+const filterValue = (result: ExtendedResult, header: TableHeader) => {
   if (!header.property) return
   const value = result.values[header.key] as ExtendedResultValue
-  if (value?.displayDetail) {
-    filterLoading.value = true
-    try {
-      const data = await $fetch<{ results: Record<string, any>[] }>(`${$apiPath}/datasets/${id}/lines`, {
-        query: { qs: `_id:"${result._id}"`, select: header.key }
-      })
-      const fullValue = data.results[0]?.[header.key]
-      emit('filter', { property: header.property, operator: 'eq', value: fullValue, formattedValue: fullValue })
-    } finally {
-      filterLoading.value = false
-    }
-  } else {
-    emit('filter', { property: header.property, operator: 'eq', value: value.raw, formattedValue: value.formatted })
-  }
+  emit('filter', { property: header.property, operator: 'eq', value: value.raw, formattedValue: value.formatted })
 }
 
 const props = defineProps({
@@ -156,7 +146,9 @@ const syntheticCell = computed(() => props.header.synthetic?.render(props.result
 
 const emit = defineEmits<{
   filter: [filter: any],
-  hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
+  // immediate: on keyboard focus, the mouse hover waits a little (a sweep over many cells)
+  hoverstart: [result: ExtendedResult, value: ExtendedResultValue, immediate?: boolean],
+  removeFilter: [filter: DatasetFilter],
   hoverstop: [],
   showMapPreview: [],
   showDetailDialog: [value: ExtendedResultValue],

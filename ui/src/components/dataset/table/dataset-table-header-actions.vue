@@ -6,6 +6,7 @@
     <template v-if="canBulkLines && results.length >= 2">
       <v-btn
         v-if="selectedResults.length"
+        tabindex="-1"
         :title="t('unselectAllLines')"
         color="primary"
         :size="dense ? 'md' : 'large'"
@@ -17,6 +18,7 @@
       <v-btn
         v-else
         :key="'header-actions-check2-' + h"
+        tabindex="-1"
         :size="dense ? 'md' : 'large'"
         variant="text"
         :title="t('selectAllLines', {nbLines: results.length})"
@@ -28,6 +30,7 @@
     <template v-if="selectedResults.length >=2">
       <v-btn
         v-if="canBulkLines"
+        tabindex="-1"
         :size="dense ? 'md' : 'large'"
         color="warning"
         variant="text"
@@ -38,6 +41,7 @@
       />
       <v-btn
         v-if="canBulkLines"
+        tabindex="-1"
         :icon="mdiPencil"
         :size="dense ? 'md' : 'large'"
         variant="text"
@@ -49,6 +53,7 @@
     <template v-else>
       <v-btn
         v-if="canCreateLine"
+        tabindex="-1"
         :icon="mdiPlusCircle"
         :size="dense ? 'md' : 'large'"
         variant="text"
@@ -62,6 +67,7 @@
       >
         <template #activator="{props: activatorProps, title}">
           <v-btn
+            tabindex="-1"
             :size="dense ? 'md' : 'large'"
             variant="text"
             color="primary"

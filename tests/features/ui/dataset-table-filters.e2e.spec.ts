@@ -27,7 +27,7 @@ test.describe('dataset table column filters', () => {
   test('a text-only column still offers the "is defined" filters', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
-    await page.locator('#header-bio').click()
+    await page.locator('thead th').getByRole('button', { name: 'bio', exact: true }).click()
     await page.getByRole('listitem').filter({ hasText: 'Ajouter un filtre' }).click()
     await page.getByRole('listitem').filter({ hasText: 'Est défini' }).click()
     await expect(page.locator('tbody tr')).toHaveCount(1)

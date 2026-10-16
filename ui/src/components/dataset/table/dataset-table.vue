@@ -102,11 +102,18 @@
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
+      ref="tableRoot"
       :height="pagination ? undefined : height - (showToolbar ? 48 : 0)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
+      @keydown="onTableKeydown"
+      @focusin="onTableFocusin"
+      @focusout="onTableFocusout"
     >
+      <caption class="d-sr-only">
+        {{ tableLabel }}. {{ t('keyboardHint') }}
+      </caption>
       <thead ref="thead">
         <tr>
           <template
@@ -114,7 +121,11 @@
             :key="header.key"
           >
             <th
-              :id="`header-${header.cssKey ?? header.key}`"
+              scope="col"
+              :data-row="0"
+              :data-col="i"
+              :tabindex="isTabbableCell(0, i) ? 0 : -1"
+              :aria-sort="header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : undefined"
               :title="header.title"
               class="text-left"
               :class="{
@@ -149,22 +160,31 @@
                   :selected-cols="selectedCols"
                 />
               </div>
+              <button
+                v-else-if="header.property && showHeaderMenu(header)"
+                :id="`${instanceId}-header-button-${header.cssKey ?? header.key}`"
+                type="button"
+                tabindex="-1"
+                class="pr-2 header-wrapper dataset-table-th-button"
+              >
+                <span class="two-lines">{{ header.title }}</span>
+                <v-icon
+                  v-if="hoveredHeader?.key === header.key || header.key === sort?.key"
+                  :color="header.key === sort?.key ? 'primary' : 'default'"
+                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+                  class="action-icon"
+                />
+              </button>
               <div
                 v-else
                 class="pr-2 header-wrapper"
               >
                 <span class="two-lines">{{ header.title }}</span>
-                <v-icon
-                  v-if="header.property && (hoveredHeader?.key === header.key || header.key === sort?.key)"
-                  :color="header.key === sort?.key ? 'primary' : 'default'"
-                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
-                  class="action-icon"
-                />
               </div>
             </th>
             <dataset-table-header-menu
               v-if="header.property && showHeaderMenu(header)"
-              :activator="`#header-${header.cssKey ?? header.key}`"
+              :activator="`#${instanceId}-header-button-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
               :no-filter="!can('filters')"
@@ -176,7 +196,7 @@
               :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
-              @hide="hideHeader(header)"
+              @hide="hideHeader(header, i)"
               @fix-col="onFixCol(header.key)"
               @update:sort="direction => {sort = direction ? {direction, key: header.key} : undefined}"
             />
@@ -208,9 +228,12 @@
           <template #default="{ item, index }">
             <tr v-intersect="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
               <dataset-table-cell
-                v-for="header of headers"
+                v-for="(header, j) of headers"
                 :key="header.key"
                 v-model:selected-results="selectedResults"
+                :data-row="index + 1"
+                :data-col="j"
+                :tabindex="isTabbableCell(index + 1, j) ? 0 : -1"
                 :dense="displayMode === 'table-dense'"
                 :filter="header.property && findEqFilter(filters, header.property, item)"
                 :filters="filters"
@@ -227,6 +250,7 @@
                 @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
                 @filter="f => can('cells') && addFilter(f)"
+                @remove-filter="f => can('cells') && removeFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
                 @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -238,13 +262,16 @@
       <!-- Pagination mode -->
       <tbody v-else>
         <tr
-          v-for="item in paginatedResults"
+          v-for="(item, index) in paginatedResults"
           :key="item._id"
         >
           <dataset-table-cell
-            v-for="header of headers"
+            v-for="(header, j) of headers"
             :key="header.key"
             v-model:selected-results="selectedResults"
+            :data-row="index + 1"
+            :data-col="j"
+            :tabindex="isTabbableCell(index + 1, j) ? 0 : -1"
             :dense="displayMode === 'table-dense'"
             :filter="header.property && findEqFilter(filters, header.property, item)"
             :filters="filters"
@@ -261,6 +288,7 @@
             @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
             @filter="f => can('cells') && addFilter(f)"
+            @remove-filter="f => can('cells') && removeFilter(f)"
             @edit="showEditDialog = item"
             @delete="showDeleteDialog = item"
             @select="selectedItem = selectedItem === item._id ? '' : item._id"
@@ -463,6 +491,9 @@
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
     fullscreen: Afficher en plein écran
+    tableCaption: "Tableau de données : {title}"
+    tableCaptionFallback: Tableau de données
+    keyboardHint: Utilisez les flèches pour passer d'une cellule à l'autre et Entrée pour utiliser les actions d'une cellule.
     colTitles:
       _updatedBy: Mis à jour par
       _owner: Propriétaire de ligne
@@ -477,6 +508,9 @@
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
     fullscreen: Show fullscreen
+    tableCaption: "Data table: {title}"
+    tableCaptionFallback: Data table
+    keyboardHint: Use the arrow keys to move between cells and Enter to use the actions of a cell.
     colTitles:
       _updatedBy: Updated by
       _owner: Line owner
@@ -493,6 +527,7 @@ import { agentToolError } from '~/composables/agent/utils'
 import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
+import { nextPosition, type CellPosition, type GridBounds } from './table-keyboard'
 import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -586,6 +621,14 @@ const session = useSession()
 const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
+// Scope per-table DOM IDs so two coexisting tables (e.g. back-office + preview
+// drawer) don't collide on the header button selectors used as v-menu activators.
+const instanceId = useId()
+
+const tableLabel = computed(() => dataset.value?.title
+  ? t('tableCaption', { title: dataset.value.title })
+  : t('tableCaptionFallback'))
+
 // in own-lines mode every read/write targets the own/{owner} routes, whose owner is the full active
 // account (department included), exactly as the own-lines embed form builds it
 const linesOwner = computed(() => {
@@ -598,12 +641,17 @@ const linesOwner = computed(() => {
 const allCols = computed(() => dataset.value?.schema?.filter(isVisibleCol).map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const hideHeader = (header: TableHeader) => {
+const hideHeader = async (header: TableHeader, col?: number) => {
+  // from its menu, the focus goes with the column: give it to the header taking its place
+  const fromMenu = !!document.activeElement?.closest('.v-overlay')
   let newCols = cols.value
   if (!cols.value.length) {
     newCols = [...allCols.value]
   }
   cols.value = newCols.filter(col => col !== header.key)
+  if (!fromMenu || col === undefined) return
+  await nextTick()
+  focusCell({ row: 0, col: Math.min(col, (headers.value?.length ?? 1) - 1) })
 }
 
 // Agent contexts
@@ -624,7 +672,7 @@ const dataEntryContext = computed(() => {
   return lines.join(' ')
 })
 
-const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
+const { filters, addFilter, removeFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
 const filterHelpContext = computed(() => {
   const d = dataset.value
   if (!d) return ''
@@ -744,6 +792,8 @@ if (edit) {
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
+const tableRoot = ref<{ $el?: HTMLElement } | null>(null)
+
 const minColWidth = computed(() => {
   return displayMode.value === 'table-dense' ? 80 : 120
 })
@@ -773,9 +823,11 @@ const onScrollItem = async (index: number) => {
 
 const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
-const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
+const hoverStart = (result: ExtendedResult, value: ExtendedResultValue, immediate = false) => {
   if (!can('cells')) return
-  _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
+  if (_hoverTimeout) clearTimeout(_hoverTimeout)
+  if (immediate) hovered.value = [result, value]
+  else _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {
@@ -788,6 +840,127 @@ const hoverStop = () => {
 }
 
 const hoveredHeader = ref<TableHeader>()
+
+// Keyboard navigation between cells (RGAA 7.3): the table is a single Tab stop (roving
+// tabindex), arrows move between cells, Enter/F2 reaches a cell's controls (Tab cycles
+// them, Escape comes back). Row 0 is the header row; in pagination mode rows are local
+// to the page.
+const activeCell = ref<CellPosition>({ row: 1, col: 0 })
+const rowResults = computed(() => pagination ? paginatedResults.value : results.value)
+// new results (a filter added or removed from a cell) replace the hovered line object while
+// the focus or the pointer stays on the same cell, which then loses its buttons: show them
+// again, for the focused cell first
+watch(rowResults, async () => {
+  await nextTick()
+  const root = tableRoot.value?.$el as HTMLElement | undefined
+  if (!root) return
+  const active = document.activeElement as HTMLElement | null
+  if (active && active !== root && root.contains(active) && active.closest('[data-row]')) {
+    active.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    active.dispatchEvent(new FocusEvent('focus'))
+    return
+  }
+  root.querySelector('tbody td:hover')?.dispatchEvent(new MouseEvent('mouseenter'))
+})
+const gridBounds = computed<GridBounds>(() => ({
+  rows: rowResults.value.length + 1,
+  cols: headers.value?.length ?? 0,
+  pageRows: Math.max(1, Math.floor((height - (showToolbar.value ? 48 : 0) - (displayMode.value === 'table-dense' ? 38 : 50)) / lineHeight.value))
+}))
+// the tab stop stays on an existing cell when the results shrink (search, sort)
+const tabbableCell = computed(() => ({
+  row: Math.max(0, Math.min(activeCell.value.row, gridBounds.value.rows - 1)),
+  col: Math.max(0, Math.min(activeCell.value.col, gridBounds.value.cols - 1))
+}))
+const isTabbableCell = (row: number, col: number) => tabbableCell.value.row === row && tabbableCell.value.col === col
+
+const cellPosition = (cell: HTMLElement): CellPosition => ({ row: Number(cell.dataset.row), col: Number(cell.dataset.col) })
+const cellControls = (cell: HTMLElement) => [...cell.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, [tabindex]')]
+  .filter(el => el !== cell && el.getClientRects().length > 0)
+
+const focusCell = async (pos: CellPosition) => {
+  activeCell.value = pos
+  const root = tableRoot.value?.$el as HTMLElement | undefined
+  if (!root) return
+  const selector = `[data-row="${pos.row}"][data-col="${pos.col}"]`
+  let cell = root.querySelector<HTMLElement>(selector)
+  if (!cell && !pagination && pos.row > 0) {
+    // the row is outside the rendered range of the virtual scroll
+    virtualScroll.value?.scrollToIndex(pos.row - 1)
+    for (let i = 0; i < 10 && !cell; i++) {
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      cell = root.querySelector<HTMLElement>(selector)
+    }
+  }
+  if (!cell) return
+  cell.focus()
+  // focus() does not account for the sticky header: bring a cell hidden under it back
+  // into view (a scroll-padding on the wrapper did it, but disturbed wheel scrolling)
+  if (pos.row > 0) {
+    const headBottom = thead.value?.getBoundingClientRect().bottom
+    const wrapper = root.querySelector<HTMLElement>('.v-table__wrapper')
+    const top = cell.getBoundingClientRect().top
+    if (wrapper && headBottom !== undefined && top < headBottom) wrapper.scrollTop -= headBottom - top
+  }
+}
+
+const onTableKeydown = (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement
+  const cell = target.closest<HTMLElement>('[data-row]')
+  if (!cell) return
+  if (target !== cell) {
+    // focus is on a control inside the cell
+    if (event.key === 'Escape') {
+      // an open menu (header) handles its own Escape and gives focus back to its button
+      if (target.getAttribute('aria-expanded') === 'true') return
+      event.preventDefault()
+      cell.focus()
+      return
+    }
+    if (event.key === 'Tab') {
+      const controls = cellControls(cell)
+      if (!controls.length) return
+      event.preventDefault()
+      const index = controls.indexOf(target)
+      controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length].focus()
+      return
+    }
+    if (target.matches('input, textarea')) return
+  } else if (event.key === 'Enter' || event.key === 'F2') {
+    const controls = cellControls(cell)
+    if (!controls.length) return
+    event.preventDefault()
+    // Enter activates a single control directly (a header's menu, a value's filter button,
+    // a link); F2, or Enter on several controls, reaches them first (Tab cycles them)
+    if (event.key === 'Enter' && controls.length === 1) controls[0].click()
+    else controls[0].focus()
+    return
+  }
+  const next = nextPosition(cellPosition(cell), event, gridBounds.value)
+  if (!next) return
+  event.preventDefault()
+  focusCell(next)
+}
+
+// leaving the table by keyboard hides the buttons the focused cell was showing
+const onTableFocusout = (event: FocusEvent) => {
+  const root = tableRoot.value?.$el as HTMLElement | undefined
+  if (root?.contains(event.relatedTarget as Node | null)) return
+  hovered.value = undefined
+  hoveredHeader.value = undefined
+}
+
+// The tab stop moves with keyboard navigation only (focusCell): updating it on every
+// focus, a click included, re-rendered the whole table template each time (measured
+// with the ui-table harness, header-menu scenario). The cells show their hover buttons
+// on focus themselves (dataset-table-cell, @focusin).
+const onTableFocusin = (event: FocusEvent) => {
+  const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-row]')
+  if (!cell) return
+  const pos = cellPosition(cell)
+  const header = headers.value?.[pos.col]
+  if (pos.row === 0 && header && showHeaderMenu(header)) hoveredHeader.value = header
+}
 
 const mapHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
@@ -860,6 +1033,29 @@ const deleteLine = useAsyncAction(async () => {
 .dataset-table th {
   z-index: 2;
 }
+.dataset-table .dataset-table-th-button {
+  background: transparent;
+  border: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+.dataset-table .dataset-table-th-button:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+}
+.dataset-table [data-row]:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+}
+
 .dataset-table .header-wrapper {
   position: relative;
   width: 100%;
@@ -882,7 +1078,6 @@ const deleteLine = useAsyncAction(async () => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   overflow: hidden;
 }
 .dataset-table th.selectable-header {
@@ -893,7 +1088,6 @@ const deleteLine = useAsyncAction(async () => {
   cursor: text;
   display: block;
   -webkit-line-clamp: unset;
-  line-clamp: unset;
   overflow: visible;
   white-space: normal;
   word-break: break-all;
