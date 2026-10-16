@@ -15,11 +15,13 @@ const oauth2Of = (doc: any, operationId: string): string[] | undefined => {
 const dataset: any = { id: 'd1', owner: { type: 'organization', id: 'o1' }, isRest: true, schema: [] }
 let docs: Record<string, any>
 let scopeDescriptions: (locale: 'fr' | 'en') => Record<string, string>
+let rootOperationClasses: Record<string, string>
 
 test.beforeAll(async () => {
   const apiDocs = (await import('../../../api/contract/api-docs.ts')).default
   const privateDatasetAPIDocs = (await import('../../../api/contract/dataset-private-api-docs.ts')).default
   scopeDescriptions = (await import('../../../api/src/misc/utils/scopes.ts')).scopeDescriptions
+  rootOperationClasses = (await import('../../../api/contract/scopes-security.ts')).rootOperationClasses
   docs = {
     root: apiDocs('http://localhost'),
     private: privateDatasetAPIDocs(dataset, 'http://localhost')
@@ -65,5 +67,28 @@ test.describe('oauth2 security in the OpenAPI docs', () => {
     for (const id of ['ping', 'getApiDoc', 'getVocabulary']) assert.equal(oauth2Of(docs.root, id), undefined)
     const superadmin = operations(docs.root).filter((o: any) => o['x-permissionClass'] === 'superadmin')
     for (const op of superadmin as any[]) assert.equal(op.security?.some((s: any) => s.oauth2), undefined, op.operationId)
+  })
+})
+
+// the operations of the root doc defined inline carry no x-permissionClass: applyOauth2Security maps
+// them by operationId through rootOperationClasses. A new inline operation of a family must be
+// mapped there, or listed here when it deliberately has no tier.
+const rootOperationsWithoutTier = new Set<string>([])
+
+test.describe('inline root operations of the families', () => {
+  test('are mapped to a permission class or explicitly exempted', () => {
+    const inline: string[] = []
+    for (const [path, pathItem] of Object.entries(docs.root.paths) as [string, any][]) {
+      if (!['/datasets', '/catalog', '/applications'].some(prefix => path.startsWith(prefix))) continue
+      for (const method of [...methods, 'head']) {
+        const op = pathItem[method]
+        if (!op || op['x-permissionClass']) continue
+        inline.push(op.operationId)
+        assert.ok(Object.hasOwn(rootOperationClasses, op.operationId) || rootOperationsWithoutTier.has(op.operationId),
+          `${method} ${path} (${op.operationId}) has no x-permissionClass: map it in rootOperationClasses or exempt it`)
+      }
+    }
+    // no stale entry: every mapped or exempted operation still exists inline
+    for (const id of [...Object.keys(rootOperationClasses), ...rootOperationsWithoutTier]) assert.ok(inline.includes(id), `${id} is not an inline root operation anymore`)
   })
 })

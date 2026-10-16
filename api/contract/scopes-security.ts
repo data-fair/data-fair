@@ -23,7 +23,7 @@ export const oauth2Entry = (family: ScopeFamily, permissionClass: string): Recor
 }
 
 /** permission class of the operations defined inline in the root doc (they carry no x-permissionClass) */
-const rootOperationClasses: Record<string, string> = {
+export const rootOperationClasses: Record<string, string> = {
   listDatasets: 'list',
   postDataset: 'post',
   putDataset: 'post',
