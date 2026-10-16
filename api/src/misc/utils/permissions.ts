@@ -9,6 +9,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
+import { scopeAllowsClass } from './scopes.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
@@ -177,6 +178,30 @@ export const can = function (resourceType: ResourceType, resource: Resource, ope
 
 /** Lists every operationId the session can perform on the given resource (combining owner role, explicit permissions and bypasses). */
 export const list = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
+  const operations = listUnscoped(resourceType, resource, sessionState, bypassPermissions)
+  // sessions without a scope claim keep exactly their rights
+  if (!sessionState.scopes) return operations
+  return operations.filter(op => scopeAllowsOperation(sessionState, resourceType, op))
+}
+
+/** operationId -> every standard class listing it, per resource type */
+const classesByOperation = {} as Record<ResourceType, Map<string, string[]>>
+for (const [resourceType, classes] of Object.entries(permissionsClasses.operationsClasses) as [ResourceType, Record<string, string[]>][]) {
+  const map = classesByOperation[resourceType] = new Map<string, string[]>()
+  for (const [cl, ops] of Object.entries(classes)) {
+    for (const op of ops) {
+      const opClasses = map.get(op)
+      if (opClasses) opClasses.push(cl)
+      else map.set(op, [cl])
+    }
+  }
+}
+
+/** a scoped session keeps an operation if the scopes allow any of its classes (an operation of no class is dropped) */
+const scopeAllowsOperation = (sessionState: SessionState, resourceType: ResourceType, operation: string) =>
+  (classesByOperation[resourceType].get(operation) ?? []).some(cl => scopeAllowsClass(sessionState, resourceType, cl))
+
+const listUnscoped = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
   const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const operations = new Set<string>([])
 
@@ -358,6 +383,7 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
  */
 export const canDoForOwner = function (owner: AccountKeys, resourceType: ResourceType, operationClass: string, sessionState: SessionState, allAccounts = false) {
   if (sessionState.user?.adminMode) return true
+  if (!scopeAllowsClass(sessionState, resourceType, operationClass)) return false
   const ownerClasses = getOwnerClasses(owner, sessionState, resourceType, allAccounts)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
