@@ -83,12 +83,14 @@ test.describe('proxy and embed marks', () => {
     // no referer: the proxy refuses on its own terms, whatever the status is, but never on the scope
     const st = await status(bearerAx.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
     assert.notEqual(st, 403)
+    // the proxy route answers GET only: another method is refused on the method, not on the scope
+    assert.equal(await status(bearerAx.post('/api/v1/remote-services/geocoder-koumoul/proxy/coord', {})), 405)
   })
 
   test('the embed shell is served to a scoped session on GET only', async () => {
     const { bearerAx } = await nhiSession('datasets:read')
     assert.equal(await status(bearerAx.get('/embed/dataset/unknown/table')), 200)
     // no handler for other methods: not served (the mark is not what answers)
-    assert.notEqual(await status(bearerAx.post('/embed/dataset/unknown/table', {})), 200)
+    assert.equal(await status(bearerAx.post('/embed/dataset/unknown/table', {})), 404)
   })
 })
