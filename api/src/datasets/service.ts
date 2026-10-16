@@ -64,7 +64,8 @@ const filterFields = {
 const facetFields = {
   ...filterFields,
   topics: 'topics',
-  conformsTo: 'conformsTo'
+  conformsTo: 'conformsTo',
+  customMetadata: 'customMetadata'
 }
 const sumsFields = { count: 'count' }
 const nullFacetFields = ['publicationSites']

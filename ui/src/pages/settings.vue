@@ -74,8 +74,8 @@
             color="accent"
             variant="flat"
             :disabled="!topicsValid"
-            :loading="topicsEdit.save.loading.value"
-            @click="topicsEdit.save.execute()"
+            :loading="topicsEdit.save.loading.value || saveConfirm?.loading"
+            @click="saveConfirm?.save(topicsEdit, 'topics')"
           >
             {{ t('save') }}
           </v-btn>
@@ -115,8 +115,8 @@
             color="accent"
             variant="flat"
             :disabled="!qualityValid"
-            :loading="qualityEdit.save.loading.value"
-            @click="qualityEdit.save.execute()"
+            :loading="qualityEdit.save.loading.value || saveConfirm?.loading"
+            @click="saveConfirm?.save(qualityEdit, 'customMetadata')"
           >
             {{ t('save') }}
           </v-btn>
@@ -291,6 +291,14 @@
       <!-- Table of contents -->
       <df-toc :sections="tocSections" />
     </df-navigation-right>
+
+    <!-- a save that removes values from datasets or applications asks for confirmation first -->
+    <settings-save-confirm
+      ref="save-confirm"
+      :account="settingsAccount"
+      :previous="settingsEditFetch.serverData.value"
+      :current="settings"
+    />
   </v-container>
 </template>
 
@@ -490,6 +498,7 @@ const anyDirty = computed(() =>
 )
 
 const qualityTab = ref('datasetsMetadata')
+const saveConfirm = useTemplateRef('save-confirm')
 
 // Validation state from child components
 const topicsValid = ref(true)
