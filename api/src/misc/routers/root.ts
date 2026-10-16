@@ -7,6 +7,7 @@ import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
 import config from '#config'
+import { scopeDescriptions } from '../utils/scopes.ts'
 import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../utils/public-base-url.ts'
 
@@ -27,6 +28,13 @@ router.get('/api-docs.json', (req, res) => {
 router.get('/agents/index.json', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300')
   res.json(agentsIndex(reqPublicBaseUrl(req), config))
+})
+
+// The scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL); public, no session read.
+router.get('/scopes.json', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300')
+  res.vary('Accept-Language')
+  res.json({ scopes: scopeDescriptions(req.getLocale() === 'en' ? 'en' : 'fr') })
 })
 
 // The bodies of the root document's skills, linked from its x-agent.skills; public like the document.
