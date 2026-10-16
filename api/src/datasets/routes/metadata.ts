@@ -42,7 +42,7 @@ import { searchIndexPatch } from '../utils/search-text.ts'
 import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
-import { filterByContextualCardinality, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
+import { filterByContextualCardinality, filterByUniqueValues, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
 import { manageESError } from './_es-error.ts'
 import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
@@ -54,15 +54,20 @@ const debugBreakingChanges = debugModule('breaking-changes')
 // retrieve only the schema.. Mostly useful for easy select fields
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
-  if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+  const filtered = hasDataFilters(reqQuery)
+  const uniqueValues = reqQuery.uniqueValues === 'true'
+  const contextualMaxCardinality = !!reqQuery.maxCardinality && filtered
+  if (contextualCardinality && (contextualMaxCardinality || uniqueValues)) {
     // which columns survive tells whether some line matches the filters, e.g. maxCardinality=0
-    // keeps a column iff no line does: that is a read of the lines, not of the schema
-    if (!can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
+    // keeps a column iff no line does, uniqueValues tells how many lines match at most: that is a
+    // read of the lines, not of the schema
+    if (filtered && !can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
       throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
     }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
-    // within the context of the data filters, instead of the stored whole-dataset cardinality
+    // within the context of the data filters, instead of the stored whole-dataset cardinality;
+    // uniqueValues compares distinct values to matching lines in ES, with or without data filters
     // this path runs an ES query, so unlike the plain schema read it gets the same cache headers
     // as the data endpoints; the reference date is the latest of updatedAt (schema metadata edits)
     // and finalizedAt (data changes, refreshed cardinalities)
@@ -70,17 +75,20 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
     const cacheTimes = [dataset.updatedAt, dataset.finalizedAt].filter((d): d is string => !!d).map(d => new Date(d).getTime())
     const cacheDate = new Date(Math.max(...cacheTimes))
     if (cacheHeaders.applyResourceCacheHeaders(req, res, cacheDate)) return
-    const maxCardinality = Number(reqQuery.maxCardinality)
     const schemaQuery: Record<string, string> = { ...reqQuery }
-    delete schemaQuery.maxCardinality
+    if (contextualMaxCardinality) delete schemaQuery.maxCardinality
     schema = filterSchema(schema, schemaQuery)
     try {
-      schema = await filterByContextualCardinality(dataset, schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
+      const esOptions = createEsRequestOptions(req, res)
+      if (contextualMaxCardinality) schema = await filterByContextualCardinality(dataset, schema, reqQuery, Number(reqQuery.maxCardinality), esOptions)
+      if (uniqueValues) schema = await filterByUniqueValues(dataset, schema, reqQuery, filtered, esOptions)
     } catch (err) {
       await manageESError(req, err)
     }
   } else {
     schema = filterSchema(schema, reqQuery)
+    // the safe schema gives no clue about the data, no column can be told to hold unique values
+    if (uniqueValues) schema = []
   }
   if (reqQuery.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', contentDisposition(reqDataset(req).slug + '-tableschema.json'))
