@@ -336,6 +336,48 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(page.locator('.v-overlay--active.v-menu')).toBeVisible()
     })
 
+    test('the focus comes back to the header after an action of its menu', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'adr')
+      await page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`).focus()
+      await page.keyboard.press('ArrowUp')
+      await page.keyboard.press('Enter')
+      const menu = page.locator('.v-overlay--active.v-menu')
+      // the opening menu moves the focus into itself a little later, it can take it back
+      const focusItem = async (name: RegExp) => {
+        const item = menu.locator('.v-list-item').filter({ hasText: name }).first()
+        await expect(async () => {
+          await item.focus()
+          await expect(item).toBeFocused({ timeout: 100 })
+        }).toPass()
+      }
+      await expect(menu).toBeVisible()
+      await focusItem(/tri ascendant|ascending sort/i)
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page.locator(`.dataset-table th[data-col="${col}"]`)).toHaveAttribute('aria-sort', 'ascending')
+      await expect.poll(() => activeCell(page)).toMatchObject({ inTable: true, row: 0, col })
+      // and the arrows go on from there
+      await page.keyboard.press('Escape')
+      await page.keyboard.press('ArrowDown')
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: 1, col })
+
+      // hiding the column removes its header: the focus goes to the header that takes its place
+      // (Vuetify ignores its activator for 50ms after a close, see the sort test above)
+      await page.waitForTimeout(100)
+      await page.keyboard.press('ArrowUp')
+      await page.keyboard.press('Enter')
+      await expect(menu).toBeVisible()
+      await focusItem(/masquer cette|hide this/i)
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page.locator('.dataset-table thead th').filter({ hasText: /^adr$/ })).toHaveCount(0)
+      await expect.poll(() => activeCell(page)).toMatchObject({ inTable: true, row: 0, col })
+    })
+
     test('a cell reached with ArrowUp is not hidden under the sticky header', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-up', schema: [{ key: 'n', type: 'integer' }] })).data

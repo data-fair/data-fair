@@ -196,7 +196,7 @@
               :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
-              @hide="hideHeader(header)"
+              @hide="hideHeader(header, i)"
               @fix-col="onFixCol(header.key)"
               @update:sort="direction => {sort = direction ? {direction, key: header.key} : undefined}"
             />
@@ -641,12 +641,17 @@ const linesOwner = computed(() => {
 const allCols = computed(() => dataset.value?.schema?.filter(isVisibleCol).map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const hideHeader = (header: TableHeader) => {
+const hideHeader = async (header: TableHeader, col?: number) => {
+  // from its menu, the focus goes with the column: give it to the header taking its place
+  const fromMenu = !!document.activeElement?.closest('.v-overlay')
   let newCols = cols.value
   if (!cols.value.length) {
     newCols = [...allCols.value]
   }
   cols.value = newCols.filter(col => col !== header.key)
+  if (!fromMenu || col === undefined) return
+  await nextTick()
+  focusCell({ row: 0, col: Math.min(col, (headers.value?.length ?? 1) - 1) })
 }
 
 // Agent contexts
