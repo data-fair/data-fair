@@ -9,6 +9,7 @@ import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch
 import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
+import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import pJson from './p-json.js'
 import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint } from './x-agent.ts'
 
@@ -157,7 +158,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           type: 'apiKey',
           in: 'cookie',
           name: 'id_token'
-        }
+        },
+        oauth2: oauth2Scheme()
       },
       responses: {
         BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
@@ -583,6 +585,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       }
     }
   }
+
+  applyOauth2Security(api)
 
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.

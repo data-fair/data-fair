@@ -282,6 +282,10 @@ there is nothing to keep compatible. A request naming it is refused like any und
 - A stack check composes every document with every profile at once and asserts that no service
   declares an undeclared profile, that no tool name repeats, and that no tool sits at two tiers.
 
+## Profiles and authorization
+
+Profiles stay a tool offering until phase 3: they decide which tools an agent is shown, never what it may do. Authorization is the OAuth scopes of the session ([scopes.md](scopes.md)), enforced by data-fair on every request whatever tools the profile lists.
+
 ## 10. Rollout
 
 Release order: a consumer must run `@data-fair/openapi-mcp` 0.4.0 or later before data-fair

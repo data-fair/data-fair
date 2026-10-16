@@ -10,6 +10,7 @@ import { visibility } from '../src/misc/utils/visibility.ts'
 import { datasetOperationGrantedBy } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import { operations as xAgent } from './x-agent.ts'
+import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
@@ -106,7 +107,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       type: 'apiKey',
       in: 'cookie',
       name: 'id_token'
-    }
+    },
+    oauth2: oauth2Scheme()
   }
   api.security = [{ apiKey: [] }, { sdCookie: [] }]
 
@@ -934,6 +936,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       if (!Object.keys(methods).some(k => httpMethods.has(k))) delete api.paths[path]
     }
   }
+
+  // paths are relative to /datasets/{id}: the family is the datasets one
+  applyOauth2Security(api, '/datasets')
 
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.
