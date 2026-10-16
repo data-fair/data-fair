@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { nhiSession } from '../../support/nhi.ts'
 
 // the keys of a write body that need more than the route's own operation (read API key, master
@@ -25,6 +25,10 @@ const createDataset = async (id: string) => {
 
 const readApiKey = { readApiKey: { active: true, interval: 'P1W' } }
 const masterData = { masterData: { standardSchema: { active: true } } }
+
+// a publication site that is not a staging site: publishing on it needs writePublicationSites
+const site = { type: 'data-fair-portals', id: 'scope-portal', url: 'http://scope-portal.example.com', title: 'Scope portal' }
+const siteKey = `${site.type}:${site.id}`
 
 test.describe('admin tier keys of the write bodies', () => {
   test.beforeEach(async () => { await clean() })
@@ -70,5 +74,25 @@ test.describe('admin tier keys of the write bodies', () => {
     assert.ok(ds.readApiKey?.active)
     assert.ok(ds.masterData?.standardSchema?.active)
     assert.equal(await status(ax.post('/api/v1/datasets', { isRest: true, title: 'Created by admin', schema: [], ...readApiKey })), 201)
+  })
+
+  test('applications:write cannot publish through PUT /applications/:id', async () => {
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    const app = (await orgAdmin.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Scope app' })).data
+    const ax = (await nhiSession('applications:write')).bearerAx
+    assert.equal(await status(ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: [siteKey] })), 403)
+    assert.equal(await status(ax.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] })), 403)
+    assert.equal(await status(ax.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publications: [{ catalog: 'c1', status: 'waiting' }] })), 403)
+    assert.deepEqual((await orgAdmin.get(`/api/v1/applications/${app.id}`)).data.publicationSites ?? [], [])
+    // a replacement that does not touch the publications is still a write tier operation
+    assert.equal(await status(ax.put(`/api/v1/applications/${app.id}`, { url: app.url, title: 'Renamed' })), 200)
+  })
+
+  test('applications:admin publishes through PUT /applications/:id', async () => {
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    const app = (await orgAdmin.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Scope app' })).data
+    const ax = (await nhiSession('applications:admin')).bearerAx
+    assert.equal(await status(ax.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] })), 200)
+    assert.deepEqual((await orgAdmin.get(`/api/v1/applications/${app.id}`)).data.publicationSites, [siteKey])
   })
 })

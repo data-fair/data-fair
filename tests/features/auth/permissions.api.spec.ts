@@ -493,6 +493,22 @@ test.describe('permissions', () => {
     assert.deepEqual(dataset.publicationSites, [siteKey])
   })
 
+  test('organization contrib cannot publish an application through PUT', async () => {
+    const site = { type: 'data-fair-portals', id: 'contrib-portal', url: 'http://contrib-portal.example.com', title: 'Contrib portal' }
+    const siteKey = `${site.type}:${site.id}`
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+
+    const app = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'An application' })).data
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${app.id}`, { publicationSites: [siteKey] }), { status: 403 })
+    await assert.rejects(testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] }), { status: 403 })
+    await assert.rejects(testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publications: [{ catalog: 'c1', status: 'waiting' }] }), { status: 403 })
+    assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${app.id}`)).data.publicationSites ?? [], [])
+    await testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: 'Renamed by contrib' })
+
+    await testUser1Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] })
+    assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${app.id}`)).data.publicationSites, [siteKey])
+  })
+
   test('organization user has even more limited capabilities', { tag: '@smoke' }, async () => {
     await assert.rejects(testUser8Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err: any) => err.status === 403)
     const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
