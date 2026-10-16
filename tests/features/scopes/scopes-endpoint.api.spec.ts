@@ -24,5 +24,6 @@ test.describe('GET /api/v1/scopes.json', () => {
     assert.ok(res.headers.etag)
     const again = await anonymousAx.get('/api/v1/scopes.json', { headers: { 'if-none-match': res.headers.etag }, validateStatus: () => true })
     assert.equal(again.status, 304)
+    assert.match(String(again.headers.vary), /Accept-Language/i)
   })
 })

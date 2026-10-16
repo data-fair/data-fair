@@ -1,26 +1,34 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import type { SessionState } from '@data-fair/lib-express'
-import { operationsClasses, contribOperationsClasses, adminOperationsClasses } from '../../../shared/permissions/operations.ts'
+import { operations } from '../../../shared/permissions/operations.ts'
 import { scopeFamilyOf, tierOfClass, acceptedScopes, scopeAllowsClass, familyScopes, scopeDescriptions } from '../../../api/src/misc/utils/scopes.ts'
 
 const scoped = (...scopes: string[]) => ({ user: { id: 'u' }, scopes }) as unknown as SessionState
 const unrestricted = { user: { id: 'u' } } as unknown as SessionState
 
 test.describe('scope vocabulary', () => {
-  test('every class of the operations source maps to its tier', () => {
-    const expected: Record<string, string> = { list: 'read', read: 'read', readAdvanced: 'read', write: 'write', manageOwnLines: 'write', admin: 'admin' }
-    for (const rt of ['datasets', 'applications'] as const) {
-      for (const cl of Object.keys(operationsClasses[rt])) assert.equal(tierOfClass(cl), expected[cl], `${rt} ${cl}`)
-      for (const id of contribOperationsClasses[rt]) assert.equal(tierOfClass('post'), 'write', id)
-      for (const id of adminOperationsClasses[rt]) assert.equal(tierOfClass('manageMasterData'), 'admin', id)
+  test('every class of the operations source is decided: a tier or deliberately ungranted', () => {
+    const expected: Record<string, string> = { list: 'read', read: 'read', readAdvanced: 'read', write: 'write', manageOwnLines: 'write', post: 'write', admin: 'admin', manageMasterData: 'admin' }
+    // classes of operations that scoped sessions never get (superadmin routes, routes covered by another operation)
+    const ungranted = new Set(operations.filter(op => op.grouping === 'superadmin' || op.grouping === 'documented').map(op => op.class))
+    const allClasses = new Set(operations.map(op => op.class))
+    // a class both granted and ungranted would be a bug in the source
+    for (const cl of Object.keys(expected)) assert.ok(!ungranted.has(cl) || operations.some(op => op.class === cl && op.grouping !== 'superadmin' && op.grouping !== 'documented'), cl)
+    const decided = new Set([...Object.keys(expected), ...ungranted])
+    assert.deepEqual([...allClasses].sort(), [...decided].sort(), 'a new permission class needs a tier decision in scopes.ts and this test')
+    for (const op of operations) {
+      if (op.grouping === 'superadmin' || op.grouping === 'documented') {
+        if (!expected[op.class]) assert.equal(tierOfClass(op.class), undefined, `${op.resourceType} ${op.id}`)
+      } else {
+        assert.equal(tierOfClass(op.class), expected[op.class], `${op.resourceType} ${op.id} (${op.class})`)
+      }
     }
-    assert.equal(tierOfClass('post'), 'write')
-    assert.equal(tierOfClass('manageMasterData'), 'admin')
+    assert.ok(operations.some(op => op.grouping === 'contrib') && operations.some(op => op.grouping === 'ownerAdmin'))
   })
 
   test('superadmin and unknown classes have no tier', () => {
-    for (const cl of ['superadmin', 'diagnose', 'reindex', 'readSomething', '']) assert.equal(tierOfClass(cl), undefined)
+    for (const cl of ['superadmin', 'diagnose', 'reindex', 'readSomething', '', 'toString']) assert.equal(tierOfClass(cl), undefined)
   })
 
   test('scopeFamilyOf', () => {
