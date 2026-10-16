@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import config from '#config'
-import { reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { buildPublicationSiteSubscriptions } from './operations.ts'
 import * as service from './service.ts'
 import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams, reqWriteContext } from './middlewares.ts'
@@ -11,6 +11,10 @@ import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParam
 const router = express.Router()
 
 router.use('/:type/:id', settingsParamsMiddleware)
+
+// allowAnyScope marks the read routes the UIs call on load (licenses, and the isOwnerMember
+// reads): a scoped session reaches them whatever its scopes. Settings writes and the full
+// settings read (isOwnerAdmin) stay unmarked: scoped sessions are refused there (403).
 
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
@@ -26,27 +30,27 @@ router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
 })
 
 // Get topics list as owner
-router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
+router.get('/:type/:id/topics', allowAnyScope, isOwnerMember, async (req, res) => {
   res.status(200).send(await service.getTopics(reqSettingsParams(req)))
 })
 
 // Get licenses list as anyone
-router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
+router.get('/:type/:id/licenses', allowAnyScope, cacheHeaders.noCache, async (req, res) => {
   res.status(200).send(await service.getLicenses(reqSettingsParams(req)))
 })
 
 // Get datasets metadata settings as owner
-router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
+router.get('/:type/:id/datasets-metadata', allowAnyScope, isOwnerMember, async (req, res) => {
   res.status(200).send(await service.getDatasetsMetadata(reqSettingsParams(req)))
 })
 
 // Get agent chat setting as member
-router.get('/:type/:id/agent-chat', isOwnerMember, cacheHeaders.noCache, async (req, res) => {
+router.get('/:type/:id/agent-chat', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
   res.status(200).send(await service.getAgentChat(reqSettingsParams(req)))
 })
 
 // Get publication sites as owner
-router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
+router.get('/:type/:id/publication-sites', allowAnyScope, isOwnerMember, async (req, res) => {
   reqSessionAuthenticated(req)
   res.status(200).send(await service.getPublicationSites(reqSettingsParams(req)))
 })

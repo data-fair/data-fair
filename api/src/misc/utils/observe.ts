@@ -93,7 +93,9 @@ export const reqStep = (req: Request, stepName: string) => {
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
   if (duration > SLOW_REQUEST_THRESHOLD_MS && stepName !== 'total' && stepName !== 'finish') {
     const referer = req.headers.referer || req.headers.referrer || 'unknown'
-    const user = reqUser(req)
+    // logging only: a scoped session on a route that did not check scopes makes reqUser throw
+    let user
+    try { user = reqUser(req) } catch { user = undefined }
     const userStr = user ? `${user.name}(${user.id})` : 'anonymous'
     console.log(`slow request ${req.method} ${req.originalUrl} ${stepName} ${duration}ms referer=${referer} user=${userStr}`)
   }

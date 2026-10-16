@@ -128,7 +128,7 @@ export const registerMetadataRoutes = (router: Router) => {
     let sessionState = reqSession(req)
     let asVisitorFilters: any[] | undefined
     if (reqQuery.asVisitor) {
-      const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+      const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string, 'datasets')
       sessionState = ctx.sessionState
       asVisitorFilters = [ctx.ownerFilter]
     }

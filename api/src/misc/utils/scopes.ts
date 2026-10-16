@@ -2,7 +2,8 @@
 // (read < write < admin) and a bare umbrella per family. Tiers are derived from the permission
 // classes of shared/permissions/operations.ts; any other class (superadmin operations) has no
 // tier and is never granted to a scoped session.
-import { hasScope, type SessionState } from '@data-fair/lib-express'
+import { hasScope, assertReqScope, type SessionState } from '@data-fair/lib-express'
+import type { RequestHandler } from 'express'
 import type { ResourceType } from '#types'
 
 export type ScopeFamily = 'datasets' | 'applications'
@@ -34,6 +35,19 @@ export const acceptedScopes = (family: ScopeFamily, tier: ScopeTier): string[] =
 
 export const familyScopes = (family: ScopeFamily): string[] =>
   [family, ...tiers.map(t => `${family}:${t}`)]
+
+/**
+ * Mounted in front of a family's routers: a scoped session holding no scope of the family is
+ * refused (403), and the request is marked scope-checked so the routes can read the session; the
+ * tier is then checked per operation by the permission core (list / canDoForOwner). Unrestricted
+ * sessions pass and are marked harmlessly.
+ * A scoped token without the family therefore gets less than anonymous on the family's public
+ * resources, and loses the application-key bypass a Referer would otherwise give (fail closed).
+ */
+export const scopeFamilyGate = (family: ScopeFamily): RequestHandler => (req, _res, next) => {
+  assertReqScope(req, familyScopes(family))
+  next()
+}
 
 /** unrestricted sessions (no scope claim) are always allowed */
 export const scopeAllowsClass = (sessionState: SessionState, resourceType: ResourceType, operationClass: string): boolean => {

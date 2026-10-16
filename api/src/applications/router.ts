@@ -56,7 +56,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   let sessionState = reqSession(req)
   let asVisitorFilters: any[] | undefined
   if (reqQuery.asVisitor) {
-    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string, 'applications')
     sessionState = ctx.sessionState
     asVisitorFilters = [ctx.ownerFilter]
   }
