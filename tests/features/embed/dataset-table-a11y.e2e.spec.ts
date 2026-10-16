@@ -210,10 +210,23 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await page.keyboard.press('Enter')
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
 
-      // the filters bar is no Tab stop of its own, Tab goes from the search field to the filter
+      // the filters bar is no Tab stop of its own, nor is its chip that has no action: Tab goes
+      // from the search field to the chip's close button, Enter removes the filter
       await page.locator('[role="search"] input').first().focus()
       await page.keyboard.press('Tab')
-      await expect(page.locator('.dataset-filters .v-chip').first()).toBeFocused()
+      const closeFilter = page.locator('.dataset-filters .v-chip').first().getByRole('button')
+      await expect(closeFilter).toBeFocused()
+      await expect(page.locator('.dataset-filters .v-chip--link')).toHaveCount(0)
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-filters .v-chip')).toHaveCount(0)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
+      // the focus goes back to the search field, not to the page body
+      await expect(page.locator('[role="search"] input').first()).toBeFocused()
+      await cell.focus()
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
 
       // the filtered chip removes its filter the same way
       const filteredCell = page.locator(`.dataset-table td[data-row="${await page.locator('.dataset-table tbody tr').filter({ hasText: 'rouge' }).locator('td').first().getAttribute('data-row')}"][data-col="${col}"]`)
