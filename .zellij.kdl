@@ -22,7 +22,7 @@ layout {
       start_suspended true
     }
   }
-  pane name="urls" size=1 borderless=true command="bash" {
+  pane name="url" size=1 borderless=true command="bash" {
     args "-c" "echo -n -e \"Dev server available at \\e[1;96mhttp://$DEV_HOST:$NGINX_PORT\\e[0m\"; exec sleep infinity"
   }
 }

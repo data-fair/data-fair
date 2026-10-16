@@ -33,9 +33,7 @@
       "ready": "http://localhost:${MOCK_PORT}/"
     }
   },
-  "urls": {
-    "Data Fair": "http://${DEV_HOST}:${NGINX_PORT}/data-fair/"
-  },
+  "url": "http://${DEV_HOST}:${NGINX_PORT}/data-fair/",
   "setup": [
     "npm -w parquet-writer run build"
   ],
