@@ -96,3 +96,24 @@ test.describe('admin tier keys of the write bodies', () => {
     assert.deepEqual((await orgAdmin.get(`/api/v1/applications/${app.id}`)).data.publicationSites, [siteKey])
   })
 })
+
+test.describe('application configuration referencing datasets', () => {
+  test.beforeEach(async () => { await clean() })
+
+  test('applications:read needs datasets:read to read a configuration that references a dataset', async () => {
+    await createDataset('scope-cfg')
+    const ds = (await orgAdmin.get('/api/v1/datasets/scope-cfg')).data
+    const app = (await orgAdmin.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Scope cfg app' })).data
+    await orgAdmin.put(`/api/v1/applications/${app.id}/configuration`, { datasets: [{ href: ds.href, id: ds.id, title: ds.title }] })
+
+    const appsOnly = (await nhiSession('applications:read')).bearerAx
+    const refused = await appsOnly.get(`/api/v1/applications/${app.id}/configuration`).catch((err: any) => err)
+    assert.equal(refused.status, 403)
+    assert.match(String(refused.data), /datasets:read/)
+
+    const both = (await nhiSession('applications:read datasets:read')).bearerAx
+    const res = await both.get(`/api/v1/applications/${app.id}/configuration`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.datasets[0].id, ds.id)
+  })
+})

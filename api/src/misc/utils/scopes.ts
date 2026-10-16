@@ -78,13 +78,13 @@ const descriptions: Record<ScopeFamily, Record<'fr' | 'en', Record<'umbrella' | 
   applications: {
     fr: {
       umbrella: 'Tous les droits sur les applications',
-      read: 'Lire les applications, leur configuration, leur journal',
+      read: 'Lire les applications, leur configuration, leur journal ; les applications qui référencent des jeux de données demandent aussi datasets:read',
       write: 'Modifier les applications et leur configuration, en créer',
       admin: 'Administrer les applications : suppression, permissions, publication'
     },
     en: {
       umbrella: 'All application scopes',
-      read: 'Read applications, their configuration and journal',
+      read: 'Read applications, their configuration and journal; applications referencing datasets also need datasets:read',
       write: 'Edit applications and their configuration, create applications',
       admin: 'Administer applications: deletion, permissions, publication'
     }

@@ -28,6 +28,10 @@ A scoped session is never `adminMode` (the lib refuses superadmin claims on scop
 
 Lib-express refuses a scoped session on any route that neither checked scopes nor was marked: that is what "stays refused" below means (403).
 
+## Applications and the datasets they reference
+
+`GET /api/v1/applications/:id/configuration` (and the deprecated `/config`) checks that the session can read the description of every dataset the configuration references (`refreshConfigDatasetsRefs` with the personal session). An `applications:read` token without any `datasets` scope fails closed there: 403 whenever the configuration references a dataset, with a message naming the missing `datasets:read` scope. The `applications:read` scope description says so: applications referencing datasets also need `datasets:read`.
+
 ## Any-scope routes
 
 Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), because the UIs call them on load and they expose nothing a tier would restrict:
