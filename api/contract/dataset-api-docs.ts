@@ -616,6 +616,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       {
         in: 'query',
+        name: 'uniqueValues',
+        description: 'Restreindre aux colonnes dont chaque ligne porte une valeur distincte (aucun doublon, aucune valeur vide) : des candidates pour servir de clé naturelle, pour une jointure ou pour synchroniser une sélection de lignes entre applications. Il s\'agit d\'une observation des données, pas d\'une contrainte déclarée.\n\n' +
+          'Les lignes considérées sont celles qui correspondent aux filtres sur les données de la requête (toutes les lignes sans filtre). Avec au moins un filtre, ce mode nécessite la permission de lire les lignes (`readLines`).\n\n' +
+          'Une seule ligne vide (valeur absente, chaîne vide ou blanche) écarte la colonne quel que soit le volume. La détection des doublons est exacte jusqu\'à 40 000 lignes, approchée au-delà (tolérance de 1 %). Les colonnes multivaluées, calculées ou sans capacité de valeurs ne sont jamais retenues.\n\n' +
+          '*Non applicable sur `/safe-schema`, qui n\'expose pas d\'indice sur les données : la réponse est alors vide.*',
+        required: false,
+        schema: {
+          title: 'Valeurs uniques',
+          type: 'string',
+          enum: ['false', 'true']
+        }
+      },
+      {
+        in: 'query',
         name: 'calculated',
         description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
           'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +
