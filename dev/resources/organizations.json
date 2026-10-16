@@ -43,6 +43,9 @@
     }, {
       "id": "test_org1_agent_nhi",
       "role": "contrib"
+    }, {
+      "id": "test_org1_scope_nhi",
+      "role": "admin"
     }]
   },
   {
