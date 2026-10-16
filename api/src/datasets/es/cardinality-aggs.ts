@@ -76,8 +76,9 @@ const storedCardinalityMargin = 0.9
 
 // Keep the fields that hold a distinct value on every line matching the data filters of the query
 // (all lines without filters): candidates for a natural key, e.g. to join or to sync a line
-// selection between applications. One ES search counts the lines and the distinct values of each
-// candidate field, cf hasUniqueValues for the comparison and its tolerance on large sets.
+// selection between applications. One ES search counts the lines, and for each candidate field
+// the lines with a value (exact at any size, so that an empty line always disqualifies) and the
+// distinct values (cf hasUniqueValues for the comparison and its tolerance on large sets).
 export const filterByUniqueValues = async (dataset: any, schema: any[], reqQuery: Record<string, any>, filtered: boolean, abortContext?: EsAbortContext) => {
   const candidates = schema
     .filter(cardinalityEligible)
@@ -88,11 +89,18 @@ export const filterByUniqueValues = async (dataset: any, schema: any[], reqQuery
   const esQuery = prepareCardinalityQuery(dataset, reqQuery)
   if (!candidates.length) return []
   esQuery.track_total_hits = true
-  esQuery.aggs = cardinalityAggs(candidates, UNIQUE_VALUES_PRECISION_THRESHOLD)
+  // aggs named by position, a legacy column key could collide with any key-derived name
+  esQuery.aggs = {}
+  candidates.forEach((prop: any, i: number) => {
+    esQuery.aggs['card_' + i] = { cardinality: { field: prop.key, precision_threshold: UNIQUE_VALUES_PRECISION_THRESHOLD } }
+    // multi-valued fields are excluded above, so the number of values is the number of lines with a value
+    esQuery.aggs['count_' + i] = { value_count: { field: prop.key } }
+  })
   const esResponse = await runCardinalityQuery(dataset, esQuery, abortContext)
   const nbLines = esResponse.hits.total.value
-  return candidates.filter((prop: any) => {
-    const cardinality = esResponse.aggregations?.[prop.key]?.value
+  return candidates.filter((prop: any, i: number) => {
+    if (esResponse.aggregations?.['count_' + i]?.value !== nbLines) return false
+    const cardinality = esResponse.aggregations?.['card_' + i]?.value
     return cardinality != null && hasUniqueValues(cardinality, nbLines)
   })
 }

@@ -67,6 +67,23 @@ test.describe('Schema uniqueValues filter', () => {
     await assert.rejects(get({ unknown_eq: 'x' }), (err: any) => err.status === 400)
   })
 
+  test('Empty or blank strings of REST lines count as empty values', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-unique-empty', {
+      isRest: true,
+      title: 'rest-unique-empty',
+      schema: [{ key: 'id', type: 'string' }, { key: 'code', type: 'string' }, { key: 'label', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/rest-unique-empty/_bulk_lines', [
+      { id: '1', code: '', label: 'a' },
+      { id: '2', code: 'x', label: '   ' },
+      { id: '3', code: 'y', label: 'c' }
+    ])
+    await waitForFinalize(ax, 'rest-unique-empty')
+    const res = await ax.get('/api/v1/datasets/rest-unique-empty/schema', { params: { uniqueValues: 'true' } })
+    assert.deepEqual(keysOf(res), ['id'])
+  })
+
   test('Filtered uniqueValues requires the permission to read lines', async () => {
     await testUser1.post('/api/v1/datasets/rest-unique-perm', {
       isRest: true,
