@@ -32,6 +32,26 @@ npx playwright test --project api --project e2e --grep @smoke
 Every run writes per-test durations to `dev/logs/test-timings.json` (Playwright's json
 reporter, next to the `dot` one). It holds the last run only.
 
+### Scope tests and the local simple-directory image
+
+The scope API tests (`tests/features/scopes/`) need a simple-directory that issues scoped NHI tokens: it keeps a separate scoped key set, published at `/.well-known/scoped-jwks.json`. Until simple-directory `master` ships it, build the image from the oidc-provider worktree of the simple-directory checkout:
+
+```bash
+docker build -t simple-directory:oidc-provider <path to simple-directory checkout>
+```
+
+Point the dev `sd` service at it with `SD_IMAGE` (the compose file falls back to `ghcr.io/data-fair/simple-directory:master` when it is unset), then restart the `sd` service so it picks the image up:
+
+```bash
+SD_IMAGE=simple-directory:oidc-provider docker compose up -d sd
+```
+
+Check that the scoped key set is served:
+
+```bash
+curl -s http://localhost:$SD_PORT/.well-known/scoped-jwks.json
+```
+
 ## File Naming Convention
 
 | Suffix | Type | Dependencies |

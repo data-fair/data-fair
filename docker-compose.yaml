@@ -108,7 +108,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:master
+    image: ${SD_IMAGE:-ghcr.io/data-fair/simple-directory:master}
     network_mode: host
     depends_on:
       - mongodb
