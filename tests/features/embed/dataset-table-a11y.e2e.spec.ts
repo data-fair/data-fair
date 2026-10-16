@@ -290,15 +290,23 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(cell.getByRole('button', { name: /filtrer|filter the/i })).toHaveCount(0)
       await page.keyboard.press('Enter')
       await expect(page.getByRole('dialog').getByText(/fin$/)).toBeVisible()
+      // Escape or Enter close it, the focus goes back to the cell
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
-      await expect.poll(() => activeCell(page)).toMatchObject({ inTable: true, row: Number(row), col })
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: Number(row), col })
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog').getByText(/fin$/)).toBeVisible()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: Number(row), col })
 
       // the same from the focused button
-      await cell.focus()
       await page.keyboard.press('F2')
       await page.keyboard.press('Enter')
       await expect(page.getByRole('dialog').getByText(/fin$/)).toBeVisible()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: Number(row), col })
     })
 
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {

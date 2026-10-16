@@ -5,8 +5,14 @@
     max-width="800"
     :scrim="false"
   >
+    <!-- the focus moves into the dialog, or Enter and the arrows go on acting on the table
+         behind it. Enter closes it like Escape (it opens on Enter from the table cell), except
+         on a link or a button of the value -->
     <v-card
+      ref="card"
+      tabindex="-1"
       :loading="fetchFullValue.loading.value"
+      @keydown.enter="(e: KeyboardEvent) => !(e.target as HTMLElement).closest('a, button, input, textarea') && (show = false)"
     >
       <v-toolbar
         density="compact"
@@ -47,6 +53,15 @@ const { extendedResult, property } = defineProps({
 })
 
 const show = defineModel<boolean>({ default: false })
+
+// the table unmounts the dialog when it closes: give the focus back to the cell it opened
+// from (its loupe button is gone by then, the table hides its buttons once it loses the focus)
+const active = document.activeElement as HTMLElement | null
+const opener = active?.closest<HTMLElement>('[data-row]') ?? active
+const card = useTemplateRef('card')
+// as soon as it renders, a key pressed during the opening transition would reach the table
+watch(card, c => (c?.$el as HTMLElement | undefined)?.focus())
+onUnmounted(() => opener?.focus())
 
 const { id } = useDatasetStore()
 
