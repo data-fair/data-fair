@@ -228,7 +228,9 @@ router.get('/tileserver-koumoul/proxy/*proxyPath', (req, res) => {
 
 // Use the proxy as a user of an application
 // always apply restrictive rate limiting to remote services, privileged access does not go through here
-router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
+// allowAnyScope: this proxy authorizes by Referer / application owner, never by the session, forwards
+// no caller credentials upstream and only accepts GET, so the scopes of a session are irrelevant here
+router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 

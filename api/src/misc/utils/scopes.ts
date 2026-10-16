@@ -43,6 +43,8 @@ export const familyScopes = (family: ScopeFamily): string[] =>
  * sessions pass and are marked harmlessly.
  * A scoped token without the family therefore gets less than anonymous on the family's public
  * resources, and loses the application-key bypass a Referer would otherwise give (fail closed).
+ * For an in-family scoped bearer the application-key / Referer bypass operations are intersected
+ * with the token's tier (a datasets:read token on a form app loses createLine).
  */
 export const scopeFamilyGate = (family: ScopeFamily): RequestHandler => (req, _res, next) => {
   assertReqScope(req, familyScopes(family))

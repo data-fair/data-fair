@@ -204,7 +204,8 @@ export const run = async () => {
       '/embed/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
 
-    app.use('/embed', allowAnyScope, trackEmbed)
+    // the embed shell is a GET/HEAD page, same restriction as the SPA mark below
+    app.use('/embed', (req, res, next) => (req.method === 'GET' || req.method === 'HEAD') ? allowAnyScope(req, res, next) : next(), trackEmbed)
 
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect

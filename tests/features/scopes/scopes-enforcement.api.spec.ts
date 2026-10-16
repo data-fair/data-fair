@@ -76,3 +76,19 @@ test.describe('the admin tier and the unrestricted session', () => {
     assert.equal(await status(cookieAx.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 200)
   })
 })
+
+test.describe('proxy and embed marks', () => {
+  test('the remote-services proxy answers a datasets:read session without the scope refusal', async () => {
+    const { bearerAx } = await nhiSession('datasets:read')
+    // no referer: the proxy refuses on its own terms, whatever the status is, but never on the scope
+    const st = await status(bearerAx.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
+    assert.notEqual(st, 403)
+  })
+
+  test('the embed shell is served to a scoped session on GET only', async () => {
+    const { bearerAx } = await nhiSession('datasets:read')
+    assert.equal(await status(bearerAx.get('/embed/dataset/unknown/table')), 200)
+    // no handler for other methods: not served (the mark is not what answers)
+    assert.notEqual(await status(bearerAx.post('/embed/dataset/unknown/table', {})), 200)
+  })
+})
