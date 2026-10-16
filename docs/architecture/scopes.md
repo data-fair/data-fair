@@ -34,16 +34,46 @@ Lib-express refuses a scoped session on any route that neither checked scopes no
 
 ## Any-scope routes
 
-Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), because the UIs call them on load and they expose nothing a tier would restrict:
+Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), because the UIs call them on load and they expose nothing a tier would restrict. The list is exhaustive: a route not listed here and not behind a family gate is refused to a scoped session.
 
-- root reads of `/api/v1` (ping, api-docs, vocabulary, scopes.json, agent index);
-- settings member reads and licenses (`GET /api/v1/settings/...`), limits `GET /api/v1/limits/:type/:id`;
-- base-applications reads, remote-services `GET` lists and the proxy (`GET` only: other methods answer 405);
-- `/app-sw.js`, `/embed` on `GET`/`HEAD` (the shell; other methods are not served), streamsaver, and the SPA shell on `GET`/`HEAD`.
+- root reads of `/api/v1` (`misc/routers/root.ts`): `GET /ping`, `/api-docs.json`, `/agents/index.json`, `/agents/skills/:file`, `/scopes.json`, `/vocabulary`, `/projections`, `/configurable-remote-services`, `/configurable-catalogs`;
+- the settings member reads, each route listed explicitly: `GET /api/v1/settings/:type/:id/topics`, `/datasets-metadata`, `/agent-chat`, `/publication-sites` (these four also require membership of the account) and `/licenses`. The full settings document `GET /api/v1/settings/:type/:id` is not marked and is refused;
+- limits `GET /api/v1/limits/:type/:id` (account members);
+- base-applications `GET /api/v1/base-applications`, `/:id/icon` and `/:id/thumbnail`;
+- remote-services `GET /api/v1/remote-services` (the list), `GET /api/v1/remote-services-actions`, and the proxy `/api/v1/remote-services/:id/proxy/*` (`GET` only: other methods answer 405). `GET /api/v1/remote-services/:id` is not marked;
+- `/app-sw.js`, `/streamsaver/mitm.html` and `/streamsaver/sw.js`, `/embed` on `GET`/`HEAD` (the shell; other methods are not served), and the SPA shell on `GET`/`HEAD`.
 
 ## What stays refused
 
-Everything not listed above: settings writes (API keys, publication sites), admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d: the notification bell of the UI gets 403 for a scoped session until events opts in).
+Everything not listed above. In particular settings writes (API keys, and publication sites: the "publication sites refused" of the review focus means their writes, `POST`/`DELETE /api/v1/settings/:type/:id/publication-sites...`; the member read above is allowed), the full settings read, admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d).
+
+## Tiers of some dataset operations
+
+The tier follows the permission class, not the HTTP method, so some reads are not read tier:
+
+- `readOwnLines` and `readOwnLine` (the `/own/:owner/lines` routes of datasets with line ownership) are in the `manageOwnLines` class, write tier: a `datasets:read` token cannot read its own lines.
+- `getPermissions` (`GET /datasets/:id/permissions`) and `readIntegrity` / `readIntegrityRevisions` are in the `admin` class: a `datasets:read` or `datasets:write` token cannot read the ACL nor the integrity state.
+
+## Fragments
+
+Deleting an application deletes its fragments first (`fragmentsService.deleteFragments`, see [fragments.md](fragments.md)), datasets included: a token with `applications:admin` and no datasets scope therefore deletes the dataset fragments of the application it deletes. This is the fragment design (a fragment has no existence without its parent), not a cross-family grant: the token reaches no other dataset operation.
+
+## Documented exposures
+
+What a scoped session can learn beyond its scopes' operations, accepted as is:
+
+- `?can=<operation>` on the listings (`GET /api/v1/datasets?can=writeData`) filters on what the identity could do by its role: a read tier token learns which resources its identity could act on, though it cannot do it with that token.
+- The application proxy (`/app/:id`, applications family) fills the configuration of the application with the descriptions of the datasets it references, checked against the application owner, not the session: an applications-only token sees those descriptions through the proxy, unlike `GET /applications/:id/configuration` (above).
+
+## Known gaps in the UI for scoped sessions
+
+UI calls a scoped session gets 403 on, so the corresponding parts of the UI are empty or show an error:
+
+- the dataset page "applications using this dataset" with a datasets-only token (it lists applications);
+- remote-services `GET /api/v1/remote-services/:id`;
+- `/api/v1/activity` and `/api/v1/stats`;
+- the full settings read `GET /api/v1/settings/:type/:id` (settings pages);
+- the events notification bell, and the `user/*` websocket channels (until events and the user channels opt in, phase 1d).
 
 ## OpenAPI
 
