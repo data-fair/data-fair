@@ -1,0 +1,74 @@
+import { test } from '@playwright/test'
+import assert from 'node:assert/strict'
+import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { nhiSession } from '../../support/nhi.ts'
+
+// the keys of a write body that need more than the route's own operation (read API key, master
+// data, publications) are checked the same way on every write route: a write tier token
+// cannot set them through POST/PUT /datasets/:id, dataset creation or an application PUT when
+// PATCH refuses them. Resources are created by an unrestricted admin of test_org1.
+
+const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
+
+const status = async (p: Promise<any>) => {
+  try {
+    return (await p).status
+  } catch (err: any) {
+    if (err.status) return err.status
+    throw err
+  }
+}
+
+const createDataset = async (id: string) => {
+  await orgAdmin.put(`/api/v1/datasets/${id}`, { isRest: true, title: 'Write bodies', schema: [{ key: 'a', type: 'string' }] })
+}
+
+const readApiKey = { readApiKey: { active: true, interval: 'P1W' } }
+const masterData = { masterData: { standardSchema: { active: true } } }
+
+test.describe('admin tier keys of the write bodies', () => {
+  test.beforeEach(async () => { await clean() })
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('datasets:write cannot set admin tier keys through POST/PUT /datasets/:id', async () => {
+    await createDataset('scope-wb-write')
+    const ax = (await nhiSession('datasets:write')).bearerAx
+    assert.equal(await status(ax.post('/api/v1/datasets/scope-wb-write', readApiKey)), 403)
+    assert.equal(await status(ax.put('/api/v1/datasets/scope-wb-write', readApiKey)), 403)
+    assert.equal(await status(ax.post('/api/v1/datasets/scope-wb-write', masterData)), 403)
+    // PATCH refuses them as before
+    assert.equal(await status(ax.patch('/api/v1/datasets/scope-wb-write', readApiKey)), 403)
+    assert.equal(await status(ax.patch('/api/v1/datasets/scope-wb-write', masterData)), 403)
+    // the write tier still writes the rest
+    assert.equal(await status(ax.post('/api/v1/datasets/scope-wb-write', { title: 'Renamed' })), 200)
+    const ds = (await orgAdmin.get('/api/v1/datasets/scope-wb-write')).data
+    assert.equal(ds.title, 'Renamed')
+    assert.ok(!ds.readApiKey?.active)
+    assert.ok(!ds.masterData?.standardSchema?.active)
+  })
+
+  test('datasets:write cannot create a dataset with admin tier keys', async () => {
+    const ax = (await nhiSession('datasets:write')).bearerAx
+    const base = { isRest: true, title: 'Created', schema: [{ key: 'a', type: 'string' }] }
+    assert.equal(await status(ax.post('/api/v1/datasets', { ...base, ...readApiKey })), 403)
+    assert.equal(await status(ax.post('/api/v1/datasets', { ...base, ...masterData })), 403)
+    assert.equal(await status(ax.put('/api/v1/datasets/scope-wb-created', { ...base, ...readApiKey })), 403)
+    assert.ok(!(await orgAdmin.get('/api/v1/datasets', { params: { select: 'title' } })).data.results.some((d: any) => d.title === 'Created'))
+    assert.equal(await status(ax.post('/api/v1/datasets', base)), 201)
+  })
+
+  test('datasets:admin sets the admin tier keys through every write route', async () => {
+    await createDataset('scope-wb-admin')
+    const ax = (await nhiSession('datasets:admin')).bearerAx
+    assert.equal(await status(ax.post('/api/v1/datasets/scope-wb-admin', readApiKey)), 200)
+    assert.equal(await status(ax.post('/api/v1/datasets/scope-wb-admin', masterData)), 200)
+    assert.equal(await status(ax.patch('/api/v1/datasets/scope-wb-admin', { readApiKey: { active: false } })), 200)
+    assert.equal(await status(ax.put('/api/v1/datasets/scope-wb-admin', readApiKey)), 200)
+    const ds = (await orgAdmin.get('/api/v1/datasets/scope-wb-admin')).data
+    assert.ok(ds.readApiKey?.active)
+    assert.ok(ds.masterData?.standardSchema?.active)
+    assert.equal(await status(ax.post('/api/v1/datasets', { isRest: true, title: 'Created by admin', schema: [], ...readApiKey })), 201)
+  })
+})

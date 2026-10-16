@@ -11,7 +11,7 @@ import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-exp
 import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
-import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
+import { readDataset, reqDataset, reqDatasetFull, lockDataset, assertWriteBodyPermissions } from '../middlewares.ts'
 import { safeDescription, safeSchema } from '../operations.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
 import applicationKey from '../../misc/utils/application-key.ts'
@@ -96,9 +96,6 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
   res.status(200).send(schema)
 }
 
-const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
-const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
-const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
@@ -115,7 +112,16 @@ const descriptionHasBreakingChanges = (req: Request) => {
   return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
-const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData', true)
+// the per key checks shared with POST/PUT /datasets/:id (read API key, master data, publications,
+// exports); the last operation checked is reported as x-operation, as its own middleware did
+const permissionsWriteBody = (req: Request, res: Response, next: NextFunction) => {
+  const operation = assertWriteBodyPermissions(reqResource(req), req.body, reqSession(req), reqBypassPermissions(req))
+  if (operation) {
+    permissions.setReqOperation(req, operation)
+    res.setHeader('x-operation', JSON.stringify(operation))
+  }
+  next()
+}
 
 export const registerMetadataRoutes = (router: Router) => {
   // Get the list of datasets
@@ -187,7 +193,6 @@ export const registerMetadataRoutes = (router: Router) => {
     lockDataset((patch: any) => {
       return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
     }),
-    (req: Request, res: Response, next: NextFunction) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => {
       if (descriptionHasBreakingChanges(req)) {
         permissionsWriteDescriptionBreaking(req, res, next)
@@ -198,9 +203,7 @@ export const registerMetadataRoutes = (router: Router) => {
         permissionsWriteDescriptionBreaking(req, res, next)
       }
     },
-    (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
-    (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
-    (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    permissionsWriteBody,
     // fragments are never publishable — shared with the other three write routes (spec §5)
     fragmentWriteGuard(true),
     async (req, res) => {

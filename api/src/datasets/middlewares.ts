@@ -1,18 +1,19 @@
 import type { RequestHandler } from 'express'
-import type { Dataset } from '#types'
+import type { Dataset, Resource, BypassPermissions } from '#types'
 import config from '#config'
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.ts'
-import { getOwnerRole } from '../misc/utils/permissions.ts'
+import { getOwnerRole, can, canDoForOwner, type ReqOperation } from '../misc/utils/permissions.ts'
+import { classByOperation } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { defineReqContext, setReqResource, reqResourceOptional, setReqDataset, reqDataset, reqDatasetOptional, reqRestDataset, setReqLinesOwner, reqLinesOwnerOptional, setReqDraft, reqDraftOptional } from '../misc/utils/req-context.ts'
 import { setReqNoCache } from '../misc/utils/cache-headers.ts'
-import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
+import { reqPublicationSite, reqMainPublicationSite, assertCanPublishAtCreation } from '../misc/utils/publication-sites.ts'
 import { checkStorage as checkStorageFn } from './utils/storage.ts'
 import * as service from './service.ts'
 import { withQuery } from 'ufo'
-import { type Account, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { type Account, type AccountKeys, type SessionState, type SessionStateAuthenticated, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { emit as workerPing } from '../workers/ping.ts'
 
 // dataset / linesOwner / _draft accessors live in the config-free req-context.ts (so query-advice.ts and
@@ -25,6 +26,54 @@ const datasetFullCtx = defineReqContext<Dataset>('datasetFull')
 export const setReqDatasetFull = datasetFullCtx.set
 export const reqDatasetFull = datasetFullCtx.get
 export const reqDatasetFullOptional = datasetFullCtx.getOptional
+
+// the keys of a dataset write body that need an operation of their own on top of the route's
+// operation. PATCH, POST/PUT /datasets/:id and dataset creation all check them, so no write route
+// accepts a key another one refuses (masterData is checked apart: it is reserved to the owner's admins)
+const writeBodyKeyOperations = [
+  ['publications', 'writePublications'],
+  ['exports', 'writeExports'],
+  ['readApiKey', 'setReadApiKey']
+] as const
+
+const missingOperation = (operationId: string, operationClass: string) =>
+  httpError(403, `Permission manquante pour l'opération "${operationId}" ou la catégorie "${operationClass}".`)
+
+/**
+ * Checks the keys of a write body on an existing dataset that need more than the route's own
+ * operation: masterData needs the owner's admins (manageMasterData, departments ignored), the
+ * others their operation on the dataset. Throws 403; returns the last operation checked, which
+ * PATCH reports as x-operation.
+ */
+export const assertWriteBodyPermissions = (dataset: Resource, body: Record<string, any>, sessionState: SessionState, bypassPermissions?: BypassPermissions): ReqOperation | undefined => {
+  if (body.masterData && !canDoForOwner({ ...dataset.owner, department: undefined }, 'datasets', 'manageMasterData', sessionState)) {
+    throw httpError(403, 'Permission manquante pour l\'opération.')
+  }
+  let operation: ReqOperation | undefined
+  for (const [key, operationId] of writeBodyKeyOperations) {
+    if (!body[key]) continue
+    const operationClass = classByOperation.datasets[operationId]
+    if (!can('datasets', dataset, operationId, sessionState, bypassPermissions)) throw missingOperation(operationId, operationClass)
+    operation = { class: operationClass, id: operationId }
+  }
+  return operation
+}
+
+/**
+ * The same keys at creation, when there is no ACL yet: they need the owner's class of their
+ * operation (admin), and publishing on a site that is not a staging site needs the owner's class of
+ * writePublicationSites.
+ */
+export const assertCreateBodyPermissions = async (owner: AccountKeys, body: Record<string, any>, sessionState: SessionStateAuthenticated) => {
+  if (body.masterData && !canDoForOwner({ ...owner, department: undefined }, 'datasets', 'manageMasterData', sessionState)) {
+    throw httpError(403, 'Permission manquante pour l\'opération.')
+  }
+  for (const [key, operationId] of writeBodyKeyOperations) {
+    const operationClass = classByOperation.datasets[operationId]
+    if (body[key] && !canDoForOwner(owner, 'datasets', operationClass, sessionState)) throw missingOperation(operationId, operationClass)
+  }
+  if (body.publicationSites?.length) await assertCanPublishAtCreation(owner, body.publicationSites, sessionState, 'datasets')
+}
 
 export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)
