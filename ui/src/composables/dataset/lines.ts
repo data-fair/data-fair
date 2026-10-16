@@ -151,11 +151,14 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
 // with heterogeneous types determined by the schema at runtime
 
 const prepareExtendedResultValue = (value: any, property: SchemaProperty, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
+  const displayDetail = shouldDisplayDetail(value, property, truncate)
   return {
     raw: value,
     formatted: formatValue(value, property, null, localeDayjs),
-    displayDetail: shouldDisplayDetail(value, property, truncate),
-    filterable: isFilterable(value, property)
+    displayDetail,
+    // a value long enough to be truncated is no useful filter, and often too long for an
+    // exact one (keyword fields ignore values over 200 characters): it offers its full value only
+    filterable: !displayDetail && isFilterable(value, property)
   }
 }
 

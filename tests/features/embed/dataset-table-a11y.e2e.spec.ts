@@ -272,6 +272,35 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(reloaded.getByRole('button', { name: /retirer le filtre|remove the filter/i })).toBeVisible()
     })
 
+    test('a truncated value only offers its full value, Enter shows it', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-long', schema: [{ key: 'txt', type: 'string' }] })).data
+      const long = 'mot '.repeat(80) + 'fin'
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ txt: long }, { txt: 'court' }])
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const col = await colOf(page, 'txt')
+      const row = await page.locator('.dataset-table tbody tr').filter({ hasText: 'mot' }).locator('td').first().getAttribute('data-row')
+      const cell = page.locator(`.dataset-table td[data-row="${row}"][data-col="${col}"]`)
+      await cell.focus()
+
+      // a value long enough to be truncated is no useful filter (and too long for an exact one)
+      await expect(cell.getByRole('button', { name: /entière|full value/i })).toBeVisible()
+      await expect(cell.getByRole('button', { name: /filtrer|filter the/i })).toHaveCount(0)
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog').getByText(/fin$/)).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect.poll(() => activeCell(page)).toMatchObject({ inTable: true, row: Number(row), col })
+
+      // the same from the focused button
+      await cell.focus()
+      await page.keyboard.press('F2')
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('dialog').getByText(/fin$/)).toBeVisible()
+    })
+
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)

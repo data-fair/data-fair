@@ -85,7 +85,6 @@
         v-if="!noFilter && extendedValue.filterable"
         tabindex="-1"
         :icon="filtered ? mdiFilterRemove : mdiFilterVariant"
-        :loading="filterLoading"
         :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
@@ -128,7 +127,6 @@ const { value: extendedValue, property } = defineProps({
   filtered: { type: Boolean, required: true },
   hovered: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
-  filterLoading: { type: Boolean, default: false },
   noFilter: { type: Boolean, default: false }
 })
 

@@ -46,7 +46,7 @@ const emit = defineEmits<{
   hoverstop: []
 }>()
 
-const canFilter = (value: ExtendedResultValue) => !noInteraction && !noFilter && value.filterable && !value.displayDetail
+const canFilter = (value: ExtendedResultValue) => !noInteraction && !noFilter && value.filterable
 // filter values are strings (as in the URL), raw values are typed
 const isFiltered = (value: ExtendedResultValue) => !!filter && filter.value === '' + value.raw
 

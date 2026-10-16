@@ -93,7 +93,6 @@
 
     <dataset-table-value
       v-else-if="header.property && result.values[header.key]"
-      :filter-loading="filterLoading"
       :filtered="!!filter"
       :no-filter="noFilter"
       :hovered="hovered === result.values[header.key]"
@@ -124,25 +123,10 @@ import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset/lines'
 import { type DatasetFilter } from '../../../composables/dataset/filters'
 
-const { id } = useDatasetStore()
-const filterLoading = ref(false)
-const filterValue = async (result: ExtendedResult, header: TableHeader) => {
+const filterValue = (result: ExtendedResult, header: TableHeader) => {
   if (!header.property) return
   const value = result.values[header.key] as ExtendedResultValue
-  if (value?.displayDetail) {
-    filterLoading.value = true
-    try {
-      const data = await $fetch<{ results: Record<string, any>[] }>(`${$apiPath}/datasets/${id}/lines`, {
-        query: { qs: `_id:"${result._id}"`, select: header.key }
-      })
-      const fullValue = data.results[0]?.[header.key]
-      emit('filter', { property: header.property, operator: 'eq', value: fullValue, formattedValue: fullValue })
-    } finally {
-      filterLoading.value = false
-    }
-  } else {
-    emit('filter', { property: header.property, operator: 'eq', value: value.raw, formattedValue: value.formatted })
-  }
+  emit('filter', { property: header.property, operator: 'eq', value: value.raw, formattedValue: value.formatted })
 }
 
 const props = defineProps({
