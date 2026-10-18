@@ -147,8 +147,8 @@ ADD /shared shared
 
 ADD package.json README.md LICENSE BUILD.json* ./
 
-# npm/npx/corepack are not needed at runtime and carry their own vulnerable dependencies
-RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+# npm/npx/corepack/yarn are not needed at runtime and carry their own vulnerable dependencies
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 WORKDIR /app/api
 
@@ -161,4 +161,4 @@ VOLUME /data
 EXPOSE 8080
 EXPOSE 9090
 
-CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "index.ts"]
+CMD ["node", "--max-http-header-size", "64000", "--no-warnings", "index.ts"]
