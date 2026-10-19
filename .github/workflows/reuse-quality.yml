@@ -100,7 +100,10 @@ jobs:
     - name: Audit
       run: npm audit --omit=dev --audit-level=critical
 
-    # no server needed
+    # no server needed, but some units import #config, whose development config reads .env
+    - name: Init .env
+      run: ./node_modules/.bin/df-dev init-env # local bin only: a bare npx would fetch an unrelated "df-dev" from the registry if the dependency were missing
+
     - name: Unit tests
       run: npx playwright test --project=unit
 
