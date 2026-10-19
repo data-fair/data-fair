@@ -185,8 +185,6 @@ services:
       test: 'wget -O - http://127.0.0.1:$${MAILDEV_WEB_PORT}$${MAILDEV_BASE_PATHNAME}/healthz || exit 1'
 
   clamav:
-    profiles:
-      - clamav
     image: clamav/clamav:1.5.1
     ports:
       - ${CLAMAV_PORT}:3310

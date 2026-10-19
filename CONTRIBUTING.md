@@ -17,7 +17,7 @@ Install nodejs dependencies and set the checkout up (`.env` with free ports, nat
 Start the development environment (zellij >= 0.44; core containers + ui, api, mock):
 
     npm run dev-zellij
-    npm run dev-zellij -- --services clamav,events,agents   # with optional containers
+    npm run dev-zellij -- --services events,agents   # with optional containers
 
 The footer shows the dev URL; log in with an account of `dev/resources/users.json`. From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
 

@@ -46,11 +46,6 @@
     },
     "registry": {
       "privateRegistryUrl": null
-    },
-    "clamav": {
-      "clamav": {
-        "active": false
-      }
     }
   }
 }
