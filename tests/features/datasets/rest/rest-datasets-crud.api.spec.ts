@@ -123,6 +123,7 @@ test.describe('REST datasets - CRUD', () => {
     // Line writes must never reach stored events nor subscribers (script-driven spam, see
     // notifications.md §10): the signal is restricted to the webhooks channel and coalesced.
     // The matching test for virtual parents lives in virtual-datasets-features.api.spec.ts.
+    test.slow() // 5 chained finalizations, ~28 s on an idle machine
     const ax = testUser1
     // creation's full finalize pass must not signal: collect from before the creation
     let notifs = await collectNotifs()
