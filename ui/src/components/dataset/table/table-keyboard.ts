@@ -25,3 +25,36 @@ export function nextPosition (pos: CellPosition, event: { key: string, ctrlKey: 
     default: return null
   }
 }
+
+// The same in the card list display: cards are laid out in rows of perRow cards, all with the
+// same fields from top to bottom.
+export type CardPosition = { card: number, field: number }
+export type CardBounds = { cards: number, fields: number, perRow: number }
+
+/** The card field a key moves to, or null when the key is not a navigation key. */
+export function nextCardPosition (pos: CardPosition, event: { key: string, ctrlKey: boolean }, bounds: CardBounds): CardPosition | null {
+  const lastCard = bounds.cards - 1
+  const lastField = bounds.fields - 1
+  const card = clamp(pos.card, lastCard)
+  const field = clamp(pos.field, lastField)
+  const rowOf = (c: number) => Math.floor(c / bounds.perRow)
+  switch (event.key) {
+    case 'ArrowDown': {
+      if (field < lastField) return { card, field: field + 1 }
+      // the last row may have fewer cards: its last one is the closest below
+      const below = Math.min(card + bounds.perRow, lastCard)
+      return rowOf(below) > rowOf(card) ? { card: below, field: 0 } : { card, field }
+    }
+    case 'ArrowUp': {
+      if (field > 0) return { card, field: field - 1 }
+      return card - bounds.perRow >= 0 ? { card: card - bounds.perRow, field: lastField } : { card, field }
+    }
+    case 'ArrowRight': return { card: clamp(card + 1, lastCard), field }
+    case 'ArrowLeft': return { card: clamp(card - 1, lastCard), field }
+    case 'Home': return event.ctrlKey ? { card: 0, field: 0 } : { card, field: 0 }
+    case 'End': return event.ctrlKey ? { card: lastCard, field: lastField } : { card, field: lastField }
+    case 'PageDown': return { card: clamp(card + bounds.perRow, lastCard), field }
+    case 'PageUp': return { card: clamp(card - bounds.perRow, lastCard), field }
+    default: return null
+  }
+}
