@@ -1,7 +1,7 @@
 {
   "tools": [
     {
-      "name": "list_account_datasets",
+      "name": "datafair_list_account_datasets",
       "description": "List the datasets owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.",
       "inputSchema": {
         "type": "object",
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "create_dataset_from_file",
+      "name": "datafair_create_dataset_from_file",
       "description": "Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (list_account_datasets shows it).",
       "inputSchema": {
         "type": "object",
@@ -121,7 +121,7 @@
       ]
     },
     {
-      "name": "list_datasets",
+      "name": "datafair_list_datasets",
       "description": "List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update. Only available from a portal, not from the back-office.",
       "inputSchema": {
         "type": "object",
@@ -189,7 +189,7 @@
       ]
     },
     {
-      "name": "describe_dataset",
+      "name": "datafair_describe_dataset",
       "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.",
       "inputSchema": {
         "type": "object",
@@ -247,7 +247,7 @@
       ]
     },
     {
-      "name": "replace_dataset_file",
+      "name": "datafair_replace_dataset_file",
       "description": "Replace the data file of a file dataset with a new file; all its rows are replaced, its metadata, permissions and publications are kept. If the new file removes or changes the type of a column, the update waits as a draft for a person to validate it in the back-office; otherwise it is applied once indexed.",
       "inputSchema": {
         "type": "object",
@@ -300,7 +300,7 @@
       ]
     },
     {
-      "name": "delete_dataset",
+      "name": "datafair_delete_dataset",
       "description": "Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
       "inputSchema": {
         "type": "object",
@@ -339,7 +339,7 @@
       ]
     },
     {
-      "name": "update_dataset",
+      "name": "datafair_update_dataset",
       "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with publish_dataset.",
       "inputSchema": {
         "type": "object",
@@ -388,7 +388,7 @@
       ]
     },
     {
-      "name": "publish_dataset",
+      "name": "datafair_publish_dataset",
       "description": "Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key, its master-data exposure, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.",
       "inputSchema": {
         "type": "object",
@@ -432,7 +432,7 @@
       ]
     },
     {
-      "name": "list_account_applications",
+      "name": "datafair_list_account_applications",
       "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory. Returns id, title, status and last update.",
       "inputSchema": {
         "type": "object",
@@ -507,7 +507,7 @@
       ]
     },
     {
-      "name": "describe_application",
+      "name": "datafair_describe_application",
       "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
       "inputSchema": {
         "type": "object",
@@ -556,7 +556,7 @@
       ]
     },
     {
-      "name": "delete_application",
+      "name": "datafair_delete_application",
       "description": "Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
       "inputSchema": {
         "type": "object",
@@ -595,7 +595,7 @@
       ]
     },
     {
-      "name": "update_application",
+      "name": "datafair_update_application",
       "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
       "inputSchema": {
         "type": "object",
@@ -954,7 +954,7 @@
       ]
     },
     {
-      "name": "publish_application",
+      "name": "datafair_publish_application",
       "description": "Change where an application is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.",
       "inputSchema": {
         "type": "object",
@@ -1088,7 +1088,7 @@
       ]
     },
     {
-      "name": "search_data",
+      "name": "datafair_search_data",
       "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the \"after\" value returned as next.",
       "inputSchema": {
         "type": "object",
@@ -1200,7 +1200,7 @@
       ]
     },
     {
-      "name": "export_data",
+      "name": "datafair_export_data",
       "description": "Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and search_data to read rows yourself.",
       "inputSchema": {
         "type": "object",
@@ -1308,7 +1308,7 @@
       ]
     },
     {
-      "name": "get_field_values",
+      "name": "datafair_get_field_values",
       "description": "List distinct values of a column. Useful to discover values before filtering with _eq or _in.",
       "inputSchema": {
         "type": "object",
@@ -1422,7 +1422,7 @@
       ]
     },
     {
-      "name": "aggregate_data",
+      "name": "datafair_aggregate_data",
       "description": "Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use calculate_metric.",
       "inputSchema": {
         "type": "object",
@@ -1540,7 +1540,7 @@
       ]
     },
     {
-      "name": "calculate_metric",
+      "name": "datafair_calculate_metric",
       "description": "Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use aggregate_data.",
       "inputSchema": {
         "type": "object",
@@ -1652,7 +1652,7 @@
       ]
     },
     {
-      "name": "download_dataset_file",
+      "name": "datafair_download_dataset_file",
       "description": "Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use export_data.",
       "inputSchema": {
         "type": "object",
@@ -1701,7 +1701,7 @@
       ]
     },
     {
-      "name": "download_dataset_converted_file",
+      "name": "datafair_download_dataset_converted_file",
       "description": "Get the data file of a file dataset in the format data-fair converted it to for indexing: CSV for spreadsheets and text files, GeoJSON for geographic files. Returns a link to the file, not its content.",
       "inputSchema": {
         "type": "object",
@@ -1750,7 +1750,7 @@
       ]
     },
     {
-      "name": "get_dataset_permissions",
+      "name": "datafair_get_dataset_permissions",
       "description": "Read who can access a dataset: its permission entries for users, organizations, roles and departments, or for everyone.",
       "inputSchema": {
         "type": "object",
@@ -1789,7 +1789,7 @@
       ]
     },
     {
-      "name": "set_dataset_permissions",
+      "name": "datafair_set_dataset_permissions",
       "description": "Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.",
       "inputSchema": {
         "type": "object",
@@ -1957,8 +1957,8 @@
   ],
   "skills": [
     {
-      "id": "workflow",
-      "name": "workflow",
+      "id": "datafair-workflow",
+      "name": "datafair-workflow",
       "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
       "digest": "sha256:8f0ed6a6772a54fa7d2de16bc120219b5768061650b34f31f654e02045ad4b07"
     }

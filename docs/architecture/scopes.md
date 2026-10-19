@@ -36,7 +36,7 @@ Lib-express refuses a scoped session on any route that neither checked scopes no
 
 Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), because the UIs call them on load and they expose nothing a tier would restrict. The list is exhaustive: a route not listed here and not behind a family gate is refused to a scoped session.
 
-- root reads of `/api/v1` (`misc/routers/root.ts`): `GET /ping`, `/api-docs.json`, `/agents/index.json`, `/agents/skills/:file`, `/scopes.json`, `/vocabulary`, `/projections`, `/configurable-remote-services`, `/configurable-catalogs`;
+- root reads of `/api/v1` (`misc/routers/root.ts`): `GET /ping`, `/api-docs.json`, `/platform/api-docs.json`, `/agents/skills/:file`, `/scopes.json`, `/vocabulary`, `/projections`, `/configurable-remote-services`, `/configurable-catalogs`;
 - the settings member reads, each route listed explicitly: `GET /api/v1/settings/:type/:id/topics`, `/datasets-metadata`, `/agent-chat`, `/publication-sites` (these four also require membership of the account) and `/licenses`. The full settings document `GET /api/v1/settings/:type/:id` is not marked and is refused;
 - limits `GET /api/v1/limits/:type/:id` (account members);
 - base-applications `GET /api/v1/base-applications`, `/:id/icon` and `/:id/thumbnail`;

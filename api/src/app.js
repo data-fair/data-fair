@@ -319,6 +319,7 @@ export const run = async () => {
       (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
+      (await import('./platform-api-docs/service.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'development') {
           // TODO: remove this ugly exception, this code should be tested
@@ -370,6 +371,7 @@ export const run = async () => {
 export const stop = async () => {
   if (config.mode.includes('server')) {
     await wsServer.stop()
+    await (await import('./platform-api-docs/service.ts')).stop()
     if (httpTerminator) await httpTerminator.terminate()
   }
 
