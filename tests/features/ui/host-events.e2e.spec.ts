@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
+import { serviceUp } from '../../support/optional-services.ts'
 
 /**
  * What this application PUBLISHES to the assistant, asserted at the channel
@@ -59,6 +60,8 @@ test.describe('host events published to the assistant', () => {
   })
 
   test('the layout publishes where the user is, and republishes it on navigation', async ({ page, goToWithAuth }) => {
+    // the assistant's tools and host events are only on with the agents integration
+    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev-zellij -- --services agents')
     await page.addInitScript(collectEvents)
     await goToWithAuth('/data-fair/datasets', 'test_user1')
 
