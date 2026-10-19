@@ -92,32 +92,69 @@ const rewriteRefs = (value: any, ns: string): void => {
 const sameScheme = (a: any, b: Record<string, string>) =>
   isObject(a) && a.type === b.type && a.in === b.in && a.name === b.name
 
-/** checks the security schemes of a fragment, returns its declared scopes or a refusal */
-const checkSecuritySchemes = (schemes: Record<string, any>, warnings: string[]): { scopes: Record<string, string> } | { refused: string } => {
+interface SchemesCheck {
+  /** declared by its oauth2 scheme, {} when none */
+  scopes: Record<string, string>
+  /** scheme names a requirement may use as is: the shared ones, and oauth2 when the fragment declares it */
+  kept: Set<string>
+  /** schemes the fragment declares that the merged document does not carry */
+  dropped: Set<string>
+}
+
+/** checks the security schemes of a fragment, returns what its requirements may use or a refusal */
+const checkSecuritySchemes = (schemes: Record<string, any>, warnings: string[]): SchemesCheck | { refused: string } => {
   let scopes: Record<string, string> = {}
+  const kept = new Set<string>(Object.keys(sharedSecuritySchemes))
+  const dropped = new Set<string>()
   for (const [name, scheme] of Object.entries(schemes)) {
     if (name === 'apiKey' || name === 'sdCookie') {
       if (!sameScheme(scheme, sharedSecuritySchemes[name])) return { refused: `security scheme ${name} differs from the platform's definition` }
     } else if (name === 'oauth2' || scheme?.type === 'oauth2') {
       if (name !== 'oauth2') return { refused: `oauth2 security scheme declared under another name: ${name}` }
       if (scheme?.type !== 'oauth2') return { refused: 'security scheme oauth2 is not of type oauth2' }
-      const flows = Object.keys(scheme.flows ?? {})
-      if (flows.length !== 1 || flows[0] !== 'clientCredentials') return { refused: `oauth2 flows must be clientCredentials only, got ${flows.join(', ') || 'none'}` }
-      scopes = { ...(scheme.flows.clientCredentials.scopes ?? {}) }
+      const flows = isObject(scheme.flows) ? Object.keys(scheme.flows) : []
+      if (flows.length !== 1 || flows[0] !== 'clientCredentials' || !isObject(scheme.flows.clientCredentials)) {
+        return { refused: `oauth2 flows must be clientCredentials only, got ${flows.join(', ') || 'none'}` }
+      }
+      const declaredScopes = scheme.flows.clientCredentials.scopes ?? {}
+      if (!isObject(declaredScopes)) return { refused: 'oauth2 scopes must be an object' }
+      scopes = { ...declaredScopes }
+      kept.add('oauth2')
     } else {
-      warnings.push(`security scheme ${name} is not part of the platform document`)
+      dropped.add(name)
+      warnings.push(`security scheme ${name} is not part of the platform document, its requirements are removed`)
     }
   }
-  return { scopes }
+  return { scopes, kept, dropped }
 }
 
-const undeclaredScope = (security: unknown, scopes: Record<string, string>): string | undefined => {
-  if (!Array.isArray(security)) return
+/**
+ * the security of an operation (or of an x-agent entry) as the merged document can carry it, or a
+ * refusal: a requirement must not name a scheme its fragment does not declare (it would bind to
+ * the merged scheme of that name), an oauth2 scope must be declared, and the alternatives using a
+ * scheme the merge drops are removed — failing closed to the cookie session when none is left.
+ */
+const platformSecurity = (security: unknown, schemes: SchemesCheck, at: string): { security: unknown } | { refused: string } => {
+  if (!Array.isArray(security)) return { security }
+  const alternatives: unknown[] = []
   for (const requirement of security) {
-    for (const scope of (isObject(requirement) && Array.isArray(requirement.oauth2)) ? requirement.oauth2 : []) {
-      if (!(scope in scopes)) return scope
+    if (!isObject(requirement)) return { refused: `${at} has a security requirement that is not an object` }
+    let droppedAlternative = false
+    for (const [name, requiredScopes] of Object.entries(requirement)) {
+      if (schemes.dropped.has(name)) {
+        droppedAlternative = true
+      } else if (!schemes.kept.has(name)) {
+        return { refused: `${at} requires the security scheme ${name} that its fragment does not declare` }
+      } else if (name === 'oauth2') {
+        if (!Array.isArray(requiredScopes)) return { refused: `${at} has oauth2 scopes that are not a list` }
+        const scope = requiredScopes.find(scope => typeof scope !== 'string' || !Object.hasOwn(schemes.scopes, scope))
+        if (scope !== undefined) return { refused: `${at} requires the scope ${scope} that its oauth2 scheme does not declare` }
+      }
     }
+    if (!droppedAlternative) alternatives.push(requirement)
   }
+  if (security.length && !alternatives.length) return { security: [{ sdCookie: [] }] }
+  return { security: alternatives }
 }
 
 const namespaceSkill = (ns: string, skill: AgentSkill): AgentSkill => {
@@ -133,14 +170,14 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
   if (!isObject(sourceDoc) || typeof sourceDoc.openapi !== 'string' || !/^3\.[01]\./.test(sourceDoc.openapi) || !isObject(sourceDoc.paths)) {
     return { refused: 'not an OpenAPI 3.0 or 3.1 document with paths' }
   }
-  // a copy: the source may share module level objects (data-fair's own document does)
-  const doc = structuredClone(sourceDoc)
+  // a JSON copy, not structuredClone: the source shares objects between operations (data-fair's own
+  // document does) and the in-place rewrites below must see each occurrence as its own object
+  const doc = JSON.parse(JSON.stringify(sourceDoc))
   const ns = service.id
   const warnings: string[] = []
 
   const schemesCheck = checkSecuritySchemes(isObject(doc.components?.securitySchemes) ? doc.components.securitySchemes : {}, warnings)
   if ('refused' in schemesCheck) return schemesCheck
-  const { scopes } = schemesCheck
 
   const operations = operationsOf(doc.paths)
 
@@ -160,23 +197,32 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
     }
   }
 
+  // the merged document has one server, the site: servers below the root would be wrong after prefixing
+  for (const item of Object.values(doc.paths)) if (isObject(item)) delete item.servers
+
   const rootSecurity = doc.security
   for (const { path, method, op } of operations) {
+    const at = `${method.toUpperCase()} ${path}`
+    delete op.servers
     // every operation carries an explicit security, failing closed when none is declared anywhere
-    if (op.security === undefined) op.security = rootSecurity !== undefined ? structuredClone(rootSecurity) : [{ sdCookie: [] }]
+    const opSecurity = platformSecurity(op.security ?? rootSecurity ?? [{ sdCookie: [] }], schemesCheck, at)
+    if ('refused' in opSecurity) return opSecurity
+    op.security = opSecurity.security
     const entries = agentEntries(op)
-    for (const security of [op.security, ...entries.map(entry => entry.security)]) {
-      const scope = undeclaredScope(security, scopes)
-      if (scope) return { refused: `${method.toUpperCase()} ${path} requires the scope ${scope} that its oauth2 scheme does not declare` }
+    for (const entry of entries) {
+      if (entry.security === undefined) continue
+      const entrySecurity = platformSecurity(entry.security, schemesCheck, `${at} x-agent`)
+      if ('refused' in entrySecurity) return entrySecurity
+      entry.security = entrySecurity.security
     }
 
     const operationId = op.operationId
+    if (entries.length && typeof operationId !== 'string') warnings.push(`x-agent on ${at} that has no operationId`)
     for (const entry of entries) {
       delete entry.profiles
       delete entry.namePrefix
       const name = entry.name ?? (typeof operationId === 'string' ? snakeCase(operationId) : undefined)
       if (name) entry.name = `${ns}_${name}`
-      else warnings.push(`x-agent without name nor operationId on ${method.toUpperCase()} ${path}`)
     }
     if (typeof operationId === 'string') op.operationId = `${ns}_${operationId}`
     if (Array.isArray(op.tags)) op.tags = op.tags.map((tag: string) => `${service.title} / ${tag}`)
@@ -194,7 +240,7 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
   const tags = (Array.isArray(doc.tags) ? doc.tags : []).filter(isObject).map((tag: any) => ({ ...tag, name: `${service.title} / ${tag.name}` }))
   const skills = (Array.isArray(doc['x-agent']?.skills) ? doc['x-agent'].skills : []).map((skill: AgentSkill) => namespaceSkill(ns, skill))
 
-  return { fragment: { service, paths, components, tags, skills, scopes, warnings } }
+  return { fragment: { service, paths, components, tags, skills, scopes: schemesCheck.scopes, warnings } }
 }
 
 const resolveHref = (href: Localized, base: string): Localized => typeof href === 'string'
@@ -208,17 +254,27 @@ export function mergePlatformDoc (siteOrigin: string, states: FragmentState[], i
   const skills: AgentSkill[] = []
   const scopes: Record<string, string> = {}
   const services: Record<string, any>[] = []
+  const pathOwners: Record<string, PlatformServiceId> = {}
 
   for (const { service, fragment, status, error, fetchedAt } of states) {
+    const warnings = [...(fragment?.warnings ?? [])]
     services.push({
       id: service.id,
       status,
       ...(error !== undefined ? { error } : {}),
       ...(fetchedAt !== undefined ? { fetchedAt } : {}),
-      ...(fragment?.warnings.length ? { warnings: fragment.warnings } : {})
+      warnings
     })
     if (!fragment) continue
-    Object.assign(paths, fragment.paths)
+    // the first service keeps a path; a later one claiming it again is left out of the merge
+    for (const [path, item] of Object.entries(fragment.paths)) {
+      if (Object.hasOwn(pathOwners, path)) {
+        warnings.push(`path ${path} is already provided by ${pathOwners[path]}`)
+        continue
+      }
+      pathOwners[path] = service.id
+      paths[path] = item
+    }
     for (const [kind, items] of Object.entries(fragment.components)) components[kind] = { ...components[kind], ...items }
     tags.push(...fragment.tags)
     const base = siteOrigin + service.docPath
@@ -231,7 +287,7 @@ export function mergePlatformDoc (siteOrigin: string, states: FragmentState[], i
     info: { title: 'API de la plateforme Data Fair', version: info.version },
     servers: [{ url: siteOrigin }],
     'x-agent': { skills },
-    'x-platform': { services },
+    'x-platform': { services: services.map(({ warnings, ...entry }) => warnings.length ? { ...entry, warnings } : entry) },
     tags,
     components: {
       ...components,

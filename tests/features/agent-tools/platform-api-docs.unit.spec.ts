@@ -5,7 +5,8 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import { prepareFragment, mergePlatformDoc, type PlatformService, type PreparedFragment } from '../../../api/contract/platform-api-docs.ts'
+import { snakeCase as openapiMcpSnakeCase } from '@data-fair/openapi-mcp'
+import { prepareFragment, mergePlatformDoc, snakeCase, type PlatformService, type PreparedFragment } from '../../../api/contract/platform-api-docs.ts'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
@@ -26,6 +27,25 @@ const refusal = (doc: any): string => {
   assert.ok('refused' in result, 'expected a refusal')
   return result.refused
 }
+
+/** every $ref of a document, with where it was found */
+const refsOf = (value: any, at = '#'): { at: string, ref: string }[] => {
+  if (Array.isArray(value)) return value.flatMap((item, i) => refsOf(item, `${at}/${i}`))
+  if (typeof value !== 'object' || value === null) return []
+  return Object.entries(value).flatMap(([key, child]) => key === '$ref' && typeof child === 'string' ? [{ at, ref: child }] : refsOf(child, `${at}/${key}`))
+}
+
+const resolves = (doc: any, ref: string) => {
+  let target = doc
+  for (const segment of ref.slice(2).split('/')) {
+    target = target?.[segment.replace(/~1/g, '/').replace(/~0/g, '~')]
+    if (target === undefined) return false
+  }
+  return true
+}
+
+const agentNamesOf = (doc: any): string[] => Object.values(doc.paths).flatMap((item: any) => Object.values(item))
+  .flatMap((op: any) => op?.['x-agent'] === undefined ? [] : [op['x-agent']].flat().map((entry: any) => entry.name))
 
 const oauth2 = (flows: any = { clientCredentials: { tokenUrl: '/token', scopes: { 'things:read': 'Read things' } } }) => ({ type: 'oauth2', flows })
 
@@ -62,6 +82,46 @@ test.describe('platform api docs', () => {
     assert.ok(fragment.components.responses.sd_NotFound)
     assert.ok(fragment.components.parameters.sd_q)
     assert.equal(fragment.components.securitySchemes, undefined)
+  })
+
+  test('objects shared between operations are rewritten once', () => {
+    const notFound = { $ref: '#/components/responses/NotFound' }
+    const xAgent = { description: 'shared' }
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      components: { responses: { NotFound: { description: 'not found' } } },
+      paths: {
+        '/a': { get: { operationId: 'getA', 'x-agent': xAgent, responses: { 404: notFound } } },
+        '/b': { get: { operationId: 'getB', 'x-agent': xAgent, responses: { 404: notFound } } }
+      }
+    })
+    assert.equal(fragment.paths['/simple-directory/a'].get.responses[404].$ref, '#/components/responses/sd_NotFound')
+    assert.equal(fragment.paths['/simple-directory/b'].get.responses[404].$ref, '#/components/responses/sd_NotFound')
+    assert.equal(fragment.paths['/simple-directory/a'].get['x-agent'].name, 'sd_get_a')
+    assert.equal(fragment.paths['/simple-directory/b'].get['x-agent'].name, 'sd_get_b')
+    assert.equal(notFound.$ref, '#/components/responses/NotFound', 'the source document is not mutated')
+  })
+
+  test('snakeCase matches openapi-mcp', () => {
+    for (const name of ['listItems', 'opX', 'getDatasetLines', 'patch_application', 'API-docs.json', 'x2Y']) {
+      assert.equal(snakeCase(name), openapiMcpSnakeCase(name))
+    }
+  })
+
+  test('servers below the root are removed', () => {
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      servers: [{ url: 'http://simple-directory:8080' }],
+      paths: { '/a': { servers: [{ url: 'http://private' }], get: { operationId: 'a', servers: [{ url: 'http://private' }], responses: ok200 } } }
+    })
+    assert.equal(fragment.paths['/simple-directory/a'].servers, undefined)
+    assert.equal(fragment.paths['/simple-directory/a'].get.servers, undefined)
+  })
+
+  test('x-agent on an operation without operationId is reported', () => {
+    const fragment = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { 'x-agent': { name: 'a' }, responses: ok200 } } } })
+    assert.deepEqual(fragment.warnings, ['x-agent on GET /a that has no operationId'])
+    assert.equal(fragment.paths['/simple-directory/a'].get['x-agent'].name, 'sd_a')
   })
 
   test('names every x-agent entry', () => {
@@ -105,6 +165,22 @@ test.describe('platform api docs', () => {
     assert.deepEqual(withRoot.paths['/simple-directory/public'].get.security, [])
     assert.deepEqual(withRoot.paths['/simple-directory/default'].get.security, [{ apiKey: [] }])
 
+    // a scheme the merged document does not carry: its alternatives go, failing closed when none is left
+    const withBearer = prepared(sd, {
+      openapi: '3.1.0',
+      components: { securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } } },
+      paths: {
+        '/only': { get: { operationId: 'only', security: [{ bearer: [] }], responses: ok200 } },
+        '/either': { get: { operationId: 'either', security: [{ bearer: [] }, { apiKey: [] }], responses: ok200 } },
+        '/both': { get: { operationId: 'both', security: [{ bearer: [], apiKey: [] }, {}], responses: ok200 } }
+      }
+    })
+    assert.deepEqual(withBearer.paths['/simple-directory/only'].get.security, [{ sdCookie: [] }])
+    assert.deepEqual(withBearer.paths['/simple-directory/either'].get.security, [{ apiKey: [] }])
+    assert.deepEqual(withBearer.paths['/simple-directory/both'].get.security, [{}])
+    assert.equal(withBearer.warnings.length, 1)
+    assert.match(withBearer.warnings[0], /bearer/)
+
     const withoutAny = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { operationId: 'a', responses: ok200 } } } })
     assert.deepEqual(withoutAny.paths['/simple-directory/a'].get.security, [{ sdCookie: [] }])
   })
@@ -126,6 +202,20 @@ test.describe('platform api docs', () => {
       }
     }), /duplicate/)
     assert.match(refusal({ openapi: '2.0', paths: {} }), /OpenAPI/)
+    assert.match(refusal({ openapi: '3.1.0', paths: {}, components: { securitySchemes: { oauth2: oauth2({ clientCredentials: null }) } } }), /clientCredentials/)
+    // a scheme the fragment does not declare would bind to the merged scheme of that name
+    assert.match(refusal({ openapi: '3.1.0', paths: { '/a': { get: { operationId: 'a', security: [{ oauth2: [] }], responses: ok200 } } } }), /oauth2/)
+    assert.match(refusal({ openapi: '3.1.0', paths: { '/a': { get: { operationId: 'a', security: [{ bearer: [] }], responses: ok200 } } } }), /bearer/)
+    assert.match(refusal({
+      openapi: '3.1.0',
+      components: { securitySchemes: { oauth2: oauth2() } },
+      paths: { '/a': { get: { operationId: 'a', security: [{ oauth2: ['constructor'] }], responses: ok200 } } }
+    }), /constructor/)
+    assert.match(refusal({
+      openapi: '3.1.0',
+      components: { securitySchemes: { oauth2: oauth2() } },
+      paths: { '/a': { patch: { operationId: 'a', security: [{ oauth2: ['things:read'] }], 'x-agent': [{}, { security: [{ oauth2: ['things:admin'] }] }], responses: ok200 } } }
+    }), /things:admin/)
 
     const duplicate = prepared(sd, {
       openapi: '3.1.0',
@@ -175,14 +265,16 @@ test.describe('platform api docs', () => {
     const doc = mergePlatformDoc('https://site.test', [
       { service: datafair, fragment: datafairFragment, status: 'ok', fetchedAt: '2026-10-19T00:00:00.000Z' },
       { service: sd, fragment: sdFragment, status: 'stale', error: 'timeout' },
-      { service: metrics, status: 'error', error: 'connection refused' }
+      { service: metrics, status: 'error', error: 'connection refused' },
+      { service: { ...metrics, id: 'metrics' }, status: 'refused', error: 'oauth2 flows must be clientCredentials only' }
     ], { version: '1.0.0', oauth2Description: 'tokens' })
 
     assert.equal(doc.openapi, '3.1.0')
     assert.equal(doc.info.title, 'API de la plateforme Data Fair')
     assert.deepEqual(doc.servers, [{ url: 'https://site.test' }])
-    assert.deepEqual(doc['x-platform'].services.map((s: any) => s.status), ['ok', 'stale', 'error'])
+    assert.deepEqual(doc['x-platform'].services.map((s: any) => s.status), ['ok', 'stale', 'error', 'refused'])
     assert.deepEqual(doc['x-platform'].services[2], { id: 'metrics', status: 'error', error: 'connection refused' })
+    assert.deepEqual(doc['x-platform'].services[3], { id: 'metrics', status: 'refused', error: 'oauth2 flows must be clientCredentials only' })
     assert.equal(doc.components.securitySchemes.oauth2.flows.clientCredentials.tokenUrl, 'https://site.test/simple-directory/api/auth/nhi-token')
     assert.deepEqual(doc.components.securitySchemes.oauth2.flows.clientCredentials.scopes, { 'datasets:read': 'Read datasets', 'things:read': 'Read things' })
     assert.deepEqual(doc.components.securitySchemes.apiKey, { type: 'apiKey', in: 'header', name: 'x-apiKey' })
@@ -193,6 +285,18 @@ test.describe('platform api docs', () => {
 
     const { compile } = await import('../../../api/src/misc/utils/ajv.ts')
     compile('openapi-3.1')(doc)
+  })
+
+  test('a path claimed by two services stays with the first', () => {
+    const first = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { operationId: 'first', responses: ok200 } } } })
+    const second = prepared({ ...metrics, mountPath: '/simple-directory' }, { openapi: '3.1.0', paths: { '/a': { get: { operationId: 'second', responses: ok200 } } } })
+    const doc = mergePlatformDoc('https://site.test', [
+      { service: sd, fragment: first, status: 'ok' },
+      { service: metrics, fragment: second, status: 'ok' }
+    ], { version: '1.0.0', oauth2Description: 'tokens' })
+    assert.equal(doc.paths['/simple-directory/a'].get.operationId, 'sd_first')
+    assert.equal(doc['x-platform'].services[0].warnings, undefined)
+    assert.deepEqual(doc['x-platform'].services[1].warnings, ['path /simple-directory/a is already provided by sd'])
   })
 
   test('the data-fair document prepares without warnings', async () => {
@@ -206,5 +310,17 @@ test.describe('platform api docs', () => {
     const doc = mergePlatformDoc('https://example.test', [{ service: datafair, fragment: result.fragment, status: 'ok' }], { version: '1.0.0', oauth2Description: 'tokens' })
     const { compile } = await import('../../../api/src/misc/utils/ajv.ts')
     compile('openapi-3.1')(doc)
+
+    const refs = refsOf(doc).filter(({ ref }) => ref.startsWith('#/'))
+    assert.ok(refs.length > 100)
+    assert.deepEqual(refs.filter(({ ref }) => !resolves(doc, ref)), [])
+    const names = agentNamesOf(doc)
+    assert.ok(names.length > 10)
+    assert.deepEqual(names.filter(name => !/^datafair_/.test(name) || /^datafair_datafair_/.test(name)), [])
+    for (const op of Object.values(doc.paths).flatMap((item: any) => Object.values(item)) as any[]) {
+      for (const requirement of op?.security ?? []) {
+        for (const scheme of Object.keys(requirement)) assert.ok(doc.components.securitySchemes[scheme], scheme)
+      }
+    }
   })
 })
