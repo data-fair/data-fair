@@ -2,7 +2,7 @@
 // and the per-operation `oauth2` security alternative. An operation gets the entry for the tier of
 // its permission class; operations with no tier (public, superadmin, settings) get none.
 import config from '#config'
-import { acceptedScopes, scopeDescriptions, tierOfClass, type ScopeFamily } from '../src/misc/utils/scopes.ts'
+import { acceptedScopes, scopeDescriptions, tierOfClass, type ScopeFamily, type ScopeTier } from '../src/misc/utils/scopes.ts'
 
 export const oauth2Scheme = () => ({
   type: 'oauth2',
@@ -15,12 +15,20 @@ export const oauth2Scheme = () => ({
   }
 })
 
-/** the `security` entry of an operation of a family for a permission class, undefined when the class has no tier */
-export const oauth2Entry = (family: ScopeFamily, permissionClass: string): Record<string, string[]> | undefined => {
+/**
+ * the oauth2 security alternatives of an operation of a family for a permission class, undefined when
+ * the class has no tier. In OpenAPI alternatives are ORed and scopes inside one requirement are ANDed:
+ * each accepted scope is therefore its own `{ oauth2: [scope] }` alternative.
+ */
+export const oauth2Alternatives = (family: ScopeFamily, permissionClass: string): Record<string, string[]>[] | undefined => {
   const tier = tierOfClass(permissionClass)
   if (!tier) return undefined
-  return { oauth2: acceptedScopes(family, tier) }
+  return acceptedScopes(family, tier).map(scope => ({ oauth2: [scope] }))
 }
+
+/** the full security of an operation restricted to a tier: the existing alternatives plus its accepted scopes */
+export const agentSecurity = (family: ScopeFamily, tier: ScopeTier): Record<string, string[]>[] =>
+  [{ apiKey: [] }, { sdCookie: [] }, ...acceptedScopes(family, tier).map(scope => ({ oauth2: [scope] }))]
 
 /** permission class of the operations defined inline in the root doc (they carry no x-permissionClass) */
 export const rootOperationClasses: Record<string, string> = {
@@ -52,9 +60,9 @@ export const applyOauth2Security = (api: { paths: Record<string, any>, security:
       if (!op || op.security?.some((s: any) => s.oauth2)) continue
       const permissionClass = op['x-permissionClass'] ?? rootOperationClasses[op.operationId]
       if (!permissionClass) continue
-      const entry = oauth2Entry(family, permissionClass)
+      const alternatives = oauth2Alternatives(family, permissionClass)
       // a copy: some operations are module level objects shared between docs
-      if (entry) methods[method] = { ...op, security: [...(op.security ?? api.security), entry] }
+      if (alternatives) methods[method] = { ...op, security: [...(op.security ?? api.security), ...alternatives] }
     }
   }
 }

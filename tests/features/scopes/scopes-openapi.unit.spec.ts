@@ -6,11 +6,13 @@ process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/
 
 const methods = ['get', 'put', 'post', 'delete', 'patch']
 const operations = (doc: any) => Object.values(doc.paths).flatMap((p: any) => methods.filter(m => p[m]).map(m => p[m]))
-const oauth2Of = (doc: any, operationId: string): string[] | undefined => {
+const oauth2Of = (doc: any, operationId: string): string[][] | undefined => {
   const op = operations(doc).find((o: any) => o.operationId === operationId) as any
   assert.ok(op, operationId)
-  return op.security?.find((s: any) => s.oauth2)?.oauth2
+  const found = (op.security ?? []).filter((s: any) => s.oauth2).map((s: any) => s.oauth2)
+  return found.length ? found : undefined
 }
+const alt = (...scopes: string[]) => scopes.map(s => [s])
 
 const dataset: any = { id: 'd1', owner: { type: 'organization', id: 'o1' }, isRest: true, schema: [] }
 let docs: Record<string, any>
@@ -41,7 +43,7 @@ test.describe('oauth2 security in the OpenAPI docs', () => {
         for (const s of op.security ?? []) {
           if (!s.oauth2) continue
           used++
-          assert.ok(s.oauth2.length > 0)
+          assert.equal(s.oauth2.length, 1)
           for (const scope of s.oauth2) assert.ok(declared[scope], `${op.operationId}: ${scope}`)
           // the existing alternatives are kept
           assert.ok(op.security.some((x: any) => x.apiKey) && op.security.some((x: any) => x.sdCookie), op.operationId)
@@ -53,14 +55,23 @@ test.describe('oauth2 security in the OpenAPI docs', () => {
 
   test('read, write and admin operations list the scopes of their tier', () => {
     const root = docs.root
-    assert.deepEqual(oauth2Of(root, 'listDatasets'), ['datasets:read', 'datasets:write', 'datasets:admin', 'datasets'])
-    assert.deepEqual(oauth2Of(root, 'readLines'), ['datasets:read', 'datasets:write', 'datasets:admin', 'datasets'])
-    assert.deepEqual(oauth2Of(root, 'postDataset'), ['datasets:write', 'datasets:admin', 'datasets'])
-    assert.deepEqual(oauth2Of(root, 'deleteApplication'), ['applications:admin', 'applications'])
-    assert.deepEqual(oauth2Of(root, 'getApplication'), ['applications:read', 'applications:write', 'applications:admin', 'applications'])
-    assert.deepEqual(oauth2Of(root, 'getPermissions'), ['datasets:admin', 'datasets'])
-    assert.equal(oauth2Of(docs.private, 'readLines')?.[0], 'datasets:read')
-    assert.deepEqual(oauth2Of(root, 'delete'), ['datasets:admin', 'datasets'])
+    assert.deepEqual(oauth2Of(root, 'listDatasets'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(root, 'readLines'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(root, 'postDataset'), alt('datasets:write', 'datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(root, 'deleteApplication'), alt('applications:admin', 'applications'))
+    assert.deepEqual(oauth2Of(root, 'getApplication'), alt('applications:read', 'applications:write', 'applications:admin', 'applications'))
+    assert.deepEqual(oauth2Of(root, 'getPermissions'), alt('datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(docs.private, 'readLines')?.[0], ['datasets:read'])
+    assert.deepEqual(oauth2Of(root, 'delete'), alt('datasets:admin', 'datasets'))
+  })
+
+  test('each accepted scope is its own alternative', () => {
+    assert.deepEqual(oauth2Of(docs.root, 'listDatasets'), [['datasets:read'], ['datasets:write'], ['datasets:admin'], ['datasets']])
+    for (const name of ['root', 'private']) {
+      for (const op of operations(docs[name]) as any[]) {
+        for (const s of op.security ?? []) if (s.oauth2) assert.equal(s.oauth2.length, 1, op.operationId)
+      }
+    }
   })
 
   test('operations without a tier carry no oauth2 entry', () => {
