@@ -1,8 +1,11 @@
 import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
+import debugModule from 'debug'
 import { type Account, type AccountKeys } from '@data-fair/lib-express'
 import type { Limit, Limits } from '#types'
+
+const debugLimits = debugModule('limits')
 
 export const getLimits = async (consumer: Account | AccountKeys) => {
   const now = moment()
@@ -54,4 +57,21 @@ export const incrementConsumption = async (consumer: AccountKeys, type: keyof Li
 export const setConsumption = async (consumer: AccountKeys, type: keyof Limits, value: number) => {
   return await mongo.limits
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })
+}
+
+/**
+ * The i18n key of the quota refusing the transfer of these datasets (a dataset and its dataset fragments)
+ * to newOwner, if any. A transfer within the same account (a department move) is not checked.
+ */
+export const changeOwnerLimitError = async (currentOwner: AccountKeys, newOwner: AccountKeys, datasets: { storage?: { size?: number, indexed?: { size?: number } } }[]) => {
+  if (!datasets.length || (newOwner.type === currentOwner.type && newOwner.id === currentOwner.id)) return null
+  const left = await remaining(newOwner)
+  const size = datasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
+  const indexed = datasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
+  let error: 'exceedLimitNbDatasets' | 'exceedLimitStorage' | 'exceedLimitIndexed' | null = null
+  if (left.nbDatasets !== -1 && left.nbDatasets < datasets.length) error = 'exceedLimitNbDatasets'
+  else if (left.storage !== -1 && left.storage < size) error = 'exceedLimitStorage'
+  else if (left.indexed !== -1 && left.indexed < indexed) error = 'exceedLimitIndexed'
+  if (error) debugLimits(`${error}/changeOwner`, { owner: newOwner, remaining: left, nbDatasets: datasets.length, size, indexed })
+  return error
 }

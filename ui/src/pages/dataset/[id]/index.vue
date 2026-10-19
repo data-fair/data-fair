@@ -562,6 +562,7 @@
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
+      :nb-fragments="nbFragments"
       @changed="store.datasetFetch.refresh()"
     />
 

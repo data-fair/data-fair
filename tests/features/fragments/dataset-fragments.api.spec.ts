@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
@@ -155,8 +155,6 @@ test.describe('dataset fragments', () => {
     await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { publicationSites: [] }), { status: 400 })
     await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, []), { status: 403 })
     await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 403 })
-    // the parent cannot change owner while it has fragments
-    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 400 })
     // detach keeps the ACL as it is and re-opens ACL edition
     res = await testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: null })
     assert.equal(res.data.partOf, undefined)
@@ -164,6 +162,32 @@ test.describe('dataset fragments', () => {
     assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
     await testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, [])
     await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })
+  })
+
+  test('changing the owner of a virtual dataset moves its fragments too', async () => {
+    const virtual = await createVirtual()
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
+    const newOwner = { type: 'user', id: 'test_user1', name: 'Test User1' }
+
+    // the quota is checked for the whole family: the parent alone would fit, not with its fragment
+    await testUser1Org.post('/api/v1/limits/user/test_user1', { nb_datasets: { limit: 1, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, newOwner), { status: 429 })
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${fragment.id}`)).data.owner.type, 'organization')
+    await testUser1Org.post('/api/v1/limits/user/test_user1', { nb_datasets: { limit: 10, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, newOwner)
+    const testUser1 = await axiosAuth('test_user1@test.com')
+    const moved = (await testUser1.get(`/api/v1/datasets/${fragment.id}`)).data
+    assert.equal(moved.owner.type, 'user')
+    assert.equal(moved.owner.id, 'test_user1')
+    assert.deepEqual(moved.partOf, { type: 'dataset', id: virtual.id })
+    // the ACL is still derived from the parent's, which a user-owned resource resets to nothing
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${virtual.id}/permissions`)).data, [])
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${fragment.id}/permissions`)).data, [])
+    await assert.rejects(testUser5Org.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
+    // its files followed it
+    assert.equal((await testUser1.get(`/api/v1/datasets/${fragment.id}/raw`)).status, 200)
+    assert.ok((await testUser1.get(`/api/v1/datasets/${fragment.id}/lines`)).data.total > 0)
   })
 
   // POST /api/v1/datasets/:datasetId (and its PUT twin) shares the patch-req schema with PATCH but

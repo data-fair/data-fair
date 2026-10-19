@@ -425,6 +425,7 @@
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
+      :nb-fragments="nbFragments"
       @changed="store.applicationFetch.refresh()"
     />
 

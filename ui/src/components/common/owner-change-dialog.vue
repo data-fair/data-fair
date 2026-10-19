@@ -21,6 +21,14 @@
           other-accounts
         />
         <v-alert
+          v-if="nbFragments"
+          type="info"
+          variant="outlined"
+          class="mt-4"
+        >
+          {{ t('fragmentsFollow', { count: nbFragments }) }}
+        </v-alert>
+        <v-alert
           type="warning"
           variant="outlined"
           class="mt-4"
@@ -72,6 +80,7 @@ fr:
   warningApiKeys: la ressource est-elle utilisée par des programmes qui utilisent une clé d'API du compte propriétaire ?
   warningProcessings: la ressource est-elle associée à un traitement automatisé ?
   warningOutro: Après la confirmation vérifiez de nouveau tous ces aspects et effectuez les corrections nécessaires.
+  fragmentsFollow: "Cette ressource a {count} fragment(s) qui changeront de propriétaire avec elle."
   cancel: Annuler
   confirm: Confirmer
   successMsg: Propriétaire modifié avec succès
@@ -86,6 +95,7 @@ en:
   warningApiKeys: is the resource used by programs that use an API key from the owner account?
   warningProcessings: is the resource associated with an automated processing?
   warningOutro: After confirmation, review all these aspects again and make the necessary corrections.
+  fragmentsFollow: "This resource has {count} fragment(s) that will change owner with it."
   cancel: Cancel
   confirm: Confirm
   successMsg: Owner successfully changed
@@ -96,6 +106,7 @@ en:
 const props = defineProps<{
   resource: { id: string, owner: Record<string, any> }
   resourceType: 'datasets' | 'applications'
+  nbFragments?: number
 }>()
 
 const emit = defineEmits<{

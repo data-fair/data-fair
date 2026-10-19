@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, getRawDataset, clearDatasetCache } from '../../../support/workers.ts'
+import { sendDataset, waitForFinalize, doAndWaitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, getRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -328,5 +328,29 @@ other
     assert.equal(lines[1].id, 'bidule')
     csv = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines?format=csv')).data
     assert.ok(csv.startsWith('"id","adr"'))
+  })
+
+  test('Change the owner of a dataset with a pending draft, both directories follow', async () => {
+    const ax = testUser1
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
+    await waitForFinalize(ax, dataset.id)
+    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+
+    // whichever view the transfer is requested on, published and draft directories both move
+    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    for (const dirName of ['datasets', 'datasets-drafts']) {
+      assert.ok(await fileExists(`${dataDir}/organization/test_org1/${dirName}/${dataset.id}`), dirName)
+      assert.ok(!await fileExists(`${dataDir}/user/test_user1/${dirName}/${dataset.id}`), dirName)
+    }
+
+    // the draft is still usable under its new owner
+    const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })).status, 200)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    assert.equal(dataset.file.name, 'dataset2.csv')
   })
 })
