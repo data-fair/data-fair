@@ -45,7 +45,7 @@ Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), b
 
 ## What stays refused
 
-Everything not listed above. In particular settings writes (API keys, and publication sites: the "publication sites refused" of the review focus means their writes, `POST`/`DELETE /api/v1/settings/:type/:id/publication-sites...`; the member read above is allowed), the full settings read, admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d).
+Everything not listed above. In particular settings writes (API keys, and publication sites: their configuration writes, `POST`/`DELETE /api/v1/settings/:type/:id/publication-sites...`, are refused; the member read above is allowed), the full settings read, admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d).
 
 ## Tiers of some dataset operations
 
