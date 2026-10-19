@@ -209,8 +209,9 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ingest.geoip.downloader.enabled=false
-      # heap 512m; an agent that needs more sets ES_HEAP=1g in .env (df-dev never overwrites it)
-      - ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
+      # heap starts at 64m and grows up to 512m (pre-touching a fixed 512m cost ~360m per idle stack);
+      # an agent that needs more sets ES_HEAP=1g in .env (df-dev never overwrites it)
+      - ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:

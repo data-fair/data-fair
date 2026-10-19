@@ -66,15 +66,21 @@ unidentified; the cap is what makes it survivable meanwhile.
 ### Elasticsearch — `docker-compose.yaml`
 
 ```
-ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
+ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
 mem_limit: 2g
 memswap_limit: 2g
 ```
 
 Dev and test datasets are small, so 512 MiB of heap is ample. ES pre-touches its
-whole heap at boot (`-XX:+AlwaysPreTouch`), so the heap is resident in every running
-stack even when idle: at the earlier 1g a stack's ES sat around 1.5 GiB resident,
-at 512m around 1 GiB. `memswap_limit` equal to `mem_limit` forbids swap — without it
+initial heap at boot (`-XX:+AlwaysPreTouch`), so with `-Xms` equal to `-Xmx` the whole
+heap is resident in every running stack even when idle: at the earlier 1g a stack's ES
+sat around 1.5 GiB resident, at 512m around 1 GiB, while using ~130–165 MiB of it.
+Starting the heap at 64m lets it grow on demand up to the same 512m ceiling; measured
+on this image, idle 1001 → 640 MiB, after bulk indexing 20k documents plus searches and
+aggregations 1079 → 722 MiB (~360 MiB saved per stack). ES only logs a warning about
+resize pauses: the heap-size bootstrap check is not enforced with `single-node` discovery.
+
+`memswap_limit` equal to `mem_limit` forbids swap — without it
 docker allows as much swap again as `mem_limit`, and idle ES containers were seen
 pushing 1.7 GiB each into swap. `mem_limit` bounds the off-heap side (direct memory,
 metaspace, thread stacks) so a runaway ES is killed *inside its container* rather
