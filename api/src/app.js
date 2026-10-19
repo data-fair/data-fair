@@ -275,8 +275,8 @@ export const run = async () => {
     const workers = await import('./workers/index.ts')
     await workers.init()
     workers.loop().catch(error => {
+      // never rethrow: an unhandled rejection here would take the whole process down
       internalError('workers-loop-error', error)
-      throw error
     })
     const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
     apiKeysExpirationWorker.start()

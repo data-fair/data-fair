@@ -294,18 +294,23 @@ export const loop = async () => {
 
   while (true) {
     if (stopped) break
-    let resourceTask = await queryNextResourceTask()
-    while (resourceTask) {
-      debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
-      if (stopped) break
-      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-        internalError('worker-task', err)
-      }).then(() => {
-        // at the end of task ignore the wait interval and loop immediately
-        if (resolveWaitInterval) resolveWaitInterval()
-      })
-      if (stopped) break
-      resourceTask = await queryNextResourceTask()
+    try {
+      let resourceTask = await queryNextResourceTask()
+      while (resourceTask) {
+        debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
+        if (stopped) break
+        processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
+          internalError('worker-task', err)
+        }).then(() => {
+          // at the end of task ignore the wait interval and loop immediately
+          if (resolveWaitInterval) resolveWaitInterval()
+        })
+        if (stopped) break
+        resourceTask = await queryNextResourceTask()
+      }
+    } catch (err) {
+      // a transient mongo/lock error while querying the next task must not kill the loop (and the process)
+      internalError('worker-loop', err)
     }
     if (stopped) break
     debug('wait for ' + config.worker.interval)
