@@ -20,7 +20,7 @@ It replaces the deployment index (`/api/v1/agents/index.json`) and the agent pro
 
 Fragments are fetched over private URLs, once per service, not per site: after the rewrite nothing in a fragment depends on the site. The merged document has one server, the origin of the request's public base URL; every path carries its service's mount path. Processings is not aggregated: its listed document is superadmin-only.
 
-To add a service, add an entry to `platformServices()` in `service.ts` (id in lowercase `[a-z0-9]+`, title, mount path, public document path, private URL) and extend `PlatformServiceId`. The service must serve a public, session-independent document, annotated with `x-agent` and declaring its scopes in an `oauth2` scheme if its operations are scoped.
+To add a service, add an entry to `platformServices()` in `service.ts` (id in lowercase `[a-z0-9]+` by convention — nothing checks it, but `<ns>_<name>` must stay a valid tool name — title, mount path, public document path, private URL) and extend `PlatformServiceId`. The service must serve a public, session-independent document, annotated with `x-agent` and declaring its scopes in an `oauth2` scheme if its operations are scoped.
 
 ## Rewrites
 
@@ -30,8 +30,9 @@ To add a service, add an entry to `platformServices()` in `service.ts` (id in lo
 - Paths are prefixed with the mount path; `servers` (path level and operation level) are removed.
 - `operationId` becomes `<ns>_<operationId>`; every component kind except security schemes is renamed `<ns>_<name>` and the internal `$ref`s follow.
 - Tags become `<Service title> / <tag>`, root tags are concatenated.
-- Each `x-agent` entry (an operation may carry an array) gets the final tool name `<ns>_<name ?? snake_case(operationId)>`; `profiles` and `namePrefix` are stripped.
+- Each `x-agent` entry (an operation may carry an array) gets the final tool name `<ns>_<name ?? snake_case(operationId)>`.
 - Root `x-agent.skills` are collected: name `<ns>-<name>`, `tools` prefixed, `href` resolved against the service's public document path on the site.
+- **Vocabulary.** openapi-mcp refuses the whole document for a bad tag or skill annotation, and under `lint: 'error'` for a bad operation annotation, so one service's version skew would cost every service its tools. The merge therefore keeps only the keys openapi-mcp knows (`agentEntryKeys`, `agentTagKeys`, `agentSkillKeys`, pinned to openapi-mcp's vocabulary by a unit test) and removes the others with a warning — `profiles` and `namePrefix` included. A skill openapi-mcp would refuse (name not kebab-case once namespaced, description over 1024 characters, both `href` and `body`, `tools` not a list of names) is removed with a warning, as is a tag `skill` that is not a text and an `x-agent` that is not an object or a list of objects. The fragment itself is not refused: the rest of it is fine. The values of the kept keys are not checked here (see Known gaps).
 - A duplicate `operationId` inside a fragment loses its id on the second and later occurrences, with a warning; if one of them carries `x-agent`, the fragment is refused.
 - A path already provided by an earlier service is left out of the merge, with a warning on the later one.
 
@@ -41,15 +42,16 @@ The merged document declares `oauth2` (client credentials, `tokenUrl` = `<site o
 
 - **Fail closed.** An operation with no security anywhere gets `[{ sdCookie: [] }]`: no scoped token reaches it. Only `security: []` or an empty alternative `{}` is public.
 - **Alternatives are ORed, scopes inside one requirement are ANDed.** data-fair therefore emits one `{ oauth2: [scope] }` alternative per accepted scope (`oauth2Alternatives`), not one requirement holding all of them.
-- **A fragment is refused** (left out entirely, reported in `x-platform`, its last good version not reused) if: it declares an `oauth2`-type scheme under another name, or an `oauth2` scheme with a flow other than client credentials; it declares `apiKey` or `sdCookie` differently from the platform; an operation or `x-agent` entry requires a scheme the fragment does not declare, or an `oauth2` scope its scheme does not declare.
+- **A fragment is refused** (left out entirely, reported in `x-platform`, its last good version not reused) if: it declares an `oauth2`-type scheme under another name, or an `oauth2` scheme with a flow other than client credentials; it declares `apiKey` or `sdCookie` differently from the platform; an operation or `x-agent` entry requires `oauth2` (or any other scheme) without the fragment declaring it, or an `oauth2` scope its scheme does not declare. `apiKey` and `sdCookie` may be required without being declared: they are the platform's shared schemes, and neither grants anything to a scoped token.
+- **A security that is not a list** (root or operation) fails closed: the operation gets `[{ sdCookie: [] }]`, with a warning.
 - Other security schemes (e.g. `http`) are not carried: the alternatives using one are removed, with a warning, and an operation left with none falls back to `[{ sdCookie: [] }]`.
-- **Narrowing per tool.** An `x-agent` entry may carry its own `security`, which replaces the operation's for filtering and can only drop alternatives. `agentSecurity(family, tier)` builds one: `apiKey`, `sdCookie` and one `oauth2` alternative per `acceptedScopes(family, tier)`. `PATCH /datasets/{id}` yields `datafair_update_dataset` (write tier) and `datafair_publish_dataset` (admin tier), and the same for applications: a `datasets:write` token is offered the first and not the second, while `datasets:admin`, `datasets` and unscoped sessions get both.
+- **Narrowing per tool.** An `x-agent` entry may carry its own `security`, which replaces the operation's for filtering and can only drop alternatives. The merge rewrites it consistently with the operation's rewritten security, so openapi-mcp's narrowing check always holds: alternatives using a dropped scheme go (an entry left with none follows the operation onto `[{ sdCookie: [] }]`), alternatives not in the operation's rewritten security are removed with a warning, and an entry left with nothing — or an entry `[]` on an operation that is not public — is removed with a warning, never made public. A `security` that is not a list removes the entry too. A skill stops naming the tool of a removed entry, unless another entry still provides that name. `agentSecurity(family, tier)` builds one: `apiKey`, `sdCookie` and one `oauth2` alternative per `acceptedScopes(family, tier)`. `PATCH /datasets/{id}` yields `datafair_update_dataset` (write tier) and `datafair_publish_dataset` (admin tier), and the same for applications: a `datasets:write` token is offered the first and not the second, while `datasets:admin`, `datasets` and unscoped sessions get both.
 
 ## Freshness and `x-platform`
 
-`service.ts` fetches every fragment at startup and every 300 s, with conditional GETs (`If-None-Match`) and a 10 s abort. Each service settles on its own: a slow service does not delay the others' state. The cache is in process memory, per API pod. `init` waits for the first round at most 5 s, then serves what it has.
+`service.ts` fetches every fragment at startup and every 300 s; the remote ones (sd, metrics) with conditional GETs (`If-None-Match`) and a 10 s abort, data-fair's own built in process. Each service settles on its own: a slow service does not delay the others' state. The cache is in process memory, per API pod. `init` waits for the first round at most 5 s, then serves what it has.
 
-The merge is memoized per site origin until the next state change. The root `x-platform.services` lists, per service: `status`, `error` (when any), `fetchedAt`, `warnings`.
+The merge is memoized per site origin until the next state change. The root `x-platform.services` lists, per service: `status`, `error` (when any), `fetchedAt` (once it answered), `warnings` (only when there are some).
 
 | Status | Meaning |
 | --- | --- |
@@ -71,6 +73,11 @@ Cache headers: `Cache-Control: no-store` while any service has never answered (n
 The agent surface is pinned by `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts` (golden `tests/fixtures/agent-surface.json`, with the expected tool names per scope set); the merge is unit-tested in `platform-api-docs.unit.spec.ts`, the cache in `platform-api-docs-service.unit.spec.ts` and the route in `platform-api-docs.api.spec.ts`.
 
 ## Known gaps
+
+- **Not strictly OpenAPI 3.1.** The envelope is 3.1, but 3.0 fragments are included as is: simple-directory's `examples` array on a media type makes the merged document fail a strict `openapi-3.1` schema. openapi-mcp tolerates it; converting 3.0 constructs is left for when a consumer needs it.
+- **Refs to schemas the document does not embed.** simple-directory's schemas point at other `$id`s (`…/simple-directory/partial`, `…/lib/session-state`) and at `$defs` of their own resource. The merge passes them through; openapi-mcp resolves the ones the document holds (against the nearest embedded `$id` resource, then the root) and reads the others as `{}` with a console warning, never failing the document.
+- **Annotation values are not validated at merge time.** Only the keys are (openapi-mcp is not a runtime dependency). A kept key with a bad value fails openapi-mcp on that operation: the whole tool set under `lint: 'error'`, only that operation under `lint: 'warn'`; a property-level `x-agent` in a shared component schema fails the document at any level. A consumer that must survive a misbehaving service loads with `lint: 'warn'`.
+- **Secondary sites.** data-fair's mount path comes from the main `publicUrl` pathname, while secondary sites always serve data-fair under `/data-fair`. The two agree unless the main `publicUrl` is not mounted at `/data-fair`.
 
 - **mcp half not done.** The dev stack's `mcp` container, the personal assistants (`PERSONAL_ASSISTANTS`) and the autonomous-agent simulations still read the removed `agents/index.json` and the profiles; they stay broken until the mcp server and the agents service read this document and filter tools by token scopes. There is no temporary route.
 - **Metrics fetch untested in dev.** The URL `privateMetricsUrl + '/api/api-docs.json'` is not exercised: `privateMetricsUrl` is unset in the dev stack.
