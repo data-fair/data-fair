@@ -186,6 +186,7 @@ export const run = async () => {
 
     const embedUnsafePaths = [
       '/embed/dataset/:id/table-edit',
+      '/embed/dataset/:id/edit-own-lines',
       '/embed/dataset/:id/form',
       '/embed/application/:id/config',
       '/embed/workflow/update-dataset',
