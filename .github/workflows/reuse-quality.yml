@@ -195,8 +195,7 @@ jobs:
         export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd ui && NODE_CONFIG_DIR=../api/config/ ../node_modules/.bin/vite --port $DEV_UI_PORT > ../dev/logs/ui.log 2>&1 &
 
-    # vite compiles on first request: without a warm-up the first e2e page load of the
-    # job spends its navigation timeout on dependency optimization
+    # the e2e-warmup project then pays vite's first-request transforms
     - name: Wait for API and UI
       run: |
         for url in "http://localhost:$NGINX_PORT/data-fair/api/v1/ping" "http://localhost:$NGINX_PORT/data-fair/"; do

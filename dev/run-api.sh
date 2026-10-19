@@ -1,5 +1,5 @@
 #!/bin/sh
-# The dev API's run command, invoked by nodemon — see api/package.json.
+# The dev API's run command, invoked by nodemon from the api pane of .zellij.kdl (and by the CI).
 #
 # It exists so that retry-on-crash cannot fire when nodemon kills us on an
 # ordinary restart.
