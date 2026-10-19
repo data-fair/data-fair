@@ -23,12 +23,15 @@ export const oauth2Scheme = () => ({
 export const oauth2Alternatives = (family: ScopeFamily, permissionClass: string): Record<string, string[]>[] | undefined => {
   const tier = tierOfClass(permissionClass)
   if (!tier) return undefined
-  return acceptedScopes(family, tier).map(scope => ({ oauth2: [scope] }))
+  return tierAlternatives(family, tier)
 }
+
+const tierAlternatives = (family: ScopeFamily, tier: ScopeTier): Record<string, string[]>[] =>
+  acceptedScopes(family, tier).map(scope => ({ oauth2: [scope] }))
 
 /** the full security of an operation restricted to a tier: the existing alternatives plus its accepted scopes */
 export const agentSecurity = (family: ScopeFamily, tier: ScopeTier): Record<string, string[]>[] =>
-  [{ apiKey: [] }, { sdCookie: [] }, ...acceptedScopes(family, tier).map(scope => ({ oauth2: [scope] }))]
+  [{ apiKey: [] }, { sdCookie: [] }, ...tierAlternatives(family, tier)]
 
 /** permission class of the operations defined inline in the root doc (they carry no x-permissionClass) */
 export const rootOperationClasses: Record<string, string> = {

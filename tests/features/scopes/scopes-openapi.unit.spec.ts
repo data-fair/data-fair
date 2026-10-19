@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import { strict as assert } from 'node:assert'
 import path from 'node:path'
+import { isDeepStrictEqual as deepEqual } from 'node:util'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
@@ -71,6 +72,24 @@ test.describe('oauth2 security in the OpenAPI docs', () => {
       for (const op of operations(docs[name]) as any[]) {
         for (const s of op.security ?? []) if (s.oauth2) assert.equal(s.oauth2.length, 1, op.operationId)
       }
+    }
+  })
+
+  test('agentSecurity equals the security of a real operation of the same family and tier', async () => {
+    const { agentSecurity } = await import('../../../api/contract/scopes-security.ts')
+    const cases: [any, string, 'datasets' | 'applications', 'read' | 'write' | 'admin'][] = [
+      [docs.root, 'listDatasets', 'datasets', 'read'],
+      [docs.root, 'postDataset', 'datasets', 'write'],
+      [docs.root, 'getPermissions', 'datasets', 'admin'],
+      [docs.root, 'getApplication', 'applications', 'read'],
+      [docs.root, 'patchApplication', 'applications', 'write'],
+      [docs.root, 'deleteApplication', 'applications', 'admin']
+    ]
+    for (const [doc, id, family, tier] of cases) {
+      const op = (operations(doc) as any[]).find(o => o.operationId === id)
+      const expected = agentSecurity(family, tier)
+      for (const a of expected) assert.ok(op.security.some((s: any) => deepEqual(s, a)), `${id}: ${JSON.stringify(a)} missing from the operation`)
+      for (const s of op.security) assert.ok(expected.some(a => deepEqual(s, a)), `${id}: ${JSON.stringify(s)} missing from agentSecurity`)
     }
   })
 
