@@ -77,7 +77,9 @@ UI calls a scoped session gets 403 on, so the corresponding parts of the UI are 
 
 ## OpenAPI
 
-`components.securitySchemes.oauth2` (client credentials flow, `tokenUrl` = `<directoryUrl>/api/auth/nhi-token`, scopes from `scopeDescriptions('fr')`) is declared in the root doc and the private dataset doc. `applyOauth2Security` adds `{ oauth2: acceptedScopes(family, tier) }` next to `apiKey` and `sdCookie` on every operation that maps to a permission class, from its `x-permissionClass` (root operations defined inline use a table by `operationId`). Public, superadmin and settings operations have no oauth2 entry. `tests/features/scopes/scopes-openapi.unit.spec.ts` checks that every scope used is declared. The agent-surface snapshots do not include `security` and did not change.
+`components.securitySchemes.oauth2` (client credentials flow, `tokenUrl` = `<directoryUrl>/api/auth/nhi-token`, scopes from `scopeDescriptions('fr')`) is declared in the root doc and the private dataset doc. `applyOauth2Security` adds one alternative per accepted scope, `{ oauth2: [scope] }` for each of `acceptedScopes(family, tier)`, next to `apiKey` and `sdCookie` on every operation that maps to a permission class, from its `x-permissionClass` (root operations defined inline use a table by `operationId`). OpenAPI ORs alternatives and ANDs the scopes of one requirement, so one requirement listing every accepted scope would mean "all of them". Public, superadmin and settings operations have no oauth2 entry. `tests/features/scopes/scopes-openapi.unit.spec.ts` checks that every scope used is declared.
+
+An `x-agent` entry may narrow the security of its tool (`agentSecurity(family, tier)` in `scopes-security.ts`): `publish_dataset` and `publish_application` are on the admin tier although they share `PATCH` with the write tier tools, so a `datasets:write` token is not offered them. The platform document merges the services' documents and fails closed on missing security; see [platform-api-docs.md](platform-api-docs.md).
 
 ## Testing
 

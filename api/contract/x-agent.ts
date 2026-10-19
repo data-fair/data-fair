@@ -1,7 +1,8 @@
 /**
  * The x-agent annotations that turn this API's OpenAPI document into agent tools through
- * `@data-fair/openapi-mcp` (vocabulary: docs/x-agent.md in that project). Text only — nothing
- * executable is read from here. Each operation references its constant in one line; the
+ * `@data-fair/openapi-mcp` (vocabulary: docs/x-agent.md in that project). Mostly text: the
+ * only code it runs is `agentSecurity()`, which reads the configured scope vocabulary to narrow
+ * some tools to a tier. Each operation references its constant in one line; the
  * per-dataset operations are annotated once in dataset-api-docs.ts and so appear identically
  * on the root document and on every dataset's own document.
  *

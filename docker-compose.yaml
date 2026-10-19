@@ -242,7 +242,8 @@ services:
       # the two built-in personal assistants read what the portal publishes, nothing more
       - 'PERSONAL_ASSISTANTS={"portal":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]},"backOffice":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]}}'
 
-  # the MCP server composed from the services' agent annotations (/data-fair/api/v1/agents/index.json)
+  # the MCP server composed from the services' agent annotations. Broken until the mcp side reads
+  # /data-fair/api/v1/platform/api-docs.json: it still reads the removed agents/index.json
   mcp:
     profiles:
       - dev

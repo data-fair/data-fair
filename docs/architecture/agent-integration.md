@@ -631,8 +631,9 @@ one subscription. An invalid run must never be judged, and
 `simulations/autonomous-agent.sim.spec.ts` drives the other way the stack exposes
 data-fair's tools: an **autonomous agent** of the agents service, owned by
 `test_org1`, acting as its own non-human identity and calling the **mcp server**,
-whose tools are composed from the `x-agent` annotations of this API
-(`/api/v1/agents/index.json`) — the configuration production runs. The back-office
+whose tools are composed from the `x-agent` annotations of the platform
+document (`/api/v1/platform/api-docs.json`, see [platform-api-docs.md](./platform-api-docs.md)).
+Until the mcp server reads that document these cases cannot run. The back-office
 drawer and its in-page tools are not involved.
 
 - The NHI `test_org1_agent_nhi` is declared in simple-directory's file storage
@@ -642,8 +643,8 @@ drawer and its in-page tools are not involved.
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.
 - The agent reaches the mcp server through the operator catalog (`MCP_SERVERS` in
-  `docker-compose.yaml`): one profiled entry, `datafair`, on which the simulated agent selects
-  `profiles: ['read']` (sent as `/mcp-server/mcp?profiles=read`), as the agent's own session.
+  `docker-compose.yaml`): one entry, `datafair`, which the simulated agent reaches as its own session. The profile
+  selection this entry used to carry is gone with the profiles.
 - Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
   `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
 - Before any model call the runner asks the agent's tool diagnostic for the tools the
@@ -784,9 +785,10 @@ still builds the absolute URLs, and the reported `location.url` uses it.
 ## 11. The API-facing agent surface
 
 Independently of the browser tools above, the served OpenAPI document carries `x-agent`
-annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into tools, grouped by
-the profiles of [agent-profiles.md](./agent-profiles.md): `catalog` (what a portal publishes),
-and `read`/`write`/`manage` for datasets and applications. They are consumed by the stack's MCP
+annotations (`api/contract/x-agent.ts`) that `@data-fair/openapi-mcp` turns into tools, merged
+with the other services' into the platform document ([platform-api-docs.md](./platform-api-docs.md)).
+Which tools a client gets is decided by its token's scopes ([scopes.md](./scopes.md)); the two
+publication tools (`publish_dataset`, `publish_application`) are narrowed to the admin tier. They are consumed by the stack's MCP
 server (`data-fair/mcp`), by coding agents and by the agents service's autonomous runs; the
 browser assistant does not use them yet.
 
@@ -796,24 +798,18 @@ the model reads the name and description. The mcp server renders it in its `LOCA
 titles follow the browser assistant's for the same action (« Lister les jeux de données »,
 « Agréger des données »…); a test requires one per tool, in both languages, none shared.
 
-`GET /api/v1/agents/index.json` lists the deployment's service-level documents
-(`api/contract/agents-index.ts`): data-fair itself, plus each sibling whose integration is
-configured, at the site origin and its conventional mount path. A consumer is configured with
-that one URL. The metrics service (`privateMetricsUrl`) contributes `metrics_aggregate_requests`
-and a `metrics-review` skill, so an agent can review the audience of the active account's
-datasets and applications.
-
-How tools are grouped into profiles across the stack — the `read`/`write`/`manage` grid per
-resource family, the `catalog` profile, and the stability rules agent configurations rely on —
-is described in [agent-profiles.md](./agent-profiles.md).
+The platform document (`GET /api/v1/platform/api-docs.json`, `api/contract/platform-api-docs.ts`)
+namespaces each service's tools (`datafair_`, `sd_`, `metrics_`): the names in the descriptions and
+skills of this API are those platform names. The metrics service (`privateMetricsUrl`) contributes
+`metrics_aggregate_requests` and a `metrics-review` skill, so an agent can review the audience of the
+active account's datasets and applications.
 
 The agent-facing surface is pinned in CI: `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`
-loads the generator with `lint: 'error'` and diffs one golden per profile
-(`tests/fixtures/agent-surface.<profile>.json`); `agents-composition.unit.spec.ts` composes the
-index with the document. Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is
+loads the generator with `lint: 'error'` and diffs one golden
+(`tests/fixtures/agent-surface.json`) and the tool names reached by each scope set. Change an annotation, regenerate with `UPDATE_GOLDEN=1`, and the diff is
 what the reviewer reads. Superadmin routes (only documented in admin mode) carry no annotation,
 so the surface does not vary with the session; routes of the owner's admin class (deletion,
-permissions) are annotated in the `manage_*` profiles and present for every session.
+permissions) are annotated and present for every session; token scopes decide who is offered them.
 
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
@@ -854,10 +850,8 @@ the consumer is the agents service's file store (autonomous agents only).
   on the dataset), so their link has no extension: the client types the file from the response.
   `/lines` declares one media type per `format`, which gives the export its `text/csv` type and
   its `<id>-lines.csv` name. One export holds at most 10,000 rows (`elasticsearch.maxPageSize`).
-- **Placement** ([agent-profiles.md](./agent-profiles.md) §3-4). Creating and replacing change
-  content: `write`, like their permission classes (`writeData`, dataset creation). Downloads
-  change nothing: `read`. None is in `catalog`, the short end-user set served to every MCP
-  client by default: a link is of use only to a client that keeps files.
+- **Placement.** Creating and replacing change content: write tier, like their permission
+  classes (`writeData`, dataset creation). Downloads change nothing: read tier.
 - **Replacing never breaks silently.** `replace_dataset_file` always sends `draft=compatible`: a
   file whose columns stay compatible is validated automatically; one that removes or retypes a
   column stays a draft until a person validates it ([dataset-drafts.md](./dataset-drafts.md)).
