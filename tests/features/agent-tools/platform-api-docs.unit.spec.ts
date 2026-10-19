@@ -5,8 +5,8 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import { snakeCase as openapiMcpSnakeCase } from '@data-fair/openapi-mcp'
-import { prepareFragment, mergePlatformDoc, snakeCase, type PlatformService, type PreparedFragment } from '../../../api/contract/platform-api-docs.ts'
+import { snakeCase as openapiMcpSnakeCase, validateVocabulary, load, toolsForScopes } from '@data-fair/openapi-mcp'
+import { prepareFragment, mergePlatformDoc, snakeCase, agentEntryKeys, agentTagKeys, agentSkillKeys, type PlatformService, type PreparedFragment } from '../../../api/contract/platform-api-docs.ts'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
@@ -134,6 +134,65 @@ test.describe('platform api docs', () => {
     })
     assert.deepEqual(fragment.paths['/simple-directory/x'].get['x-agent'], [{ name: 'sd_a' }, { name: 'sd_op_x' }])
     assert.deepEqual(fragment.paths['/simple-directory/y'].get['x-agent'], { name: 'sd_get_y', description: 'y' })
+    assert.deepEqual(fragment.warnings, ['GET /x: x-agent profiles not part of the platform vocabulary, removed'])
+  })
+
+  test('x-agent keys outside the vocabulary are removed, never passed to openapi-mcp', () => {
+    const fragment = prepared(metrics, {
+      openapi: '3.1.0',
+      'x-agent': {
+        namePrefix: 'metrics',
+        profiles: { x: {} },
+        skills: [
+          { name: 'review', description: 'Review', href: 'review.md', profiles: ['x'] },
+          { name: 'Bad Name', description: 'x' },
+          { name: 'both', description: 'x', href: 'a.md', body: 'b' },
+          { name: 'long', description: 'x'.repeat(1025) },
+          'not an object'
+        ]
+      },
+      tags: [
+        { name: 'A', 'x-agent': { skill: 'Use A', profiles: ['x'] } },
+        { name: 'B', 'x-agent': { skill: 3 } },
+        { name: 'C', 'x-agent': 'nope' }
+      ],
+      paths: { '/x': { get: { operationId: 'x', 'x-agent': { namePrefix: 'm', response: { rows: '/results' } }, responses: ok200 } } }
+    })
+    assert.deepEqual(fragment.skills, [{ name: 'metrics-review', description: 'Review', href: 'review.md' }])
+    assert.deepEqual(fragment.tags, [
+      { name: 'Metrics / A', 'x-agent': { skill: 'Use A' } },
+      { name: 'Metrics / B' },
+      { name: 'Metrics / C' }
+    ])
+    assert.deepEqual(fragment.paths['/metrics/api/x'].get['x-agent'], { name: 'metrics_x', response: { rows: '/results' } })
+    assert.deepEqual(fragment.warnings, [
+      'GET /x: x-agent namePrefix not part of the platform vocabulary, removed',
+      'tag A: x-agent profiles not part of the platform vocabulary, removed',
+      'tag B: x-agent skill is not a text, removed',
+      'tag C: x-agent is not an object, removed',
+      'skill review: x-agent profiles not part of the platform vocabulary, removed',
+      'skill Bad Name removed: its name is not kebab-case (64 characters at most once namespaced)',
+      'skill both removed: it has both href and body',
+      'skill long removed: its description is not a text of 1024 characters at most',
+      'a skill that is not an object, removed'
+    ])
+  })
+
+  test('the vocabulary kept is one openapi-mcp accepts', () => {
+    // a key of these lists that openapi-mcp no longer knows would come back as "additional property"
+    const unknownIn = (doc: any) => {
+      try {
+        validateVocabulary(doc)
+        return []
+      } catch (err: any) {
+        return [...err.message.matchAll(/\(([^)]+)\)/g)].map(match => match[1])
+      }
+    }
+    const garbage = (keys: string[]) => Object.fromEntries(keys.map(key => [key, Symbol('not json')]))
+    assert.deepEqual(unknownIn({ paths: { '/a': { get: { 'x-agent': garbage(agentEntryKeys) } } } }), [])
+    assert.deepEqual(unknownIn({ tags: [{ name: 'a', 'x-agent': garbage(agentTagKeys) }] }), [])
+    assert.deepEqual(unknownIn({ 'x-agent': { skills: [garbage(agentSkillKeys)] } }), [])
+    assert.deepEqual(unknownIn({ paths: { '/a': { get: { 'x-agent': { profiles: [] } } } } }), ['profiles'])
   })
 
   test('skills', () => {
@@ -183,6 +242,77 @@ test.describe('platform api docs', () => {
 
     const withoutAny = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { operationId: 'a', responses: ok200 } } } })
     assert.deepEqual(withoutAny.paths['/simple-directory/a'].get.security, [{ sdCookie: [] }])
+
+    // a security that is not a list fails closed
+    const notAList = prepared(sd, {
+      openapi: '3.1.0',
+      security: { apiKey: [] },
+      paths: {
+        '/root': { get: { operationId: 'root', responses: ok200 } },
+        '/own': { get: { operationId: 'own', security: 'none', responses: ok200 } }
+      }
+    })
+    assert.deepEqual(notAList.paths['/simple-directory/root'].get.security, [{ sdCookie: [] }])
+    assert.deepEqual(notAList.paths['/simple-directory/own'].get.security, [{ sdCookie: [] }])
+    assert.deepEqual(notAList.warnings, [
+      'the root security is not a list of requirements, its operations require the cookie session',
+      'GET /own: security is not a list of requirements, the cookie session is required'
+    ])
+  })
+
+  test('an x-agent entry security only narrows the rewritten operation security', () => {
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      'x-agent': { skills: [{ name: 'guide', description: 'Guide', body: 'Use them', tools: ['a', 'b', 'c', 'dropped2'] }] },
+      components: { securitySchemes: { oauth2: oauth2(), bearer: { type: 'http', scheme: 'bearer' } } },
+      paths: {
+        // the entry's own alternative outside the operation's is removed, the rest kept
+        '/narrow': {
+          patch: {
+            operationId: 'narrow',
+            security: [{ apiKey: [] }, { oauth2: ['things:read'] }],
+            'x-agent': [{ name: 'a' }, { name: 'b', security: [{ oauth2: ['things:read'] }, { sdCookie: [] }] }],
+            responses: ok200
+          }
+        },
+        // nothing of the entry is left: the entry goes, the operation's other entries stay
+        '/gone': {
+          patch: {
+            operationId: 'gone',
+            security: [{ apiKey: [] }],
+            'x-agent': [{ name: 'a' }, { name: 'b', security: [{ sdCookie: [] }] }, { name: 'c', security: [] }],
+            responses: ok200
+          }
+        },
+        // the operation fell back on the cookie session (its only scheme dropped): the entry follows it
+        '/dropped': { get: { operationId: 'dropped', security: [{ bearer: [] }], 'x-agent': { security: [{ bearer: [] }] }, responses: ok200 } },
+        // an entry made only of dropped alternatives, on an operation keeping others, is removed
+        '/dropped2': { get: { operationId: 'dropped2', security: [{ bearer: [] }, { apiKey: [] }], 'x-agent': { security: [{ bearer: [] }] }, responses: ok200 } },
+        // public stays public
+        '/public': { get: { operationId: 'pub', security: [], 'x-agent': { security: [] }, responses: ok200 } },
+        '/bad': { get: { operationId: 'bad', 'x-agent': { security: 'x' }, responses: ok200 } }
+      }
+    })
+    const op = (p: string) => Object.values(fragment.paths[`/simple-directory${p}`])[0] as any
+    assert.deepEqual(op('/narrow')['x-agent'], [{ name: 'sd_a' }, { name: 'sd_b', security: [{ oauth2: ['things:read'] }] }])
+    assert.deepEqual(op('/gone')['x-agent'], [{ name: 'sd_a' }])
+    assert.deepEqual(op('/dropped').security, [{ sdCookie: [] }])
+    assert.deepEqual(op('/dropped')['x-agent'], { name: 'sd_dropped', security: [{ sdCookie: [] }] })
+    assert.equal(op('/dropped2')['x-agent'], undefined)
+    assert.deepEqual(op('/public')['x-agent'], { name: 'sd_pub', security: [] })
+    assert.equal(op('/bad')['x-agent'], undefined)
+    // a skill no longer names the tool of a removed entry ('c', 'dropped2'), unless another
+    // entry still provides that name ('b' stays on /narrow)
+    assert.deepEqual(fragment.skills[0].tools, ['sd_a', 'sd_b'])
+    assert.deepEqual(fragment.warnings.filter(w => !/bearer is not part/.test(w)), [
+      'PATCH /narrow: x-agent security alternatives not in the operation\'s security removed: {"sdCookie":[]}',
+      'PATCH /gone: x-agent security alternatives not in the operation\'s security removed: {"sdCookie":[]}',
+      'PATCH /gone: x-agent entry b removed, none of its security is left within the operation\'s',
+      'PATCH /gone: x-agent entry c removed, none of its security is left within the operation\'s',
+      'GET /dropped2: x-agent security alternatives not in the operation\'s security removed: {"sdCookie":[]}',
+      'GET /dropped2: x-agent entry removed, none of its security is left within the operation\'s',
+      'GET /bad: x-agent entry with a security that is not a list, removed'
+    ])
   })
 
   test('refusals', () => {
@@ -297,6 +427,98 @@ test.describe('platform api docs', () => {
     assert.equal(doc.paths['/simple-directory/a'].get.operationId, 'sd_first')
     assert.equal(doc['x-platform'].services[0].warnings, undefined)
     assert.deepEqual(doc['x-platform'].services[1].warnings, ['path /simple-directory/a is already provided by sd'])
+  })
+
+  test('a merged document of data-fair, a simple-directory-like and a metrics-like fragment loads in openapi-mcp', async () => {
+    const apiDocs = (await import('../../../api/contract/api-docs.ts')).default
+    const datafairFragment = prepared(datafair, apiDocs('https://example.test/data-fair'))
+    // simple-directory's shape: OpenAPI 3.0, schemas with their own $id pointing at other $ids
+    // the document does not embed, and at $defs of their own resource
+    const sdFragment = prepared(sd, {
+      openapi: '3.0.0',
+      components: { securitySchemes: { sdCookie: { type: 'apiKey', in: 'cookie', name: 'id_token' }, oauth2: oauth2({ clientCredentials: { tokenUrl: '/t', scopes: { 'organizations:read': 'Read organizations' } } }) } },
+      tags: [{ name: 'Users' }],
+      paths: {
+        '/.well-known/jwks.json': { get: { responses: { 200: { description: 'keys', content: { 'application/json': { examples: [{ keys: [] }] } } } } } },
+        '/api/auth/passwordless': { post: { operationId: 'authPasswordless', responses: ok200 } },
+        '/api/auth/password': { post: { operationId: 'authPasswordless', responses: ok200 } },
+        '/api/users/{id}': {
+          get: {
+            operationId: 'getUser',
+            tags: ['Users'],
+            security: [{ sdCookie: [] }, { oauth2: ['organizations:read'] }],
+            parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+            responses: {
+              200: {
+                description: 'a user',
+                content: {
+                  'application/json': {
+                    schema: {
+                      $id: 'https://github.com/data-fair/simple-directory/user',
+                      type: 'object',
+                      properties: {
+                        created: { allOf: [{ $ref: 'https://github.com/data-fair/simple-directory/partial#/$defs/modifier' }] },
+                        sessions: { type: 'array', items: { $ref: '#/$defs/serverSession' } },
+                        nickname: { type: 'string', nullable: true }
+                      },
+                      $defs: { serverSession: { type: 'object', properties: { id: { type: 'string' } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    // metrics' shape: a tool behind the cookie session or its own scope, a linked skill naming it
+    const metricsFragment = prepared(metrics, {
+      openapi: '3.1.0',
+      'x-agent': { skills: [{ name: 'review', description: 'Review the audience', href: 'agents/skills/review.md', tools: ['aggregate_requests'] }] },
+      components: { securitySchemes: { sdCookie: { type: 'apiKey', in: 'cookie', name: 'id_token' }, oauth2: oauth2({ clientCredentials: { tokenUrl: '/t', scopes: { 'metrics:read': 'Read metrics' } } }) } },
+      security: [{ sdCookie: [] }],
+      paths: {
+        '/daily-api-metrics/_agg': {
+          get: {
+            operationId: 'aggDailyApiMetrics',
+            security: [{ sdCookie: [] }, { oauth2: ['metrics:read'] }],
+            'x-agent': { name: 'aggregate_requests', description: 'Count the requests over a period.' },
+            parameters: [{ in: 'query', name: 'start', required: true, description: 'First day.', schema: { type: 'string', format: 'date' } }],
+            responses: { 200: { description: 'rows', content: { 'application/json': { schema: { type: 'object' } } } } }
+          }
+        }
+      }
+    })
+    const doc = mergePlatformDoc('https://example.test', [
+      { service: datafair, fragment: datafairFragment, status: 'ok' },
+      { service: sd, fragment: sdFragment, status: 'ok' },
+      { service: metrics, fragment: metricsFragment, status: 'ok' }
+    ], { version: '1.0.0', oauth2Description: 'tokens' })
+
+    const warn = console.warn
+    const warned: string[] = []
+    console.warn = (message: string) => { warned.push(message) }
+    let toolSet
+    try {
+      toolSet = await load(doc, { lint: 'error' })
+    } finally {
+      console.warn = warn
+    }
+    // the ref to a $id the document does not embed reads as any value; the one into the resource's own $defs resolves
+    assert.equal(warned.length, 1)
+    assert.match(warned[0], /1 \$ref\(s\)[^\n]*\n[^\n]*simple-directory\/partial#\/\$defs\/modifier$/)
+
+    const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
+    assert.ok(names().filter(name => name.startsWith('datafair_')).length > 10)
+    assert.ok(names().includes('metrics_aggregate_requests'))
+    assert.ok(names(['datasets:write']).includes('datafair_update_dataset'))
+    assert.ok(!names(['datasets:write']).includes('datafair_publish_dataset'))
+    assert.ok(names(['datasets:admin']).includes('datafair_publish_dataset'))
+    assert.deepEqual(names(['metrics:read']), ['metrics_aggregate_requests'])
+    assert.deepEqual(names([]), [])
+    // a skill goes with its tools (data-fair's workflow skill names none: offered to every token)
+    assert.ok(toolsForScopes(toolSet, ['metrics:read']).skills.some(skill => skill.name === 'metrics-review'))
+    assert.ok(!toolsForScopes(toolSet, ['datasets:read']).skills.some(skill => skill.name === 'metrics-review'))
   })
 
   test('the data-fair document prepares without warnings', async () => {

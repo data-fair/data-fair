@@ -1,5 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import { load, toolsForScopes } from '@data-fair/openapi-mcp'
 import { anonymousAx, axiosAuth, baseURL } from '../../support/axios.ts'
 import { nhiSession } from '../../support/nhi.ts'
 
@@ -27,5 +28,27 @@ test.describe('GET /api/v1/platform/api-docs.json', () => {
     const { bearerAx } = await nhiSession('datasets:read')
     const scopedDoc = (await bearerAx.get('/api/v1/platform/api-docs.json')).data
     assert.deepEqual(withoutFetchedAt(scopedDoc), withoutFetchedAt(doc))
+  })
+
+  // the contract between this route and its consumer: whatever the services publish, the merged
+  // document configures an MCP server, and its tools are offered by scope
+  test('loads in openapi-mcp with lint error, tools filtered by scope', async () => {
+    const doc = (await anonymousAx.get('/api/v1/platform/api-docs.json')).data
+    const warn = console.warn
+    console.warn = () => {} // refs simple-directory's schemas make to $ids the document does not embed
+    let toolSet
+    try {
+      toolSet = await load(doc, { lint: 'error' })
+    } finally {
+      console.warn = warn
+    }
+    const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
+    assert.ok(names().filter(name => name.startsWith('datafair_')).length > 10, names().join(', '))
+    assert.ok(names(['datasets:read']).length > 0)
+    assert.ok(names(['datasets:write']).includes('datafair_update_dataset'))
+    assert.ok(!names(['datasets:write']).includes('datafair_publish_dataset'))
+    assert.ok(names(['datasets:admin']).includes('datafair_update_dataset'))
+    assert.ok(names(['datasets:admin']).includes('datafair_publish_dataset'))
+    assert.deepEqual(names([]), [])
   })
 })

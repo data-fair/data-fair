@@ -110,10 +110,11 @@ test.describe('platform document fragment cache', () => {
   })
 
   test('a document that fails to prepare is stale and its ETag is not kept', async () => {
-    const broken = { ...sdDoc, 'x-agent': { skills: [null] } }
+    // valid JSON nested deeper than the copy made while preparing can follow
+    const broken = JSON.stringify(sdDoc).replace(/}$/, `,"deep":${'['.repeat(200000)}${']'.repeat(200000)}}`)
     const { cache, requests, sd } = sdCache([
       { status: 200, body: JSON.stringify(sdDoc), etag: 'W/"1"' },
-      { status: 200, body: JSON.stringify(broken), etag: 'W/"2"' },
+      { status: 200, body: broken, etag: 'W/"2"' },
       { status: 200, body: JSON.stringify(sdDoc), etag: 'W/"1"' }
     ])
     await cache.refresh()
