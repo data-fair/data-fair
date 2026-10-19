@@ -533,8 +533,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation.fullBody._deleted = false
       if (_action === 'patch') {
         patchPreviousFilters.push(operation.filter)
-      } else if (restoreOwnership && _action !== 'create' && body._owner === undefined) {
+      } else if (restoreOwnership && _action !== 'create' && (body._owner === undefined || (body._owner !== null && body._ownerName === undefined))) {
         ownerPreviousFilters.push(operation.filter)
+      }
+      // _owner: null removes the owner (patch drops null keys itself once merged with the previous line)
+      if (_action !== 'patch' && body._owner === null) {
+        delete body._owner
+        delete body._ownerName
+        delete operation.fullBody._owner
+        delete operation.fullBody._ownerName
       }
     }
   }
@@ -568,6 +575,10 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         missingPatchPrevious.delete(_id)
         const operation = operationsById.get(_id)
         if (operation) {
+          // a new owner sent without its name must not inherit the previous owner's name
+          if (operation.body._owner !== undefined && operation.body._ownerName === undefined && operation.body._owner !== previousBody._owner) {
+            delete previousBody._ownerName
+          }
           operation.body = { ...previousBody, ...operation.body }
           Object.assign(operation.fullBody, operation.body)
           for (const key in operation.body) {
@@ -627,7 +638,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       if (++op % 100 === 0) await new Promise(resolve => setImmediate(resolve))
       if (ownerPrevious._deleted || ownerPrevious._owner === undefined) continue
       const operation = operationsById.get(ownerPrevious._id)
-      if (!operation || operation.body._owner !== undefined) continue
+      if (!operation) continue
+      if (operation.body._owner !== undefined) {
+        // owner re-sent unchanged without its name (the name is not editable): keep the stored name
+        if (operation.body._owner === ownerPrevious._owner && ownerPrevious._ownerName !== undefined) {
+          operation.body._ownerName = ownerPrevious._ownerName
+          operation.fullBody._ownerName = ownerPrevious._ownerName
+        }
+        continue
+      }
       operation.body._owner = ownerPrevious._owner
       operation.fullBody._owner = ownerPrevious._owner
       if (ownerPrevious._ownerName !== undefined) {

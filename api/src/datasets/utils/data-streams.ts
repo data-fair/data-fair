@@ -33,8 +33,9 @@ export const formatLine = (item: Record<string, any>, schema: SchemaProperty[]) 
         item[key] = value
       }
     }
-    // special case for rest datasets where null values are kept in a patch
-    if (item._action !== 'patch') {
+    // special case for rest datasets where null values are kept in a patch,
+    // and _owner: null always clears the line owner instead of restoring the previous one
+    if (item._action !== 'patch' && key !== '_owner') {
       if (item[key] === null) delete item[key]
     }
   }

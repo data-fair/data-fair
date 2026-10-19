@@ -202,6 +202,7 @@
             v-model="newLine"
             :loading="addLine.loading.value"
             :extension="true"
+            :owner="!ownLines"
             :sub-agent="true"
             prefix-name="editLine_"
             :data-title="t('addLine')"
@@ -270,7 +271,7 @@ defineProps({
 
 // canCreate/canBulk are resolved by the edition store to the own-lines classes in own-lines mode;
 // routeBase carries the own/{owner} prefix so bulk reads hit the same owner-scoped route as the writes
-const { selectedResults, bulkLines, saveLine, saving, addLineTrigger, lineDialog, canCreate: canCreateLine, canBulk: canBulkLines, routeBase } = useDatasetEdition()
+const { selectedResults, bulkLines, saveLine, saving, addLineTrigger, lineDialog, canCreate: canCreateLine, canBulk: canBulkLines, routeBase, ownLines } = useDatasetEdition()
 
 watch(addLineTrigger, (v) => {
   if (v) {
@@ -279,7 +280,8 @@ watch(addLineTrigger, (v) => {
   }
 })
 
-const { jsonSchemaFetch } = useDatasetStore()
+const { jsonSchemaFetch, restDataset } = useDatasetStore()
+const session = useSession()
 const { t } = useI18n()
 
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
@@ -340,7 +342,11 @@ const newLine = ref({})
 const file = ref<File>()
 watch(addLineDialog, () => {
   if (!addLineDialog.value) return
-  newLine.value = {}
+  // a new line belongs by default to the active account, the same owner its own-lines view filters on
+  const account = session.account.value
+  newLine.value = !ownLines.value && restDataset.value?.rest?.lineOwnership && account
+    ? { _owner: `${account.type}:${account.id}` + (account.department ? `:${account.department}` : '') }
+    : {}
   file.value = undefined
 })
 const addLine = useAsyncAction(async () => {
