@@ -15,6 +15,10 @@ on:
         description: playwright retries per failed test (the nightly run uses 0 to expose flaky tests)
         type: number
         default: 1
+      browser:
+        description: browser engine of the e2e tests (chromium, firefox or webkit; the nightly run rotates them)
+        type: string
+        default: chromium
   workflow_dispatch:
 
 jobs:
@@ -111,6 +115,8 @@ jobs:
       OGR2OGR_SKIP: 'true'
       # empty on workflow_dispatch, where playwright.config.ts falls back to 1
       TEST_RETRIES: ${{ inputs.retries }}
+      # empty on workflow_dispatch, where playwright.config.ts falls back to chromium
+      TEST_BROWSER: ${{ inputs.browser }}
     steps:
     - name: Checkout git repository
       uses: actions/checkout@v4
@@ -128,7 +134,7 @@ jobs:
       with:
         name: build
 
-    # only the browser binaries are cached, keyed on the installed playwright version;
+    # only the browser binaries are cached, keyed on the installed playwright version and engine;
     # the system packages they need are installed on every run
     - name: Read the playwright version
       if: matrix.project == 'e2e'
@@ -141,15 +147,15 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ inputs.browser || 'chromium' }}
 
     - name: Install playwright browser
       if: matrix.project == 'e2e' && steps.playwright-cache.outputs.cache-hit != 'true'
-      run: npx playwright install --with-deps chromium
+      run: npx playwright install --with-deps ${{ inputs.browser || 'chromium' }}
 
     - name: Install playwright system dependencies
       if: matrix.project == 'e2e' && steps.playwright-cache.outputs.cache-hit == 'true'
-      run: npx playwright install-deps chromium
+      run: npx playwright install-deps ${{ inputs.browser || 'chromium' }}
 
     - name: Init .env
       run: ./node_modules/.bin/df-dev init-env # local bin only: a bare npx would fetch an unrelated "df-dev" from the registry if the dependency were missing

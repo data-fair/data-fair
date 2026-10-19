@@ -98,7 +98,7 @@ runs what is worth its cost there:
 | push | `commits.yml` | docker build + staging deploy only, no quality checks |
 | pull request | `pull-requests.yml` → `reuse-quality.yml` | the full gate: lint, type ratchet, builds, UI types, audit, and the whole unit/api/e2e suite (unit in the static job, api and e2e in two parallel jobs) |
 | release tag | `releases.yml` → `reuse-quality.yml` | the full gate, before building the image |
-| nightly | `nightly.yml` → `reuse-quality.yml` | the full gate on master without retries, skipped when master has not moved since the last green nightly run |
+| nightly | `nightly.yml` → `reuse-quality.yml` | the full gate on master without retries, its e2e tests on one browser engine per night (chromium, firefox, webkit in turn; pull requests stay on chromium), skipped when this master commit already passed a night on that engine |
 
 `npm run quality` still runs the whole gate locally, for when you want the certainty before
 pushing.

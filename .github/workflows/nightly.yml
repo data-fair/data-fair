@@ -1,7 +1,9 @@
-# full quality checks on master, once a night, only when master moved since the last
-# green nightly run. It catches what reached master without a pull request (direct pushes
-# only pass the light pre-push hook), and runs without retries so flaky tests show up
-# instead of being absorbed.
+# full quality checks on master, once a night. It catches what reached master without a pull
+# request (direct pushes only pass the light pre-push hook), and runs without retries so flaky
+# tests show up instead of being absorbed. The e2e tests run on one browser engine per night,
+# chromium, firefox and webkit in turn (days since epoch % 3); pull requests stay on chromium.
+# A scheduled night is skipped when this master commit already passed a scheduled night on
+# that engine: a quiet master gets each engine once over 3 nights, then stops.
 
 name: Nightly quality checks
 
@@ -9,6 +11,12 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
+    inputs:
+      browser:
+        description: browser engine of the e2e tests
+        type: choice
+        options: [of-the-day, chromium, firefox, webkit]
+        default: of-the-day
 
 permissions:
   actions: read
@@ -19,22 +27,32 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run: ${{ steps.check.outputs.run }}
+      browser: ${{ steps.check.outputs.browser }}
     steps:
     - id: check
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        last=$(gh api "repos/${{ github.repository }}/actions/workflows/nightly.yml/runs?branch=master&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
-        echo "master: ${{ github.sha }}, last green nightly: ${last:-none}"
-        if [ "$last" = "${{ github.sha }}" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+        engines=(chromium firefox webkit)
+        day=$(( $(date -u +%s) / 86400 % 3 ))
+        browser="${{ inputs.browser }}"
+        if [ -z "$browser" ] || [ "$browser" = of-the-day ]; then browser=${engines[$day]}; fi
+        echo "browser=$browser" >> "$GITHUB_OUTPUT"
+        # the engine of a past scheduled night is the one of its creation day
+        done=$(gh api "repos/${{ github.repository }}/actions/workflows/nightly.yml/runs?branch=master&event=schedule&status=success&head_sha=${{ github.sha }}&per_page=100" \
+          --jq "[.workflow_runs[].created_at | fromdateiso8601 / 86400 | floor % 3] | index($day) != null")
+        echo "master: ${{ github.sha }}, engine: $browser, already green on this engine: $done"
+        if [ "$done" = true ] && [ "${{ github.event_name }}" = "schedule" ]; then
           echo "run=false" >> "$GITHUB_OUTPUT"
         else
           echo "run=true" >> "$GITHUB_OUTPUT"
         fi
 
   quality:
+    name: quality (${{ needs.changed.outputs.browser }})
     needs: changed
     if: needs.changed.outputs.run == 'true'
     uses: ./.github/workflows/reuse-quality.yml
     with:
       retries: 0
+      browser: ${{ needs.changed.outputs.browser }}
