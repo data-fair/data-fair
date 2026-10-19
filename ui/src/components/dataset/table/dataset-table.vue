@@ -452,6 +452,7 @@
             :extension="true"
             :loading="editLine.loading.value"
             :ro-primary-key="true"
+            :owner="!ownLines"
             :sub-agent="true"
             prefix-name="editLine_"
             :data-title="t('editLine')"

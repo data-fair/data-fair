@@ -8,6 +8,29 @@
     :data-title="dataTitle"
   />
 
+  <v-text-field
+    v-if="showOwner"
+    :model-value="model._owner"
+    :label="t('owner')"
+    :hint="t('ownerHint')"
+    :rules="[v => !v || ownerPattern.test(v) || t('ownerHint')]"
+    :readonly="roPrimaryKey && restDataset?.primaryKey?.includes('_owner')"
+    persistent-hint
+    clearable
+    class="mb-4"
+    @update:model-value="v => model = { ...model, _owner: v }"
+  >
+    <template
+      v-if="ownerAvatar"
+      #prepend-inner
+    >
+      <v-avatar
+        :image="ownerAvatar"
+        size="24"
+      />
+    </template>
+  </v-text-field>
+
   <template v-if="digitalDocumentField && digitalDocumentField['x-display'] !== 'text-field'">
     <p>
       {{ t('loadAttachment') }}
@@ -33,9 +56,13 @@
   fr:
     loadAttachment: Chargez un fichier en pièce jointe.
     selectFile: Sélectionnez un fichier
+    owner: Propriétaire de ligne
+    ownerHint: "Identifiant du compte, par exemple user:abc ou organization:xyz:departement"
   en:
     loadAttachment: Load a file as an attachment
     selectFile: Select a file
+    owner: Line owner
+    ownerHint: "Account identifier, for example user:abc or organization:xyz:department"
 </i18n>
 
 <script setup lang="ts">
@@ -46,8 +73,10 @@ import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
+const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle, owner } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
+  // let the user set the line owner (free account id), only meaningful on the standard /lines routes
+  owner: { type: Boolean, default: false },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
   extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
@@ -79,6 +108,14 @@ if (subAgent) {
   })
 }
 
+const showOwner = computed(() => owner && !!restDataset.value?.rest?.lineOwnership)
+const ownerPattern = /^(user|organization):[^:\s]+(:[^:\s]+)?$/
+const ownerAvatar = computed(() => {
+  const owner = model.value?._owner
+  if (!owner || !ownerPattern.test(owner)) return
+  return `${$sdUrl}/api/avatars/${owner.split(':').join('/')}/avatar.png`
+})
+
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 })
@@ -109,6 +146,8 @@ const editSchema = computed(() => {
       schema.properties[key].layout.comp = 'none'
     }
   })
+  // declared but hidden so that removeAdditional keeps it, the field is rendered after the vjsf form
+  if (showOwner.value) schema.properties._owner = { type: ['string', 'null'], layout: { comp: 'none' } }
   return schema
 })
 
