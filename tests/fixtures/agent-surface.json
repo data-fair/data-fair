@@ -70,7 +70,7 @@
     },
     {
       "name": "datafair_create_dataset_from_file",
-      "description": "Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (list_account_datasets shows it).",
+      "description": "Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (datafair_list_account_datasets shows it).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -190,13 +190,13 @@
     },
     {
       "name": "datafair_describe_dataset",
-      "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.",
+      "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call datafair_search_data with size=3 afterwards to see sample rows.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "response_format": {
             "type": "string",
@@ -254,7 +254,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "file": {
             "type": "string",
@@ -307,7 +307,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -340,13 +340,13 @@
     },
     {
       "name": "datafair_update_dataset",
-      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with publish_dataset.",
+      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "body": {
             "type": "object",
@@ -395,7 +395,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "body": {
             "type": "object",
@@ -446,7 +446,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Restrict to the applications using these datasets (ids from list_account_datasets)."
+            "description": "Restrict to the applications using these datasets (ids from datafair_list_account_datasets)."
           },
           "page": {
             "type": "integer",
@@ -514,7 +514,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
           }
         },
         "additionalProperties": false,
@@ -563,7 +563,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
           }
         },
         "additionalProperties": false,
@@ -596,13 +596,13 @@
     },
     {
       "name": "datafair_update_application",
-      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
+      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
           },
           "slug": {
             "type": "string",
@@ -961,7 +961,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in list_account_applications results."
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
           },
           "publications": {
             "anyOf": [
@@ -1089,13 +1089,13 @@
     },
     {
       "name": "datafair_search_data",
-      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the \"after\" value returned as next.",
+      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the \"after\" value returned as next.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "after": {
             "type": "string",
@@ -1120,7 +1120,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned."
+            "description": "Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned."
           },
           "query": {
             "type": "string",
@@ -1201,13 +1201,13 @@
     },
     {
       "name": "datafair_export_data",
-      "description": "Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and search_data to read rows yourself.",
+      "description": "Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and datafair_search_data to read rows yourself.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "size": {
             "default": 10000,
@@ -1228,7 +1228,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned."
+            "description": "Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned."
           },
           "query": {
             "type": "string",
@@ -1315,11 +1315,11 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "fieldKey": {
             "type": "string",
-            "description": "The column key (use keys from describe_dataset)"
+            "description": "The column key (use keys from datafair_describe_dataset)"
           },
           "size": {
             "default": 10,
@@ -1423,20 +1423,20 @@
     },
     {
       "name": "datafair_aggregate_data",
-      "description": "Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use calculate_metric.",
+      "description": "Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use datafair_calculate_metric.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "groupByColumns": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from describe_dataset. NOT the column to compute the metric on."
+            "description": "Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from datafair_describe_dataset. NOT the column to compute the metric on."
           },
           "metric": {
             "type": "string",
@@ -1541,13 +1541,13 @@
     },
     {
       "name": "datafair_calculate_metric",
-      "description": "Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use aggregate_data.",
+      "description": "Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use datafair_aggregate_data.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "metric": {
             "type": "string",
@@ -1565,7 +1565,7 @@
           },
           "fieldKey": {
             "type": "string",
-            "description": "The column key to calculate the metric on (use keys from describe_dataset)"
+            "description": "The column key to calculate the metric on (use keys from datafair_describe_dataset)"
           },
           "percents": {
             "type": "string",
@@ -1653,13 +1653,13 @@
     },
     {
       "name": "datafair_download_dataset_file",
-      "description": "Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use export_data.",
+      "description": "Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use datafair_export_data.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -1708,7 +1708,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -1757,7 +1757,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -1790,13 +1790,13 @@
     },
     {
       "name": "datafair_set_dataset_permissions",
-      "description": "Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.",
+      "description": "Replace the whole list of permission entries of a dataset. Read it with datafair_get_dataset_permissions first, then send the complete new list.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
           },
           "body": {
             "$id": "https://github.com/data-fair/data-fair/permissions-resolved",
@@ -1960,7 +1960,7 @@
       "id": "datafair-workflow",
       "name": "datafair-workflow",
       "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:8f0ed6a6772a54fa7d2de16bc120219b5768061650b34f31f654e02045ad4b07"
+      "digest": "sha256:03031a2ce4889cbd88314c813cdd6659446412d2346900c79a1e62cb09341053"
     }
   ]
 }

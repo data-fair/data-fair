@@ -32,10 +32,9 @@ export function platformServices (cfg: { publicUrl: string, directoryUrl: string
   return services
 }
 
-/** the origin of the site a request came through: its data-fair base URL minus data-fair's mount path */
-export function siteOrigin (publicBaseUrl: string, publicUrl: string): string {
-  const mountPath = new URL(publicUrl).pathname.replace(/\/$/, '')
-  return mountPath && publicBaseUrl.endsWith(mountPath) ? publicBaseUrl.slice(0, -mountPath.length) : new URL(publicBaseUrl).origin
+/** the origin of the site a request came through, every service's mount path is relative to it */
+export function siteOrigin (publicBaseUrl: string): string {
+  return new URL(publicBaseUrl).origin
 }
 
 interface CachedState {
@@ -86,47 +85,54 @@ export function createFragmentCache (opts: { services: { service: PlatformServic
   }
 
   const refreshOne = async (state: CachedState) => {
-    let fetched: Fetched
     try {
-      fetched = await fetchDoc(state)
+      const fetched = await fetchDoc(state)
+      if ('notModified' in fetched) {
+        // the version prepared from that ETag is still current, refused or not
+        if (state.fragment) {
+          state.status = 'ok'
+          delete state.error
+        }
+      } else {
+        const prepared = prepareFragment(state.service, fetched.doc)
+        if ('refused' in prepared) {
+          // a refused version means the service changed in a way that needs a fix: the last good one is not reused
+          delete state.fragment
+          state.status = 'refused'
+          state.error = prepared.refused
+        } else {
+          state.fragment = prepared.fragment
+          state.status = 'ok'
+          delete state.error
+        }
+        // only once prepared: a later 304 must not stand for a version that failed
+        state.etag = fetched.etag
+      }
+      state.fetchedAt = now().toISOString()
     } catch (err: any) {
       state.error = err?.message ?? String(err)
       state.status = state.fragment ? 'stale' : 'error'
-      return
-    }
-    state.fetchedAt = now().toISOString()
-    if ('notModified' in fetched) {
-      // the version prepared from that ETag is still current, refused or not
-      if (state.fragment) {
-        state.status = 'ok'
-        delete state.error
-      }
-      return
-    }
-    state.etag = fetched.etag
-    const prepared = prepareFragment(state.service, fetched.doc)
-    if ('refused' in prepared) {
-      // a refused version means the service changed in a way that needs a fix: the last good one is not reused
-      delete state.fragment
-      state.status = 'refused'
-      state.error = prepared.refused
-    } else {
-      state.fragment = prepared.fragment
-      state.status = 'ok'
-      delete state.error
     }
   }
 
   return {
+    /** each service's state is published as soon as it settles: none waits on a slower one */
     async refresh () {
-      await Promise.all(cached.map(refreshOne))
-      snapshot()
+      await Promise.all(cached.map(state => refreshOne(state).then(snapshot)))
     },
-    /** a new array after every refresh, the same one in between */
+    /** a new array after every change, the same one in between */
     states (): FragmentState[] {
       return states
     }
   }
+}
+
+/**
+ * a document missing a service that never answered (just after a restart, or while it is down) is not
+ * kept by shared caches: they would serve it degraded for 5 minutes after the service is back
+ */
+export function cacheControl (states: FragmentState[]): string {
+  return states.some(state => state.fetchedAt === undefined) ? 'no-store' : 'public, max-age=300'
 }
 
 let cache: ReturnType<typeof createFragmentCache> | undefined
@@ -162,4 +168,9 @@ export function platformDoc (origin: string): any {
     memo.set(origin, doc)
   }
   return doc
+}
+
+export function platformDocCacheControl (): string {
+  if (!cache) throw new Error('platform document cache not initialized')
+  return cacheControl(cache.states())
 }

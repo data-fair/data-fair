@@ -9,7 +9,7 @@ import config from '#config'
 import { scopeDescriptions } from '../utils/scopes.ts'
 import { reqSession, reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../utils/public-base-url.ts'
-import { platformDoc, siteOrigin } from '../../platform-api-docs/service.ts'
+import { platformDoc, platformDocCacheControl, siteOrigin } from '../../platform-api-docs/service.ts'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
@@ -28,8 +28,8 @@ router.get('/api-docs.json', allowAnyScope, (req, res) => {
 
 // The platform document: every service's API of this site in one document, the same for every caller.
 router.get('/platform/api-docs.json', allowAnyScope, (req, res) => {
-  res.set('Cache-Control', 'public, max-age=300')
-  res.json(platformDoc(siteOrigin(reqPublicBaseUrl(req), config.publicUrl)))
+  res.set('Cache-Control', platformDocCacheControl())
+  res.json(platformDoc(siteOrigin(reqPublicBaseUrl(req))))
 })
 
 // The scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL); public, no session read.

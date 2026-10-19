@@ -8,7 +8,7 @@ import path from 'node:path'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
-const { createFragmentCache, platformServices, siteOrigin } = await import('../../../api/src/platform-api-docs/service.ts')
+const { cacheControl, createFragmentCache, platformServices, siteOrigin } = await import('../../../api/src/platform-api-docs/service.ts')
 const { mergePlatformDoc } = await import('../../../api/contract/platform-api-docs.ts')
 
 const sdService = { id: 'sd', title: 'Simple Directory', mountPath: '/simple-directory', docPath: '/simple-directory/api/api-docs.json' } as const
@@ -109,6 +109,50 @@ test.describe('platform document fragment cache', () => {
     assert.equal(sd().fragment, undefined)
   })
 
+  test('a document that fails to prepare is stale and its ETag is not kept', async () => {
+    const broken = { ...sdDoc, 'x-agent': { skills: [null] } }
+    const { cache, requests, sd } = sdCache([
+      { status: 200, body: JSON.stringify(sdDoc), etag: 'W/"1"' },
+      { status: 200, body: JSON.stringify(broken), etag: 'W/"2"' },
+      { status: 200, body: JSON.stringify(sdDoc), etag: 'W/"1"' }
+    ])
+    await cache.refresh()
+    await cache.refresh()
+    assert.equal(sd().status, 'stale')
+    assert.ok(sd().error)
+    await cache.refresh()
+    assert.equal(requests[2].headers['if-none-match'], 'W/"1"', 'the version that failed is not the one asked about')
+    assert.equal(sd().status, 'ok')
+  })
+
+  test('the in-process document does not wait on a slow service', async () => {
+    const datafair = { id: 'datafair', title: 'Data Fair', mountPath: '/data-fair/api/v1', docPath: '/data-fair/api/v1/api-docs.json' } as const
+    let answer!: (res: Response) => void
+    const fetchFn = (() => new Promise<Response>(resolve => { answer = resolve })) as typeof fetch
+    const cache = createFragmentCache({
+      services: [{ service: datafair }, { service: sdService, url: sdUrl }],
+      local: () => ({ openapi: '3.1.0', paths: { '/ping': { get: { responses: {} } } } }),
+      fetch: fetchFn,
+      now
+    })
+    const refreshing = cache.refresh()
+    await new Promise(resolve => setImmediate(resolve))
+    assert.deepEqual(cache.states().map(s => s.status), ['ok', 'error'])
+    assert.equal(cacheControl(cache.states()), 'no-store', 'a document missing a service that never answered is not cached')
+    answer(new Response(JSON.stringify(sdDoc)))
+    await refreshing
+    assert.deepEqual(cache.states().map(s => s.status), ['ok', 'ok'])
+    assert.equal(cacheControl(cache.states()), 'public, max-age=300')
+  })
+
+  test('a service that answered before keeps the document cacheable while it fails', async () => {
+    const { cache } = sdCache([{ status: 200, body: JSON.stringify(sdDoc) }, 'network'])
+    await cache.refresh()
+    await cache.refresh()
+    assert.equal(cache.states()[0].status, 'stale')
+    assert.equal(cacheControl(cache.states()), 'public, max-age=300')
+  })
+
   test('the in-process document is prepared without fetching', async () => {
     const datafair = { id: 'datafair', title: 'Data Fair', mountPath: '/data-fair/api/v1', docPath: '/data-fair/api/v1/api-docs.json' } as const
     const fetchFn = (async () => { throw new Error('no fetch for the local document') }) as typeof fetch
@@ -119,9 +163,10 @@ test.describe('platform document fragment cache', () => {
   })
 
   test('the site origin of another site puts the token URL on that site', () => {
-    const origin = siteOrigin('https://other.test/data-fair', 'https://main.test/data-fair')
+    const origin = siteOrigin('https://other.test/data-fair')
     assert.equal(origin, 'https://other.test')
-    assert.equal(siteOrigin('https://main.test/data-fair', 'https://main.test/data-fair'), 'https://main.test')
+    assert.equal(siteOrigin('https://main.test/data-fair'), 'https://main.test')
+    assert.equal(siteOrigin('https://host.test/sub/data-fair'), 'https://host.test', 'an origin, even below a prefix')
     const doc = mergePlatformDoc(origin, [], { version: '1', oauth2Description: '' })
     assert.equal(doc.components.securitySchemes.oauth2.flows.clientCredentials.tokenUrl, 'https://other.test/simple-directory/api/auth/nhi-token')
     assert.equal(doc.servers[0].url, 'https://other.test')

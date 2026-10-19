@@ -30,7 +30,7 @@ const platformDoc = async () => {
   const { service } = platformServices({ publicUrl: PUBLIC_URL, directoryUrl: 'https://example.test/simple-directory' })[0]
   const prepared = prepareFragment(service, apiDocs(PUBLIC_URL))
   if ('refused' in prepared) throw new Error(prepared.refused)
-  return mergePlatformDoc(siteOrigin(PUBLIC_URL, PUBLIC_URL), [{ service, fragment: prepared.fragment, status: 'ok' }], { version: 'test', oauth2Description: '' })
+  return mergePlatformDoc(siteOrigin(PUBLIC_URL), [{ service, fragment: prepared.fragment, status: 'ok' }], { version: 'test', oauth2Description: '' })
 }
 
 /** Serves what the root router serves at /api/v1/agents/skills/<name>.md, so linked skill bodies resolve offline. */
@@ -236,6 +236,21 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual(toolSet.skills.map(s => s.id), ['datafair-workflow'])
     assert.equal(toolSet.skills[0].error, undefined, 'the linked body is read, so the golden pins its real digest')
     assert.deepEqual(toolsForScopes(toolSet, ['datasets:read']).skills.map(s => s.id), ['datafair-workflow'])
+  })
+
+  test('tool descriptions and skill bodies name tools by their platform names', async () => {
+    // the platform document is where the tools come from: a text naming `search_data` sends the
+    // agent to a tool that does not exist there
+    const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES })
+    const baseNames = toolSet.tools.map(t => t.name.replace(/^datafair_/, ''))
+    const unprefixed = new RegExp(`(?<![A-Za-z0-9_])(${baseNames.join('|')})(?![A-Za-z0-9_])`, 'g')
+    const texts = [
+      ...toolSet.tools.map(t => ({ where: t.name, text: JSON.stringify({ description: t.description, inputSchema: t.inputSchema }) })),
+      ...toolSet.skills.map(s => ({ where: `skill ${s.id}`, text: `${s.description}\n${s.body}` }))
+    ]
+    assert.ok(toolSet.skills.every(s => s.body), 'skill bodies are read')
+    const found = texts.flatMap(({ where, text }) => [...text.matchAll(unprefixed)].map(m => `${where}: ${m[1]}`))
+    assert.deepEqual(found, [])
   })
 
   test('the annotated surface does not depend on the session', async () => {

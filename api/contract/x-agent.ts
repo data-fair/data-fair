@@ -12,7 +12,7 @@ import { agentSecurity } from './scopes-security.ts'
 
 export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
 
-const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in list_account_datasets (or, on a portal, list_datasets) results. Do not use the title or slug.' }
+const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug.' }
 
 /** Geo and temporal filters, shared by every query operation. */
 const queryParams: Record<string, AgentParamOverride> = {
@@ -40,7 +40,7 @@ const linesSelection: Record<string, AgentParamOverride> = {
   hint: { exclude: true },
   collapse: { exclude: true },
   sort: { description: 'Array of column keys to sort by, one per element. Prefix a key with - for descending.' },
-  select: { description: 'Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned.' },
+  select: { description: 'Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned.' },
   ...queryParams
 }
 
@@ -76,7 +76,7 @@ export const applicationPatchFields = {
   manage: ['publications', 'publicationSites', 'partOf']
 }
 
-const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in list_account_applications results.' }
+const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in datafair_list_account_applications results.' }
 
 export const operations = {
   listDatasets: {
@@ -123,7 +123,7 @@ export const operations = {
   readDescription: {
     name: 'describe_dataset',
     title: { fr: 'Décrire un jeu de données', en: 'Describe a dataset' },
-    description: 'Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call search_data with size=3 afterwards to see sample rows.',
+    description: 'Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call datafair_search_data with size=3 afterwards to see sample rows.',
     params: { id: datasetId },
     response: {
       concise: ['id', 'slug', 'title', 'summary', 'description', 'page', 'count', 'keywords', 'origin', 'license', 'topics', 'spatial', 'temporal', 'frequency', 'bbox', 'timePeriod', 'schema'],
@@ -134,7 +134,7 @@ export const operations = {
     {
       name: 'search_data',
       title: { fr: 'Rechercher des lignes de données', en: 'Search data rows' },
-      description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use aggregate_data or calculate_metric. Paginate with the "after" value returned as next.',
+      description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the "after" value returned as next.',
       params: {
         ...linesSelection,
         size: { default: 12, maximum: 100 },
@@ -146,7 +146,7 @@ export const operations = {
     {
       name: 'export_data',
       title: { fr: 'Exporter des lignes de données', en: 'Export data rows' },
-      description: 'Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and search_data to read rows yourself.',
+      description: 'Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and datafair_search_data to read rows yourself.',
       params: {
         ...linesSelection,
         after: { exclude: true },
@@ -162,7 +162,7 @@ export const operations = {
     description: 'List distinct values of a column. Useful to discover values before filtering with _eq or _in.',
     params: {
       id: datasetId,
-      field: { name: 'fieldKey', description: 'The column key (use keys from describe_dataset)' },
+      field: { name: 'fieldKey', description: 'The column key (use keys from datafair_describe_dataset)' },
       q: { description: 'Optional text to filter values (prefix/substring match within this column)' },
       size: { default: 10, maximum: 1000 },
       ...queryParams
@@ -171,10 +171,10 @@ export const operations = {
   getValuesAgg: {
     name: 'aggregate_data',
     title: { fr: 'Agréger des données', en: 'Aggregate data' },
-    description: 'Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use calculate_metric.',
+    description: 'Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use datafair_calculate_metric.',
     params: {
       id: datasetId,
-      field: { name: 'groupByColumns', description: 'Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from describe_dataset. NOT the column to compute the metric on.' },
+      field: { name: 'groupByColumns', description: 'Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from datafair_describe_dataset. NOT the column to compute the metric on.' },
       metric: { description: 'Metric computed ON EACH GROUP. Omit to count rows per group.' },
       metric_field: { name: 'metricColumn', description: 'The column to compute the metric on, for the average or sum of that column. Requires metric.' },
       // Declared as an array (one size per nesting level); the vocabulary cannot target items, and
@@ -198,10 +198,10 @@ export const operations = {
   getMetricAgg: {
     name: 'calculate_metric',
     title: { fr: 'Calculer une métrique', en: 'Calculate a metric' },
-    description: 'Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use aggregate_data.',
+    description: 'Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use datafair_aggregate_data.',
     params: {
       id: datasetId,
-      field: { name: 'fieldKey', description: 'The column key to calculate the metric on (use keys from describe_dataset)' },
+      field: { name: 'fieldKey', description: 'The column key to calculate the metric on (use keys from datafair_describe_dataset)' },
       metric: { description: 'avg, sum, min, max (numbers); min, max, cardinality, value_count (strings); stats returns count/min/max/avg/sum; percentiles returns a distribution.' },
       percents: { description: 'Comma-separated percentages for the percentiles metric (default "1,5,25,50,75,95,99").' },
       ...queryParams
@@ -211,7 +211,7 @@ export const operations = {
   downloadOriginalData: {
     name: 'download_dataset_file',
     title: { fr: 'Télécharger le fichier d\'origine', en: 'Download the original file' },
-    description: 'Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use export_data.',
+    description: 'Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use datafair_export_data.',
     params: { id: datasetId },
     response: { file: true }
   },
@@ -225,7 +225,7 @@ export const operations = {
   postDataset: {
     name: 'create_dataset_from_file',
     title: { fr: 'Créer un jeu de données depuis un fichier', en: 'Create a dataset from a file' },
-    description: 'Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (list_account_datasets shows it).',
+    description: 'Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (datafair_list_account_datasets shows it).',
     bodyFields: ['file', 'title'],
     bodyRequired: ['file']
   },
@@ -243,7 +243,7 @@ export const operations = {
     {
       name: 'update_dataset',
       title: { fr: 'Modifier un jeu de données', en: 'Update a dataset' },
-      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with publish_dataset.',
+      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.',
       params: { id: datasetId },
       body: 'compact',
       bodyFields: datasetPatchFields.write
@@ -274,7 +274,7 @@ export const operations = {
   setDatasetPermissions: {
     name: 'set_dataset_permissions',
     title: { fr: 'Modifier les permissions d\'un jeu de données', en: 'Set a dataset\'s permissions' },
-    description: 'Replace the whole list of permission entries of a dataset. Read it with get_dataset_permissions first, then send the complete new list.',
+    description: 'Replace the whole list of permission entries of a dataset. Read it with datafair_get_dataset_permissions first, then send the complete new list.',
     annotations: { destructiveHint: true },
     params: { id: datasetId }
   },
@@ -284,7 +284,7 @@ export const operations = {
     description: 'List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory. Returns id, title, status and last update.',
     params: {
       q: { description: 'Keywords for full-text search.' },
-      dataset: { description: 'Restrict to the applications using these datasets (ids from list_account_datasets).' },
+      dataset: { description: 'Restrict to the applications using these datasets (ids from datafair_list_account_datasets).' },
       size: { default: 10, maximum: 50 },
       page: { default: 1 },
       mine: { exclude: true },
@@ -307,7 +307,7 @@ export const operations = {
     {
       name: 'update_application',
       title: { fr: 'Modifier une application', en: 'Update an application' },
-      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
+      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
       params: { id: applicationId },
       bodyFields: applicationPatchFields.write
     },
