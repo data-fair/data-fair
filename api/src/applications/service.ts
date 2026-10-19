@@ -21,7 +21,7 @@ import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs, trimApplication } from './operations.ts'
 import filesStorage from '#files-storage'
 import { syncApplications } from '../datasets/service.ts'
-import type { Application, Event } from '#types'
+import type { Application, Event, Permission } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { RESPONSE_EXCLUDED_FIELD_NAMES, indexPatch, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
 import { applicationsTextSearch, applicationsStats } from '../misc/utils/text-search/collections.ts'
@@ -356,7 +356,8 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   return patchedApplication! as Application
 }
 
-export const changeApplicationOwner = async (ctx: ApplicationWriteContext, application: Application, newOwner: any) => {
+// `fragmentPermissions` is given for a fragment, whose ACL is derived from its parent's new ACL rather than reset
+export const changeApplicationOwner = async (ctx: ApplicationWriteContext, application: Application, newOwner: any, fragmentPermissions?: Permission[]) => {
   const sessionState = ctx.sessionState
 
   const patch: any = {
@@ -374,18 +375,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
     patch.publications = []
   }
 
-  const preservePermissions = (application.permissions || []).filter((p: any) => {
-    // keep public permissions
-    if (!p.type) return true
-    if (sameOrg) {
-      // keep individual user permissions (user partners)
-      if (p.type === 'user') return true
-      // keep permissions to external org (org partners)
-      if (p.type === 'organization' && p.id !== application.owner.id) return true
-    }
-    return false
-  })
-  await permissions.initResourcePermissions(patch, preservePermissions)
+  patch.permissions = fragmentPermissions ?? await permissions.ownerChangePermissions(application as any, newOwner)
 
   // owner.name/owner.departmentName are indexed fields — carrying the old owner's terms across a
   // transfer would leave the index pointing at the wrong owner (found under the old name, not the

@@ -385,6 +385,25 @@ export const initResourcePermissions = async (resource: Resource, extraPermissio
   resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'], operations: [] }, ...extraPermissions]
 }
 
+/** The ACL a resource gets when transferred to newOwner: the creation defaults, plus the entries that survive the transfer. */
+export const ownerChangePermissions = async (resource: Resource, newOwner: Resource['owner']): Promise<Permission[]> => {
+  const sameOrg = resource.owner.type === 'organization' && resource.owner.type === newOwner.type && resource.owner.id === newOwner.id
+  const preservePermissions = (resource.permissions || []).filter((p: any) => {
+    // keep public permissions
+    if (!p.type) return true
+    if (sameOrg) {
+      // keep individual user permissions (user partners)
+      if (p.type === 'user') return true
+      // keep permissions to external org (org partners)
+      if (p.type === 'organization' && p.id !== resource.owner.id) return true
+    }
+    return false
+  })
+  const patch = { owner: newOwner } as Resource
+  await initResourcePermissions(patch, preservePermissions)
+  return patch.permissions as Permission[]
+}
+
 /** Builds the Express sub-router exposing GET /permissions, PUT /permissions and lookup helpers, mounted under each resource. */
 export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void), onUpdated?: (resource: Resource) => Promise<void>) => {
   const router = Router()

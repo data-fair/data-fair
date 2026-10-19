@@ -45,7 +45,6 @@ test.describe('application fragments', () => {
     await assert.rejects(testUser1Org.patch(`/api/v1/applications/${sub.id}`, { publicationSites: [] }), { status: 400 })
     await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}/permissions`, []), { status: 403 })
     await assert.rejects(testUser1Org.put(`/api/v1/applications/${sub.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 403 })
-    await assert.rejects(testUser1Org.put(`/api/v1/applications/${dashboard.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 400 })
 
     // detach
     await testUser1Org.patch(`/api/v1/applications/${sub.id}`, { partOf: null })
@@ -147,6 +146,27 @@ test.describe('application fragments', () => {
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { classes: ['list', 'read'] }])
     assert.equal((await anonymous.get(`/app/${sub.id}/`, { maxRedirects: 0 })).status, 200)
     assert.equal((await anonymous.get(`/api/v1/applications/${sub.id}`)).data.visibility, 'public')
+  })
+
+  test('changing the owner of the dashboard moves its sub-applications and utility datasets', async () => {
+    const dashboard = await createApp()
+    const sub = await createApp(testUser1Org, { title: 'sub', partOf: { type: 'application', id: dashboard.id } })
+    const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
+    // the sub-application's derived ACL is not reset like a standalone application's: it follows the parent's
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [{ classes: ['list', 'read'] }])
+
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })
+    const testUser1 = await axiosAuth('test_user1@test.com')
+    for (const fragment of [(await testUser1.get(`/api/v1/applications/${sub.id}`)).data, (await testUser1.get(`/api/v1/datasets/${utility.id}`)).data]) {
+      assert.equal(fragment.owner.type, 'user')
+      assert.equal(fragment.owner.id, 'test_user1')
+      assert.deepEqual(fragment.partOf, { type: 'application', id: dashboard.id })
+    }
+    // the public read entry survives the transfer on the parent, so on the sub-application (rule B)
+    assert.deepEqual((await testUser1.get(`/api/v1/applications/${sub.id}/permissions`)).data, [{ classes: ['list', 'read'] }])
+    assert.equal((await anonymous.get(`/api/v1/applications/${sub.id}`)).status, 200)
+    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${utility.id}/permissions`)).data, [])
+    assert.equal((await testUser1.get(`/api/v1/datasets/${utility.id}/raw`)).status, 200)
   })
 
   test('deleting the dashboard deletes its sub-applications and utility datasets', async () => {

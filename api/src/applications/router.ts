@@ -22,6 +22,8 @@ import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { checkStorage } from '../datasets/middlewares.ts'
+import { updateTotalStorage } from '../datasets/utils/storage.ts'
+import * as limits from '../limits/service.ts'
 import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
@@ -163,14 +165,24 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
   const application = reqApplication(req)
   usersUtils.normalizeOwner(req.body)
   if (application.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
-  if (await fragmentsService.countFragments('application', application.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   // (checked against all the user's memberships, the new owner is rarely the active account)
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
+  // fragments have their parent's owner: they follow it, like they follow its deletion
+  const fragments = await fragmentsService.prepareFragmentsOwnerChange('application', application, req.body, sessionState)
+  const limitError = await limits.changeOwnerLimitError(application.owner, req.body, fragments.datasets)
+  if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
+
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
-  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body)
+  const newPermissions = await permissions.ownerChangePermissions(application as any, req.body)
+  await fragmentsService.changeFragmentsOwner(ctx, 'applications', fragments, req.body, newPermissions)
+  const patchedApp = await service.changeApplicationOwner(ctx, application, req.body, newPermissions)
+  if (fragments.datasets.length) {
+    await updateTotalStorage(application.owner)
+    await updateTotalStorage(req.body)
+  }
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
