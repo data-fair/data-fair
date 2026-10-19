@@ -209,6 +209,11 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ingest.geoip.downloader.enabled=false
+      # features the services never use, skipped to lighten the boot
+      - xpack.ml.enabled=false
+      - xpack.watcher.enabled=false
+      - stack.templates.enabled=false
+      - cluster.deprecation_indexing.enabled=false
       # heap starts at 64m and grows up to 512m (pre-touching a fixed 512m cost ~360m per idle stack);
       # an agent that needs more sets ES_HEAP=1g in .env (df-dev never overwrites it)
       - ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
@@ -228,6 +233,8 @@ services:
     # takes the desktop session down with it, see docs/architecture/dev-resources.md).
     mem_limit: 2g
     memswap_limit: 2g
+    # halves the boot CPU burst (ES sizes its thread pools, GC and JIT threads to the quota)
+    cpus: ${ES_CPUS:-2}
 
   mongo:
     image: mongo:8

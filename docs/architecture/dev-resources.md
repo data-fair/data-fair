@@ -91,6 +91,22 @@ For a heavier workload (large benchmark datasets, say) set `ES_HEAP=1g` in `.env
 still fits in the 2g limit. Remember the
 multiplier is the number of environments you have up.
 
+Boot is the other cost: an uncapped ES 8 spends 60–120 s of CPU in its first
+30 s, peaking at 5–6 of 8 cores (enough to spin the laptop fan). `cpus: ${ES_CPUS:-2}`
+caps it, and since ES sizes its thread pools, GC and JIT threads to the quota, total
+boot CPU drops by about half with no slower time to green. Machine learning,
+watcher, the built-in `logs-*`/`metrics-*` stack templates and deprecation indexing
+are disabled because data-fair uses none of them. Measured on throwaway containers,
+median of 3 (noisy host), CPU seconds 30 s after green:
+
+| config | cold boot | restart (existing data) | time to green |
+|---|---|---|---|
+| previous | 104 s | 96 s | 36–37 s |
+| features disabled | 87 s | 65 s | 27–30 s |
+| features disabled + 2 CPUs | 45 s | 46 s | 27–29 s |
+
+Raise `ES_CPUS` alongside `ES_HEAP` for benchmark indexing.
+
 ### MongoDB — `docker-compose.yaml`
 
 `--wiredTigerCacheSizeGB 0.25`, the minimum. The default is half of (host RAM − 1 GiB)
