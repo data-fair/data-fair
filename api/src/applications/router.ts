@@ -17,7 +17,7 @@ import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
 import { fragmentWriteGuard } from '../fragments/middlewares.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
-import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
+import { readApplication, readBaseApp, attemptInsert, assertCreateBodyPermissions, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
@@ -78,6 +78,7 @@ router.post('', async (req, res) => {
   const { body } = (await import('#doc/applications/post-req/index.js')).returnValid(req)
   const application = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
+  await assertCreateBodyPermissions(application.owner, body, reqSessionAuthenticated(req))
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const created = await service.createApplication(ctx, application)

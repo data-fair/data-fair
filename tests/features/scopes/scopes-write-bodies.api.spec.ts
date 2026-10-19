@@ -97,6 +97,44 @@ test.describe('admin tier keys of the write bodies', () => {
   })
 })
 
+test.describe('application creation applies the publication checks', () => {
+  test.beforeEach(async () => { await clean() })
+
+  const stagingSite = { type: 'data-fair-portals', id: 'scope-staging', url: 'http://scope-staging.example.com', title: 'Scope staging', settings: { staging: true } }
+  const stagingKey = `${stagingSite.type}:${stagingSite.id}`
+  const base = () => ({ url: mockAppUrl('monapp1'), title: 'Created app' })
+  const countCreated = async () => (await orgAdmin.get('/api/v1/applications', { params: { select: 'title' } })).data.results.filter((a: any) => a.title === 'Created app').length
+
+  test('applications:write cannot create an application with publications', async () => {
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', stagingSite)
+    const ax = (await nhiSession('applications:write')).bearerAx
+    assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 403)
+    assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publicationSites: [siteKey] })), 403)
+    assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publications: [{ catalog: 'c1', status: 'waiting' }] })), 403)
+    assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publications: [{ catalog: 'c1', status: 'waiting' }] })), 403)
+    assert.equal(await countCreated(), 0)
+    assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publicationSites: [stagingKey] })), 201)
+    assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publicationSites: [stagingKey] })), 201)
+  })
+
+  test('applications:admin creates an application on a publication site', async () => {
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    const ax = (await nhiSession('applications:admin')).bearerAx
+    assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 201)
+    assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publicationSites: [siteKey] })), 201)
+  })
+
+  test('a contrib cannot create an application on a publication site, an admin can', async () => {
+    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    const contrib = await axiosAuth('test_user5@test.com', 'test_org1')
+    assert.equal(await status(contrib.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 403)
+    assert.equal(await status(contrib.put('/api/v1/applications/contrib-created', { ...base(), publicationSites: [siteKey] })), 403)
+    assert.equal(await countCreated(), 0)
+    assert.equal(await status(orgAdmin.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 201)
+  })
+})
+
 test.describe('application configuration referencing datasets', () => {
   test.beforeEach(async () => { await clean() })
 

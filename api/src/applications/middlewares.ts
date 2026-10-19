@@ -1,11 +1,12 @@
 import { type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { type AccountKeys, type SessionStateAuthenticated, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
+import { classByOperation } from '@data-fair/data-fair-shared/permissions/operations.ts'
+import { reqPublicationSite, reqMainPublicationSite, assertCanPublishAtCreation } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
@@ -91,6 +92,18 @@ export const readBaseApp: RequestHandler = async (req, res, next) => {
   next()
 }
 
+/**
+ * Publication keys of a creation body, when there is no ACL yet: publications need the owner's
+ * class of writePublications, publicationSites the same checks as a dataset creation.
+ * Throws 403.
+ */
+export const assertCreateBodyPermissions = async (owner: AccountKeys, body: Record<string, any>, sessionState: SessionStateAuthenticated) => {
+  if (body.publications?.length && !permissions.canDoForOwner(owner, 'applications', classByOperation.applications.writePublications, sessionState)) {
+    throw httpError(403, 'Permission manquante pour l\'opération "writePublications".')
+  }
+  if (body.publicationSites?.length) await assertCanPublishAtCreation(owner, body.publicationSites, sessionState, 'applications')
+}
+
 // PUT used to create or update: try insertion if the user is authorized,
 // in case of conflict go on with the update scenario
 export const attemptInsert: RequestHandler = async (req, res, next) => {
@@ -116,6 +129,8 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (!alreadyExists && permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+    // a refusal here is final: it must not fall through to the update branch
+    await assertCreateBodyPermissions(newApplication.owner, body, ctx.sessionState)
     // only derive/validate the parent ACL on a genuine create
     await service.initApplicationPermissions(ctx.sessionState, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)
