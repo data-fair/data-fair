@@ -1,7 +1,6 @@
 import express from 'express'
 import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.ts'
-import { agentsIndex } from '../../../contract/agents-index.ts'
 import { readAgentSkill } from '../../../contract/agent-skills.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
@@ -24,12 +23,6 @@ router.get('/api-docs.json', allowAnyScope, (req, res) => {
   const session = reqSession(req)
   const authenticatedSession = session.user ? (session as Parameters<typeof apiDocs>[1]) : undefined
   res.json(apiDocs(reqPublicBaseUrl(req), authenticatedSession))
-})
-
-// The deployment index agents compose their tool set from; no session, cacheable by anyone.
-router.get('/agents/index.json', allowAnyScope, (req, res) => {
-  res.set('Cache-Control', 'public, max-age=300')
-  res.json(agentsIndex(reqPublicBaseUrl(req), config))
 })
 
 // The scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL); public, no session read.

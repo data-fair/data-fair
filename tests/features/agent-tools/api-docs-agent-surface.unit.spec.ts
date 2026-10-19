@@ -1,25 +1,24 @@
 /**
  * The agent-facing surface of this API: what `@data-fair/openapi-mcp` generates from the
- * x-agent annotations in the served document, one golden per declared profile. `lint: 'error'`
- * refuses a description that contradicts its schema; the goldens turn any change to a tool's
- * name, description or schema into a diff a reviewer sees. Regenerate with UPDATE_GOLDEN=1 when
- * the change is intended. Profiles: docs/architecture/agent-profiles.md.
+ * x-agent annotations in the served document, as one golden of the whole tool set, and the tools
+ * each scope set reaches through `toolsForScopes`. `lint: 'error'` refuses a description that
+ * contradicts its schema; the golden turns any change to a tool's name, description, schema or
+ * security into a diff a reviewer sees. Regenerate with UPDATE_GOLDEN=1 when the change is intended.
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { load, toolSetSnapshot } from '@data-fair/openapi-mcp'
+import { load, toolSetSnapshot, toolsForScopes } from '@data-fair/openapi-mcp'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 
-const goldenPath = (profile: string) => path.resolve(import.meta.dirname, `../../fixtures/agent-surface.${profile}.json`)
+const goldenPath = path.resolve(import.meta.dirname, '../../fixtures/agent-surface.json')
 const PUBLIC_URL = 'https://example.test/data-fair'
 
 const generators = async () => ({
   apiDocs: (await import('../../../api/contract/api-docs.ts')).default,
   datasetAPIDocs: (await import('../../../api/contract/dataset-api-docs.ts')).default,
-  agentsIndex: (await import('../../../api/contract/agents-index.ts')).agentsIndex,
   xAgent: await import('../../../api/contract/x-agent.ts')
 })
 
@@ -38,22 +37,30 @@ const adminSession: any = {
   accountRole: 'admin'
 }
 
-const datasetReads = ['datafair_aggregate_data', 'datafair_calculate_metric', 'datafair_describe_dataset', 'datafair_get_field_values', 'datafair_search_data']
-const datasetFileReads = ['datafair_download_dataset_file', 'datafair_download_dataset_converted_file', 'datafair_export_data']
-const datasetFileWrites = ['datafair_create_dataset_from_file', 'datafair_replace_dataset_file']
+const datasetReads = ['aggregate_data', 'calculate_metric', 'describe_dataset', 'get_field_values', 'search_data']
+const datasetFileReads = ['download_dataset_file', 'download_dataset_converted_file', 'export_data']
+const datasetFileWrites = ['create_dataset_from_file', 'replace_dataset_file']
 
 /** A file store, as the MCP server is configured once the agents service has one: the upload tools exist only then. */
 const FILES = { urlPrefixes: ['https://files.example.test/agent-files/'] }
 
-/** The tools each declared profile yields with a file store, `includes` applied. */
+const datasetsRead = [...datasetReads, ...datasetFileReads, 'list_datasets', 'list_account_datasets']
+const datasetsWrite = [...datasetsRead, ...datasetFileWrites, 'update_dataset']
+const datasetsAdmin = [...datasetsWrite, 'publish_dataset', 'delete_dataset', 'get_dataset_permissions', 'set_dataset_permissions']
+const applicationsRead = ['list_account_applications', 'describe_application']
+const applicationsWrite = [...applicationsRead, 'update_application']
+const applicationsAdmin = [...applicationsWrite, 'publish_application', 'delete_application']
+
+/** The tools a token with these scopes reaches, with a file store. */
 const expectedTools: Record<string, string[]> = {
-  catalog: [...datasetReads, 'datafair_list_datasets'],
-  read_datasets: [...datasetReads, ...datasetFileReads, 'datafair_list_account_datasets'],
-  write_datasets: [...datasetReads, ...datasetFileReads, ...datasetFileWrites, 'datafair_list_account_datasets', 'datafair_update_dataset'],
-  manage_datasets: [...datasetReads, ...datasetFileReads, ...datasetFileWrites, 'datafair_list_account_datasets', 'datafair_update_dataset', 'datafair_publish_dataset', 'datafair_delete_dataset', 'datafair_get_dataset_permissions', 'datafair_set_dataset_permissions'],
-  read_applications: ['datafair_list_account_applications', 'datafair_describe_application'],
-  write_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application'],
-  manage_applications: ['datafair_list_account_applications', 'datafair_describe_application', 'datafair_update_application', 'datafair_publish_application', 'datafair_delete_application']
+  'datasets:read': datasetsRead,
+  'datasets:write': datasetsWrite,
+  'datasets:admin': datasetsAdmin,
+  datasets: datasetsAdmin,
+  'applications:read': applicationsRead,
+  'applications:write': applicationsWrite,
+  'applications:admin': applicationsAdmin,
+  applications: applicationsAdmin
 }
 
 /** Every nested property path under a schema, `[]` marking array items, composition keywords followed. */
@@ -75,33 +82,40 @@ const annotatedOperationIds = (doc: any): string[] => Object.values<any>(doc.pat
   .sort()
 
 test.describe('agent surface of the root document', () => {
-  test('declares the cells data-fair fills, all of them in the index vocabulary', async () => {
-    const { apiDocs, agentsIndex } = await generators()
-    const declared = Object.keys(apiDocs(PUBLIC_URL)['x-agent']!.profiles!)
-    assert.deepEqual([...declared].sort(), Object.keys(expectedTools).sort())
-    const vocabulary = Object.keys(agentsIndex(PUBLIC_URL, { publicUrl: PUBLIC_URL }).profiles!)
-    for (const p of declared) assert.ok(vocabulary.includes(p), `${p} is in the index vocabulary`)
+  test('loads without a lint error and matches its golden', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, files: FILES, lint: 'error' })
+    const names = toolSet.tools.map(t => t.name)
+    assert.equal(new Set(names).size, names.length, 'no name twice')
+    assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
+    // Through JSON: the golden is a file, and an `enum: undefined` left by the generator is not.
+    const snapshot = JSON.parse(JSON.stringify(toolSetSnapshot(toolSet)))
+    if (process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify(snapshot, null, 2) + '\n')
+    assert.deepEqual(snapshot, JSON.parse(readFileSync(goldenPath, 'utf8')))
   })
 
-  for (const [profile, tools] of Object.entries(expectedTools)) {
-    test(`${profile}: loads without a lint error and matches its golden`, async () => {
+  for (const [scope, tools] of Object.entries(expectedTools)) {
+    test(`${scope}: reaches its tools`, async () => {
       const { apiDocs } = await generators()
-      const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: [profile], files: FILES, lint: 'error' })
-      assert.deepEqual(toolSet.tools.map(t => t.name).sort(), [...tools].sort())
-      // Through JSON: the golden is a file, and an `enum: undefined` left by the generator is not.
-      const snapshot = JSON.parse(JSON.stringify(toolSetSnapshot(toolSet)))
-      if (process.env.UPDATE_GOLDEN) writeFileSync(goldenPath(profile), JSON.stringify(snapshot, null, 2) + '\n')
-      assert.deepEqual(snapshot, JSON.parse(readFileSync(goldenPath(profile), 'utf8')))
+      const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, files: FILES, lint: 'error' })
+      assert.deepEqual(toolsForScopes(toolSet, [scope]).tools.map(t => t.name).sort(), [...tools].sort())
     })
   }
 
-  test('every profile combines with every other: one tool set, no name twice', async () => {
+  test('an unscoped session reaches every tool', async () => {
     const { apiDocs } = await generators()
-    const doc = apiDocs(PUBLIC_URL)
-    const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), files: FILES, lint: 'error' })
-    const names = toolSet.tools.map(t => t.name)
-    assert.equal(new Set(names).size, names.length)
-    assert.deepEqual([...names].sort(), [...new Set(Object.values(expectedTools).flat())].sort())
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, files: FILES, lint: 'error' })
+    assert.deepEqual(toolsForScopes(toolSet, undefined).tools.map(t => t.name), toolSet.tools.map(t => t.name))
+  })
+
+  test('the publish tools need the admin tier, though they share their operation with the update tools', async () => {
+    const { apiDocs } = await generators()
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, files: FILES, lint: 'error' })
+    const names = (scopes: string[]) => toolsForScopes(toolSet, scopes).tools.map(t => t.name)
+    assert.ok(names(['datasets:write']).includes('update_dataset'))
+    assert.ok(!names(['datasets:write']).includes('publish_dataset'))
+    assert.ok(names(['applications:write']).includes('update_application'))
+    assert.ok(!names(['applications:write']).includes('publish_application'))
   })
 
   test('every tool has a title in French and in English, for the person who sees it called', async () => {
@@ -110,14 +124,14 @@ test.describe('agent surface of the root document', () => {
     const { apiDocs } = await generators()
     const doc = apiDocs(PUBLIC_URL)
     for (const locale of ['fr', 'en']) {
-      const toolSet = await load(doc, { fetch: skillFetch, profiles: Object.keys(doc['x-agent']!.profiles!), files: FILES, locale })
+      const toolSet = await load(doc, { fetch: skillFetch, files: FILES, locale })
       const untitled = toolSet.tools.filter(t => !t.title).map(t => t.name)
       assert.deepEqual(untitled, [], `untitled in ${locale}`)
       const titles = toolSet.tools.map(t => t.title)
       assert.equal(new Set(titles).size, titles.length, `two tools share a title in ${locale}`)
     }
-    const fr = await load(doc, { fetch: skillFetch, profiles: ['read_datasets'], files: FILES, locale: 'fr' })
-    assert.equal(fr.tools.find(t => t.name === 'datafair_list_account_datasets')?.title, 'Lister les jeux de données du compte')
+    const fr = await load(doc, { fetch: skillFetch, files: FILES, locale: 'fr' })
+    assert.equal(fr.tools.find(t => t.name === 'list_account_datasets')?.title, 'Lister les jeux de données du compte')
   })
 
   test('places every dataset PATCH body field in exactly one view', async () => {
@@ -153,8 +167,9 @@ test.describe('agent surface of the root document', () => {
       urls.push(input instanceof Request ? input.url : String(input))
       return new Response(JSON.stringify({ count: 0, results: [] }), { headers: { 'content-type': 'application/json' } })
     }) as typeof fetch
-    const toolSet = await load(apiDocs(PUBLIC_URL), { profiles: ['read_datasets', 'read_applications'], fetch: fetchFn })
-    for (const name of ['datafair_list_account_datasets', 'datafair_list_account_applications']) {
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: fetchFn })
+    urls.length = 0 // the workflow skill body read at load
+    for (const name of ['list_account_datasets', 'list_account_applications']) {
       const result = await toolSet.tools.find(t => t.name === name)!.execute({})
       assert.ok(!result.isError, result.text)
     }
@@ -164,7 +179,7 @@ test.describe('agent surface of the root document', () => {
 
   test('grid dataset tools point to a listing tool of the grid for ids', async () => {
     const { apiDocs } = await generators()
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['manage_datasets'] })
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch })
     for (const tool of toolSet.tools.filter(t => t.inputSchema.properties?.datasetId)) {
       assert.match(tool.inputSchema.properties.datasetId.description, /list_account_datasets/, tool.name)
     }
@@ -172,12 +187,12 @@ test.describe('agent surface of the root document', () => {
 
   test('tools replacing whole values say so, and the ACL replacement is destructive', async () => {
     const { apiDocs } = await generators()
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['manage_datasets', 'manage_applications'] })
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch })
     const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
-    for (const name of ['datafair_update_dataset', 'datafair_update_application']) {
+    for (const name of ['update_dataset', 'update_application']) {
       assert.match(tool(name).description, /replace the current value entirely/, name)
     }
-    assert.equal(tool('datafair_set_dataset_permissions').annotations.destructiveHint, true)
+    assert.equal(tool('set_dataset_permissions').annotations.destructiveHint, true)
   })
 
   // The field placement tests above are top-level only: a governance sub-field added later inside a
@@ -201,24 +216,24 @@ test.describe('agent surface of the root document', () => {
 
   test('the delete tools say that the resources attached to the deleted one go with it', async () => {
     const { apiDocs } = await generators()
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['manage_datasets', 'manage_applications'] })
-    for (const name of ['datafair_delete_dataset', 'datafair_delete_application']) {
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch })
+    for (const name of ['delete_dataset', 'delete_application']) {
       assert.match(toolSet.tools.find(t => t.name === name)!.description, /attached to it \(partOf\) are deleted too/, name)
     }
   })
 
   test('update_application asks not to change application key permissions unless asked', async () => {
     const { apiDocs } = await generators()
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['write_applications'] })
-    assert.match(toolSet.tools.find(t => t.name === 'datafair_update_application')!.description, /Do not change configuration\.datasets\[\]\.applicationKeyPermissions unless explicitly asked/)
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch })
+    assert.match(toolSet.tools.find(t => t.name === 'update_application')!.description, /Do not change configuration\.datasets\[\]\.applicationKeyPermissions unless explicitly asked/)
   })
 
-  test('the catalog workflow skill comes with the catalog profile only', async () => {
+  test('the workflow skill is offered with its linked body, to a read token too', async () => {
     const { apiDocs } = await generators()
-    const catalog = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['catalog'] })
-    assert.deepEqual(catalog.skills.map(s => s.id), ['workflow'])
-    assert.equal(catalog.skills[0].error, undefined, 'the linked body is read, so the golden pins its real digest')
-    assert.deepEqual((await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['read_datasets'] })).skills.map(s => s.id), [])
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch })
+    assert.deepEqual(toolSet.skills.map(s => s.id), ['workflow'])
+    assert.equal(toolSet.skills[0].error, undefined, 'the linked body is read, so the golden pins its real digest')
+    assert.deepEqual(toolsForScopes(toolSet, ['datasets:read']).skills.map(s => s.id), ['workflow'])
   })
 
   test('the annotated surface does not depend on the session', async () => {
@@ -227,27 +242,26 @@ test.describe('agent surface of the root document', () => {
     const admin = apiDocs(PUBLIC_URL, adminSession)
     assert.ok(annotatedOperationIds(admin).length > 0)
     assert.deepEqual(annotatedOperationIds(admin), annotatedOperationIds(anonymous))
-    const profiles = Object.keys(anonymous['x-agent']!.profiles!)
-    const [a, b] = await Promise.all([anonymous, admin].map(doc => load(doc, { profiles, lint: 'error' })))
+    const [a, b] = await Promise.all([anonymous, admin].map(doc => load(doc, { lint: 'error' })))
     assert.deepEqual(toolSetSnapshot(a), toolSetSnapshot(b))
   })
 
   test('without a file store, the upload tools are not offered and the downloads are', async () => {
     const { apiDocs } = await generators()
-    const names = (await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['write_datasets'], lint: 'error' })).tools.map(t => t.name)
+    const names = (await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, lint: 'error' })).tools.map(t => t.name)
     for (const name of datasetFileWrites) assert.ok(!names.includes(name), `${name} would have no file argument`)
     for (const name of datasetFileReads) assert.ok(names.includes(name), name)
   })
 
   test('the upload tools take one required file URL, and replacing is destructive', async () => {
     const { apiDocs } = await generators()
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, profiles: ['write_datasets'], files: FILES, lint: 'error' })
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: skillFetch, files: FILES, lint: 'error' })
     const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
-    const create = tool('datafair_create_dataset_from_file')
+    const create = tool('create_dataset_from_file')
     assert.deepEqual(Object.keys(create.inputSchema.properties), ['file', 'title'])
     assert.deepEqual(create.inputSchema.required, ['file'])
     assert.ok(create.inputSchema.properties.file['x-mcp-file'])
-    const replace = tool('datafair_replace_dataset_file')
+    const replace = tool('replace_dataset_file')
     assert.deepEqual(Object.keys(replace.inputSchema.properties), ['datasetId', 'file'])
     assert.deepEqual(replace.inputSchema.required, ['datasetId', 'file'])
     assert.equal(replace.annotations.destructiveHint, true)
@@ -256,13 +270,13 @@ test.describe('agent surface of the root document', () => {
   test('the download and export tools return a link without calling the API', async () => {
     const { apiDocs } = await generators()
     const noFetch = (async () => { throw new Error('a file tool must not call the API') }) as typeof fetch
-    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: noFetch, profiles: ['read_datasets'], lint: 'error' })
+    const toolSet = await load(apiDocs(PUBLIC_URL), { fetch: noFetch, lint: 'error' })
     const tool = (name: string) => toolSet.tools.find(t => t.name === name)!
-    const raw = await tool('datafair_download_dataset_file').execute({ datasetId: 'ds1' })
+    const raw = await tool('download_dataset_file').execute({ datasetId: 'ds1' })
     assert.deepEqual(raw.resourceLink, { uri: `${PUBLIC_URL}/api/v1/datasets/ds1/raw`, name: 'ds1-raw' })
-    const converted = await tool('datafair_download_dataset_converted_file').execute({ datasetId: 'ds1' })
+    const converted = await tool('download_dataset_converted_file').execute({ datasetId: 'ds1' })
     assert.equal(converted.resourceLink!.uri, `${PUBLIC_URL}/api/v1/datasets/ds1/convert`)
-    const exported = await tool('datafair_export_data').execute({ datasetId: 'ds1', query: 'paris' })
+    const exported = await tool('export_data').execute({ datasetId: 'ds1', query: 'paris' })
     const url = new URL(exported.resourceLink!.uri)
     assert.equal(url.pathname, '/data-fair/api/v1/datasets/ds1/lines')
     assert.equal(url.searchParams.get('format'), 'csv')
@@ -270,7 +284,7 @@ test.describe('agent surface of the root document', () => {
     assert.equal(url.searchParams.get('size'), '10000', 'one file holds up to the page size limit by default')
     assert.equal(exported.resourceLink!.name, 'ds1-lines.csv')
     assert.equal(exported.resourceLink!.mimeType, 'text/csv')
-    assert.match(tool('datafair_export_data').description, /10,000 rows/)
+    assert.match(tool('export_data').description, /10,000 rows/)
   })
 
   test('the per-dataset document carries the same annotations, with real column keys', async () => {
@@ -288,9 +302,9 @@ test.describe('agent surface of the root document', () => {
       ]
     }
     const doc = datasetAPIDocs(dataset, PUBLIC_URL).api
-    assert.deepEqual(Object.keys(doc['x-agent'].profiles), ['catalog', 'read_datasets', 'write_datasets', 'manage_datasets'], 'a dataset document declares only the cells it can fill')
-    const toolSet = await load(doc, { fetch: skillFetch, profiles: ['read_datasets'], lint: 'error' })
-    const search = toolSet.tools.find(t => t.name === 'datafair_search_data')
+    assert.deepEqual(doc['x-agent'], {}, 'no cross-dataset workflow skill on a dataset document')
+    const toolSet = await load(doc, { fetch: skillFetch, lint: 'error' })
+    const search = toolSet.tools.find(t => t.name === 'search_data')
     assert.ok(search, 'search_data is generated from the per-dataset document')
     assert.deepEqual(search.inputSchema.properties.select.items.enum, ['code', 'nom', 'population'])
   })

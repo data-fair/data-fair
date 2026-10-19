@@ -46,7 +46,7 @@ test.describe('file tools against the API', () => {
   test.beforeAll(async () => {
     await new Promise<void>(resolve => store.listen(0, '127.0.0.1', resolve))
     storeUrl = `http://127.0.0.1:${(store.address() as any).port}`
-    const toolSet = await load(`${baseURL}/api/v1/api-docs.json`, { profiles: ['write_datasets'], structuredContent: true, files: { urlPrefixes: [`${storeUrl}/agent-files/`] } })
+    const toolSet = await load(`${baseURL}/api/v1/api-docs.json`, { structuredContent: true, files: { urlPrefixes: [`${storeUrl}/agent-files/`] } })
     tools = toolSet.tools
   })
   test.afterAll(() => { store.close() })
@@ -60,7 +60,7 @@ test.describe('file tools against the API', () => {
 
   test('creates a dataset from a file URL, then replaces its file', async () => {
     test.setTimeout(60_000)
-    const created = await tool('datafair_create_dataset_from_file').execute({ file: fileUrl('dataset1.csv', dataset1), title: 'Agent upload' }, ctx)
+    const created = await tool('create_dataset_from_file').execute({ file: fileUrl('dataset1.csv', dataset1), title: 'Agent upload' }, ctx)
     assert.ok(!created.isError, created.text)
     const id = (created.structuredContent as any).id
     let dataset = await waitForFinalize(testUser1, id)
@@ -69,7 +69,7 @@ test.describe('file tools against the API', () => {
     assert.equal(dataset.count, 2)
 
     dataset = await doAndWaitForFinalize(testUser1, id, async () => {
-      const replaced = await tool('datafair_replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset1-more.csv', dataset1More) }, ctx)
+      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset1-more.csv', dataset1More) }, ctx)
       assert.ok(!replaced.isError, replaced.text)
     })
     assert.equal(dataset.file.name, 'dataset1-more.csv')
@@ -84,7 +84,7 @@ test.describe('file tools against the API', () => {
     test.setTimeout(60_000)
     const { id } = await sendDataset('datasets/dataset1.csv', testUser1)
     await doAndWaitForFinalize(testUser1, id, async () => {
-      const replaced = await tool('datafair_replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset2.csv', dataset2) }, ctx)
+      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset2.csv', dataset2) }, ctx)
       assert.ok(!replaced.isError, replaced.text)
     })
     const raw = await getRawDataset(id)
@@ -96,7 +96,7 @@ test.describe('file tools against the API', () => {
   test('download and export links serve the data to the caller session, and only to it', async () => {
     const { id } = await sendDataset('datasets/dataset1.csv', testUser1)
 
-    const original = await tool('datafair_download_dataset_file').execute({ datasetId: id }, ctx)
+    const original = await tool('download_dataset_file').execute({ datasetId: id }, ctx)
     assert.equal(original.resourceLink!.uri, `${baseURL}/api/v1/datasets/${id}/raw`)
     let res = await fetch(original.resourceLink!.uri, { headers: ctx.headers })
     assert.equal(res.status, 200)
@@ -104,12 +104,12 @@ test.describe('file tools against the API', () => {
     res = await fetch(original.resourceLink!.uri)
     assert.ok([401, 403].includes(res.status), `anonymously: ${res.status}`)
 
-    const converted = await tool('datafair_download_dataset_converted_file').execute({ datasetId: id }, ctx)
+    const converted = await tool('download_dataset_converted_file').execute({ datasetId: id }, ctx)
     res = await fetch(converted.resourceLink!.uri, { headers: ctx.headers })
     assert.equal(res.status, 200)
     assert.match(await res.text(), /koumoul/)
 
-    const exported = await tool('datafair_export_data').execute({ datasetId: id, select: ['id', 'nb'] }, ctx)
+    const exported = await tool('export_data').execute({ datasetId: id, select: ['id', 'nb'] }, ctx)
     assert.equal(exported.resourceLink!.mimeType, 'text/csv')
     assert.equal(exported.resourceLink!.name, `${id}-lines.csv`)
     res = await fetch(exported.resourceLink!.uri, { headers: ctx.headers })
