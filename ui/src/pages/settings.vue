@@ -34,7 +34,7 @@
     />
 
     <template v-else>
-      <!-- Contact section (auto-save) -->
+      <!-- Contact section (save/cancel + leave guard) -->
       <df-section-tabs
         v-if="sections.info"
         id="info"
@@ -42,9 +42,34 @@
         :title="sections.info.title"
         :subtitle="t('sections.info.subtitle')"
       >
+        <template #actions>
+          <confirm-menu
+            v-if="infoEdit.hasDiff.value"
+            :btn-props="{ color: 'warning', variant: 'tonal' }"
+            :label="t('cancel')"
+            :text="t('confirmCancelText')"
+            :icon="mdiCancel"
+            yes-color="warning"
+            @confirm="infoEdit.cancel()"
+          />
+          <v-btn
+            v-if="infoEdit.hasDiff.value"
+            class="ml-2"
+            color="accent"
+            variant="flat"
+            :disabled="!infoValid"
+            :loading="infoEdit.save.loading.value"
+            @click="infoEdit.save.execute()"
+          >
+            {{ t('save') }}
+          </v-btn>
+        </template>
         <template #content>
           <div class="pa-4 narrow-section">
-            <settings-info v-model="settings.info" />
+            <settings-info
+              v-model="settings.info"
+              v-model:valid="infoValid"
+            />
           </div>
         </template>
       </df-section-tabs>
@@ -231,7 +256,7 @@
         </template>
       </df-section-tabs>
 
-      <!-- AI Assistant section (auto-save) -->
+      <!-- AI Assistant section (save/cancel + leave guard) -->
       <df-section-tabs
         v-if="sections.agentChat"
         id="agentChat"
@@ -240,6 +265,27 @@
         :title="sections.agentChat.title"
         :subtitle="t('sections.agentChat.subtitle')"
       >
+        <template #actions>
+          <confirm-menu
+            v-if="agentChatEdit.hasDiff.value"
+            :btn-props="{ color: 'warning', variant: 'tonal' }"
+            :label="t('cancel')"
+            :text="t('confirmCancelText')"
+            :icon="mdiCancel"
+            yes-color="warning"
+            @confirm="agentChatEdit.cancel()"
+          />
+          <v-btn
+            v-if="agentChatEdit.hasDiff.value"
+            class="ml-2"
+            color="accent"
+            variant="flat"
+            :loading="agentChatEdit.save.loading.value"
+            @click="agentChatEdit.save.execute()"
+          >
+            {{ t('save') }}
+          </v-btn>
+        </template>
         <template #content>
           <v-container>
             <v-checkbox
@@ -463,40 +509,42 @@ watch(settingsEditFetch.serverData, (s) => {
 })
 
 // Sub-edits for sections with save/cancel
+const infoEdit = settingsEditFetch.createSubEdit(['info'], { success: t('saved') })
 const topicsEdit = settingsEditFetch.createSubEdit(['topics'], { success: t('saved') })
 const qualityEdit = settingsEditFetch.createSubEdit(
   ['licenses', 'datasetsMetadata', 'privateVocabulary'],
   { success: t('saved') }
 )
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
+const agentChatEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience'], { success: t('saved') })
 
 // Sub-edits for auto-save sections (watch hasDiff to trigger save, avoids feedback loops)
-const infoEdit = settingsEditFetch.createSubEdit(['info'], { success: t('saved') })
 const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
-const agentChatEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience'], { success: t('saved') })
 const compatEdit = settingsEditFetch.createSubEdit(['compatODS'], { success: t('saved') })
 
 // Auto-save: trigger save when hasDiff becomes true
-watch(infoEdit.hasDiff, (dirty) => { if (dirty) infoEdit.save.execute() })
 watch(apiKeysEdit.hasDiff, (dirty) => { if (dirty) apiKeysEdit.save.execute() })
 watch(webhooksEdit.hasDiff, (dirty) => { if (dirty) webhooksEdit.save.execute() })
-watch(agentChatEdit.hasDiff, (dirty) => { if (dirty) agentChatEdit.save.execute() })
 watch(compatEdit.hasDiff, (dirty) => { if (dirty) compatEdit.save.execute() })
 
 // Leave guards for sections with save/cancel
+useLeaveGuard(infoEdit.hasDiff, { locale })
 useLeaveGuard(topicsEdit.hasDiff, { locale })
 useLeaveGuard(qualityEdit.hasDiff, { locale })
 useLeaveGuard(portalsEdit.hasDiff, { locale })
+useLeaveGuard(agentChatEdit.hasDiff, { locale })
 
 // Track if any section with save/cancel has unsaved changes
 const anyDirty = computed(() =>
-  topicsEdit.hasDiff.value || qualityEdit.hasDiff.value || portalsEdit.hasDiff.value
+  infoEdit.hasDiff.value || topicsEdit.hasDiff.value || qualityEdit.hasDiff.value ||
+  portalsEdit.hasDiff.value || agentChatEdit.hasDiff.value
 )
 
 const qualityTab = ref('datasetsMetadata')
 
 // Validation state from child components
+const infoValid = ref(true)
 const topicsValid = ref(true)
 const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
