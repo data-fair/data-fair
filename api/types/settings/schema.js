@@ -671,6 +671,27 @@ export default {
       title: 'AI assistant',
       description: 'Active l\'assistant IA',
       default: false
+    },
+    agentChatAudience: {
+      type: 'array',
+      title: 'AI assistant audience',
+      description: 'Restreint l\'assistant IA aux membres correspondant à l\'une de ces règles. Vide : tous les membres.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['department'],
+        properties: {
+          department: {
+            type: 'string',
+            description: 'Identifiant du département, "*" pour tous les départements ou "-" pour l\'organisation principale seulement'
+          },
+          roles: {
+            type: 'array',
+            description: 'Rôles concernés, tous si vide',
+            items: { type: 'string' }
+          }
+        }
+      }
     }
   }
 }

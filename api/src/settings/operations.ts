@@ -1,5 +1,5 @@
 import slug from 'slugify'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
+import { type OptionsDesMetadonneesDeJeuxDeDonnees, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User } from '@data-fair/lib-express'
 import trimFields from '../misc/utils/trim-fields.ts'
@@ -122,6 +122,19 @@ export const buildPublicationSiteSubscriptions = (owner: AccountKeys, site: any,
  */
 export const rootSettingsFilter = (owner: { type: string, id: string }) =>
   ({ type: owner.type, id: owner.id, department: { $exists: false } })
+
+/**
+ * Whether an organization member is in the AI assistant audience. An empty audience means every member.
+ * A rule's department is "-" (main organization only), "*" (any department) or a department id,
+ * its roles are all roles when empty. Unlike resource permissions, admins are not implicitly included.
+ */
+export const matchAgentChatAudience = (audience: AIAssistantAudience | undefined, member: { role?: string | null, department?: string }) => {
+  if (!audience?.length) return true
+  return audience.some(rule => {
+    if (rule.department === '-' ? !!member.department : (rule.department !== '*' && rule.department !== member.department)) return false
+    return !rule.roles?.length || (!!member.role && rule.roles.includes(member.role))
+  })
+}
 
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
 
