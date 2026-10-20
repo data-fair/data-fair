@@ -81,5 +81,4 @@ The agent surface is pinned by `tests/features/agent-tools/api-docs-agent-surfac
 
 - **mcp half not done.** The dev stack's `mcp` container, the personal assistants (`PERSONAL_ASSISTANTS`) and the autonomous-agent simulations still read the removed `agents/index.json` and the profiles; they stay broken until the mcp server and the agents service read this document and filter tools by token scopes. There is no temporary route.
 - **Metrics fetch untested in dev.** The URL `privateMetricsUrl + '/api/api-docs.json'` is not exercised: `privateMetricsUrl` is unset in the dev stack.
-- **openapi-mcp 0.7.0** (no profiles, `toolsForScopes`, per-entry `security`) is used from a local build until it is published. `package-lock.json` still pins `^0.5.0`, so after `npm ci` the agent specs break until the dependency is bumped.
 - **No catalog tool set.** Without profiles `datasets:read` covers both `list_datasets` (portal catalog) and `list_account_datasets`; a catalog-only MCP is a tool selection on the mcp side.
