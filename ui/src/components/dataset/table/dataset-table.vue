@@ -301,8 +301,12 @@
     <!-- card mode -->
     <div
       v-if="displayMode === 'list' && headers"
+      ref="cardsList"
       :style="`height: ${height - (showToolbar ? 48 : 0)}px; overflow-y: scroll;overflow-x: hidden;`"
       class="dataset-table-list-wrapper"
+      @keydown="onCardsKeydown"
+      @focusin="onCardsFocusin"
+      @focusout="onCardsFocusout"
     >
       <div style="height:2px;width:100%;">
         <v-progress-linear
@@ -318,7 +322,7 @@
         dense
       >
         <v-col
-          v-for="result in (pagination ? paginatedResults : results)"
+          v-for="(result, index) in (pagination ? paginatedResults : results)"
           :key="result._id"
           cols="12"
           sm="6"
@@ -337,6 +341,8 @@
             :no-sort="!can('sort')"
             :no-cols="!can('select-cols')"
             :result="result"
+            :index="index"
+            :tabbable-field="tabbableCardField.card === index ? tabbableCardField.field : -1"
             :selected-fields="selectedCols"
             :truncate="truncate"
             :selectable="selectable"
@@ -528,7 +534,7 @@ import { agentToolError } from '~/composables/agent/utils'
 import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLineDialogState } from '~/composables/agent/host-state'
-import { nextPosition, type CellPosition, type GridBounds } from './table-keyboard'
+import { nextPosition, nextCardPosition, type CellPosition, type CardPosition, type GridBounds } from './table-keyboard'
 import useHeaders, { isVisibleCol, TableHeaderWithProperty, type TableHeader, type SyntheticColumn, type TableSort } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -905,43 +911,104 @@ const focusCell = async (pos: CellPosition) => {
   }
 }
 
-const onTableKeydown = (event: KeyboardEvent) => {
+// The keys acting on an item of the navigation (a cell, a card's field) or on its controls,
+// before the arrows. Returns true when the key is used.
+const onItemKeys = (event: KeyboardEvent, item: HTMLElement) => {
   const target = event.target as HTMLElement
-  const cell = target.closest<HTMLElement>('[data-row]')
-  if (!cell) return
-  if (target !== cell) {
-    // focus is on a control inside the cell
+  if (target !== item) {
+    // focus is on a control inside the item
     if (event.key === 'Escape') {
       // an open menu (header) handles its own Escape and gives focus back to its button
-      if (target.getAttribute('aria-expanded') === 'true') return
+      if (target.getAttribute('aria-expanded') === 'true') return true
       event.preventDefault()
-      cell.focus()
-      return
+      item.focus()
+      return true
     }
     if (event.key === 'Tab') {
-      const controls = cellControls(cell)
-      if (!controls.length) return
+      const controls = cellControls(item)
+      if (!controls.length) return true
       event.preventDefault()
       const index = controls.indexOf(target)
       controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length].focus()
-      return
+      return true
     }
-    if (target.matches('input, textarea')) return
-  } else if (event.key === 'Enter' || event.key === 'F2') {
-    const controls = cellControls(cell)
-    if (!controls.length) return
-    event.preventDefault()
-    // Enter activates a single control directly (a header's menu, a value's filter button,
-    // a link); F2, or Enter on several controls, reaches them first (Tab cycles them)
-    if (event.key === 'Enter' && controls.length === 1) controls[0].click()
-    else controls[0].focus()
-    return
+    return target.matches('input, textarea')
   }
+  if (event.key !== 'Enter' && event.key !== 'F2') return false
+  // a card's field opens its column menu on Enter, as on a click
+  if (event.key === 'Enter' && item.getAttribute('aria-haspopup') === 'menu') {
+    event.preventDefault()
+    item.click()
+    return true
+  }
+  const controls = cellControls(item)
+  if (!controls.length) return true
+  event.preventDefault()
+  // Enter activates a single control directly (a header's menu, a value's filter button,
+  // a link); F2, or Enter on several controls, reaches them first (Tab cycles them)
+  if (event.key === 'Enter' && controls.length === 1) controls[0].click()
+  else controls[0].focus()
+  return true
+}
+
+const onTableKeydown = (event: KeyboardEvent) => {
+  const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-row]')
+  if (!cell || onItemKeys(event, cell)) return
   const next = nextPosition(cellPosition(cell), event, gridBounds.value)
   if (!next) return
   event.preventDefault()
   focusCell(next)
 }
+
+// The card list display gets the same keyboard navigation: a single Tab stop, the arrows
+// move between the fields of the cards (see nextCardPosition), Enter opens a field's
+// column menu, F2 reaches its controls.
+const cardsList = ref<HTMLElement | null>(null)
+const activeCardField = ref<CardPosition>({ card: 0, field: 0 })
+const tabbableCardField = computed(() => ({
+  card: Math.max(0, Math.min(activeCardField.value.card, rowResults.value.length - 1)),
+  field: activeCardField.value.field
+}))
+const onCardsKeydown = (event: KeyboardEvent) => {
+  const field = (event.target as HTMLElement).closest<HTMLElement>('[data-card]')
+  const list = cardsList.value
+  if (!field || !list || onItemKeys(event, field)) return
+  const cards = [...list.querySelectorAll<HTMLElement>('.dataset-table-card')]
+  // the cards per row follow the breakpoints of the v-col around them
+  const top = cards[0]?.getBoundingClientRect().top
+  const perRow = Math.max(1, cards.filter(c => c.getBoundingClientRect().top === top).length)
+  const fields = cards[0]?.querySelectorAll('[data-field]').length ?? 0
+  const pos = { card: Number(field.dataset.card), field: Number(field.dataset.field) }
+  const next = nextCardPosition(pos, event, { cards: cards.length, fields, perRow })
+  if (!next) return
+  event.preventDefault()
+  list.querySelector<HTMLElement>(`[data-card="${next.card}"][data-field="${next.field}"]`)?.focus()
+}
+// unlike the table's, the tab stop follows the focus (a click focuses a field), only the 2 cards
+// concerned render again
+const syncCardField = (el: Element | null) => {
+  const field = el?.closest<HTMLElement>('[data-card]')
+  if (!field || !cardsList.value?.contains(field)) return false
+  activeCardField.value = { card: Number(field.dataset.card), field: Number(field.dataset.field) }
+  return true
+}
+// the focus lost to nowhere, by the removal of the focused card for instance
+let cardsLostFocus = false
+const onCardsFocusin = (event: FocusEvent) => { syncCardField(event.target as HTMLElement) }
+const onCardsFocusout = (event: FocusEvent) => {
+  if (cardsList.value?.contains(event.relatedTarget as Node | null)) return
+  cardsLostFocus = !event.relatedTarget
+  hovered.value = undefined
+}
+// new results (a sort, a filter from a field's menu) move the focused card, or remove it
+watch(rowResults, async () => {
+  if (displayMode.value !== 'list') return
+  await nextTick()
+  if (syncCardField(document.activeElement)) return
+  if (cardsLostFocus && document.activeElement === document.body) {
+    cardsList.value?.querySelector<HTMLElement>('[data-card][tabindex="0"]')?.focus()
+  }
+})
 
 // leaving the table by keyboard hides the buttons the focused cell was showing
 const onTableFocusout = (event: FocusEvent) => {

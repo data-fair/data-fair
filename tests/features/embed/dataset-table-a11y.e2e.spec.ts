@@ -83,14 +83,15 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     await page.keyboard.press('Enter')
     // Vuetify's v-menu renders as .v-overlay--active.v-menu (no role="menu" on the overlay itself)
     await expect(page.locator('.v-overlay--active.v-menu').first()).toBeVisible({ timeout: 2000 })
-    // Closing the menu must return focus to the trigger button so keyboard users
-    // don't get dropped on <body> after Escape (RGAA 7.3 / 12.8)
+    // Closing the menu must return focus to the header cell so keyboard users
+    // don't get dropped on <body> after Escape (RGAA 7.3 / 12.8), nor kept on the cell's inner
+    // button, from which Tab cycles the cell's controls instead of leaving the table
     // Vuetify only honors Escape on the top overlay, a flag it updates in a setTimeout after
     // opening: let that timer run first, a human can't press Escape within the same few ms
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve)))
     await page.keyboard.press('Escape')
     await expect(page.locator('.v-overlay--active.v-menu')).toHaveCount(0)
-    await expect(firstSortButton).toBeFocused()
+    await expect(page.locator('thead th:has(button[aria-haspopup="menu"])').first()).toBeFocused()
   })
 
   test('sort and column visibility states are exposed without relying on color (7.1 / 3.1)', async ({ page, goToWithAuth }) => {
@@ -378,6 +379,120 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect.poll(() => activeCell(page)).toMatchObject({ inTable: true, row: 0, col })
     })
 
+    test('a search filter added from the header menu is removed from the keyboard', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
+      const rows = await page.locator('.dataset-table tbody tr').count()
+      const col = await colOf(page, 'adr')
+      await page.locator(`.dataset-table th[data-col="${col}"]`).focus()
+      await page.keyboard.press('Enter')
+      const menu = page.locator('.v-overlay--active.v-menu')
+      await expect(menu).toBeVisible()
+      const focusItem = async (name: RegExp) => {
+        const item = menu.locator('.v-list-item').filter({ hasText: name }).first()
+        await expect(async () => {
+          await item.focus()
+          await expect(item).toBeFocused({ timeout: 100 })
+        }).toPass()
+      }
+      await focusItem(/ajouter un filtre|add a filter/i)
+      await page.keyboard.press('Enter')
+      await focusItem(/recherche texte libre|free text search/i)
+      await page.keyboard.press('Enter')
+      await expect(menu.locator('input')).toBeFocused()
+      await page.keyboard.type('lactée')
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1)
+      await expect.poll(() => activeCell(page)).toMatchObject({ isCell: true, row: 0, col })
+
+      // Shift+Tab leaves the table from where the menu put the focus back, towards the filter
+      const closeFilter = page.locator('.dataset-filters .v-chip').first().getByRole('button')
+      for (let i = 0; i < 10 && !(await closeFilter.evaluate(el => el === document.activeElement)); i++) {
+        await page.keyboard.press('Shift+Tab')
+      }
+      await expect(closeFilter).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.dataset-filters .v-chip')).toHaveCount(0)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(rows)
+
+      // the menu removes it too: its field shows the value, emptied it removes the filter
+      await page.goto(page.url().replace(/\?.*$/, '') + '?adr_search=lact%C3%A9e')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1, { timeout: 15000 })
+      await page.locator(`.dataset-table th[data-col="${col}"]`).focus()
+      await page.keyboard.press('Enter')
+      await expect(menu).toBeVisible()
+      await focusItem(/ajouter un filtre|add a filter/i)
+      await page.keyboard.press('Enter')
+      await focusItem(/recherche texte libre|free text search/i)
+      // released as a person does, once the field it opens has the focus
+      await page.keyboard.down('Enter')
+      await page.waitForTimeout(150)
+      await page.keyboard.up('Enter')
+      await expect(menu.locator('input')).toBeFocused()
+      await expect(menu.locator('input')).toHaveValue('lactée')
+      await menu.locator('input').fill('')
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page.locator('.dataset-filters .v-chip')).toHaveCount(0)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(rows)
+    })
+
+    test('an existing filter is edited, then cleared, from the header menu', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-edit-filter', schema: [{ key: 'numero', type: 'integer' }] })).data
+      await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ numero: 1 }, { numero: 2 }, { numero: 1 }])
+      await waitForFinalize(ax, dataset.id)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?numero_eq=1`, 'test_user1')
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2, { timeout: 15000 })
+      const col = await colOf(page, 'numero')
+      const menu = page.locator('.v-overlay--active.v-menu')
+      const focusItem = async (name: RegExp) => {
+        const item = menu.locator('.v-list-item').filter({ hasText: name }).first()
+        await expect(async () => {
+          await item.focus()
+          await expect(item).toBeFocused({ timeout: 100 })
+        }).toPass()
+      }
+      const openEquals = async () => {
+        await page.locator(`.dataset-table th[data-col="${col}"]`).focus()
+        await page.keyboard.press('Enter')
+        await expect(menu).toBeVisible()
+        await focusItem(/ajouter un filtre|add a filter/i)
+        await page.keyboard.press('Enter')
+        await focusItem(/égal à une valeur|equal to a value/i)
+        // released as a person does, once the field it opens has the focus
+        await page.keyboard.down('Enter')
+        await page.waitForTimeout(150)
+        await page.keyboard.up('Enter')
+      }
+
+      // the Enter that opens the field does not apply its current value: the menu stays open
+      await openEquals()
+      const input = menu.locator('input').first()
+      await expect(input).toBeFocused()
+      await expect(input).toHaveValue('1')
+      await page.waitForTimeout(200)
+      await expect(menu).toBeVisible()
+      await input.fill('2')
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page).toHaveURL(/numero_eq=2/)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(1)
+
+      // an emptied field removes the filter
+      await page.waitForTimeout(100)
+      await openEquals()
+      await expect(input).toHaveValue('2')
+      await input.fill('')
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(page.locator('.dataset-filters .v-chip')).toHaveCount(0)
+      await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
+    })
+
     test('a cell reached with ArrowUp is not hidden under the sticky header', async ({ page, goToWithAuth }) => {
       const ax = await axiosAuth('test_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-up', schema: [{ key: 'n', type: 'integer' }] })).data
@@ -419,6 +534,113 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await page.keyboard.press('Control+End')
       await expect.poll(async () => (await activeCell(page)).row).toBeGreaterThan(renderedRows)
       expect((await activeCell(page)).isCell).toBe(true)
+    })
+  })
+
+  test.describe('keyboard navigation in the card list (7.3)', () => {
+    const activeField = (page: any) => page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null
+      const field = el?.closest('[data-card]') as HTMLElement | null
+      return {
+        inList: !!el?.closest('.dataset-table-list-wrapper'),
+        isField: !!el?.matches('[data-card]'),
+        card: field ? Number(field.dataset.card) : null,
+        field: field ? Number(field.dataset.field) : null
+      }
+    })
+
+    test('the list is a single Tab stop, arrows move between fields and cards, Enter opens a field menu', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+      const list = page.locator('.dataset-table-list-wrapper')
+      await expect(list.locator('.dataset-table-card').first()).toBeVisible({ timeout: 15000 })
+      await expect(list.locator('[tabindex="0"]')).toHaveCount(1)
+
+      await page.locator('[role="search"] input').first().focus()
+      for (let i = 0; i < 15 && !(await activeField(page)).inList; i++) await page.keyboard.press('Tab')
+      expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field: 0 })
+
+      await page.keyboard.press('ArrowDown')
+      expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field: 1 })
+      await page.keyboard.press('ArrowRight')
+      expect(await activeField(page)).toMatchObject({ isField: true, card: 1, field: 1 })
+      await page.keyboard.press('ArrowLeft')
+      await page.keyboard.press('ArrowDown')
+      const { field } = await activeField(page)
+      expect(field).toBe(2)
+      // one Tab leaves the list, Shift+Tab comes back to the same field
+      await page.keyboard.press('Tab')
+      expect((await activeField(page)).inList).toBe(false)
+      await page.keyboard.press('Shift+Tab')
+      expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field })
+
+      // Enter opens the column menu of the field, its actions give the focus back to the field
+      const menu = page.locator('.v-overlay--active.v-menu')
+      await page.keyboard.press('Enter')
+      await expect(menu).toBeVisible()
+      const sortItem = menu.locator('.v-list-item').filter({ hasText: /tri ascendant|ascending sort/i }).first()
+      await expect(async () => {
+        await sortItem.focus()
+        await expect(sortItem).toBeFocused({ timeout: 100 })
+      }).toPass()
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      // the sort moved the card, the focus stays on its field and the Tab stop with it
+      await expect.poll(() => activeField(page)).toMatchObject({ isField: true, field })
+      await expect(list.locator('[tabindex="0"]')).toBeFocused()
+      const card = (await activeField(page)).card
+
+      // and Escape too (Vuetify ignores its activator for 50ms after a close)
+      await page.waitForTimeout(100)
+      await page.keyboard.press('Enter')
+      await expect(menu).toBeVisible()
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve)))
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+      await expect.poll(() => activeField(page)).toMatchObject({ isField: true, card, field })
+    })
+
+    test('F2 reaches the controls of a field, a filter that removes the focused card keeps the focus in the list', async ({ page, goToWithAuth }) => {
+      const ax = await axiosAuth('test_user1@test.com')
+      const dataset = await sendDataset('datasets/dataset1.csv', ax)
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+      const list = page.locator('.dataset-table-list-wrapper')
+      await expect(list.locator('.dataset-table-card').first()).toBeVisible({ timeout: 15000 })
+      const cards = await list.locator('.dataset-table-card').count()
+      const adr = list.locator('.dataset-table-card').filter({ hasText: 'adresse inconnue' }).locator('[data-field]').filter({ hasText: 'adresse inconnue' })
+      await adr.focus()
+
+      // the focused field shows the buttons of a hovered one, F2 reaches them, Escape comes back
+      const openMenu = adr.getByRole('button', { name: /trier, filtrer|sort, filter/i })
+      await expect(openMenu).toBeVisible()
+      await page.keyboard.press('F2')
+      await expect(adr.getByRole('button').first()).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(adr).toBeFocused()
+
+      // a search on another value removes the card
+      await page.keyboard.press('Enter')
+      const menu = page.locator('.v-overlay--active.v-menu')
+      await expect(menu).toBeVisible()
+      const focusItem = async (name: RegExp) => {
+        const item = menu.locator('.v-list-item').filter({ hasText: name }).first()
+        await expect(async () => {
+          await item.focus()
+          await expect(item).toBeFocused({ timeout: 100 })
+        }).toPass()
+      }
+      await focusItem(/ajouter un filtre|add a filter/i)
+      await page.keyboard.press('Enter')
+      await focusItem(/recherche texte libre|free text search/i)
+      await page.keyboard.press('Enter')
+      await expect(menu.locator('input')).toBeFocused()
+      await page.keyboard.type('lactée')
+      await page.keyboard.press('Enter')
+      await expect(menu).toHaveCount(0)
+      await expect(list.locator('.dataset-table-card')).toHaveCount(1)
+      expect(cards).toBeGreaterThan(1)
+      await expect.poll(() => activeField(page)).toMatchObject({ isField: true, card: 0 })
     })
   })
 
