@@ -402,6 +402,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
 
   test('Create REST and file datasets from a metadata-only dataset', async () => {
     const ax = testUser1
+    await ax.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] } })
     const metadata = {
       summary: 'A summary',
       description: 'A description',
@@ -433,17 +434,18 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Only copy the topics and custom metadata known to the target account', async () => {
+    await testUser1.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: ['foo', 'bar', 'num', 'svc', 'svc2'].map(key => ({ title: key, key })) } })
     const source = (await testUser1.post('/api/v1/datasets', {
       isMetaOnly: true,
       title: 'meta only',
       license: { title: 'Some license', href: 'https://example.com/license' },
       topics: [{ id: 'topic1', title: 'Topic 1' }, { id: 'topic2', title: 'Topic 2' }],
-      customMetadata: { foo: 'foo value', bar: 'bar value' }
+      customMetadata: { foo: 'foo value', bar: 'bar value', num: 'not a number', svc: 'Voirie', svc2: 'Autre' }
     })).data
     await testUser1.put(`/api/v1/datasets/${source.id}/permissions`, [{ classes: ['read'] }])
     await testUser5.put('/api/v1/settings/user/test_user5', {
       topics: [{ id: 'topic1', title: 'Topic 1' }],
-      datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] }
+      datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }, { title: 'Num', key: 'num', type: 'integer' }, { title: 'Svc', key: 'svc', enum: ['Voirie'] }, { title: 'Svc2', key: 'svc2', enum: ['Voirie'] }] }
     })
 
     const res = await testUser5.post('/api/v1/datasets', {
@@ -454,7 +456,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     const dataset = await waitForFinalize(testUser5, res.data.id)
     assert.deepEqual(dataset.license, { title: 'Some license', href: 'https://example.com/license' })
     assert.deepEqual(dataset.topics, [{ id: 'topic1', title: 'Topic 1' }])
-    assert.deepEqual(dataset.customMetadata, { foo: 'foo value' })
+    assert.deepEqual(dataset.customMetadata, { foo: 'foo value', svc: 'Voirie' })
   })
 
   test('Refuse copying data from a metadata-only dataset', async () => {

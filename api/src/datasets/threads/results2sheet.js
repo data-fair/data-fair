@@ -5,6 +5,7 @@
 import Module from 'node:module'
 import { prepareResultItem, prepareResultContext } from '../es/commons.ts'
 import { getFlatten } from '../utils/flatten.ts'
+import { formatCustomMetadata } from '../../../types/custom-metadata.ts'
 const require = Module.createRequire(import.meta.url)
 const XLSX = require('@e965/xlsx')
 
@@ -133,8 +134,8 @@ export default ({ rawBuffer, bookType, query, dataset, publicBaseUrl, downloadUr
   if (datasetsMetadata.custom && datasetsMetadata.custom.length) {
     for (const custom of datasetsMetadata.custom) {
       if (!custom.key) continue
-      const value = dataset.customMetadata ? dataset.customMetadata[custom.key] : undefined
-      metadataArray.push([custom.key, custom.title || custom.key, value || ''])
+      const value = dataset.customMetadata?.[custom.key]
+      metadataArray.push([custom.key, custom.title || custom.key, value != null ? formatCustomMetadata(value) : ''])
     }
   }
 

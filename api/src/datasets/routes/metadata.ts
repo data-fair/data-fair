@@ -41,6 +41,7 @@ import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatib
 import { filterByContextualCardinality, filterByUniqueValues, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
 import { manageESError } from './_es-error.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
+import { prepareCustomMetadata } from '../utils/custom-metadata.ts'
 
 const clean = datasetUtils.clean
 const debugBreakingChanges = debugModule('breaking-changes')
@@ -213,6 +214,7 @@ export const registerMetadataRoutes = (router: Router) => {
       const sessionState = reqSessionAuthenticated(req)
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+      if (patch.customMetadata) await prepareCustomMetadata(dataset.owner, patch.customMetadata, dataset.customMetadata)
 
       // partOf changes are a dedicated write (spec §5); the publication-keys refusal is applied by
       // the fragmentWriteGuard mounted above, shared with every other write route
