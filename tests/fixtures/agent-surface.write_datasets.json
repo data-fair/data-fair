@@ -118,6 +118,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 100,
+            "format": "int32",
             "description": "Le nombre de résultats à retourner (taille de la pagination)."
           },
           "sort": {
@@ -136,6 +137,7 @@
           },
           "query": {
             "type": "string",
+            "maxLength": 1000,
             "description": "Full-text search across all columns. Prefer filters for structured criteria."
           },
           "filters": {
@@ -202,6 +204,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 1000,
+            "format": "int32",
             "description": "Le nombre de résultats à retourner (taille de la pagination)."
           },
           "sort": {
@@ -221,6 +224,7 @@
           },
           "q": {
             "type": "string",
+            "maxLength": 1000,
             "description": "Optional text to filter values (prefix/substring match within this column)"
           },
           "filters": {
@@ -311,6 +315,7 @@
           },
           "q": {
             "type": "string",
+            "maxLength": 1000,
             "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
           },
           "filters": {
@@ -394,6 +399,7 @@
           },
           "q": {
             "type": "string",
+            "maxLength": 1000,
             "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
           },
           "filters": {

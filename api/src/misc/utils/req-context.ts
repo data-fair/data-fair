@@ -13,7 +13,7 @@
 // See docs/architecture/code-conventions.md §2.
 import type { IncomingMessage } from 'node:http'
 import type { Request } from 'express'
-import { reqSession, type User, type Account } from '@data-fair/lib-express'
+import { reqSession, reqIp, type User, type Account } from '@data-fair/lib-express'
 import type { Resource, ResourceType, BypassPermissions, DatasetInternal, RestDataset } from '#types'
 
 export type ReqContext<T> = {
@@ -102,7 +102,7 @@ export const reqEventLogContext = (req: Request): LogContext => {
   return {
     user: session.user,
     account: session.account,
-    ip: req.get('X-Client-IP'),
+    ip: reqIp(req, { optional: true }),
     host: req.get('Host')
   }
 }

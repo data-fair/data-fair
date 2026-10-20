@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { defineReqContext } from '../../../api/src/misc/utils/req-context.ts'
+import { session } from '@data-fair/lib-express'
+import { defineReqContext, reqEventLogContext } from '../../../api/src/misc/utils/req-context.ts'
 
 // symbol-keyed typed request context (lib-express session.ts pattern). The transitional `legacyProp`
 // dual-write was removed once every property migrated — the context is now Symbol-only.
@@ -44,5 +45,24 @@ test.describe('defineReqContext', () => {
     ctx.set(req, false)
     assert.equal(ctx.get(req), false)
     assert.equal(ctx.getOptional(req), false)
+  })
+})
+
+test.describe('reqEventLogContext', () => {
+  // the session middleware marks the request; without cookies it attaches an anonymous session offline
+  const withSession = async (headers: Record<string, string>) => {
+    const req: any = { headers, get: (name: string) => headers[name.toLowerCase()], cookies: {} }
+    await new Promise<void>((resolve, reject) => session.middleware()(req, {} as any, (err?: any) => err ? reject(err) : resolve()))
+    return req
+  }
+
+  test('logs the client IP the proxy forwarded, not X-Client-IP', async () => {
+    const req = await withSession({ 'x-forwarded-for': '203.0.113.7', 'x-client-ip': '10.0.0.9', host: 'example.com' })
+    assert.equal(reqEventLogContext(req).ip, '203.0.113.7')
+  })
+
+  test('logs no IP for a request without one (an in-cluster call with an API key)', async () => {
+    const req = await withSession({ host: 'data-fair:8080' })
+    assert.equal(reqEventLogContext(req).ip, undefined)
   })
 })

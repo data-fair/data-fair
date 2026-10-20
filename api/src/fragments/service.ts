@@ -1,7 +1,7 @@
 // Mongo-backed operations of the fragments feature: see docs/architecture/fragments.md
 import mongo from '#mongo'
 import type { Permission, WhoHint } from '#types'
-import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import type { LogContext } from '../misc/utils/req-context.ts'
@@ -163,6 +163,44 @@ export const syncFragmentPermissions = async (parentType: FragmentResourceType, 
   if (parentType === 'applications') {
     // applications have no integrity trail
     await mongo.applications.updateMany(filter, { $set: { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'applications'), updatedAt } })
+  }
+}
+
+/**
+ * The fragments that follow their parent's owner change, once checked that each of them can be
+ * transferred too — before anything is written, so that a refusal moves nothing.
+ */
+export const prepareFragmentsOwnerChange = async (parentType: PartOf['type'], parent: { id: string, owner: OwnerLike }, newOwner: AccountKeys, sessionState: SessionStateAuthenticated) => {
+  const fragments = await findFragments(parentType, parent.id, parent.owner)
+  // same refusal as on the dataset's own owner change: integrity anchors are owner-scoped
+  const enrolled = fragments.datasets.find(dataset => dataset.integrity?.active)
+  if (enrolled) throw httpError(400, `Le contrôle d'intégrité du fragment « ${enrolled.title} » doit être désactivé avant un changement de propriétaire`)
+  if (fragments.datasets.length && !permissions.canDoForOwner(newOwner, 'datasets', 'post', sessionState, true)) {
+    throw httpError(403, 'Vous ne pouvez pas créer les jeux de données fragments dans le nouveau propriétaire')
+  }
+  if (fragments.applications.length && !permissions.canDoForOwner(newOwner, 'applications', 'post', sessionState, true)) {
+    throw httpError(403, 'Vous ne pouvez pas créer les applications fragments dans le nouveau propriétaire')
+  }
+  return fragments
+}
+
+/**
+ * Transfer the fragments returned by prepareFragmentsOwnerChange, their ACL derived from the parent's
+ * ACL after its own transfer. Called before the parent's own write: a failure in between leaves
+ * fragments already with the new owner, which a retry of the parent's transfer no longer reaches
+ * (ownedFragmentsFilter) and completes. The caller recomputes the storage totals.
+ * Dynamic imports: datasets/service and applications/service both import this module.
+ */
+export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: FragmentResourceType, fragments: Awaited<ReturnType<typeof findFragments>>, newOwner: OwnerLike, parentPermissions: Permission[]) => {
+  if (fragments.datasets.length) {
+    const { changeDatasetOwner } = await import('../datasets/service.ts')
+    const derived = deriveFragmentPermissions(parentPermissions, parentType, 'datasets')
+    for (const dataset of fragments.datasets) await changeDatasetOwner(ctx, dataset, dataset, newOwner, derived)
+  }
+  if (fragments.applications.length) {
+    const { changeApplicationOwner } = await import('../applications/service.ts')
+    const derived = deriveFragmentPermissions(parentPermissions, parentType, 'applications')
+    for (const application of fragments.applications) await changeApplicationOwner(ctx, application as any, newOwner, derived)
   }
 }
 

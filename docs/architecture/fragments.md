@@ -4,16 +4,15 @@ This document describes **fragments**: datasets and applications that exist only
 another resource, declared by a `partOf` attribute on the fragment itself. See also
 [Application keys](./application-keys.md) for the application-context mechanism that fragments
 extend, and the design spec at `docs/superpowers/specs/2026-09-18-fragments-design.md` (some
-decisions there — notably owner-change cascading — were amended during implementation; this
-document describes the code as built).
+decisions there were amended during implementation; this document describes the code as built).
 
 ## 1. What a fragment is
 
 A fragment is a dataset or an application that carries `partOf: { type: 'dataset' | 'application',
 id: string }`. It has no ACL of its own — its permissions are a **derived ACL**, recomputed from
 the parent's ACL by a pure function and re-synced whenever the parent's ACL changes (§4). It cannot
-be published, is hidden from listings by default (§6), is deleted with its parent (§7), and can be
-detached back into an ordinary standalone resource.
+be published, is hidden from listings by default (§6), is deleted with its parent and follows its
+owner changes (§7), and can be detached back into an ordinary standalone resource.
 
 Three use cases drove the design:
 
@@ -88,7 +87,7 @@ data it needs (parent lookup, sibling-fragment count) is fetched by `preparePart
 | A fragment cannot be published (`publicationSites`, `requestedPublicationSites`, `publications`) nor declared as reference data, on **any** write route | 400 | `fragmentWriteBodyError` / `fragmentForbiddenPatchKey` (`operations.ts`), applied by `fragments/middlewares.ts` on all four write routes (§3.1) |
 | `PUT /:id/permissions` on a fragment | 403 | `misc/utils/permissions.ts:367` |
 | `PUT /:id/owner` on a fragment | 403 | `datasets/routes/metadata.ts:228`, `applications/router.ts:146` |
-| `PUT /:id/owner` on a resource that still has fragments | 400 | `datasets/routes/metadata.ts:229`, `applications/router.ts:147` |
+| `PUT /:id/owner` on a parent: every fragment must be transferable too (integrity off, creation rights and quotas in the new owner) | 400 / 403 / 429 | `prepareFragmentsOwnerChange` (`fragments/service.ts`), `changeOwnerLimitError` (`limits/service.ts`) |
 | `partOf` cannot be changed by the body-replacing write routes (dataset `POST`/`PUT /:datasetId`, application `PUT /:applicationId`), only by `PATCH` | 400 | `fragmentWriteBodyError`, applied by `fragments/middlewares.ts` (§3.1) |
 
 ### 3.1 One guard, four write routes
@@ -146,7 +145,7 @@ fragment may be prepared and attached before the parent's configuration includes
 **Nothing is stripped from a fragment's operation list.** An early draft of this feature stripped
 ACL-management, owner-change, publication and key operations from a fragment's derived permissions.
 That was dropped as unneeded complexity: the three things a fragment must never do are refused at
-the route (the `PUT /permissions` 403, the two owner-change refusals above, and the forbidden
+the route (the `PUT /permissions` 403, the owner-change refusal above, and the forbidden
 publication keys on PATCH). Everything else — an `admin` entry derived onto a fragment really does
 carry `admin`, including `getKeys`/`setKeys`, `writeExports`, `setReadApiKey` — is simply hidden in
 the UI behind a `!resource.partOf` check (§8). There is no server-side attempt to make a fragment's
@@ -237,7 +236,7 @@ with the write it accounts for. The origin is `propagation`, not `user`: the act
 | Creation with `partOf` | For an application, `initResourcePermissions` is skipped entirely — `initApplicationPermissions` (`applications/service.ts:163-169`) branches on `partOf` before ever calling it. For a dataset, `initResourcePermissions` runs unconditionally (`datasets/service.ts:308`) and its result is then **overwritten** by `preparePartOf(...).permissions` when `dataset.partOf` is set (`datasets/service.ts:309-312`) — same end state, different path. |
 | Attach (existing resource) | Same derivation, computed in `applyPartOfChange` at attach time (§7). |
 | Identity rewrites (`identities/service.ts`) | Unchanged: they rewrite ACL entries across both collections by owner filter, fragments included — no fragment-specific code needed. |
-| Owner change of the parent | Refused while the parent has fragments (§7), so there is nothing to re-sync. |
+| Owner change of the parent | The cascade (§7) gives each fragment the ACL derived from the parent's post-transfer ACL. |
 
 A failure between the parent's update and the `updateMany` calls leaves fragments with a stale but
 previously-valid ACL; re-running the sync is idempotent. There is no repair endpoint in this
@@ -393,9 +392,9 @@ parent's finalization, whose count queries every descendant index.
   application that never went through `PUT /permissions` or its `onPublic` hook.
 - The attach write pins the fragment's owner and the absence of `partOf` in its filter (409 when
   they changed since validation), then re-reads the parent and re-validates: a parent that changed
-  owner or became a fragment in between gets the attach undone (409). The owner-change routes still
-  check `countFragments` before writing, without a re-check after: an attach landing exactly between
-  that count and the owner write is not caught, and needs the same admin rights on both sides.
+  owner or became a fragment in between gets the attach undone (409). The owner-change cascade lists
+  the fragments before writing, without a re-check after: an attach landing exactly between that
+  listing and the parent's owner write is not moved along, and needs the same admin rights on both sides.
 - **Attach** (`null → value`): replaces `permissions` with the freshly derived ACL, in the same
   update that sets `partOf`. A resource that is already a fragment cannot be re-parented directly
   (400 — "détachez-la avant de la rattacher à un autre parent"); detach, then attach.
@@ -441,17 +440,30 @@ fragment) after all fragment datasets are gone. This is deliberately noted in a 
 site: **do not remove it as apparent dead weight on the dataset path** — doing so would silently
 leave the owner's cached storage total stale whenever fragments are deleted through an application.
 
-**Owner change is refused, not cascaded** — the one deviation from the original design (its §6
-proposed cascading the owner change through every fragment). As built:
+**Owner change cascade.** `PUT /:id/owner` on a fragment itself is refused (403, "détachez-le
+d'abord"); on a parent it moves every fragment along, so the same-owner invariant (§1) holds after the
+transfer as it did before. Both owner-change routes (`datasets/routes/metadata.ts`,
+`applications/router.ts`):
 
-- `PUT /:id/owner` on a fragment itself → 403 ("détachez-le d'abord").
-- `PUT /:id/owner` on a resource that still has fragments → 400 ("détachez d'abord les
-  fragments"), checked via `fragmentsService.countFragments(...)`.
+1. check everything before writing anything: `prepareFragmentsOwnerChange` (`fragments/service.ts`)
+   lists the parent's owned fragments and refuses if one of them has integrity active (anchors are
+   owner-scoped, the same refusal as on a standalone transfer) or if the caller cannot create that kind
+   of resource in the new owner; `changeOwnerLimitError` (`limits/service.ts`) checks `nb_datasets`,
+   `store_bytes` and `indexed_bytes` against the parent and all its dataset fragments at once. A
+   refusal moves nothing.
+2. compute the parent's post-transfer ACL (`ownerChangePermissions`, `misc/utils/permissions.ts`,
+   the same rules as any transfer: public entries kept, partners kept within the same organization);
+3. transfer the fragments (`changeFragmentsOwner`), each through the same per-resource function as a
+   standalone transfer (`changeDatasetOwner` in `datasets/service.ts` — file move, search index,
+   notifications, remote-service sync — and `changeApplicationOwner` in `applications/service.ts` —
+   application key owner), but with the ACL derived from step 2 instead of a reset one;
+4. transfer the parent, then recompute both owners' storage totals.
 
-The dataset owner-change route moves file directories and re-checks quotas inline per dataset, so a
-cascade would have to re-run that whole route once per fragment; the two refusals keep the
-same-owner invariant with a single guard instead. Cascading remains a possible later addition
-(§10).
+Fragments go first: if the request fails midway, the fragments already moved are no longer reached by
+`ownedFragmentsFilter` on the parent's old owner, so retrying the parent's transfer moves the rest and
+then the parent. The cascade is not re-checked against a concurrent attach landing between the listing
+and the parent's write (same posture as the delete cascade).`changeDatasetOwner` moves both the published and the draft directory of a dataset, so a fragment
+with a pending draft keeps it.
 
 **Identity rewrites** (`identities/service.ts`): nothing fragment-specific to do — there is no owner
 data on `partOf` itself, and the ACL rewrite already covers fragments through the normal

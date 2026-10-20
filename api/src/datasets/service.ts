@@ -1,6 +1,8 @@
 import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
+import moment from 'moment'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import memoize from 'memoizee'
@@ -11,7 +13,7 @@ import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
 import * as webhooks from '../misc/utils/webhooks.ts'
-import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
+import { send as sendNotification, sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
@@ -29,13 +31,15 @@ import * as integrityOps from '../integrity/operations.ts'
 import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import * as fragmentsService from '../fragments/service.ts'
+import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
+import { type LogContext } from '../misc/utils/req-context.ts'
 import { partOfListFilter } from '../fragments/operations.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
-import type { VirtualDataset } from '#types'
+import type { VirtualDataset, Permission } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
@@ -480,6 +484,73 @@ export const deleteDataset = async (app: any, dataset: any) => {
       await updateStorage(dataset, { deleted: true })
     }
   }
+}
+
+/**
+ * Transfer a dataset to newOwner. `dataset` may be a draft view (?draft=true), `datasetFull` is the stored
+ * document. `fragmentPermissions` is given for a fragment, whose ACL is derived from its parent's new ACL
+ * rather than reset. The caller checks permissions and quotas, and recomputes the storage totals.
+ */
+export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, dataset: any, datasetFull: any, newOwner: any, fragmentPermissions?: Permission[]) => {
+  const { sessionState } = ctx
+  const patch: any = {
+    owner: newOwner,
+    updatedBy: { id: sessionState.user.id },
+    updatedAt: moment().toISOString()
+  }
+
+  const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === newOwner.type && dataset.owner.id === newOwner.id
+  if (sameOrg && !dataset.owner.department && newOwner.department) {
+    // moving from org root to a department, we keep the publicationSites
+  } else {
+    patch.publicationSites = []
+  }
+  if (!sameOrg && newOwner.publications) {
+    patch.publications = []
+  }
+
+  patch.permissions = fragmentPermissions ?? await permissions.ownerChangePermissions(dataset, newOwner)
+
+  // owner.name/owner.departmentName are indexed fields, and the permissions the search-text guard reads
+  // were just rewritten: recompute rather than carry the old owner's terms across the transfer.
+  // the stored document, not the draft-merged one (?draft=true)
+  const indexedDataset = { ...datasetFull, owner: patch.owner, permissions: patch.permissions }
+  const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
+  const patchedDataset: any = await mongo.db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
+
+  // Move all files: the published version and a pending draft each have their own directory, move
+  // both whichever of the two views the transfer was requested on
+  for (const draftReason of [undefined, 'draft']) {
+    const srcDir = dir({ id: dataset.id, owner: dataset.owner, draftReason })
+    const dstDir = dir({ id: dataset.id, owner: patchedDataset.owner, draftReason })
+    if (srcDir === dstDir || !await filesStorage.pathExists(srcDir)) continue
+    try {
+      await filesStorage.moveDir(srcDir, dstDir)
+    } catch (err) {
+      console.warn('Error while moving dataset directory', err)
+    }
+  }
+
+  const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+  const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
+
+  eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { ...ctx.logCtx, account: dataset.owner })
+  eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { ...ctx.logCtx, account: patch.owner })
+  const event = {
+    title: 'Changement de propriétaire d\'un jeu de données',
+    body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
+    topic: {
+      key: `data-fair:dataset-change-owner:${dataset.id}`
+    },
+    resource: { type: 'dataset', title: dataset.title, id: dataset.id },
+    sender: { ...dataset.owner, role: 'admin' }
+  }
+  await sendNotification(event, sessionState)
+  await sendNotification({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
+
+  await syncRemoteService(patchedDataset)
+  return patchedDataset
 }
 
 export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean, who?: integrityOps.WhoHint) => {

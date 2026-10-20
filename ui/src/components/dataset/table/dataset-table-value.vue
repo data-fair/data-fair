@@ -3,6 +3,7 @@
     <!-- attachment_url is empty if the value is an external link -->
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
+      tabindex="-1"
       :href="extendedValue.raw"
       :title="t('download', { name: extendedValue.formatted })"
       target="_blank"
@@ -12,6 +13,7 @@
   <template v-else-if="property['x-refersTo'] === 'https://schema.org/WebPage'">
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
+      tabindex="-1"
       target="_blank"
       rel="noopener"
       :href="extendedValue.raw"
@@ -70,6 +72,7 @@
     >
       <v-btn
         v-if="extendedValue.displayDetail"
+        tabindex="-1"
         :icon="dense ? mdiLoupe : mdiMagnifyPlus"
         :density="dense ? 'comfortable' : 'default'"
         size="x-small"
@@ -79,15 +82,15 @@
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-if="!noFilter && !filtered && extendedValue.filterable"
-        :icon="mdiFilterVariant"
-        :loading="filterLoading"
+        v-if="!noFilter && extendedValue.filterable"
+        tabindex="-1"
+        :icon="filtered ? mdiFilterRemove : mdiFilterVariant"
         :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
-        :title="t('filterValue')"
-        @click="emit('filter')"
+        :title="filtered ? t('removeFilter') : t('filterValue')"
+        @click="filtered ? emit('removeFilter') : emit('filter')"
       />
     </div>
   </div>
@@ -96,6 +99,7 @@
 <i18n lang="yaml">
 fr:
   filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
+  removeFilter: Retirer le filtre sur cette valeur
   showFullValue: Afficher la valeur entière
   download: "Télécharger {name} (nouvelle fenêtre)"
   dtSource: Source
@@ -103,6 +107,7 @@ fr:
   dtLocal: Votre fuseau
 en:
   filterValue: Filter the lines that have the same value in this column
+  removeFilter: Remove the filter on this value
   showFullValue: Show full value
   download: "Download {name} (new window)"
   dtSource: Source
@@ -114,7 +119,7 @@ en:
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResultValue } from '../../../composables/dataset/lines'
 import { dateTimeBreakdown } from '../../../composables/dataset/format-date-logic'
-import { mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
+import { mdiFilterRemove, mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({
   value: { type: Object as () => ExtendedResultValue, required: true },
@@ -122,12 +127,12 @@ const { value: extendedValue, property } = defineProps({
   filtered: { type: Boolean, required: true },
   hovered: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
-  filterLoading: { type: Boolean, default: false },
   noFilter: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
   filter: [],
+  removeFilter: [],
   showDetailDialog: []
 }>()
 

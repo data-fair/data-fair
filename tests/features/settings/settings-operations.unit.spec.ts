@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents, matchAgentChatAudience } from '../../../api/src/settings/operations.ts'
 
 test.describe('rootSettingsFilter', () => {
   test('always targets the root document, ignoring the department the caller is in', () => {
@@ -211,5 +211,46 @@ test.describe('removeWebhookEvents', () => {
 
   test('leaves a webhook that listens to every event (empty list) alone', () => {
     assert.equal(removeWebhookEvents([hook('a', [])], removed), null)
+  })
+})
+
+test.describe('matchAgentChatAudience', () => {
+  const rootAdmin = { role: 'admin' }
+  const rootUser = { role: 'user' }
+  const dep1Admin = { role: 'admin', department: 'dep1' }
+  const dep2Contrib = { role: 'contrib', department: 'dep2' }
+
+  test('an empty or missing audience lets every member in', () => {
+    for (const member of [rootAdmin, rootUser, dep1Admin, dep2Contrib]) {
+      assert.ok(matchAgentChatAudience(undefined, member))
+      assert.ok(matchAgentChatAudience([], member))
+    }
+  })
+
+  test('"-" restricts to the main organization, "*" accepts any department', () => {
+    const rootOnly = [{ department: '-', roles: ['admin'] }]
+    assert.ok(matchAgentChatAudience(rootOnly, rootAdmin))
+    assert.ok(!matchAgentChatAudience(rootOnly, rootUser))
+    assert.ok(!matchAgentChatAudience(rootOnly, dep1Admin))
+
+    const anyAdmin = [{ department: '*', roles: ['admin'] }]
+    assert.ok(matchAgentChatAudience(anyAdmin, rootAdmin))
+    assert.ok(matchAgentChatAudience(anyAdmin, dep1Admin))
+    assert.ok(!matchAgentChatAudience(anyAdmin, dep2Contrib))
+  })
+
+  test('a department id matches that department only, empty roles meaning all roles', () => {
+    const dep2 = [{ department: 'dep2' }]
+    assert.ok(matchAgentChatAudience(dep2, dep2Contrib))
+    assert.ok(!matchAgentChatAudience(dep2, dep1Admin))
+    assert.ok(!matchAgentChatAudience(dep2, rootAdmin))
+  })
+
+  test('admins are not implicitly included and any matching rule is enough', () => {
+    assert.ok(!matchAgentChatAudience([{ department: '*', roles: ['contrib'] }], rootAdmin))
+    const rules = [{ department: '-', roles: ['admin'] }, { department: 'dep2', roles: ['contrib'] }]
+    assert.ok(matchAgentChatAudience(rules, rootAdmin))
+    assert.ok(matchAgentChatAudience(rules, dep2Contrib))
+    assert.ok(!matchAgentChatAudience(rules, dep1Admin))
   })
 })

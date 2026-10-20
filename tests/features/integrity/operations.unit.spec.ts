@@ -416,13 +416,52 @@ test('date skew: within tolerance is fine, beyond is a suspect anomaly', () => {
   expect(anomaly).toMatchObject({ kind: 'date-skew', key: 'p/000000003', confidence: 'suspect' })
 })
 
-test('ack fingerprints cover an anomaly exactly, new versions escape an old ack', () => {
-  const shadow: ops.TrailAnomaly = { kind: 'version-divergence', key: 'p/000000000', confidence: 'confirmed', versionIds: ['original', 'shadow'] }
-  const fp = ops.anomalyFingerprint(shadow)
-  expect(ops.filterAckedAnomalies([shadow], [fp])).toEqual([])
-  // a NEW shadow version after the ack changes the fingerprint → resurfaces
-  const reShadow = { ...shadow, versionIds: ['original', 'shadow', 'shadow2'] }
-  expect(ops.filterAckedAnomalies([reShadow], [fp])).toEqual([reShadow])
+test('trail fold: current view entries carry a per-key clean flag', () => {
+  const { current } = foldAll([
+    v('p/000000000', 'v1'),
+    v('p/000000001', 'shadow', { etag: 'bbb' }), v('p/000000001', 'original'),
+    v('p/000000002', 'v3'), { key: 'p/000000002', versionId: 'm1', deleteMarker: true },
+    v('p/000000003', 'newer'), v('p/000000003', 'older') // byte-identical retry: clean
+  ])
+  expect(current.get('p/000000000')!.clean).toBe(true)
+  expect(current.get('p/000000001')!.clean).toBe(false)
+  expect(current.get('p/000000002')!.clean).toBe(false)
+  expect(current.get('p/000000003')!.clean).toBe(true)
+})
+
+test('trail fold: an anomaly sink receives anomalies instead of the accumulator', () => {
+  const seen: ops.TrailAnomaly[] = []
+  const acc = ops.newTrailFold((a) => seen.push(a))
+  ops.foldTrailVersions(acc, [v('p/000000000', 'v1'), { key: 'p/000000000', versionId: 'm1', deleteMarker: true }])
+  const { anomalies } = ops.finishTrailFold(acc)
+  expect(anomalies).toEqual([])
+  expect(seen).toHaveLength(1)
+  expect(seen[0].kind).toBe('delete-marker')
+})
+
+test('collector filters acks before capping: acked anomalies cannot crowd out an unacked one', () => {
+  const acked = Array.from({ length: 60 }, (_, n) => ({ kind: 'delete-marker' as const, key: `p/${n}`, confidence: 'confirmed' as const, versionIds: [`m${n}`] }))
+  const fresh = { kind: 'version-divergence' as const, key: 'p/zzz', confidence: 'confirmed' as const, versionIds: ['a', 'b'] }
+  const collector = ops.newAnomalyCollector(acked.map(ops.anomalyFingerprint), 50)
+  for (const a of acked) collector.push(a)
+  collector.push(fresh)
+  expect(collector.total()).toBe(1)
+  expect(collector.kept).toEqual([fresh])
+})
+
+test('collector caps kept anomalies but keeps counting', () => {
+  const collector = ops.newAnomalyCollector([], 2)
+  for (let n = 0; n < 5; n++) collector.push({ kind: 'delete-marker', key: `p/${n}`, confidence: 'confirmed', versionIds: [`m${n}`] })
+  expect(collector.kept).toHaveLength(2)
+  expect(collector.total()).toBe(5)
+})
+
+test('collector: a re-shadowed acked key resurfaces (fingerprint pins the version set)', () => {
+  const shadow = { kind: 'version-divergence' as const, key: 'p/1', confidence: 'confirmed' as const, versionIds: ['a', 'b'] }
+  const collector = ops.newAnomalyCollector([ops.anomalyFingerprint(shadow)], 50)
+  collector.push(shadow)
+  collector.push({ ...shadow, versionIds: ['a', 'b', 'c'] })
+  expect(collector.total()).toBe(1)
 })
 
 test('shouldNotify: alerts on entry, re-alerts only past the window, silent when good', () => {

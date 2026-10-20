@@ -1386,3 +1386,19 @@ export const valuesIncludeClause = (
   const prefix = qMode === 'complete' && !prop['x-capabilities']?.wildcard
   return valuesIncludePattern(q, prefix ? 'prefix' : 'contains')
 }
+
+// the maximum precision_threshold accepted by Elasticsearch: below it the cardinality agg counts
+// (practically) exactly, above it the count is an HyperLogLog estimate
+export const UNIQUE_VALUES_PRECISION_THRESHOLD = 40000
+const UNIQUE_VALUES_TOLERANCE = 0.01
+
+/**
+ * Whether a column holds a distinct value on every line, from its distinct values count (empty
+ * values are not counted) and the number of lines. Strict below the precision threshold, within
+ * a small tolerance above it, where the estimate can land on either side of the true count.
+ */
+export const hasUniqueValues = (cardinality: number, nbLines: number): boolean => {
+  if (!nbLines) return false
+  if (nbLines <= UNIQUE_VALUES_PRECISION_THRESHOLD) return cardinality === nbLines
+  return Math.abs(cardinality - nbLines) <= nbLines * UNIQUE_VALUES_TOLERANCE
+}

@@ -1,6 +1,6 @@
 import express from 'express'
-import path from 'node:path'
-import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { readFile } from 'node:fs/promises'
 import { reqAdminMode } from '@data-fair/lib-express'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import {
@@ -26,11 +26,16 @@ router.use(async (req, res, next) => {
 
 router.use(cacheHeaders.noCache)
 
-let info: any = { version: process.env.NODE_ENV }
-router.get('/info', async (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    info = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../BUILD.json'), 'utf8'))
+// BUILD.json is written by CI; an image built without it must still start and answer
+let info: Record<string, string> = { version: process.env.NODE_ENV ?? 'development' }
+if (process.env.NODE_ENV === 'production') {
+  try {
+    info = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../BUILD.json'), 'utf8'))
+  } catch {
+    info = { version: 'unknown (built without CI)' }
   }
+}
+router.get('/info', async (req, res) => {
   res.json(info)
 })
 

@@ -2,7 +2,6 @@
 import type { Router, Request, Response, NextFunction } from 'express'
 import type { Request as DfRequest, Event } from '#types'
 import clone from '@data-fair/lib-utils/clone.js'
-import moment from 'moment'
 import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -10,7 +9,6 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
-import filesStorage from '#files-storage'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset } from '../middlewares.ts'
 import { safeDescription, safeSchema } from '../operations.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './_common.ts'
@@ -31,39 +29,40 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
+import { findDatasets, applyPatch, deleteDataset, changeDatasetOwner } from '../service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
 import { reqEventLogContext, reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
-import { searchIndexPatch } from '../utils/search-text.ts'
-import { mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
-import { filterByContextualCardinality, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
+import { filterByContextualCardinality, filterByUniqueValues, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
 import { manageESError } from './_es-error.ts'
-import { dir } from '../utils/files.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 import { prepareCustomMetadata } from '../utils/custom-metadata.ts'
 
 const clean = datasetUtils.clean
-const debugLimits = debugModule('limits')
 const debugBreakingChanges = debugModule('breaking-changes')
 
 // retrieve only the schema.. Mostly useful for easy select fields
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
-  if (contextualCardinality && reqQuery.maxCardinality && hasDataFilters(reqQuery)) {
+  const filtered = hasDataFilters(reqQuery)
+  const uniqueValues = reqQuery.uniqueValues === 'true'
+  const contextualMaxCardinality = !!reqQuery.maxCardinality && filtered
+  if (contextualCardinality && (contextualMaxCardinality || uniqueValues)) {
     // which columns survive tells whether some line matches the filters, e.g. maxCardinality=0
-    // keeps a column iff no line does: that is a read of the lines, not of the schema
-    if (!can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
+    // keeps a column iff no line does, uniqueValues tells how many lines match at most: that is a
+    // read of the lines, not of the schema
+    if (filtered && !can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
       throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
     }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
-    // within the context of the data filters, instead of the stored whole-dataset cardinality
+    // within the context of the data filters, instead of the stored whole-dataset cardinality;
+    // uniqueValues compares distinct values to matching lines in ES, with or without data filters
     // this path runs an ES query, so unlike the plain schema read it gets the same cache headers
     // as the data endpoints; the reference date is the latest of updatedAt (schema metadata edits)
     // and finalizedAt (data changes, refreshed cardinalities)
@@ -71,17 +70,20 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
     const cacheTimes = [dataset.updatedAt, dataset.finalizedAt].filter((d): d is string => !!d).map(d => new Date(d).getTime())
     const cacheDate = new Date(Math.max(...cacheTimes))
     if (cacheHeaders.applyResourceCacheHeaders(req, res, cacheDate)) return
-    const maxCardinality = Number(reqQuery.maxCardinality)
     const schemaQuery: Record<string, string> = { ...reqQuery }
-    delete schemaQuery.maxCardinality
+    if (contextualMaxCardinality) delete schemaQuery.maxCardinality
     schema = filterSchema(schema, schemaQuery)
     try {
-      schema = await filterByContextualCardinality(dataset, schema, reqQuery, maxCardinality, createEsRequestOptions(req, res))
+      const esOptions = createEsRequestOptions(req, res)
+      if (contextualMaxCardinality) schema = await filterByContextualCardinality(dataset, schema, reqQuery, Number(reqQuery.maxCardinality), esOptions)
+      if (uniqueValues) schema = await filterByUniqueValues(dataset, schema, reqQuery, filtered, esOptions)
     } catch (err) {
       await manageESError(req, err)
     }
   } else {
     schema = filterSchema(schema, reqQuery)
+    // the safe schema gives no clue about the data, no column can be told to hold unique values
+    if (uniqueValues) schema = []
   }
   if (reqQuery.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', contentDisposition(reqDataset(req).slug + '-tableschema.json'))
@@ -305,7 +307,6 @@ export const registerMetadataRoutes = (router: Router) => {
     usersUtils.normalizeOwner(req.body)
 
     if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
-    if (await fragmentsService.countFragments('dataset', dataset.id)) throw httpError(400, 'Cette ressource a des fragments, détachez-les avant de changer de propriétaire')
 
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
@@ -319,92 +320,19 @@ export const registerMetadataRoutes = (router: Router) => {
     // (checked against all the user's memberships, the new owner is rarely the active account)
     if (!permissions.canDoForOwner(req.body, 'datasets', 'post', sessionState, true)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
 
-    if (req.body.type !== dataset.owner.type || req.body.id !== dataset.owner.id) {
-      const remaining = await limits.remaining(req.body)
-      if (remaining.nbDatasets === 0) {
-        debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
-        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
-      }
-      if (dataset.storage) {
-        if (remaining.storage !== -1 && remaining.storage < dataset.storage.size) {
-          debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
-        }
-        if (remaining.indexed !== -1 && dataset.storage.indexed && remaining.indexed < dataset.storage.indexed.size) {
-          debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: dataset.storage })
-          return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
-        }
-      }
-    }
+    // fragments have their parent's owner: they follow it, like they follow its deletion
+    const fragments = await fragmentsService.prepareFragmentsOwnerChange('dataset', dataset, req.body, sessionState)
 
-    const patch: any = {
-      owner: req.body,
-      updatedBy: { id: sessionState.user.id },
-      updatedAt: moment().toISOString()
-    }
+    const limitError = await limits.changeOwnerLimitError(dataset.owner, req.body, [dataset, ...fragments.datasets])
+    if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
 
-    const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === req.body.type && dataset.owner.id === req.body.id
-    if (sameOrg && !dataset.owner.department && req.body.department) {
-      // moving from org root to a department, we keep the publicationSites
-    } else {
-      patch.publicationSites = []
-    }
-    if (!sameOrg && req.body.publications) {
-      patch.publications = []
-    }
-
-    const preservePermissions = (dataset.permissions || []).filter((p: any) => {
-      // keep public permissions
-      if (!p.type) return true
-      if (sameOrg) {
-        // keep individual user permissions (user partners)
-        if (p.type === 'user') return true
-        // keep permissions to external org (org partners)
-        if (p.type === 'organization' && p.id !== dataset.owner.id) return true
-      }
-      return false
-    })
-    await permissions.initResourcePermissions(patch, preservePermissions)
-
-    // owner.name/owner.departmentName are indexed fields, and initResourcePermissions may have
-    // rewritten the permissions the search-text guard reads: recompute rather than carry the old
-    // owner's terms across the transfer.
-    // the stored document, not the draft-merged one (?draft=true)
-    const indexedDataset = { ...reqDatasetFull(req), owner: patch.owner, permissions: patch.permissions }
-    const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
-    const patchedDataset: any = await mongo.db.collection('datasets')
-      .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
-
-    // Move all files
-    if (dir(dataset) !== dir(patchedDataset)) {
-      try {
-        await filesStorage.moveDir(dir(dataset), dir(patchedDataset))
-      } catch (err) {
-        console.warn('Error while moving dataset directory', err)
-      }
-    }
-
-    const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
-    const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
-
-    eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner })
-    eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: patch.owner })
-    const event = {
-      title: 'Changement de propriétaire d\'un jeu de données',
-      body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
-      topic: {
-        key: `data-fair:dataset-change-owner:${dataset.id}`
-      },
-      resource: { type: 'dataset', title: dataset.title, id: dataset.id },
-      sender: { ...dataset.owner, role: 'admin' }
-    }
-    await notifications.send(event, sessionState)
-    await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
-
-    await syncRemoteService(patchedDataset)
+    const ctx = { sessionState, logCtx: reqEventLogContext(req) }
+    const newPermissions = await permissions.ownerChangePermissions(dataset, req.body)
+    await fragmentsService.changeFragmentsOwner(ctx, 'datasets', fragments, req.body, newPermissions)
+    const patchedDataset = await changeDatasetOwner(ctx, dataset, reqDatasetFull(req), req.body, newPermissions)
 
     await updateTotalStorage(dataset.owner)
-    await updateTotalStorage(patch.owner)
+    await updateTotalStorage(req.body)
 
     res.status(200).json(clean(req as DfRequest, patchedDataset))
   })

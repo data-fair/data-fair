@@ -425,6 +425,7 @@
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
+      :nb-fragments="nbFragments"
       @changed="store.applicationFetch.refresh()"
     />
 
@@ -696,15 +697,16 @@ watch(application, (app) => {
   if (can('getPermissions') && !permissionsFetch.initialized.value) permissionsFetch.refresh()
 }, { immediate: true })
 
-// Fetch datasets and children apps once config is loaded
+// Refetch on every config change: the store outlives this page, so an edit made on the config page must show up here
 watch(() => store.config.value, (conf) => {
   if (!conf) return
-  if (!datasetsFetch.initialized.value) datasetsFetch.refresh()
-  if (!childrenAppsFetch.initialized.value) childrenAppsFetch.refresh()
+  datasetsFetch.refresh()
+  childrenAppsFetch.refresh()
 }, { immediate: true })
 
-const datasets = computed(() => datasetsFetch.data.value?.results ?? [])
-const childrenApps = computed(() => childrenAppsFetch.data.value?.results ?? [])
+// a null url means the config no longer references any: ignore the stale previous response
+const datasets = computed(() => (datasetsFetch.fullUrl.value && datasetsFetch.data.value?.results) || [])
+const childrenApps = computed(() => (childrenAppsFetch.fullUrl.value && childrenAppsFetch.data.value?.results) || [])
 
 const hasPrivateParents = computed(() =>
   datasets.value.some(d => d.visibility === 'private' || d.visibility === 'protected')

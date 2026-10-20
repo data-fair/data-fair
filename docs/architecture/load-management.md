@@ -183,6 +183,11 @@ so a throttled client is told what to change, not just that it was throttled.
   are in §9.
 - `_source` defaults to all schema fields except the heavy geo-index fields (`_geoshape`,
   `_geocorners`); `select` validated against the schema.
+- `q` and `q_ignored` are capped at `maxQLength` (**1000** characters) — `400` otherwise. `qs` has
+  no own cap: it is parsed and its fields checked against the schema, and the whole request line
+  is bounded by Node's 16 KiB header limit. The dataset API doc declares these bounds
+  (`maxLength`, `maxItems`, `int32`) so OpenAPI linters such as Tenable or Spectral's OWASP ruleset
+  see the limits the API enforces.
 - **Not** set: `terminate_after` — a single query can scan an unbounded number of documents per
   shard.
 

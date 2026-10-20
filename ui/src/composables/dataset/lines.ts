@@ -104,7 +104,8 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
               extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
             }
           }
-          if (property['x-refersTo'] === 'https://schema.org/WebPage' && raw[property.key]) {
+          // the API skips truncating these concepts to keep the raw value usable, so truncate the display here
+          if (untruncatedConcepts.has(property['x-refersTo'] as string) && typeof raw[property.key] === 'string') {
             extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
           }
           // an api key writes lines under an "apiKey:<id>" identity, which has no avatar
@@ -150,12 +151,17 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
 // FieldValue is kept as `any` because dataset field values come from dynamic API responses
 // with heterogeneous types determined by the schema at runtime
 
+const untruncatedConcepts = new Set(['https://schema.org/WebPage', 'http://schema.org/image', 'https://www.w3.org/2006/vcard/ns#email'])
+
 const prepareExtendedResultValue = (value: any, property: SchemaProperty, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
+  const displayDetail = shouldDisplayDetail(value, property, truncate)
   return {
     raw: value,
     formatted: formatValue(value, property, null, localeDayjs),
-    displayDetail: shouldDisplayDetail(value, property, truncate),
-    filterable: isFilterable(value, property)
+    displayDetail,
+    // a value long enough to be truncated is no useful filter, and often too long for an
+    // exact one (keyword fields ignore values over 200 characters): it offers its full value only
+    filterable: !displayDetail && isFilterable(value, property)
   }
 }
 
@@ -189,7 +195,11 @@ export const formatValue = (value: any, property: SchemaProperty, truncate: numb
     if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
     return value ? 'oui' : 'non'
   }
-  if (property.type === 'number' || property.type === 'integer') return typeof value === 'number' ? formatNumber(value, localeDayjs.locale) : value + ''
+  if (property.type === 'number' || property.type === 'integer') {
+    // a number can come as a string, from the URL of a filter
+    const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value
+    return typeof n === 'number' && Number.isFinite(n) ? formatNumber(n, localeDayjs.locale) : value + ''
+  }
   if (truncate) return truncateMiddle(value + '', truncate, 0, '...')
   return value
 }

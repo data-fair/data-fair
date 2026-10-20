@@ -270,3 +270,29 @@ test.describe('settings auto-save', () => {
     }
   })
 })
+
+test.describe('settings AI assistant audience', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('an org admin activates the assistant and restricts it to main organization admins', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+
+    await goToSettingsOrg(page, goToWithAuth)
+    const section = page.locator('#agentChat')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByLabel(/Activer l'assistant IA/i).check()
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChat, { timeout: 10000 }).toBe(true)
+
+    // a new rule defaults to the main organization only, all roles
+    await section.getByRole('button', { name: /Ajouter une règle/i }).click()
+    await section.locator('.v-select').filter({ hasText: 'Rôles' }).click()
+    await page.getByRole('option', { name: 'admin', exact: true }).click()
+    await page.keyboard.press('Escape')
+
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChatAudience, { timeout: 10000 })
+      .toEqual([{ department: '-', roles: ['admin'] }])
+    await expect(section.getByText(/Seuls les membres correspondant/)).toBeVisible()
+  })
+})

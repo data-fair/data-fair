@@ -84,7 +84,7 @@ export const simpleMetricsAgg = async (client: Client, dataset: any, query: Reco
     fieldMetrics[metricField] = metrics
     for (const metric of metrics) {
       esQuery.aggs[metricField + ':' + metric] = {
-        [metric]: { field: metricField }
+        [metric]: metric === 'percentiles' ? { field: metricField, keyed: false } : { field: metricField }
       }
     }
   }

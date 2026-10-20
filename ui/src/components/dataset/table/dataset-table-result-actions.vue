@@ -3,6 +3,7 @@
     <template v-if="canBulkLines">
       <v-btn
         v-if="selectedResults.some(r => r._id === result._id)"
+        tabindex="-1"
         :title="t('unselectLine')"
         color="primary"
         :size="dense ? 'md' : 'large'"
@@ -13,6 +14,7 @@
       />
       <v-btn
         v-else
+        tabindex="-1"
         :size="dense ? 'md' : 'large'"
         variant="text"
         :title="t('selectLine')"
@@ -23,6 +25,7 @@
     </template>
     <v-btn
       v-if="canDeleteLine"
+      tabindex="-1"
       :size="dense ? 'md' : 'large'"
       color="warning"
       :title="t('deleteLine')"
@@ -33,6 +36,7 @@
     />
     <v-btn
       v-if="canUpdateLine"
+      tabindex="-1"
       :icon="mdiPencil"
       :size="dense ? 'md' : 'large'"
       variant="text"

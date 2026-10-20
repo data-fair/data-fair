@@ -146,6 +146,7 @@
           }
         },
         "lockWaitMs": { "type": "number" },
+        "adminSyncBudgetMs": { "type": "number" },
         "trail": {
           "type": "object",
           "properties": {

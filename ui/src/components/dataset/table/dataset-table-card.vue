@@ -9,12 +9,16 @@
     :class="{'dataset-table-card--selected': selected}"
     variant="outlined"
   >
+    <!-- with buttons, the card header is the first field of the keyboard navigation
+         (dataset-table, onCardsKeydown), on every card so that the fields line up -->
     <div
-      v-if="selectable || label || result._thumbnail || showMapBtn"
+      v-if="hasActionsField || label || result._thumbnail"
       class="d-flex align-center ga-2 pa-2 pb-0"
+      v-bind="hasActionsField ? fieldAttrs(0) : {}"
     >
       <v-btn
         v-if="selectable"
+        tabindex="-1"
         :icon="selected ? mdiCheckboxMarked : mdiCheckboxBlankOutline"
         :title="selected ? t('unselectLine') : t('selectLine')"
         :color="selected ? 'primary' : undefined"
@@ -34,6 +38,7 @@
       >{{ label }}</span>
       <v-btn
         v-if="showMapBtn"
+        tabindex="-1"
         :icon="mdiMap"
         :title="t('showMapPreview')"
         class="ms-auto"
@@ -52,17 +57,19 @@
         v-if="descriptionField && result.values[descriptionField.key]"
         :inner-html.prop="(result.values[descriptionField.key] + '')"
       />-->
-      <v-list
-        density="compact"
-        class="bg-transparent pt-0"
-      >
+      <!-- not a v-list: it is a Tab stop of its own and it handles the arrow keys, both against
+           the list's keyboard navigation (RGAA 7.3) -->
+      <div class="pb-2">
         <template
-          v-for="header in otherHeaders"
+          v-for="(header, i) in otherHeaders"
           :key="`input-${header.key}`"
         >
           <div
             :style="showHeaderMenu ? 'cursor:pointer' : ''"
+            class="dataset-table-card-field"
+            v-bind="fieldAttrs(i + (hasActionsField ? 1 : 0))"
             @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
+            @focusin="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue), true)"
             @mouseleave="emit('hoverstop')"
           >
             <div class="text-body-small mt-2">
@@ -79,7 +86,7 @@
                 :no-interaction="noInteraction"
                 :no-filter="noFilter"
                 @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw + '', formattedValue: v.formatted})"
-                @hoverstart="v => emit('hoverstart', result, v)"
+                @hoverstart="(v, immediate) => emit('hoverstart', result, v, immediate)"
                 @hoverstop="emit('hoverstop')"
               />
               <dataset-table-value
@@ -98,6 +105,7 @@
               >
                 <v-btn
                   v-if="!noInteraction && (result.values[header.key] as ExtendedResultValue).formatted && ((result.values[header.key] as ExtendedResultValue).displayDetail || isGeometry(header))"
+                  tabindex="-1"
                   :icon="mdiLoupe"
                   :title="t('showFullValue')"
                   color="primary"
@@ -109,6 +117,7 @@
                 <!-- no handler: the click reaches the value, which opens the column menu -->
                 <v-btn
                   v-if="showHeaderMenu"
+                  tabindex="-1"
                   :icon="mdiChevronDown"
                   :title="t('openMenu')"
                   color="primary"
@@ -153,7 +162,7 @@
             </dataset-table-header-menu>
           </div>
         </template>
-      </v-list>
+      </div>
     </v-card-text>
   </v-card>
 </template>
@@ -180,7 +189,7 @@ import { type TableHeaderWithProperty, type TableSort } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiChevronDown, mdiLoupe, mdiMagnifyPlus, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiMap } from '@mdi/js'
 
-const { result, headers, noSort, noFilter, noCols, noInteraction, mapPreview } = defineProps({
+const { result, headers, noSort, noFilter, noCols, noInteraction, mapPreview, selectable, index, tabbableField } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
@@ -193,7 +202,10 @@ const { result, headers, noSort, noFilter, noCols, noInteraction, mapPreview } =
   hovered: { type: Object as () => ExtendedResultValue, default: null },
   selectable: { type: Boolean, default: false },
   selected: { type: Boolean, default: false },
-  mapPreview: { type: Boolean, default: false }
+  mapPreview: { type: Boolean, default: false },
+  // the position of this card in the list, and its field that is the list's Tab stop (-1: none)
+  index: { type: Number, required: true },
+  tabbableField: { type: Number, default: -1 }
 })
 
 const sort = defineModel<TableSort>('sort')
@@ -201,7 +213,7 @@ const sort = defineModel<TableSort>('sort')
 const emit = defineEmits<{
   hide: [header: TableHeaderWithProperty],
   filter: [filter: DatasetFilter],
-  hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
+  hoverstart: [result: ExtendedResult, value: ExtendedResultValue, immediate?: boolean],
   hoverstop: [],
   showMapPreview: [],
   showDetailDialog: [header: TableHeaderWithProperty],
@@ -225,6 +237,11 @@ const isGeometry = (header: TableHeaderWithProperty) => header.property['x-refer
 
 // label and image are already shown in the card header
 const otherHeaders = computed(() => headers.filter(h => h.property && h.key !== labelField.value?.key && h.key !== imageField.value?.key))
+
+const hasActionsField = computed(() => selectable || mapPreview)
+// the Tab stop stays on an existing field when columns are hidden
+const tabbableIndex = computed(() => tabbableField === -1 ? -1 : Math.min(tabbableField, otherHeaders.value.length - (hasActionsField.value ? 0 : 1)))
+const fieldAttrs = (field: number) => ({ 'data-card': index, 'data-field': field, tabindex: field === tabbableIndex.value ? 0 : -1 })
 </script>
 
 <style>

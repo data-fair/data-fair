@@ -352,6 +352,51 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.equal(res.data.total, 1)
   })
 
+  test('Set, change and clear the line owner from the standard lines routes', async () => {
+    let res = await testUser1Org.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true },
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    const dataset = res.data
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+    await testAlone.post(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`, { _id: 'line1', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/line1`)
+    assert.ok(res.data._ownerName)
+
+    // a new owner is set without a name: the previous owner's name must not stick to it
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/lines/line1`, { col1: 'value 2', _owner: 'user:test_user3' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/line1`)
+    assert.equal(res.data._owner, 'user:test_user3')
+    assert.equal(res.data._ownerName, undefined)
+
+    // same through a patch, back to the original owner
+    await testAlone.post(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`, { _id: 'line2', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}/lines/line2`, { _owner: 'user:test_user3' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/line2`)
+    assert.equal(res.data._owner, 'user:test_user3')
+    assert.equal(res.data._ownerName, undefined)
+
+    // null clears the owner, through an update and through a patch
+    await testUser1Org.put(`/api/v1/datasets/${dataset.id}/lines/line1`, { col1: 'value 3', _owner: null })
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}/lines/line2`, { _owner: null })
+    await waitForFinalize(testUser1Org, dataset.id)
+    for (const lineId of ['line1', 'line2']) {
+      res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/${lineId}`)
+      assert.equal(res.data._owner, undefined)
+      assert.equal(res.data._ownerName, undefined)
+    }
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/line1`)
+    assert.equal(res.data.col1, 'value 3')
+  })
+
   test('Clean up the ownership columns when line ownership is deactivated', async () => {
     let res = await testUser1Org.post('/api/v1/datasets', {
       isRest: true,
