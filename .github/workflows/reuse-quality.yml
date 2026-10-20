@@ -110,7 +110,7 @@ jobs:
   tests:
     name: tests (${{ matrix.name }})
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       # e2e runs ~15-20 min against ~12 for api: two e2e shards keep the jobs close
@@ -223,6 +223,10 @@ jobs:
           test-results/
           dev/logs/
         retention-days: 7
+
+    - name: Docker compose logs on failure
+      if: failure()
+      run: docker compose --profile '*' logs
 
     - name: Stop services
       if: always()
