@@ -62,6 +62,8 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
       dataset.value.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
         if (line[f.key] !== null && line[f.key] !== undefined) body[f.key] = line[f.key]
       })
+      // both line dialogs show the owner field outside own-lines mode, an absent value (vjsf drops nulls) clears it
+      if (!ownLines.value && dataset.value.rest?.lineOwnership) body._owner = line._owner || null
 
       if (line._id) {
         body._id = line._id
@@ -71,12 +73,13 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
       }
       formData.append('_body', JSON.stringify(body))
       const res = await $fetch(`${routeBase.value}/lines`, { method: 'POST', body: formData })
-      indexedAt.value = res._updatedAt
+      // an unchanged line answers 304 with no body
+      if (res) indexedAt.value = res._updatedAt
       // The transition a declared wait_for_user_action resolves on. Emitted here
       // rather than in either dialog because both go through this one call, and
       // only a save that really landed reaches this line. Before it, the assistant
       // had to end its turn asking the person to report their own click back.
-      emitAgentEvent('dataset-line-saved', { id, action: body._action, lineId: res._id ?? body._id })
+      emitAgentEvent('dataset-line-saved', { id, action: body._action, lineId: res?._id ?? body._id })
     } finally {
       saving.value = false
     }

@@ -6,12 +6,16 @@ import filesStorage from './index.ts'
 import contentDisposition from 'content-disposition'
 import { dataDir, tmpDir } from '../datasets/utils/files.ts'
 import slug from 'slugify'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 
 type DlFileOpts = {
   dispositionType?: 'inline' | 'attachment'
 }
 
 export const downloadFileFromStorage = async (filePath: string, req: Request, res: Response, opts: DlFileOpts = {}) => {
+  // no stored file has control characters in its name, and some S3 providers answer such keys with a non-404 error
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(filePath)) throw httpError(404, 'file not found')
   const { body, size, lastModified, range } = await filesStorage.readStream(filePath, req.get('If-Modified-Since'), req.get('Range'))
   if (lastModified) res.set('Last-Modified', lastModified.toUTCString())
   if (size !== undefined) res.set('Content-Length', size + '')

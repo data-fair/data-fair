@@ -195,6 +195,7 @@ export const run = async () => {
 
     const embedUnsafePaths = [
       '/embed/dataset/:id/table-edit',
+      '/embed/dataset/:id/edit-own-lines',
       '/embed/dataset/:id/form',
       '/embed/application/:id/config',
       '/embed/workflow/update-dataset',
@@ -286,8 +287,8 @@ export const run = async () => {
     const workers = await import('./workers/index.ts')
     await workers.init()
     workers.loop().catch(error => {
+      // never rethrow: an unhandled rejection here would take the whole process down
       internalError('workers-loop-error', error)
-      throw error
     })
     const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
     apiKeysExpirationWorker.start()
@@ -381,6 +382,12 @@ export const stop = async () => {
     if (config.integrity?.active) {
       await (await import('./integrity/checker.ts')).stop()
     }
+  }
+
+  // bounded wait for integrity admin actions finishing in the background (202 running): a rolling
+  // deploy otherwise deletes the dataset lock (locks.stop) under a running repair
+  if (config.mode.includes('server') && config.integrity?.active) {
+    await (await import('./integrity/service.ts')).drainAdminBackgroundWork(60000)
   }
 
   await locks.stop()

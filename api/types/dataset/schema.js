@@ -73,43 +73,61 @@ const datasetProperties = {
   },
   title: {
     type: 'string',
-    description: 'Short title of the dataset'
+    title: 'Title',
+    'x-i18n-title': { fr: 'Titre' },
+    description: 'Short title of the dataset',
+    layout: { props: { variant: 'outlined' } }
   },
   summary: {
     type: 'string',
-    description: 'Short description of the dataset'
+    title: 'Summary',
+    'x-i18n-title': { fr: 'Résumé' },
+    description: 'Short description of the dataset',
+    layout: { comp: 'textarea', props: { rows: 3, variant: 'outlined' } }
   },
   description: {
     type: 'string',
-    description: 'Detailed description of the dataset'
+    title: 'Description',
+    description: 'Detailed description of the dataset',
+    layout: { comp: 'markdown', props: { centerAffix: false } }
   },
   image: {
     type: 'string',
-    description: 'URL d\'une image, illustration du jeu de données'
+    title: 'Image',
+    'x-i18n-title': { en: 'URL of an image used as thumbnail', fr: 'Adresse d\'une image utilisée comme vignette' }
   },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
   spatial: {
     type: 'string',
-    description: 'spatial coverage'
+    title: 'Spatial',
+    'x-i18n-title': { en: 'Geographic coverage', fr: 'Couverture géographique' }
   },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
   temporal: {
     type: 'object',
-    description: 'temporal coverage',
+    title: 'Temporal',
+    'x-i18n-title': { en: 'Temporal coverage', fr: 'Couverture temporelle' },
     properties: {
       start: {
         type: 'string',
-        format: 'date'
+        format: 'date',
+        title: 'Start',
+        'x-i18n-title': { fr: 'Début' },
+        layout: { cols: { sm: 6 } }
       },
       end: {
         type: 'string',
-        format: 'date'
+        format: 'date',
+        title: 'End',
+        'x-i18n-title': { fr: 'Fin' },
+        layout: { cols: { sm: 6 } }
       }
     }
   },
   keywords: {
     type: 'array',
-    description: 'keywords',
+    title: 'Keywords',
+    'x-i18n-title': { fr: 'Mots-clés' },
     items: {
       type: 'string'
     }
@@ -117,22 +135,52 @@ const datasetProperties = {
   searchTerms: {
     type: 'string',
     maxLength: 1000,
-    description: 'Free text used only by the catalog search, never displayed: synonyms, acronyms and their expansion, everyday wording'
+    title: 'Search terms',
+    'x-i18n-title': { fr: 'Termes de recherche associés' },
+    description: 'Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. Not shown anywhere, but present in the dataset\'s public API response: do not put anything confidential here.',
+    'x-i18n-description': { fr: 'Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n\'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n\'y mettez rien de confidentiel.' },
+    layout: { comp: 'textarea', props: { rows: 1, counter: 1000 } }
   },
   // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
   frequency: {
     type: 'string',
-    description: 'update frequency',
-    enum: ['', 'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
+    title: 'Frequency',
+    'x-i18n-title': { en: 'Update frequency', fr: 'Fréquence de mise à jour' },
+    oneOf: [
+      { const: '' },
+      { const: 'irregular', title: 'Irregular', 'x-i18n-title': { en: 'Irregular', fr: 'Irrégulière' } },
+      { const: 'continuous', title: 'Continuous', 'x-i18n-title': { en: 'Continuous', fr: 'En continu' } },
+      { const: 'daily', title: 'Daily', 'x-i18n-title': { en: 'Every day', fr: 'Tous les jours' } },
+      { const: 'threeTimesAWeek', title: 'Three times a week', 'x-i18n-title': { en: '3 times a week', fr: '3 fois par semaine' } },
+      { const: 'semiweekly', title: 'Semiweekly', 'x-i18n-title': { en: 'Twice a week', fr: '2 fois par semaine' } },
+      { const: 'weekly', title: 'Weekly', 'x-i18n-title': { en: 'Every week', fr: 'Chaque semaine' } },
+      { const: 'threeTimesAMonth', title: 'Three times a month', 'x-i18n-title': { en: '3 times a month', fr: '3 fois par mois' } },
+      { const: 'biweekly', title: 'Biweekly', 'x-i18n-title': { en: 'Every 2 weeks', fr: 'Toutes les 2 semaines' } },
+      { const: 'semimonthly', title: 'Semimonthly', 'x-i18n-title': { en: 'Twice a month', fr: '2 fois par mois' } },
+      { const: 'monthly', title: 'Monthly', 'x-i18n-title': { en: 'Every month', fr: 'Tous les mois' } },
+      { const: 'bimonthly', title: 'Bimonthly', 'x-i18n-title': { en: 'Every 2 months', fr: 'Tous les 2 mois' } },
+      { const: 'quarterly', title: 'Quarterly', 'x-i18n-title': { en: 'Every quarter', fr: 'Chaque trimestre' } },
+      { const: 'threeTimesAYear', title: 'Three times a year', 'x-i18n-title': { en: '3 times a year', fr: '3 fois par an' } },
+      { const: 'semiannual', title: 'Semiannual', 'x-i18n-title': { en: 'Twice a year', fr: '2 fois par an' } },
+      { const: 'annual', title: 'Annual', 'x-i18n-title': { en: 'Every year', fr: 'Tous les ans' } },
+      { const: 'biennial', title: 'Biennial', 'x-i18n-title': { en: 'Every 2 years', fr: 'Tous les 2 ans' } },
+      { const: 'triennial', title: 'Triennial', 'x-i18n-title': { en: 'Every 3 years', fr: 'Tous les 3 ans' } }
+    ]
   },
   // https://www.w3.org/TR/vocab-dcat-3/#Property:resource_creator
   creator: {
     type: 'string',
+    title: 'Creator',
+    'x-i18n-title': { en: 'Producer', fr: 'Producteur' }
   },
   // https://www.w3.org/TR/vocab-dcat-3/#Property:distribution_update_date
   modified: {
     type: 'string',
-    format: 'date'
+    format: 'date',
+    title: 'Modified',
+    'x-i18n-title': { en: 'Source modification date', fr: 'Date de modification de la source' },
+    description: 'Date the data was modified at its source, when it differs from the date it was loaded into Data Fair. It is used to sort datasets by update date, on portals in particular: left empty, the date of the last data update is used.',
+    'x-i18n-description': { fr: 'Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c\'est la date de la dernière mise à jour des données qui est utilisée.' }
   },
   visibility: {
     type: 'string',
@@ -532,6 +580,16 @@ const datasetProperties = {
         required: ['i'],
         properties: { i: { type: 'number' } }
       },
+      // display-only: a synchronous admin action exceeded its budget and is finishing in-process.
+      // Nothing gates on it; GET _integrity drops it when the dataset lock is no longer held.
+      running: {
+        type: 'object',
+        required: ['action', 'startedAt'],
+        properties: {
+          action: { type: 'string' },
+          startedAt: { type: 'string', format: 'date-time' }
+        }
+      },
       // per-event-key date of the last sent alert (realert cadence dedup, cleared on recovery)
       alerts: {
         type: 'object',
@@ -646,6 +704,8 @@ const datasetProperties = {
   },
   license: {
     type: 'object',
+    title: 'License',
+    'x-i18n-title': { fr: 'Licence' },
     additionalProperties: false,
     required: ['title', 'href'],
     properties: {
@@ -661,7 +721,10 @@ const datasetProperties = {
   },
   origin: {
     type: 'string',
-    description: 'The URL where the original data can be found'
+    title: 'Origin',
+    'x-i18n-title': { fr: 'Provenance' },
+    description: 'Address of the page where the original data is published, for example on the producer\'s website.',
+    'x-i18n-description': { fr: 'Adresse de la page où les données d\'origine sont publiées, par exemple sur le site du producteur.' }
   },
   constraints: {
     type: 'array',
@@ -947,15 +1010,18 @@ const datasetProperties = {
   },
   topics: {
     type: 'array',
-    title: 'Liste de thématiques',
-    layout: { itemTitle: 'item.title' },
+    title: 'Topics',
+    'x-i18n-title': { fr: 'Thématiques' },
     items: {
       $ref: 'https://github.com/data-fair/data-fair/topic'
     }
   },
   relatedDatasets: {
     type: 'array',
-    title: 'Autres jeux de données à recommender',
+    title: 'Related datasets',
+    'x-i18n-title': { fr: 'Jeux de données liés' },
+    description: 'Other related datasets (same topic, similar structure, or other criteria) suggested to portal users.',
+    'x-i18n-description': { fr: 'Autres jeux de données proches (même thématique, structure similaire, ou autre critère) proposés aux utilisateurs de portails.' },
     items: {
       type: 'object',
       additionalProperties: false,
@@ -983,9 +1049,10 @@ const datasetProperties = {
   },
   customMetadata: {
     type: 'object',
+    description: 'Values of the custom metadata defined in the owner settings (datasetsMetadata.custom), by key. A value follows the type of its definition: a text, a number, a date "YYYY-MM-DD", a link { url, title }, a text from the definition value list, or an array of texts when the definition allows several values.',
     patternProperties: {
       '^(.*)$': {
-        type: 'string'
+        type: ['string', 'number', 'object', 'array']
       }
     }
   },

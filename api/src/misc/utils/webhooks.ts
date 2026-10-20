@@ -5,6 +5,7 @@ import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
 import type { Resource, Dataset, ResourceType } from '#types'
 import testEvents from './test-events.ts'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debug = debugLib('webhooks')
 
@@ -24,7 +25,13 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
     type: resource.owner.type,
     department: resource.owner.department || { $exists: false }
   }
-  const settings = await mongo.settings.findOne(settingsFilter) || {}
+  // trigger is always called fire-and-forget, so a mongo error on this lookup must not become an unhandled rejection
+  let settings
+  try {
+    settings = await mongo.settings.findOne(settingsFilter) || {}
+  } catch (err) {
+    return internalError('webhook-settings', err)
+  }
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
     if (webhook.events && webhook.events.length && !webhook.events.includes(`${singularResourceType}-${event.type}`)) continue

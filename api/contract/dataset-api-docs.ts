@@ -10,7 +10,7 @@ import * as datasetUtils from '../src/datasets/utils/index.ts'
 import { acceptedMetricAggs } from '../src/datasets/es/operations.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
-import { getColumnFilters } from '../src/datasets/es/commons.ts'
+import { getColumnFilters, maxQLength } from '../src/datasets/es/commons.ts'
 import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
 import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 
@@ -168,7 +168,8 @@ export default (
     `,
     schema: {
       title: 'Recherche textuelle',
-      type: 'string'
+      type: 'string',
+      maxLength: maxQLength
     }
   }, {
     in: 'query',
@@ -198,7 +199,8 @@ export default (
     `,
     schema: {
       title: 'Mots ignorés (pagination adapt)',
-      type: 'string'
+      type: 'string',
+      maxLength: maxQLength
     }
   }, {
     in: 'query',
@@ -276,7 +278,9 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   `,
     schema: {
       title: 'Recherche textuelle avancée',
-      type: 'string'
+      type: 'string',
+      // not checked by the API, the whole request line is capped by Node's 16 KiB header limit
+      maxLength: 16384
     }
   }]
 
@@ -634,6 +638,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       {
         in: 'query',
+        name: 'uniqueValues',
+        description: 'Restreindre aux colonnes dont chaque ligne porte une valeur distincte (aucun doublon, aucune valeur vide) : des candidates pour servir de clé naturelle, pour une jointure ou pour synchroniser une sélection de lignes entre applications. Il s\'agit d\'une observation des données, pas d\'une contrainte déclarée.\n\n' +
+          'Les lignes considérées sont celles qui correspondent aux filtres sur les données de la requête (toutes les lignes sans filtre). Avec au moins un filtre, ce mode nécessite la permission de lire les lignes (`readLines`).\n\n' +
+          'Une seule ligne vide (valeur absente, chaîne vide ou blanche) écarte la colonne quel que soit le volume. La détection des doublons est exacte jusqu\'à 40 000 lignes, approchée au-delà (tolérance de 1 %). Les colonnes multivaluées, calculées ou sans capacité de valeurs ne sont jamais retenues.\n\n' +
+          '*Non applicable sur `/safe-schema`, qui n\'expose pas d\'indice sur les données : la réponse est alors vide.*',
+        required: false,
+        schema: {
+          title: 'Valeurs uniques',
+          type: 'string',
+          enum: ['false', 'true']
+        }
+      },
+      {
+        in: 'query',
         name: 'calculated',
         description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
           'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +
@@ -742,7 +760,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               title: 'Numéro de la page',
               type: 'integer',
               default: 1,
-              minimum: 1
+              minimum: 1,
+              maximum: 10000
             }
           },
           ...hitsParams(),
@@ -962,6 +981,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             schema: {
               title: 'Interval(s) de groupement',
               type: 'array',
+              maxItems: valuesProperties.length || undefined,
               items: { type: 'string' }
             }
           }, htmlParam, {
@@ -997,6 +1017,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             schema: {
               title: 'Groupe des valeurs manquantes',
               type: 'array',
+              maxItems: valuesProperties.length || undefined,
               items: { type: 'string' }
             }
           }, {
@@ -1006,6 +1027,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             explode: false,
             schema: {
               type: 'array',
+              maxItems: valuesProperties.length || undefined,
               items: {
                 default: 20,
                 type: 'integer',
@@ -1484,8 +1506,8 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           { in: 'query', name: 'where', schema: { type: 'string' } },
           { in: 'query', name: 'group_by', schema: { type: 'string' } },
           { in: 'query', name: 'order_by', schema: { type: 'string' } },
-          { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
-          { in: 'query', name: 'offset', schema: { type: 'integer', default: 0 } }
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 10, minimum: -1, maximum: 20000 } },
+          { in: 'query', name: 'offset', schema: { type: 'integer', default: 0, minimum: 0, maximum: 20000 } }
         ],
         responses: {
           200: {
@@ -1520,7 +1542,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           { in: 'query', name: 'select', schema: { type: 'string' } },
           { in: 'query', name: 'where', schema: { type: 'string' } },
           { in: 'query', name: 'order_by', schema: { type: 'string' } },
-          { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } }
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 20, minimum: -1 } }
         ],
         responses: {
           200: {
@@ -1531,6 +1553,18 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           },
           ...errorResponses
         }
+      }
+    }
+  }
+
+  // Declare the bounds the API already enforces, so OpenAPI linters (Tenable, Spectral OWASP) see them
+  for (const methods of Object.values(api.paths) as any[]) {
+    for (const op of Object.values(methods) as any[]) {
+      for (const param of op?.parameters ?? []) {
+        const s = param.schema
+        if (s?.type === 'integer') s.format ??= 'int32'
+        if (s?.type === 'array' && s.items?.enum?.length) s.maxItems ??= s.items.enum.length
+        if (s?.type === 'array' && s.items?.type === 'integer') s.items.format ??= 'int32'
       }
     }
   }

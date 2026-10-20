@@ -28,10 +28,11 @@ const matchesQueryOperator = (queryOperator: Operator, filterOperator: Operator)
   (filterOperator === 'eq' && queryOperator === 'in') ||
   (filterOperator === 'neq' && queryOperator === 'nin')
 
+// filter values are strings (as in the URL), raw values are typed (10000, true)
 export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty, result: ExtendedResult) => {
   return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key])
-    ? (result.values[property.key] as ExtendedResultValue[]).some(v => v.raw === f.value)
-    : (result.values[property.key] as ExtendedResultValue).raw === f.value))
+    ? (result.values[property.key] as ExtendedResultValue[]).some(v => '' + v.raw === f.value)
+    : '' + (result.values[property.key] as ExtendedResultValue).raw === f.value))
 }
 
 export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>, options: { excludeKeys?: string[] } = {}) => {
@@ -39,6 +40,9 @@ export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>,
   const filters = ref<DatasetFilter[]>([])
 
   const addFilter = (filter: DatasetFilter) => {
+    // a value from a table cell is typed (10000): store it as the URL will give it back
+    // ("10000"), or the URL sync sees a new value and rebuilds the filter, label included
+    if (filter.value !== undefined && filter.value !== null) filter = { ...filter, value: '' + filter.value }
     const existingFilter = filters.value.find(f => f.property.key === filter.property.key && f.operator === filter.operator)
     if (existingFilter) removeFilter(existingFilter)
     if (filter.operator === 'in') {

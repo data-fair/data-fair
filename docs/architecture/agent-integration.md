@@ -19,7 +19,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 PRIVATE_AGENTS_URL (env var)
   -> config.privateAgentsUrl (API config)
     -> uiConfig.agentsIntegration (boolean flag exposed to frontend)
-      -> GET /settings/{type}/{id}/agent-chat (per-account boolean)
+      -> GET /settings/{type}/{id}/agent-chat (boolean for the calling member)
         -> showAgentChat (reactive ref in UI)
           -> Tool registration + Chat drawer rendering
 ```
@@ -29,6 +29,17 @@ The `agentChat` setting is **organization-level only**: it lives on the root set
 inherit their organization's activation — `getAgentChat` always resolves the root document, even
 when the request path is department scoped (`/settings/organization/org1:dep1/agent-chat`), and the
 settings page hides the toggle when a department is selected. `compatODS` works the same way.
+
+The organization's admins manage it (no super-admin step). Next to the toggle, `agentChatAudience`
+restricts who sees the assistant: a list of `{ department, roles }` rules where `department` is `"-"`
+(main organization only), `"*"` (any department) or a department id — exact match, sub-departments
+are not included — and an empty `roles` means all roles. A member matching any rule sees the
+assistant, an empty or missing audience means every member. Unlike resource permissions, admins are
+not implicitly included. `getAgentChat` matches the rules (`matchAgentChatAudience` in
+`api/src/settings/operations.ts`) against the caller's active role and department, so the answer is
+per member; super-admins in admin mode bypass the audience and personal accounts only have the toggle.
+This only drives what the back-office shows: nothing in data-fair refuses an assistant request from a
+member outside the audience, that enforcement belongs to the agents service.
 
 ## 2. Architecture
 
@@ -518,7 +529,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |
 | `api/src/settings/router.ts` | `GET /settings/:type/:id/agent-chat` endpoint |
-| `api/types/settings/schema.js` | `agentChat` boolean setting definition |
+| `api/types/settings/schema.js` | `agentChat` boolean and `agentChatAudience` rules setting definitions |
 
 ## 8. Dependencies
 

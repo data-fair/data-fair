@@ -623,8 +623,10 @@ export default {
                 fr: 'Ajouter une métadonnée'
               }
             },
+            // a copy gets its own key, generated from its title on save
+            itemCopy: '{ ...item, key: undefined }',
             itemTitle: 'item.title',
-            itemSubtitle: `[item.key && "Clé : " + item.key, "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
+            itemSubtitle: `[item.key && "Clé : " + item.key, ({ string: "Texte", integer: "Nombre entier", number: "Nombre", date: "Date", link: "Lien" })[item.type ?? "string"] + (item.enum?.length ? ", liste de valeurs" : "") + (item.multiple ? ", plusieurs valeurs" : ""), "Catégorie : " + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
           },
           items: {
             type: 'object',
@@ -646,14 +648,39 @@ export default {
                 title: 'Libellé',
                 type: 'string',
                 minLength: 3,
-                layout: { cols: 6 }
+                layout: { cols: 4 }
               },
-              group: metadataGroup(informationsGroup, false, 6),
+              type: {
+                title: 'Type',
+                type: 'string',
+                default: 'string',
+                layout: { cols: 3 },
+                oneOf: [
+                  { const: 'string', title: 'Texte' },
+                  { const: 'integer', title: 'Nombre entier' },
+                  { const: 'number', title: 'Nombre' },
+                  { const: 'date', title: 'Date' },
+                  { const: 'link', title: 'Lien (URL et libellé)' }
+                ]
+              },
+              group: metadataGroup(informationsGroup, false, 3),
+              multiple: {
+                title: 'Plusieurs valeurs',
+                type: 'boolean',
+                layout: { cols: 2, comp: 'checkbox', if: '(parent.data?.type ?? "string") === "string"' }
+              },
               description: {
                 title: 'Infobulle',
                 description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
                 type: 'string',
                 layout: 'textarea'
+              },
+              enum: {
+                title: 'Liste de valeurs',
+                description: 'Laissez vide pour une saisie libre.',
+                type: 'array',
+                items: { type: 'string' },
+                layout: { if: '(parent.data?.type ?? "string") === "string"' }
               }
             }
           }
@@ -671,6 +698,27 @@ export default {
       title: 'AI assistant',
       description: 'Active l\'assistant IA',
       default: false
+    },
+    agentChatAudience: {
+      type: 'array',
+      title: 'AI assistant audience',
+      description: 'Restreint l\'assistant IA aux membres correspondant à l\'une de ces règles. Vide : tous les membres.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['department'],
+        properties: {
+          department: {
+            type: 'string',
+            description: 'Identifiant du département, "*" pour tous les départements ou "-" pour l\'organisation principale seulement'
+          },
+          roles: {
+            type: 'array',
+            description: 'Rôles concernés, tous si vide',
+            items: { type: 'string' }
+          }
+        }
+      }
     }
   }
 }

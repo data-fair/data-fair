@@ -43,6 +43,10 @@ module.exports = {
     // how long a synchronous admin action (enable/fix/restore/check) waits for the per-dataset
     // worker lock before answering 409 — it must hold that lock to not race the relay tasks
     lockWaitMs: 10000,
+    // synchronous admin actions (check / fix / restores / ack) answer with the fresh verdict when
+    // they finish within this budget; past it they answer 202 {status:'running'} and finish
+    // in-process under the dataset lock (a full check on a 1M-line dataset takes minutes)
+    adminSyncBudgetMs: 20000,
     // trail-coherence verdict: tolerated distance between a revision's claimed context.date and
     // the provider-stamped LastModified (relay retries legitimately delay the object write)
     trail: { dateSkewHours: 48 },

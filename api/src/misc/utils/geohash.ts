@@ -1,4 +1,4 @@
-import geolib from 'geolib'
+import { getDistance } from 'geolib'
 import ngeohash from 'ngeohash'
 
 const geohash: any = {}
@@ -8,7 +8,7 @@ const errorsPerPrecision = [2500, 630, 78, 20, 2.4, 0.61, 0.076, 0.019]
 geohash.precision2area = errorsPerPrecision.map(error => (error * 2) * (error * 2))
 
 geohash.bbox2area = function (bbox: any) {
-  const width = geolib.getDistance({
+  const width = getDistance({
     longitude: bbox[0], // left
     latitude: bbox[1] // bottom
   }, {
@@ -16,7 +16,7 @@ geohash.bbox2area = function (bbox: any) {
     latitude: bbox[1] // bottom
   }) / 1000
 
-  const height = geolib.getDistance({
+  const height = getDistance({
     longitude: bbox[0], // left
     latitude: bbox[1] // bottom
   }, {

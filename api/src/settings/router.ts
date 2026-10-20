@@ -46,7 +46,7 @@ router.get('/:type/:id/datasets-metadata', allowAnyScope, isOwnerMember, async (
 
 // Get agent chat setting as member
 router.get('/:type/:id/agent-chat', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
-  res.status(200).send(await service.getAgentChat(reqSettingsParams(req)))
+  res.status(200).send(await service.getAgentChat(reqSettingsParams(req), reqSessionAuthenticated(req)))
 })
 
 // Get publication sites as owner

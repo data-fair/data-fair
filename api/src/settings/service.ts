@@ -17,7 +17,7 @@ import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, matchAgentChatAudience, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -207,8 +207,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
   if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
-    // clean up the metadata off datasets when its definition was removed from the settings
-    if (!newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
+    // clean up the metadata off datasets when its definition was removed, or its values changed shape
+    const newMeta = newDatasetsMetadata.custom?.find(nc => nc.key === oldMeta.key)
+    if (!newMeta || (newMeta.type ?? 'string') !== (oldMeta.type ?? 'string') || !!newMeta.multiple !== !!oldMeta.multiple) {
       const customMetadataFilter = { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } }
       // stamp BEFORE the $unset: the unset removes the very key this filter's $exists checks,
       // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)
@@ -217,6 +218,21 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
+    } else if (newMeta.enum?.length && !equal(newMeta.enum, oldMeta.enum)) {
+      // values no longer in the list are removed, a list left empty goes with them
+      for (const path of [`customMetadata.${oldMeta.key}`, `draft.customMetadata.${oldMeta.key}`]) {
+        const ownerFilter = { 'owner.type': owner.type, 'owner.id': owner.id }
+        const staleFilter = { ...ownerFilter, [path]: newMeta.multiple ? { $elemMatch: { $nin: newMeta.enum } } : { $exists: true, $nin: newMeta.enum } }
+        const updatedAt = { [path.startsWith('draft.') ? 'draft.updatedAt' : 'updatedAt']: new Date().toISOString() }
+        // stamp BEFORE the write, as for the removal above
+        if (!path.startsWith('draft.')) await stampHistorizeMany(staleFilter)
+        if (newMeta.multiple) {
+          const kept = { $filter: { input: '$' + path, cond: { $in: ['$$this', newMeta.enum] } } }
+          await mongo.datasets.updateMany(staleFilter, [{ $set: { [path]: { $cond: [{ $eq: [{ $size: kept }, 0] }, '$$REMOVE', kept] }, ...updatedAt } }])
+        } else {
+          await mongo.datasets.updateMany(staleFilter, { $unset: { [path]: 1 }, $set: updatedAt })
+        }
+      }
     }
   }
 }
@@ -267,10 +283,16 @@ export const getDatasetsMetadata = async (params: SettingsParams) => {
   return result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {}
 }
 
-export const getAgentChat = async (params: SettingsParams) => {
+export const getAgentChat = async (params: SettingsParams, sessionState: SessionStateAuthenticated) => {
   // the AI assistant is activated at the organization level only, departments inherit the activation
-  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1 } })
-  return { agentChat: !!(result && isMainSettings(result) && result.agentChat) }
+  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1, agentChatAudience: 1 } })
+  if (!(result && isMainSettings(result) && result.agentChat)) return { agentChat: false }
+  const { owner } = params
+  if (owner.type === 'user' || sessionState.user.adminMode) return { agentChat: true }
+  // the audience is matched against the role and department of the caller's active account in this organization
+  const { account, accountRole } = sessionState
+  if (account.type !== owner.type || account.id !== owner.id) return { agentChat: false }
+  return { agentChat: matchAgentChatAudience(result.agentChatAudience, { role: accountRole, department: account.department }) }
 }
 
 export const getPublicationSites = async (params: SettingsParams) => {

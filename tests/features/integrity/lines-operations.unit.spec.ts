@@ -73,3 +73,45 @@ test('classifyLine detects the three divergence shapes', () => {
   expect(lops.classifyLine(line, undefined)).toBe('inserted')
   expect(lops.classifyLine(line, { i: 3, deleted: true })).toBe('inserted')
 })
+
+const k = (lineId: string, i: number, sha = 'aa') => lops.lineRevisionKey(owner, 'ds1', lineId, i, sha)
+const foldGroups = (pages: Array<Array<{ key: string, clean?: boolean }>>) => {
+  const acc = lops.newLineGroupFold()
+  const out: lops.LineAnchorGroup[] = []
+  for (const page of pages) out.push(...lops.pushLineGroupKeys(acc, page))
+  out.push(...lops.finishLineGroupFold(acc))
+  return out
+}
+
+test('line group fold emits one latest anchor per line, equal to latestLineAnchors', () => {
+  const keys = [k('a', 1), k('a', 5, 'bb'), k('a', 5, 'bb') + '.who', k('b', 2, lops.DELETED_MARKER), k('c', 3)].sort()
+  const groups = foldGroups([keys.map((key) => ({ key }))])
+  const reference = lops.latestLineAnchors(keys)
+  expect(groups.map((g) => g.lineId).sort()).toEqual([...reference.keys()].sort())
+  for (const g of groups) {
+    const { key, i, sha256, deleted } = reference.get(g.lineId)!
+    expect({ key: g.key, i: g.i, sha256: g.sha256, deleted: g.deleted }).toEqual({ key, i, sha256, deleted })
+    expect(g.clean).toBe(true)
+  }
+})
+
+test('line group fold keeps the lexically-first key on an equal-i tie (same as latestLineAnchors)', () => {
+  const keys = [k('a', 5, 'ff'), k('a', 5, '00')].sort()
+  const [g] = foldGroups([keys.map((key) => ({ key }))])
+  expect(g.key).toBe(lops.latestLineAnchors(keys).get('a')!.key)
+})
+
+test('line group fold handles a group straddling pages and prefix-related ids', () => {
+  // 'a-b' sorts BEFORE 'a' in S3 key order ('-' < '/'), the reverse of their raw order
+  const keys = [k('a', 1), k('a', 2), k('a-b', 1), k('a/b', 4), k('é', 1)].sort()
+  const pages = [keys.slice(0, 2), keys.slice(2, 3), keys.slice(3)].map((p) => p.map((key) => ({ key })))
+  const groups = foldGroups(pages)
+  expect(groups.map((g) => g.lineId).sort()).toEqual(['a', 'a-b', 'a/b', 'é'].sort())
+  expect(groups.find((g) => g.lineId === 'a')!.i).toBe(2)
+})
+
+test('line group fold carries the clean flag of the chosen latest key', () => {
+  const groups = foldGroups([[{ key: k('a', 1), clean: true }, { key: k('a', 2), clean: false }, { key: k('b', 1), clean: false }, { key: k('b', 2), clean: true }]])
+  expect(groups.find((g) => g.lineId === 'a')!.clean).toBe(false)
+  expect(groups.find((g) => g.lineId === 'b')!.clean).toBe(true)
+})

@@ -76,7 +76,7 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
 The same logic is exported as `applyResourceCacheHeaders(req, res, date)` for routes that decide
 per request. `GET /datasets/:id/schema` uses it: it stays `noCache` (a memoized Mongo read that
 the back-office reads right after schema edits), **except** when `maxCardinality` comes with data
-filters. That path runs an ES cardinality aggregation (see `datasets/es/cardinality-aggs.ts`), so it
+filters or `uniqueValues=true` is set. That path runs an ES cardinality aggregation (see `datasets/es/cardinality-aggs.ts`), so it
 gets the full resource-based treatment. Its reference date is `max(updatedAt, finalizedAt)`: a
 metadata edit of the schema (labels…) moves only `updatedAt`, while a finalization (data change,
 refreshed `x-cardinality`) moves only `finalizedAt`. Either date alone would produce stale `304`s.

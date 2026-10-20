@@ -68,6 +68,18 @@ test.describe('isCachedDatasetFresh', () => {
   // without touching updatedAt (that field is the dataset's user-facing modification date, and a
   // nightly check must not move it), so before these two comparisons a "check now" kept serving
   // the previous verdict for the whole cache window, page reloads included
+  // the worker advances a draft by writing draft.status and draft.finalizedAt without touching
+  // draft.updatedAt: a read made mid-processing used to pin the intermediate status for the whole
+  // cache window, so the page following a draft saw it stuck on "analyzed" after it had finalized
+  test('a draft moving along forces a re-read in draft mode, and only in draft mode', () => {
+    const cached: any = { ...base(), draft: { updatedAt: '2026-08-01T10:00:00.000Z', status: 'analyzed' } }
+    const fresh: any = { ...base(), draft: { updatedAt: '2026-08-01T10:00:00.000Z', status: 'finalized', finalizedAt: '2026-08-01T10:00:09.000Z' } }
+    assert.equal(isCachedDatasetFresh(cached, fresh, true), false)
+    assert.equal(isCachedDatasetFresh(cached, fresh, false), true)
+    assert.ok(datasetFreshnessProjection(true)['draft.status'])
+    assert.equal(datasetFreshnessProjection(false)['draft.status'], undefined)
+  })
+
   test('a fresh integrity verdict forces a re-read even though nothing else moved', () => {
     const fresh = base()
     fresh.integrity.lastCheck.date = '2026-08-06T09:30:00.000Z'

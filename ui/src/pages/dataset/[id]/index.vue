@@ -77,13 +77,14 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="constraints">
-          <dataset-constraints
-            v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly"
-            :model-value="structureEditFetch.data.value.constraints"
-            :dataset-schema="structureEditFetch.data.value.schema"
-            :editable="true"
-            @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
-          />
+          <v-form v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly">
+            <dataset-constraints
+              :model-value="structureEditFetch.data.value.constraints"
+              :dataset-schema="structureEditFetch.data.value.schema"
+              :editable="true"
+              @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
+            />
+          </v-form>
         </v-tabs-window-item>
 
         <v-tabs-window-item value="extensions">
@@ -194,13 +195,14 @@
           :key="tab.key"
           :value="tab.key"
         >
-          <dataset-metadata-form
-            v-if="metadataEditFetch.data.value"
-            v-model="metadataEditFetch.data.value"
-            :server-data="metadataEditFetch.serverData.value"
-            :datasets-metadata="datasetsMetadata"
-            :group="tab.key"
-          />
+          <v-form v-if="metadataEditFetch.data.value">
+            <dataset-metadata-form
+              v-model="metadataEditFetch.data.value"
+              :server-data="metadataEditFetch.serverData.value"
+              :datasets-metadata="datasetsMetadata"
+              :group="tab.key"
+            />
+          </v-form>
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
@@ -562,6 +564,7 @@
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
+      :nb-fragments="nbFragments"
       @changed="store.datasetFetch.refresh()"
     />
 
@@ -1398,6 +1401,9 @@ const sections = computedDeepDiff(() => {
     if (can('setPermissions').value && !d.isMetaOnly) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
+  }
+  // the journal is data-fair's own: the section must not depend on the events integration
+  if (activityTabs.length) {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
   // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.

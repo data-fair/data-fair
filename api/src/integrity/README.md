@@ -117,6 +117,31 @@ invariants are the ones whose violation does exactly that.
     renewal decision ever depends on its presence — losing one (crash before write, early purge,
     the attribution kill switch) only ever degrades a revision to "unattributed", exactly
     today's pre-attribution state, never to a false verdict or a blocked repair.
+17. **Ack filtering happens before capping** (`newAnomalyCollector`): capping first lets acked
+    anomalies crowd out an unacked one — a false `ok` trail verdict.
+18. **Lines renewal re-verifies each key** in its own walk (`clean` on the current view) and
+    renews only clean latest anchors: `PutObjectRetention` carries no version id. **A failed
+    lines renewal never clears `linesRenewal.retainUntil`**: the previous horizon stays so the
+    next pass retries; clearing or advancing it on failure goes quiet forever (the line anchors
+    lapse unrepairable with nothing left to alert on).
+    The remedy for a refused (unclean, typically acked) latest line key is `_fix`: it re-anchors
+    those live lines through the pipeline (fresh higher `_i` → a clean latest key supersedes the
+    shadowed one), found with the SAME versions walk as renewal (`checker.ts`
+    `iterateLineAnchorGroupsWithVersions`) so the two cannot disagree. It never clears the trail
+    anomaly itself.
+19. **The lines compare counts DISTINCT accounted lines**: a lineId emitted twice (forged
+    non-canonical key) must not inflate the count and hide an insert. Insert-by-count is exact
+    only on a stable live set, so the comparer names inserts by scan whenever a covered write
+    landed during the compare (`changedDuringCompare`).
+20. **Admin work is never triggered from a Mongo flag**, and `integrity.running` is display-only
+    (design 2026-10-15 §4): a flag-driven worker would let a Mongo writer bless their own tamper.
+    `withAdminBudget` acquires the dataset lock BEFORE starting the budget (a busy dataset
+    answers 409, never a 202) and releases it only when the work settles, background included —
+    so routes pass the `*Unlocked` service variants. Shutdown drains background work
+    (`drainAdminBackgroundWork`) before `locks.stop()`.
+21. **Repairs run after the compare, never during it** (`_fix`, `lines/_restore`): divergences
+    are collected (memory O(diverged)) and repaired in chunks once the stream ends. Mutating a
+    line mid-stream would make a freshly restored line read as an out-of-band insert.
 
 ## Testing
 

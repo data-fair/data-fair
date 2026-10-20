@@ -1,13 +1,18 @@
 <template>
+  <!-- the arrows move between the cells of the table, or the fields of the card list, whose
+       fields are the menu's activators: they do not open it, Enter does -->
   <v-menu
+    ref="menu"
     v-model="showMenu"
     :activator="activator"
     :close-on-content-click="false"
     :max-height="filterHeight"
+    :open-on-arrow="false"
     location="bottom right"
     @update:model-value="toggleMenu"
   >
     <v-sheet
+      ref="sheet"
       class="pa-1"
       rounded="0"
       style="max-width: 450px"
@@ -67,6 +72,7 @@
         <template v-if="header.sortable && !noSort">
           <v-list-item
             :active="sort === 1"
+            :aria-current="sort === 1 ? 'true' : undefined"
             :title="t('sortAsc')"
             class="pl-2"
             @click="toggleSort(1)"
@@ -80,6 +86,7 @@
           </v-list-item>
           <v-list-item
             :active="sort === -1"
+            :aria-current="sort === -1 ? 'true' : undefined"
             :title="t('sortDesc')"
             class="pl-2"
             @click="toggleSort(-1)"
@@ -132,17 +139,17 @@
                 variant="outlined"
                 autofocus
                 hide-details
-                @keyup.enter="search && emitNewFilter(search)"
+                @keydown.enter="canApply(search, 'search') && emitNewFilter(search)"
               >
                 <template #append>
                   <v-btn
-                    :disabled="!search"
+                    :disabled="!canApply(search, 'search')"
                     :icon="mdiCheck"
                     :title="t('applyFilter')"
                     class="mr-1"
                     color="primary"
                     density="comfortable"
-                    @click="search && emitNewFilter(search)"
+                    @click="canApply(search, 'search') && emitNewFilter(search)"
                   />
                 </template>
               </v-text-field>
@@ -166,17 +173,17 @@
                   autofocus
                   hide-details
                   @update:model-value="v => equals = [v]"
-                  @keyup.enter="equals[0] && emitEqualsFilter()"
+                  @keydown.enter="canApply(equals[0], 'eq', 'in') && emitEqualsFilter()"
                 >
                   <template #append>
                     <v-btn
-                      :disabled="!equals[0]"
+                      :disabled="!canApply(equals[0], 'eq', 'in')"
                       :icon="mdiCheck"
                       :title="t('applyFilter')"
                       class="mr-1"
                       color="primary"
                       density="comfortable"
-                      @click="equals[0] && emitEqualsFilter()"
+                      @click="canApply(equals[0], 'eq', 'in') && emitEqualsFilter()"
                     />
                   </template>
                 </v-text-field>
@@ -214,17 +221,17 @@
                   autofocus
                   hide-details
                   @update:model-value="v => nEquals = [v]"
-                  @keyup.enter="nEquals[0] && emitNEqualsFilter()"
+                  @keydown.enter="canApply(nEquals[0], 'neq', 'nin') && emitNEqualsFilter()"
                 >
                   <template #append>
                     <v-btn
-                      :disabled="!nEquals[0]"
+                      :disabled="!canApply(nEquals[0], 'neq', 'nin')"
                       :icon="mdiCheck"
                       :title="t('applyFilter')"
                       class="mr-1"
                       color="primary"
                       density="comfortable"
-                      @click="nEquals[0] && emitNEqualsFilter()"
+                      @click="canApply(nEquals[0], 'neq', 'nin') && emitNEqualsFilter()"
                     />
                   </template>
                 </v-text-field>
@@ -424,17 +431,17 @@
                 variant="outlined"
                 autofocus
                 hide-details
-                @keyup.enter="startsWith && emitNewFilter(startsWith)"
+                @keydown.enter="canApply(startsWith, 'starts') && emitNewFilter(startsWith)"
               >
                 <template #append>
                   <v-btn
                     class="mr-1"
                     density="comfortable"
-                    :disabled="!startsWith"
+                    :disabled="!canApply(startsWith, 'starts')"
                     color="primary"
                     :title="t('applyFilter')"
                     :icon="mdiCheck"
-                    @click="startsWith && emitNewFilter(startsWith)"
+                    @click="canApply(startsWith, 'starts') && emitNewFilter(startsWith)"
                   />
                 </template>
               </v-text-field>
@@ -454,17 +461,17 @@
                 density="compact"
                 variant="outlined"
                 hide-details
-                @keyup.enter="contains && emitNewFilter(contains)"
+                @keydown.enter="canApply(contains, 'contains') && emitNewFilter(contains)"
               >
                 <template #append>
                   <v-btn
                     class="mr-1"
                     density="comfortable"
-                    :disabled="!contains"
+                    :disabled="!canApply(contains, 'contains')"
                     color="primary"
                     :title="t('applyFilter')"
                     :icon="mdiCheck"
-                    @click="contains && emitNewFilter(contains)"
+                    @click="canApply(contains, 'contains') && emitNewFilter(contains)"
                   />
                 </template>
               </v-text-field>
@@ -528,17 +535,17 @@
                 type="number"
                 variant="outlined"
                 hide-details
-                @keyup.enter="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+                @keydown.enter="canApply(gte, 'gte') && emitNewFilter(gte ?? '', gte && formatValue(gte, header.property, null, localeDayjs))"
               >
                 <template #append>
                   <v-btn
-                    :disabled="!gte"
+                    :disabled="!canApply(gte, 'gte')"
                     :icon="mdiCheck"
                     :title="t('applyFilter')"
                     class="mr-1"
                     color="primary"
                     density="comfortable"
-                    @click="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+                    @click="canApply(gte, 'gte') && emitNewFilter(gte ?? '', gte && formatValue(gte, header.property, null, localeDayjs))"
                   />
                 </template>
               </v-text-field>
@@ -558,17 +565,17 @@
                 type="number"
                 variant="outlined"
                 hide-details
-                @keyup.enter="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+                @keydown.enter="canApply(lte, 'lte') && emitNewFilter(lte ?? '', lte && formatValue(lte, header.property, null, localeDayjs))"
               >
                 <template #append>
                   <v-btn
-                    :disabled="!lte"
+                    :disabled="!canApply(lte, 'lte')"
                     :icon="mdiCheck"
                     :title="t('applyFilter')"
                     class="mr-1"
                     color="primary"
                     density="comfortable"
-                    @click="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+                    @click="canApply(lte, 'lte') && emitNewFilter(lte ?? '', lte && formatValue(lte, header.property, null, localeDayjs))"
                   />
                 </template>
               </v-text-field>
@@ -711,7 +718,7 @@ import { type DatasetFilter } from '~/composables/dataset/filters'
 import { formatValue } from '~/composables/dataset/lines'
 import useHeaderFilters from './use-header-filters'
 
-const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols } = defineProps({
+const { header, localEnum, filters, closeOnFilter, noFilter, noSort, noCols, activator } = defineProps({
   header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
@@ -743,6 +750,24 @@ const localeDayjs = useLocaleDayjs()
 const { t } = useI18n()
 
 const showMenu = ref(false)
+// Vuetify gives the focus back to the activator on Escape only: closed by one of its actions
+// (a sort, a filter), the menu kept the focus on its hidden content, out of the table. A hidden
+// column has no activator any more, the table handles that one (hideHeader).
+// In a table cell, the cell takes the focus back, on Escape too: on its inner button, Tab cycled
+// the cell's controls (dataset-table, onTableKeydown) and could not leave the table any more
+const sheet = useTemplateRef('sheet')
+const menu = useTemplateRef('menu')
+// a selector, or "parent" (a field of the card list)
+const activatorEl = () => (activator === 'parent' ? menu.value?.activatorEl : document.querySelector<HTMLElement>(activator)) as HTMLElement | undefined | null
+watch(showMenu, async (open) => {
+  if (open) return
+  const active = document.activeElement
+  const content = sheet.value?.$el as HTMLElement | undefined
+  if (active !== document.body && active !== activatorEl() && !content?.contains(active)) return
+  await nextTick()
+  const el = activatorEl()
+  ;(el?.closest<HTMLElement>('[data-row]') ?? el)?.focus()
+})
 const equals = ref<string[]>([])
 const nEquals = ref<string[]>([])
 const startsWith = ref('')
@@ -871,6 +896,9 @@ const emitNEqualsFilter = () => {
     })
   }
 } */
+// an empty value removes the column's filter of this operator, if there is one (addFilter)
+const canApply = (value: string | undefined, ...operators: string[]) => !!value ||
+  filters.some(f => f.property.key === header.property.key && operators.includes(f.operator))
 const emitFilter = (filter: DatasetFilter, close = true) => {
   emit('filter', filter)
   if (close || closeOnFilter) {

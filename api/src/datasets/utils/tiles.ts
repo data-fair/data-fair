@@ -2,6 +2,7 @@ import path from 'path'
 import { Piscina } from 'piscina'
 import _config from 'config'
 import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const config = _config as any
 
@@ -11,6 +12,8 @@ export const geojson2pbfPiscina = new Piscina({
   idleTimeout: 60 * 60 * 1000,
   maxThreads: config.tiles.maxThreads
 })
+// a pool emits 'error' when a thread dies with no task in flight; without a listener it crashes the process
+geojson2pbfPiscina.on('error', (err) => internalError('piscina-geojson2pbf', err))
 
 function tile2long (x, z) {
   return (x / Math.pow(2, z) * 360 - 180)

@@ -10,7 +10,11 @@ export default (types: any) => {
     // accept a list of types known to this api
     if (types.find((type: any) => req.is(type))) return next()
     // if the body is empty the content-type doesn't really matter, it might be defined by default by the http client
-    if (req.get('content-length') === '0') return next()
+    // express 5 leaves req.body undefined without a parsed body, handlers expect an object
+    if (req.get('content-length') === '0') {
+      req.body ??= {}
+      return next()
+    }
     res.status(415).send(req.__('errors.badContentType'))
     debug('expected content-type', types, req.get('content-type'))
   }

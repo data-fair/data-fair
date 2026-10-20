@@ -27,7 +27,7 @@ Les fichiers identiques ne sont jamais stockés deux fois : une modification qui
 
 ### Le contrôle et l'alerte
 
-Un contrôle automatique passe chaque nuit sur les jeux de données protégés ; un contrôle immédiat peut aussi être déclenché à la demande depuis l'interface. Chaque passage produit les deux verdicts (données et historique, voir les garanties) et alerte les administrateurs abonnés via le système de notifications de la plateforme en cas d'anomalie — avec la logique de réémission périodique décrite dans les garanties.
+Un contrôle automatique passe chaque nuit sur les jeux de données protégés, par lots : les jeux dont le dernier contrôle est le plus ancien passent en premier, si bien que sur une plateforme où de nombreux jeux sont protégés, chacun est contrôlé tous les quelques jours. Un jeu protégé qui reste trop longtemps sans verdict concluant (sept jours par défaut) déclenche sa propre alerte. Un contrôle immédiat peut aussi être déclenché à la demande depuis l'interface. Chaque passage produit les deux verdicts (données et historique, voir les garanties) et alerte les administrateurs abonnés via le système de notifications de la plateforme en cas d'anomalie — avec la logique de réémission périodique décrite dans les garanties.
 
 ### La rétention et l'horizon de protection
 

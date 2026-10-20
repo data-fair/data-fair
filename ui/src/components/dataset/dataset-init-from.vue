@@ -99,6 +99,7 @@
 
 <script setup lang="ts">
 import type { AccountKeys } from '@data-fair/lib-vue/session'
+import { type CustomMetadataDefinition } from '#api/types'
 
 interface InitFrom {
   dataset: string
@@ -142,13 +143,16 @@ const otherAccount = computed(() => {
 })
 const ownerSettingsUrl = computed(() => otherAccount.value ? `${$apiPath}/settings/${owner.value.type}/${owner.value.id}` : null)
 const ownerTopicsFetch = useFetch<{ id: string }[]>(() => ownerSettingsUrl.value && `${ownerSettingsUrl.value}/topics`)
-const ownerDatasetsMetadataFetch = useFetch<{ custom?: { key: string }[] }>(() => ownerSettingsUrl.value && `${ownerSettingsUrl.value}/datasets-metadata`)
+const ownerDatasetsMetadataFetch = useFetch<{ custom?: CustomMetadataDefinition[] }>(() => ownerSettingsUrl.value && `${ownerSettingsUrl.value}/datasets-metadata`)
 
 const isCopyable = (part: string) => {
   if (!otherAccount.value) return true
   const ds = initFromDataset.value
   if (part === 'topics') return ds.topics.some((topic: { id: string }) => ownerTopicsFetch.data.value?.some(t => t.id === topic.id))
-  if (part === 'customMetadata') return Object.keys(ds.customMetadata).some(key => ownerDatasetsMetadataFetch.data.value?.custom?.some(c => c.key === key))
+  if (part === 'customMetadata') {
+    // the worker then keeps only the values valid for the target definitions
+    return ownerDatasetsMetadataFetch.data.value?.custom?.some(c => !!c.key && ds.customMetadata?.[c.key] != null)
+  }
   return true
 }
 

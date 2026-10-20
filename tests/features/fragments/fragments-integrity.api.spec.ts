@@ -33,3 +33,17 @@ test('changing the parent ACL of an integrity-enabled dataset fragment does not 
   expect(check.breach ?? null).toBe(null)
   expect(check.status).toBe('ok')
 })
+
+test('the parent of an integrity-enabled dataset fragment cannot change owner, nothing is moved', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const virtual = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'parent of an audited fragment' })).data
+  const plain = await sendDataset('datasets/dataset1.csv', admin, {}, { partOf: { type: 'dataset', id: virtual.id } })
+  const audited = await sendDataset('datasets/dataset1.csv', admin, {}, { partOf: { type: 'dataset', id: virtual.id } })
+  await admin.put(`/api/v1/datasets/${audited.id}/_integrity`, { active: true })
+
+  // integrity anchors are owner-scoped, same refusal as on the fragment's own transfer
+  await expect(admin.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })).rejects.toMatchObject({ status: 400 })
+  for (const id of [virtual.id, plain.id, audited.id]) {
+    expect((await admin.get(`/api/v1/datasets/${id}`)).data.owner).toMatchObject(virtual.owner)
+  }
+})

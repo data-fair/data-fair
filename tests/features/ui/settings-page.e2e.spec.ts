@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/login.ts'
+import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../support/axios.ts'
 
 const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
@@ -96,6 +97,32 @@ test.describe('settings topics save/cancel', () => {
     // Save/cancel buttons should disappear
     await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
   })
+
+  test('deleting a used topic asks for confirmation before saving', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const topics = (await ax.put('/api/v1/settings/user/test_user1', { topics: [{ title: 'Used topic' }] })).data.topics
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'with topic', topics })).data
+
+    await goToSettings(page, goToWithAuth)
+    await page.locator('#topics').scrollIntoViewIfNeeded()
+    // delete through the item actions menu, then its own confirmation
+    const item = page.locator('#topics').getByRole('listitem').first()
+    await item.hover()
+    await item.getByRole('button').last().click()
+    await page.getByRole('listitem').filter({ hasText: 'Supprimer' }).last().click()
+    await page.locator('.v-btn.bg-warning').filter({ hasText: 'Confirmer' }).click()
+    await page.locator('#topics').getByRole('button', { name: /Enregistrer/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText('Thématique « Used topic » supprimée : elle sera retirée de 1 jeu de données.')
+    await dialog.getByRole('button', { name: /Annuler/i }).click()
+    // checked on the settings: reading the dataset here would put it in the 30s memoize cache
+    assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.topics.length, 1)
+
+    await page.locator('#topics').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.getByRole('dialog').getByRole('button', { name: /Enregistrer/i }).click()
+    await expect.poll(async () => (await ax.get(`/api/v1/datasets/${dataset.id}`)).data.topics?.length ?? 0, { timeout: 10000 }).toBe(0)
+  })
 })
 
 test.describe('settings quality tabs save/cancel', () => {
@@ -114,7 +141,7 @@ test.describe('settings quality tabs save/cancel', () => {
 
     // Add a license in the Licences tab
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('MIT License')
+    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('MIT License')
     await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://mit.edu/license')
 
     // Save button appears
@@ -143,7 +170,7 @@ test.describe('settings quality tabs save/cancel', () => {
 
     // Add a license
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('To Cancel')
+    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('To Cancel')
 
     // Cancel and confirm
     await page.locator('#quality').getByRole('button', { name: /Annuler/i }).click()
@@ -200,7 +227,7 @@ test.describe('settings cross-subEdit interference', () => {
     await page.locator('#quality').scrollIntoViewIfNeeded()
     await page.getByRole('tab', { name: /Licences/i }).click()
     await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel(/titre/i).filter({ visible: true }).first().fill('Saved License')
+    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('Saved License')
     await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://example.com/license')
     await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
 
@@ -218,28 +245,59 @@ test.describe('settings cross-subEdit interference', () => {
   })
 })
 
-test.describe('settings auto-save', () => {
+test.describe('settings contact save/cancel', () => {
   test.beforeEach(async () => {
     await clean()
   })
 
-  test('contact info saves automatically', async ({ page, goToWithAuth }) => {
+  test('contact info is saved only on explicit save', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
 
-    // Edit contact phone
-    await page.locator('#info').scrollIntoViewIfNeeded()
-    const phoneInput = page.locator('#info').getByLabel(/téléphone/i)
-    if (await phoneInput.isVisible()) {
-      await phoneInput.fill('0123456789')
-      await phoneInput.blur()
+    const section = page.locator('#info')
+    await section.scrollIntoViewIfNeeded()
+    const nameInput = section.getByLabel('Nom', { exact: true })
+    await nameInput.fill('Test Contact')
+    await nameInput.blur()
 
-      // Verify via API (auto-save should have triggered)
-      await expect.poll(async () => {
-        const res = await ax.get('/api/v1/settings/user/test_user1')
-        return res.data.info?.phone
-      }, { timeout: 10000 }).toBe('0123456789')
-    }
+    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
+    await expect(saveButton).toBeVisible({ timeout: 5000 })
+    expect((await ax.get('/api/v1/settings/user/test_user1')).data.info?.contact?.name).toBeUndefined()
+
+    await saveButton.click()
+    await expect.poll(async () => {
+      const res = await ax.get('/api/v1/settings/user/test_user1')
+      return res.data.info?.contact?.name
+    }, { timeout: 10000 }).toBe('Test Contact')
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 })
+  })
+})
+
+test.describe('settings AI assistant audience', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('an org admin activates the assistant and restricts it to main organization admins', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+
+    await goToSettingsOrg(page, goToWithAuth)
+    const section = page.locator('#agentChat')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByLabel(/Activer l'assistant IA/i).check()
+    await section.getByRole('button', { name: /Enregistrer/i }).click()
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChat, { timeout: 10000 }).toBe(true)
+
+    // a new rule defaults to the main organization only, all roles
+    await section.getByRole('button', { name: /Ajouter une règle/i }).click()
+    await section.locator('.v-select').filter({ hasText: 'Rôles' }).click()
+    await page.getByRole('option', { name: 'admin', exact: true }).click()
+    await page.keyboard.press('Escape')
+    await section.getByRole('button', { name: /Enregistrer/i }).click()
+
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChatAudience, { timeout: 10000 })
+      .toEqual([{ department: '-', roles: ['admin'] }])
+    await expect(section.getByText(/Seuls les membres correspondant/)).toBeVisible()
   })
 })

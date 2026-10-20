@@ -74,6 +74,22 @@ test.describe('simple_metrics_agg hardening', () => {
     assert.equal(res.data.metrics.longueur.avg, 15)
     assert.equal(res.data.metrics.label, undefined)
   })
+
+  test('percentiles come back as the same key/value list as metric_agg', async () => {
+    await geoSetup('sma-percentiles')
+    const res = await ax.get('/api/v1/datasets/sma-percentiles/simple_metrics_agg', { params: { metrics: 'percentiles', fields: 'longueur' } })
+    assert.equal(res.data.metrics.longueur.percentiles.find((p: any) => p.key === 50).value, 15)
+  })
+
+  test('q is capped at 1000 characters on every route sharing prepareQuery', async () => {
+    await geoSetup('sma-q')
+    const q = 'a'.repeat(1001)
+    for (const route of ['lines', 'simple_metrics_agg']) {
+      await assert.rejects(ax.get(`/api/v1/datasets/sma-q/${route}`, { params: { q } }), (e: any) => e.status === 400, route)
+    }
+    const res = await ax.get('/api/v1/datasets/sma-q/lines', { params: { q: 'a'.repeat(1000) } })
+    assert.equal(res.status, 200)
+  })
 })
 
 test.describe('simple_metrics_agg truncated-values warning', () => {
