@@ -142,7 +142,7 @@ export const operations = {
         format: { exclude: true }
       },
       fixed: { hint: 'true' },
-      response: { rows: '/results', hints: true }
+      response: { rows: '/results', hints: '/meta/hints' }
     },
     {
       name: 'export_data',
@@ -194,7 +194,7 @@ export const operations = {
       ...queryParams
     },
     fixed: { hint: 'true', size: '0' },
-    response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: true }
+    response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: '/meta/hints' }
   },
   getMetricAgg: {
     name: 'calculate_metric',

@@ -78,7 +78,7 @@ const agentEntries = (op: any): Record<string, any>[] => {
 // warning, so that version skew in one service costs only that annotation detail. The values
 // themselves are not checked here (openapi-mcp is not a runtime dependency).
 export const agentEntryKeys = ['name', 'title', 'description', 'examples', 'annotations', 'params', 'fixed', 'body', 'bodyFields', 'bodyRequired', 'response', 'editor', 'security']
-export const agentTagKeys = ['skill']
+export const agentTagKeys = ['guide']
 export const agentSkillKeys = ['name', 'description', 'href', 'body', 'tools']
 
 /** keeps the known keys of an x-agent object, a warning naming the others */
@@ -227,9 +227,9 @@ const platformTag = (tag: Record<string, any>, title: string, warnings: string[]
     return out
   }
   const kept = knownKeys(xAgent, agentTagKeys, at, warnings)
-  if (kept.skill !== undefined && !isLocalized(kept.skill)) {
-    warnings.push(`${at}: x-agent skill is not a text, removed`)
-    delete kept.skill
+  if (kept.guide !== undefined && !isLocalized(kept.guide)) {
+    warnings.push(`${at}: x-agent guide is not a text, removed`)
+    delete kept.guide
   }
   if (Object.keys(kept).length) out['x-agent'] = kept
   return out

@@ -152,15 +152,15 @@ test.describe('platform api docs', () => {
         ]
       },
       tags: [
-        { name: 'A', 'x-agent': { skill: 'Use A', profiles: ['x'] } },
-        { name: 'B', 'x-agent': { skill: 3 } },
+        { name: 'A', 'x-agent': { guide: 'Use A', profiles: ['x'] } },
+        { name: 'B', 'x-agent': { guide: 3 } },
         { name: 'C', 'x-agent': 'nope' }
       ],
       paths: { '/x': { get: { operationId: 'x', 'x-agent': { namePrefix: 'm', response: { rows: '/results' } }, responses: ok200 } } }
     })
     assert.deepEqual(fragment.skills, [{ name: 'metrics-review', description: 'Review', href: 'review.md' }])
     assert.deepEqual(fragment.tags, [
-      { name: 'Metrics / A', 'x-agent': { skill: 'Use A' } },
+      { name: 'Metrics / A', 'x-agent': { guide: 'Use A' } },
       { name: 'Metrics / B' },
       { name: 'Metrics / C' }
     ])
@@ -168,7 +168,7 @@ test.describe('platform api docs', () => {
     assert.deepEqual(fragment.warnings, [
       'GET /x: x-agent namePrefix not part of the platform vocabulary, removed',
       'tag A: x-agent profiles not part of the platform vocabulary, removed',
-      'tag B: x-agent skill is not a text, removed',
+      'tag B: x-agent guide is not a text, removed',
       'tag C: x-agent is not an object, removed',
       'skill review: x-agent profiles not part of the platform vocabulary, removed',
       'skill Bad Name removed: its name is not kebab-case (64 characters at most once namespaced)',

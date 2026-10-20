@@ -233,9 +233,9 @@ test.describe('agent surface of the root document', () => {
 
   test('the workflow skill is offered with its linked body, to a read token too', async () => {
     const toolSet = await load(await platformDoc(), { fetch: skillFetch })
-    assert.deepEqual(toolSet.skills.map(s => s.id), ['datafair-workflow'])
+    assert.deepEqual(toolSet.skills.map(s => s.name), ['datafair-workflow'])
     assert.equal(toolSet.skills[0].error, undefined, 'the linked body is read, so the golden pins its real digest')
-    assert.deepEqual(toolsForScopes(toolSet, ['datasets:read']).skills.map(s => s.id), ['datafair-workflow'])
+    assert.deepEqual(toolsForScopes(toolSet, ['datasets:read']).skills.map(s => s.name), ['datafair-workflow'])
   })
 
   test('tool descriptions and skill bodies name tools by their platform names', async () => {
@@ -246,7 +246,7 @@ test.describe('agent surface of the root document', () => {
     const unprefixed = new RegExp(`(?<![A-Za-z0-9_])(${baseNames.join('|')})(?![A-Za-z0-9_])`, 'g')
     const texts = [
       ...toolSet.tools.map(t => ({ where: t.name, text: JSON.stringify({ description: t.description, inputSchema: t.inputSchema }) })),
-      ...toolSet.skills.map(s => ({ where: `skill ${s.id}`, text: `${s.description}\n${s.body}` }))
+      ...toolSet.skills.map(s => ({ where: `skill ${s.name}`, text: `${s.description}\n${s.body}` }))
     ]
     assert.ok(toolSet.skills.every(s => s.body), 'skill bodies are read')
     const found = texts.flatMap(({ where, text }) => [...text.matchAll(unprefixed)].map(m => `${where}: ${m[1]}`))
