@@ -237,13 +237,14 @@ services:
       # the agents repo's development signing key, public by design: it only signs dev NHI assertions
       - 'NHI_SIGNING_KEY={"kty":"EC","crv":"P-256","x":"iuGRxiUsSj4YmAvrp3XpXGnvttc6ruQIYakEVp-B4Ig","y":"nF0kPlKpzNztlqKozkb9T4sHl_sCD1M6ngrpwEnTL-M","d":"Hv71PS5oK6z6bqiRT-nq62cmgauiaCreaO-zmS30-6Q","kid":"dev-1","alg":"ES256"}'
       # the operator catalog: the stack's mcp server as ONE profiled entry, as the agent; each agent selects
-      # its profiles (catalog, read, write…) from the vocabulary at profilesUrl
+      # its profiles (catalog, read, write…) from the vocabulary at profilesUrl. Broken until phase 4a:
+      # the mcp server no longer serves /profiles nor ?profiles=, agents connect to /mcp with a scoped token
       - 'MCP_SERVERS=[{"id":"datafair","name":"Data Fair","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/mcp","profilesUrl":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/profiles","auth":"nhi-session"}]'
       # the two built-in personal assistants read what the portal publishes, nothing more
       - 'PERSONAL_ASSISTANTS={"portal":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]},"backOffice":{"mcpServers":[{"serverId":"datafair","profiles":["catalog"]}]}}'
 
-  # the MCP server composed from the services' agent annotations. Broken until the mcp side reads
-  # /data-fair/api/v1/platform/api-docs.json: it still reads the removed agents/index.json
+  # the MCP server built from /data-fair/api/v1/platform/api-docs.json: /mcp-server/mcp (every tool,
+  # filtered by the caller's scopes, credentials required) and /mcp-server/datasets/mcp (the dataset tools)
   mcp:
     profiles:
       - dev
@@ -253,10 +254,12 @@ services:
       - TRANSPORT=http
       - PORT=${MCP_PORT}
       - MAIN_SITE_URL=http://${DEV_HOST}:${NGINX_PORT1}
+      # the signing keys that verify callers' sessions and tokens
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
       # sent as in production; the dev nginx has no request limiting and does not read it
       - TRUSTED_FORWARDER=dev-trusted-forwarder
       - SSRF_PUBLIC_IPS=127.0.0.1,::1
-      # tool and profile titles are shown to people (chat chips, the agent form's profile tree)
+      # tool titles are shown to people (chat chips)
       - LOCALE=fr
       - OBSERVER_ACTIVE=false
 

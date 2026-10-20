@@ -832,13 +832,13 @@ upload takes a URL the MCP server fetches, a download returns a link the client 
 mechanics are openapi-mcp's ([`docs/x-agent.md#files`](https://github.com/data-fair/openapi-mcp/blob/main/docs/x-agent.md#files));
 the consumer is the agents service's file store (autonomous agents only).
 
-| Tool | Operation | Profile | Returns |
+| Tool | Operation | Scope tier | Returns |
 | --- | --- | --- | --- |
-| `datafair_create_dataset_from_file` | `POST /datasets` | `write_datasets` | the created dataset |
-| `datafair_replace_dataset_file` | `POST /datasets/{id}` (`writeData`) | `write_datasets` | the dataset, its new file pending |
-| `datafair_download_dataset_file` | `GET /datasets/{id}/raw` | `read_datasets` | a link |
-| `datafair_download_dataset_converted_file` | `GET /datasets/{id}/convert` | `read_datasets` | a link |
-| `datafair_export_data` | `GET /datasets/{id}/lines?format=csv` | `read_datasets` | a link |
+| `datafair_create_dataset_from_file` | `POST /datasets` | `datasets:write` | the created dataset |
+| `datafair_replace_dataset_file` | `POST /datasets/{id}` (`writeData`) | `datasets:write` | the dataset, its new file pending |
+| `datafair_download_dataset_file` | `GET /datasets/{id}/raw` | `datasets:read` | a link |
+| `datafair_download_dataset_converted_file` | `GET /datasets/{id}/convert` | `datasets:read` | a link |
+| `datafair_export_data` | `GET /datasets/{id}/lines?format=csv` | `datasets:read` | a link |
 
 - **Uploads take a URL.** A file argument is a `{ type: string, format: uri, x-mcp-file }` input
   (the keyword of the MCP file-input proposals, [SEP-2631](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2631);
