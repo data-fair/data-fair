@@ -25,6 +25,12 @@ test.describe('permissions', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
+  test('an anonymous PATCH with an empty body is refused, not a 500', async () => {
+    const res = await testUser1.post('/api/v1/datasets', { isRest: true, title: 'empty patch' })
+    await assert.rejects(anonymous.patch('/api/v1/datasets/' + res.data.id, undefined, { headers: { 'content-length': '0' } }),
+      (err: any) => err.status === 403)
+  })
+
   test('apply permissions to datasets', { tag: '@smoke' }, async () => {
     // A dataset with restricted permissions
     let res = await testUser1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })

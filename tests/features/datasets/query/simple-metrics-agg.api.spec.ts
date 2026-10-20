@@ -74,6 +74,11 @@ test.describe('simple_metrics_agg hardening', () => {
     assert.equal(res.data.metrics.longueur.avg, 15)
     assert.equal(res.data.metrics.label, undefined)
   })
+
+  test('percentiles come back as the same key/value list as metric_agg', async () => {
+    const res = await ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { metrics: 'percentiles', fields: 'longueur' } })
+    assert.equal(res.data.metrics.longueur.percentiles.find((p: any) => p.key === 50).value, 15)
+  })
 })
 
 test.describe('simple_metrics_agg truncated-values warning', () => {
