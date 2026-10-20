@@ -159,6 +159,40 @@ test.describe('settings API', () => {
     assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1:dep1/agent-chat')).data, { agentChat: true })
   })
 
+  test('org admins restrict the AI assistant to an audience of departments and roles', async () => {
+    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
+    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser6Dep1 = await axiosAuth('test_user6@test.com', 'test_org1')
+    testUser6Dep1.setOrg('test_org1', 'dep1')
+    const testUser8Org = await axiosAuth('test_user8@test.com', 'test_org1')
+    const agentChat = async (ax: typeof testUser1Org) => (await ax.get('/api/v1/settings/organization/test_org1/agent-chat')).data.agentChat
+
+    // a plain org admin (not a super-admin) manages the activation and its audience
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: true, agentChatAudience: [{ department: '-', roles: ['admin'] }] })
+    assert.equal(await agentChat(testUser1Org), true)
+    assert.equal(await agentChat(testUser8Org), false)
+    assert.equal(await agentChat(testUser4Dep1), false)
+
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [{ department: '*', roles: ['admin'] }, { department: 'dep1', roles: ['contrib'] }] })
+    assert.equal(await agentChat(testUser1Org), true)
+    assert.equal(await agentChat(testUser4Dep1), true)
+    assert.equal(await agentChat(testUser6Dep1), true)
+    assert.equal(await agentChat(testUser8Org), false)
+
+    // an empty audience means every member
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [] })
+    assert.equal(await agentChat(testUser8Org), true)
+
+    // the audience never overrides the activation
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: false })
+    assert.equal(await agentChat(testUser1Org), false)
+
+    await assert.rejects(
+      testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [{ roles: ['admin'] }] }),
+      (err: any) => err.status === 400
+    )
+  })
+
   test('can still re-save settings after the worker set an expiration flag on a key', async () => {
     // create a key
     const created = (await testUser1.put('/api/v1/settings/user/test_user1', {

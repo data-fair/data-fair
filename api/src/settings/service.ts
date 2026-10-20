@@ -17,7 +17,7 @@ import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
-import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, type SettingsParams } from './operations.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, matchAgentChatAudience, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -267,10 +267,16 @@ export const getDatasetsMetadata = async (params: SettingsParams) => {
   return result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {}
 }
 
-export const getAgentChat = async (params: SettingsParams) => {
+export const getAgentChat = async (params: SettingsParams, sessionState: SessionStateAuthenticated) => {
   // the AI assistant is activated at the organization level only, departments inherit the activation
-  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1 } })
-  return { agentChat: !!(result && isMainSettings(result) && result.agentChat) }
+  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1, agentChatAudience: 1 } })
+  if (!(result && isMainSettings(result) && result.agentChat)) return { agentChat: false }
+  const { owner } = params
+  if (owner.type === 'user' || sessionState.user.adminMode) return { agentChat: true }
+  // the audience is matched against the role and department of the caller's active account in this organization
+  const { account, accountRole } = sessionState
+  if (account.type !== owner.type || account.id !== owner.id) return { agentChat: false }
+  return { agentChat: matchAgentChatAudience(result.agentChatAudience, { role: accountRole, department: account.department }) }
 }
 
 export const getPublicationSites = async (params: SettingsParams) => {

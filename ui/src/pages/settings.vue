@@ -237,7 +237,6 @@
         id="agentChat"
         :svg="compatSvg"
         svg-no-margin
-        color="admin"
         :title="sections.agentChat.title"
         :subtitle="t('sections.agentChat.subtitle')"
       >
@@ -246,6 +245,12 @@
             <v-checkbox
               v-model="settings.agentChat"
               :label="t('agentChatToggle')"
+            />
+            <settings-agent-chat-audience
+              v-if="settings.agentChat && settingsAccount.type === 'organization'"
+              v-model="settings.agentChatAudience"
+              :departments="departments.filter(d => d.id !== '__root')"
+              :roles="accountDetailsFetch.data.value?.roles ?? []"
             />
           </v-container>
         </template>
@@ -469,7 +474,7 @@ const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { succ
 const infoEdit = settingsEditFetch.createSubEdit(['info'], { success: t('saved') })
 const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
-const agentChatEdit = settingsEditFetch.createSubEdit(['agentChat'], { success: t('saved') })
+const agentChatEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience'], { success: t('saved') })
 const compatEdit = settingsEditFetch.createSubEdit(['compatODS'], { success: t('saved') })
 
 // Auto-save: trigger save when hasDiff becomes true
@@ -527,7 +532,7 @@ const sections = computed(() => {
   }
   // agentChat and compatODS are activated at the organization level only, departments inherit them
   if (!settingsAccount.value.department) {
-    if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
+    if ($uiConfig.agentsIntegration) {
       result.agentChat = { title: t('sections.agentChat.title') }
     }
     if ($uiConfig.compatODS && session.user.value.adminMode) {
