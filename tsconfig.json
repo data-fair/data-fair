@@ -13,7 +13,10 @@
       // same alias as ui/tsconfig.json — needed when a test imports a ui module
       // (the ui package "imports" target crosses package boundaries, which
       // NodeNext resolution rejects)
-      "#api/types": ["./api/types/index.ts"]
+      "#api/types": ["./api/types/index.ts"],
+      // api runs content-disposition 1 (untyped, in api/node_modules) while express 5.3 hoists
+      // its own v2 (typed, different API) to the root: without this, tsc checks against v2
+      "content-disposition": ["./node_modules/@types/content-disposition/index.d.ts"]
     }
   },
   "exclude": [
