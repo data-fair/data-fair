@@ -50,7 +50,7 @@ const scoreField = (title, value, ifExpr, props, getProps, cols = scoreCols) => 
     ...(getProps && { getProps })
   }
 })
-/** @typedef {{ unit?: string, min?: number, max?: number, if?: string, getProps?: string }} Bounds */
+/** @typedef {{ unit: string, min?: number, max?: number }} Bounds */
 // weight of a metadata in the completeness score, and for a text or a list its recommended size
 // x-default is read by the score, not a json schema default: vjsf would store it
 /**
@@ -61,8 +61,8 @@ const scoreField = (title, value, ifExpr, props, getProps, cols = scoreCols) => 
 const scoreProperties = (weight, ifExpr, bounds) => ({
   weight: scoreField('Poids', weight, ifExpr),
   ...(bounds && {
-    recommendedMin: scoreField('Min.', bounds.min, bounds.if ?? ifExpr, { suffix: bounds.unit }, bounds.getProps),
-    recommendedMax: scoreField('Max.', bounds.max, bounds.if ?? ifExpr, { suffix: bounds.unit }, bounds.getProps)
+    recommendedMin: scoreField('Min.', bounds.min, ifExpr, { suffix: bounds.unit }),
+    recommendedMax: scoreField('Max.', bounds.max, ifExpr, { suffix: bounds.unit })
   })
 })
 const chars = 'car.'

@@ -49,7 +49,7 @@ export const completenessCriteria = (dataset: Record<string, any>, datasetsMetad
   for (const key of scoredFields) {
     const settings: ScoreSettings = datasetsMetadata?.[key] ?? {}
     const defaults = metadataSchema[key].properties
-    if (!(settings.active ?? defaults.active?.default ?? true)) continue
+    if (!(settings.active ?? defaults.active.default)) continue
     criteria.push(rate(key, false, dataset[key], settings, defaults))
   }
   for (const settings of datasetsMetadata?.custom ?? []) {
