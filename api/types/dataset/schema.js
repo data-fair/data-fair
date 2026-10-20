@@ -726,6 +726,13 @@ const datasetProperties = {
     description: 'Address of the page where the original data is published, for example on the producer\'s website.',
     'x-i18n-description': { fr: 'Adresse de la page où les données d\'origine sont publiées, par exemple sur le site du producteur.' }
   },
+  completeness: {
+    type: 'integer',
+    minimum: 0,
+    maximum: 100,
+    readOnly: true,
+    description: 'Readonly field. Metadata completeness score, from 0 to 100, present when the owner activated it in the settings.'
+  },
   constraints: {
     type: 'array',
     title: 'Contraintes',

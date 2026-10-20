@@ -212,6 +212,13 @@ Current callers, both bulk writers that patch fields directly with `updateMany` 
   matching only its OLD topic name, indefinitely. (Applications carry no `topics` in their
   definition, so their branch does not call it.)
 
+The dataset recompute also refreshes the metadata completeness score (`completeness`, computed by
+`api/types/metadata-completeness.ts` from the owner's `datasetsMetadata` settings), so two more
+writers stamp the flag for it: **`api/src/settings/service.ts`, `writeSettings`** marks every
+dataset of the owner stale when `datasetsMetadata` changes while the score is (or was) active, and
+**`api/src/fragments/service.ts`, `applyPartOfChange`** sets it on attach and detach, since a
+fragment has no score.
+
 If you add a new bulk writer — an upgrade script, an admin bulk action, anything using
 `updateMany`/`bulkWrite` on `datasets`/`applications` outside `applyPatch` — and it touches any
 field in `datasetsTextSearch.definition.fields` (or `applicationsTextSearch.definition.fields`),
