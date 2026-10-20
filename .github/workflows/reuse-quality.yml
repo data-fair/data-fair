@@ -1,10 +1,10 @@
 name: Quality checks
 
 # The full gate. One build job (types, UI, parquet-writer) shared as an artifact; static checks
-# and unit tests in one job; api and e2e tests in two parallel jobs. Each test job is a fresh
-# runner with its own services, so the suite's single-worker constraint (tests share one dev env
-# state) holds inside each one. Splitting by project and not by --shard: shards follow the file
-# order and came out unbalanced (16 s / 2.6 min / 23.9 min), the api and e2e halves are close.
+# and unit tests in one job; api tests and two e2e shards in three parallel jobs. Each test job is
+# a fresh runner with its own services, so the suite's single-worker constraint (tests share one
+# dev env state) holds inside each one. Split by project first: --shard over the whole suite
+# follows the file order and came out unbalanced (16 s / 2.6 min / 23.9 min).
 # Used by pull requests, releases and the nightly check of master; the pre-push hook only
 # runs a light subset (see docs/architecture/testing.md).
 
@@ -108,12 +108,17 @@ jobs:
       run: npx playwright test --project=unit
 
   tests:
+    name: tests (${{ matrix.name }})
     needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # e2e runs ~15-20 min against ~12 for api: two e2e shards keep the jobs close
       matrix:
-        project: [api, e2e]
+        include:
+          - { name: api, project: api, args: '' }
+          - { name: e2e 1/2, project: e2e, args: '--shard=1/2' }
+          - { name: e2e 2/2, project: e2e, args: '--shard=2/2' }
     env:
       OGR2OGR_SKIP: 'true'
       # empty on workflow_dispatch, where playwright.config.ts falls back to 1
@@ -207,13 +212,13 @@ jobs:
         done
 
     - name: Run tests
-      run: npx playwright test --project=${{ matrix.project }}
+      run: npx playwright test --project=${{ matrix.project }} ${{ matrix.args }}
 
     - name: Upload test results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.project }}
+        name: test-results-${{ strategy.job-index }}-${{ matrix.project }}
         path: |
           test-results/
           dev/logs/

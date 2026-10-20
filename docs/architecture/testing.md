@@ -96,7 +96,7 @@ runs what is worth its cost there:
 | commit | `.husky/pre-commit` | `npm run lint`, with the eslint cache (a few seconds warm) |
 | push | `.husky/pre-push` → `dev/pre-push.sh` | type ratchet, all unit tests, the `@smoke` api/e2e set, and the api/e2e spec files changed since `origin/master` |
 | push | `commits.yml` | docker build + staging deploy only, no quality checks |
-| pull request | `pull-requests.yml` → `reuse-quality.yml` | the full gate: lint, type ratchet, builds, UI types, audit, and the whole unit/api/e2e suite (unit in the static job, api and e2e in two parallel jobs) |
+| pull request | `pull-requests.yml` → `reuse-quality.yml` | the full gate: lint, type ratchet, builds, UI types, audit, and the whole unit/api/e2e suite (unit in the static job, api and two e2e shards in three parallel jobs) |
 | release tag | `releases.yml` → `reuse-quality.yml` | the full gate, before building the image |
 | nightly | `nightly.yml` → `reuse-quality.yml` | the full gate on master without retries, its e2e tests on one browser engine per night (chromium, firefox, webkit in turn; pull requests stay on chromium), skipped when this master commit already passed a night on that engine |
 
@@ -110,10 +110,11 @@ be selected reliably.
 
 **CI jobs.** A build job compiles the types, the UI and `parquet-writer` once (the Rust build is
 cached by Swatinem/rust-cache) and shares them as an artifact. The static job runs lint, type
-checks, audit and the unit tests. The api and e2e projects run in two parallel jobs, each a fresh
-runner with every docker service, a dev API and a dev UI; only the Playwright browser binaries
-are cached between runs. `--shard` was dropped: it splits by file order, and the 3 shards came
-out at 16 s / 2.6 min / 23.9 min. On a failure a job uploads `test-results/` and `dev/logs/` as
+checks, audit and the unit tests. The api project and two `--shard` halves of the e2e project run
+in three parallel jobs, each a fresh runner with every docker service, a dev API and a dev UI;
+only the Playwright browser binaries are cached between runs. The jobs split by project first:
+`--shard` over the whole suite follows the file order, and its 3 shards came out at 16 s /
+2.6 min / 23.9 min. e2e alone (~15-20 min against ~12 for api) is then halved. On a failure a job uploads `test-results/` and `dev/logs/` as
 an artifact. A new push on a pull request cancels its running checks.
 
 ### The smoke set
