@@ -80,6 +80,8 @@ export const sheet2csvPiscina = new Piscina({
   idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
 })
+// a pool emits 'error' when a thread dies with no task in flight; without a listener it crashes the process
+sheet2csvPiscina.on('error', (err) => internalError('piscina-sheet2csv', err))
 
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
@@ -899,7 +901,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   }
 
   if (bulkOpMatchingOperations.length && sessionState) {
-    mongo.datasets.updateOne(
+    await mongo.datasets.updateOne(
       { id: dataset.id },
       {
         $set: {
