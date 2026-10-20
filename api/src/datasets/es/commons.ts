@@ -199,6 +199,8 @@ export const applyCollapse = (esQuery: any, dataset: any, query: Record<string, 
   esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
 }
 
+export const maxQLength = 1000
+
 export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?: string[], sqsOptions: any = {}, qsAsFilter?: boolean, ignoreInvalidQS?: boolean) => {
   const esQuery: any = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
@@ -334,6 +336,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   let q = query.q ?? query._c_q
   if (q) q = q.trim()
+  if (q?.length > maxQLength || query.q_ignored?.length > maxQLength) throw httpError(400, `Les paramètres q et q_ignored sont limités à ${maxQLength} caractères.`)
 
   if (q || query.qs) {
     if (query.qs) {

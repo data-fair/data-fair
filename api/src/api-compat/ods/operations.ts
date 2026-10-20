@@ -313,15 +313,25 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
 
   const esQuery: any = {}
   esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
-  if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
+  if (!Number.isInteger(esQuery.size) || esQuery.size < -1) throw httpError(400, 'le paramètre "limit" doit être un entier positif ou -1')
+  if (esQuery.size === -1) esQuery.size = 100 // -1 is interpreted as 100
 
   const size = esQuery.size
   const from = esQuery.from = query.offset ? Number(query.offset) : 0
+  if (!Number.isInteger(from) || from < 0) throw httpError(400, 'le paramètre "offset" doit être un entier positif')
 
   const fields = dataset.schema.map(f => f.key)
 
-  const aliasesSources = [query.select, query.group_by].filter(Boolean).filter(p => p.trim() !== '*')
-  const simpleAliases: Aliases = aliasesSources.length ? parseAliases(aliasesSources.join(',')) : {}
+  const simpleAliases: Aliases = {}
+  for (const param of ['select', 'group_by']) {
+    if (!query[param] || query[param].trim() === '*') continue
+    try {
+      Object.assign(simpleAliases, parseAliases(query[param]))
+    } catch (err: any) {
+      logCompatODSError(err, query[param], route, `invalid-${param.replace('_', '-')}`, dataset.id)
+      throw httpError(400, `le paramètre "${param}" est invalide : ` + err.message)
+    }
+  }
 
   let aliases: Aliases = {}
   let selectAggs = {}

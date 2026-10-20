@@ -320,6 +320,25 @@ bidule;1;22.2
     assert.equal(res.data.results[2].somedate, null)
   })
 
+  test('rejects malformed paging and alias params with a 400', async () => {
+    const ax = testUser1Org
+
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const is400 = (err: any) => err.status === 400
+
+    for (const params of [{ select: '"' }, { group_by: '\n' }, { offset: '-5' }, { offset: 'true' }, { limit: '-2' }, { limit: '1.5' }]) {
+      await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params }), is400, JSON.stringify(params))
+    }
+    // the export used to stream its headers before ES refused the negative size, the proxy answered 502
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`, { params: { limit: '-2' } }), is400)
+
+    // -1 still means "no limit"
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/json`, { params: { limit: '-1' } })
+    assert.equal(res.data.length, 2)
+  })
+
   test('should manage multi-values', async () => {
     const ax = testUser1Org
 
