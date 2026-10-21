@@ -18,15 +18,15 @@ export interface SimulatedAgentConfig {
   title?: string
   persona?: string
   instructions?: string
-  /** References into the agents service's MCP_SERVERS catalog (docker-compose.yaml): profiles on the profiled `datafair` entry. */
-  mcpServers?: Array<{ serverId: string, profiles?: string[], toolFilter?: string[] }>
+  /** References into the agents service's MCP_SERVERS catalog (docker-compose.yaml); what they offer is set by the agent's identity's scopes. */
+  mcpServers?: Array<{ serverId: string, toolFilter?: string[] }>
 }
 
 export const DEFAULT_SIMULATED_AGENT: Required<SimulatedAgentConfig> = {
   title: 'Assistant données de l\'organisation',
   persona: 'Tu es l\'assistant données de l\'organisation. Tu réponds brièvement, en français, et tu dis clairement quand tu ne peux pas faire quelque chose.',
   instructions: 'Appuie-toi sur tes outils plutôt que de deviner. Si un outil échoue ou qu\'aucun outil ne permet de répondre, dis-le au lieu d\'inventer un résultat.',
-  mcpServers: [{ serverId: 'datafair', profiles: ['read'] }]
+  mcpServers: [{ serverId: 'datafair' }, { serverId: 'datafair-datasets' }]
 }
 
 export type AgentCase = SimulationCase & {

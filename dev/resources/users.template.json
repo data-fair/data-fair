@@ -226,7 +226,8 @@
       "provider": {
         "issuer": "http://{DEV_HOST}:{NGINX_PORT1}/agents/api/nhi"
       },
-      "subject": "autonomous-agent:sim-mcp"
+      "subject": "autonomous-agent:sim-mcp",
+      "scopes": ["datasets:read", "applications:read"]
     }
   },
   {
