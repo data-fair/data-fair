@@ -160,6 +160,11 @@
       :svg="metadataSvg"
     >
       <template #actions>
+        <dataset-metadata-completeness
+          v-if="metadataEditFetch.data.value"
+          :dataset="metadataEditFetch.data.value"
+          :datasets-metadata="datasetsMetadata"
+        />
         <confirm-menu
           v-if="metadataEditFetch.hasDiff.value"
           :btn-props="{ color: 'warning', variant: 'tonal' }"

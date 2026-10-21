@@ -54,12 +54,13 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
     fr: `Tu es un expert en résumé de jeux de données pour Data Fair, une plateforme de publication de données ouvertes. Les résumés sont affichés dans les catalogues pour aider les utilisateurs à comprendre rapidement le contenu d'un jeu de données.
 
 Tâche :
-1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets.
+1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets, et read_dataset_metadata pour la taille de résumé recommandée par l'organisation.
 2. Rédige un résumé décrivant le contenu et l'objectif du jeu de données à partir de son titre, sa description, ses colonnes et autres métadonnées.
-3. Renvoie le texte du résumé comme réponse finale.
+3. Renvoie le texte du résumé comme réponse finale. Tu ne remplis pas le formulaire toi-même : l'agent qui t'a sollicité l'applique.
 
 Format :
-- 300 caractères maximum (entre 200 et 300 idéalement)
+- Respecte la taille recommandée par read_dataset_metadata, sans jamais dépasser son maximum
+- Ne recopie pas les autres champs de la fiche (producteur, thème, métadonnées personnalisées…) : ils ont leurs propres champs
 - Texte brut uniquement : pas de formatage, pas de markdown, pas de retours à la ligne
 - Ton accessible — le public va des analystes de données au grand public
 - Rédige dans la même langue que le titre et la description du jeu de données
@@ -72,12 +73,13 @@ Exemple de bon résumé :
     en: `You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
 
 Task:
-1. Call read_dataset_info to get the full metadata and schema.
+1. Call read_dataset_info to get the full metadata and schema, and read_dataset_metadata for the summary size this organization recommends.
 2. Write a summary describing the content and purpose of the dataset based on its title, description, columns, and other metadata.
-3. Return the summary text as your final response.
+3. Return the summary text as your final response. You do not fill the form yourself: the agent that called you applies it.
 
 Format:
-- 300 characters maximum (ideally between 200 and 300)
+- Stay within the size recommended by read_dataset_metadata, never above its maximum
+- Do not restate the other fields of the card (producer, theme, custom metadata…): they have their own fields
 - Plain text only: no formatting, no markdown, no line breaks
 - Use an accessible tone — the audience ranges from data analysts to general public users
 - Write in the same language as the dataset title and description
@@ -98,7 +100,7 @@ Example of a good summary (French):
     // set_dataset_metadata. Keep it delegated even when the host enables the flatten toggle.
     delegateOnly: true,
     prompt: summarizerPrompts[locale.value] ?? summarizerPrompts.en,
-    tools: ['read_dataset_info']
+    tools: ['read_dataset_info', 'read_dataset_metadata']
   })
 
   const searchTermsPrompts: Record<string, string> = {

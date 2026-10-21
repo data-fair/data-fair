@@ -24,5 +24,16 @@ export async function seedSettings (assistantModelId: string, toolsModelId: stri
   const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
   await seedAgentsSettings(admin, `${ROOT}/agents`, OWNER, assistantModelId, toolsModelId)
   // PATCH merges, so it preserves the owner's other settings.
-  await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, { agentChat: true })
+  await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, {
+    agentChat: true,
+    // an organization that scores its metadata and adds its own, with a summary bound unlike the agent's former 300
+    datasetsMetadata: {
+      completeness: { active: true },
+      summary: { recommendedMin: 80, recommendedMax: 180 },
+      custom: [
+        { title: 'Service producteur', description: 'Direction ou service de la collectivité qui produit et met à jour les données.' },
+        { title: 'Thème interne', enum: ['Sport', 'Culture', 'Éducation', 'Voirie'], multiple: true }
+      ]
+    }
+  })
 }

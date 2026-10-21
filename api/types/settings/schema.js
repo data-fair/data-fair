@@ -9,7 +9,7 @@ const allGroupsExpr = `[{ key: "informations", title: rootData.informationsTitle
 
 // tab of a metadata in the dataset form, left empty it stays in its default tab
 /** @param {{ key: string, title: string }} defaultGroup */
-const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
+const metadataGroup = (defaultGroup, toggleable = false, cols = 3) => ({
   type: 'string',
   title: 'Catégorie',
   // read by the dataset form, not a json schema default: vjsf would store it
@@ -26,19 +26,68 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
-// a metadata always shown on a dataset: only its tab can be chosen
+const scoreActive = 'rootData.completeness?.active'
+const toggleableScore = `parent.data.active && ${scoreActive}`
+// weight, min and max end the row of their metadata on wide screens
+const scoreCols = { xs: 4, lg: 1 }
+/**
+ * @param {string} title
+ * @param {number | undefined} value
+ * @param {string} ifExpr
+ * @param {Record<string, any>} [props]
+ * @param {string} [getProps]
+ * @param {Record<string, number>} [cols]
+ */
+const scoreField = (title, value, ifExpr, props, getProps, cols = scoreCols) => ({
+  type: 'integer',
+  minimum: 0,
+  title,
+  'x-default': value,
+  layout: {
+    if: ifExpr,
+    cols,
+    props: { controlVariant: 'hidden', ...props, ...(value !== undefined && { placeholder: String(value), persistentPlaceholder: true }) },
+    ...(getProps && { getProps })
+  }
+})
+/** @typedef {{ unit: string, min?: number, max?: number }} Bounds */
+// weight of a metadata in the completeness score, and for a text or a list its recommended size
+// x-default is read by the score, not a json schema default: vjsf would store it
+/**
+ * @param {number} weight
+ * @param {string} ifExpr
+ * @param {Bounds} [bounds]
+ */
+const scoreProperties = (weight, ifExpr, bounds) => ({
+  weight: scoreField('Poids', weight, ifExpr),
+  ...(bounds && {
+    recommendedMin: scoreField('Min.', bounds.min, ifExpr, { suffix: bounds.unit }),
+    recommendedMax: scoreField('Max.', bounds.max, ifExpr, { suffix: bounds.unit })
+  })
+})
+const chars = 'car.'
+const values = 'val.'
+const textType = '(parent.data?.type ?? "string") === "string"'
+// a single value picked in a list has no size to recommend
+const customBounds = `${scoreActive} && ${textType} && (parent.data?.multiple || !parent.data?.enum?.length)`
+
+// a metadata always shown on a dataset: only its tab can be chosen, except for summary and description
 /**
  * @param {string} title
  * @param {{ key: string, title: string }} defaultGroup
  * @param {string} description
+ * @param {number} weight
+ * @param {Bounds} [bounds]
+ * @param {boolean} [fixedGroup]
  */
-const fixedMetadata = (title, defaultGroup, description) => ({
+const fixedMetadata = (title, defaultGroup, description, weight, bounds, fixedGroup = false) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
-  layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group'] },
+  layout: { children: ['active', { text: '\u00a0', cols: 3 }, 'group', 'weight', ...(bounds ? ['recommendedMin', 'recommendedMax'] : [])] },
   properties: {
-    active: { title, description, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
-    group: metadataGroup(defaultGroup)
+    active: { title, description, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 3 } },
+    group: fixedGroup ? { ...metadataGroup(defaultGroup), readOnly: true } : metadataGroup(defaultGroup),
+    ...scoreProperties(weight, scoreActive, bounds)
   }
 })
 
@@ -430,11 +479,26 @@ export default {
             }
           }
         },
-        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."),
-        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."),
-        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
-        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
-        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."),
+        completeness: {
+          type: 'object',
+          properties: {
+            active: {
+              type: 'boolean',
+              title: 'Activer le score de complétion des métadonnées',
+              description: 'Calcule sur chaque jeu de données un score de 0 à 100. Chaque métadonnée renseignée rapporte son poids, ou la moitié seulement si sa taille sort du minimum et du maximum recommandés. Une métadonnée de poids 0 ne compte pas.',
+              default: false,
+              layout: { comp: 'switch' }
+            }
+          }
+        },
+        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 3, { unit: chars, min: 100, max: 300 }, true),
+        // Google Dataset rich results expect a description of 50 to 5000 characters
+        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 4, { unit: chars, min: 300, max: 5000 }, true),
+        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 3),
+        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 1),
+        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 1),
+        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.', 2, { unit: values }),
+        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.", 0, { unit: values }),
         creator: {
           type: 'object',
           properties: {
@@ -443,18 +507,19 @@ export default {
               description: "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données.",
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Producteur' }
               }
             },
-            group: metadataGroup(informationsGroup, true)
+            group: metadataGroup(informationsGroup, true),
+            ...scoreProperties(2, toggleableScore)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
@@ -466,18 +531,19 @@ export default {
               description: 'Zone géographique couverte par les données, par exemple une commune ou une région.',
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Couverture géographique' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(1, toggleableScore)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
@@ -489,18 +555,19 @@ export default {
               description: 'Période couverte par les données.',
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(1, toggleableScore)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -512,18 +579,19 @@ export default {
               description: 'Fréquence à laquelle les données sont mises à jour.',
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Fréquence de mise à jour' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(2, toggleableScore)
           }
         },
         modified: {
@@ -534,18 +602,19 @@ export default {
               description: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée.",
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Date de modification de la source' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(0, toggleableScore)
           }
         },
         keywords: {
@@ -556,18 +625,19 @@ export default {
               description: 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.',
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Mots-clés' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(2, toggleableScore, { unit: values })
           }
         },
         searchTerms: {
@@ -578,18 +648,19 @@ export default {
               description: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel.",
               type: 'boolean',
               default: true,
-              layout: { comp: 'switch', cols: 4 }
+              layout: { comp: 'switch', cols: 3 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 4,
+                cols: 3,
                 props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            ...scoreProperties(0, toggleableScore)
           }
         },
         conformsTo: {
@@ -635,6 +706,14 @@ export default {
               switch: [{
                 if: 'summary',
                 children: []
+              }, {
+                // the weight takes the room of min and max when a metadata has none
+                children: [
+                  'title', 'type', 'group',
+                  { key: 'weight', cols: { xs: 12, lg: 1 }, if: customBounds },
+                  { key: 'weight', cols: { xs: 12, lg: 3 }, if: `${scoreActive} && !(${customBounds})` },
+                  'recommendedMin', 'recommendedMax', 'enum', 'multiple', 'description'
+                ]
               }]
             },
             properties: {
@@ -644,11 +723,12 @@ export default {
                 readOnly: true,
                 layout: 'none'
               },
+              // label, type and category then the score, in line with the other metadata rows
               title: {
                 title: 'Libellé',
                 type: 'string',
                 minLength: 3,
-                layout: { cols: 4 }
+                layout: { cols: 3 }
               },
               type: {
                 title: 'Type',
@@ -664,23 +744,33 @@ export default {
                 ]
               },
               group: metadataGroup(informationsGroup, false, 3),
-              multiple: {
-                title: 'Plusieurs valeurs',
-                type: 'boolean',
-                layout: { cols: 2, comp: 'checkbox', if: '(parent.data?.type ?? "string") === "string"' }
-              },
-              description: {
-                title: 'Infobulle',
-                description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
-                type: 'string',
-                layout: 'textarea'
-              },
+              weight: scoreField('Poids', 1, scoreActive, {}, undefined, { xs: 12, lg: 3 }),
+              // the options of a text, then the size recommended for its values
               enum: {
                 title: 'Liste de valeurs',
                 description: 'Laissez vide pour une saisie libre.',
                 type: 'array',
                 items: { type: 'string' },
-                layout: { if: '(parent.data?.type ?? "string") === "string"' }
+                layout: { cols: { xs: 12, lg: 9 }, if: textType }
+              },
+              multiple: {
+                title: 'Plusieurs valeurs',
+                type: 'boolean',
+                layout: { cols: { xs: 12, lg: 3 }, comp: 'checkbox', if: textType }
+              },
+              ...Object.fromEntries(['recommendedMin', 'recommendedMax'].map((key, i) => [key, scoreField(
+                ['Min.', 'Max.'][i],
+                undefined,
+                customBounds,
+                {},
+                `({ ...layout.props, suffix: parent.data?.multiple ? ${JSON.stringify(values)} : ${JSON.stringify(chars)} })`,
+                { xs: 6, lg: 1 }
+              )])),
+              description: {
+                title: 'Infobulle',
+                description: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données.",
+                type: 'string',
+                layout: 'textarea'
               }
             }
           }

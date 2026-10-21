@@ -21,6 +21,8 @@ import { fixConcepts, getSchemaBreakingChanges, checkSchemaKeys } from './utils/
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { searchIndexPatch } from './utils/search-text.ts'
+import { completenessPatch } from './utils/completeness.ts'
+import { scoredFields } from '#types/metadata-completeness.ts'
 import { RESPONSE_EXCLUDED_FIELD_NAMES, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
 import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
@@ -425,7 +427,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
-  assignIndexFields(dataset, searchIndexPatch(dataset))
+  assignIndexFields(dataset, { ...searchIndexPatch(dataset), ...await completenessPatch(dataset) })
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -515,7 +517,8 @@ export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthen
   // were just rewritten: recompute rather than carry the old owner's terms across the transfer.
   // the stored document, not the draft-merged one (?draft=true)
   const indexedDataset = { ...datasetFull, owner: patch.owner, permissions: patch.permissions }
-  const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
+  // the score follows the new owner's settings
+  const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, { ...searchIndexPatch(indexedDataset), ...await completenessPatch(indexedDataset) })
   const patchedDataset: any = await mongo.db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -672,6 +675,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   const searchIndexUpdate = touchesIndexedContent && !dataset.draftReason && !patch.draftReason
     ? searchIndexPatch({ ...dataset, ...patch })
     : undefined
+  // same for the completeness score, which also reads the owner settings
+  const touchesScoredContent = [...scoredFields, 'customMetadata'].some(key => key in patch)
+  const completenessUpdate = touchesScoredContent && !dataset.draftReason && !patch.draftReason
+    ? await completenessPatch({ ...dataset, ...patch })
+    : undefined
 
   Object.assign(dataset, patch)
 
@@ -735,9 +743,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
       mongoPatch.$set[key] = patch[key]
     }
   }
-  if (searchIndexUpdate) {
-    mergeIndexUpdate(mongoPatch, searchIndexUpdate)
-    assignIndexFields(dataset, searchIndexUpdate)
+  for (const derivedUpdate of [searchIndexUpdate, completenessUpdate]) {
+    if (!derivedUpdate) continue
+    mergeIndexUpdate(mongoPatch, derivedUpdate)
+    assignIndexFields(dataset, derivedUpdate)
   }
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 

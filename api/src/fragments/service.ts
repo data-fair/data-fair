@@ -98,6 +98,8 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
     if (!resource.partOf) return resource
     update.$unset = { partOf: true }
   }
+  // a fragment has no completeness score: the worker rescores the dataset
+  if (resourceType === 'datasets') update.$set._needsSearchIndex = true
   if (resourceType === 'datasets' && resource.integrity?.active) {
     // ACL and parentage are high forensic-value metadata writes, like PUT /permissions
     stampHistorize(update as any, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
@@ -123,7 +125,7 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
       ? validatePartOf({ fragmentType: resourceType, fragment: resource, partOf, parent: parent as any, nbFragments: 0 })
       : 'Ressource parente supprimée'
     if (error) {
-      const revert = { $unset: { partOf: true }, $set: { permissions: resource.permissions ?? [], updatedAt: new Date().toISOString() } }
+      const revert = { $unset: { partOf: true }, $set: { permissions: resource.permissions ?? [], updatedAt: new Date().toISOString(), ...(resourceType === 'datasets' && { _needsSearchIndex: true }) } }
       if (resourceType === 'datasets' && resource.integrity?.active) {
         stampHistorize(revert as any, { operation: 'update', origin: 'user', ...(who ? { who } : {}) })
       }
