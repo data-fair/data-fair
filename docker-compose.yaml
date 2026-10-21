@@ -124,7 +124,7 @@ services:
       - MANAGE_NHIS=true
       # dev only: the NHI issuer is plain http on a .localhost host, which assertSafeIssuer refuses otherwise
       - NHIS_ALLOW_INSECURE_ISSUERS=true
-      # the scopes an NHI may hold: data-fair's own vocabulary
+      # the scopes an NHI may hold: those of every service of data-fair's platform document
       - PLATFORM_SCOPES_URL=http://localhost:${DEV_API_PORT}/api/v1/scopes.json
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
