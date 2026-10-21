@@ -259,7 +259,7 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness',
   }
   if (q.value) params.q = q.value
   else params.sort = sort.value
@@ -291,6 +291,9 @@ watch(() => catalog.totalCount.value, (count) => {
   breadcrumbs.receive({ breadcrumbs: [{ text: t('datasets', { count }) }] })
 }, { immediate: true })
 
+// the score exists only once the account activated it in its settings
+const datasetsMetadataFetch = useFetch<{ completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
+
 const sortItems = computed(() => [
   { title: t('sortCreatedAtDesc'), value: 'createdAt:-1' },
   { title: t('sortCreatedAtAsc'), value: 'createdAt:1' },
@@ -300,6 +303,12 @@ const sortItems = computed(() => [
   { title: t('sortDataUpdatedAtAsc'), value: 'dataUpdatedAt:1' },
   { title: t('sortTitleAsc'), value: 'title:1' },
   { title: t('sortTitleDesc'), value: 'title:-1' },
+  ...(datasetsMetadataFetch.data.value?.completeness?.active
+    ? [
+        { title: t('sortCompletenessDesc'), value: 'completeness:-1' },
+        { title: t('sortCompletenessAsc'), value: 'completeness:1' }
+      ]
+    : [])
 ])
 </script>
 
@@ -317,6 +326,8 @@ fr:
   sortDataUpdatedAtAsc: Données mises à jour (plus anciennes)
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
+  sortCompletenessDesc: Score de complétion des métadonnées (plus élevé)
+  sortCompletenessAsc: Score de complétion des métadonnées (plus faible)
   sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
   datasets: "{count} jeux de données"
 en:
@@ -332,6 +343,8 @@ en:
   sortDataUpdatedAtAsc: Data update (oldest)
   sortTitleAsc: Title (A → Z)
   sortTitleDesc: Title (Z → A)
+  sortCompletenessDesc: Metadata completeness score (highest)
+  sortCompletenessAsc: Metadata completeness score (lowest)
   sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
   datasets: "{count} datasets"
 </i18n>

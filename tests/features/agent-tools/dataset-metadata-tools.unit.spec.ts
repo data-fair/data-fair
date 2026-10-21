@@ -208,7 +208,7 @@ test.describe('formatMetadataContext', () => {
   })
 
   test('gives the sizes the organization recommends, else the platform defaults', () => {
-    assert.match(formatMetadataContext({ title: 'T' }, ctx), /- summary: 100 to 300 characters\n- description: 500 to 5000 characters/)
+    assert.match(formatMetadataContext({ title: 'T' }, ctx), /- summary: 100 to 300 characters\n- description: 300 to 5000 characters/)
     const custom = { ...ctx, datasetsMetadata: { summary: { recommendedMax: 150 } } }
     assert.match(formatMetadataContext({ title: 'T' }, custom), /- summary: 100 to 150 characters/)
     // the recommended maximum is also the cap set_dataset_metadata enforces

@@ -218,7 +218,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the description markdown editor, on the metadata form |
 | **Action ID** | `describe-dataset` |
-| **Subagent** | `dataset_description_writer` — reads metadata and the recommended description size (default 500–5000 chars), produces a markdown description |
+| **Subagent** | `dataset_description_writer` — reads metadata and the recommended description size (default 300–5000 chars), produces a markdown description |
 | **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_metadata` (description field). Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |

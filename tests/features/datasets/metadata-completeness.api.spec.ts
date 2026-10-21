@@ -6,7 +6,7 @@ import { getRawDataset } from '../../support/workers.ts'
 const testUser1 = await axiosAuth('test_user1@test.com')
 const settingsUrl = '/api/v1/settings/user/test_user1'
 // only the summary counts, 100 to 300 characters by default
-const summaryOnly = { summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 } }
+const summaryOnly = { summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
 
 // the worker rescores the datasets a settings change marked stale
 const waitForRescore = async (id: string) => {

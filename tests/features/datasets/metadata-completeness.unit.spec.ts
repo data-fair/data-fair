@@ -25,21 +25,22 @@ test.describe('metadata completeness', () => {
   })
 
   test('default weights apply to the metadata shown by default', () => {
-    // summary 3, description 4, license 3, origin 1, topics 2: the toggleable ones are off by default
+    // summary 3, description 4, license 3, origin 1, image 1, topics 2: the toggleable ones are off by default
     assert.deepEqual(completenessCriteria({}, active).map(c => [c.key, c.weight]),
-      [['summary', 3], ['description', 4], ['license', 3], ['origin', 1], ['topics', 2]])
+      [['summary', 3], ['description', 4], ['license', 3], ['origin', 1], ['image', 1], ['topics', 2]])
     assert.equal(computeCompleteness({}, active), 0)
     assert.equal(computeCompleteness({
       summary: longText(100),
       description: longText(600),
       license: { title: 'Licence ouverte', href: 'https://www.etalab.gouv.fr/licence-ouverte' },
       origin: 'https://example.com',
+      image: 'https://example.com/image.png',
       topics: [{ id: 't1', title: 'Topic' }]
     }, active), 100)
   })
 
   test('a filled metadata outside its recommended bounds counts for half', () => {
-    const settings = { ...active, summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 } }
+    const settings = { ...active, summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
     assert.equal(computeCompleteness({ summary: longText(10) }, settings), 50)
     assert.equal(computeCompleteness({ summary: longText(301) }, settings), 50)
     assert.equal(computeCompleteness({ summary: longText(200) }, settings), 100)
@@ -50,7 +51,7 @@ test.describe('metadata completeness', () => {
   })
 
   test('lists are measured in values, objects are only filled or empty', () => {
-    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 }, keywords: { active: true, recommendedMin: 3 }, temporal: { active: true } }
+    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 }, keywords: { active: true, recommendedMin: 3 }, temporal: { active: true } }
     const criteria = completenessCriteria({ keywords: ['a'], temporal: { start: '2020-01-01' } }, settings)
     assert.deepEqual(criteria.map(c => [c.key, c.size, c.note]), [['temporal', undefined, 1], ['keywords', 1, 0.5]])
     assert.equal(computeCompleteness({ keywords: [], temporal: { start: '', end: null } }, settings), 0)
@@ -63,6 +64,7 @@ test.describe('metadata completeness', () => {
       description: { weight: 0 },
       license: { weight: 0 },
       origin: { weight: 0 },
+      image: { weight: 0 },
       topics: { weight: 0 },
       custom: [
         { key: 'service', title: 'Service' },
@@ -78,7 +80,7 @@ test.describe('metadata completeness', () => {
   })
 
   test('nothing weighted means no score', () => {
-    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 } }
+    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
     assert.equal(computeCompleteness({ summary: 'a' }, settings), undefined)
   })
 })

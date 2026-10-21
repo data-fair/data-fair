@@ -493,10 +493,10 @@ export default {
         },
         summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 3, { unit: chars, min: 100, max: 300 }, true),
         // Google Dataset rich results expect a description of 50 to 5000 characters
-        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 4, { unit: chars, min: 500, max: 5000 }, true),
+        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 4, { unit: chars, min: 300, max: 5000 }, true),
         license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 3),
         origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 1),
-        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 0),
+        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 1),
         topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.', 2, { unit: values }),
         relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.", 0, { unit: values }),
         creator: {
@@ -591,7 +591,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            ...scoreProperties(1, toggleableScore)
+            ...scoreProperties(2, toggleableScore)
           }
         },
         modified: {
