@@ -126,9 +126,11 @@ interface SchemesCheck {
   dropped: Set<string>
 }
 
+const oauth2Flows = ['clientCredentials', 'authorizationCode']
+
 /** checks the security schemes of a fragment, returns what its requirements may use or a refusal */
 const checkSecuritySchemes = (schemes: Record<string, any>, warnings: string[]): SchemesCheck | { refused: string } => {
-  let scopes: Record<string, string> = {}
+  const scopes: Record<string, string> = {}
   const kept = new Set<string>(Object.keys(sharedSecuritySchemes))
   const dropped = new Set<string>()
   for (const [name, scheme] of Object.entries(schemes)) {
@@ -137,13 +139,16 @@ const checkSecuritySchemes = (schemes: Record<string, any>, warnings: string[]):
     } else if (name === 'oauth2' || scheme?.type === 'oauth2') {
       if (name !== 'oauth2') return { refused: `oauth2 security scheme declared under another name: ${name}` }
       if (scheme?.type !== 'oauth2') return { refused: 'security scheme oauth2 is not of type oauth2' }
+      // the scopes are what the merge keeps of a flow: the merged scheme has its own token endpoint
       const flows = isObject(scheme.flows) ? Object.keys(scheme.flows) : []
-      if (flows.length !== 1 || flows[0] !== 'clientCredentials' || !isObject(scheme.flows.clientCredentials)) {
-        return { refused: `oauth2 flows must be clientCredentials only, got ${flows.join(', ') || 'none'}` }
+      if (!flows.length || flows.some(flow => !oauth2Flows.includes(flow) || !isObject(scheme.flows[flow]))) {
+        return { refused: `oauth2 flows must be ${oauth2Flows.join(' or ')}, got ${flows.join(', ') || 'none'}` }
       }
-      const declaredScopes = scheme.flows.clientCredentials.scopes ?? {}
-      if (!isObject(declaredScopes)) return { refused: 'oauth2 scopes must be an object' }
-      scopes = { ...declaredScopes }
+      for (const flow of flows) {
+        const declaredScopes = scheme.flows[flow].scopes ?? {}
+        if (!isObject(declaredScopes)) return { refused: 'oauth2 scopes must be an object' }
+        Object.assign(scopes, declaredScopes)
+      }
       kept.add('oauth2')
     } else {
       dropped.add(name)

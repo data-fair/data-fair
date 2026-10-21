@@ -317,7 +317,8 @@ test.describe('platform api docs', () => {
 
   test('refusals', () => {
     assert.match(refusal({ openapi: '3.1.0', paths: {}, components: { securitySchemes: { oidc: oauth2() } } }), /oidc/)
-    assert.match(refusal({ openapi: '3.1.0', paths: {}, components: { securitySchemes: { oauth2: oauth2({ authorizationCode: { authorizationUrl: '/a', tokenUrl: '/t', scopes: {} } }) } } }), /clientCredentials/)
+    assert.match(refusal({ openapi: '3.1.0', paths: {}, components: { securitySchemes: { oauth2: oauth2({ implicit: { authorizationUrl: '/a', scopes: {} } }) } } }), /clientCredentials or authorizationCode, got implicit/)
+    assert.match(refusal({ openapi: '3.1.0', paths: {}, components: { securitySchemes: { oauth2: oauth2({}) } } }), /got none/)
     assert.match(refusal({
       openapi: '3.1.0',
       components: { securitySchemes: { oauth2: oauth2() } },
@@ -368,6 +369,22 @@ test.describe('platform api docs', () => {
     assert.deepEqual(fragment.scopes, { 'things:read': 'Read things' })
   })
 
+  test('accepts the authorization code flow of an authorization server, with the scopes of every flow', () => {
+    const fragment = prepared(sd, {
+      openapi: '3.0.0',
+      components: {
+        securitySchemes: {
+          oauth2: oauth2({
+            clientCredentials: { tokenUrl: '/token', scopes: { 'things:read': 'Read things' } },
+            authorizationCode: { authorizationUrl: '/authorize', tokenUrl: '/token', scopes: { 'things:read': 'Read things', things: 'All things' } }
+          })
+        }
+      },
+      paths: { '/a': { get: { operationId: 'a', security: [{ oauth2: ['things'] }], responses: ok200 } } }
+    })
+    assert.deepEqual(fragment.scopes, { 'things:read': 'Read things', things: 'All things' })
+  })
+
   test('merge', async () => {
     const datafairFragment = prepared(datafair, {
       openapi: '3.1.0',
@@ -396,7 +413,7 @@ test.describe('platform api docs', () => {
       { service: datafair, fragment: datafairFragment, status: 'ok', fetchedAt: '2026-10-19T00:00:00.000Z' },
       { service: sd, fragment: sdFragment, status: 'stale', error: 'timeout' },
       { service: metrics, status: 'error', error: 'connection refused' },
-      { service: { ...metrics, id: 'metrics' }, status: 'refused', error: 'oauth2 flows must be clientCredentials only' }
+      { service: { ...metrics, id: 'metrics' }, status: 'refused', error: 'oauth2 flows must be clientCredentials or authorizationCode, got implicit' }
     ], { version: '1.0.0', oauth2Description: 'tokens' })
 
     assert.equal(doc.openapi, '3.1.0')
@@ -404,7 +421,7 @@ test.describe('platform api docs', () => {
     assert.deepEqual(doc.servers, [{ url: 'https://site.test' }])
     assert.deepEqual(doc['x-platform'].services.map((s: any) => s.status), ['ok', 'stale', 'error', 'refused'])
     assert.deepEqual(doc['x-platform'].services[2], { id: 'metrics', status: 'error', error: 'connection refused' })
-    assert.deepEqual(doc['x-platform'].services[3], { id: 'metrics', status: 'refused', error: 'oauth2 flows must be clientCredentials only' })
+    assert.deepEqual(doc['x-platform'].services[3], { id: 'metrics', status: 'refused', error: 'oauth2 flows must be clientCredentials or authorizationCode, got implicit' })
     assert.equal(doc.components.securitySchemes.oauth2.flows.clientCredentials.tokenUrl, 'https://site.test/simple-directory/api/auth/nhi-token')
     assert.deepEqual(doc.components.securitySchemes.oauth2.flows.clientCredentials.scopes, { 'datasets:read': 'Read datasets', 'things:read': 'Read things' })
     assert.deepEqual(doc.components.securitySchemes.apiKey, { type: 'apiKey', in: 'header', name: 'x-apiKey' })
