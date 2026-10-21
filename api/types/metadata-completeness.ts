@@ -35,9 +35,17 @@ const isEmpty = (value: any): boolean => {
 
 const sizeOf = (value: any) => typeof value === 'string' ? value.trim().length : Array.isArray(value) ? value.length : undefined
 
+const withDefaults = (settings: ScoreSettings, defaults: Record<string, any>) => (['weight', 'recommendedMin', 'recommendedMax'] as const)
+  .map(prop => settings[prop] ?? defaults[prop]?.['x-default'])
+
+/** Size recommended for a dataset field (characters of a text, values of a list): the owner's setting, else the platform default. */
+export const recommendedSize = (key: string, datasetsMetadata?: DatasetsMetadata | null) => {
+  const [, min, max] = withDefaults(datasetsMetadata?.[key] ?? {}, metadataSchema[key]?.properties ?? {})
+  return { min, max }
+}
+
 const rate = (key: string, custom: boolean, value: unknown, settings: ScoreSettings, defaults: Record<string, any>): CompletenessCriterion => {
-  const [weight, recommendedMin, recommendedMax] = (['weight', 'recommendedMin', 'recommendedMax'] as const)
-    .map(prop => settings[prop] ?? defaults[prop]?.['x-default'])
+  const [weight, recommendedMin, recommendedMax] = withDefaults(settings, defaults)
   const size = sizeOf(value)
   const outside = size !== undefined && ((recommendedMin !== undefined && size < recommendedMin) || (recommendedMax !== undefined && size > recommendedMax))
   return { key, custom, weight: weight ?? 0, size, recommendedMin, recommendedMax, note: isEmpty(value) ? 0 : outside ? 0.5 : 1 }

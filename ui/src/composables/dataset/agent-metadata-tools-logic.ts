@@ -7,6 +7,9 @@
 // closed licence and topic lists, and the dataset's own write permission. A field that
 // the form would not render is refused rather than written silently.
 
+import { recommendedSize } from '../../../../api/types/metadata-completeness.ts'
+import { type CustomMetadataDefinition, formatCustomMetadata, isCustomMetadataEmpty, trimCustomMetadata } from '../../../../api/types/custom-metadata.ts'
+
 export const FREQUENCY_VALUES = [
   'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
   'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly',
@@ -19,6 +22,7 @@ export const OPTIONAL_FIELDS = ['keywords', 'searchTerms', 'creator', 'frequency
 /** Fields always rendered by the metadata form. */
 export const ALWAYS_FIELDS = ['title', 'summary', 'description', 'license', 'topics', 'origin'] as const
 
+// hard cap when the owner settings give no recommended maximum
 export const SUMMARY_MAX_LENGTH = 300
 export const SEARCH_TERMS_MAX_LENGTH = 1000
 
@@ -31,7 +35,9 @@ export interface MetadataContext {
   /** `settings/<type>/<id>/topics` */
   topics: Topic[]
   /** `settings/<type>/<id>/datasets-metadata` */
-  datasetsMetadata: Record<string, { active?: boolean, title?: string }> | null
+  datasetsMetadata: Record<string, any> & {
+    custom?: (CustomMetadataDefinition & { recommendedMin?: number, recommendedMax?: number })[]
+  } | null
 }
 
 export interface MetadataInput {
@@ -46,6 +52,8 @@ export interface MetadataInput {
   creator?: string
   frequency?: string
   spatial?: string
+  /** keyed by the custom metadata key or title, null clears a value */
+  customMetadata?: Record<string, unknown>
 }
 
 export interface FieldOutcome {
@@ -92,18 +100,48 @@ const GENERIC_SUMMARY_STARTS = [
   'the dataset'
 ]
 
-export function validateSummary (summary: string): string | undefined {
+export const summaryMaxLength = (ctx: MetadataContext) => recommendedSize('summary', ctx.datasetsMetadata).max ?? SUMMARY_MAX_LENGTH
+
+export function validateSummary (summary: string, max = SUMMARY_MAX_LENGTH): string | undefined {
   const trimmed = summary.trim()
   if (!trimmed) return 'the summary is empty'
-  if (trimmed.length > SUMMARY_MAX_LENGTH) {
-    const over = trimmed.length - SUMMARY_MAX_LENGTH
-    return `the summary is ${trimmed.length} characters, ${over} too many (max ${SUMMARY_MAX_LENGTH}). Cut about ${over + 20} characters and call the tool again.`
+  if (trimmed.length > max) {
+    const over = trimmed.length - max
+    return `the summary is ${trimmed.length} characters, ${over} too many (max ${max}). Cut about ${over + 20} characters and call the tool again.`
   }
   const lower = norm(trimmed)
   if (GENERIC_SUMMARY_STARTS.some(s => lower.startsWith(s))) {
     return 'the summary must open on the concrete subject, not on a filler phrase like "Ce jeu de données…" / "This dataset…". Rephrase and call the tool again.'
   }
   return undefined
+}
+
+type CustomDefinition = NonNullable<NonNullable<MetadataContext['datasetsMetadata']>['custom']>[number]
+
+// same rules as customMetadataSchema, checked here so the model gets a precise reason instead of a failed save
+const checkCustomItem = (item: any, definition: CustomDefinition): { value?: unknown, error?: string } => {
+  switch (definition.type ?? 'string') {
+    case 'integer':
+    case 'number': {
+      const n = typeof item === 'string' && item.trim() ? Number(item) : item
+      if (typeof n !== 'number' || !Number.isFinite(n) || (definition.type === 'integer' && !Number.isInteger(n))) return { error: `${JSON.stringify(item)} is not ${definition.type === 'integer' ? 'an integer' : 'a number'}` }
+      return { value: n }
+    }
+    case 'date':
+      if (typeof item !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.trim()) || isNaN(Date.parse(item.trim()))) return { error: `${JSON.stringify(item)} is not a date in YYYY-MM-DD form` }
+      return { value: item }
+    case 'link': {
+      const link = typeof item === 'string' ? { url: item } : item
+      if (typeof link?.url !== 'string' || !/^https?:\/\/\S+$/.test(link.url.trim())) return { error: `${JSON.stringify(item)} is not a link: pass an http(s) URL, or { url, title }` }
+      return { value: typeof link.title === 'string' ? { url: link.url, title: link.title } : { url: link.url } }
+    }
+    default: {
+      if (typeof item !== 'string') return { error: `${JSON.stringify(item)} is not a text` }
+      if (!definition.enum?.length) return { value: item }
+      const match = definition.enum.find(v => norm(v) === norm(item))
+      return match ? { value: match } : { error: `"${item}" is not in the list. Available: ${definition.enum.join(' | ')}` }
+    }
+  }
 }
 
 /**
@@ -139,7 +177,7 @@ export function buildMetadataPatch (input: MetadataInput, current: any, ctx: Met
   }
 
   if (input.summary !== undefined) {
-    const err = validateSummary(input.summary)
+    const err = validateSummary(input.summary, summaryMaxLength(ctx))
     if (err) reject('summary', err)
     else apply('summary', input.summary.trim())
   }
@@ -212,6 +250,52 @@ export function buildMetadataPatch (input: MetadataInput, current: any, ctx: Met
 
   if (input.spatial !== undefined && gate('spatial')) apply('spatial', input.spatial.trim())
 
+  if (input.customMetadata !== undefined) {
+    const definitions = (ctx.datasetsMetadata?.custom ?? []).filter(d => d.key)
+    const next: Record<string, unknown> = { ...current?.customMetadata }
+    let changed = false
+    for (const [name, raw] of Object.entries(input.customMetadata)) {
+      const definition = definitions.find(d => d.key === name) ?? definitions.find(d => norm(d.title) === norm(name))
+      const field = `customMetadata.${definition?.title ?? name}`
+      if (current?.partOf) {
+        outcomes.push({ field, status: 'rejected', reason: 'this dataset is part of another resource, the form does not show its custom metadata' })
+        continue
+      }
+      if (!definition) {
+        outcomes.push({ field, status: 'rejected', reason: definitions.length ? `unknown custom metadata "${name}". Available: ${definitions.map(d => d.title).join(' | ')}` : 'this organization defines no custom metadata' })
+        continue
+      }
+      const key = definition.key!
+      let value: unknown
+      if (!isCustomMetadataEmpty(raw)) {
+        const multiple = (definition.type ?? 'string') === 'string' && definition.multiple
+        const items = multiple ? (Array.isArray(raw) ? raw : [raw]) : [raw]
+        if (!multiple && Array.isArray(raw)) {
+          outcomes.push({ field, status: 'rejected', reason: 'this custom metadata takes a single value, not a list' })
+          continue
+        }
+        const checked = items.map(item => checkCustomItem(item, definition))
+        const error = checked.find(c => c.error)?.error
+        if (error) {
+          outcomes.push({ field, status: 'rejected', reason: error })
+          continue
+        }
+        const trimmed: Record<string, unknown> = { [key]: multiple ? checked.map(c => c.value) : checked[0].value }
+        trimCustomMetadata(trimmed)
+        value = trimmed[key]
+      }
+      if (JSON.stringify(value ?? null) === JSON.stringify(current?.customMetadata?.[key] ?? null)) {
+        outcomes.push({ field, status: 'unchanged' })
+        continue
+      }
+      if (value === undefined) delete next[key]
+      else next[key] = value
+      changed = true
+      outcomes.push({ field, status: 'applied' })
+    }
+    if (changed) patch.customMetadata = next
+  }
+
   return { patch, outcomes }
 }
 
@@ -242,6 +326,8 @@ export function formatMetadataContext (dataset: any, ctx: MetadataContext): stri
   sections.push(`# Metadata: ${dataset?.title ?? '(untitled)'}`)
   sections.push('')
   sections.push('## Current values')
+  const renamed = Object.entries(ctx.datasetsMetadata ?? {}).filter(([key, v]) => key !== 'custom' && v?.title).map(([key, v]) => `${key} is labelled « ${v.title} »`)
+  if (renamed.length) sections.push(`(in the form, ${renamed.join(', ')})`)
   sections.push(`- title: ${val(dataset?.title)}`)
   sections.push(`- summary: ${val(dataset?.summary)}`)
   sections.push(`- description: ${dataset?.description ? `${dataset.description.length} characters` : '(empty)'}`)
@@ -268,6 +354,30 @@ export function formatMetadataContext (dataset: any, ctx: MetadataContext): stri
   sections.push(disabled.length
     ? `- disabled in this organization (cannot be written): ${disabled.join(', ')}`
     : '- every optional field is enabled for this organization')
+
+  const range = (min?: number, max?: number) => min !== undefined && max !== undefined ? `${min} to ${max}` : min !== undefined ? `at least ${min}` : max !== undefined ? `at most ${max}` : undefined
+  sections.push('')
+  sections.push("## Recommended sizes (this organization's settings, follow them when writing)")
+  for (const [field, unit] of [['summary', 'characters'], ['description', 'characters'], ['keywords', 'values']]) {
+    const { min, max } = recommendedSize(field, ctx.datasetsMetadata)
+    if (range(min, max)) sections.push(`- ${field}: ${range(min, max)} ${unit}`)
+  }
+
+  const custom = (ctx.datasetsMetadata?.custom ?? []).filter(c => c.key)
+  if (custom.length) {
+    sections.push('')
+    sections.push('## Custom metadata (defined by this organization, set them with set_dataset_metadata customMetadata, keyed by title)')
+    for (const c of custom) {
+      const value = dataset?.customMetadata?.[c.key!]
+      const details = [
+        c.type ?? 'string',
+        c.enum?.length && `values: ${c.enum.join(' | ')}`,
+        c.multiple && 'several values',
+        range(c.recommendedMin, c.recommendedMax) && `recommended ${range(c.recommendedMin, c.recommendedMax)} ${c.multiple ? 'values' : 'characters'}`
+      ].filter(Boolean).join(', ')
+      sections.push(`- ${c.title} (${details}): ${isCustomMetadataEmpty(value) ? '(empty)' : formatCustomMetadata(value)}${c.description ? ` — help shown in the form: ${c.description}` : ''}`)
+    }
+  }
 
   return sections.join('\n')
 }

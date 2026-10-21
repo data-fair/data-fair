@@ -140,6 +140,48 @@ test.describe('buildMetadataPatch', () => {
   })
 })
 
+test.describe('buildMetadataPatch on custom metadata', () => {
+  const custom = [
+    { key: 'service', title: 'Service' },
+    { key: 'theme', title: 'Thème interne', enum: ['Eau', 'Air'], multiple: true },
+    { key: 'count', title: 'Effectif', type: 'integer' as const },
+    { key: 'since', title: 'Depuis', type: 'date' as const },
+    { key: 'page', title: 'Page', type: 'link' as const }
+  ]
+  const customCtx = { ...ctx, datasetsMetadata: { custom } }
+  const current = { customMetadata: { service: 'DSI', count: 3 } }
+
+  test('writes valid values, keyed by title or key, and keeps the others', () => {
+    const { patch, outcomes } = buildMetadataPatch({ customMetadata: { 'thème interne': 'eau', count: '12', Depuis: '2024-05-01', Page: 'https://example.com', service: 'DSI' } }, current, customCtx)
+    assert.deepEqual(patch.customMetadata, { service: 'DSI', count: 12, theme: ['Eau'], since: '2024-05-01', page: { url: 'https://example.com' } })
+    assert.deepEqual(outcomes.map(o => [o.field, o.status]), [
+      ['customMetadata.Thème interne', 'applied'], ['customMetadata.Effectif', 'applied'], ['customMetadata.Depuis', 'applied'], ['customMetadata.Page', 'applied'], ['customMetadata.Service', 'unchanged']
+    ])
+  })
+
+  test('clears a value with null', () => {
+    const { patch } = buildMetadataPatch({ customMetadata: { Service: null } }, current, customCtx)
+    assert.deepEqual(patch.customMetadata, { count: 3 })
+  })
+
+  test('refuses what the form would refuse, with a reason the model can act on', () => {
+    const { patch, outcomes } = buildMetadataPatch({ customMetadata: { Inconnue: 'x', 'Thème interne': ['Feu'], Effectif: 1.5, Depuis: '01/05/2024', Page: 'example.com', Service: ['a', 'b'] } }, current, customCtx)
+    assert.equal(patch.customMetadata, undefined)
+    assert.ok(outcomes.every(o => o.status === 'rejected'))
+    assert.match(outcomes[0].reason!, /Available: Service \| Thème interne/)
+    assert.match(outcomes[1].reason!, /Available: Eau \| Air/)
+    assert.match(outcomes[2].reason!, /not an integer/)
+    assert.match(outcomes[3].reason!, /YYYY-MM-DD/)
+    assert.match(outcomes[4].reason!, /http\(s\) URL/)
+    assert.match(outcomes[5].reason!, /single value/)
+  })
+
+  test('refuses on a fragment, whose form hides the custom metadata', () => {
+    const { outcomes } = buildMetadataPatch({ customMetadata: { Service: 'x' } }, { partOf: { type: 'application', id: 'a' } }, customCtx)
+    assert.equal(outcomes[0].status, 'rejected')
+  })
+})
+
 test.describe('formatMetadataContext', () => {
   test('hands the model the closed vocabularies instead of letting it guess', () => {
     const out = formatMetadataContext({ title: 'T', keywords: [] }, ctx)
@@ -163,6 +205,27 @@ test.describe('formatMetadataContext', () => {
     const text = formatMetadataContext({ title: 'T', searchTerms: 'élections scrutin' }, ctx)
     assert.match(text, /searchTerms: élections scrutin/)
     assert.match(text, /never displayed/)
+  })
+
+  test('gives the sizes the organization recommends, else the platform defaults', () => {
+    assert.match(formatMetadataContext({ title: 'T' }, ctx), /- summary: 100 to 300 characters\n- description: 500 to 5000 characters/)
+    const custom = { ...ctx, datasetsMetadata: { summary: { recommendedMax: 150 } } }
+    assert.match(formatMetadataContext({ title: 'T' }, custom), /- summary: 100 to 150 characters/)
+    // the recommended maximum is also the cap set_dataset_metadata enforces
+    const out = buildMetadataPatch({ summary: 'Recense ' + 'x'.repeat(200) }, {}, custom)
+    assert.equal(out.outcomes[0].status, 'rejected')
+    assert.match(out.outcomes[0].reason!, /max 150/)
+  })
+
+  test('describes the custom metadata and the renamed fields of the organization', () => {
+    const datasetsMetadata = {
+      creator: { active: true, title: 'Service producteur' },
+      custom: [{ key: 'theme', title: 'Thème interne', enum: ['eau', 'air'], multiple: true, description: 'Choisir les thèmes du référentiel', recommendedMax: 2 }, { title: 'Pas encore enregistrée' }]
+    }
+    const out = formatMetadataContext({ title: 'T', customMetadata: { theme: ['eau'] } }, { ...ctx, datasetsMetadata })
+    assert.match(out, /creator is labelled « Service producteur »/)
+    assert.match(out, /- Thème interne \(string, values: eau \| air, several values, recommended at most 2 values\): eau — help shown in the form: Choisir les thèmes du référentiel/)
+    assert.ok(!out.includes('Pas encore enregistrée'))
   })
 })
 
