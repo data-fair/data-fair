@@ -113,29 +113,11 @@
         class="mt-4"
       />
 
-      <!-- Sort select -->
-      <v-tooltip
-        :disabled="!searchInput"
-        :text="t('sortDisabledRelevance')"
-        location="bottom"
-      >
-        <template #activator="{ props: tooltipProps }">
-          <div
-            v-bind="tooltipProps"
-            :class="{ 'cursor-not-allowed': !!searchInput }"
-          >
-            <v-select
-              v-model="sort"
-              :label="t('sort')"
-              :items="sortItems"
-              :clearable="false"
-              :disabled="!!searchInput"
-              class="mt-4 mx-4"
-              rounded="md"
-            />
-          </div>
-        </template>
-      </v-tooltip>
+      <catalog-sort
+        v-model="sort"
+        :items="sortItems"
+        :disabled="!!searchInput"
+      />
 
       <!-- Super admin toggle -->
       <v-switch
@@ -277,40 +259,27 @@ watch(() => catalog.totalCount.value, (count) => {
 }, { immediate: true })
 
 const sortItems = computed(() => [
-  { title: t('sortCreatedAtDesc'), value: 'createdAt:-1' },
-  { title: t('sortCreatedAtAsc'), value: 'createdAt:1' },
-  { title: t('sortUpdatedAtDesc'), value: 'updatedAt:-1' },
-  { title: t('sortUpdatedAtAsc'), value: 'updatedAt:1' },
-  { title: t('sortTitleAsc'), value: 'title:1' },
-  { title: t('sortTitleDesc'), value: 'title:-1' },
+  { title: t('sortCreatedAt'), value: 'createdAt' },
+  { title: t('sortUpdatedAt'), value: 'updatedAt' },
+  { title: t('sortTitle'), value: 'title' }
 ])
 </script>
 
 <i18n lang="yaml">
 fr:
+  sortCreatedAt: Création
+  sortUpdatedAt: Mise à jour
+  sortTitle: Titre
   showAll: Voir toutes les applications
-  sort: Trier par
   newApplication: Créer une nouvelle application
   noApplication: Vous n'avez pas encore configuré d'application.
   applications: "{count} applications"
-  sortCreatedAtDesc: Création (plus récent)
-  sortCreatedAtAsc: Création (plus ancien)
-  sortUpdatedAtDesc: Mise à jour (plus récente)
-  sortUpdatedAtAsc: Mise à jour (plus ancienne)
-  sortTitleAsc: Titre (A → Z)
-  sortTitleDesc: Titre (Z → A)
-  sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
 en:
+  sortCreatedAt: Creation
+  sortUpdatedAt: Update
+  sortTitle: Title
   showAll: Show all applications
-  sort: Sort by
   newApplication: Create a new application
   noApplication: You haven't configured any application yet.
   applications: "{count} applications"
-  sortCreatedAtDesc: Creation (newest)
-  sortCreatedAtAsc: Creation (oldest)
-  sortUpdatedAtDesc: Update (newest)
-  sortUpdatedAtAsc: Update (oldest)
-  sortTitleAsc: Title (A → Z)
-  sortTitleDesc: Title (Z → A)
-  sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
 </i18n>

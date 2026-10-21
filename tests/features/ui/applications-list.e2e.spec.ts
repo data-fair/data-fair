@@ -68,7 +68,8 @@ test.describe('applications list page', () => {
 
     // Click the sort select wrapper
     await sortSelect.click()
-    await page.getByRole('option', { name: 'Titre (A → Z)' }).click()
+    await page.getByRole('option', { name: 'Titre', exact: true }).click()
+    await page.getByRole('button', { name: 'Ordre croissant' }).click()
 
     // URL should reflect the new sort
     await page.waitForURL(/sort=title%3A1|sort=title:1/, { timeout: 5000 })

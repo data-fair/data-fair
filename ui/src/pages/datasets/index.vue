@@ -113,29 +113,11 @@
         class="mt-4"
       />
 
-      <!-- Sort select -->
-      <v-tooltip
-        :disabled="!searchInput"
-        :text="t('sortDisabledRelevance')"
-        location="bottom"
-      >
-        <template #activator="{ props: tooltipProps }">
-          <div
-            v-bind="tooltipProps"
-            :class="{ 'cursor-not-allowed': !!searchInput }"
-          >
-            <v-select
-              v-model="sort"
-              :label="t('sort')"
-              :items="sortItems"
-              :clearable="false"
-              :disabled="!!searchInput"
-              class="mt-4 mx-4"
-              rounded="md"
-            />
-          </div>
-        </template>
-      </v-tooltip>
+      <catalog-sort
+        v-model="sort"
+        :items="sortItems"
+        :disabled="!!searchInput"
+      />
 
       <!-- Super admin toggle -->
       <v-switch
@@ -295,56 +277,33 @@ watch(() => catalog.totalCount.value, (count) => {
 const datasetsMetadataFetch = useFetch<{ completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
 
 const sortItems = computed(() => [
-  { title: t('sortCreatedAtDesc'), value: 'createdAt:-1' },
-  { title: t('sortCreatedAtAsc'), value: 'createdAt:1' },
-  { title: t('sortUpdatedAtDesc'), value: 'updatedAt:-1' },
-  { title: t('sortUpdatedAtAsc'), value: 'updatedAt:1' },
-  { title: t('sortDataUpdatedAtDesc'), value: 'dataUpdatedAt:-1' },
-  { title: t('sortDataUpdatedAtAsc'), value: 'dataUpdatedAt:1' },
-  { title: t('sortTitleAsc'), value: 'title:1' },
-  { title: t('sortTitleDesc'), value: 'title:-1' },
-  ...(datasetsMetadataFetch.data.value?.completeness?.active
-    ? [
-        { title: t('sortCompletenessDesc'), value: 'completeness:-1' },
-        { title: t('sortCompletenessAsc'), value: 'completeness:1' }
-      ]
-    : [])
+  { title: t('sortCreatedAt'), value: 'createdAt' },
+  { title: t('sortUpdatedAt'), value: 'updatedAt' },
+  { title: t('sortDataUpdatedAt'), value: 'dataUpdatedAt' },
+  { title: t('sortTitle'), value: 'title' },
+  ...(datasetsMetadataFetch.data.value?.completeness?.active ? [{ title: t('sortCompleteness'), value: 'completeness' }] : [])
 ])
 </script>
 
 <i18n lang="yaml">
 fr:
+  sortCreatedAt: Création
+  sortUpdatedAt: Mise à jour
+  sortDataUpdatedAt: Mise à jour des données
+  sortTitle: Titre
+  sortCompleteness: Score de complétion des métadonnées
   showAll: Voir tous les jeux de données
-  sort: Trier par
   createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
-  sortCreatedAtDesc: Création (plus récent)
-  sortCreatedAtAsc: Création (plus ancien)
-  sortUpdatedAtDesc: Mise à jour (plus récente)
-  sortUpdatedAtAsc: Mise à jour (plus ancienne)
-  sortDataUpdatedAtDesc: Données mises à jour (plus récentes)
-  sortDataUpdatedAtAsc: Données mises à jour (plus anciennes)
-  sortTitleAsc: Titre (A → Z)
-  sortTitleDesc: Titre (Z → A)
-  sortCompletenessDesc: Score de complétion des métadonnées (plus élevé)
-  sortCompletenessAsc: Score de complétion des métadonnées (plus faible)
-  sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
   datasets: "{count} jeux de données"
 en:
+  sortCreatedAt: Creation
+  sortUpdatedAt: Update
+  sortDataUpdatedAt: Data update
+  sortTitle: Title
+  sortCompleteness: Metadata completeness score
   showAll: Show all datasets
-  sort: Sort by
   createDataset: Create a dataset
   noDataset: You haven't created a dataset yet.
-  sortCreatedAtDesc: Creation (newest)
-  sortCreatedAtAsc: Creation (oldest)
-  sortUpdatedAtDesc: Update (newest)
-  sortUpdatedAtAsc: Update (oldest)
-  sortDataUpdatedAtDesc: Data update (newest)
-  sortDataUpdatedAtAsc: Data update (oldest)
-  sortTitleAsc: Title (A → Z)
-  sortTitleDesc: Title (Z → A)
-  sortCompletenessDesc: Metadata completeness score (highest)
-  sortCompletenessAsc: Metadata completeness score (lowest)
-  sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
   datasets: "{count} datasets"
 </i18n>
