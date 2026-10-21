@@ -212,7 +212,7 @@ Current callers, both bulk writers that patch fields directly with `updateMany` 
   matching only its OLD topic name, indefinitely. (Applications carry no `topics` in their
   definition, so their branch does not call it.)
 
-The dataset recompute also refreshes the metadata completeness score (`completeness`, computed by
+The dataset recompute also refreshes the metadata completeness score (`completeness` and its detail `completenessCriteria`, computed by
 `api/types/metadata-completeness.ts` from the owner's `datasetsMetadata` settings), so two more
 writers stamp the flag for it: **`api/src/settings/service.ts`, `writeSettings`** marks every
 dataset of the owner stale when `datasetsMetadata` changes while the score is (or was) active, and

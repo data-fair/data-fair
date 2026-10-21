@@ -41,6 +41,8 @@ test.describe('metadata completeness score', () => {
     // filled but shorter than recommended: half
     let res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { summary: 'too short' })
     assert.equal(res.data.completeness, 50)
+    // the detail is stored with the score, for the portals
+    assert.deepEqual(res.data.completenessCriteria, [{ key: 'summary', custom: false, weight: 1, size: 9, recommendedMin: 50, recommendedMax: 250, note: 0.5 }])
     assert.ok(!Object.keys(res.data).includes('_needsSearchIndex'))
     res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { summary: 'x'.repeat(100) })
     assert.equal(res.data.completeness, 100)
@@ -64,7 +66,9 @@ test.describe('metadata completeness score', () => {
     assert.equal(res.data.completeness, 100)
 
     await testUser1.put(settingsUrl, { datasetsMetadata: { completeness: { active: false }, ...summaryOnly } })
-    assert.equal((await waitForRescore(dataset.id)).completeness, undefined)
+    const raw = await waitForRescore(dataset.id)
+    assert.equal(raw.completeness, undefined)
+    assert.equal(raw.completenessCriteria, undefined)
     assert.equal((await testUser1.get('/api/v1/datasets/' + dataset.id)).data.completeness, undefined)
   })
 })
