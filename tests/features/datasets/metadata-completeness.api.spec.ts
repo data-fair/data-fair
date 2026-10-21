@@ -5,7 +5,7 @@ import { getRawDataset } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const settingsUrl = '/api/v1/settings/user/test_user1'
-// only the summary counts, 50 to 250 characters by default
+// only the summary counts, 100 to 300 characters by default
 const summaryOnly = { summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 } }
 
 // the worker rescores the datasets a settings change marked stale
@@ -42,7 +42,7 @@ test.describe('metadata completeness score', () => {
     let res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { summary: 'too short' })
     assert.equal(res.data.completeness, 50)
     // the detail is stored with the score, for the portals
-    assert.deepEqual(res.data.completenessCriteria, [{ key: 'summary', custom: false, weight: 1, size: 9, recommendedMin: 50, recommendedMax: 250, note: 0.5 }])
+    assert.deepEqual(res.data.completenessCriteria, [{ key: 'summary', custom: false, weight: 1, size: 9, recommendedMin: 100, recommendedMax: 300, note: 0.5 }])
     assert.ok(!Object.keys(res.data).includes('_needsSearchIndex'))
     res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { summary: 'x'.repeat(100) })
     assert.equal(res.data.completeness, 100)

@@ -53,7 +53,7 @@
 
 <i18n lang="yaml">
 fr:
-  title: Complétude des métadonnées
+  title: Score de complétion des métadonnées
   help: Chaque métadonnée renseignée rapporte son poids, ou la moitié seulement si sa taille sort du minimum et du maximum recommandés.
   weight: 'Poids {weight}'
   empty: Non renseignée
@@ -63,7 +63,7 @@ fr:
   min: 'au moins {min} recommandés'
   max: 'au plus {max} recommandés'
 en:
-  title: Metadata completeness
+  title: Metadata completeness score
   help: Each filled metadata earns its weight, or only half of it when its size is outside the recommended minimum and maximum.
   weight: 'Weight {weight}'
   empty: Not filled
@@ -89,7 +89,7 @@ const { t, locale } = useI18n()
 // computed on the edited dataset, so the score follows the form before it is saved
 const score = computed(() => computeCompleteness(dataset, datasetsMetadata))
 const criteria = computed(() => completenessCriteria(dataset, datasetsMetadata))
-const scoreColor = computed(() => score.value! >= 80 ? 'success' : score.value! >= 50 ? 'warning' : 'error')
+const scoreColor = computed(() => score.value! >= 75 ? 'success' : score.value! >= 50 ? 'warning' : 'error')
 
 const label = (criterion: CompletenessCriterion) => {
   if (criterion.custom) return datasetsMetadata?.custom?.find((c: any) => c.key === criterion.key)?.title ?? criterion.key

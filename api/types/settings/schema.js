@@ -484,15 +484,16 @@ export default {
           properties: {
             active: {
               type: 'boolean',
-              title: 'Complétude des métadonnées',
+              title: 'Activer le score de complétion des métadonnées',
               description: 'Calcule sur chaque jeu de données un score de 0 à 100. Chaque métadonnée renseignée rapporte son poids, ou la moitié seulement si sa taille sort du minimum et du maximum recommandés. Une métadonnée de poids 0 ne compte pas.',
               default: false,
               layout: { comp: 'switch' }
             }
           }
         },
-        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 3, { unit: chars, min: 50, max: 250 }, true),
-        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 4, { unit: chars, min: 200 }, true),
+        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 3, { unit: chars, min: 100, max: 300 }, true),
+        // Google Dataset rich results expect a description of 50 to 5000 characters
+        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 4, { unit: chars, min: 500, max: 5000 }, true),
         license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 3),
         origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 1),
         image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 0),
@@ -664,26 +665,23 @@ export default {
         },
         conformsTo: {
           type: 'object',
-          // no category: an empty column keeps its weight in line with the other rows
-          layout: { children: ['active', 'title', { text: '\u00a0', cols: 3 }, 'weight'] },
           properties: {
             active: {
               title: 'Schéma',
               description: 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.',
               type: 'boolean',
               default: false,
-              layout: { comp: 'switch', cols: 3 }
+              layout: { comp: 'switch', cols: 4 }
             },
             title: {
               title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
-                cols: 3,
+                cols: 4,
                 props: { variant: 'outlined', placeholder: 'Schéma' }
               }
-            },
-            ...scoreProperties(1, toggleableScore)
+            }
           }
         },
         custom: {

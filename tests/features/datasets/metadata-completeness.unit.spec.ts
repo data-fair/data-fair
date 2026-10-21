@@ -31,7 +31,7 @@ test.describe('metadata completeness', () => {
     assert.equal(computeCompleteness({}, active), 0)
     assert.equal(computeCompleteness({
       summary: longText(100),
-      description: longText(300),
+      description: longText(600),
       license: { title: 'Licence ouverte', href: 'https://www.etalab.gouv.fr/licence-ouverte' },
       origin: 'https://example.com',
       topics: [{ id: 't1', title: 'Topic' }]
@@ -41,8 +41,8 @@ test.describe('metadata completeness', () => {
   test('a filled metadata outside its recommended bounds counts for half', () => {
     const settings = { ...active, summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, topics: { weight: 0 } }
     assert.equal(computeCompleteness({ summary: longText(10) }, settings), 50)
-    assert.equal(computeCompleteness({ summary: longText(300) }, settings), 50)
-    assert.equal(computeCompleteness({ summary: longText(100) }, settings), 100)
+    assert.equal(computeCompleteness({ summary: longText(301) }, settings), 50)
+    assert.equal(computeCompleteness({ summary: longText(200) }, settings), 100)
     // blank text is empty
     assert.equal(computeCompleteness({ summary: '   ' }, settings), 0)
     // the owner bounds replace the defaults
