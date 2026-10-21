@@ -1,19 +1,41 @@
 // The OAuth-style scope vocabulary data-fair declares: a family (datasets, applications), a tier
-// (read < write < admin) and a bare umbrella per family. Tiers are derived from the permission
-// classes of shared/permissions/operations.ts; any other class (superadmin operations) has no
-// tier and is never granted to a scoped session.
+// (read < write < admin) and a bare umbrella per family, plus the global tier scopes all:read /
+// all:write / all:admin shared by every service of the platform (lib-common-types defineScopes).
+// Tiers are derived from the permission classes of shared/permissions/operations.ts; any other class
+// (superadmin operations) has no tier and is never granted to a scoped session.
 import { hasScope, assertReqScope, type SessionState } from '@data-fair/lib-express'
+import { defineScopes, type ScopeTier } from '@data-fair/lib-common-types/scopes.js'
 import type { RequestHandler } from 'express'
 import type { ResourceType } from '#types'
 
-export type ScopeFamily = 'datasets' | 'applications'
-export type ScopeTier = 'read' | 'write' | 'admin'
+export type { ScopeTier }
 
-const families: ScopeFamily[] = ['datasets', 'applications']
-const tiers: ScopeTier[] = ['read', 'write', 'admin']
+export const vocabulary = defineScopes({
+  datasets: {
+    tiers: ['read', 'write', 'admin'],
+    descriptions: {
+      umbrella: { fr: 'Tous les droits sur les jeux de données', en: 'All dataset scopes' },
+      read: { fr: 'Lire les jeux de données, leurs données, leur journal', en: 'Read datasets, their data and journal' },
+      write: { fr: 'Modifier les jeux de données et leurs données, en créer', en: 'Edit datasets and their data, create datasets' },
+      admin: { fr: 'Administrer les jeux de données : suppression, permissions, publication', en: 'Administer datasets: deletion, permissions, publication' }
+    }
+  },
+  applications: {
+    tiers: ['read', 'write', 'admin'],
+    descriptions: {
+      umbrella: { fr: 'Tous les droits sur les applications', en: 'All application scopes' },
+      read: { fr: 'Lire les applications, leur configuration, leur journal ; les applications qui référencent des jeux de données demandent aussi datasets:read', en: 'Read applications, their configuration and journal; applications referencing datasets also need datasets:read' },
+      write: { fr: 'Modifier les applications et leur configuration, en créer', en: 'Edit applications and their configuration, create applications' },
+      admin: { fr: 'Administrer les applications : suppression, permissions, publication', en: 'Administer applications: deletion, permissions, publication' }
+    }
+  }
+})
+/** acceptedScopes: a higher tier, the umbrella and the global tier scopes at or above cover a tier */
+export const { acceptedScopes, familyScopes, scopeDescriptions } = vocabulary
+export type ScopeFamily = typeof vocabulary.families[number]
 
 export const scopeFamilyOf = (resourceType: ResourceType): ScopeFamily | undefined =>
-  (families as string[]).includes(resourceType) ? resourceType as ScopeFamily : undefined
+  (vocabulary.families as string[]).includes(resourceType) ? resourceType as ScopeFamily : undefined
 
 const tierByClass: Record<string, ScopeTier> = {
   list: 'read',
@@ -28,13 +50,6 @@ const tierByClass: Record<string, ScopeTier> = {
 
 export const tierOfClass = (operationClass: string): ScopeTier | undefined =>
   Object.hasOwn(tierByClass, operationClass) ? tierByClass[operationClass] : undefined
-
-/** a higher tier covers the lower ones */
-export const acceptedScopes = (family: ScopeFamily, tier: ScopeTier): string[] =>
-  [...tiers.slice(tiers.indexOf(tier)).map(t => `${family}:${t}`), family]
-
-export const familyScopes = (family: ScopeFamily): string[] =>
-  [family, ...tiers.map(t => `${family}:${t}`)]
 
 /**
  * Mounted in front of a family's routers: a scoped session holding no scope of the family is
@@ -58,45 +73,4 @@ export const scopeAllowsClass = (sessionState: SessionState, resourceType: Resou
   const tier = tierOfClass(operationClass)
   if (!family || !tier) return false
   return hasScope(sessionState, acceptedScopes(family, tier))
-}
-
-const descriptions: Record<ScopeFamily, Record<'fr' | 'en', Record<'umbrella' | ScopeTier, string>>> = {
-  datasets: {
-    fr: {
-      umbrella: 'Tous les droits sur les jeux de données',
-      read: 'Lire les jeux de données, leurs données, leur journal',
-      write: 'Modifier les jeux de données et leurs données, en créer',
-      admin: 'Administrer les jeux de données : suppression, permissions, publication'
-    },
-    en: {
-      umbrella: 'All dataset scopes',
-      read: 'Read datasets, their data and journal',
-      write: 'Edit datasets and their data, create datasets',
-      admin: 'Administer datasets: deletion, permissions, publication'
-    }
-  },
-  applications: {
-    fr: {
-      umbrella: 'Tous les droits sur les applications',
-      read: 'Lire les applications, leur configuration, leur journal ; les applications qui référencent des jeux de données demandent aussi datasets:read',
-      write: 'Modifier les applications et leur configuration, en créer',
-      admin: 'Administrer les applications : suppression, permissions, publication'
-    },
-    en: {
-      umbrella: 'All application scopes',
-      read: 'Read applications, their configuration and journal; applications referencing datasets also need datasets:read',
-      write: 'Edit applications and their configuration, create applications',
-      admin: 'Administer applications: deletion, permissions, publication'
-    }
-  }
-}
-
-export const scopeDescriptions = (locale: 'fr' | 'en'): Record<string, string> => {
-  const out: Record<string, string> = {}
-  for (const family of families) {
-    const d = descriptions[family][locale]
-    out[family] = d.umbrella
-    for (const tier of tiers) out[`${family}:${tier}`] = d[tier]
-  }
-  return out
 }

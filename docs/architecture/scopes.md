@@ -6,7 +6,9 @@ Code: `api/src/misc/utils/scopes.ts` (vocabulary, tiers, gate, descriptions), `a
 
 ## Vocabulary and tiers
 
-Two families, `datasets` and `applications`, each with `:read`, `:write`, `:admin` and a bare umbrella (`datasets` covers every tier). The vocabulary is served at `GET /api/v1/scopes.json` (simple-directory reads it through `PLATFORM_SCOPES_URL`) and as the `oauth2` scheme of `/api-docs.json`.
+Two families, `datasets` and `applications`, each with `:read`, `:write`, `:admin` and a bare umbrella (`datasets` covers every tier), plus the global tier scopes `all:read`, `all:write`, `all:admin` shared by every service of the platform ("everything the role allows, at this tier"). The vocabulary is built with `defineScopes` from `@data-fair/lib-common-types/scopes.js`, as in events and metrics, and is declared as the `oauth2` scheme of `/api-docs.json`.
+
+`GET /api/v1/scopes.json` is the platform's list, which simple-directory reads through `PLATFORM_SCOPES_URL` to decide which scopes an admin may store on an NHI: the scopes every service of the [platform document](platform-api-docs.md) declares (`platformScopes()`), data-fair's own in the requested language and the others' in the language of their documents. A stale service keeps the scopes of its last good document; a service that never answered since startup is missing until it does.
 
 Tier of a permission class (`shared/permissions/operations.ts`):
 
@@ -16,7 +18,7 @@ Tier of a permission class (`shared/permissions/operations.ts`):
 | write | `write`, `manageOwnLines`, `post` (contrib) |
 | admin | `admin`, `manageMasterData` |
 
-Any other class (superadmin operations) has no tier and is never granted to a scoped session. A higher tier covers the lower ones, so a tier accepts `F:<tier>`, the higher tiers and `F`. Matching is exact or bare umbrella, never prefix (`acceptedScopes(family, tier)`). `remote-services` has no family.
+Any other class (superadmin operations) has no tier and is never granted to a scoped session. A higher tier covers the lower ones, so a tier accepts `F:<tier>`, the higher tiers, `F` and the global tier scopes at or above it (`datasets:read` is satisfied by `all:read`, `all:write` or `all:admin`). Matching is exact or bare umbrella, never prefix (`acceptedScopes(family, tier)`); `all:*` needs no lib matcher change because it is listed among the accepted scopes. `remote-services` has no family.
 
 A scoped session is never `adminMode` (the lib refuses superadmin claims on scoped tokens), so superadmin routes stay refused without extra code. The scopes only ever restrict: a scoped session gets the intersection of what its user may do and what its scopes allow.
 

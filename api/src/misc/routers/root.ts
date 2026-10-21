@@ -9,7 +9,7 @@ import config from '#config'
 import { scopeDescriptions } from '../utils/scopes.ts'
 import { reqSession, reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../utils/public-base-url.ts'
-import { platformDoc, platformDocCacheControl, siteOrigin } from '../../platform-api-docs/service.ts'
+import { platformDoc, platformDocCacheControl, platformScopes, siteOrigin } from '../../platform-api-docs/service.ts'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
@@ -32,11 +32,13 @@ router.get('/platform/api-docs.json', allowAnyScope, (req, res) => {
   res.json(platformDoc(siteOrigin(reqPublicBaseUrl(req))))
 })
 
-// The scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL); public, no session read.
+// The platform's scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL): the scopes every
+// service of the platform document declares, data-fair's own in the requested language; public, no
+// session read.
 router.get('/scopes.json', allowAnyScope, (req, res) => {
   res.set('Cache-Control', 'public, max-age=300')
   res.vary('Accept-Language')
-  res.json({ scopes: scopeDescriptions(req.getLocale() === 'en' ? 'en' : 'fr') })
+  res.json({ scopes: { ...platformScopes(), ...scopeDescriptions(req.getLocale() === 'en' ? 'en' : 'fr') } })
 })
 
 // The bodies of the root document's skills, linked from its x-agent.skills; public like the document.

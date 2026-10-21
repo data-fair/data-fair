@@ -1,6 +1,6 @@
 # Platform OpenAPI document
 
-`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
+`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics and events. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
 
 Code: `api/contract/platform-api-docs.ts` (pure: check, rewrite and merge), `api/src/platform-api-docs/service.ts` (fetching, caching, per-site memoization), the route in `api/src/misc/routers/root.ts`, `api/contract/scopes-security.ts` and `api/contract/x-agent.ts` (what data-fair contributes).
 
@@ -17,6 +17,7 @@ It replaces the deployment index (`/api/v1/agents/index.json`) and the agent pro
 | `datafair` | in process, `apiDocs(publicUrl)` without a session (no superadmin routes) | data-fair's public path + `/api/v1` | always |
 | `sd` | `(privateDirectoryUrl \|\| directoryUrl) + '/api/api-docs.json'` | `/simple-directory` | always |
 | `metrics` | `privateMetricsUrl + '/api/api-docs.json'` | `/metrics/api` | `privateMetricsUrl` is set |
+| `events` | `privateEventsUrl + '/api/api-docs.json'` | `/events/api` | `privateEventsUrl` is set |
 
 Fragments are fetched over private URLs, once per service, not per site: after the rewrite nothing in a fragment depends on the site. The merged document has one server, the origin of the request's public base URL; every path carries its service's mount path. Processings is not aggregated: its listed document is superadmin-only.
 
@@ -49,7 +50,7 @@ The merged document declares `oauth2` (client credentials, `tokenUrl` = `<site o
 
 ## Freshness and `x-platform`
 
-`service.ts` fetches every fragment at startup and every 300 s; the remote ones (sd, metrics) with conditional GETs (`If-None-Match`) and a 10 s abort, data-fair's own built in process. Each service settles on its own: a slow service does not delay the others' state. The cache is in process memory, per API pod. `init` waits for the first round at most 5 s, then serves what it has.
+`service.ts` fetches every fragment at startup and every 300 s; the remote ones (sd, metrics, events) with conditional GETs (`If-None-Match`) and a 10 s abort, data-fair's own built in process. Each service settles on its own: a slow service does not delay the others' state. The cache is in process memory, per API pod. `init` waits for the first round at most 5 s, then serves what it has.
 
 The merge is memoized per site origin until the next state change. The root `x-platform.services` lists, per service: `status`, `error` (when any), `fetchedAt` (once it answered), `warnings` (only when there are some).
 

@@ -56,18 +56,18 @@ test.describe('oauth2 security in the OpenAPI docs', () => {
 
   test('read, write and admin operations list the scopes of their tier', () => {
     const root = docs.root
-    assert.deepEqual(oauth2Of(root, 'listDatasets'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets'))
-    assert.deepEqual(oauth2Of(root, 'readLines'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets'))
-    assert.deepEqual(oauth2Of(root, 'postDataset'), alt('datasets:write', 'datasets:admin', 'datasets'))
-    assert.deepEqual(oauth2Of(root, 'deleteApplication'), alt('applications:admin', 'applications'))
-    assert.deepEqual(oauth2Of(root, 'getApplication'), alt('applications:read', 'applications:write', 'applications:admin', 'applications'))
-    assert.deepEqual(oauth2Of(root, 'getPermissions'), alt('datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(root, 'listDatasets'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets', 'all:read', 'all:write', 'all:admin'))
+    assert.deepEqual(oauth2Of(root, 'readLines'), alt('datasets:read', 'datasets:write', 'datasets:admin', 'datasets', 'all:read', 'all:write', 'all:admin'))
+    assert.deepEqual(oauth2Of(root, 'postDataset'), alt('datasets:write', 'datasets:admin', 'datasets', 'all:write', 'all:admin'))
+    assert.deepEqual(oauth2Of(root, 'deleteApplication'), alt('applications:admin', 'applications', 'all:admin'))
+    assert.deepEqual(oauth2Of(root, 'getApplication'), alt('applications:read', 'applications:write', 'applications:admin', 'applications', 'all:read', 'all:write', 'all:admin'))
+    assert.deepEqual(oauth2Of(root, 'getPermissions'), alt('datasets:admin', 'datasets', 'all:admin'))
     assert.deepEqual(oauth2Of(docs.private, 'readLines')?.[0], ['datasets:read'])
-    assert.deepEqual(oauth2Of(root, 'delete'), alt('datasets:admin', 'datasets'))
+    assert.deepEqual(oauth2Of(root, 'delete'), alt('datasets:admin', 'datasets', 'all:admin'))
   })
 
   test('each accepted scope is its own alternative', () => {
-    assert.deepEqual(oauth2Of(docs.root, 'listDatasets'), [['datasets:read'], ['datasets:write'], ['datasets:admin'], ['datasets']])
+    assert.deepEqual(oauth2Of(docs.root, 'listDatasets'), [['datasets:read'], ['datasets:write'], ['datasets:admin'], ['datasets'], ['all:read'], ['all:write'], ['all:admin']])
     for (const name of ['root', 'private']) {
       for (const op of operations(docs[name]) as any[]) {
         for (const s of op.security ?? []) if (s.oauth2) assert.equal(s.oauth2.length, 1, op.operationId)

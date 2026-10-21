@@ -69,6 +69,18 @@ test.describe('the admin tier and the unrestricted session', () => {
     assert.equal(await status(bearerAx.get('/api/v1/catalog/datasets')), 403)
   })
 
+  test('the global tier scopes cover both families at their tier', async () => {
+    const read = (await nhiSession('all:read')).cookieAx
+    assert.equal(await status(read.get('/api/v1/datasets')), 200)
+    assert.equal(await status(read.get('/api/v1/applications')), 200)
+    assert.equal(await status(read.post('/api/v1/datasets', { isRest: true, title: 'all-read' })), 403)
+    assert.equal(await status(read.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 403)
+    assert.equal(await status(read.get('/api/v1/settings/organization/test_org1')), 403)
+    const admin = (await nhiSession('all:admin')).cookieAx
+    assert.equal(await status(admin.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 200)
+    assert.equal(await status(admin.get('/api/v1/settings/organization/test_org1')), 403)
+  })
+
   test('an unrestricted session is unaffected', async () => {
     const { cookieAx } = await nhiSession()
     assert.equal(await status(cookieAx.get('/api/v1/applications')), 200)

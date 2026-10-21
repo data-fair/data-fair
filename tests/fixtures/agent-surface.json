@@ -65,6 +65,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -125,6 +140,16 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -194,6 +219,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -252,6 +292,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -305,6 +360,16 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -343,6 +408,11 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -393,6 +463,16 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -436,6 +516,11 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -512,6 +597,21 @@
           "oauth2": [
             "applications"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -561,6 +661,21 @@
           "oauth2": [
             "applications"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -599,6 +714,11 @@
         {
           "oauth2": [
             "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -959,6 +1079,16 @@
           "oauth2": [
             "applications"
           ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1093,6 +1223,11 @@
           "oauth2": [
             "applications"
           ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1207,6 +1342,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1316,6 +1466,21 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -1432,6 +1597,21 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -1552,6 +1732,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1665,6 +1860,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1713,6 +1923,21 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -1763,6 +1988,21 @@
           "oauth2": [
             "datasets"
           ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
         }
       ]
     },
@@ -1801,6 +2041,11 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]
@@ -1967,6 +2212,11 @@
         {
           "oauth2": [
             "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
           ]
         }
       ]

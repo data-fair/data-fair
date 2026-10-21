@@ -38,10 +38,10 @@ test.describe('scope vocabulary', () => {
   })
 
   test('acceptedScopes', () => {
-    assert.deepEqual(acceptedScopes('datasets', 'read'), ['datasets:read', 'datasets:write', 'datasets:admin', 'datasets'])
-    assert.deepEqual(acceptedScopes('datasets', 'write'), ['datasets:write', 'datasets:admin', 'datasets'])
-    assert.deepEqual(acceptedScopes('applications', 'admin'), ['applications:admin', 'applications'])
-    assert.deepEqual(familyScopes('applications'), ['applications', 'applications:read', 'applications:write', 'applications:admin'])
+    assert.deepEqual(acceptedScopes('datasets', 'read'), ['datasets:read', 'datasets:write', 'datasets:admin', 'datasets', 'all:read', 'all:write', 'all:admin'])
+    assert.deepEqual(acceptedScopes('datasets', 'write'), ['datasets:write', 'datasets:admin', 'datasets', 'all:write', 'all:admin'])
+    assert.deepEqual(acceptedScopes('applications', 'admin'), ['applications:admin', 'applications', 'all:admin'])
+    assert.deepEqual(familyScopes('applications'), ['applications', 'applications:read', 'applications:write', 'applications:admin', 'all:read', 'all:write', 'all:admin'])
   })
 
   test('scopeAllowsClass', () => {
@@ -60,8 +60,22 @@ test.describe('scope vocabulary', () => {
     assert.equal(scopeAllowsClass(scoped('datasets:admin'), 'remote-services', 'read'), false)
   })
 
-  test('scopeDescriptions lists the 8 scopes in both locales', () => {
-    const names = ['datasets', 'datasets:read', 'datasets:write', 'datasets:admin', 'applications', 'applications:read', 'applications:write', 'applications:admin']
+  test('scopeAllowsClass with the global tier scopes', () => {
+    const r = scoped('all:read')
+    for (const family of ['datasets', 'applications'] as const) {
+      for (const cl of ['read', 'readAdvanced', 'list']) assert.equal(scopeAllowsClass(r, family, cl), true, `${family} ${cl}`)
+      for (const cl of ['write', 'post', 'admin']) assert.equal(scopeAllowsClass(r, family, cl), false, `${family} ${cl}`)
+    }
+    assert.equal(scopeAllowsClass(scoped('all:write'), 'applications', 'write'), true)
+    assert.equal(scopeAllowsClass(scoped('all:write'), 'datasets', 'read'), true)
+    assert.equal(scopeAllowsClass(scoped('all:write'), 'datasets', 'admin'), false)
+    assert.equal(scopeAllowsClass(scoped('all:admin'), 'datasets', 'manageMasterData'), true)
+    assert.equal(scopeAllowsClass(scoped('all:admin'), 'datasets', 'superadmin'), false)
+    assert.equal(scopeAllowsClass(scoped('all:admin'), 'remote-services', 'read'), false)
+  })
+
+  test('scopeDescriptions lists the 8 scopes and the global tier scopes in both locales', () => {
+    const names = ['datasets', 'datasets:read', 'datasets:write', 'datasets:admin', 'applications', 'applications:read', 'applications:write', 'applications:admin', 'all:read', 'all:write', 'all:admin']
     for (const locale of ['fr', 'en'] as const) {
       const d = scopeDescriptions(locale)
       assert.deepEqual(Object.keys(d).sort(), [...names].sort())

@@ -118,6 +118,15 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual(toolsForScopes(toolSet, undefined).tools.map(t => t.name), toolSet.tools.map(t => t.name))
   })
 
+  test('a global tier scope reaches the tools of every family at its tier', async () => {
+    const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES, lint: 'error' })
+    const names = (scopes: string[]) => toolsForScopes(toolSet, scopes).tools.map(t => t.name).sort()
+    for (const tier of ['read', 'write', 'admin']) {
+      assert.ok(names([`all:${tier}`]).length > 0, tier)
+      assert.deepEqual(names([`all:${tier}`]), names([`datasets:${tier}`, `applications:${tier}`]), tier)
+    }
+  })
+
   test('the publish tools need the admin tier, though they share their operation with the update tools', async () => {
     const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES, lint: 'error' })
     const names = (scopes: string[]) => toolsForScopes(toolSet, scopes).tools.map(t => t.name)
