@@ -122,6 +122,7 @@
           size="16"
           width="3"
           class="ml-2"
+          style="transform: scaleX(-1)"
         />
         <span
           v-if="dataset.updatedAt"

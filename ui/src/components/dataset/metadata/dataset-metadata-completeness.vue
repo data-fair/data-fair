@@ -18,6 +18,7 @@
           width="3"
           class="mr-2"
           aria-hidden="true"
+          style="transform: scaleX(-1)"
         />
         {{ score }} %
       </v-btn>
