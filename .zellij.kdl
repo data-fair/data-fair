@@ -16,7 +16,7 @@ layout {
     }
     pane name="api" command="bash" {
       // optional containers that do not run at start are unplugged from the config (dev/dev.json "optional")
-      args "-c" "./node_modules/.bin/df-dev wait-deps && export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config) && cd api && FORCE_COLOR=1 MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error exec ../node_modules/.bin/nodemon --verbose -e js,ts,json --exec 'sh ../dev/run-api.sh'"
+      args "-c" "./node_modules/.bin/df-dev wait-deps && export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config) && cd api && FORCE_COLOR=1 MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error exec ../node_modules/.bin/nodemon --verbose -e js,ts,json index.ts"
     }
     pane name="bridge" command="./node_modules/.bin/df-agents-bridge" {
       start_suspended true

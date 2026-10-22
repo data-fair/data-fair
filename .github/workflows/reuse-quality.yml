@@ -195,7 +195,7 @@ jobs:
     - name: Start dev API
       run: |
         export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
-        cd api && MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error sh ../dev/run-api.sh > ../dev/logs/api.log 2>&1 &
+        cd api && MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error node index.ts > ../dev/logs/api.log 2>&1 &
 
     # vite hashes the API's ui-config to link it: same absent-config as the API
     - name: Start dev UI
