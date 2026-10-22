@@ -224,4 +224,23 @@ test.describe('fragments UI', () => {
     await expect(page.getByRole('option', { name: 'own fragment' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('option', { name: 'foreign fragment' })).toHaveCount(0)
   })
+
+  test('a super admin can list fragments from the datasets list', async ({ page }) => {
+    const parent = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'listing parent' })).data
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'listedfragment', partOf: { type: 'dataset', id: parent.id } })
+
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    const fullUrl = `${baseUrl}/data-fair/datasets?showAll=true&q=listedfragment`
+    await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`)
+    await page.getByLabel('Adresse mail').fill('test_superadmin@test.com')
+    await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
+    await page.getByRole('button', { name: 'Se connecter' }).click()
+    await page.waitForURL(fullUrl, { timeout: 10000 })
+
+    // hidden by default, even with every owner shown
+    await expect(page.getByText('Aucun résultat ne correspond à la recherche.')).toBeVisible({ timeout: 15000 })
+    await page.getByLabel('Voir aussi les fragments').check()
+    await page.waitForURL(/showFragments=true/)
+    await expect(page.locator('.v-container .v-card').filter({ hasText: 'listedfragment' })).toBeVisible({ timeout: 10000 })
+  })
 })

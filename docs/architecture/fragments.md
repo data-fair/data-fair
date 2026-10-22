@@ -365,6 +365,9 @@ storage page, the agent tools `list_datasets` / `list_applications`
 (`docs/architecture/agent-integration.md`), and the portal catalog API (additionally scoped by
 `publicationSites`, always empty on a fragment).
 
+The one listing that shows them on request: in admin mode, the back-office datasets list has an
+"Also show fragments" switch (`showFragments=true` in the page URL) that sends `partOf=false,true`.
+
 ## 7. Lifecycle
 
 **Creation.** `dataset.partOf` (or `application.partOf`) short-circuits the normal creation-time
