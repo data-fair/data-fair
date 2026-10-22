@@ -1,10 +1,10 @@
 // Geo files support tests
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize, callWorkerFunction, setServerEnv } from '../../../support/workers.ts'
+import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize, setServerEnv } from '../../../support/workers.ts'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
@@ -296,9 +296,6 @@ test.describe('geo files support', () => {
   test('Process uploaded GPX dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     const ax = testUser1
-
-    // Increase storage limits for this test
-    await callWorkerFunction('filesProcessor', 'setConfig', { key: 'defaultLimits', value: { totalStorage: 10000000, datasetStorage: 10000000, nbDatasets: -1, datasetIndexed: -1, nbApiKeys: -1, store_nb: { limit: -1 } } })
 
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/geo/paths.gpx')

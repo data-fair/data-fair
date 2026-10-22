@@ -5,7 +5,7 @@
     density="compact"
   >
     <div
-      class="text-subtitle-2 mb-1"
+      class="text-label-large mb-1"
       style="line-height:1.2"
     >
       {{ title }}
@@ -24,7 +24,7 @@
         class="mr-2 flex-shrink-0"
         :style="`display:inline-block;width:14px;height:14px;border-radius:3px;background-color:${item.color};`"
       />
-      <span class="text-body-2 text-truncate">{{ item.label }}</span>
+      <span class="text-body-medium text-truncate">{{ item.label }}</span>
     </div>
     <div
       v-if="otherColor"
@@ -35,7 +35,7 @@
         class="mr-2 flex-shrink-0"
         :style="`display:inline-block;width:14px;height:14px;border-radius:3px;background-color:${otherColor};`"
       />
-      <span class="text-body-2 font-italic">{{ t('other') }}</span>
+      <span class="text-body-medium font-italic">{{ t('other') }}</span>
     </div>
   </v-card>
 </template>

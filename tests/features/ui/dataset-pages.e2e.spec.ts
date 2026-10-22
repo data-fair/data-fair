@@ -34,6 +34,21 @@ test.describe('dataset detail pages', () => {
 
     // Record count rendered in informations
     await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible()
+
+    // Exploration, share and activity tabs
+    await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
+    await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).toBeVisible()
+    await expect(page.locator('#share').getByRole('tab', { name: /Intégrer|Embed/ })).toBeVisible()
+    await expect(page.locator('#share').getByRole('tab', { name: /Clé d'API|Read API key/ })).toBeVisible()
+    await expect(page.locator('#activity').getByRole('tab', { name: /Journal/ })).toBeVisible()
+
+    // Right-nav actions do not repeat the items moved inline
+    const actionsList = page.locator('#navigation-right-local')
+    await expect(actionsList).toBeVisible()
+    await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).not.toBeVisible()
+    await expect(actionsList.getByText(/Intégrer dans un site|Embed in a website/)).not.toBeVisible()
+    await expect(actionsList.getByText('Notifications')).not.toBeVisible()
+    await expect(actionsList.getByText('Webhooks')).not.toBeVisible()
   })
 
   test('dataset /table route loads table view', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {

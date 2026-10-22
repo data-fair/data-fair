@@ -1,8 +1,8 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests } from '../../../support/workers.ts'
-import { collectWsEvents } from '../../../support/events.ts'
+import { collectWsEvents, waitForCollected } from '../../../support/events.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { validate } from 'tableschema'
@@ -314,7 +314,7 @@ test.describe('datasets - upload', () => {
     await waitForFinalize(ax, datasetId)
 
     // Verify WS journal events were received
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await waitForCollected(() => wsCollector.events.length > 0)
     assert.ok(wsCollector.events.length > 0, 'should have received WS journal events')
     wsCollector.stop()
 

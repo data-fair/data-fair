@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { anonymousAx, baseURL, directoryUrl } from '../../support/axios.ts'
 

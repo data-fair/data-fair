@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize } from '../../../support/workers.ts'
@@ -23,16 +23,19 @@ const createDataset = async (ax: any) => {
   return await waitForFinalize(ax, 'multival1')
 }
 
-test.describe('values on multi-valued columns', () => {
-  test.beforeEach(async () => { await clean() })
+test.afterEach(async ({}, testInfo) => {
+  if (testInfo.status === 'passed') await checkPendingTasks()
+})
 
-  test.afterEach(async ({}, testInfo) => {
-    if (testInfo.status === 'passed') await checkPendingTasks()
+test.describe('values on multi-valued columns', () => {
+  // none of these tests mutate the dataset, so it is built once for the whole describe block
+  test.beforeAll(async () => {
+    await clean()
+    await createDataset(testUser1)
   })
 
   test('q narrows to the matching values, not the matching rows', async () => {
     const ax = testUser1
-    await createDataset(ax)
 
     // unfiltered: every value of the column, unchanged behaviour
     let res = await ax.get('/api/v1/datasets/multival1/values/tags')
@@ -67,24 +70,8 @@ test.describe('values on multi-valued columns', () => {
     assert.deepEqual(res.data, ['cinema', 'cinema d auteur', 'cinéma'])
   })
 
-  test('values-labels narrows the same way', async () => {
-    const ax = testUser1
-    const dataset = await createDataset(ax)
-
-    let res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?q=cin&q_mode=complete')
-    assert.deepEqual(res.data.map((v: any) => v.value), ['cinema', 'cinema d auteur', 'cinéma'])
-
-    // labels still apply on top of the narrowed list
-    const schema = dataset.schema.filter((f: any) => !f['x-calculated'])
-    schema.find((f: any) => f.key === 'tags')['x-labels'] = { cinema: 'Cinéma !' }
-    await ax.patch('/api/v1/datasets/multival1', { schema })
-    res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?q=cin&q_mode=complete')
-    assert.deepEqual(res.data[0], { value: 'cinema', label: 'Cinéma !' })
-  })
-
   test('single-valued columns and non-literal queries keep their analysed matching', async () => {
     const ax = testUser1
-    await createDataset(ax)
 
     // single-valued column: doc and value are 1:1, nothing to narrow, stemming untouched
     let res = await ax.get('/api/v1/datasets/multival1/values/label?q=a&q_mode=complete')
@@ -99,7 +86,6 @@ test.describe('values on multi-valued columns', () => {
 
   test('pathological queries stay bounded', async () => {
     const ax = testUser1
-    await createDataset(ax)
 
     // The `include` pattern is compiled into an automaton inside ES, and determinization there is
     // uninterruptible: an unbounded pattern is a memory-exhaustion vector on a public read
@@ -121,7 +107,6 @@ test.describe('values on multi-valued columns', () => {
 
   test('a filter on the listed column narrows the values it lists', async () => {
     const ax = testUser1
-    await createDataset(ax)
 
     // the reported case: values-labels asked with an _in filter must answer with the labels of
     // the values named, not with everything else the matching rows happen to carry
@@ -154,6 +139,37 @@ test.describe('values on multi-valued columns', () => {
     assert.deepEqual(res.data, ['sport'])
   })
 
+  test('values_agg keeps faceting over matching rows', async () => {
+    const ax = testUser1
+
+    // values_agg's q is dataset-wide (no q_fields), so its buckets are a facet of the matching
+    // rows — the sibling values belong there and must NOT be narrowed away
+    const res = await ax.get('/api/v1/datasets/multival1/values_agg?field=tags&q=cin&q_mode=complete')
+    const values = res.data.aggs.map((a: any) => a.value)
+    assert.ok(values.includes('théâtre'), 'a facet keeps the other values of the matching rows')
+    assert.ok(values.includes('cinéma'))
+  })
+})
+
+// these tests patch the dataset schema, so each needs its own fresh fixture
+test.describe('values on multi-valued columns — schema mutations', () => {
+  test.beforeEach(async () => { await clean() })
+
+  test('values-labels narrows the same way', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+
+    let res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?q=cin&q_mode=complete')
+    assert.deepEqual(res.data.map((v: any) => v.value), ['cinema', 'cinema d auteur', 'cinéma'])
+
+    // labels still apply on top of the narrowed list
+    const schema = dataset.schema.filter((f: any) => !f['x-calculated'])
+    schema.find((f: any) => f.key === 'tags')['x-labels'] = { cinema: 'Cinéma !' }
+    await ax.patch('/api/v1/datasets/multival1', { schema })
+    res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?q=cin&q_mode=complete')
+    assert.deepEqual(res.data[0], { value: 'cinema', label: 'Cinéma !' })
+  })
+
   test('the labels-restricted shortcut narrows identically', async () => {
     const ax = testUser1
     const dataset = await createDataset(ax)
@@ -169,18 +185,6 @@ test.describe('values on multi-valued columns', () => {
     assert.deepEqual(res.data.map((v: any) => v.value), ['cinema', 'sport', 'danse'])
     res = await ax.get('/api/v1/datasets/multival1/values-labels/tags?tags_in=cinema,danse')
     assert.deepEqual(res.data, [{ value: 'cinema', label: 'Cinéma' }, { value: 'danse', label: 'Danse' }])
-  })
-
-  test('values_agg keeps faceting over matching rows', async () => {
-    const ax = testUser1
-    await createDataset(ax)
-
-    // values_agg's q is dataset-wide (no q_fields), so its buckets are a facet of the matching
-    // rows — the sibling values belong there and must NOT be narrowed away
-    const res = await ax.get('/api/v1/datasets/multival1/values_agg?field=tags&q=cin&q_mode=complete')
-    const values = res.data.aggs.map((a: any) => a.value)
-    assert.ok(values.includes('théâtre'), 'a facet keeps the other values of the matching rows')
-    assert.ok(values.includes('cinéma'))
   })
 
   test('narrowing follows the wildcard capability in complete mode', async () => {

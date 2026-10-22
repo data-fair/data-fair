@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, anonymousAx, clean, checkPendingTasks, config, apiUrl } from '../../support/axios.ts'
 import { clearDatasetCache } from '../../support/workers.ts'

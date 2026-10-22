@@ -1,8 +1,9 @@
 import { test, expect } from '../../fixtures/login.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../support/axios.ts'
+import type { AxiosInstance } from 'axios'
 
-const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 async function goToSettings (page: any, goToWithAuth: any, user = 'test_user1') {
   await goToWithAuth('/data-fair/', user)
@@ -19,11 +20,8 @@ async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_user1
   await expect(page.locator('#info')).toBeVisible({ timeout: 15000 })
 }
 
+// no clean(): these tests only assert static section/tab visibility, not data content
 test.describe('settings page sections', () => {
-  test.beforeEach(async () => {
-    await clean()
-  })
-
   test('displays all sections for user', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
 
@@ -46,13 +44,22 @@ test.describe('settings page sections', () => {
 })
 
 test.describe('settings topics save/cancel', () => {
-  test.beforeEach(async () => {
+  let ax: AxiosInstance
+  let baseSettings: any
+
+  test.beforeAll(async () => {
     await clean()
+    ax = await axiosAuth('test_user1@test.com')
+    baseSettings = (await ax.get('/api/v1/settings/user/test_user1')).data
+  })
+
+  // reset topics between tests: fragile "first titre field" locators only target
+  // the right (blank) item when the topics array starts empty
+  test.beforeEach(async () => {
+    await ax.put('/api/v1/settings/user/test_user1', baseSettings)
   })
 
   test('save button appears on topic change and saves correctly', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-
     await goToSettings(page, goToWithAuth)
     await page.locator('#topics').scrollIntoViewIfNeeded()
 
@@ -126,13 +133,21 @@ test.describe('settings topics save/cancel', () => {
 })
 
 test.describe('settings quality tabs save/cancel', () => {
-  test.beforeEach(async () => {
+  let ax: AxiosInstance
+  let baseSettings: any
+
+  test.beforeAll(async () => {
     await clean()
+    ax = await axiosAuth('test_user1@test.com')
+    baseSettings = (await ax.get('/api/v1/settings/user/test_user1')).data
+  })
+
+  // reset licenses between tests: same "first titre field" fragility as topics
+  test.beforeEach(async () => {
+    await ax.put('/api/v1/settings/user/test_user1', baseSettings)
   })
 
   test('save persists license across tabs', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-
     await goToSettings(page, goToWithAuth)
     await page.locator('#quality').scrollIntoViewIfNeeded()
 
@@ -182,7 +197,7 @@ test.describe('settings quality tabs save/cancel', () => {
 })
 
 test.describe('settings publication sites save/cancel', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
   })
 
@@ -209,7 +224,7 @@ test.describe('settings publication sites save/cancel', () => {
 })
 
 test.describe('settings cross-subEdit interference', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
   })
 
@@ -246,7 +261,7 @@ test.describe('settings cross-subEdit interference', () => {
 })
 
 test.describe('settings contact save/cancel', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
   })
 

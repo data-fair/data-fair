@@ -55,6 +55,19 @@ test.describe('checkConstraints', () => {
   test('is a no-op for empty/absent constraints', () => {
     assert.doesNotThrow(() => checkConstraints(schema, []))
   })
+
+  test('rejects any unique constraint on a virtual dataset', () => {
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['a'] }], { isVirtual: true }), /virtuel/i)
+  })
+
+  test('rejects any unique constraint on a metaOnly dataset', () => {
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['a'] }], { isMetaOnly: true }), /isMetaOnly|sans données/i)
+  })
+
+  test('removing constraints is always safe, even on virtual/metaOnly datasets', () => {
+    assert.doesNotThrow(() => checkConstraints(schema, [], { isVirtual: true }))
+    assert.doesNotThrow(() => checkConstraints(schema, undefined, { isMetaOnly: true }))
+  })
 })
 
 test.describe('unicityViolationMessage', () => {

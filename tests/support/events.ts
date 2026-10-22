@@ -140,3 +140,17 @@ export const waitForTestEvent = async (
     throw err
   }
 }
+
+/**
+ * Poll an in-memory collector (TestEventClient buffer, WS collector...) until the getter returns
+ * something truthy. Replaces fixed sleeps that hoped the event had arrived.
+ */
+export const waitForCollected = async <T>(getter: () => T | undefined | false, timeout = 10000): Promise<T | undefined> => {
+  const start = Date.now()
+  for (;;) {
+    const found = getter()
+    if (found) return found
+    if (Date.now() - start >= timeout) return undefined
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+}

@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -580,6 +580,8 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
   // reading it used to surface as an unhandled 'error' event (ENOENT) that took
   // the process down. The worst acceptable outcome is an HTTP error.
   test('Concurrent bulk requests reusing an actions filename cannot crash the API', async () => {
+    // 8 datasets, each finalized at creation then reindexed by its bulk: 16 worker cycles
+    test.setTimeout(90000)
     const ax = testUser5
     const n = 8
     const ids = Array.from({ length: n }, (_, i) => 'restbulkrace' + i)
@@ -605,7 +607,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     }
 
     // the API process must still be alive and serving requests
-    await waitForWorkerIdle()
+    assert.ok(await waitForWorkerIdle(60000), 'the worker never went idle after the concurrent bulks')
     for (const id of ids) {
       const res = await ax.get('/api/v1/datasets/' + id + '/lines', { validateStatus: () => true })
       assert.equal(res.status, 200, 'the API must still serve requests after concurrent bulk uploads')

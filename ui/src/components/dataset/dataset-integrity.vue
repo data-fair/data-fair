@@ -557,7 +557,7 @@
             <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <div class="text-body-small">
                   {{ t('diffRevision') }}
@@ -848,7 +848,7 @@
             <h4 class="text-title-small mt-2">
               {{ key }}
             </h4>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <div class="text-body-small">
                   {{ t('diffRevision') }}

@@ -1,6 +1,6 @@
 require('dotenv').config({ quiet: true })
 
-if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, use "source dev/init-env.sh" to init .env file')
+if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, run "npx --no df-dev setup" to create .env, then start the env with "npm run dev-zellij"')
 
 module.exports = {
   port: process.env.DEV_API_PORT,
@@ -15,8 +15,8 @@ module.exports = {
     singleLineOpRefresh: true
   },
   filesStorage: 'fs',
-  publicUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
-  wsPublicUrl: `ws://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
+  publicUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`,
+  wsPublicUrl: `ws://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`,
   s3: {
     region: 'us-east-1',
     endpoint: `http://localhost:${process.env.S3_PORT}`,
@@ -42,9 +42,9 @@ module.exports = {
     attribution: { active: true, retentionDays: 1 },
     lockWaitMs: 2000, // fast 409 in dev/tests when the per-dataset lock is held
   },
-  directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`,
+  directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
-  captureUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/capture`,
+  captureUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/capture`,
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
@@ -114,11 +114,11 @@ module.exports = {
   },
   remoteTimeout: 500,
   secretKeys: {
-    identities: 'identities-test-key',
-    limits: 'limits-test-key',
-    events: 'secret-notifications',
+    identities: 'secret-identities',
+    limits: 'secret-limits',
+    events: 'secret-events',
     catalogs: 'secret-catalogs',
-    sendMails: 'testkey',
+    sendMails: 'secret-sendmails',
     registry: 'secret-registry-internal'
   },
   applications: [{
@@ -168,7 +168,7 @@ module.exports = {
     {
       id: 'test',
       title: { fr: 'Test', en: 'Test en' },
-      iframe: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair/_dev/extra`,
+      iframe: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'M3.9,12C3.9,10.29 5.29,8.9 7,8.9H11V7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H11V15.1H7C5.29,15.1 3.9,13.71 3.9,12M8,13H16V11H8V13M17,7H13V8.9H17C18.71,8.9 20.1,10.29 20.1,12C20.1,13.71 18.71,15.1 17,15.1H13V17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7Z',
       group: 'help'

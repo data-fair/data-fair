@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
@@ -27,85 +27,96 @@ const setup = async (id: string) => {
 }
 
 test.describe('keyword ignore_above — exact filters (operand-driven)', () => {
-  test.beforeEach(async () => { await clean() })
+  // all tests only read this fixture, so it is built once for the whole describe block
+  test.beforeAll(async () => {
+    await clean()
+    await setup('ia-eq')
+  })
 
   test('_eq with a > 200-char value on a plain column → 400', async () => {
-    await setup('ia-eq')
     await assert.rejects(ax.get('/api/v1/datasets/ia-eq/lines', { params: { plain_eq: long } }),
       (e: any) => e.status === 400)
   })
   test('_eq with a > 200-char value routes to .wildcard and matches', async () => {
-    await setup('ia-eq2')
-    const res = await ax.get('/api/v1/datasets/ia-eq2/lines', { params: { wild_eq: long } })
+    const res = await ax.get('/api/v1/datasets/ia-eq/lines', { params: { wild_eq: long } })
     assert.equal(res.data.total, 1)
   })
   test('_eq short value still works on the plain column', async () => {
-    await setup('ia-eq3')
-    const res = await ax.get('/api/v1/datasets/ia-eq3/lines', { params: { plain_eq: 'short' } })
+    const res = await ax.get('/api/v1/datasets/ia-eq/lines', { params: { plain_eq: 'short' } })
     assert.equal(res.data.total, 1)
   })
   test('_in with a > 200-char value and no wildcard → 400', async () => {
-    await setup('ia-in')
-    await assert.rejects(ax.get('/api/v1/datasets/ia-in/lines', { params: { plain_in: `short,${long}` } }),
+    await assert.rejects(ax.get('/api/v1/datasets/ia-eq/lines', { params: { plain_in: `short,${long}` } }),
       (e: any) => e.status === 400)
   })
 })
 
 test.describe('keyword ignore_above — exists/starts (flag-gated)', () => {
-  test.beforeEach(async () => { await clean() })
+  // all tests only read this fixture, so it is built once for the whole describe block
+  test.beforeAll(async () => {
+    await clean()
+    await setup('ia-exists')
+  })
 
   test('_exists finds the long-valued row on the plain column (union after detection)', async () => {
-    await setup('ia-exists')
     const res = await ax.get('/api/v1/datasets/ia-exists/lines', { params: { plain_exists: 'true' } })
     assert.equal(res.data.total, 2)
   })
   test('_nexists does not wrongly include the long-valued row', async () => {
-    await setup('ia-nexists')
-    const res = await ax.get('/api/v1/datasets/ia-nexists/lines', { params: { plain_nexists: 'true' } })
+    const res = await ax.get('/api/v1/datasets/ia-exists/lines', { params: { plain_nexists: 'true' } })
     assert.equal(res.data.total, 0)
   })
   test('_starts matches a long value through .wildcard on the wildcard column', async () => {
-    await setup('ia-starts')
-    const res = await ax.get('/api/v1/datasets/ia-starts/lines', { params: { wild_starts: 'LL' } })
+    const res = await ax.get('/api/v1/datasets/ia-exists/lines', { params: { wild_starts: 'LL' } })
     assert.equal(res.data.total, 1)
   })
 })
 
 test.describe('keyword ignore_above — per-request hint', () => {
-  test.beforeEach(async () => { await clean() })
+  // both fixtures only get read, so build them once and clean() only once for the block
+  test.beforeAll(async () => {
+    await clean()
+    await setup('ia-hint')
+    await ax.post('/api/v1/datasets/ia-clean', { isRest: true, title: 'ia-clean', schema: [{ key: 'plain', type: 'string' }] })
+    await ax.post('/api/v1/datasets/ia-clean/_bulk_lines', [{ plain: 'short' }])
+    await waitForFinalize(ax, 'ia-clean')
+  })
 
   test('uncertain _starts on a flagged plain column attaches a readable hint', async () => {
-    await setup('ia-hint')
     const res = await ax.get('/api/v1/datasets/ia-hint/lines', { params: { plain_starts: 'sh', hint: 'true' } })
     const hints: string[] = res.data.meta?.hints ?? []
     assert.ok(hints.some((h: string) => h.includes('plain')), JSON.stringify(hints))
   })
   test('no hint on a clean column even with hint=true', async () => {
-    await ax.post('/api/v1/datasets/ia-clean', { isRest: true, title: 'ia-clean', schema: [{ key: 'plain', type: 'string' }] })
-    await ax.post('/api/v1/datasets/ia-clean/_bulk_lines', [{ plain: 'short' }])
-    await waitForFinalize(ax, 'ia-clean')
     const res = await ax.get('/api/v1/datasets/ia-clean/lines', { params: { plain_starts: 'sh', hint: 'true', count: 'false' } })
     assert.equal(res.data.meta, undefined)
   })
 })
 
-test.describe('keyword ignore_above — diagnose + ODS where equality', () => {
-  test.beforeEach(async () => { await clean() })
+test.describe('keyword ignore_above — diagnose', () => {
+  // both tests only read this fixture, so it is built once for the whole describe block
+  test.beforeAll(async () => {
+    await clean()
+    await setup('ia-diag')
+  })
 
   test('diagnose surfaces IgnoredKeywordValues for a long-valued plain column', async () => {
-    await setup('ia-diag')
     const diagnose = (await adminAx.get('/api/v1/datasets/ia-diag/_diagnose')).data
     assert.ok(diagnose.warnings.find((w: any) => w.code === 'IgnoredKeywordValues'))
   })
 
   test('a newly long-valued plain column logs a journal warning at finalize', async () => {
-    await setup('ia-journal')
     // the dataset journal must contain a non-error event mentioning the truncated column
-    const journal = (await ax.get('/api/v1/datasets/ia-journal/journal')).data
+    const journal = (await ax.get('/api/v1/datasets/ia-diag/journal')).data
     const ev = journal.find((e: any) => e.type === 'ignored-keyword-values')
     assert.ok(ev, 'expected an ignored-keyword-values journal event')
     assert.ok(typeof ev.data === 'string' && ev.data.includes('plain'), 'event should name the truncated column')
   })
+})
+
+// mutates organization settings, so it must stay isolated with its own clean()
+test.describe('keyword ignore_above — ODS where equality', () => {
+  test.beforeEach(async () => { await clean() })
 
   test('ODS where equality with a > 200-char value and no wildcard → 400', async () => {
     await axOrg.put('/api/v1/settings/organization/test_org1', { compatODS: true })

@@ -2,7 +2,7 @@
 // Pre-release hardening round 2: per-dataset locking of the synchronous admin actions, the
 // orphaned-line-stamp safety net, and storage accounting of the historized store (including the
 // aging-out tail of a deleted dataset).
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 import { ensureIntegrityBucket, integrityTestStore, waitForFlagCleared, waitForLinesDrained, integrityEndpoint } from '../../support/integrity.ts'

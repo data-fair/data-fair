@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
