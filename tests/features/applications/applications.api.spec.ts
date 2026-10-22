@@ -144,7 +144,7 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.datasets.length, 2)
     assert.equal(res.data.datasets[0].title, 'split')
-    assert.deepEqual(res.data.datasets[1].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] }) // published base apps still declare the legacy id
+    assert.deepEqual(res.data.datasets[1].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] })
     res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
     assert.equal(res.data.count, 0)
     res = await ax.get('/api/v1/applications', { params: { dataset: dataset.id } })

@@ -2,7 +2,7 @@
 import type { Dataset, Permission } from '#types'
 import trimFields from '../misc/utils/trim-fields.ts'
 import { trimCustomMetadata } from '#types/custom-metadata.ts'
-import { operationsClasses, addOperationIdVariants } from '@data-fair/data-fair-shared/permissions/operations.ts'
+import { operationsClasses } from '@data-fair/data-fair-shared/permissions/operations.ts'
 
 // matches the separator used by memoizee's built-in `primitive` normalizer
 const KEY_SEP = '\u0001'
@@ -89,7 +89,7 @@ const grantedOperations = (permission: Permission): Set<string> => {
   for (const opClass of permission.classes ?? []) {
     for (const op of operationsClasses.datasets[opClass] ?? []) granted.add(op)
   }
-  return addOperationIdVariants(granted)
+  return granted
 }
 
 export const SEARCH_TEXT_LIMITS = {

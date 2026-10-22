@@ -31,28 +31,6 @@ test.describe('permissions', () => {
       (err: any) => err.status === 403)
   })
 
-  test('a legacy operation id stored in permissions keeps granting the renamed operation', async () => {
-    const res = await testUser1.post('/api/v1/datasets', { isRest: true, title: 'legacy op', schema: [{ key: 'attr1', type: 'string' }] })
-    const datasetId = res.data.id
-    // written raw: PUT /permissions rewrites legacy ids, older documents still hold them
-    await patchRawDataset(datasetId, { permissions: [{ type: 'user', id: 'test_user5', classes: ['list', 'read'], operations: ['createLine'] }] })
-
-    const dataset = (await testUser5.get('/api/v1/datasets/' + datasetId)).data
-    assert.ok(dataset.userPermissions.includes('postLine'))
-    assert.ok(dataset.userPermissions.includes('createLine'))
-    assert.equal((await testUser5.post(`/api/v1/datasets/${datasetId}/lines`, { attr1: 'test' })).status, 201)
-
-    for (const can of ['postLine', 'createLine']) {
-      const listed = (await testUser5.get('/api/v1/datasets', { params: { can } })).data.results.map((d: any) => d.id)
-      assert.deepEqual(listed, [datasetId], `can=${can}`)
-    }
-
-    assert.deepEqual((await testUser1.get(`/api/v1/datasets/${datasetId}/permissions`)).data[0].operations, ['postLine'])
-    const written = await testUser1.put(`/api/v1/datasets/${datasetId}/permissions`, [{ type: 'user', id: 'test_user5', operations: ['createLine', 'postLine', 'readLine'] }])
-    assert.deepEqual(written.data[0].operations, ['postLine', 'readLine'])
-    await waitForFinalize(testUser1, datasetId)
-  })
-
   test('apply permissions to datasets', { tag: '@smoke' }, async () => {
     // A dataset with restricted permissions
     let res = await testUser1.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })

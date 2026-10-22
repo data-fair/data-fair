@@ -18,7 +18,9 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   // both switch on the presence of an owner — resolved here so every action component stays agnostic.
   const ownLines = computed(() => !!linesOwner?.value)
   const routeBase = computed(() => ownLines.value ? `datasets/${id}/own/${linesOwner!.value}` : `datasets/${id}`)
-  const canCreate = computed(() => !!can(ownLines.value ? 'postOwnLine' : 'postLine').value)
+  const canCreate = computed(() => ownLines.value
+    ? !!(can('createOwnLine').value || can('postOwnLine').value)
+    : !!(can('createLine').value || can('postLine').value))
   const canUpdate = computed(() => !!can(ownLines.value ? 'updateOwnLine' : 'updateLine').value)
   const canDelete = computed(() => !!can(ownLines.value ? 'deleteOwnLine' : 'deleteLine').value)
   const canBulk = computed(() => !!can(ownLines.value ? 'bulkOwnLines' : 'bulkLines').value)

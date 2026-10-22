@@ -470,7 +470,7 @@ test.describe('API keys', () => {
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
         href: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
-        applicationKeyPermissions: { operations: ['postLine'] }
+        applicationKeyPermissions: { operations: ['createLine'] }
       }]
     })
 
@@ -479,20 +479,6 @@ test.describe('API keys', () => {
     await assert.rejects(
       anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } }),
       (err: any) => err.status === 403)
-  })
-
-  test('An application key declaring a legacy operation id grants the renamed operation', async () => {
-    const ax = testUser1
-    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
-    const appId = res.data.id
-    await ax.put('/api/v1/datasets/restlegacyop', { isRest: true, title: 'restlegacyop', schema: [{ key: 'attr1', type: 'string' }] })
-    await ax.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/restlegacyop`, applicationKeyPermissions: { operations: ['createLine', 'readDescription'] } }]
-    })
-    res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
-    const key = res.data[0].id
-    res = await anonymous.get('/api/v1/datasets/restlegacyop', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
-    assert.deepEqual(res.data.userPermissions, ['createLine', 'readDescription', 'postLine'])
   })
 
   test('Use an application key to post lines into referenced datasets', async () => {
@@ -509,7 +495,7 @@ test.describe('API keys', () => {
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
         href: `${config.publicUrl}/api/v1/datasets/restcrowd`,
-        applicationKeyPermissions: { operations: ['postLine', 'readSchema', 'readDescription'] }
+        applicationKeyPermissions: { operations: ['createLine', 'readSchema', 'readDescription'] }
       }]
     })
     res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
@@ -519,7 +505,7 @@ test.describe('API keys', () => {
       (err: any) => err.status === 403)
     res = await anonymous.get('/api/v1/datasets/restcrowd', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
-    assert.deepEqual(res.data.userPermissions, ['postLine', 'readSchema', 'readDescription', 'createLine'])
+    assert.deepEqual(res.data.userPermissions, ['createLine', 'readSchema', 'readDescription'])
     res = await anonymous.get('/api/v1/datasets/restcrowd/schema', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
     const anonymousToken = (await anonymous.get(directoryUrl + '/api/auth/anonymous-action')).data
@@ -558,7 +544,7 @@ test.describe('API keys', () => {
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
         href: `${config.publicUrl}/api/v1/datasets/restcrowdown`,
-        applicationKeyPermissions: { operations: ['postOwnLine', 'readOwnLines', 'readDescription'] }
+        applicationKeyPermissions: { operations: ['createOwnLine', 'readOwnLines', 'readDescription'] }
       }]
     })
     res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
@@ -572,7 +558,7 @@ test.describe('API keys', () => {
       (err: any) => err.status === 403)
     res = await testUser3.get('/api/v1/datasets/restcrowdown', { headers })
     assert.equal(res.status, 200)
-    assert.deepEqual(res.data.userPermissions, ['postOwnLine', 'readOwnLines', 'readDescription', 'createOwnLine'])
+    assert.deepEqual(res.data.userPermissions, ['createOwnLine', 'readOwnLines', 'readDescription'])
 
     res = await testUser3.post('/api/v1/datasets/restcrowdown/own/user:test_user3/lines', {}, { headers })
     assert.equal(res.status, 201)

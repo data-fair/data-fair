@@ -440,7 +440,7 @@ function isContribWriteDataPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && isInDepartmentPermission(p) &&
     p.roles?.length === 1 && p.roles[0] === 'contrib' &&
-    !!p.operations && p.operations.includes(props.resource.isRest ? 'postLine' : 'writeData') &&
+    !!p.operations && p.operations.includes(props.resource.isRest ? 'createLine' : 'writeData') &&
     !p.operations.includes('writeDescription')
 }
 
@@ -548,7 +548,7 @@ const contribProfile = computed({
       .filter((p) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
 
     const writeDataOps = props.resource.isRest
-      ? ['postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
+      ? ['createLine', 'postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
       : ['writeData', 'cancelDraft']
 
     if (v === 'contribWriteData') {

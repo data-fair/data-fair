@@ -94,8 +94,8 @@ export const useHeaders = (
       // user holds any of these permissions; each button inside is then gated on its own permission.
       // own-lines mode gates on the *OwnLine classes instead, granted to a plain manageOwnLines holder.
       const editOps = ownLines
-        ? ['bulkOwnLines', 'postOwnLine', 'updateOwnLine', 'deleteOwnLine']
-        : ['bulkLines', 'postLine', 'updateLine', 'deleteLine']
+        ? ['bulkOwnLines', 'createOwnLine', 'postOwnLine', 'updateOwnLine', 'deleteOwnLine']
+        : ['bulkLines', 'createLine', 'postLine', 'updateLine', 'deleteLine']
       const canEditLines = edit && editOps.some(op => can(op).value)
       if (selectable || canEditLines) {
         headers.unshift({ title: '', key: '_actions', sticky: true })

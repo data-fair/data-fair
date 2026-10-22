@@ -191,7 +191,7 @@ Per-dataset permission tuning lives on the application's own configuration:
   "id": "abc",
   "applicationKeyPermissions": {
     "classes":    ["read"],                       // permission classes (default if absent)
-    "operations": ["readSchema", "postLine"]      // explicit operation ids
+    "operations": ["readSchema", "createLine"]    // explicit operation ids
   }
 }
 ```
@@ -199,16 +199,17 @@ Per-dataset permission tuning lives on the application's own configuration:
 Examples covered by `tests/features/auth/api-keys.api.spec.ts`:
 
 - Default (`{ classes: ['read'] }`) — anonymous referer can `GET /lines`, `GET /schema`, …
-- `{ operations: ['readSafeSchema', 'postLine'] }` — visualization that lets users submit
+- `{ operations: ['readSafeSchema', 'createLine'] }` — visualization that lets users submit
   rows without reading existing ones (crowdsourcing form).
-- `{ operations: ['postOwnLine', 'readOwnLines', 'readDescription'] }` — combined with
+- `{ operations: ['createOwnLine', 'readOwnLines', 'readDescription'] }` — combined with
   `rest.lineOwnership: true` on the dataset, gives a logged-in user-of-another-service the
   ability to manage only their own rows through the application URL.
 
-`postLine` / `postOwnLine` were named `createLine` / `createOwnLine` before `POST /lines` took
-`_action`. Published base apps still declare the old ids, and stored permissions may hold them:
-`legacyOperationIds` in `shared/permissions/operations.ts` makes both ids grant each other
-wherever operations are expanded, so no migration is needed and the alias must stay.
+`createLine` opens `POST /lines` but restricts its `_action` to the operations otherwise held
+(update, patch and delete need `updateLine` / `patchLine` / `deleteLine`, and `createOrUpdate`
+only creates without `updateLine`), which is what a crowdsourcing form wants. `postLine` opens
+the same route with every `_action`, like `bulkLines` in bulk. Same pair for `createOwnLine` /
+`postOwnLine`.
 
 The matching dataset entry is also enriched with base-app `datasetsFilters` defaults/consts
 before the bypass is computed (`application-key.ts:146-153`), so the same dataset can be reused
@@ -341,7 +342,7 @@ A failing test in `api-keys.api.spec.ts` lines 440-458 walks the full flow: too-
 - **Anti-spam is intentionally weak**. It targets opportunistic bots; a determined attacker who
   solves the anonymous-token wait + uses many IPs can still post. The mitigation is the narrow
   permission surface — `applicationKeyPermissions` should always be the minimum set of
-  `operations` for the use case (e.g. `['postOwnLine']`, not `['write']`), so that a successful
+  `operations` for the use case (e.g. `['createOwnLine']`, not `['write']`), so that a successful
   abuse only writes rows the legitimate UI would also produce.
 - **Trust boundary stops at the owner**. Cross-owner access is impossible by construction (§7) —
   this is the load-bearing invariant; regressions to the `ownerFilter` queries or the stored

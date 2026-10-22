@@ -22,14 +22,25 @@ test.describe('private-api-docs contextual to permissions', () => {
   test.beforeEach(async () => { await clean() })
   test.afterEach(async ({}, testInfo) => { if (testInfo.status === 'passed') await checkPendingTasks() })
 
-  test('contrib without bulkLines does not see _bulk_lines, but sees postLine', async () => {
+  test('contrib without bulkLines does not see _bulk_lines, but sees createLine', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-1' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['postLine', 'updateLine', 'writeData', 'writeDescription'] }
+      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine', 'updateLine', 'writeData', 'writeDescription'] }
     ])
     const paths = await pathsOf(contrib, ds.id)
     assert.ok(!paths.includes('/_bulk_lines'), 'bulk_lines must be filtered out')
-    assert.ok(paths.includes('/lines'), 'postLine endpoint must be present')
+    assert.ok(paths.includes('/lines'), 'createLine endpoint must be present')
+  })
+
+  test('POST /lines is documented as postLine to holders of createLine or postLine', async () => {
+    const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-post-line' })
+    for (const operation of ['createLine', 'postLine']) {
+      await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
+        { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: [operation] }
+      ])
+      const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/private-api-docs.json`)).data
+      assert.equal(doc.paths['/lines']?.post?.operationId, 'postLine', operation)
+    }
   })
 
   test('contrib with the write class sees _bulk_lines', async () => {
@@ -44,7 +55,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('admin mode bypasses the filter and lists every operation', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-admin' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['postLine'] }
+      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine'] }
     ])
     const filtered = await pathsOf(contrib, ds.id)
     assert.ok(!filtered.includes('/_bulk_lines'), 'bulk_lines must be filtered out for a limited contrib')

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { permissionClassesPicker, isDatasetOperationApplicable, currentOperationId, operationIdVariants, addOperationIdVariants, normalizePermissionsOperations, type DatasetContext } from '../../../shared/permissions/operations.ts'
+import { permissionClassesPicker, isDatasetOperationApplicable, datasetOperationGrantedBy, type DatasetContext } from '../../../shared/permissions/operations.ts'
 
 const ctx = (over: Partial<DatasetContext>): DatasetContext => ({
   isRest: false,
@@ -25,11 +25,11 @@ test.describe('shared permission operations / picker', () => {
     // admin operations appear with their true class, including those that have no documented route
     assert.deepEqual(picker.admin.map((o) => o.id).sort(), ['changeOwner', 'delete', 'getPermissions', 'setPermissions', 'setReadApiKey', 'writeExports', 'writePublicationSites', 'writePublications', 'readIntegrity', 'readIntegrityRevisions'].sort())
     // REST-only write operations
-    assert.ok(all.includes('postLine') && all.includes('bulkLines'))
+    assert.ok(all.includes('createLine') && all.includes('postLine') && all.includes('bulkLines'))
     assert.ok(all.includes('simulateExtension')) // extensions present
     assert.ok(all.includes('bulkSearch')) // master-data present
     assert.ok(all.includes('getReadApiKey')) // read api key active
-    assert.ok(picker.manageOwnLines?.some((o) => o.id === 'postOwnLine')) // line ownership
+    assert.ok(picker.manageOwnLines?.some((o) => o.id === 'createOwnLine')) // line ownership
     // deprecated operations are never grantable through the picker
     assert.ok(!all.includes('getMinAgg') && !all.includes('getMaxAgg'))
     // file-only operations must not show for a REST dataset
@@ -40,7 +40,7 @@ test.describe('shared permission operations / picker', () => {
     const picker = permissionClassesPicker('datasets', 'fr', ctx({ isFile: true }))
     const all = idsOf(picker)
     assert.ok(all.includes('writeData') && all.includes('validateDraft') && all.includes('listDataFiles') && all.includes('downloadOriginalData'))
-    assert.ok(!all.includes('postLine') && !all.includes('updateLine'))
+    assert.ok(!all.includes('createLine') && !all.includes('updateLine'))
     assert.ok(!('manageOwnLines' in picker)) // no line ownership
     assert.ok(!all.includes('bulkSearch')) // no master-data
   })
@@ -88,17 +88,8 @@ test.describe('shared permission operations / picker', () => {
     assert.ok(!('manageOwnLines' in apps))
   })
 
-  test('legacy operation ids resolve to the renamed operations', () => {
-    assert.equal(currentOperationId('createLine'), 'postLine')
-    assert.equal(currentOperationId('createOwnLine'), 'postOwnLine')
-    assert.equal(currentOperationId('readLine'), 'readLine')
-    assert.deepEqual(operationIdVariants('createLine'), ['postLine', 'createLine'])
-    assert.deepEqual(operationIdVariants('readLine'), ['readLine'])
-    assert.deepEqual([...addOperationIdVariants(new Set(['createLine', 'readLine']))].sort(), ['createLine', 'postLine', 'readLine'])
-    assert.deepEqual([...addOperationIdVariants(new Set(['postOwnLine']))].sort(), ['createOwnLine', 'postOwnLine'])
-    assert.deepEqual(
-      normalizePermissionsOperations([{ classes: ['read'] }, { operations: ['createLine', 'postLine', 'readLine'] }]),
-      [{ classes: ['read'] }, { operations: ['postLine', 'readLine'] }]
-    )
+  test('the POST /lines route is documented as postLine and also granted by createLine', () => {
+    assert.deepEqual(datasetOperationGrantedBy('postLine'), ['postLine', 'createLine'])
+    assert.deepEqual(datasetOperationGrantedBy('postOwnLine'), ['postOwnLine', 'createOwnLine'])
   })
 })
