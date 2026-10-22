@@ -1261,10 +1261,11 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
-// the write routes are gated by their default operation (createLine / updateLine and Own
-// variants). A body _action requesting different semantics through POST must also hold the
-// matching permission — checked here rather than in a middleware because for multipart
-// requests the body is not parsed yet when the permissions middleware runs.
+// the write routes are gated by their default operation (createLine or postLine / updateLine and
+// Own variants). postLine grants every _action through POST, like bulkLines does in bulk. Under
+// createLine alone a body _action requesting different semantics must also hold the matching
+// permission — checked here rather than in a middleware because for multipart requests the body
+// is not parsed yet when the permissions middleware runs.
 const alternateActionOperations: Record<string, { operationId: string, ownOperationId: string }> = {
   update: { operationId: 'updateLine', ownOperationId: 'updateOwnLine' },
   patch: { operationId: 'patchLine', ownOperationId: 'patchOwnLine' },
@@ -1274,11 +1275,15 @@ const alternateActionOperationId = (req: RequestWithRestDataset, _action: string
   const actionOperation = alternateActionOperations[_action]
   return reqLinesOwnerOptional(req) ? actionOperation.ownOperationId : actionOperation.operationId
 }
+const canOperation = (req: RequestWithRestDataset, operationId: string) =>
+  can(reqResourceType(req), reqResource(req), operationId, reqSession(req), reqBypassPermissions(req))
+const canAnyPostAction = (req: RequestWithRestDataset) =>
+  !req.params.lineId && canOperation(req, reqLinesOwnerOptional(req) ? 'postOwnLine' : 'postLine')
 const canAlternateAction = (req: RequestWithRestDataset, _action: string) =>
-  can(reqResourceType(req), reqResource(req), alternateActionOperationId(req, _action), reqSession(req), reqBypassPermissions(req))
+  canAnyPostAction(req) || canOperation(req, alternateActionOperationId(req, _action))
 const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
   if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
-  if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's createLine gate
+  if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's createLine / postLine gate
   if (!canAlternateAction(req, _action)) {
     throw httpError(403, `Permission manquante pour l'opération "${alternateActionOperationId(req, _action)}".`)
   }

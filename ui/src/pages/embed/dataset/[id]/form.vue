@@ -66,8 +66,8 @@ const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.para
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const ownLinesMode = computed(() => dataset.value?.rest?.lineOwnership)
-// in ownLinesMode the line is posted on own/{owner}/lines, gated by createOwnLine, not createLine
-const canCreate = computed(() => dataset.value?.userPermissions.includes(ownLinesMode.value ? 'createOwnLine' : 'createLine'))
+// in ownLinesMode the line is posted on own/{owner}/lines, gated by createOwnLine / postOwnLine, not createLine / postLine
+const canCreate = computed(() => (ownLinesMode.value ? ['createOwnLine', 'postOwnLine'] : ['createLine', 'postLine']).some(op => dataset.value?.userPermissions.includes(op)))
 // the own/{owner} routes match the full active account, department included
 const linesOwner = computed(() => {
   const account = session.account.value

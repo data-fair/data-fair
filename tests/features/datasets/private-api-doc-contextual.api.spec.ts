@@ -32,6 +32,17 @@ test.describe('private-api-docs contextual to permissions', () => {
     assert.ok(paths.includes('/lines'), 'createLine endpoint must be present')
   })
 
+  test('POST /lines is documented as postLine to holders of createLine or postLine', async () => {
+    const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-post-line' })
+    for (const operation of ['createLine', 'postLine']) {
+      await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
+        { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: [operation] }
+      ])
+      const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/private-api-docs.json`)).data
+      assert.equal(doc.paths['/lines']?.post?.operationId, 'postLine', operation)
+    }
+  })
+
   test('contrib with the write class sees _bulk_lines', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-2' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [

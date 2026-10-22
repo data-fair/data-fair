@@ -168,6 +168,35 @@ test.describe('REST datasets - single line _action', () => {
     await waitForFinalize(ax, 'restaction5')
   })
 
+  test('postLine grants every _action through POST, but not the /lines/{lineId} routes', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restaction6', {
+      isRest: true,
+      title: 'restaction6',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/restaction6/lines', { _id: 'line1', attr1: 'test1' })
+    await waitForFinalize(ax, 'restaction6')
+    await ax.put('/api/v1/datasets/restaction6/permissions', [
+      { type: 'user', id: 'test_user2', operations: ['postLine', 'readLine'] }
+    ])
+
+    // the default createOrUpdate is a real upsert: 200 on an existing line
+    let res = await testUser2.post('/api/v1/datasets/restaction6/lines', { _id: 'line1', attr1: 'upserted' })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, 'restaction6')
+    res = await testUser2.post('/api/v1/datasets/restaction6/lines', { _action: 'patch', _id: 'line1', attr1: 'patched' })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, 'restaction6')
+    assert.equal((await testUser2.get('/api/v1/datasets/restaction6/lines/line1')).data.attr1, 'patched')
+    res = await testUser2.post('/api/v1/datasets/restaction6/lines', { _action: 'delete', _id: 'line1' })
+    assert.equal(res.status, 204)
+    await waitForFinalize(ax, 'restaction6')
+
+    await assert.rejects(testUser2.put('/api/v1/datasets/restaction6/lines/line2', { attr1: 'x' }), (err: any) => err.status === 403)
+    await assert.rejects(testUser2.delete('/api/v1/datasets/restaction6/lines/line2'), (err: any) => err.status === 403)
+  })
+
   test('own-lines POST honors _action within the manageOwnLines class', async () => {
     const ax = testUser1Org
     let res = await ax.post('/api/v1/datasets', {
