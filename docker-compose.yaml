@@ -237,7 +237,8 @@ services:
     cpus: ${ES_CPUS:-2}
 
   mongo:
-    image: mongo:8
+    # production version; later 8.0 patches refuse Ubuntu 7.0 kernels (https://jira.mongodb.org/browse/SERVER-136848)
+    image: mongo:8.0.17
     ports:
       - ${MONGO_PORT}:27017
     # wiredTiger takes half the machine's RAM by default
