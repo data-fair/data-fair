@@ -41,6 +41,7 @@
           v-if="application.visibility || application.partOf"
           :visibility="application.visibility"
           :part-of="application.partOf"
+          :foreign="foreign"
           size="small"
         />
         <capability-chip
@@ -64,6 +65,7 @@
 <script setup lang="ts">
 import type { Application } from '#api/types'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
 const { t, locale } = useI18n()
 const session = useSession()
@@ -72,12 +74,15 @@ const showAll = useBooleanSearchParam('showAll')
 const props = defineProps<{
   application: Partial<Application> & Pick<Application, 'id' | 'title' | 'updatedAt' | 'owner'> & { visibility?: 'public' | 'private' | 'protected', thumbnail?: string }
   showCapability?: boolean
+  // the resource whose page lists this card as one of its users: flags a fragment used outside of its parent
+  usedBy?: ReferencingResource
 }>()
 
 const cardUserPermissions = computed(() => (props.application as Application & { userPermissions?: string[] }).userPermissions)
 const cardAccessSources = computed(() => (props.application as Application & { accessSources?: AccessSources }).accessSources)
 // temporarily limited to the access audit page, hidden in the regular resource lists
 const showCapabilityChip = computed(() => props.showCapability)
+const foreign = computed(() => !!props.application.partOf && !!props.usedBy && foreignReferences(props.application.partOf, [props.usedBy]).length > 0)
 
 const captureUrl = computed(() => {
   return props.application.thumbnail || props.application.image || `${props.application.href}/capture?updatedAt=${props.application.updatedAt}`

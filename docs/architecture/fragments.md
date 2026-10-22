@@ -142,6 +142,12 @@ The API never checks that the parent actually references the fragment (`virtual.
 `configuration.datasets`, `configuration.applications`). That link is intentionally weak: a
 fragment may be prepared and attached before the parent's configuration includes it.
 
+Nor does it check the reverse: a configuration or `virtual.children` may reference a fragment of
+another parent (raw API calls, typically from an AI agent, have produced a sub-application embedded
+in two dashboards while a fragment of one of them). Refusing it would make every configuration write
+relational, so the API only documents the rule in the `partOf` schema description and the UI shows
+the situation (§8, "Fragments used outside of their parent").
+
 **Nothing is stripped from a fragment's operation list.** An early draft of this feature stripped
 ACL-management, owner-change, publication and key operations from a fragment's derived permissions.
 That was dropped as unneeded complexity: the three things a fragment must never do are refused at
@@ -554,6 +560,15 @@ permission model on the client, it is purely presentational.
   application it also warns that read access now follows the parent's (rule B, §4), so a public
   application embedded in a private dashboard stops being public. Attaching a dataset to an
   application has no UI for now; the API (`PATCH .../partOf`) still accepts any valid parent.
+- **Fragments used outside of their parent.** `foreignReferences` (`ui/src/utils/fragments.ts`)
+  keeps the users of a fragment that are neither its parent nor one of its siblings. On the
+  fragment's own page, `fragment-foreign-references.vue` (in the Informations section) lists them
+  in a warning — applications from `application=` / `dataset=`, plus virtual datasets from `children=`
+  for a dataset, all pinning queries that list fragments too — and says what breaks: no access for
+  those users' readers, deletion with the parent; detaching or removing the reference fixes it. On
+  the user's side, the cards of an application's datasets and sub-applications tabs get a
+  `used-by` prop, and `resource-visibility.vue` turns the puzzle icon warning-colored with an extra
+  tooltip line for such a fragment.
 - **Parent delete dialog loop**: deleting a resource that has fragments shows a warning ("Ce jeu de
   données a N fragment(s) qui seront supprimés avec lui") with two actions: the default delete
   button (relies on the unconditional API cascade), or "Détacher d'abord"
