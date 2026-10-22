@@ -93,7 +93,7 @@
     </dataset-upload-dialog>
 
     <v-list-item
-      v-if="dataset.isRest && can('createLine').value"
+      v-if="dataset.isRest && (can('createLine').value || can('postLine').value)"
       :to="`/dataset/${dataset.id}/edit-data`"
       link
     >
@@ -207,7 +207,7 @@ const canUpdateData = computed(() => {
   if (!dataset.value) return false
   const d = dataset.value
   if (isFileDataset.value) return can('writeData').value
-  if (d.isRest) return can('createLine').value
+  if (d.isRest) return can('createLine').value || can('postLine').value
   return false
 })
 

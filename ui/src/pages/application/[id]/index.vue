@@ -115,7 +115,10 @@
               md="6"
               lg="4"
             >
-              <dataset-card :dataset="dataset" />
+              <dataset-card
+                :dataset="dataset"
+                :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+              />
             </v-col>
           </v-row>
         </v-tabs-window-item>
@@ -132,7 +135,10 @@
               md="6"
               lg="4"
             >
-              <application-card :application="app" />
+              <application-card
+                :application="app"
+                :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+              />
             </v-col>
           </v-row>
         </v-tabs-window-item>

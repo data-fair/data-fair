@@ -224,4 +224,56 @@ test.describe('fragments UI', () => {
     await expect(page.getByRole('option', { name: 'own fragment' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('option', { name: 'foreign fragment' })).toHaveCount(0)
   })
+
+  test('a fragment used outside of its parent is flagged on both sides', async ({ page, goToWithAuth }) => {
+    // what raw API calls can produce: the API does not check who references a fragment
+    const parent = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'real parent' })).data
+    const other = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other dashboard' })).data
+    const sub = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'shared sub app', partOf: { type: 'application', id: parent.id } })).data
+    const subRef = (await ax.get('/api/v1/applications', { params: { id: sub.id, select: 'id' } })).data.results[0]
+    await ax.put(`/api/v1/applications/${parent.id}/config`, { applications: [{ id: sub.id, href: subRef.href }] })
+    await ax.put(`/api/v1/applications/${other.id}/config`, { applications: [{ id: sub.id, href: subRef.href }] })
+
+    await goToWithAuth(`/data-fair/application/${sub.id}`, 'test_user1', { org: 'test_org1' })
+    const alert = page.locator('.v-alert').filter({ hasText: 'aussi utilisée en dehors de son parent' })
+    await pastActiveAccountGate(page, alert)
+    await expect(alert.getByRole('link', { name: 'other dashboard' })).toBeVisible()
+    // the parent itself is not a foreign user
+    await expect(alert.getByRole('link', { name: 'real parent' })).toHaveCount(0)
+
+    // on the other dashboard, the sub-application card says it does not belong there
+    await goToWithAuth(`/data-fair/application/${other.id}`, 'test_user1', { org: 'test_org1' })
+    const childrenTab = page.locator('#metadata').getByRole('tab', { name: 'Applications utilisées' })
+    await pastActiveAccountGate(page, childrenTab)
+    await childrenTab.click()
+    const card = page.locator('#metadata .v-card').filter({ hasText: 'shared sub app' })
+    await card.locator('.v-icon.text-warning').hover()
+    await expect(page.getByText('Utilisé ici en dehors de son parent')).toBeVisible()
+
+    // on the real parent, the same card is not flagged
+    await goToWithAuth(`/data-fair/application/${parent.id}`, 'test_user1', { org: 'test_org1' })
+    await pastActiveAccountGate(page, childrenTab)
+    await childrenTab.click()
+    await expect(page.locator('#metadata .v-card').filter({ hasText: 'shared sub app' })).toBeVisible()
+    await expect(page.locator('#metadata .v-card').filter({ hasText: 'shared sub app' }).locator('.v-icon.text-warning')).toHaveCount(0)
+  })
+
+  test('a super admin can list fragments from the datasets list', async ({ page }) => {
+    const parent = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'listing parent' })).data
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'listedfragment', partOf: { type: 'dataset', id: parent.id } })
+
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    const fullUrl = `${baseUrl}/data-fair/datasets?showAll=true&q=listedfragment`
+    await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`)
+    await page.getByLabel('Adresse mail').fill('test_superadmin@test.com')
+    await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
+    await page.getByRole('button', { name: 'Se connecter' }).click()
+    await page.waitForURL(fullUrl, { timeout: 10000 })
+
+    // hidden by default, even with every owner shown
+    await expect(page.getByText('Aucun résultat ne correspond à la recherche.')).toBeVisible({ timeout: 15000 })
+    await page.getByLabel('Voir aussi les fragments').check()
+    await page.waitForURL(/showFragments=true/)
+    await expect(page.locator('.v-container .v-card').filter({ hasText: 'listedfragment' })).toBeVisible({ timeout: 10000 })
+  })
 })

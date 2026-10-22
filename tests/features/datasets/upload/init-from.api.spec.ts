@@ -259,6 +259,30 @@ test.describe('Datasets with auto-initialization from another one', () => {
     assert.equal(event.type, 'finalize-end')
   })
 
+  test('Create file dataset whose data would narrow the types of the copied schema', async () => {
+    const ax = testUser1
+    const parent = (await ax.post('/api/v1/datasets/rest-types', {
+      isRest: true,
+      title: 'rest types',
+      schema: [{ key: 'code', type: 'string' }, { key: 'amount', type: 'number' }, { key: 'count', type: 'integer' }]
+    })).data
+
+    const form = new FormData()
+    form.append('file', Buffer.from('code,amount,count\n123,1,1\n456,2,2\n'), 'narrow.csv')
+    form.append('body', JSON.stringify({ title: 'init from schema', initFrom: { dataset: parent.id, parts: ['schema'] } }))
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const dataset = await waitForFinalize(ax, res.data.id)
+
+    // the copied types are kept against the detection: digits in a text column stay text, integers in a number column stay numbers
+    const types = Object.fromEntries(dataset.schema.filter((p: any) => !p['x-calculated']).map((p: any) => [p.key, p.type]))
+    assert.deepEqual(types, { code: 'string', amount: 'number', count: 'integer' })
+    assert.deepEqual(dataset.schema.find((p: any) => p.key === 'code')['x-transform'], { type: 'string' })
+    // an integer pinned on the parent could drop decimals of the child's data: it stays detected
+    assert.equal(dataset.schema.find((p: any) => p.key === 'count')['x-transform'], undefined)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: 'code' } })).data
+    assert.equal(lines.results[0].code, '123')
+  })
+
   test('Create file dataset with copied information from a rest dataset', async () => {
     const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets/rest1', {

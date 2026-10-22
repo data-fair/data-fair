@@ -205,6 +205,12 @@ Examples covered by `tests/features/auth/api-keys.api.spec.ts`:
   `rest.lineOwnership: true` on the dataset, gives a logged-in user-of-another-service the
   ability to manage only their own rows through the application URL.
 
+`createLine` opens `POST /lines` but restricts its `_action` to the operations otherwise held
+(update, patch and delete need `updateLine` / `patchLine` / `deleteLine`, and `createOrUpdate`
+only creates without `updateLine`), which is what a crowdsourcing form wants. `postLine` opens
+the same route with every `_action`, like `bulkLines` in bulk. Same pair for `createOwnLine` /
+`postOwnLine`.
+
 The matching dataset entry is also enriched with base-app `datasetsFilters` defaults/consts
 before the bypass is computed (`application-key.ts:146-153`), so the same dataset can be reused
 by several apps with different default filters and the right one wins per request.

@@ -1,5 +1,6 @@
 import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
@@ -67,6 +68,23 @@ test.describe('dataset fragments', () => {
     const finalized = await waitForFinalize(testUser1Org, restFragment.id)
     assert.deepEqual(finalized.schema.filter((p: any) => !p['x-calculated']).map((p: any) => p.key), ['id', 'adr'])
     assert.deepEqual((await testUser1Org.get(`/api/v1/datasets/${virtual.id}`)).data.virtual.children, [fileFragment.id])
+  })
+
+  test('a file fragment initialized from its virtual parent stays compatible when its text column holds digits', async () => {
+    const restChild = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'rest child', schema: [{ key: 'code', type: 'string' }] })).data
+    await testUser1Org.post(`/api/v1/datasets/${restChild.id}/lines`, { code: 'A1' })
+    await waitForFinalize(testUser1Org, restChild.id)
+    const virtual = await createVirtual(testUser1Org, { virtual: { children: [restChild.id] }, schema: [{ key: 'code' }] })
+    await waitVirtualSettled(virtual.id, [restChild.id])
+
+    const form = new FormData()
+    form.append('file', Buffer.from('code\n123\n456\n'), 'codes.csv')
+    form.append('body', JSON.stringify({ initFrom: { dataset: virtual.id, parts: ['schema'] }, partOf: { type: 'dataset', id: virtual.id } }))
+    const res = await testUser1Org.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const fileFragment = await waitForFinalize(testUser1Org, res.data.id)
+    assert.equal(fileFragment.schema.find((p: any) => p.key === 'code').type, 'string')
+    await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { virtual: { children: [restChild.id, fileFragment.id] } })
+    await waitVirtualSettled(virtual.id, [restChild.id, fileFragment.id])
   })
 
   test('a contributor of the parent reads, edits and deletes the fragment', async () => {

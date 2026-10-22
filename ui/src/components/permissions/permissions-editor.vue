@@ -548,7 +548,7 @@ const contribProfile = computed({
       .filter((p) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
 
     const writeDataOps = props.resource.isRest
-      ? ['createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
+      ? ['createLine', 'postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
       : ['writeData', 'cancelDraft']
 
     if (v === 'contribWriteData') {
