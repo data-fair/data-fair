@@ -8,6 +8,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 
 ### Key characteristics
 
+- **Assistants on WebMCP, autonomous agents on MCP**: the built-in personal assistants (back-office and portal) use the tools of their page and nothing else; the autonomous agents use the MCP server built from the [platform document](platform-api-docs.md). The separation is deliberate: the agents service can give an assistant MCP servers (`PERSONAL_ASSISTANTS`), and that capability stays, but no deployment configures it, since the assistant would then hold every catalog tool twice (its page's and the MCP server's). The WebMCP tools are not deprecated; moving the assistants to MCP is later work.
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.

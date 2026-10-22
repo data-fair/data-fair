@@ -243,8 +243,8 @@ services:
       # the operator catalog: the stack's mcp server, as the agent. On the site a chat or task works on, the
       # platform server, filtered by the agent's scopes; on every other portal, its datasets server
       - 'MCP_SERVERS=[{"id":"datafair","name":"Data Fair","description":"Every Data Fair operation your identity''s scopes allow, on the site you work on","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/mcp","auth":"nhi-session","sites":"home","homeAlternative":"datafair-datasets"},{"id":"datafair-datasets","name":"Data Fair datasets","description":"The published data catalog of a portal","url":"http://${DEV_HOST}:${NGINX_PORT1}/mcp-server/datasets/mcp","auth":"nhi-session"}]'
-      # the two built-in personal assistants read what the portal publishes, nothing more
-      - 'PERSONAL_ASSISTANTS={"portal":{"mcpServers":[{"serverId":"datafair-datasets"}]},"backOffice":{"mcpServers":[{"serverId":"datafair-datasets"}]}}'
+      # no PERSONAL_ASSISTANTS: the built-in assistants (portal, back-office) use the tools of their page
+      # (WebMCP) only, MCP_SERVERS is for the autonomous agents (docs/architecture/agent-integration.md)
 
   # the MCP server built from /data-fair/api/v1/platform/api-docs.json: /mcp-server/mcp (every tool,
   # filtered by the caller's scopes, credentials required) and /mcp-server/datasets/mcp (the dataset tools)
