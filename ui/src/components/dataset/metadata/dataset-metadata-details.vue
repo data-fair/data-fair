@@ -152,6 +152,12 @@
         </v-list-item>
       </v-col>
     </v-row>
+    <fragment-foreign-references
+      v-if="dataset.partOf"
+      resource-type="dataset"
+      :resource-id="dataset.id"
+      :part-of="dataset.partOf"
+    />
   </template>
 </template>
 

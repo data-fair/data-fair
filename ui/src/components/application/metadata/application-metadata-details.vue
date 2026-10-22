@@ -100,6 +100,12 @@
         </v-list-item>
       </v-col>
     </v-row>
+    <fragment-foreign-references
+      v-if="application.partOf"
+      resource-type="application"
+      :resource-id="application.id"
+      :part-of="application.partOf"
+    />
   </template>
 </template>
 

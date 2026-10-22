@@ -5,7 +5,7 @@
   >
     <template #activator="{props}">
       <v-icon
-        :color="visibility === 'public' ? 'primary' : (partOf ? undefined : 'warning')"
+        :color="foreign ? 'warning' : (visibility === 'public' ? 'primary' : (partOf ? undefined : 'warning'))"
         :size="size"
         v-bind="props"
       >
@@ -16,6 +16,12 @@
       <div>{{ t('fragmentOf.' + partOf.type, { title: parentFetch.data.value?.title ?? partOf.id }) }}</div>
       <div v-if="visibility">
         {{ t('visibility', { visibility: t(visibility) }) }}
+      </div>
+      <div
+        v-if="foreign"
+        class="mt-1"
+      >
+        {{ t('foreign') }}
       </div>
     </template>
     <template v-else>
@@ -33,6 +39,7 @@ fr:
     dataset: "Fragment du jeu de données « {title} »"
     application: "Fragment de l'application « {title} »"
   visibility: "Visibilité : {visibility}"
+  foreign: "Utilisé ici en dehors de son parent : ses accès découlent du parent et il sera supprimé avec lui."
 en:
   public: Public
   private: Private
@@ -41,6 +48,7 @@ en:
     dataset: "Fragment of the dataset \"{title}\""
     application: "Fragment of the application \"{title}\""
   visibility: "Visibility: {visibility}"
+  foreign: "Used here outside of its parent: its access derives from the parent and it will be deleted with it."
 </i18n>
 
 <script setup lang="ts">
@@ -50,6 +58,8 @@ const { partOf } = defineProps<{
   visibility?: 'public' | 'private' | 'protected'
   // a fragment shows the puzzle icon of fragment-info instead of the lock, its visibility moves to the tooltip
   partOf?: { type: 'dataset' | 'application', id: string }
+  // a fragment shown as used by a resource outside of its parent family, see foreignReferences
+  foreign?: boolean
   size?: string
 }>()
 const { t } = useI18n()
