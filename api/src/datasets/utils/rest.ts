@@ -1261,7 +1261,7 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
-// the write routes are gated by their default operation (createLine / updateLine and Own
+// the write routes are gated by their default operation (postLine / updateLine and Own
 // variants). A body _action requesting different semantics through POST must also hold the
 // matching permission — checked here rather than in a middleware because for multipart
 // requests the body is not parsed yet when the permissions middleware runs.
@@ -1278,7 +1278,7 @@ const canAlternateAction = (req: RequestWithRestDataset, _action: string) =>
   can(reqResourceType(req), reqResource(req), alternateActionOperationId(req, _action), reqSession(req), reqBypassPermissions(req))
 const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: string) => {
   if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
-  if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's createLine gate
+  if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's postLine gate
   if (!canAlternateAction(req, _action)) {
     throw httpError(403, `Permission manquante pour l'opération "${alternateActionOperationId(req, _action)}".`)
   }
@@ -1307,7 +1307,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
   }
   checkAlternateActionPermission(req, _action)
-  // createOrUpdate replaces an existing line, which the createLine gate does not cover: without the
+  // createOrUpdate replaces an existing line, which the postLine gate does not cover: without the
   // update permission it would let a caller overwrite any line whose _id or primary key it knows (an
   // anonymous form under an application key, for instance). Such a caller only creates, and gets a
   // 409 on an existing line, the same answer as an explicit _action create.

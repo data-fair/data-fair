@@ -143,7 +143,7 @@ const datasetOverrides: Record<string, OpOverride> = {
   writeDescription: { title: L('Modifier le jeu de données', 'Update the dataset'), grantedByAlts: ['writeDescriptionBreaking'] },
   writeDescriptionBreaking: { title: L('Modifier avec rupture de compatibilité', 'Update with breaking changes'), routeless: true },
   writeData: { title: L('Mettre à jour les données', 'Update the data'), appliesTo: isFileDataset },
-  createLine: { title: L('Ajouter une ligne', 'Add a line'), appliesTo: onlyRest },
+  postLine: { title: L('Effectuer une opération sur une ligne', 'Perform an operation on a line'), appliesTo: onlyRest },
   updateLine: { title: L('Remplacer une ligne', 'Replace a line'), appliesTo: onlyRest },
   patchLine: { title: L('Modifier une ligne', 'Patch a line'), appliesTo: onlyRest },
   bulkLines: { title: L('Effectuer des opérations en masse', 'Perform bulk operations'), appliesTo: onlyRest },
@@ -159,7 +159,7 @@ const datasetOverrides: Record<string, OpOverride> = {
 
   readOwnLines: { title: L('Lire ses propres lignes', 'Read own lines'), appliesTo: withLineOwnership },
   readOwnLine: { title: L('Récupérer une de ses lignes', 'Get one of own lines'), appliesTo: withLineOwnership },
-  createOwnLine: { title: L('Ajouter une de ses lignes', 'Add an own line'), appliesTo: withLineOwnership },
+  postOwnLine: { title: L('Effectuer une opération sur une de ses lignes', 'Perform an operation on an own line'), appliesTo: withLineOwnership },
   updateOwnLine: { title: L('Remplacer une de ses lignes', 'Replace an own line'), appliesTo: withLineOwnership },
   patchOwnLine: { title: L('Modifier une de ses lignes', 'Patch an own line'), appliesTo: withLineOwnership },
   bulkOwnLines: { title: L('Opérations en masse sur ses lignes', 'Bulk operations on own lines'), appliesTo: withLineOwnership },
@@ -203,8 +203,8 @@ const datasetOperations: OperationDescriptor[] = [
     list: ['list'],
     read: ['readDescription', 'readSafeDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey', 'readCompatODSRecords', 'readCompatODSExports'],
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
-    write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
-    manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
+    write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
+    manageOwnLines: ['readOwnLines', 'readOwnLine', 'postOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
     admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'readIntegrity', 'readIntegrityRevisions']
   }, datasetOverrides),
   ...expand('datasets', { manageMasterData: ['manageMasterData'] }, datasetOverrides, 'ownerAdmin'),
@@ -333,6 +333,44 @@ export const datasetOperationGrantedBy = (operationId: string): string[] => {
   if (op.grantedByAlts) granters.push(...op.grantedByAlts)
   return granters
 }
+
+// --- Renamed operations ---
+
+/**
+ * Legacy operationId -> current operationId. Stored permissions, application keys declared in base
+ * app configs and API clients may still carry a legacy id, without any migration: wherever stored
+ * operations are expanded both ids of a pair grant each other, permissions are rewritten to the
+ * current id when read or written through /permissions, and userPermissions keeps listing the
+ * legacy id for clients that check it.
+ */
+export const legacyOperationIds: Record<string, string> = {
+  createLine: 'postLine',
+  createOwnLine: 'postOwnLine'
+}
+
+/** The current operationId of a possibly legacy one. */
+export const currentOperationId = (id: string): string => legacyOperationIds[id] ?? id
+
+/** Every id granting the same operation: the current id followed by its legacy ids. */
+export const operationIdVariants = (id: string): string[] => {
+  const current = currentOperationId(id)
+  return [current, ...Object.keys(legacyOperationIds).filter(legacy => legacyOperationIds[legacy] === current)]
+}
+
+/** Adds to a set of granted operations the other ids of every renamed operation it contains. */
+export const addOperationIdVariants = (operations: Set<string>): Set<string> => {
+  for (const [legacy, current] of Object.entries(legacyOperationIds)) {
+    if (operations.has(legacy) || operations.has(current)) {
+      operations.add(legacy)
+      operations.add(current)
+    }
+  }
+  return operations
+}
+
+/** Rewrites the operations of permission entries to their current ids (deduplicated). */
+export const normalizePermissionsOperations = <P extends { operations?: string[] }> (permissions: P[]): P[] =>
+  permissions.map(p => p.operations ? { ...p, operations: [...new Set(p.operations.map(currentOperationId))] } : p)
 
 export interface PickerOperation { id: string, title: string }
 

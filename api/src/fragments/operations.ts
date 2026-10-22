@@ -1,7 +1,7 @@
 // Pure logic of the fragments feature (no I/O): see docs/architecture/fragments.md
 import type { Permission, ResourceType } from '#types'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { operationsClasses } from '@data-fair/data-fair-shared/permissions/operations.ts'
+import { operationsClasses, addOperationIdVariants } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { isMasterData } from '../../contract/master-data.js'
 
 export type PartOf = { type: 'dataset' | 'application', id: string }
@@ -50,7 +50,7 @@ const expandOperations = (permission: Permission, resourceType: ResourceType): S
   for (const cls of permission.classes ?? []) {
     for (const op of operationsClasses[resourceType]?.[cls] ?? []) ops.add(op)
   }
-  return ops
+  return addOperationIdVariants(ops)
 }
 
 /**

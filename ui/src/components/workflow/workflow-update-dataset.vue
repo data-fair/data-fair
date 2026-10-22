@@ -425,7 +425,7 @@ const suggestArchive = computed(() => file.value && file.value.size > 50000000 &
 const datasetsFilter = computed(() => ({
   ...props.datasetParams,
   type: 'file,rest',
-  can: 'writeData,createLine,updateLine'
+  can: 'writeData,postLine,updateLine'
 }))
 
 const selectedDataset = ref<ListedDataset>()

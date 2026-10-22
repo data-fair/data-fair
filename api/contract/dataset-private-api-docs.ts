@@ -566,7 +566,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       post: {
         summary: 'Effectuer une opération sur une ligne',
         description: "Effectuer une opération sur une ligne, équivalente à une ligne de `_bulk_lines`. L'opération est choisie par `_action` (create, update, createOrUpdate, patch, delete) ; sans `_action` c'est createOrUpdate : la ligne est créée, ou remplacée si elle existe déjà. L'identifiant de ligne est `_id` ou déduit de la clé primaire, cette route est donc la plus simple pour les jeux de données avec clé primaire. Si vous connaissez l'identifiant de ligne, préférez les routes unitaires sur `/lines/{lineId}`. Pour update, patch et delete, la permission correspondant à l'action est requise, en plus de la permission de création portée par la route.",
-        operationId: 'createLine',
+        operationId: 'postLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {

@@ -504,7 +504,7 @@ test.describe('REST datasets with owner specific lines', () => {
     res = await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id
     await testUser1Org.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}`, applicationKeyPermissions: { operations: ['createLine'] } }]
+      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}`, applicationKeyPermissions: { operations: ['postLine'] } }]
     })
     res = await testUser1Org.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
     const key = res.data[0].id

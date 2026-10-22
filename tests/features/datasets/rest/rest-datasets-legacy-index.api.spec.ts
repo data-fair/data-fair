@@ -60,7 +60,7 @@ test.describe('REST datasets - writes into an index built by an older release', 
     await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
         href: `${config.publicUrl}/api/v1/datasets/restlegacy`,
-        applicationKeyPermissions: { operations: ['createLine', 'patchLine', 'readLines'] }
+        applicationKeyPermissions: { operations: ['postLine', 'patchLine', 'readLines'] }
       }]
     })
     res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])

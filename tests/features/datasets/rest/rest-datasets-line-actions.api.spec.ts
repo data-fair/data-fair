@@ -142,7 +142,7 @@ test.describe('REST datasets - single line _action', () => {
 
     // user2 may only create lines
     await ax.put('/api/v1/datasets/restaction5/permissions', [
-      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine'] }
+      { type: 'user', id: 'test_user2', operations: ['postLine', 'readLine'] }
     ])
 
     // without updateLine the default createOrUpdate only creates: 201, not the upsert's 200
@@ -161,7 +161,7 @@ test.describe('REST datasets - single line _action', () => {
 
     // granting deleteLine unlocks _action delete
     await ax.put('/api/v1/datasets/restaction5/permissions', [
-      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine', 'deleteLine'] }
+      { type: 'user', id: 'test_user2', operations: ['postLine', 'readLine', 'deleteLine'] }
     ])
     res = await testUser2.post('/api/v1/datasets/restaction5/lines', { _action: 'delete', _id: 'line1' })
     assert.equal(res.status, 204)

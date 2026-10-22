@@ -142,7 +142,7 @@ export const resolveApplicationContextBypass = async (applicationKeyId: string |
   if (!matchingApplication) return null
 
   // apply some permissions based on app configuration
-  // some dataset might need to be readable, some other writable only for createLine, etc
+  // some dataset might need to be readable, some other writable only for postLine, etc
   const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && (d.href === datasetHref || d.id === dataset.id))
   if (datasetIndex === undefined || datasetIndex === -1) {
     debug('dataset is not referenced in app configuration')

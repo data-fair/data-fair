@@ -186,7 +186,7 @@ export const list = function (resourceType: ResourceType, resource: Resource, se
       for (const operation of operationsClasses[cl] || []) operations.add(operation)
     }
     for (const operation of bypassPermissions.operations || []) operations.add(operation)
-    return [...operations]
+    return [...permissionsClasses.addOperationIdVariants(operations)]
   }
 
   const sources = accessSources(resourceType, resource, sessionState)
@@ -203,7 +203,7 @@ export const list = function (resourceType: ResourceType, resource: Resource, se
       for (const operation of operationsClasses[cl] || []) operations.add(operation)
     }
   }
-  return [...operations]
+  return [...permissionsClasses.addOperationIdVariants(operations)]
 }
 
 export type AccessSources = {
@@ -252,7 +252,7 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
       operations.add(op)
     }
   }
-  return operations
+  return permissionsClasses.addOperationIdVariants(operations)
 }
 
 /**
@@ -288,11 +288,14 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 /** Builds the Mongo `$or` clauses matching resources on which the session can perform the given operation(s). */
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
   const operationFilter = []
-  for (const op of operation.split(',')) {
+  for (const requestedOp of operation.split(',')) {
+    // a legacy id is queried as the current one, and stored entries may hold either
+    const op = permissionsClasses.currentOperationId(requestedOp)
     // own keys only: `can=constructor` read Object's constructor from these plain objects
     const operationClass = Object.hasOwn(permissionsClasses.classByOperation[resourceType], op) && permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
-      operationFilter.push({ operations: op })
+      const variants = permissionsClasses.operationIdVariants(op)
+      operationFilter.push({ operations: variants.length > 1 ? { $in: variants } : op })
       operationFilter.push({ classes: operationClass })
     } else if (Object.hasOwn(permissionsClasses.operationsClasses[resourceType], op)) {
       operationFilter.push({ classes: op })
@@ -409,12 +412,12 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
   const router = Router()
 
   router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
-    res.status(200).send(reqResource(req).permissions || [])
+    res.status(200).send(permissionsClasses.normalizePermissionsOperations(reqResource(req).permissions || []))
   }) as RequestHandler)
 
   router.put('', middleware('setPermissions', 'admin') as RequestHandler, (async (req, res, next) => {
     validate(req.body)
-    const permissions = (req.body || []) as Permission[]
+    const permissions = permissionsClasses.normalizePermissionsOperations((req.body || []) as Permission[])
     let valid = true
     for (const permission of permissions) {
       if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
@@ -444,7 +447,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
           }
         }
       }
-      const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
+      const permissionsUpdate: any = { $set: { permissions, updatedAt: new Date().toISOString() } }
       if (resourceType === 'datasets') {
         // the permission guard of the schema-derived search index depends on the grantees.
         // Computed from the stored document: with ?draft=true reqResource has the draft merged in,
@@ -463,10 +466,10 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
       if (onUpdated) await onUpdated({ ...resource, permissions })
 
       if (!wasPublic && willBePublic && onPublicCallback) {
-        await onPublicCallback(req, { ...resource, permissions: req.body })
+        await onPublicCallback(req, { ...resource, permissions })
       }
 
-      res.status(200).send(req.body)
+      res.status(200).send(permissions)
     } catch (err) {
       next(err)
     }
