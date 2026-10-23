@@ -1,4 +1,4 @@
-FROM node:24.22.0-alpine3.23 AS base
+FROM node:24.22.1-alpine3.24@sha256:1200d815de24f8dcca745fbf7651d166034a35adbcad8860a8538ffff44f1420 AS base
 
 # pick up alpine security fixes published after the base image was built
 RUN apk upgrade --no-cache
@@ -12,7 +12,7 @@ FROM base AS geodeps
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl4.2-libcrypto
+RUN apk add --no-cache libressl4.3-libcrypto
 RUN apk add --no-cache git
 
 # build CGAL (not yet present in alpine repos)
