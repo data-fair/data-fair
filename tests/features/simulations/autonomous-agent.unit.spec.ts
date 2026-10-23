@@ -39,7 +39,7 @@ test('toolMatches accepts the bare name and server-prefixed forms only', () => {
 })
 
 test('the default agent reads only, through its identity\'s scopes', () => {
-  assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [{ serverId: 'datafair' }, { serverId: 'datafair-datasets' }])
+  assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [])
   const users = JSON.parse(readFileSync(new URL('../../../dev/resources/users.template.json', import.meta.url), 'utf8'))
   const identity = users.map((u: any) => u.nhi).find((n: any) => n?.subject === 'autonomous-agent:sim-mcp')
   assert.deepEqual(identity?.scopes, ['all:read'])

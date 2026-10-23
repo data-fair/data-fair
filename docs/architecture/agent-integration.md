@@ -654,8 +654,9 @@ drawer and its in-page tools are not involved.
   subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.
-- The agent reaches the mcp server through the operator catalog (`MCP_SERVERS` in
-  `docker-compose.yaml`): one entry, `datafair`, which the simulated agent reaches as its own session.
+- The agent reaches the mcp server as a server built into every agent with an identity
+  (`PRIVATE_MCP_URL` in `docker-compose.yaml`), not as a catalog entry: what it offers is the
+  identity's scopes, and the simulated agent calls it as its own session.
 - Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
   `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
 - Before any model call the runner asks the agent's tool diagnostic for the tools the
