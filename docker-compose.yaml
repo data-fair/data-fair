@@ -111,7 +111,8 @@ services:
       - SECRET_EVENTS=secret-events
       # the image has no model by default: the mock provider of agents' development config
       - PROVIDERS=[{"type":"mock","id":"global-mock","name":"Global Mock","enabled":true}]
-      - MODELS=[{"id":"mock-model","name":"Global Mock Model","provider":"global-mock","usage":["assistant","tools","summarizer","evaluator","moderator"],"inputPricePerMillion":0,"outputPricePerMillion":0}]
+      # no "evaluator" usage: the feat-autonomous-agents image does not know it yet (put it back with agents:main)
+      - MODELS=[{"id":"mock-model","name":"Global Mock Model","provider":"global-mock","usage":["assistant","tools","summarizer","moderator"],"inputPricePerMillion":0,"outputPricePerMillion":0}]
       - DEFAULT_MODELS={"assistant":{"provider":"global-mock","id":"mock-model"}}
       - DEFAULT_CREDITS=-1
       # NODE_ENV=development only for POST /api/test-env/autonomous-agent: an NHI declared in

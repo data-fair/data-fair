@@ -49,7 +49,7 @@ const agentOrgSettings = {
     external: { unlimited: false, monthlyLimit: 0 },
     anonymous: { unlimited: false, monthlyLimit: 0 }
   },
-  storeTraces: true
+  reviewPersonalAssistant: true
 }
 
 // Filled in main() so the org-missing hint can wrap their creation.
