@@ -1,9 +1,10 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { doAndWaitForFinalize, sendDataset, waitForFinalize } from '../../support/workers.ts'
+import { serviceUp } from '../../support/optional-services.ts'
 import { collectNotifs, expectNotif, expectNotifPair } from '../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -56,6 +57,8 @@ test.describe('infra - notification system', () => {
   // §6 in notifications.md — every event goes through notifications.send, which attributes
   // an api key session to originator.apiKey instead of a pseudo-user named after the key
   test('events emitted by an api key are attributed to the api key', async () => {
+    // the originator is completed by the events queue, which the api only runs when events is up
+    test.skip(!await serviceUp('EVENTS_PORT'), 'needs the optional events service: npm run dev-zellij -- --services events')
     const settings = (await testUser1Org.put('/api/v1/settings/organization/test_org1', {
       apiKeys: [{ title: 'catalogs', scopes: ['datasets', 'applications'] }]
     })).data

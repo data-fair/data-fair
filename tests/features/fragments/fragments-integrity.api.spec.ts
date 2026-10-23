@@ -3,7 +3,7 @@
 // invariant stated in api/src/integrity/operations.ts is that every writer of a covered field must
 // stamp the outbox — otherwise a perfectly legitimate system write reads as a metadata tamper at the
 // next check. This spec pins that the fan-out stamps.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForFlagCleared } from '../../support/integrity.ts'

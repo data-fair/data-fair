@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, setupMockRoute, clearMockRoutes, getRawDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
@@ -154,7 +154,7 @@ test.describe('datasets - features', () => {
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` } })
-    assert.equal(thumbnail1.replace(process.env.DEV_HOST + ':' + process.env.NGINX_PORT1, `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
+    assert.equal(thumbnail1.replace(process.env.DEV_HOST + ':' + process.env.NGINX_PORT, `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
 
     // remove attachmentsAsImage
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data

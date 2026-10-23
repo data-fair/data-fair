@@ -1,7 +1,7 @@
 // tests/features/integrity/admin.api.spec.ts
 // Covers the admin-facing surface: the enable/disable/_fix/_check/revisions routes, permission
 // scoping, and the metadata-class historization flows (permissions, topics, publication sites).
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'

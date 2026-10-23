@@ -1,6 +1,10 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { truncateCells, MAX_CELL_LENGTH } from '../../../../api/src/datasets/threads/results2sheet.js'
+import path from 'node:path'
+
+// results2sheet.js imports #config: point node-config at api/config before importing it, the test passes alone
+process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../../api/config')
+const { truncateCells, MAX_CELL_LENGTH } = await import('../../../../api/src/datasets/threads/results2sheet.js')
 
 test.describe('xlsx export - truncateCells', () => {
   test('truncates string cells over the limit and reports stats', () => {

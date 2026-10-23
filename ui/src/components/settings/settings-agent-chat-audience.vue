@@ -1,13 +1,13 @@
 <template>
   <div>
-    <p class="text-body-2 mb-2">
+    <p class="text-body-medium mb-2">
       {{ audience?.length ? t('restricted') : t('everyone') }}
     </p>
     <v-row
       v-for="(rule, i) in audience ?? []"
       :key="i"
-      dense
-      align="center"
+      class="align-center"
+      density="compact"
     >
       <v-col
         cols="12"

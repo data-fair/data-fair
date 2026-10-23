@@ -1,0 +1,53 @@
+{
+  "ports": [
+    "NGINX_PORT",
+    "NGINX_PORT2",
+    "DEV_API_PORT",
+    "DEV_UI_PORT",
+    "DEV_OBSERVER_PORT",
+    "DEV_UI_HMR_PORT",
+    "ES_PORT",
+    "MONGO_PORT",
+    "S3_PORT",
+    "MAILDEV_UI_PORT",
+    "MAILDEV_SMTP_PORT",
+    "CLAMAV_PORT",
+    "SD_PORT",
+    "EVENTS_PORT",
+    "OAV_PORT",
+    "CAPTURE_PORT",
+    "CATALOGS_PORT",
+    "MOCK_PORT",
+    "AGENTS_PORT",
+    "REGISTRY_PORT",
+    "BRIDGE_PORT",
+    "MCP_PORT"
+  ],
+  "panes": {
+    "api": {
+      "ready": "http://localhost:${DEV_API_PORT}/api/v1/ping"
+    },
+    "ui": {
+      "ready": "http://localhost:${DEV_UI_PORT}/data-fair/"
+    },
+    "mock": {
+      "ready": "http://localhost:${MOCK_PORT}/"
+    }
+  },
+  "url": "http://${DEV_HOST}:${NGINX_PORT}/data-fair/",
+  "setup": [
+    "npm -w parquet-writer run build",
+    "node dev/render-users.mjs"
+  ],
+  "optional": {
+    "events": {
+      "privateEventsUrl": null
+    },
+    "agents": {
+      "privateAgentsUrl": null
+    },
+    "registry": {
+      "privateRegistryUrl": null
+    }
+  }
+}

@@ -1,8 +1,8 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -208,7 +208,7 @@ test.describe('Attachments', () => {
   test('Create a metadata attachment with a private target URL', async () => {
     const ax = testUser1
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
-    const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
+    const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: `${mockUrl}/static/logo-square.png` }] })
     assert.equal(patchRes.data.attachments[0].mimetype, 'image/png')
     assert.ok(!patchRes.data.attachments[0].targetUrl)
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments2/metadata-attachments/logo-square.png')
@@ -228,7 +228,7 @@ test.describe('Attachments', () => {
     assert.equal(downloadAttachmentRes3.headers['content-type'], 'image/png')
     assert.ok(downloadAttachmentRes3.headers['content-length'] > 1000)
     assert.equal(downloadAttachmentRes3.headers['x-remote-status'], 'NOTMODIFIED')
-    await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png?t=1' }] })
+    await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: `${mockUrl}/static/logo-square.png?t=1` }] })
     const downloadAttachmentRes4 = await ax.get('/api/v1/datasets/attachments2/metadata-attachments/logo-square.png')
     assert.equal(downloadAttachmentRes4.status, 200)
     assert.equal(downloadAttachmentRes4.headers['content-type'], 'image/png')

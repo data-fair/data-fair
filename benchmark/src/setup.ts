@@ -4,10 +4,10 @@ import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import type { AxiosInstance } from 'axios'
 
 // The harness auto-discovers the dev environment from the repo .env (loaded by
-// ./env.ts): DEV_HOST + NGINX_PORT1 give the reverse-proxy base URL.
+// ./env.ts): DEV_HOST + NGINX_PORT give the reverse-proxy base URL.
 // BENCHMARK_URL / BENCHMARK_DIRECTORY_URL override.
-const proxyBase = process.env.DEV_HOST && process.env.NGINX_PORT1
-  ? `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const proxyBase = process.env.DEV_HOST && process.env.NGINX_PORT
+  ? `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
   : 'http://localhost:8080'
 const baseUrl = process.env.BENCHMARK_URL || `${proxyBase}/data-fair`
 const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `${proxyBase}/simple-directory`

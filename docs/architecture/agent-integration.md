@@ -576,10 +576,10 @@ dispatched reports the previous run's verdict as its own; the skill sequences
 that, `npm run simulate` is only the browser half.
 
 **Prerequisites**, each of which fails confusingly if missing: the dev stack up
-(`bash dev/status.sh`), the UI built (`ui/dist/index.html`), and the bridge
-running. The bridge has its own `bridge` pane in the zellij layout and is
-reported by `dev/status.sh` as `dev-bridge (opt)` — optional because only
-simulations need it, and idle it costs nothing. The runner checks it and says so.
+(`npx --no df-dev status`, with the optional `agents` container: `npx --no df-dev up agents`),
+the UI built (`ui/dist/index.html`, done by `npx --no df-dev setup`), and the bridge
+running. The bridge has its own `bridge` pane in the zellij layout, suspended until
+the maintainer presses Enter in it — optional because only simulations need it. The runner checks it and says so.
 
 **Layout.** `playwright.sim.config.ts` is a separate config so a bare
 `playwright test` can never reach the cases and spend quota. `simulations/cases/`
@@ -650,7 +650,7 @@ drawer and its in-page tools are not involved.
 
 - The NHI `test_org1_agent_nhi` is declared in simple-directory's file storage
   (`dev/resources/users.template.json`, rendered into `users.json` by
-  `dev/init-env.sh` with the checkout's host and port, which its issuer names). Its
+  `dev/render-users.mjs` with the host and port of `.env`, which its issuer names). Its
   subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.

@@ -13,9 +13,9 @@ const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => st
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */
 
-export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`
+export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
-export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`
+export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`
 export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
@@ -53,19 +53,26 @@ export const waitForWorkerIdle = async (timeoutMs = 5000): Promise<boolean> => {
 }
 
 export const clean = async () => {
-  await waitForWorkerIdle()
+  // wiping datasets and indices under a busy worker crashes its tasks and takes the next test
+  // down with them: better fail here, naming the leak, than cascade. 20s keeps this message
+  // ahead of the 30s test timeout that also covers beforeEach.
+  if (!await waitForWorkerIdle(20000)) {
+    const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
+    throw new Error(`clean() refused: the worker is still busy after 20s, the previous test left tasks running: ${JSON.stringify(res.data)}`)
+  }
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
 }
 
 export const config = {
   publicUrl: baseURL,
   directoryUrl,
-  secretKeys: { identities: 'identities-test-key', limits: 'limits-test-key' },
+  secretKeys: { identities: 'secret-identities', limits: 'secret-limits' },
   cache: { publicMaxAge: 1, timestampedPublicMaxAge: 604800 },
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }
 
-export const checkPendingTasks = async (timeoutMs = 30000) => {
+// 10s: this runs in afterEach, inside the test's own 30s budget
+export const checkPendingTasks = async (timeoutMs = 10000) => {
   // some test paths legitimately leave a finalize task in-flight (e.g. a successful REST line POST
   // sets _partialRestStatus: 'indexed' which the shortProcessor picks up asynchronously). A task that
   // is still running is not a leak, so keep polling for the whole window and only report what is

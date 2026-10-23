@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'

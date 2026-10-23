@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { clearPublicationSitesCache, waitForFinalize } from '../../support/workers.ts'
 
 const DEV_HOST = process.env.DEV_HOST!
-const NGINX_PORT1 = process.env.NGINX_PORT1!
+const NGINX_PORT = process.env.NGINX_PORT!
 const NGINX_PORT2 = process.env.NGINX_PORT2!
-const baseUrl1 = `http://${DEV_HOST}:${NGINX_PORT1}`
+const baseUrl1 = `http://${DEV_HOST}:${NGINX_PORT}`
 const baseUrl2 = `http://${DEV_HOST}:${NGINX_PORT2}`
 
 test.describe('new-dataset wizard — virtual dataset from master-data on a secondary-domain back-office', () => {

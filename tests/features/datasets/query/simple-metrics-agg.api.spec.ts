@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
@@ -25,11 +25,14 @@ const geoSetup = async (id: string) => {
 }
 
 test.describe('simple_metrics_agg hardening', () => {
-  test.beforeEach(async () => { await clean() })
+  // all tests only read this fixture, so it is built once for the whole describe block
+  test.beforeAll(async () => {
+    await clean()
+    await geoSetup('sma')
+  })
 
   test('default fields list skips the geometry column instead of failing', async () => {
-    await geoSetup('sma-geo')
-    const res = await ax.get('/api/v1/datasets/sma-geo/simple_metrics_agg')
+    const res = await ax.get('/api/v1/datasets/sma/simple_metrics_agg')
     assert.equal(res.data.total, 2)
     assert.ok(res.data.metrics.longueur)
     assert.equal(res.data.metrics.longueur.min, 10)
@@ -38,39 +41,33 @@ test.describe('simple_metrics_agg hardening', () => {
   })
 
   test('the misused singular field param is ignored and the query still succeeds', async () => {
-    await geoSetup('sma-field')
-    const res = await ax.get('/api/v1/datasets/sma-field/simple_metrics_agg', { params: { field: 'longueur' } })
+    const res = await ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { field: 'longueur' } })
     assert.equal(res.data.total, 2)
     assert.ok(res.data.metrics.longueur)
   })
 
   test('explicitly requesting the geometry column → 400, not an ES failure', async () => {
-    await geoSetup('sma-geo-explicit')
-    await assert.rejects(ax.get('/api/v1/datasets/sma-geo-explicit/simple_metrics_agg', { params: { fields: 'geom' } }),
+    await assert.rejects(ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { fields: 'geom' } }),
       (e: any) => e.status === 400)
   })
 
   test('unknown column in fields → 400', async () => {
-    await geoSetup('sma-unknown')
-    await assert.rejects(ax.get('/api/v1/datasets/sma-unknown/simple_metrics_agg', { params: { fields: 'nope' } }),
+    await assert.rejects(ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { fields: 'nope' } }),
       (e: any) => e.status === 400)
   })
 
   test('unknown metric name → 400', async () => {
-    await geoSetup('sma-bad-metric')
-    await assert.rejects(ax.get('/api/v1/datasets/sma-bad-metric/simple_metrics_agg', { params: { metrics: 'nope' } }),
+    await assert.rejects(ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { metrics: 'nope' } }),
       (e: any) => e.status === 400)
   })
 
   test('metric_agg on the geometry column → 400, not an ES failure', async () => {
-    await geoSetup('sma-metric-agg-geo')
-    await assert.rejects(ax.get('/api/v1/datasets/sma-metric-agg-geo/metric_agg', { params: { metric: 'cardinality', field: 'geom' } }),
+    await assert.rejects(ax.get('/api/v1/datasets/sma/metric_agg', { params: { metric: 'cardinality', field: 'geom' } }),
       (e: any) => e.status === 400)
   })
 
   test('explicit metrics narrow the default fields list instead of failing on other columns', async () => {
-    await geoSetup('sma-avg')
-    const res = await ax.get('/api/v1/datasets/sma-avg/simple_metrics_agg', { params: { metrics: 'avg' } })
+    const res = await ax.get('/api/v1/datasets/sma/simple_metrics_agg', { params: { metrics: 'avg' } })
     assert.equal(res.data.metrics.longueur.avg, 15)
     assert.equal(res.data.metrics.label, undefined)
   })
@@ -93,9 +90,9 @@ test.describe('simple_metrics_agg hardening', () => {
 })
 
 test.describe('simple_metrics_agg truncated-values warning', () => {
-  test.beforeEach(async () => { await clean() })
-
-  test('metrics on a column that dropped > 200-char values attach a readable hint', async () => {
+  // both fixtures only get read, so build them once and clean() only once for the block
+  test.beforeAll(async () => {
+    await clean()
     const long = 'L'.repeat(260)
     await ax.post('/api/v1/datasets/sma-trunc', {
       isRest: true,
@@ -108,6 +105,16 @@ test.describe('simple_metrics_agg truncated-values warning', () => {
     ])
     await waitForFinalize(ax, 'sma-trunc')
 
+    await ax.post('/api/v1/datasets/sma-no-trunc', {
+      isRest: true,
+      title: 'sma-no-trunc',
+      schema: [{ key: 'plain', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/sma-no-trunc/_bulk_lines', [{ plain: 'short' }])
+    await waitForFinalize(ax, 'sma-no-trunc')
+  })
+
+  test('metrics on a column that dropped > 200-char values attach a readable hint', async () => {
     const res = await ax.get('/api/v1/datasets/sma-trunc/simple_metrics_agg')
     const hints: string[] = res.data.meta?.hints ?? []
     assert.ok(hints.some((h: string) => h.includes('plain')), `expected a meta.hints entry mentioning "plain", got: ${JSON.stringify(hints)}`)
@@ -116,13 +123,6 @@ test.describe('simple_metrics_agg truncated-values warning', () => {
   })
 
   test('no hint when no column dropped values', async () => {
-    await ax.post('/api/v1/datasets/sma-no-trunc', {
-      isRest: true,
-      title: 'sma-no-trunc',
-      schema: [{ key: 'plain', type: 'string' }]
-    })
-    await ax.post('/api/v1/datasets/sma-no-trunc/_bulk_lines', [{ plain: 'short' }])
-    await waitForFinalize(ax, 'sma-no-trunc')
     const res = await ax.get('/api/v1/datasets/sma-no-trunc/simple_metrics_agg')
     assert.equal(res.data.meta, undefined)
   })

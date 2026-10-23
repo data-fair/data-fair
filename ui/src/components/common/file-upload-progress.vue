@@ -9,7 +9,7 @@
     />
     <span
       v-if="percent !== undefined"
-      class="text-caption text-medium-emphasis ml-2 text-no-wrap"
+      class="text-body-small text-medium-emphasis ml-2 text-no-wrap"
     >
       <template v-if="total">
         {{ Math.floor(percent) }}% — {{ formatBytes(total, locale) }}

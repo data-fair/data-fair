@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
 import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl } from '../../support/axios.ts'

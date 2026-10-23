@@ -194,7 +194,7 @@ test.describe('owner facet filtering', () => {
    * Helper: switch to org context via the personal menu
    */
   async function switchToOrg (page: any, goToWithAuth: any) {
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
     await goToWithAuth('/data-fair/', 'test_user1')
     await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
     await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
@@ -280,7 +280,7 @@ test.describe('publication sites facet', () => {
 
   test('publication sites facet shows portal names without null or IDs', async ({ page, goToWithAuth }) => {
     // Switch to org context and go to datasets page
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
     await goToWithAuth('/data-fair/', 'test_user1')
     await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
     await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()

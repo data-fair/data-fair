@@ -1,7 +1,7 @@
 // the API exposed by a dataset can be referenced as a remote service
 // by another (or the same) data-fair instance
 
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
@@ -92,6 +92,8 @@ const lonProperty = {
 
 test.describe('master data - Multi-level extensions, sorting, date-interval/geo-distance search, chaining, permissions', () => {
   test.beforeEach(async () => {
+    // chains of dataset finalizations on a single worker slot: 90 s per test, hooks included
+    test.slow()
     await clean()
   })
 

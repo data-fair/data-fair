@@ -1,7 +1,7 @@
 // the API exposed by a dataset can be referenced as a remote service
 // by another (or the same) data-fair instance
 
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne, waitForJournalEvent } from '../../../support/workers.ts'
@@ -43,6 +43,8 @@ const siretProperty = {
 
 test.describe('master data - Define/use master-data as remote-service, extend geojson, special chars', () => {
   test.beforeEach(async () => {
+    // chains of dataset finalizations on a single worker slot: 90 s per test, hooks included
+    test.slow()
     await clean()
   })
 
@@ -66,8 +68,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
         },
         { key: 'extraFilter', type: 'string' },
         { key: 'extraMulti', type: 'string', separator: ', ' }
-      ]
-      ,
+      ],
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',

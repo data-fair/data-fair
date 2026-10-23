@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { clearPublicationSitesCache } from '../../support/workers.ts'

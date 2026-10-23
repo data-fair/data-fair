@@ -24,7 +24,7 @@ export default defineConfig({
   reporter: 'list',
 
   use: {
-    baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
+    baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/data-fair`,
     // Headed by default, unlike every other project here: simulations never run
     // in CI and are always started by a maintainer, and watching a simulated
     // person use the product is most of the value. Since 0.4.0 the persona has

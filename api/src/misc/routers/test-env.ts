@@ -120,6 +120,12 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
+// the test diagnostics compare it before and after a failed test to tell a restart (nodemon) from a regression
+const startedAt = new Date().toISOString()
+router.get('/started-at', (req, res) => {
+  res.json({ startedAt })
+})
+
 // Patch a dataset document directly in MongoDB (test-only). The body is normally a flat object
 // of fields to $set (backward-compatible shape), but a `$unset` key is also recognized so tests
 // can simulate an out-of-band tamper that REMOVES a covered field (e.g. `file`/`originalFile`),

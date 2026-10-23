@@ -2,8 +2,6 @@ import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
 import type { AxiosInstance } from 'axios'
 
-const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-
 async function createPublicationSite (ax: AxiosInstance, opts?: {
   id?: string
   staging?: boolean
@@ -31,21 +29,31 @@ async function goToPublicationSitesTab (
   resourceType: 'dataset' | 'application',
   resourceId: string,
   user = 'test_user1',
-  orgLabel = 'Test Org 1'
+  account: { org: string, dep?: string } = { org: 'test_org1' }
 ) {
-  await goToWithAuth('/data-fair/', user)
-  await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-  await page.getByRole('listitem').filter({ hasText: orgLabel }).click()
-  await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-  await page.goto(`${baseUrl}/data-fair/${resourceType}/${resourceId}`)
+  await goToWithAuth(`/data-fair/${resourceType}/${resourceId}`, user, account)
   await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
   await page.locator('#share').scrollIntoViewIfNeeded()
   await page.getByRole('tab', { name: /Portails/i }).click()
 }
 
+const clearPublicationSites = async () => {
+  const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+  const sites = (await ax.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+  for (const site of sites) {
+    await ax.delete(`/api/v1/settings/organization/test_org1/publication-sites/${site.type}/${site.id}`)
+  }
+}
+
 test.describe('dataset publication sites', () => {
-  test.beforeEach(async () => {
+  // one wipe, then only the sites are reset between tests: a leftover site from a previous test
+  // makes the per-site "Publié" switches ambiguous
+  test.beforeAll(async () => {
     await clean()
+  })
+
+  test.beforeEach(async () => {
+    await clearPublicationSites()
   })
 
   test('empty state when no publication sites configured', async ({ page, goToWithAuth }) => {
@@ -169,14 +177,7 @@ test.describe('dataset publication sites', () => {
     const dataset = (await deptAx.post('/api/v1/datasets', { isRest: true, title: 'dept dataset', schema: [] })).data
     await deptAx.put(`/api/v1/datasets/${dataset.id}/permissions`, [])
 
-    await goToWithAuth('/data-fair/', 'test_user4')
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/dataset/${dataset.id}`)
-    await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
-    await page.locator('#share').scrollIntoViewIfNeeded()
-    await page.getByRole('tab', { name: /Portails/i }).click()
+    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_user4', { org: 'test_org1', dep: 'dep1' })
     await expect(page.getByRole('link', { name: 'Shared Portal' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Portail ouvert aux contributions de votre département')).toBeVisible()
     await expect(page.getByLabel('publié')).toBeEnabled()
@@ -190,7 +191,8 @@ test.describe('dataset publication sites', () => {
 })
 
 test.describe('application publication sites', () => {
-  test.beforeEach(async () => {
+  // own wipe: must not inherit publication sites left by the "dataset publication sites" describe above
+  test.beforeAll(async () => {
     await clean()
   })
 

@@ -2,14 +2,17 @@
 //
 // docker-compose mounts that file straight into simple-directory, which reads it verbatim: a fixture
 // that names a URL (the autonomous-agent NHI's issuer) cannot write the host and port literally,
-// because they are chosen per checkout by dev/init-env.sh. They are substituted here.
+// because they are chosen per checkout (.env, written by df-dev init-env). They are substituted here,
+// by df-dev setup (dev/dev.json), by the status pane before it starts the containers (.zellij.kdl)
+// and in CI.
 //
-// Only the values passed in RENDER_VALUES are used, never the ambient environment: a shell that
-// sourced a previous .env would otherwise render the previous port, and the NHI exchange would fail
-// with simple-directory's uniform 401. Written to a temp file moved into place only once valid.
+// Only the values of .env are used, never the ambient environment: a shell that exported a previous
+// .env would otherwise render the previous port, and the NHI exchange would fail with
+// simple-directory's uniform 401. Written to a temp file moved into place only once valid.
 import { readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { parse } from 'dotenv'
 
-const values = JSON.parse(process.env.RENDER_VALUES ?? '{}')
+const values = parse(readFileSync('.env', 'utf8'))
 let raw = readFileSync('dev/resources/users.template.json', 'utf8')
 for (const [key, value] of Object.entries(values)) {
   raw = raw.replaceAll(`{${key}}`, String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"'))

@@ -5,7 +5,7 @@
 
 import type { ConversationExport, ParsedExport } from '@data-fair/lib-agents-sim'
 
-export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 export const BRIDGE_URL = process.env.BRIDGE_URL ?? `http://localhost:${process.env.BRIDGE_PORT ?? 3194}/v1`
 

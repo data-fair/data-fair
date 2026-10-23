@@ -9,6 +9,7 @@
     "allowJs": true,
     "checkJs": true,
     "skipLibCheck": true,
+    "erasableSyntaxOnly": true,
     "paths": {
       // same alias as ui/tsconfig.json — needed when a test imports a ui module
       // (the ui package "imports" target crosses package boundaries, which
@@ -23,9 +24,7 @@
     "node_modules",
     "types",
     "data",
-    "parquet_writer",
     "ui",
-    "test-it",
     "tmp"
   ]
 }

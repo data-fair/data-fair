@@ -2,7 +2,7 @@
 // Covers the integrity store (WORM primitives), the anchoring relay (organic writes), the
 // checker (breach detection + renewal) and lock-renewal edge cases — everything below the
 // admin-facing routes, which live in admin.api.spec.ts.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectVersionsCommand } from '@aws-sdk/client-s3'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, doAndWaitForFinalize, waitForFinalize, getRawDataset, collectNotifications } from '../../support/workers.ts'

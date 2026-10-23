@@ -1,57 +1,70 @@
-# nginx configuration file for Data Fair development and test environment
+# Dev reverse proxy of the data-fair stack. This head is identical in every service repo
+# (data-fair-service skill, references/nginx.md) and mirrors the production ingress-nginx config,
+# minus the shared cache and gzip. The nginx image entrypoint substitutes the env vars and
+# includes the result in the http block.
 
-# nginx cache definition
+# websocket support (realtime channels, Vite HMR): upgrade only the requests that ask for it
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+proxy_http_version 1.1;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection $connection_upgrade;
+
+# Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
+proxy_set_header Host $http_host;
+proxy_set_header X-Forwarded-Host $http_host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-For $remote_addr;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Client-IP $remote_addr;
+# the relay secret proves a forwarded client IP to the ingress; services never see it
+proxy_set_header X-Trusted-Forwarder "";
+proxy_set_header X-Forwarded-Path $request_uri;
+# Headers data-fair uses for better private caching
+proxy_set_header X-Private-If-Modified-Since $http_if_modified_since;
+proxy_set_header X-Private-If-None-Match $http_if_none_match;
+# range requests support (pmtiles)
+proxy_set_header Range $http_range;
+
+# accept some occasional long queries
+proxy_read_timeout 600s;
+# body size limits are implemented by services themselves
+client_max_body_size 0;
+# direct streaming of uploads
+proxy_request_buffering off;
+# direct streaming of downloads, enabled on-demand by services using x-accel-buffering header
+proxy_buffering off;
+# allow large response headers (setCookies with large session token)
+proxy_buffer_size 32k;
+proxy_buffers 4 32k;
+
+# No server or location below sets proxy_set_header: it would drop every header above.
+
+# data-fair only: a shared cache like prod, its tests check X-Cache-Status and revalidation
+# (tests/features/datasets/query/cache-headers.api.spec.ts), bypassed by the other tests
 proxy_cache_path /var/cache/nginx/data-fair levels=1:2 keys_zone=data-fair-cache:10m inactive=10d max_size=10g;
-# this is necessary for host based routing where different hosts serve different content on the same path
-proxy_cache_key $scheme$host$request_uri;
+# host based routing serves different content on the same path, HEAD is not converted to GET
+proxy_cache_key "$request_method $scheme$host$request_uri";
+proxy_cache data-fair-cache;
+proxy_cache_revalidate on;
+proxy_cache_lock on;
+proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+proxy_cache_convert_head off;
+proxy_cache_bypass $http_x_cache_bypass;
+proxy_cache_bypass $cookie_cache_bypass;
+add_header X-Cache-Status $upstream_cache_status;
+# tests read the buffering choice of the API
+proxy_pass_header X-Accel-Buffering;
 
 server {
-  listen ${NGINX_PORT1};
+  listen ${NGINX_PORT};
   server_name ${DEV_HOST};
 
-  # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
-  proxy_set_header Host $http_host;
-  # overwritten, never appended: services take it as the client address and flag several entries
-  proxy_set_header X-Forwarded-For $remote_addr;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_set_header X-Forwarded-Host $http_host;
-  proxy_set_header X-Real-IP $remote_addr;
-  proxy_set_header X-Client-IP $remote_addr;
-  # the relay secret proves a forwarded client IP to the ingress; services never see it
-  proxy_set_header X-Trusted-Forwarder "";
+  # add the trailing slash to the service prefixes
+  rewrite ^(/data-fair|/simple-directory|/openapi-viewer|/capture|/events|/agents|/registry)$ $1/ redirect;
 
-  # Headers we use for better private caching
-  proxy_set_header X-Private-If-Modified-Since $http_if_modified_since;
-  proxy_set_header X-Private-If-None-Match $http_if_none_match;
-  proxy_pass_header "X-Accel-Buffering";
-  # web socket support
-  proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection "Upgrade";
-  # range requests support
-  proxy_set_header Range $http_range;
-  # accept some occasional long queries
-  proxy_read_timeout 600s;
-  # body size limits are implemented by services themselves
-  client_max_body_size 0;
-  # direct streaming of uploads
-  proxy_request_buffering off;
-  # direct streaming of downloads, enabled on-demand by services using x-accel-buffering header
-  proxy_buffering off;
-  # allow large response headers (setCookies with large session token)
-  proxy_buffer_size 32k;
-  proxy_buffers 4 32k;
-
-  # a simple cache respecting the cache-control headers
-  proxy_cache data-fair-cache;
-  proxy_cache_revalidate on;
-  proxy_cache_lock on;
-  proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
-  proxy_cache_convert_head off;
-  add_header X-Cache-Status $upstream_cache_status;
-  proxy_cache_bypass $http_x_cache_bypass;
-  proxy_cache_bypass $cookie_cache_bypass;
-
-  # redirect root to /data-fair/
   location = / {
     return 302 /data-fair/;
   }
@@ -80,7 +93,7 @@ server {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
 
-  # ui-config served by API
+  # ui-config served by the API server
   location ~ /data-fair/(.*)-ui-config.js {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
@@ -89,6 +102,7 @@ server {
   # realtime: the websocket opened on /data-fair/ goes to the API, the page itself to the UI
   # dev server (which answers the upgrade with a plain 200 page otherwise)
   location = /data-fair/ {
+    proxy_read_timeout 86400s;
     if ($http_upgrade = "websocket") {
       rewrite ^ / break;
       proxy_pass http://localhost:${DEV_API_PORT};
@@ -96,33 +110,32 @@ server {
     proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
-  # comment this to test built UI served by api
-  location /data-fair {
+  # UI served by the Vite dev server, long timeout for the HMR websocket
+  # (comment this to test the built UI served by the API)
+  location /data-fair/ {
+    proxy_read_timeout 86400s;
     proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
-  location /simple-directory {
+  location /simple-directory/ {
     proxy_pass http://localhost:${SD_PORT};
   }
 
-  location /openapi-viewer {
+  location /openapi-viewer/ {
     proxy_pass http://localhost:${OAV_PORT};
   }
 
-  location /capture {
-    rewrite  ^/capture/(.*) /$1 break;
-    proxy_pass http://localhost:8087/;
+  # capture has prefixOptional, served without its prefix as before
+  location /capture/ {
+    rewrite ^/capture/(.*) /$1 break;
+    proxy_pass http://localhost:${CAPTURE_PORT};
   }
 
-  location /events {
+  location /events/ {
     proxy_pass http://localhost:${EVENTS_PORT};
   }
 
-  location /catalogs {
-    proxy_pass http://localhost:${CATALOGS_PORT};
-  }
-
-  location /agents {
+  location /agents/ {
     proxy_pass http://localhost:${AGENTS_PORT};
   }
 
@@ -136,84 +149,45 @@ server {
     proxy_pass http://localhost:${MCP_PORT}/mcp-server/ai-catalog.json;
   }
 
-  # Registry expects the /registry prefix in the URL itself
-  # (PUBLIC_URL=...registry); pass the full path through unchanged.
   location /registry/ {
     proxy_pass http://localhost:${REGISTRY_PORT};
   }
 }
 
-# secondary exposition to simulate a publication site
+# secondary exposition to simulate a publication site: the API only, no UI
 server {
   listen ${NGINX_PORT2};
   server_name ${DEV_HOST};
 
-  # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
-  proxy_set_header Host $http_host;
-  # overwritten, never appended: services take it as the client address and flag several entries
-  proxy_set_header X-Forwarded-For $remote_addr;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_set_header X-Forwarded-Host $http_host;
-  proxy_set_header X-Real-IP $remote_addr;
-  proxy_set_header X-Client-IP $remote_addr;
-  # the relay secret proves a forwarded client IP to the ingress; services never see it
-  proxy_set_header X-Trusted-Forwarder "";
-  # Headers we use for better private caching
-  proxy_set_header X-Private-If-Modified-Since $http_if_modified_since;
-  proxy_set_header X-Private-If-None-Match $http_if_none_match;
-  proxy_pass_header "X-Accel-Buffering";
-  # web socket support
-  proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection "Upgrade";
-  # accept some occasional long queries
-  proxy_read_timeout 600s;
-  # body size limits are implemented by services themselves
-  client_max_body_size 0;
-  # direct streaming of uploads
-  proxy_request_buffering off;
-  # direct streaming of downloads, enabled on-demand by services using x-accel-buffering header
-  proxy_buffering off;
-  # allow large response headers (setCookies with large session token)
-  proxy_buffer_size 32k;
-  proxy_buffers 4 32k;
+  # add the trailing slash to the service prefixes
+  rewrite ^(/data-fair|/simple-directory|/api-doc|/capture|/events)$ $1/ redirect;
 
-  # a simple cache respecting the cache-control headers
-  proxy_cache data-fair-cache;
-  proxy_cache_revalidate on;
-  proxy_cache_lock on;
-  proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
-  proxy_cache_convert_head off;
-  add_header X-Cache-Status $upstream_cache_status;
-  proxy_cache_bypass $http_x_cache_bypass;
-  proxy_cache_bypass $cookie_cache_bypass;
-
-  # redirect root to /data-fair/
   location = / {
     return 302 /data-fair/;
   }
 
-  location /data-fair {
-    rewrite  ^/data-fair/(.*) /$1 break;
-    proxy_pass http://localhost:${DEV_API_PORT}/;
+  location /data-fair/ {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
   }
 
-  location /simple-directory {
+  location /simple-directory/ {
     proxy_pass http://localhost:${SD_PORT};
   }
 
-  location /api-doc {
-    rewrite  ^/api-doc/(.*) /$1 break;
-    proxy_pass http://localhost:${OAV_PORT}/;
+  # openapi-viewer has prefixOptional, exposed as /api-doc on the publication site
+  location /api-doc/ {
+    rewrite ^/api-doc/(.*) /$1 break;
+    proxy_pass http://localhost:${OAV_PORT};
   }
 
-  location /capture {
-    rewrite  ^/capture/(.*) /$1 break;
-    proxy_pass http://localhost:${CAPTURE_PORT}/;
+  location /capture/ {
+    rewrite ^/capture/(.*) /$1 break;
+    proxy_pass http://localhost:${CAPTURE_PORT};
   }
 
-  location /events {
-    rewrite  ^/events/(.*) /$1 break;
-    proxy_pass http://localhost:${EVENTS_PORT}/;
+  location /events/ {
+    proxy_pass http://localhost:${EVENTS_PORT};
   }
 
   # every publication site exposes the mcp server, and lists it in its AI Catalog

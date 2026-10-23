@@ -104,7 +104,7 @@ for (const simCase of selected) {
         await page.context().addCookies([{
           name: 'agent-chat-flags',
           value: encodeURIComponent(JSON.stringify({ toolExploration: false, subAgents: false, simpleSubAgents: true, mermaid: false, showReasoning: false })),
-          url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/agents`
+          url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/agents`
         }])
       }
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })

@@ -1,34 +1,37 @@
-node_modules
-/npm-debug.log
-/data
-/coverage
-/.nyc_output
-/ui/src/bundles
-/ui/src/pages/interoperate
-/ui/src/pages/user-guide
-/ui/dist/
-/ui/src/assets/css/
-/ui/src/assets/fonts/
-/doc/dist
-/doc/.nuxt
-/doc/static/install/*/data
-.cache-require-paths.json
-/api/config/local-*
+# dependencies and generated code
+node_modules/
 .type/
-/tmp
+
+# local environment and data
 .env
-.vscode
+**/config/local-*
+data/
 dev/logs/
-dev/profiles/
+
+# test output
 test-results/
+playwright-report/
+
+# agent working files
+docs/superpowers/
+.superpowers/
+.playwright-mcp/
+
+# data-fair
+/ui/dist/
+/tmp
+/coverage
+dev/profiles/
+/simulations/tmp/
 /benchmark/results/*.json
 /benchmark/.cache/
 /benchmark/capabilities-defaults/data/
 /benchmark/capabilities-defaults/results.json
+.vscode
 .playwright-mcp
 /superpowers/**/*.md
 /docs/superpowers/
 /simulations/tmp/
 
-# rendered from users.template.json by dev/init-env.sh
+# rendered from users.template.json by dev/render-users.mjs
 /dev/resources/users.json

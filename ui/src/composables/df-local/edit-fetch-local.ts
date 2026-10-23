@@ -73,6 +73,8 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
       serverData.value = clone(res)
       // case of server-side calculated properties, updatedAt, etc
       Object.assign(data.value, getPatch(dataBeforeSave, res))
+      // a key the response dropped must vanish locally, a null would be sent back by the next save
+      for (const key of Object.keys(dataBeforeSave)) if (!(key in res)) delete data.value[key]
     }
   }, options.saveOptions)
 

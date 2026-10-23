@@ -4,7 +4,7 @@
  * catalog as the datasets and applications pages: the active account's
  * resources, not the public resources of every other account.
  */
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { activeAccountScope } from '../../../ui/src/composables/agent/utils-logic.ts'

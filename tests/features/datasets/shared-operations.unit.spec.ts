@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { permissionClassesPicker, isDatasetOperationApplicable, type DatasetContext } from '../../../shared/permissions/operations.ts'
+import { permissionClassesPicker, isDatasetOperationApplicable, datasetOperationGrantedBy, type DatasetContext } from '../../../shared/permissions/operations.ts'
 
 const ctx = (over: Partial<DatasetContext>): DatasetContext => ({
   isRest: false,
@@ -25,7 +25,7 @@ test.describe('shared permission operations / picker', () => {
     // admin operations appear with their true class, including those that have no documented route
     assert.deepEqual(picker.admin.map((o) => o.id).sort(), ['changeOwner', 'delete', 'getPermissions', 'setPermissions', 'setReadApiKey', 'writeExports', 'writePublicationSites', 'writePublications', 'readIntegrity', 'readIntegrityRevisions'].sort())
     // REST-only write operations
-    assert.ok(all.includes('createLine') && all.includes('bulkLines'))
+    assert.ok(all.includes('createLine') && all.includes('postLine') && all.includes('bulkLines'))
     assert.ok(all.includes('simulateExtension')) // extensions present
     assert.ok(all.includes('bulkSearch')) // master-data present
     assert.ok(all.includes('getReadApiKey')) // read api key active
@@ -86,5 +86,10 @@ test.describe('shared permission operations / picker', () => {
     const apps = permissionClassesPicker('applications', 'fr')
     assert.ok(apps.admin.some((o) => o.id === 'getKeys') && apps.admin.some((o) => o.id === 'setKeys'))
     assert.ok(!('manageOwnLines' in apps))
+  })
+
+  test('the POST /lines route is documented as postLine and also granted by createLine', () => {
+    assert.deepEqual(datasetOperationGrantedBy('postLine'), ['postLine', 'createLine'])
+    assert.deepEqual(datasetOperationGrantedBy('postOwnLine'), ['postOwnLine', 'createOwnLine'])
   })
 })

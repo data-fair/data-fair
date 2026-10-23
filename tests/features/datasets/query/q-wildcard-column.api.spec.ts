@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
@@ -23,25 +23,28 @@ const setup = async (id: string) => {
   await waitForFinalize(ax, id)
 }
 
+// all tests only read this fixture, so it is built once for the whole describe block
+const id = 'qwc'
+
 test.describe('q_mode=complete on a wildcard column without text analysis', () => {
-  test.beforeEach(async () => { await clean() })
+  test.beforeAll(async () => {
+    await clean()
+    await setup(id)
+  })
 
   test('matches on a group of characters inside the value', async () => {
-    await setup('qwc-contains')
-    const res = await ax.get('/api/v1/datasets/qwc-contains/lines', { params: { q: 'ulange', q_mode: 'complete', q_fields: 'code' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'ulange', q_mode: 'complete', q_fields: 'code' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].code, 'boulangerie')
   })
 
   test('does not widen the match to other values', async () => {
-    await setup('qwc-precise')
-    const res = await ax.get('/api/v1/datasets/qwc-precise/lines', { params: { q: 'zzz', q_mode: 'complete', q_fields: 'code' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'zzz', q_mode: 'complete', q_fields: 'code' } })
     assert.equal(res.data.total, 0)
   })
 
   test('text-analyzed wildcard column keeps matching the same way', async () => {
-    await setup('qwc-full')
-    const res = await ax.get('/api/v1/datasets/qwc-full/lines', { params: { q: 'ulange', q_mode: 'complete', q_fields: 'full' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'ulange', q_mode: 'complete', q_fields: 'full' } })
     assert.equal(res.data.total, 1)
   })
 })

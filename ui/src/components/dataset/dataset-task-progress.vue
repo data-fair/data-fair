@@ -15,7 +15,7 @@
       />
       <span
         v-if="!compact && taskProgress.progress !== -1"
-        class="text-caption text-medium-emphasis ml-2"
+        class="text-body-small text-medium-emphasis ml-2"
       >
         {{ taskProgress.progress }}%
       </span>

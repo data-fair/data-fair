@@ -8,7 +8,7 @@ export const scopeNhiId = 'test_org1_scope_nhi'
 const issuer = 'https://data-fair-tests.example.com'
 const subject = 'scope-tests'
 // the site origin simple-directory sees (reqSiteUrl), the assertion audience
-const audience = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const audience = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
 const privateKey = await importPKCS8(
   readFileSync(new URL('../resources/nhi/test-nhi-key.pem', import.meta.url), 'utf8'),

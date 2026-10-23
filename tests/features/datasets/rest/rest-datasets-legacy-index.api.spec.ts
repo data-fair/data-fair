@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl } from '../../../support/axios.ts'
 import { waitForFinalize, clearRateLimiting, clearDatasetCache, getRawDataset, patchRawDataset, datasetEsMappingProperties } from '../../../support/workers.ts'
@@ -67,7 +67,7 @@ test.describe('REST datasets - writes into an index built by an older release', 
     const key = res.data[0].id
     const anonymousToken = (await anonymous.get(directoryUrl + '/api/auth/anonymous-action')).data
     await clearRateLimiting()
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 2000)) // the anonymous token must age before it is accepted
     const headers = { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
     res = await anonymous.post('/api/v1/datasets/restlegacy/lines', { _action: 'patch', _id: lineId, attr2: 'anon-patched' }, { headers })
     assert.equal(res.status, 200)
