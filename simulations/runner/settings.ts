@@ -156,6 +156,18 @@ export async function fetchConversationExports (owner: { type: string, id: strin
 }
 
 /**
+ * Erase `userId`'s conversations on `owner`, before a case. Opening the chat resumes the person's latest
+ * thread, so without this every case after the first continued the previous case's conversation, and
+ * created none for fetchConversationExports to find: the run came back invalid with the transcript of
+ * two cases in it. `clean()` resets data-fair, not the agents service.
+ */
+export async function eraseConversations (owner: { type: string, id: string }, userId: string): Promise<void> {
+  const { axiosAuth } = await import('../../tests/support/axios.ts')
+  const admin = await axiosAuth(SUPER_ADMIN, undefined, true, { baseURL: ROOT })
+  await admin.delete(`/agents/api/review/${owner.type}/${owner.id}`, { params: { userId } })
+}
+
+/**
  * Runs that failed, by their own record. A provider failure is never the product's fault, and a run
  * that hit one must not be judged as though it were.
  */

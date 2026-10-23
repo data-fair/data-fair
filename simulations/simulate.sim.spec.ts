@@ -10,7 +10,7 @@ import { clean } from '../tests/support/axios.ts'
 import { cases } from './cases/index.ts'
 import { selectOwnCases } from './cases/select.ts'
 import { seedDatasets } from './runner/fixtures.ts'
-import { assertBridgeUp, seedSettings, fetchConversationExports, runErrors, OWNER, OWNER_USER, ROOT, CONSENT_COOKIE, CONSENT_YES } from './runner/settings.ts'
+import { assertBridgeUp, seedSettings, eraseConversations, fetchConversationExports, runErrors, OWNER, OWNER_USER, ROOT, CONSENT_COOKIE, CONSENT_YES } from './runner/settings.ts'
 import {
   createChatDriver,
   chatDriverStrings,
@@ -93,6 +93,7 @@ for (const simCase of selected) {
       // mistaken for this run's result.
       await assertBridgeUp()
       await clean()
+      await eraseConversations(OWNER, OWNER_USER)
       const ownerAx = await seedDatasets()
       await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
