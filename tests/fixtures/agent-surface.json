@@ -2226,7 +2226,7 @@
     {
       "name": "datafair-workflow",
       "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:03031a2ce4889cbd88314c813cdd6659446412d2346900c79a1e62cb09341053"
+      "digest": "sha256:3b6d2a9873db79ade3a79863949f88b2516c647166b7de7c3414495578a3ad9f"
     }
   ],
   "guides": []

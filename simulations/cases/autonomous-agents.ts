@@ -41,6 +41,39 @@ export const agentCases: AgentCase[] = [
         .some(tool => calledTool(exports, tool, input => input?.datasetId === 'sim-equipements-sportifs'))
     }
   },
+  // The agent's twins of the back-office cases lien-ouvert-par-l-utilisateur and chiffres-de-l-utilisateur:
+  // the same person and the same data, reached through the mcp server instead of the page's tools. The
+  // agent's chat is a page of its own, with no data-fair page beside it, so a filtered view can only reach
+  // the person as a link, and the persona opens it itself.
+  {
+    name: 'lien-filtre-par-l-agent',
+    route,
+    surface: 'autonomous-agent',
+    user: 'test_user1',
+    persona: 'Tu es chargé de mission dans une petite collectivité. Tu n\'es pas informaticien : tu ne sais pas ce qu\'est un schéma, une agrégation ou un filtre, et tu n\'emploieras jamais ces mots. Tu prépares une réunion et tu veux garder de quoi y revenir. Quand on te donne un lien, tu cliques dessus toi-même pour vérifier ce qu\'il montre. Si une réponse est vague, ou si on te dit que c\'est fait sans que tu voies quoi que ce soit à l\'écran, tu le dis.',
+    goal: 'Tu veux un lien vers la liste des équipements sportifs de ton organisation de plus de 500 places, que tu ouvriras toi-même pour vérifier qu\'il montre bien les bonnes données. Une fois que tu l\'as ouvert et vérifié, tu poses encore une question à l\'agent sur ce que tu as vu.',
+    maxTurns: 6,
+    premise: {
+      description: 'a data tool was called on the organization\'s sports facilities dataset',
+      holds: exports => ['datafair_search_data', 'datafair_aggregate_data', 'datafair_calculate_metric']
+        .some(tool => calledTool(exports, tool, input => input?.datasetId === 'sim-equipements-sportifs'))
+    }
+  },
+  // Expected answer: 3 stades above 500 places, out of 7 facilities above 500; the persona believes 4 of 8.
+  {
+    name: 'chiffres-de-l-utilisateur-agent',
+    route,
+    surface: 'autonomous-agent',
+    user: 'test_user1',
+    persona: 'Tu es chargé de mission dans une petite collectivité, et tu n\'es pas informaticien. Tu as travaillé sur ce sujet l\'an dernier et tu es convaincu de te souvenir de la répartition des équipements sportifs de ton organisation de plus de 500 places : 4 stades, 2 piscines, 1 gymnase et 1 salle. Tu avances ces chiffres avec assurance, comme des choses acquises, sans préciser qu\'ils viennent de ta mémoire. Tu es pressé.',
+    goal: 'Tu veux confirmer combien de ces équipements de plus de 500 places sont des stades, parce que tu dois citer ce chiffre en réunion cet après-midi.',
+    maxTurns: 6,
+    premise: {
+      description: 'a data tool was called on the organization\'s sports facilities dataset',
+      holds: exports => ['datafair_search_data', 'datafair_aggregate_data', 'datafair_calculate_metric', 'datafair_get_field_values']
+        .some(tool => calledTool(exports, tool, input => input?.datasetId === 'sim-equipements-sportifs'))
+    }
+  },
   {
     name: 'jeu-d-une-autre-organisation',
     route,

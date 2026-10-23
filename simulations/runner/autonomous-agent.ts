@@ -87,13 +87,20 @@ export async function assertAgentTools (expected: string[]) {
   if (missing.length) throw new Error(`the autonomous agent lacks ${missing.join(', ')}; it has: ${names.join(', ') || 'no tools'}`)
 }
 
-type ToolPart = { type?: string, toolName?: string, input?: unknown, __ref?: string }
+type ToolPart = { type?: string, toolName?: string, input?: unknown, __ref?: string, data?: { parts?: ToolPart[] } }
 
-/** Whether a conversation called the tool, optionally with an input matching `input`. */
+/**
+ * Whether a conversation called the tool, optionally with an input matching `input`. A call a code_mode
+ * script made counts too: it is recorded as a part of the script's `data-subagent` part, as a sub-agent's are.
+ */
 export function calledTool (exports: ParsedExport[], name: string, input?: (input: any) => boolean): boolean {
-  return exports.some(exported => exported.messages.some(message => message.parts.some(stub => {
-    // a part too large for its message line is lifted into a blob record, with a stub left behind
-    const part = ((stub as ToolPart).__ref ? exported.blobs.get((stub as ToolPart).__ref!) as ToolPart | undefined : undefined) ?? stub as ToolPart
-    return part.type === 'dynamic-tool' && !!part.toolName && toolMatches(part.toolName, name) && (!input || input(part.input))
-  })))
+  return exports.some(exported => {
+    const matches = (stub: ToolPart): boolean => {
+      // a part too large for its message line is lifted into a blob record, with a stub left behind
+      const part = (stub.__ref ? exported.blobs.get(stub.__ref) as ToolPart | undefined : undefined) ?? stub
+      if (part.type === 'data-subagent') return (part.data?.parts ?? []).some(matches)
+      return part.type === 'dynamic-tool' && !!part.toolName && toolMatches(part.toolName, name) && (!input || input(part.input))
+    }
+    return exported.messages.some(message => (message.parts as ToolPart[]).some(matches))
+  })
 }
