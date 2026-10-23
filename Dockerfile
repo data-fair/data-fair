@@ -12,7 +12,7 @@ FROM base AS geodeps
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl4.2-libcrypto
+RUN apk add --no-cache libressl4.3-libcrypto
 RUN apk add --no-cache git
 
 # build CGAL (not yet present in alpine repos)
