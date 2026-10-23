@@ -60,8 +60,8 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         '**Detail pages** (require an ID, use list_datasets or list_applications to find IDs):\n' +
         `- Dataset overview: ${appUrl('/dataset/{id}')}\n` +
         `- Dataset data: ${appUrl('/dataset/{id}/data')}\n` +
-        `- Dataset table: ${appUrl('/dataset/{id}/table')} — accepts filter query params (same format as search_data filters: column_key + suffix like nom_search, age_lte, ville_eq). Also accepts _c_q (full-text search), sort, select, _c_bbox, _c_geo_distance, _c_date_match. The \`_c_\` prefix on q/bbox/geo_distance/date_match is required for URL sync — never put \`_c_\` on column filters (use nom_search, not _c_nom_search). Use the filterQuery from dataset_data subagent Context directly as the query parameter.\n` +
-        `- Dataset map: ${appUrl('/dataset/{id}/map')} — only for a dataset describe_dataset reports as geolocalized (the others have no map), accepts the same filter query params as the table page\n` +
+        `- Dataset table: ${appUrl('/dataset/{id}/table')} — filtered by the filterQuery of the dataset_data subagent's Context, pasted verbatim, optionally followed by cols=col1,col2 from its columns keys to choose the visible columns. Never write filter params yourself, in a navigate call or in a link written in the chat: ask dataset_data for the rows you want. Offer a filtered view only when its totalResults is above 0.\n` +
+        `- Dataset map: ${appUrl('/dataset/{id}/map')} — only for a dataset describe_dataset reports as geolocalized (the others have no map), filtered by the same filterQuery as the table page\n` +
         `- Dataset files: ${appUrl('/dataset/{id}/files')}\n` +
         `- Edit dataset data: ${appUrl('/dataset/{id}/edit-data')}\n` +
         `- Edit dataset metadata: ${appUrl('/dataset/{id}/edit-metadata')}\n` +
@@ -106,7 +106,7 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         },
         query: {
           type: 'string' as const,
-          description: 'Optional query string to append to the URL (without leading "?"). For dataset table pages, use the filterQuery from the dataset_data subagent Context. Example: "nom_search=Jean&age_lte=30&_c_q=Paris" (note: column filters like nom_search have no _c_ prefix; only q/bbox/geo_distance/date_match do).'
+          description: 'Optional query string to append to the URL (without leading "?"). For a dataset table or map page: the filterQuery of the dataset_data subagent\'s Context, verbatim, never written by hand.'
         }
       },
       required: ['path'] as const
