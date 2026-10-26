@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -10,6 +10,16 @@ const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser4 = await axiosAuth('test_user4@test.com')
 const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 const testSuperadminPersonal = await axiosAuth('test_superadmin@test.com')
+
+const waitForLinesTotal = async (ax: any, datasetId: string, total: number, timeout = 15000) => {
+  const start = Date.now()
+  let res = await ax.get(`/api/v1/datasets/${datasetId}/lines`)
+  while (res.data.total !== total && Date.now() - start < timeout) {
+    await new Promise(resolve => setTimeout(resolve, 200))
+    res = await ax.get(`/api/v1/datasets/${datasetId}/lines`)
+  }
+  return res
+}
 
 test.describe('REST datasets - History', () => {
   test.beforeEach(async () => {
@@ -277,9 +287,9 @@ test.describe('REST datasets - History', () => {
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
-    await waitForFinalize(ax, 'restttl')
-    await waitForFinalize(ax, 'restttl')
-    const res = await ax.get('/api/v1/datasets/restttl/lines')
+    // the TTL task runs after the first finalize and triggers a second one: waiting for two
+    // finalize-end events in a row can miss the second, so wait for its visible effect instead
+    const res = await waitForLinesTotal(ax, 'restttl', 1)
     assert.equal(res.data.total, 1)
   })
 
@@ -304,9 +314,9 @@ test.describe('REST datasets - History', () => {
     await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(3, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttlnounit/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
-    await waitForFinalize(ax, 'restttlnounit')
-    await waitForFinalize(ax, 'restttlnounit')
-    const res = await ax.get('/api/v1/datasets/restttlnounit/lines')
+    // the TTL task runs after the first finalize and triggers a second one: waiting for two
+    // finalize-end events in a row can miss the second, so wait for its visible effect instead
+    const res = await waitForLinesTotal(ax, 'restttlnounit', 1)
     assert.equal(res.data.total, 1)
   })
 

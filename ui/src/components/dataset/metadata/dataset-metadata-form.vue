@@ -240,8 +240,8 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
     topics: topicsFetch.data.value,
     saved: props.serverData && flatten(props.serverData)
   },
-  // help texts come from owner settings: shown as plain text, like the help-tooltip they replace
-  markdown: (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`),
+  // help texts come from owner settings: plain text with its line breaks, like the help-tooltip they replace
+  markdown: (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`).replace(/\n/g, '<br>'),
   plugins: [VjsfMarkdown],
   pluginsOptions: { markdown: { cspNonce: $cspNonce } }
 }))

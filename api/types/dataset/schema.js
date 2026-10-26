@@ -963,7 +963,7 @@ const datasetProperties = {
   },
   partOf: {
     type: 'object',
-    description: 'Declares this dataset as a fragment of another resource (a virtual dataset or an application). A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.',
+    description: 'Declares this dataset as a fragment of another resource (a virtual dataset or an application). A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent. Only its parent and the parent\'s other fragments should use it (as a virtual dataset child or in an application configuration): any other user loses it when the parent is deleted, and an application outside the parent gives its readers no access to it. To reuse it elsewhere, detach it first (partOf: null).',
     additionalProperties: false,
     required: ['type', 'id'],
     properties: {

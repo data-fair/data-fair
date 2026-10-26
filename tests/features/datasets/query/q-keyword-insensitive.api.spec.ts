@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
@@ -23,34 +23,36 @@ const setup = async (id: string) => {
   await waitForFinalize(ax, id)
 }
 
+// all tests only read this fixture, so it is built once for the whole describe block
+const id = 'qki'
+
 test.describe('q on a pure-keyword column', () => {
-  test.beforeEach(async () => { await clean() })
+  test.beforeAll(async () => {
+    await clean()
+    await setup(id)
+  })
 
   test('matches ignoring case and diacritics', async () => {
-    await setup('qki-insensitive')
-    const res = await ax.get('/api/v1/datasets/qki-insensitive/lines', { params: { q: 'patisserie', q_fields: 'code' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'patisserie', q_fields: 'code' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].code, 'PÂTISSERIE')
   })
 
   test('still matches the exact value', async () => {
-    await setup('qki-exact')
-    const res = await ax.get('/api/v1/datasets/qki-exact/lines', { params: { q: 'PÂTISSERIE', q_fields: 'code' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'PÂTISSERIE', q_fields: 'code' } })
     assert.equal(res.data.total, 1)
   })
 
   test('matches a lowercase value from an uppercase query', async () => {
-    await setup('qki-upper')
-    const res = await ax.get('/api/v1/datasets/qki-upper/lines', { params: { q: 'BOULANGERIE', q_fields: 'code' } })
+    const res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'BOULANGERIE', q_fields: 'code' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].code, 'boulangerie')
   })
 
   test('stays case sensitive when the insensitive capability is disabled', async () => {
-    await setup('qki-strict')
-    let res = await ax.get('/api/v1/datasets/qki-strict/lines', { params: { q: 'patisserie', q_fields: 'strict' } })
+    let res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'patisserie', q_fields: 'strict' } })
     assert.equal(res.data.total, 0)
-    res = await ax.get('/api/v1/datasets/qki-strict/lines', { params: { q: 'PÂTISSERIE', q_fields: 'strict' } })
+    res = await ax.get(`/api/v1/datasets/${id}/lines`, { params: { q: 'PÂTISSERIE', q_fields: 'strict' } })
     assert.equal(res.data.total, 1)
   })
 })

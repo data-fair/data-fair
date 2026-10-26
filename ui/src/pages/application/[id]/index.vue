@@ -115,7 +115,10 @@
               md="6"
               lg="4"
             >
-              <dataset-card :dataset="dataset" />
+              <dataset-card
+                :dataset="dataset"
+                :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+              />
             </v-col>
           </v-row>
         </v-tabs-window-item>
@@ -132,7 +135,10 @@
               md="6"
               lg="4"
             >
-              <application-card :application="app" />
+              <application-card
+                :application="app"
+                :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+              />
             </v-col>
           </v-row>
         </v-tabs-window-item>
@@ -327,7 +333,7 @@
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('changeOwner') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -350,7 +356,7 @@
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('detach') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -374,7 +380,7 @@
             :prepend-icon="mdiPuzzle"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('attach') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
@@ -399,7 +405,7 @@
             :prepend-icon="mdiDelete"
             class="py-4"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('deleteApp') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">

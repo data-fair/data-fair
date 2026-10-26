@@ -509,7 +509,7 @@
             "anyOf": [
               {
                 "type": "object",
-                "description": "Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent.",
+                "description": "Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent. Only its parent and the parent's other fragments should use it: the readers of any other application get no access to it and lose it when the parent is deleted. To reuse it elsewhere, detach it first (partOf: null).",
                 "additionalProperties": false,
                 "required": [
                   "type",

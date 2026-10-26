@@ -38,7 +38,7 @@
             class="mr-n2"
           />
         </template>
-        <v-list-item-title class="text-caption">
+        <v-list-item-title class="text-body-small">
           {{ tab.title }}
         </v-list-item-title>
       </v-list-item>

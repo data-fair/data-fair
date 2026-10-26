@@ -18,7 +18,7 @@
             variant="tonal"
             class="mb-3"
           >
-            <div class="text-body-1 font-weight-bold">
+            <div class="text-body-large font-weight-bold">
               {{ t('warning.' + w.code) }}
             </div>
             <div class="text-body-medium">
@@ -26,7 +26,7 @@
             </div>
             <dl
               v-if="w.details"
-              class="mt-2 text-caption"
+              class="mt-2 text-body-small"
             >
               <template
                 v-for="(v, k) in w.details"
@@ -47,7 +47,7 @@
             variant="flat"
             class="mb-4"
           >
-            <v-card-title class="text-subtitle-1">
+            <v-card-title class="text-body-large">
               {{ t('summary') }}
             </v-card-title>
             <v-card-text class="py-1">
@@ -96,17 +96,17 @@
           <v-expansion-panels variant="accordion">
             <v-expansion-panel :title="t('rawJson') + ' — esInfos'">
               <template #text>
-                <pre class="text-caption">{{ JSON.stringify(data.esInfos, null, 2) }}</pre>
+                <pre class="text-body-small">{{ JSON.stringify(data.esInfos, null, 2) }}</pre>
               </template>
             </v-expansion-panel>
             <v-expansion-panel :title="t('rawJson') + ' — filesInfos'">
               <template #text>
-                <pre class="text-caption">{{ JSON.stringify(data.filesInfos, null, 2) }}</pre>
+                <pre class="text-body-small">{{ JSON.stringify(data.filesInfos, null, 2) }}</pre>
               </template>
             </v-expansion-panel>
             <v-expansion-panel :title="t('rawJson') + ' — locks'">
               <template #text>
-                <pre class="text-caption">{{ JSON.stringify(data.locks, null, 2) }}</pre>
+                <pre class="text-body-small">{{ JSON.stringify(data.locks, null, 2) }}</pre>
               </template>
             </v-expansion-panel>
           </v-expansion-panels>

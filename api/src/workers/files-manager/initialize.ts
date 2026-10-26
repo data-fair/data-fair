@@ -99,6 +99,14 @@ export default async function (dataset: DatasetInternal) {
           if (fileProp.dateFormat) newProperty.dateFormat = fileProp.dateFormat
           if (fileProp.dateTimeFormat) newProperty.dateTimeFormat = fileProp.dateTimeFormat
         }
+        // the analysis of a file would overwrite the copied type with a narrower detected one
+        // (digits in a text column, integers in a number column): force the types that can
+        // hold any value the detection could find, the others would lose data and stay detected
+        if (!dataset.isRest && !dataset.isVirtual && !newProperty['x-transform']?.type) {
+          if ((newProperty.type === 'string' && !newProperty.format) || newProperty.type === 'number') {
+            newProperty['x-transform'] = { ...newProperty['x-transform'], type: newProperty.type }
+          }
+        }
         return newProperty
       })
 

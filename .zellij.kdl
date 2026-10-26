@@ -1,39 +1,28 @@
+// Dev environment of data-fair, see @data-fair/lib-dev. Agents: npx --no df-dev status | logs <pane> | restart <pane>
 layout {
-    pane {
-      split_direction "vertical"
-      pane name="data-fair" borderless=true {
-        command "bash"
-        args "-ic" "nvm use && bash"
-      }
-      pane name="deps" {
-        command "bash"
-        args "-ic" "npm run dev-deps"
-      }
-      pane name="mock" {
-        command "bash"
-        args "-ic" "npm run dev-mock"
-      }
+  pane split_direction="vertical" {
+    pane name="shell" borderless=true
+    pane name="status" command="./node_modules/.bin/df-status" {
+      args "--start-deps"
     }
-    pane {
-      split_direction "vertical"
-      pane name="ui" {
-        command "bash"
-        args "-ic" "nvm use && npm -w ui run dev"
-      }
-      pane name="api" {
-        command "bash"
-        args "-ic" "nvm use && npm run dev-api"
-      }
-      // Optional: only the simulations (/agents-sim) need it. Idle it costs
-      // nothing, and having it already up is what keeps the skill's bridge
-      // check from being the thing that stops a run.
-      pane name="bridge" {
-        command "bash"
-        args "-ic" "nvm use && npm run dev-bridge"
-      }
+    pane name="mock" command="bash" {
+      args "-c" "FORCE_COLOR=1 exec node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts"
     }
-    pane size=1 borderless=true {
-        command "bash"
-        args "-ic" "echo -n -e \"Dev server available at \\e[1;96mhttp://$DEV_HOST:$NGINX_PORT1\\033[0m\""
+  }
+  pane split_direction="vertical" {
+    pane name="ui" command="bash" {
+      // vite hashes the API's ui-config to link it: it needs the same absent-config as the api pane
+      args "-c" "export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config) && cd ui && FORCE_COLOR=1 NODE_CONFIG_DIR=../api/config/ exec ../node_modules/.bin/df-mem-cap vite --port $DEV_UI_PORT"
     }
+    pane name="api" command="bash" {
+      // optional containers that do not run at start are unplugged from the config (dev/dev.json "optional")
+      args "-c" "./node_modules/.bin/df-dev wait-deps && export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config) && cd api && FORCE_COLOR=1 MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error exec ../node_modules/.bin/nodemon --verbose -e js,ts,json index.ts"
+    }
+    pane name="bridge" command="./node_modules/.bin/df-agents-bridge" {
+      start_suspended true
+    }
+  }
+  pane name="url" size=1 borderless=true command="bash" {
+    args "-c" "echo -n -e \"Dev server available at \\e[1;96mhttp://$DEV_HOST:$NGINX_PORT\\e[0m\"; exec sleep infinity"
+  }
 }

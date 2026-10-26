@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
@@ -30,6 +30,17 @@ test.describe('private-api-docs contextual to permissions', () => {
     const paths = await pathsOf(contrib, ds.id)
     assert.ok(!paths.includes('/_bulk_lines'), 'bulk_lines must be filtered out')
     assert.ok(paths.includes('/lines'), 'createLine endpoint must be present')
+  })
+
+  test('POST /lines is documented as postLine to holders of createLine or postLine', async () => {
+    const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-post-line' })
+    for (const operation of ['createLine', 'postLine']) {
+      await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
+        { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: [operation] }
+      ])
+      const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/private-api-docs.json`)).data
+      assert.equal(doc.paths['/lines']?.post?.operationId, 'postLine', operation)
+    }
   })
 
   test('contrib with the write class sees _bulk_lines', async () => {

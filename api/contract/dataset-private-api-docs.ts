@@ -498,8 +498,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       },
       put: {
-        summary: 'Remplacer une ligne',
-        description: 'Remplacer entièrement le contenu d\'une ligne par son identifiant.',
+        summary: 'Créer ou remplacer une ligne',
+        description: 'Remplacer entièrement le contenu d\'une ligne par son identifiant, ou la créer si elle n\'existe pas. Si le jeu de données a une clé primaire, préférez `POST /lines`, qui déduit l\'identifiant de la ligne depuis la clé primaire.',
         operationId: 'updateLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
@@ -524,7 +524,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       patch: {
         summary: 'Modifier une ligne',
-        description: 'Modifier partiellement le contenu d\'une ligne par son identifiant.',
+        description: 'Modifier partiellement le contenu d\'une ligne par son identifiant. Si le jeu de données a une clé primaire, préférez `POST /lines` avec `_action: patch`, qui déduit l\'identifiant de la ligne depuis la clé primaire.',
         operationId: 'patchLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
@@ -549,7 +549,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       delete: {
         summary: 'Supprimer une ligne',
-        description: 'Supprimer une ligne par son identifiant.',
+        description: 'Supprimer une ligne par son identifiant. Si le jeu de données a une clé primaire, préférez `POST /lines` avec `_action: delete`, qui déduit l\'identifiant de la ligne depuis la clé primaire.',
         operationId: 'deleteLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
@@ -564,9 +564,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     api.paths['/lines'] = {
       ...api.paths['/lines'],
       post: {
-        summary: 'Ajouter une ligne',
-        description: "Ajouter une nouvelle ligne au jeu de données. Le corps peut contenir `_action` pour effectuer une opération unitaire équivalente à une ligne de `_bulk_lines` (create, update, createOrUpdate, patch, delete) ; sans `_action` le comportement est createOrUpdate. Pour update, patch et delete l'identifiant de ligne est `_id` ou déduit de la clé primaire, et la permission correspondant à l'action est requise, en plus de la permission de création portée par la route.",
-        operationId: 'createLine',
+        summary: 'Effectuer une opération sur une ligne',
+        description: "Effectuer une opération sur une ligne, équivalente à une ligne de `_bulk_lines`. L'opération est choisie par `_action` (create, update, createOrUpdate, patch, delete) ; sans `_action` c'est createOrUpdate : la ligne est créée, ou remplacée si elle existe déjà. L'identifiant de ligne est `_id` ou déduit de la clé primaire, cette route est donc la plus simple pour les jeux de données avec clé primaire. Si vous connaissez l'identifiant de ligne, préférez les routes unitaires sur `/lines/{lineId}`. La permission `postLine` autorise toutes les opérations. La permission `createLine` ouvre aussi cette route mais restreint les opérations : update, patch et delete demandent en plus la permission correspondante (`updateLine`, `patchLine`, `deleteLine`), et sans `updateLine` createOrUpdate ne fait que créer (409 si la ligne existe déjà).",
+        operationId: 'postLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {

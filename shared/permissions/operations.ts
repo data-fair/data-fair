@@ -144,6 +144,9 @@ const datasetOverrides: Record<string, OpOverride> = {
   writeDescriptionBreaking: { title: L('Modifier avec rupture de compatibilité', 'Update with breaking changes'), routeless: true },
   writeData: { title: L('Mettre à jour les données', 'Update the data'), appliesTo: isFileDataset },
   createLine: { title: L('Ajouter une ligne', 'Add a line'), appliesTo: onlyRest },
+  // POST /lines with every _action, like bulkLines for a single line. The route is documented under this
+  // id, and createLine also opens it but restricts _action to the operations otherwise held.
+  postLine: { title: L('Effectuer toute opération sur une ligne', 'Perform any operation on a line'), appliesTo: onlyRest, grantedByAlts: ['createLine'] },
   updateLine: { title: L('Remplacer une ligne', 'Replace a line'), appliesTo: onlyRest },
   patchLine: { title: L('Modifier une ligne', 'Patch a line'), appliesTo: onlyRest },
   bulkLines: { title: L('Effectuer des opérations en masse', 'Perform bulk operations'), appliesTo: onlyRest },
@@ -160,6 +163,7 @@ const datasetOverrides: Record<string, OpOverride> = {
   readOwnLines: { title: L('Lire ses propres lignes', 'Read own lines'), appliesTo: withLineOwnership },
   readOwnLine: { title: L('Récupérer une de ses lignes', 'Get one of own lines'), appliesTo: withLineOwnership },
   createOwnLine: { title: L('Ajouter une de ses lignes', 'Add an own line'), appliesTo: withLineOwnership },
+  postOwnLine: { title: L('Effectuer toute opération sur une de ses lignes', 'Perform any operation on an own line'), appliesTo: withLineOwnership, grantedByAlts: ['createOwnLine'] },
   updateOwnLine: { title: L('Remplacer une de ses lignes', 'Replace an own line'), appliesTo: withLineOwnership },
   patchOwnLine: { title: L('Modifier une de ses lignes', 'Patch an own line'), appliesTo: withLineOwnership },
   bulkOwnLines: { title: L('Opérations en masse sur ses lignes', 'Bulk operations on own lines'), appliesTo: withLineOwnership },
@@ -203,8 +207,8 @@ const datasetOperations: OperationDescriptor[] = [
     list: ['list'],
     read: ['readDescription', 'readSafeDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey', 'readCompatODSRecords', 'readCompatODSExports'],
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
-    write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
-    manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
+    write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
+    manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'postOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
     admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'readIntegrity', 'readIntegrityRevisions']
   }, datasetOverrides),
   ...expand('datasets', { manageMasterData: ['manageMasterData'] }, datasetOverrides, 'ownerAdmin'),

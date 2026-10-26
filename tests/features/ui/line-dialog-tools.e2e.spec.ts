@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
+import { serviceUp } from '../../support/optional-services.ts'
 
 /**
  * The line dialog openers must not return before the dialog's form subagent
@@ -79,6 +80,8 @@ test.describe('line dialog agent tools', () => {
   })
 
   test('navigate returns once the destination page has registered its tools', async ({ page, goToWithAuth }) => {
+    // the assistant's tools and host events are only on with the agents integration
+    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev-zellij -- --services agents')
     // Its result used to say a destination tool is "not callable in this request"
     // and send the model into a wait on the arrival — whose `location` event had
     // already been delivered inside that very result. A judged run ignored the

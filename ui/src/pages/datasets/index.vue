@@ -128,6 +128,14 @@
         :label="t('showAll')"
         hide-details
       />
+      <v-switch
+        v-if="session.state.user?.adminMode"
+        v-model="showFragmentsToggle"
+        color="admin"
+        class="mx-4 text-admin"
+        :label="t('showFragments')"
+        hide-details
+      />
 
       <!-- Facets -->
       <dataset-facets
@@ -228,6 +236,13 @@ const showAllToggle = computed({
   set: (v: boolean) => { showAll.value = v ? 'true' : '' }
 })
 
+// Super admin: also list fragments, hidden by default (docs/architecture/fragments.md §6)
+const showFragments = useStringSearchParam('showFragments')
+const showFragmentsToggle = computed({
+  get: () => showFragments.value === 'true',
+  set: (v: boolean) => { showFragments.value = v ? 'true' : '' }
+})
+
 // Owner scoping: default to current account unless facet overrides
 const ownerParam = computed(() => {
   if (facetOwner.value?.length) return facetOwner.value.join(',')
@@ -260,6 +275,7 @@ const datasetsQuery = computed(() => {
   if (children.value) params.children = children.value
   if (shared.value) params.shared = shared.value
   else if (showAll.value !== 'true') params.shared = 'false'
+  if (showFragments.value === 'true') params.partOf = 'false,true'
   return params
 })
 
@@ -294,6 +310,7 @@ fr:
   sortTitle: Titre
   sortCompleteness: Score de complétion des métadonnées
   showAll: Voir tous les jeux de données
+  showFragments: Voir aussi les fragments
   createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
   datasets: "{count} jeux de données"
@@ -304,6 +321,7 @@ en:
   sortTitle: Title
   sortCompleteness: Metadata completeness score
   showAll: Show all datasets
+  showFragments: Also show fragments
   createDataset: Create a dataset
   noDataset: You haven't created a dataset yet.
   datasets: "{count} datasets"

@@ -32,7 +32,7 @@ dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ## The caps
 
-### vite dev server — `dev/with-memory-cap.sh`, wired into `ui/package.json`
+### vite dev server — `df-mem-cap` (`@data-fair/lib-dev`), used by the ui pane of `.zellij.kdl`
 
 The dev server runs inside a transient systemd user scope with `MemoryMax=4G`
 (override with `DEV_MEMORY_MAX`). When it is exceeded the *cgroup* OOM killer kills
@@ -66,23 +66,46 @@ unidentified; the cap is what makes it survivable meanwhile.
 ### Elasticsearch — `docker-compose.yaml`
 
 ```
-ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
+ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
 mem_limit: 2g
 memswap_limit: 2g
 ```
 
 Dev and test datasets are small, so 512 MiB of heap is ample. ES pre-touches its
-whole heap at boot (`-XX:+AlwaysPreTouch`), so the heap is resident in every running
-stack even when idle: at the earlier 1g a stack's ES sat around 1.5 GiB resident,
-at 512m around 1 GiB. `memswap_limit` equal to `mem_limit` forbids swap — without it
+initial heap at boot (`-XX:+AlwaysPreTouch`), so with `-Xms` equal to `-Xmx` the whole
+heap is resident in every running stack even when idle: at the earlier 1g a stack's ES
+sat around 1.5 GiB resident, at 512m around 1 GiB, while using ~130–165 MiB of it.
+Starting the heap at 64m lets it grow on demand up to the same 512m ceiling; measured
+on this image, idle 1001 → 640 MiB, after bulk indexing 20k documents plus searches and
+aggregations 1079 → 722 MiB (~360 MiB saved per stack). ES only logs a warning about
+resize pauses: the heap-size bootstrap check is not enforced with `single-node` discovery.
+
+`memswap_limit` equal to `mem_limit` forbids swap — without it
 docker allows as much swap again as `mem_limit`, and idle ES containers were seen
 pushing 1.7 GiB each into swap. `mem_limit` bounds the off-heap side (direct memory,
 metaspace, thread stacks) so a runaway ES is killed *inside its container* rather
 than contributing to a host-wide OOM.
 
-For a heavier workload (large benchmark datasets, say) start the stack with
-`ES_HEAP=1g npm run dev-deps` — 1g still fits in the 2g limit. Remember the
+For a heavier workload (large benchmark datasets, say) set `ES_HEAP=1g` in `.env`
+(df-dev never overwrites it) and recreate ES with `docker compose up -d elasticsearch` — 1g
+still fits in the 2g limit. Remember the
 multiplier is the number of environments you have up.
+
+Boot is the other cost: an uncapped ES 8 spends 60–120 s of CPU in its first
+30 s, peaking at 5–6 of 8 cores (enough to spin the laptop fan). `cpus: ${ES_CPUS:-2}`
+caps it, and since ES sizes its thread pools, GC and JIT threads to the quota, total
+boot CPU drops by about half with no slower time to green. Machine learning,
+watcher, the built-in `logs-*`/`metrics-*` stack templates and deprecation indexing
+are disabled because data-fair uses none of them. Measured on throwaway containers,
+median of 3 (noisy host), CPU seconds 30 s after green:
+
+| config | cold boot | restart (existing data) | time to green |
+|---|---|---|---|
+| previous | 104 s | 96 s | 36–37 s |
+| features disabled | 87 s | 65 s | 27–30 s |
+| features disabled + 2 CPUs | 45 s | 46 s | 27–29 s |
+
+Raise `ES_CPUS` alongside `ES_HEAP` for benchmark indexing.
 
 ### MongoDB — `docker-compose.yaml`
 
@@ -107,8 +130,8 @@ The cheapest saving of all: a worktree you stopped working on leaves its whole
 compose stack up, ~2.5–4.5 GiB of RAM + swap holding nothing useful.
 `bash dev/idle-stacks.sh` lists every running compose project with its memory and
 whether its dev API is running (listening, or its nodemon supervisor up while it boots), and the command to stop it
-(`docker compose -p <project> stop` keeps the volumes; `npm run dev-deps` brings it
-back). Read-only, like `dev/status.sh`.
+(`docker compose -p <project> stop` keeps the volumes; `npx --no df-dev zellij` brings it
+back). Read-only, like `npx --no df-dev status`.
 
 ### MCP servers — `.mcp.json`
 

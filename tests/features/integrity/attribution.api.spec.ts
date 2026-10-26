@@ -6,7 +6,7 @@
 // T3 (this file, extended): threading `who` from the HTTP boundary through the dataset-level
 // write path — user PATCH, `_fix` after tamper, dedupe suppression, and the attribution kill
 // switch.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import fs from 'fs-extra'
 import path from 'node:path'
 import FormData from 'form-data'

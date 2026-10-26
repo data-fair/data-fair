@@ -3,7 +3,7 @@ import FormData from 'form-data'
 import fs from 'fs-extra'
 import path from 'node:path'
 import { DataFairWsClient } from '@data-fair/lib-node/ws-client.js'
-import { apiUrl, anonymousAx, wsUrl, mockUrl } from './axios.ts'
+import { apiUrl, anonymousAx, wsUrl, mockUrl, waitForWorkerIdle } from './axios.ts'
 
 const log = { info: async () => {}, error: console.error, debug: () => {} }
 
@@ -32,8 +32,26 @@ export const waitForFinalize = async (
   datasetId: string,
   timeout = 15000
 ): Promise<any> => {
+  const wsWait = getSharedWs().waitForJournal(datasetId, 'finalize-end', timeout)
+  // The journal is not replayed: when finalize-end fired between the mutation and this
+  // subscription, the websocket wait would burn the whole timeout. So also accept a dataset that
+  // is finalized (draft included) with an idle worker for longer than the worker's polling interval.
+  const race = { settled: false }
+  const stableWait = (async () => {
+    let stable = 0
+    while (!race.settled) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+      const [dataset, tasks] = await Promise.all([
+        ax.get(`/api/v1/datasets/${datasetId}`, { params: { draft: true } }).then(r => r.data, () => null),
+        anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`).then(r => r.data)
+      ])
+      const idle = Object.values(tasks).every((pending: any) => Object.keys(pending).length === 0)
+      stable = dataset?.status === 'finalized' && idle ? stable + 1 : 0
+      if (stable >= 3) return
+    }
+  })()
   try {
-    await getSharedWs().waitForJournal(datasetId, 'finalize-end', timeout)
+    await Promise.race([wsWait, stableWait])
   } catch (err: any) {
     // ignore some non-blocking errors
     // TODO: these should have a different type, like "warning"
@@ -42,6 +60,10 @@ export const waitForFinalize = async (
     } else {
       throw err
     }
+  } finally {
+    race.settled = true
+    // the losing websocket wait still times out later: keep that from surfacing as an unhandled rejection
+    wsWait.catch(() => {})
   }
   return (await ax.get(`/api/v1/datasets/${datasetId}`)).data
 }
@@ -119,17 +141,11 @@ export const waitForDatasetError = async (
     }
     throw err
   }
-  // The journal event is emitted before the generic worker error handler flips
-  // the dataset status to 'error' (especially for 'validation-error', where the
-  // worker also sends a notification before throwing). Poll until the status is
-  // actually visible so callers can reliably assert on it.
-  const deadline = Date.now() + timeout
-  let dataset = (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
-  while (dataset.status !== 'error' && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 50))
-    dataset = (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
-  }
-  return dataset
+  // The journal event precedes the worker's own status update. Wait for the worker to go idle
+  // instead of polling for 'error': some flows (a file re-upload failing every line) revert to the
+  // previous version and never reach it, which used to burn the whole timeout.
+  await waitForWorkerIdle(timeout)
+  return (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
 }
 
 /**

@@ -1,5 +1,6 @@
 // Some edge cases with CSV files
-import { test } from '@playwright/test'
+// cases asserting only sniffer output (file.props, schema keys) live in csv-cases.unit.spec.ts
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -41,6 +42,14 @@ test.describe('CSV cases', () => {
     assert.equal(dataset.schema[0]['x-originalName'], 'This key has "escaped quotes" in it')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
+  })
+
+  // the algorithm itself is covered in csv-cases.unit.spec.ts, this only proves the request option
+  // reaches escapeKey
+  test('A CSV legacy escape key algorithm', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('csv-cases/weird-keys.csv', ax, undefined, { analysis: { escapeKeyAlgorithm: 'legacy' } })
+    assert.equal(dataset.schema[0].key, 'This_key_has_escaped_quotes_in_it')
   })
 
   test('A CSV with splitting errors', async () => {
@@ -113,28 +122,6 @@ test.describe('CSV cases', () => {
     assert.equal(res.data.results[0].description_fr, 'Menez l\'enquête à la recherche des objets portés disparus !')
   })
 
-  test('A CSV with \\r\\n inside quotes, but simply \\n as value separator', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('csv-cases/Demarches_PCAET_V1_enr.csv', ax)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.schema[0].key, 'id')
-    assert.equal(dataset.file.props.linesDelimiter, '\n')
-    assert.equal(dataset.file.props.escapeChar, '"')
-    assert.equal(dataset.file.props.quote, '"')
-    assert.equal(dataset.file.props.fieldsDelimiter, ';')
-  })
-
-  test('A CSV with \\r\\n inside quotes, but simply \\n as value separator (2)', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('csv-cases/Demarches_PCAET_V1_entete.csv', ax)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.schema[0].key, 'id')
-    assert.equal(dataset.file.props.linesDelimiter, '\n')
-    assert.equal(dataset.file.props.escapeChar, '"')
-    assert.equal(dataset.file.props.quote, '"')
-    assert.equal(dataset.file.props.fieldsDelimiter, ';')
-  })
-
   test('Another CSV with empty values', async () => {
     const ax = testUser1
     const dataset = await sendDataset('csv-cases/jep-2019.csv', ax)
@@ -147,16 +134,6 @@ test.describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 35)
     assert.equal(res.data.results[0].description_fr, 'Elisabeth Berthon, feutrière styliste-modéliste, vous fera découvrir son atelier de créations et son travail sur le feutre et la soie')
-  })
-
-  test('A CSV with commas in quotes', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('csv-cases/calendar.csv', ax)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.file.props.linesDelimiter, '\n')
-    assert.equal(dataset.file.props.escapeChar, '"')
-    assert.equal(dataset.file.props.quote, '"')
-    assert.equal(dataset.file.props.fieldsDelimiter, ',')
   })
 
   test('A CSV with weird mixes of single / double quotes and linebreaks', async () => {
@@ -207,15 +184,6 @@ test.describe('CSV cases', () => {
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].com, 'L\' Abergement-Clémenciat')
-  })
-
-  test('Another CSV with single quotes in content', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('csv-cases/ouverture.csv', ax)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.file.props.escapeChar, '"')
-    assert.equal(dataset.file.props.quote, '"')
-    assert.equal(dataset.file.props.fieldsDelimiter, ';')
   })
 
   test('A CSV with empty values in number properties', async () => {
@@ -297,16 +265,6 @@ test.describe('CSV cases', () => {
     assert.equal(dataset.file.props.fieldsDelimiter, ',')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 7)
-  })
-
-  test('A CSV legacy escape key algorithm', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('csv-cases/weird-keys.csv', ax, undefined, { analysis: { escapeKeyAlgorithm: 'legacy' } })
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.schema[0].key, 'This_key_has_escaped_quotes_in_it')
-    assert.equal(dataset.schema[0]['x-originalName'], 'This key has "escaped quotes" in it')
-    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-    assert.equal(res.data.total, 1)
   })
 
   test('A CSV with ; sep', async () => {

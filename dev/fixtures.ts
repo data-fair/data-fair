@@ -5,7 +5,7 @@
  * `dev_fixtures` org, which is
  * excluded from the test-suite cleanup (owner ids matching /^test_/ only).
  *
- * Run it (dev env must be up — `bash dev/status.sh`):
+ * Run it (dev env must be up — `npx --no df-dev status`):
  *   npm run dev-fixtures
  *
  * Idempotent: datasets that already exist are skipped; settings are upserted.
@@ -17,7 +17,7 @@ import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import FormData from 'form-data'
 import { generateTablePerfCsv, tablePerfDatasetBody, chunkCsv, TABLE_PERF_ID } from './table-perf-fixture.ts'
 
-const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 const directoryUrl = `${root}/simple-directory`
 const dfBaseURL = `${root}/data-fair`
 const creds = { email: 'alban.mouton@koumoul.com', password: 'passwd', directoryUrl }
@@ -1031,7 +1031,7 @@ async function main () {
   } catch (err) {
     console.error('\nCould not authenticate into org "dev_fixtures".')
     console.error('If you just added it to dev/resources/organizations.json, restart the')
-    console.error('simple-directory container (e.g. `docker compose restart sd`) and re-run.\n')
+    console.error('simple-directory container (e.g. `docker compose restart simple-directory`) and re-run.\n')
     throw err
   }
   // admin-mode global-admin session writes any owner's agent settings; base is

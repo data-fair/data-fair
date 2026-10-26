@@ -2,7 +2,7 @@ import neostandard from 'neostandard'
 import dfLibRecommended from '@data-fair/lib-utils/eslint/recommended.js'
 
 export default [
-  { ignores: ['ui/*', '**/.type/', 'data/*', 'dev/*', 'node_modules/*', 'doc/*', '**/*.peg.js', '**/*.d.ts', 'parquet_writer/*', 'benchmark/.cache/**', 'agent-tools/**/*.js', '.claude/**'] },
+  { ignores: ['ui/', '**/.type/', 'data/', 'dev/', 'docs/', 'parquet-writer/', 'benchmark/.cache/', '**/*.peg.js', '**/*.d.ts', 'agent-tools/**/*.js', '.claude/'] },
   ...dfLibRecommended,
   ...neostandard({ ts: true }),
   {

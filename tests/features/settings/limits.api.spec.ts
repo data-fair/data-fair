@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import fs from 'fs-extra'
@@ -180,9 +180,7 @@ test.describe('limits', () => {
       Promise.all(promises),
       { status: 429 }
     )
-    // after 1 s the rate limiter is emptied
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    // clear rate limiting state
+    // clearing the rate limiting state is enough, no need to wait for the window to lapse
     await clearRateLimiting()
     await ax.get('/api/v1/datasets')
   })

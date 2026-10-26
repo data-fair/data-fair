@@ -105,6 +105,7 @@
           v-if="dataset.visibility || dataset.partOf"
           :visibility="dataset.visibility"
           :part-of="dataset.partOf"
+          :foreign="foreign"
           size="small"
         />
         <capability-chip
@@ -149,6 +150,7 @@ import {
   mdiFile,
   mdiViewHeadline,
 } from '@mdi/js'
+import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
 const { t, locale } = useI18n()
 const session = useSession()
@@ -158,6 +160,8 @@ const props = withDefaults(defineProps<{
   dataset: Dataset
   noLink?: boolean
   showCapability?: boolean
+  // the resource whose page lists this card as one of its users: flags a fragment used outside of its parent
+  usedBy?: ReferencingResource
 }>(), {
   noLink: false,
   showCapability: false
@@ -167,6 +171,7 @@ const cardUserPermissions = computed(() => (props.dataset as Dataset & { userPer
 const cardAccessSources = computed(() => (props.dataset as Dataset & { accessSources?: AccessSources }).accessSources)
 // temporarily limited to the access audit page, hidden in the regular resource lists
 const showCapabilityChip = computed(() => props.showCapability)
+const foreign = computed(() => !!props.dataset.partOf && !!props.usedBy && foreignReferences(props.dataset.partOf, [props.usedBy]).length > 0)
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||

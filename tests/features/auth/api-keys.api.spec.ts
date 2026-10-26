@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
 import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl, apiUrl } from '../../support/axios.ts'
@@ -89,7 +89,7 @@ test.describe('API keys', () => {
     const key2 = res.data.apiKeys[1]
     const key3 = res.data.apiKeys[2]
     const key4 = res.data.apiKeys[3]
-    assert.ok(key4.email.endsWith('@api-key.' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT1))
+    assert.ok(key4.email.endsWith('@api-key.' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT))
     const key5 = res.data.apiKeys[4]
 
     // Right scope

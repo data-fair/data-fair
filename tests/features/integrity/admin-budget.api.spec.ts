@@ -1,6 +1,6 @@
 // Synchronous admin actions past their budget answer 202 {status:'running'} and finish in-process
 // (design 2026-10-15 §4). integrity.running is display-only and dropped once the lock is gone.
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../../fixtures/diagnostics.ts'
 import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { ensureIntegrityBucket, waitForLinesDrained } from '../../support/integrity.ts'
 

@@ -2,7 +2,7 @@
   <v-row
     v-if="active"
     class="ma-0 mb-4"
-    dense
+    density="compact"
   >
     <v-col
       cols="12"

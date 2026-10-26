@@ -7,7 +7,7 @@
       <v-spacer />
       <span
         v-if="lastFetchedLabel"
-        class="text-caption text-medium-emphasis mr-2"
+        class="text-body-small text-medium-emphasis mr-2"
       >{{ lastFetchedLabel }}</span>
       <v-btn
         :prepend-icon="mdiRefresh"
@@ -45,7 +45,7 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('cluster.title') }}
         <v-chip
           :color="statusColor(data.cluster.status)"
@@ -56,14 +56,14 @@
         </v-chip>
       </v-card-title>
       <v-card-text>
-        <v-row dense>
+        <v-row density="compact">
           <v-col
             v-for="kpi in clusterKpis"
             :key="kpi.label"
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ kpi.label }}
             </div>
             <div class="text-body-medium">
@@ -80,7 +80,7 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('nodes.title') }}
       </v-card-title>
       <v-data-table
@@ -150,7 +150,7 @@
                 </div>
                 <div v-if="item.threadPoolsOfInterest.length">
                   <strong>{{ t('nodes.threadPools') }}:</strong>
-                  <table class="ml-2 text-caption">
+                  <table class="ml-2 text-body-small">
                     <tr>
                       <th>name</th>
                       <th>active</th>
@@ -190,7 +190,7 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('longTasks.searchTitle') }}
       </v-card-title>
       <v-alert
@@ -237,18 +237,18 @@
                 class="my-2"
               >
                 <strong>{{ t('longTasks.sourceQuery') }}:</strong>
-                <pre class="text-caption">{{ JSON.stringify(item.sourceQuery, null, 2) }}</pre>
+                <pre class="text-body-small">{{ JSON.stringify(item.sourceQuery, null, 2) }}</pre>
               </div>
               <div
                 v-else-if="item.sourceQueryOversized"
                 class="my-2 text-medium-emphasis"
               >
                 {{ t('longTasks.sourceQueryOversized') }}
-                <pre class="text-caption mt-1">{{ item.description }}</pre>
+                <pre class="text-body-small mt-1">{{ item.description }}</pre>
               </div>
               <pre
                 v-else
-                class="text-caption"
+                class="text-body-small"
               >{{ item.description }}</pre>
               <div v-if="item.targets.length > 1">
                 <strong>{{ t('longTasks.otherTargets') }}:</strong>
@@ -279,7 +279,7 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('longTasks.otherTitle') }}
       </v-card-title>
       <v-alert
@@ -329,7 +329,7 @@
         <template #expanded-row="{ columns, item }">
           <tr>
             <td :colspan="columns.length">
-              <pre class="text-caption">{{ item.description }}</pre>
+              <pre class="text-body-small">{{ item.description }}</pre>
               <div v-if="item.targets.length > 1">
                 <strong>{{ t('longTasks.otherTargets') }}:</strong>
                 <ul>
@@ -358,7 +358,7 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('unassignedShards.title') }}
       </v-card-title>
       <v-card-text
@@ -391,7 +391,7 @@
         <template #expanded-row="{ columns, item }">
           <tr>
             <td :colspan="columns.length">
-              <pre class="text-caption">{{ item.details ?? '—' }}</pre>
+              <pre class="text-body-small">{{ item.details ?? '—' }}</pre>
             </td>
           </tr>
         </template>
@@ -404,16 +404,16 @@
       variant="flat"
       class="mb-4"
     >
-      <v-card-title class="text-subtitle-1">
+      <v-card-title class="text-body-large">
         {{ t('indices.title') }}
       </v-card-title>
       <v-card-text>
-        <v-row dense>
+        <v-row density="compact">
           <v-col
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.nbDataFairIndices') }}
             </div>
             <div class="text-body-medium">
@@ -424,7 +424,7 @@
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.nbDatasetsWithIndex') }}
             </div>
             <div class="text-body-medium">
@@ -435,7 +435,7 @@
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.totalDocs') }}
             </div>
             <div class="text-body-medium">
@@ -446,7 +446,7 @@
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.totalPrimary') }}
             </div>
             <div class="text-body-medium">
@@ -457,7 +457,7 @@
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.deletedRatio') }}
             </div>
             <div class="text-body-medium">
@@ -468,7 +468,7 @@
             cols="6"
             md="3"
           >
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('indices.orphans') }}
             </div>
             <div class="text-body-medium">

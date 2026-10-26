@@ -1,5 +1,5 @@
 // A simple mock HTTP server that serves responses for external services
-// used during development and testing. Started as part of dev-deps.
+// used during development and testing. Started by the mock pane of the zellij layout.
 // Replaces the in-process nock mocks from the old test setup.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -16,6 +16,11 @@ const geocoderApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resourc
 geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock server' }]
 
 const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/sirene-api.json'), 'utf8'))
+
+// served with a stable validator so tests can exercise the remote-attachment cache revalidation
+const logoSquare = readFileSync(resolve(__dirname, '../tests/resources/logo-square.png'))
+const logoSquareLastModified = new Date('2024-01-01T00:00:00Z').toUTCString()
+const logoSquareEtag = '"logo-square-v1"'
 sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
 // lang and title are deliberately wrong here: the proxy owns the language and the title of
@@ -304,6 +309,26 @@ const server = createServer(async (req, res) => {
       return
     }
     sendResult(res, dynamicResult)
+    return
+  }
+
+  // Remote attachment fixture: answers 304 on a matching validator, which is what the
+  // metadata-attachment cache test asserts (it used to fetch a real file from koumoul.com)
+  if (pathname === '/static/logo-square.png') {
+    const ifModifiedSince = req.headers['if-modified-since']
+    const ifNoneMatch = req.headers['if-none-match']
+    if (ifNoneMatch === logoSquareEtag || ifModifiedSince === logoSquareLastModified) {
+      res.writeHead(304, { ETag: logoSquareEtag, 'Last-Modified': logoSquareLastModified })
+      res.end()
+      return
+    }
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': logoSquare.length,
+      ETag: logoSquareEtag,
+      'Last-Modified': logoSquareLastModified
+    })
+    res.end(logoSquare)
     return
   }
 

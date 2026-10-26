@@ -1,8 +1,7 @@
 <template>
   <div>
     <v-row
-      class="mr-0 mb-2"
-      align="center"
+      class="mr-0 mb-2 align-center"
     >
       <v-spacer />
       <v-select
@@ -57,8 +56,7 @@
 
     <v-row
       v-if="history?.next"
-      justify="center"
-      class="ma-2"
+      class="ma-2 justify-center"
     >
       <v-btn
         variant="text"

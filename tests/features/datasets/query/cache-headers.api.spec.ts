@@ -1,7 +1,8 @@
-import { test } from '@playwright/test'
+import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { nanoid } from 'nanoid'
 import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
+import { patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -177,9 +178,12 @@ test.describe('Cache headers', () => {
   test('Changing the slug bumps finalizedAt so a stale validator cannot match', async () => {
     const ax = testUser1
     // dsB is finalized first, so its date is older than dsA's: a client holding dsA's Last-Modified
-    // would otherwise get a 304 out of dsB after taking over dsA's slug
-    const dsB = await createDataset(ax)
-    await new Promise(resolve => setTimeout(resolve, 1100))
+    // would otherwise get a 304 out of dsB after taking over dsA's slug. Backdate it rather than
+    // waiting out a real second.
+    let dsB = await createDataset(ax)
+    await patchRawDataset(dsB.id, { finalizedAt: new Date(Date.now() - 5000).toISOString() })
+    await clearDatasetCache()
+    dsB = (await ax.get(`/api/v1/datasets/${dsB.id}`)).data
     const dsA = await createDataset(ax)
     assert.ok(new Date(dsB.finalizedAt) < new Date(dsA.finalizedAt), 'dsB must be finalized before dsA')
 

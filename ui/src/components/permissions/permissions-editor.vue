@@ -101,7 +101,7 @@
             <div>
               {{ resource.owner?.type === 'user' ? t('implicitScopeUser', labelParams) : t(ownerDepartment ? 'implicitScopeDep' : 'implicitScopeOrg', labelParams) }}
             </div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ t('implicitHint') }}
             </div>
           </td>
@@ -135,7 +135,7 @@
             <!-- a department permission also matches the members of the organization root, '-' matches them only -->
             <template v-if="item.type === 'organization'">
               <div>{{ t('organizationName', { name: item.name }) }}</div>
-              <div class="text-caption text-medium-emphasis">
+              <div class="text-body-small text-medium-emphasis">
                 {{ !item.department || item.department === '*' ? t('scopeAll') : item.department === '-' ? t('scopeRoot') : t('scopeDep', { dep: item.departmentName || item.department }) }}
               </div>
             </template>
@@ -548,7 +548,7 @@ const contribProfile = computed({
       .filter((p) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
 
     const writeDataOps = props.resource.isRest
-      ? ['createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
+      ? ['createLine', 'postLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines']
       : ['writeData', 'cancelDraft']
 
     if (v === 'contribWriteData') {

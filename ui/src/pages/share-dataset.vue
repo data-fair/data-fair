@@ -184,7 +184,7 @@
             </v-btn>
             <span
               v-if="hasPendingChanges && (currentStep === 3 || currentStep === 4)"
-              class="text-caption text-warning"
+              class="text-body-small text-warning"
             >
               {{ t('pendingChanges') }}
             </span>
