@@ -83,6 +83,15 @@
   </template>
 
   <template v-if="!simple && detailedMode && ownerDetails">
+    <v-alert
+      v-if="hasMetaOnlyFragments"
+      type="warning"
+      variant="outlined"
+      density="compact"
+      class="mt-2"
+    >
+      {{ t('warningMetaOnlyFragments') }}
+    </v-alert>
     <v-table
       density="compact"
       class="mt-2 rounded elevation-1"
@@ -251,6 +260,7 @@ fr:
     org: de l'organisation {org}
     dep: du département {dep} et de l'organisation {org}
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
+  warningMetaOnlyFragments: "Attention, seules les classes de permissions entières (Lister, Lecture) sont transmises aux jeux de données enfants : les actions détaillées ne s'appliquent qu'à ce jeu de données."
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter une permission
   editPermission: Éditer cette permission
@@ -313,6 +323,7 @@ en:
     org: of the organization {org}
     dep: of the department {dep} and of the organization {org}
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
+  warningMetaOnlyFragments: "Warning, only whole permission classes (List, Read) are passed on to the child datasets: detailed actions apply to this dataset only."
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add a permission
   editPermission: Edit this permission
@@ -375,6 +386,8 @@ const props = defineProps<{
   disabled: boolean
   hasPublicDeps?: boolean
   hasPrivateParents?: boolean
+  /** a meta-only parent passes only whole list / read classes to its fragments */
+  hasMetaOnlyFragments?: boolean
   simple?: boolean
   /** Pristine server copy — enables `accent` colouring of the simplified-mode selects when the current value differs. */
   serverData?: Permission[] | null

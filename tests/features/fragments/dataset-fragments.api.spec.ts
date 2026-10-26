@@ -1,7 +1,7 @@
 import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
+import { axiosAuth, anonymousAx, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
@@ -155,6 +155,25 @@ test.describe('dataset fragments', () => {
     const res = await testUser3.get(`/api/v1/datasets/${fragment.id}`)
     assert.ok(res.data.userPermissions.includes('readLines'))
     await testUser3.patch(`/api/v1/datasets/${fragment.id}`, { title: 'renamed by test_user3' })
+  })
+
+  test('a public meta-only dataset makes its fragments publicly readable, without listing them', async () => {
+    const metaOnly = (await testUser1Org.post('/api/v1/datasets', { isMetaOnly: true, title: 'a meta-only dataset' })).data
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: metaOnly.id } })
+    await assert.rejects(anonymousAx.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
+
+    const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${metaOnly.id}/permissions`)).data
+    await testUser1Org.put(`/api/v1/datasets/${metaOnly.id}/permissions`, [...parentPermissions, { classes: ['list', 'read'] }])
+    assert.equal((await anonymousAx.get(`/api/v1/datasets/${fragment.id}`)).data.id, fragment.id)
+    assert.ok((await anonymousAx.get(`/api/v1/datasets/${fragment.id}/lines`)).data.total > 0)
+    // hidden from the catalog, reached through its parent
+    assert.deepEqual((await anonymousAx.get('/api/v1/datasets')).data.results.map((d: any) => d.id), [metaOnly.id])
+    assert.deepEqual((await anonymousAx.get('/api/v1/datasets', { params: { partOf: `dataset:${metaOnly.id}` } })).data.results.map((d: any) => d.id), [fragment.id])
+
+    // only whole classes pass: a detailed read entry on the meta-only gives nothing on the fragment
+    await testUser1Org.put(`/api/v1/datasets/${metaOnly.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['readDescription'] }])
+    await assert.rejects(anonymousAx.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
   })
 
   test('attach an existing dataset, then detach it keeping its ACL', async () => {

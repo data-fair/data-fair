@@ -328,7 +328,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const ctx = { sessionState, logCtx: reqEventLogContext(req) }
     const newPermissions = await permissions.ownerChangePermissions(dataset, req.body)
-    await fragmentsService.changeFragmentsOwner(ctx, 'datasets', fragments, req.body, newPermissions)
+    await fragmentsService.changeFragmentsOwner(ctx, 'datasets', fragments, req.body, newPermissions, dataset.isMetaOnly)
     const patchedDataset = await changeDatasetOwner(ctx, dataset, reqDatasetFull(req), req.body, newPermissions)
 
     await updateTotalStorage(dataset.owner)

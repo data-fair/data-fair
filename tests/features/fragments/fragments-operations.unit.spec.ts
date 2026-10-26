@@ -45,6 +45,18 @@ test.describe('deriveFragmentPermissions', () => {
     ])
   })
 
+  test('dataset fragment of a meta-only dataset: whole list / read classes inherited, detailed read entries dropped', () => {
+    const metaOnlyDetailedRead: Permission = { type: 'user', id: 'u', operations: ['readDescription', 'downloadMetadataAttachment'] }
+    const derived = deriveFragmentPermissions([publicRead, contribRead, userReadOnly, metaOnlyDetailedRead, contribWrite], 'datasets', 'datasets', true)
+    assert.deepEqual(derived, [
+      { classes: ['list', 'read'] },
+      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read'] },
+      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] },
+      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] }
+    ])
+    assert.deepEqual(deriveFragmentPermissions(derived, 'datasets', 'datasets', true), derived)
+  })
+
   // a fragment must never surface through a parent's read-only ACL entry (docs §9). getPermissions,
   // readIntegrity and readIntegrityRevisions are pure reads that happen to sit in the `admin` class:
   // carrying them over used to trigger the "write implies read" grant and leak the whole fragment.
@@ -82,6 +94,7 @@ test.describe('validatePartOf', () => {
   test('accepts a dataset under a virtual dataset and under an application', () => {
     assert.equal(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent }), null)
     assert.equal(validatePartOf({ ...base, partOf: { type: 'application', id: 'a' }, parent: appParent }), null)
+    assert.equal(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'm' }, parent: { id: 'm', owner: orgOwner, isMetaOnly: true } }), null)
   })
   test('accepts an application under an application only', () => {
     assert.equal(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'application', id: 'a' }, parent: appParent }), null)

@@ -108,6 +108,19 @@
         <!-- fragments are hidden from every listing, this is where they are found -->
         <v-tabs-window-item value="fragments">
           <df-tutorial-alert
+            v-if="dataset.isMetaOnly"
+            id="dataset-meta-only-fragments"
+            persistent
+          >
+            <p class="mb-2">
+              {{ t('metaOnlyFragmentsTutorial1') }}
+            </p>
+            <p>
+              {{ t('metaOnlyFragmentsTutorial2') }}
+            </p>
+          </df-tutorial-alert>
+          <df-tutorial-alert
+            v-else
             id="dataset-fragments"
             persistent
           >
@@ -303,6 +316,7 @@
               :resource="dataset"
               resource-type="datasets"
               :disabled="!can('setPermissions').value"
+              :has-meta-only-fragments="!!dataset.isMetaOnly && nbFragments > 0"
               @save="onSavePermissions"
             />
           </v-tabs-window-item>
@@ -696,6 +710,8 @@ fr:
   fragmentsTutorial1: "Un fragment est un jeu de données qui n'existe que pour alimenter ce jeu de données virtuel. Par exemple une source par territoire ou par période, préparée séparément puis rassemblée ici."
   fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que ce jeu de données virtuel et en héritent les droits de modification, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec lui."
   fragmentsTutorial3: "Un nouveau fragment n'est pas utilisé tout de suite. Ajoutez-le aux sources quand il est prêt."
+  metaOnlyFragmentsTutorial1: "Un fragment est un jeu de données qui fait partie de ce jeu de métadonnées seules. Par exemple les différentes tables produites à partir d'un même flux, décrites ici dans leur ensemble."
+  metaOnlyFragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste ni dans le catalogue des portails : ils sont proposés dans la section « Voir aussi » de la page de ce jeu de données. Ils ont le même propriétaire, en héritent les droits de modification et les classes de permissions Lister et Lecture, ne sont ni partagés ni publiés en propre et sont supprimés avec lui."
   fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
@@ -771,6 +787,8 @@ en:
   fragmentsTutorial1: "A fragment is a dataset that only exists to feed this virtual dataset. For example one source per territory or per period, prepared separately then gathered here."
   fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this virtual dataset and inherit its edit permissions, they are neither shared nor published on their own, and they are deleted with it."
   fragmentsTutorial3: "A new fragment is not used right away. Add it to the sources when it is ready."
+  metaOnlyFragmentsTutorial1: "A fragment is a dataset that is part of this metadata-only dataset. For example the different tables produced from a single feed, described here as a whole."
+  metaOnlyFragmentsTutorial2: "Fragments appear in no listing nor in portal catalogs: they are offered in the \"See also\" section of this dataset's page. They have the same owner, inherit its edit permissions and its List and Read permission classes, are neither shared nor published on their own, and are deleted with it."
   fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
@@ -1237,12 +1255,13 @@ const sections = computedDeepDiff(() => {
   result.informations = {
     title: t('informations'),
     subtitle: t('informationsSubtitle'),
-    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent virtual dataset, with an "Add to the sources" button while it is not yet one of the parent\'s sources.'
+    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent dataset and, under a virtual parent, an "Add to the sources" button while it is not yet one of the parent\'s sources.'
   }
 
   // Structure section (new)
-  if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
-    const structureTabs: any[] = [{
+  // a meta-only has no schema: its structure is only its fragments
+  if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual || d.isMetaOnly)) {
+    const structureTabs: any[] = d.isMetaOnly ? [] : [{
       key: 'schema',
       title: t('schema'),
       icon: mdiTableCog,
@@ -1278,12 +1297,14 @@ const sections = computedDeepDiff(() => {
     }
 
     // fragments are hidden from every listing, this tab is where they are found
-    if (!d.partOf && (d.isVirtual || nbFragments.value)) {
+    if (!d.partOf && (d.isVirtual || d.isMetaOnly || nbFragments.value)) {
       structureTabs.push({
         key: 'fragments',
         title: t('fragments'),
         icon: mdiPuzzle,
-        agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
+        agentDesc: d.isMetaOnly
+          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and in the "see also" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
+          : 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }
 
