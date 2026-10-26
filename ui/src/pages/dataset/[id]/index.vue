@@ -711,7 +711,7 @@ fr:
   fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que ce jeu de données virtuel et en héritent les droits de modification, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec lui."
   fragmentsTutorial3: "Un nouveau fragment n'est pas utilisé tout de suite. Ajoutez-le aux sources quand il est prêt."
   metaOnlyFragmentsTutorial1: "Un fragment est un jeu de données qui fait partie de ce jeu de métadonnées seules. Par exemple les différentes tables produites à partir d'un même flux, décrites ici dans leur ensemble."
-  metaOnlyFragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste ni dans le catalogue des portails : ils sont proposés dans la section « Voir aussi » de la page de ce jeu de données. Ils ont le même propriétaire, en héritent les droits de modification et les classes de permissions Lister et Lecture, ne sont ni partagés ni publiés en propre et sont supprimés avec lui."
+  metaOnlyFragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste ni dans le catalogue des portails : ceux que vous déclarez aussi en jeux de données liés sont proposés dans la section « Voir aussi » de la page de ce jeu de données. Ils ont le même propriétaire, en héritent les droits de modification et les classes de permissions Lister et Lecture, ne sont ni partagés ni publiés en propre et sont supprimés avec lui."
   fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
@@ -788,7 +788,7 @@ en:
   fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this virtual dataset and inherit its edit permissions, they are neither shared nor published on their own, and they are deleted with it."
   fragmentsTutorial3: "A new fragment is not used right away. Add it to the sources when it is ready."
   metaOnlyFragmentsTutorial1: "A fragment is a dataset that is part of this metadata-only dataset. For example the different tables produced from a single feed, described here as a whole."
-  metaOnlyFragmentsTutorial2: "Fragments appear in no listing nor in portal catalogs: they are offered in the \"See also\" section of this dataset's page. They have the same owner, inherit its edit permissions and its List and Read permission classes, are neither shared nor published on their own, and are deleted with it."
+  metaOnlyFragmentsTutorial2: "Fragments appear in no listing nor in portal catalogs: those you also declare as related datasets are offered in the \"See also\" section of this dataset's page. They have the same owner, inherit its edit permissions and its List and Read permission classes, are neither shared nor published on their own, and are deleted with it."
   fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
@@ -1303,7 +1303,7 @@ const sections = computedDeepDiff(() => {
         title: t('fragments'),
         icon: mdiPuzzle,
         agentDesc: d.isMetaOnly
-          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and in the "see also" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
+          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and, when also declared as related datasets, in the "see also" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
           : 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }
