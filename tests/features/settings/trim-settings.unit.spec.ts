@@ -58,4 +58,19 @@ test.describe('cleanDatasetsMetadata', () => {
     cleanDatasetsMetadata(datasetsMetadata)
     assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.key), ['budget', 'budget-2', 'budget-3'])
   })
+
+  test('drops the recommended size of a metadata that has none', () => {
+    const bounds = { recommendedMin: 10, recommendedMax: 50 }
+    const datasetsMetadata: any = {
+      custom: [
+        { key: 'free', title: 'Free', ...bounds },
+        { key: 'several', title: 'Several', enum: ['a', 'b'], multiple: true, ...bounds },
+        { key: 'single', title: 'Single', enum: ['a', 'b'], ...bounds },
+        { key: 'date', title: 'Date', type: 'date', ...bounds }
+      ]
+    }
+    cleanDatasetsMetadata(datasetsMetadata)
+    assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.recommendedMin), [10, 10, undefined, undefined])
+    assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.recommendedMax), [50, 50, undefined, undefined])
+  })
 })

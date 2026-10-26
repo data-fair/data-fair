@@ -244,7 +244,8 @@ const datasetsQuery = computed(() => {
     select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness',
   }
   if (q.value) params.q = q.value
-  else params.sort = sort.value
+  // many datasets share a score: the id keeps the pages from repeating or skipping them
+  else params.sort = sort.value.startsWith('completeness:') ? `${sort.value},id:1` : sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')

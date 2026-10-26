@@ -13,7 +13,7 @@ import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 import { stampHistorize } from '../../integrity/operations.ts'
 import { whoFromReq } from '../../integrity/who.ts'
-import { searchIndexPatch } from '../../datasets/utils/search-text.ts'
+import { indexAndCompletenessPatch } from '../../datasets/utils/completeness.ts'
 import { mergeIndexUpdate } from './text-search/index.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
@@ -450,7 +450,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
         // Computed from the stored document: with ?draft=true reqResource has the draft merged in,
         // and its titles/labels would land in the published document's search fields
         const stored = await resources.findOne({ id: resource.id })
-        mergeIndexUpdate(permissionsUpdate, searchIndexPatch({ ...(stored as any), permissions }))
+        mergeIndexUpdate(permissionsUpdate, await indexAndCompletenessPatch({ ...(stored as any), permissions }))
       }
       if (resourceType === 'datasets' && (resource as any).integrity?.active) {
         // also covers the publications.$.status='waiting' write just above (same request)

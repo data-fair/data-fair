@@ -217,7 +217,9 @@ The dataset recompute also refreshes the metadata completeness score (`completen
 writers stamp the flag for it: **`api/src/settings/service.ts`, `writeSettings`** marks every
 dataset of the owner stale when `datasetsMetadata` changes while the score is (or was) active, and
 **`api/src/fragments/service.ts`, `applyPartOfChange`** sets it on attach and detach, since a
-fragment has no score.
+fragment has no score. Since the flag also stands for a pending rescore, dataset writers compute
+both through `indexAndCompletenessPatch` (`api/src/datasets/utils/completeness.ts`): a writer
+recomputing the index alone would clear the flag and leave the old score.
 
 If you add a new bulk writer — an upgrade script, an admin bulk action, anything using
 `updateMany`/`bulkWrite` on `datasets`/`applications` outside `applyPatch` — and it touches any

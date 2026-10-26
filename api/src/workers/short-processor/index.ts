@@ -129,8 +129,7 @@ const drainSearchIndex = async (
 
 export const computeDatasetSearchIndex = async function (dataset: Dataset) {
   await mongo.connect(true)
-  const { searchIndexPatch } = await import('../../datasets/utils/search-text.ts')
-  const { completenessPatch } = await import('../../datasets/utils/completeness.ts')
+  const { indexAndCompletenessPatch } = await import('../../datasets/utils/completeness.ts')
   await drainSearchIndex('datasets', dataset.id, async () => {
     // the dispatcher merges a pending draft into the resource it hands to a task (../index.ts), but
     // this index describes the PUBLISHED dataset: draft titles and draft column labels
@@ -139,7 +138,7 @@ export const computeDatasetSearchIndex = async function (dataset: Dataset) {
     const published = await mongo.datasets.findOne({ id: dataset.id })
     if (!published) return null
     // the completeness score is derived alongside: a settings change marks the owner's datasets stale
-    return { ...searchIndexPatch(published), ...await completenessPatch(published) }
+    return await indexAndCompletenessPatch(published)
   })
 }
 

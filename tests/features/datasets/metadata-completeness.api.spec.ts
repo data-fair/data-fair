@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { getRawDataset } from '../../support/workers.ts'
+import { getRawDataset, patchRawDataset } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const settingsUrl = '/api/v1/settings/user/test_user1'
@@ -50,6 +50,15 @@ test.describe('metadata completeness score', () => {
 
     // the score is readonly
     await assert.rejects(testUser1.patch('/api/v1/datasets/' + dataset.id, { completeness: 10 }), { status: 400 })
+  })
+
+  test('a write recomputing the search index rescores too', async () => {
+    await testUser1.put(settingsUrl, { datasetsMetadata: { completeness: { active: true }, ...summaryOnly } })
+    const { data: dataset } = await testUser1.post('/api/v1/datasets', { isMetaOnly: true, title: 'stale', summary: 'too short' })
+    // an outdated score, as left by a settings change the worker has not reached yet
+    await patchRawDataset(dataset.id, { completeness: 7 })
+    const res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { title: 'stale, renamed' })
+    assert.equal(res.data.completeness, 50)
   })
 
   test('a settings change rescores the datasets, deactivating removes the score', async () => {

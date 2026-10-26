@@ -473,9 +473,9 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 |----------|-------|---------|-------|
 | `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
-| `dataset_summarizer` | summarizer | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
+| `dataset_summarizer` | summarizer | Generate dataset summaries within the owner's recommended size, 100–300 chars by default (with sample data, validated on write) | `read_dataset_info`, `read_dataset_metadata` |
 | `search_terms_writer` | summarizer | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
-| `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
+| `dataset_description_writer` | default | Generate markdown descriptions within the owner's recommended size, 300–5000 chars by default | `read_dataset_info`, `read_dataset_metadata` |
 | `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
 | `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
 | `schema_annotator` | summarizer | Suggest column titles and descriptions | Schema annotation tools |
