@@ -524,7 +524,7 @@ permission model on the client, it is purely presentational.
   dataset, just before the "Jeu de données virtuel" tab, and in the Render section of an application,
   after the configuration tab. Fragments appear in no listing, so this is the one place they are
   found from. Shown on any non-fragment application and on a virtual or meta-only dataset (or any
-  dataset already holding fragments), with a tutorial specific to the meta-only case — a meta-only has
+  dataset already holding fragments), the virtual-dataset tutorial hidden on a meta-only — a meta-only has
   no schema, so this tab is its whole Structure section; on a dataset it follows the Structure section's `writeDescriptionBreaking`
   gate, which a reader of a virtual dataset lacks anyway (no read is derived on its fragments, §4). It lists fragment datasets and
   applications (two `partOf=` queries in the dataset/application stores, 100 at a time with a "load

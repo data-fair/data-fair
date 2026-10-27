@@ -108,19 +108,7 @@
         <!-- fragments are hidden from every listing, this is where they are found -->
         <v-tabs-window-item value="fragments">
           <df-tutorial-alert
-            v-if="dataset.isMetaOnly"
-            id="dataset-meta-only-fragments"
-            persistent
-          >
-            <p class="mb-2">
-              {{ t('metaOnlyFragmentsTutorial1') }}
-            </p>
-            <p>
-              {{ t('metaOnlyFragmentsTutorial2') }}
-            </p>
-          </df-tutorial-alert>
-          <df-tutorial-alert
-            v-else
+            v-if="!dataset.isMetaOnly"
             id="dataset-fragments"
             persistent
           >
@@ -710,8 +698,6 @@ fr:
   fragmentsTutorial1: "Un fragment est un jeu de données qui n'existe que pour alimenter ce jeu de données virtuel. Par exemple une source par territoire ou par période, préparée séparément puis rassemblée ici."
   fragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste, c'est ici qu'on les retrouve. Ils ont le même propriétaire que ce jeu de données virtuel et en héritent les droits de modification, ils ne sont ni partagés ni publiés en propre et ils sont supprimés avec lui."
   fragmentsTutorial3: "Un nouveau fragment n'est pas utilisé tout de suite. Ajoutez-le aux sources quand il est prêt."
-  metaOnlyFragmentsTutorial1: "Un fragment est un jeu de données qui fait partie de ce jeu de métadonnées seules. Par exemple les différentes tables produites à partir d'un même flux, décrites ici dans leur ensemble."
-  metaOnlyFragmentsTutorial2: "Les fragments n'apparaissent dans aucune liste ni dans le catalogue des portails : ceux que vous déclarez aussi en jeux de données liés sont proposés dans la section « Voir aussi » de la page de ce jeu de données. Ils ont le même propriétaire, en héritent les droits de modification et les classes de permissions Lister et Lecture, ne sont ni partagés ni publiés en propre et sont supprimés avec lui."
   fragmentAddedToSources: Le fragment a été ajouté aux sources du jeu de données.
   save: Enregistrer
   cancel: Annuler
@@ -787,8 +773,6 @@ en:
   fragmentsTutorial1: "A fragment is a dataset that only exists to feed this virtual dataset. For example one source per territory or per period, prepared separately then gathered here."
   fragmentsTutorial2: "Fragments appear in no listing, this is where they are found. They have the same owner as this virtual dataset and inherit its edit permissions, they are neither shared nor published on their own, and they are deleted with it."
   fragmentsTutorial3: "A new fragment is not used right away. Add it to the sources when it is ready."
-  metaOnlyFragmentsTutorial1: "A fragment is a dataset that is part of this metadata-only dataset. For example the different tables produced from a single feed, described here as a whole."
-  metaOnlyFragmentsTutorial2: "Fragments appear in no listing nor in portal catalogs: those you also declare as related datasets are offered in the \"See also\" section of this dataset's page. They have the same owner, inherit its edit permissions and its List and Read permission classes, are neither shared nor published on their own, and are deleted with it."
   fragmentAddedToSources: The fragment was added to the sources of the dataset.
   save: Save
   cancel: Cancel
