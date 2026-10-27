@@ -193,7 +193,8 @@ recomputing the *what* from the entry's expanded operation set (`classes` expand
   permissions editor warns about it in detailed mode when the meta-only has fragments. A public
   meta-only therefore has public fragments, data included — that is the point: their portal page and
   data are reachable from the meta-only's "Voir aussi" section, which lists the fragments the meta-only
-  also declares in its `relatedDatasets` (a fragment left out of them stays unlisted).
+  also declares in its `relatedDatasets` (a fragment left out of them stays unlisted; the related-datasets
+  picker of a meta-only also lists its own fragments, `partOf=false,dataset:<id>`).
 - An entry whose derived *what* ends up empty is dropped entirely.
 - **A virtual dataset grants no read on its fragments.** No read is derived from a virtual
   `datasets` parent (case B only fires application → application, B' only for a meta-only parent). Reading the virtual dataset reads its
@@ -533,7 +534,7 @@ permission model on the client, it is purely presentational.
   only offered when the parent's base app declares `<meta name="df:use-apps" content="true">` (it
   embeds other applications, typically a dashboard), and `writeConfig` on the parent. On those creation pages the owner
   picker is replaced by the parent link (`fragment-info.vue`) and the owner is taken from the parent (a fragment has
-  exactly its parent's owner), a metadata-only dataset is not offered, the breadcrumb leads back to
+  exactly its parent's owner), a metadata-only dataset is offered only under a meta-only parent, the breadcrumb leads back to
   the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
   owner's standalone datasets. For a virtual parent exposing columns, the initialization step starts
   pre-selected on the parent with its schema, so the fragment fits the parent once added to its
