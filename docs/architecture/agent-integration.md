@@ -827,6 +827,18 @@ Known gap: on a dataset's own document, the `sort` parameter's enum lists column
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
 accepts it. The distance sort is described in the `workflow` skill, not in the parameter.
 
+### Line edition arms (dev-only experiment)
+
+No line-writing operation is annotated: the served surface has no line tool. For the experiment
+comparing how an autonomous agent writes lines (`docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`),
+`POST /api/v1/test-env/line-edition-arm` with `{ arm: 'json' | 'editor' | null }` annotates the
+line operations of the merged document (`api/contract/x-agent-line-edition.ts`) and answers 204
+once the platform document is refreshed. Arm `json`: `read_line`, `delete_line`, `write_line`,
+`patch_line`, `bulk_lines`, with generic request bodies (the merged document's line schema is a
+sample dataset's). Arm `editor`: `read_line`, `delete_line` and the json-layout editor groups
+`create_line` and `edit_line`, whose form schema is the dataset's `readSchema`. `null` restores
+the production document. Pinned by `tests/features/agent-tools/line-edition-arms.unit.spec.ts`.
+
 ### File tools
 
 Five tools move files without their bytes passing through the model or the MCP protocol: an

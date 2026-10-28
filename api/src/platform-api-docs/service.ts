@@ -155,6 +155,12 @@ export const init = async () => {
   interval.unref()
 }
 
+/** a refresh round now, for a change to data-fair's own document (the dev-only line edition arm) */
+export const refreshPlatformDoc = async (): Promise<void> => {
+  if (!cache) throw new Error('platform document cache not initialized')
+  await cache.refresh()
+}
+
 export const stop = async () => {
   if (interval) clearInterval(interval)
   interval = undefined

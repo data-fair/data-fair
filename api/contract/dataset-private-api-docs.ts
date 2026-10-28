@@ -10,6 +10,7 @@ import { visibility } from '../src/misc/utils/visibility.ts'
 import { datasetOperationGrantedBy } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import { operations as xAgent } from './x-agent.ts'
+import { getLineEditionArm, lineEditionAgent, lineEditionBodies } from './x-agent-line-edition.ts'
 import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
@@ -760,6 +761,23 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       convertOwnLineApiPath('/_bulk_lines')
       convertOwnLineApiPath('/revisions')
       convertOwnLineApiPath('/lines/{lineId}/revisions')
+    }
+
+    // dev-only line edition arm (x-agent-line-edition.ts), after the own/ variants were cloned so
+    // they stay without annotation
+    const lineEditionArm = merged ? getLineEditionArm() : undefined
+    if (lineEditionArm) {
+      const annotations = lineEditionAgent(lineEditionArm)
+      const bodies = lineEditionBodies()
+      for (const apiPath of ['/lines', '/lines/{lineId}', '/_bulk_lines']) {
+        for (const operation of Object.values(api.paths[apiPath]) as any[]) {
+          const annotation = annotations[operation?.operationId]
+          if (!annotation) continue
+          operation['x-agent'] = annotation
+          const body = lineEditionArm === 'json' && bodies[operation.operationId]
+          if (body) operation.requestBody = { ...operation.requestBody, content: { 'application/json': { schema: body } } }
+        }
+      }
     }
   }
 

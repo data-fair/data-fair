@@ -617,6 +617,24 @@ router.post('/set-config', (req, res, next) => {
   }
 })
 
+// Dev-only line edition arm of the platform document (api/contract/x-agent-line-edition.ts): answers
+// once the platform document carries it
+router.post('/line-edition-arm', async (req, res, next) => {
+  try {
+    const arm = req.body?.arm
+    if (arm !== 'json' && arm !== 'editor' && arm !== null) {
+      return res.status(400).type('text/plain').send('arm must be "json", "editor" or null')
+    }
+    const { setLineEditionArm } = await import('../../../contract/x-agent-line-edition.ts')
+    const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
+    setLineEditionArm(arm ?? undefined)
+    await refreshPlatformDoc()
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Notification capture via shared buffer module
 router.post('/events/start', (req, res) => {
   res.json({ offset: capturedNotifications.length })
