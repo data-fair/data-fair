@@ -706,8 +706,13 @@ the platform document side (the switch, the two tool sets) is under
   - `npm run simulate:line-edition-report`: reads the evidence and writes
     `simulations/tmp/line-edition-report.md`, one table per case, arm totals and the field diffs
     of each run. A run that did not run, is invalid or was not judged is listed as such and never
-    scored. Cost (`simulations/runner/run-cost.ts`) counts tool calls, failed ones (a tool part in
-    error, or an output carrying an HTTP status of 400 or more), writes and tokens.
+    scored. Cost (`simulations/runner/run-cost.ts`) counts tool calls, failed ones (only a tool part
+    stored in state `output-error`: output text is DATA and is never read for a status), writes and
+    tokens. Writes are also counted per line, so arms compare: a json `bulk_lines` call answers 200
+    with refused lines, so its `nbOk` / `nbErrors` are read from the answer, while any other write
+    (a form save included) is one line, refused when the call failed. The report also shows rows
+    expected/actual per run. A run whose `sim-<run>.rows.json` is missing is `no rows evidence`:
+    listed, never scored.
 - **mcp image.** The editor groups need the openapi-mcp and mcp changes that are not released yet:
   until they are, the stack must run a locally built mcp image (`MCP_IMAGE` in `.env`, the
   `mcp-dev` image). Without it the smoke fails on the editor tools being absent.

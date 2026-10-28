@@ -56,19 +56,29 @@ const cell = (text: unknown) => String(text).replace(/\|/g, '\\|').replace(/\n/g
 const table = (head: string[], rows: unknown[][]) =>
   [head, head.map(() => '---'), ...rows].map(row => `| ${row.map(cell).join(' | ')} |`).join('\n')
 
+const legend = [
+  'How the columns are counted, per arm:',
+  '- tool calls / failed tool calls: every tool call of the run (subagents and code_mode scripts included); failed = the part is stored in error state (an MCP isError result, so an HTTP 4xx/5xx included).',
+  '- write calls: arm json = datafair_write_line, patch_line, bulk_lines and delete_line calls; arm editor = form saveForm calls and delete_line. A bulk call writes many lines, a form save one, so compare lines, not calls.',
+  '- lines written / refused: arm json: write_line, patch_line, delete_line = 1 line each (refused when the call failed); bulk_lines = the `nbOk` / `nbErrors` of its answer (it answers 200 with refused lines, so those count as refused; a failed bulk call without counts is one refused line). Arm editor: one line per saveForm (refused when the call failed).',
+  '- failed writes: write calls that failed, plus json bulk calls that refused at least one line.',
+  '- rows expected/actual: the register\'s final row count against the case\'s expected one; a difference means rows were lost or stray rows exist.',
+  ''
+]
+
 const outcomes = new Map(runs.map(run => [run, outcomeOf(run)]))
 const bases = [...new Set(runs.map(run => run.base))]
-const lines: string[] = ['# Line edition arms: comparison', '']
+const lines: string[] = ['# Line edition arms: comparison', '', ...legend]
 
 for (const base of bases) {
   lines.push(`## ${base}`, '')
   lines.push(table(
-    ['arm', 'repeat', 'valid', 'rows exact', 'fields correct', 'unexpected rows', 'judge satisfied', 'turns', 'tool calls', 'failed writes', 'duration'],
+    ['arm', 'repeat', 'valid', 'rows exact', 'fields correct', 'unexpected rows', 'rows expected/actual', 'judge satisfied', 'turns', 'tool calls', 'failed writes', 'lines written/refused', 'duration'],
     runs.filter(run => run.base === base).map(run => {
       const o = outcomes.get(run)!
       if (o.state !== 'scored') {
         const valid = o.state === 'invalid' ? `no (${o.why})` : o.state === 'not run' ? 'not run' : 'yes'
-        return [run.arm, run.repeat, valid, '-', '-', '-', o.state === 'not judged' || o.state === 'no rows evidence' ? o.state : '-', '-', '-', '-', '-']
+        return [run.arm, run.repeat, valid, '-', '-', '-', '-', o.state === 'not judged' || o.state === 'no rows evidence' ? o.state : '-', '-', '-', '-', '-', '-']
       }
       const c = o.check
       return [
@@ -76,8 +86,9 @@ for (const base of bases) {
         `${c.rowsExact}/${c.rowsExpected}`,
         `${c.fieldsCorrect}/${c.fieldsExpected}`,
         c.unexpectedPresent.length,
+        `${c.totalRows.expected}/${c.totalRows.actual}`,
         o.satisfied ? 'yes' : 'no',
-        o.turns, o.cost.toolCalls, `${o.cost.failedWriteCalls}/${o.cost.writeCalls}`, seconds(o.durationMs)
+        o.turns, o.cost.toolCalls, `${o.cost.failedWriteCalls}/${o.cost.writeCalls}`, `${o.cost.linesWritten}/${o.cost.linesRefused}`, seconds(o.durationMs)
       ]
     })
   ), '')
@@ -87,7 +98,7 @@ for (const base of bases) {
 lines.push('## Arm totals', '', 'Scored runs only: a run that did not run, is invalid, was not judged or has no rows evidence counts in "runs" and nowhere else.', '')
 const arms = [...new Set(runs.map(run => run.arm))]
 lines.push(table(
-  ['arm', 'runs', 'scored', 'satisfied', 'rows exact', 'fields correct', 'unexpected rows', 'turns', 'tool calls', 'failed tool calls', 'write calls', 'failed writes', 'duration', 'tokens in/out'],
+  ['arm', 'runs', 'scored', 'satisfied', 'rows exact', 'fields correct', 'unexpected rows', 'turns', 'tool calls', 'failed tool calls', 'write calls', 'failed writes', 'lines written', 'lines refused', 'rows expected', 'rows actual', 'duration', 'tokens in/out'],
   arms.map(arm => {
     const armRuns = runs.filter(run => run.arm === arm)
     const scored = armRuns.map(run => outcomes.get(run)!).filter((o): o is Extract<Outcome, { state: 'scored' }> => o.state === 'scored')
@@ -101,6 +112,8 @@ lines.push(table(
       sum(checks.map(c => c.unexpectedPresent.length)),
       sum(scored.map(o => o.turns)), sum(scored.map(o => o.cost.toolCalls)), sum(scored.map(o => o.cost.failedToolCalls)),
       sum(scored.map(o => o.cost.writeCalls)), sum(scored.map(o => o.cost.failedWriteCalls)),
+      sum(scored.map(o => o.cost.linesWritten)), sum(scored.map(o => o.cost.linesRefused)),
+      sum(checks.map(c => c.totalRows.expected)), sum(checks.map(c => c.totalRows.actual)),
       seconds(sum(scored.map(o => o.durationMs))),
       tokens.length ? `${sum(tokens.map(t => t.input))}/${sum(tokens.map(t => t.output))}` : '-'
     ]
@@ -113,6 +126,8 @@ for (const run of runs) {
   if (o.state !== 'scored') { lines.push(`- ${run.name}: ${o.state}${o.state === 'invalid' ? ` (${o.why})` : ''}`); continue }
   lines.push(`- ${run.name}:${o.check.diffs.length ? '' : ' no diff'}`)
   for (const d of o.check.diffs) lines.push(`  - ${JSON.stringify(d.match)} ${d.field}: expected ${JSON.stringify(d.expected)}, got ${JSON.stringify(d.actual)}`)
+  const { expected, actual } = o.check.totalRows
+  if (expected !== actual) lines.push(`  - row count: expected ${expected}, got ${actual}`)
   for (const m of o.check.unexpectedPresent) lines.push(`  - unexpected row present: ${JSON.stringify(m)}`)
 }
 

@@ -6,6 +6,9 @@
  * subject autonomous-agent:sim-mcp, which pins the agent id. The public creation route always
  * generates the id, so the agent is seeded through the agents test-env route (development mode only),
  * the same contract the agents repo's own simulations use.
+ *
+ * A second identity, sim-lines (NHI test_org1_lines_nhi, LINES_AGENT), belongs to the line edition
+ * experiment: it is allowed to write datasets, which sim-mcp is not.
  */
 import type { ParsedExport, SimulationCase } from '@data-fair/lib-agents-sim'
 import { ROOT, OWNER, OWNER_USER } from './settings.ts'
@@ -65,13 +68,13 @@ export async function seedAutonomousAgent (agent: SimulatedAgentConfig = {}, ide
   })
 }
 
+/** A tool name, or a test of the bare tool name. */
+export type AbsentTool = string | ((bareName: string) => boolean)
+
 /**
  * The agents service keys catalog tools by their bare name; a `<server>__` prefix is accepted too, so
  * a change of naming there does not silently invalidate every run.
  */
-/** A tool name, or a test of the bare tool name. */
-export type AbsentTool = string | ((bareName: string) => boolean)
-
 export const toolMatches = (toolName: string, name: string) => toolName === name || toolName.endsWith(`__${name}`)
 
 /**
