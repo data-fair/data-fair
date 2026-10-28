@@ -671,6 +671,49 @@ once that branch is merged in agents. Run one case through `/agents-sim` as the 
 e.g. `SIM_CASES=inventaire-du-compte`; `SIM_CASES` is shared by both spec files, each
 taking the cases it owns.
 
+#### Line edition arms (experiment)
+
+A one-off experiment, off by default, comparing two ways an autonomous agent writes dataset
+lines through the mcp server: plain JSON tools (arm `json`) against json-layout editor groups
+(arm `editor`). The design is `docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`;
+the platform document side (the switch, the two tool sets) is under
+[Line edition arms (dev-only experiment)](#line-edition-arms-dev-only-experiment) in section 11.
+
+- **Switch.** `POST /api/v1/test-env/line-edition-arm` with `{ arm }`; with it off (`null`) the
+  platform document is byte-identical to the production one. The spec flips it once per arm and
+  sets it back to `null` when it ends.
+- **Tool sets.** Reading tools are the same in both arms. Arm `json` adds `datafair_write_line`,
+  `datafair_patch_line`, `datafair_bulk_lines`; arm `editor` adds the `create_line` and
+  `edit_line` groups (`datafair_create_line_*`, `datafair_edit_line_*`, ending in `saveForm`).
+  `datafair_delete_line` is in both, and the cost report counts it as a write in both. The runner
+  waits until the agent holds exactly its arm's tools before the first message.
+- **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_org1_lines_nhi`, beside the existing
+  `sim-mcp` agent, which is untouched. Each run writes into a register of its own, seeded from
+  `simulations/runner/line-edition-fixtures.ts`; the communes referential stays private to
+  `test_org1`, so the editor's master-data suggestions only work if its fetch carries the
+  caller's credentials.
+- **Cases and measure.** `simulations/cases/line-edition.ts`: `saisie-courriel`, `import-tableur`,
+  `corrections`, each run per arm and repeat (`SIM_ARMS`, default `json,editor`; `SIM_REPEAT`,
+  default 2), named `<case>--<arm>--r<n>`. Beside the judge, the final lines are compared field by
+  field with the case's expected state (`simulations/runner/row-check.ts`, evidence
+  `sim-<run>.rows.json`): the data written is what is measured. A wrong row is a measure, not a
+  failure; only an invalid run fails.
+- **Commands.**
+  - `npm run simulate:line-edition-smoke`: model-free, spends no quota; calls both arms' tools on
+    the real mcp server. Run it first.
+  - `SIM_CASES=saisie-courriel,import-tableur,corrections npm run simulate`: the paid runs. A bare
+    `npm run simulate` runs none of them; judge the transcripts with `/agents-sim` as for any case.
+  - `npm run simulate:line-edition-report`: reads the evidence and writes
+    `simulations/tmp/line-edition-report.md`, one table per case, arm totals and the field diffs
+    of each run. A run that did not run, is invalid or was not judged is listed as such and never
+    scored. Cost (`simulations/runner/run-cost.ts`) counts tool calls, failed ones (a tool part in
+    error, or an output carrying an HTTP status of 400 or more), writes and tokens.
+- **mcp image.** The editor groups need the openapi-mcp and mcp changes that are not released yet:
+  until they are, the stack must run a locally built mcp image (`MCP_IMAGE` in `.env`, the
+  `mcp-dev` image). Without it the smoke fails on the editor tools being absent.
+- **Scope.** An experiment, not a feature: nothing here ships in the production document, and the
+  switch, the fixtures and these cases go away once the comparison is made.
+
 ### Writing a case
 
 A case is a page, a person and something they want, with no expected result. Two
