@@ -45,7 +45,7 @@
       "role": "contrib"
     }, {
       "id": "test_org1_lines_nhi",
-      "role": "contrib"
+      "role": "admin"
     }, {
       "id": "test_org1_scope_nhi",
       "role": "admin"
