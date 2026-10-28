@@ -17,6 +17,7 @@
     "dev-fixtures": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning dev/fixtures.ts",
     "simulate": "playwright test -c playwright.sim.config.ts --project=simulate",
     "simulate:report": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning simulations/report.ts",
+    "simulate:line-edition-smoke": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning simulations/line-edition-smoke.ts",
     "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-benchmark-prof": "MODE=server_worker npm -w api run dev-benchmark-prof",
     "dev-zellij": "df-dev zellij",
