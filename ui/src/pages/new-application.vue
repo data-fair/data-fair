@@ -246,7 +246,7 @@
           />
 
           <df-ui-notif-alert
-            :notif="createError ?? undefined"
+            :notif="createAction.notif.value"
             class="mt-4"
             :alert-props="{ maxWidth: 500, variant: 'outlined' }"
           />
@@ -264,7 +264,7 @@
             color="primary"
             variant="flat"
             :disabled="(step === 'selection' && !(creationType === 'copy' ? copyApp : selectedBaseApp)) || (step === 'info' && !appTitle)"
-            :loading="importing"
+            :loading="createAction.loading.value"
             @click="goToNext"
           >
             {{ step === 'info' ? t('save') : t('continue') }}
@@ -288,7 +288,6 @@ import { APPLICATION_WIZARD_GUIDANCE, APPLICATION_WIZARD_GUIDANCE_KEY } from '~/
 import { buildApplicationWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
-import { getFullNotif, type UiNotif } from '@data-fair/lib-vue/ui-notif'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -334,7 +333,7 @@ function goToPrev () {
 
 function goToNext () {
   if (step.value === 'selection') step.value = 'info'
-  else if (step.value === 'info') createApplication()
+  else if (step.value === 'info') createAction.execute()
 }
 
 // ---- Owner ----
@@ -459,8 +458,6 @@ function selectBaseApp (baseApp: BaseAppWithContext) {
 
 // ---- Info ----
 const appTitle = ref('')
-const importing = ref(false)
-const createError = ref<UiNotif | null>(null)
 
 // ---- Agent tools ----
 // What the wizard currently shows, so the assistant reads it from its context
@@ -500,43 +497,34 @@ const createApplicationContext = computed(() => {
 })
 
 // ---- Create ----
-async function createApplication () {
-  importing.value = true
-  createError.value = null
-  try {
-    const body: Record<string, any> = {
-      title: appTitle.value
-    }
-    if (owner.value) body.owner = owner.value
-    if (partOf.value) body.partOf = partOf.value
-
-    if (creationType.value === 'copy' && copyApp.value) {
-      body.url = copyApp.value.url
-      body.initFrom = { application: copyApp.value.id }
-    } else if (selectedBaseApp.value) {
-      body.url = selectedBaseApp.value.url
-      body.configurationDraft = {}
-      if (dataset.value) {
-        body.configurationDraft.datasets = [{
-          href: dataset.value.href,
-          title: dataset.value.title,
-          id: dataset.value.id,
-          schema: dataset.value.schema
-        }]
-      }
-    }
-
-    const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
-    emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
-    router.push(`/application/${application.id}`)
-  } catch (error: any) {
-    // a quota refusal is a warning, the other errors render like on the dataset creation page
-    createError.value = error.status === 429
-      ? getFullNotif({ msg: t('exceedLimitNbApplications'), type: 'warning' })
-      : getFullNotif({ msg: t('creationError'), error })
-    importing.value = false
+const createAction = useAsyncAction(async () => {
+  const body: Record<string, any> = {
+    title: appTitle.value
   }
-}
+  if (owner.value) body.owner = owner.value
+  if (partOf.value) body.partOf = partOf.value
+
+  if (creationType.value === 'copy' && copyApp.value) {
+    body.url = copyApp.value.url
+    body.initFrom = { application: copyApp.value.id }
+  } else if (selectedBaseApp.value) {
+    body.url = selectedBaseApp.value.url
+    body.configurationDraft = {}
+    if (dataset.value) {
+      body.configurationDraft.datasets = [{
+        href: dataset.value.href,
+        title: dataset.value.title,
+        id: dataset.value.id,
+        schema: dataset.value.schema
+      }]
+    }
+  }
+
+  const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+  emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
+  // awaited so the button stays loading until we leave, no double submit
+  await router.push(`/application/${application.id}`)
+}, { catch: 'all', error: t('creationError') })
 </script>
 
 <i18n lang="yaml">
@@ -558,7 +546,6 @@ fr:
   back: Retour
   continue: Continuer
   creationError: Erreur pendant la création de l'application
-  exceedLimitNbApplications: Vous avez atteint le nombre maximal d'applications autorisées par votre abonnement.
   copy: copie
   type_copy: Copie d'application
   type_desc_copy: Copiez une configuration complète depuis une application existante.
@@ -586,7 +573,6 @@ en:
   back: Back
   continue: Continue
   creationError: Error while creating the application
-  exceedLimitNbApplications: You have reached the maximum number of applications allowed by your subscription.
   copy: copy
   type_copy: Application copy
   type_desc_copy: Copy a complete configuration from an existing application.
