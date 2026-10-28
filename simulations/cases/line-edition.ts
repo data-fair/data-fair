@@ -49,17 +49,17 @@ export const lineEditionCases: LineEditionCase[] = [
   // format than the register's; the type of venue is missing, and only the person knows it.
   {
     name: 'saisie-courriel',
-    persona: 'Tu es bénévole au bureau d\'une fédération d\'associations sportives et tu tiens à jour, avec l\'agent, la liste des lieux où vos associations pratiquent. Tu n\'es pas informaticien : tu ne parles jamais de colonne, de champ, de ligne ni d\'API, et tu ne vérifies rien toi-même à l\'écran, tu fais confiance à ce qu\'on te répond. Tu sais que le Gymnase du Vigneau est un gymnase, mais tu ne le dis que si on te demande de quel type de lieu il s\'agit. Si on te demande l\'année du 1er mars, c\'est 2026 : le courriel date de février et tu as oublié de le traiter. Si on te demande de quelle commune il s\'agit, c\'est Saint-Herblain, à côté de Nantes.',
-    goal: 'Tu veux que le lieu décrit dans ce courriel soit ajouté à la liste des lieux d\'activité des associations. Dans ton premier message, tu demandes de l\'enregistrer et tu colles le courriel tel quel :\n\n« De : Karim Benali <contact@herblain-multisports.fr>\nEnvoyé : jeudi 12 février 2026\nObjet : Nouveau lieu pour nos activités\n\nBonjour,\nJe vous écris au nom de l\'association Herblinoise Multisports (SIRET 79845612300017). À partir du 1er mars, nous aurons nos créneaux au Gymnase du Vigneau, 12 rue du Vigneau à St Herblain. On y fait du basket, du judo et un peu de yoga le samedi. Le gymnase accueille jusqu\'à 120 personnes, enfants comme adultes, et il est accessible aux personnes en fauteuil roulant. La cotisation annuelle est de 160 €. La convention avec la mairie court jusqu\'au 30 juin 2027, le lieu ne nous sera plus ouvert après. Pour nous joindre : 02.40.12.34.56.\nBien cordialement,\nKarim Benali »\n\nTu réponds aux questions de l\'agent, et tu attends qu\'il te confirme que le lieu est bien enregistré avant de t\'arrêter.',
+    persona: 'Tu es bénévole au bureau d\'une fédération d\'associations sportives et tu tiens à jour, avec l\'agent, la liste des lieux où vos associations pratiquent. Tu n\'es pas informaticien : tu ne parles jamais de colonne, de champ, de ligne ni d\'API, et tu ne vérifies rien toi-même à l\'écran, tu fais confiance à ce qu\'on te répond. Tu sais que le Gymnase du Vigneau est un gymnase, mais tu ne le dis que si on te demande de quel type de lieu il s\'agit. Si on te demande l\'année du 1er mars, c\'est 2026 : le courriel date de février et tu as oublié de le traiter. Si on te demande de quelle commune il s\'agit, c\'est Saint-Herblain, à côté de Nantes. Si on te demande une date de fermeture, c\'est le 30 juin 2027, la date où le gymnase ferme définitivement.',
+    goal: 'Tu veux que le lieu décrit dans ce courriel soit ajouté à la liste des lieux d\'activité des associations. Dans ton premier message, tu demandes de l\'enregistrer et tu colles le courriel tel quel :\n\n« De : Karim Benali <contact@herblain-multisports.fr>\nEnvoyé : jeudi 12 février 2026\nObjet : Nouveau lieu pour nos activités\n\nBonjour,\nJe vous écris au nom de notre association, « Herblinoise Multisports » (SIRET 79845612300017). À partir du 1er mars, nous aurons nos créneaux au Gymnase du Vigneau, 12 rue du Vigneau à St Herblain. On y fait du basket, du judo et un peu de yoga le samedi. Le gymnase accueille jusqu\'à 120 personnes, enfants comme adultes, et il est accessible aux personnes en fauteuil roulant. La cotisation annuelle est de 160 €. Le gymnase fermera définitivement le 30 juin 2027. Pour nous joindre : 02.40.12.34.56.\nBien cordialement,\nKarim Benali »\n\nTu réponds aux questions de l\'agent, et tu attends qu\'il te confirme que le lieu est bien enregistré avant de t\'arrêter.',
     maxTurns: 6,
     expected: {
       rows: [{
         match: { nom: 'Gymnase du Vigneau' },
+        // every column but adresse: "12 rue du Vigneau" and "12 rue du Vigneau, Saint-Herblain" are both right
         fields: {
-          association: 'Association Herblinoise Multisports',
+          association: 'Herblinoise Multisports',
           type_lieu: 'gymnase',
           ...saintHerblain,
-          adresse: '12 rue du Vigneau',
           telephone: '02 40 12 34 56',
           email: 'contact@herblain-multisports.fr',
           siret: '79845612300017',

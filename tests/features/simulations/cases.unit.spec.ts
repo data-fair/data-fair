@@ -78,9 +78,25 @@ test.describe('case selection across the two simulation specs', () => {
     for (const name of agentCases.map(c => c.name)) assert.match(name, /^[a-z0-9-]+$/)
   })
 
-  test('the line edition runs are known to the report, with names of their own', async () => {
-    const { allCases } = await import('../../../simulations/cases/select.ts')
-    assert.ok(allCases.some(c => c.name === 'saisie-courriel--editor--r2'))
-    assert.equal(new Set(allCases.map(c => c.name)).size, allCases.length)
+  test('with no name, the set is the in-page and autonomous-agent cases, without the line edition runs', async () => {
+    const { resolveCases, allCases } = await import('../../../simulations/cases/select.ts')
+    const { agentCases } = await import('../../../simulations/cases/autonomous-agents.ts')
+    assert.deepEqual(resolveCases([]).map(c => c.name), [...cases, ...agentCases].map(c => c.name))
+    assert.deepEqual(allCases.map(c => c.name), [...cases, ...agentCases].map(c => c.name))
+  })
+
+  test('a line edition base name selects its runs, a run name that run only', async () => {
+    const { resolveCases, selectOwnCases } = await import('../../../simulations/cases/select.ts')
+    const { lineEditionRuns } = await import('../../../simulations/cases/line-edition.ts')
+    const runs = lineEditionRuns({})
+    assert.deepEqual(resolveCases(['saisie-courriel']).map(c => c.name),
+      ['saisie-courriel--json--r1', 'saisie-courriel--json--r2', 'saisie-courriel--editor--r1', 'saisie-courriel--editor--r2'])
+    assert.deepEqual(resolveCases(['corrections--editor--r2']).map(c => c.name), ['corrections--editor--r2'])
+    assert.deepEqual(selectOwnCases(runs, ['import-tableur', 'inventaire-du-compte']).map(c => c.name),
+      ['import-tableur--json--r1', 'import-tableur--json--r2', 'import-tableur--editor--r1', 'import-tableur--editor--r2'])
+    assert.deepEqual(selectOwnCases(cases, ['saisie-courriel']), [])
+    assert.throws(() => resolveCases(['saisie-courriel--form--r1']), /unknown simulation case/)
+    const names = [...resolveCases([]), ...runs].map(c => c.name)
+    assert.equal(new Set(names).size, names.length)
   })
 })
