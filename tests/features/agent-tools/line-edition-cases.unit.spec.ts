@@ -69,3 +69,8 @@ test('the runs follow SIM_ARMS and SIM_REPEAT, both arms twice by default', () =
   assert.throws(() => lineEditionRuns({ SIM_ARMS: 'json,form' }), /SIM_ARMS/)
   assert.throws(() => lineEditionRuns({ SIM_REPEAT: '0' }), /SIM_REPEAT/)
 })
+
+test('the email of saisie-courriel does not give the type of venue, which the agent must ask', () => {
+  const { goal } = lineEditionCases.find(c => c.name === 'saisie-courriel')!
+  assert.doesNotMatch(goal, /gymnase|salle|piscine|stade|terrain|plein air|polyvalent|dojo/i)
+})
