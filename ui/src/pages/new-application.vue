@@ -530,7 +530,7 @@ async function createApplication () {
     emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
     router.push(`/application/${application.id}`)
   } catch (error: any) {
-    // same rendering as the dataset creation page (useAsyncAction + df-ui-notif-alert)
+    // a quota refusal is a warning, the other errors render like on the dataset creation page
     createError.value = error.status === 429
       ? getFullNotif({ msg: t('exceedLimitNbApplications'), type: 'warning' })
       : getFullNotif({ msg: t('creationError'), error })
