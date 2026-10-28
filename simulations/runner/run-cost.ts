@@ -4,6 +4,7 @@
  * (they differ per arm of the line edition experiment).
  */
 import type { ParsedExport } from '@data-fair/lib-agents-sim'
+import { bareToolName, type ToolPart } from './autonomous-agent.ts'
 
 export type RunCost = {
   toolCalls: number,
@@ -13,28 +14,14 @@ export type RunCost = {
   tokens?: { input: number, output: number }
 }
 
-type Part = { type?: string, toolName?: string, state?: string, output?: unknown, __ref?: string, data?: { parts?: Part[] } }
+type Part = ToolPart & { state?: string }
 
-/** A tool name without the `<server>__` prefix the agents service may give it. */
-const bareToolName = (toolName: string) => {
-  const sep = toolName.lastIndexOf('__')
-  return sep === -1 ? toolName : toolName.slice(sep + 2)
-}
-
-/** An HTTP status of 400 or more, in an output object or announced in an output text. */
-const httpStatusOf = (output: unknown): number | undefined => {
-  if (output && typeof output === 'object') {
-    const o = output as Record<string, unknown>
-    const status = Number(o.status ?? o.statusCode)
-    return Number.isInteger(status) ? status : undefined
-  }
-  if (typeof output === 'string') {
-    const match = /\b(?:HTTP|status(?:Code)?)\W{0,3}([1-5]\d\d)\b/i.exec(output)
-    return match ? Number(match[1]) : undefined
-  }
-}
-
-const isFailed = (part: Part) => part.state === 'output-error' || (httpStatusOf(part.output) ?? 0) >= 400
+/**
+ * A tool call failed when its part is stored in error state: the agents service turns an MCP tool's
+ * `isError` result (an HTTP 4xx/5xx of the data-fair API included) into `output-error`. The output
+ * of a successful call is DATA wrapped in a `<tool-result>` envelope, so its text is never read.
+ */
+const isFailed = (part: Part) => part.state === 'output-error'
 
 /** Every tool part of an export, a lifted part read back from its blob, a code_mode script's calls included. */
 function toolParts (exported: ParsedExport): Part[] {
@@ -46,7 +33,7 @@ function toolParts (exported: ParsedExport): Part[] {
   return exported.messages.flatMap(message => (message.parts as Part[]).flatMap(collect))
 }
 
-/** `isWriteTool` is given the bare tool name. A tool part in error state, or whose output carries an HTTP status >= 400, failed. */
+/** `isWriteTool` is given the bare tool name. A tool part in error state failed. */
 export function costOf (parsed: ParsedExport[], isWriteTool: (name: string) => boolean): RunCost {
   const cost: RunCost = { toolCalls: 0, failedToolCalls: 0, writeCalls: 0, failedWriteCalls: 0 }
   for (const exported of parsed) {

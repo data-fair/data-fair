@@ -17,8 +17,8 @@ import { costOf, type RunCost } from './runner/run-cost.ts'
 import type { RowCheck } from './runner/row-check.ts'
 
 type Outcome =
-  | { state: 'not run' | 'not judged' | 'invalid', why?: string }
-  | { state: 'scored', satisfied: boolean, turns: number, durationMs: number, cost: RunCost, check?: RowCheck }
+  | { state: 'not run' | 'not judged' | 'no rows evidence' | 'invalid', why?: string }
+  | { state: 'scored', satisfied: boolean, turns: number, durationMs: number, cost: RunCost, check: RowCheck }
 
 const names = process.argv.slice(2)
 const runs = selectOwnCases(lineEditionRuns(), names.length ? names : undefined)
@@ -44,8 +44,11 @@ function outcomeOf (run: LineEditionRun): Outcome {
   const verdict = readJson(`sim-${run.name}.verdict.json`)
   // a verdict is written by a model: the same checks as the other reports, a stringified boolean is not a verdict
   if (!verdict || verdict.case !== run.name || typeof verdict.satisfied !== 'boolean') return { state: 'not judged' }
+  // a run without its rows is not scored, so that every total covers the same runs
+  const check = readJson(`sim-${run.name}.rows.json`)?.check
+  if (!check) return { state: 'no rows evidence' }
   const cost = costOf(exportsOf(run), isWriteTool(run))
-  return { state: 'scored', satisfied: verdict.satisfied, turns: sidecar.turns, durationMs: sidecar.durationMs, cost, check: readJson(`sim-${run.name}.rows.json`)?.check }
+  return { state: 'scored', satisfied: verdict.satisfied, turns: Number(sidecar.turns) || 0, durationMs: Number(sidecar.durationMs) || 0, cost, check }
 }
 
 const seconds = (ms: number) => `${Math.round(ms / 1000)} s`
@@ -65,14 +68,14 @@ for (const base of bases) {
       const o = outcomes.get(run)!
       if (o.state !== 'scored') {
         const valid = o.state === 'invalid' ? `no (${o.why})` : o.state === 'not run' ? 'not run' : 'yes'
-        return [run.arm, run.repeat, valid, '-', '-', '-', o.state === 'not judged' ? 'not judged' : '-', '-', '-', '-', '-']
+        return [run.arm, run.repeat, valid, '-', '-', '-', o.state === 'not judged' || o.state === 'no rows evidence' ? o.state : '-', '-', '-', '-', '-']
       }
       const c = o.check
       return [
         run.arm, run.repeat, 'yes',
-        c ? `${c.rowsExact}/${c.rowsExpected}` : 'no rows evidence',
-        c ? `${c.fieldsCorrect}/${c.fieldsExpected}` : '-',
-        c ? c.unexpectedPresent.length : '-',
+        `${c.rowsExact}/${c.rowsExpected}`,
+        `${c.fieldsCorrect}/${c.fieldsExpected}`,
+        c.unexpectedPresent.length,
         o.satisfied ? 'yes' : 'no',
         o.turns, o.cost.toolCalls, `${o.cost.failedWriteCalls}/${o.cost.writeCalls}`, seconds(o.durationMs)
       ]
@@ -81,14 +84,14 @@ for (const base of bases) {
 }
 
 // totals over the scored runs only
-lines.push('## Arm totals', '', 'Scored runs only: a run that did not run, is invalid or was not judged counts in "runs" and nowhere else.', '')
+lines.push('## Arm totals', '', 'Scored runs only: a run that did not run, is invalid, was not judged or has no rows evidence counts in "runs" and nowhere else.', '')
 const arms = [...new Set(runs.map(run => run.arm))]
 lines.push(table(
   ['arm', 'runs', 'scored', 'satisfied', 'rows exact', 'fields correct', 'unexpected rows', 'turns', 'tool calls', 'failed tool calls', 'write calls', 'failed writes', 'duration', 'tokens in/out'],
   arms.map(arm => {
     const armRuns = runs.filter(run => run.arm === arm)
     const scored = armRuns.map(run => outcomes.get(run)!).filter((o): o is Extract<Outcome, { state: 'scored' }> => o.state === 'scored')
-    const checks = scored.flatMap(o => o.check ? [o.check] : [])
+    const checks = scored.map(o => o.check)
     const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
     const tokens = scored.flatMap(o => o.cost.tokens ? [o.cost.tokens] : [])
     return [
@@ -108,8 +111,7 @@ lines.push('## Field diffs', '')
 for (const run of runs) {
   const o = outcomes.get(run)!
   if (o.state !== 'scored') { lines.push(`- ${run.name}: ${o.state}${o.state === 'invalid' ? ` (${o.why})` : ''}`); continue }
-  if (!o.check) { lines.push(`- ${run.name}: no rows evidence`); continue }
-  lines.push(`- ${run.name}: ${o.check.diffs.length ? '' : 'no diff'}`)
+  lines.push(`- ${run.name}:${o.check.diffs.length ? '' : ' no diff'}`)
   for (const d of o.check.diffs) lines.push(`  - ${JSON.stringify(d.match)} ${d.field}: expected ${JSON.stringify(d.expected)}, got ${JSON.stringify(d.actual)}`)
   for (const m of o.check.unexpectedPresent) lines.push(`  - unexpected row present: ${JSON.stringify(m)}`)
 }

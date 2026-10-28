@@ -111,10 +111,10 @@ export async function waitForAgentTools (expected: string[], absent: AbsentTool[
   }
 }
 
-type ToolPart = { type?: string, toolName?: string, input?: unknown, __ref?: string, data?: { parts?: ToolPart[] } }
+export type ToolPart = { type?: string, toolName?: string, state?: string, input?: unknown, __ref?: string, data?: { parts?: ToolPart[] } }
 
 /** A tool name without the `<server>__` prefix the agents service may give it. */
-const bareToolName = (toolName: string) => {
+export const bareToolName = (toolName: string) => {
   const sep = toolName.lastIndexOf('__')
   return sep === -1 ? toolName : toolName.slice(sep + 2)
 }
