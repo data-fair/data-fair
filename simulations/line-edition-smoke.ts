@@ -52,7 +52,13 @@ async function useArm (arm: Arm): Promise<Client> {
   const deadline = Date.now() + 60_000
   for (;;) {
     const client = await connect()
-    const names = (await client.listTools()).tools.map(t => t.name)
+    let names: string[]
+    try {
+      names = (await client.listTools()).tools.map(t => t.name)
+    } catch (err) {
+      await client.close()
+      throw err
+    }
     if (names.includes(expected) && !names.includes(absent)) return client
     await client.close()
     if (Date.now() > deadline) throw new Error(`arm ${arm}: the mcp server still serves ${names.filter(n => n.includes('line')).join(', ')}`)
@@ -166,9 +172,10 @@ async function armEditor () {
       }
       const res = await create('saveForm')
       const written = (await lines()).has('Smoke éditeur invalide')
-      const pass = res.isError && !written
       const named = /telephone|Téléphone/i.test(res.text)
-      report('editor create saveForm on an invalid form: refused', pass,
+      // refused and not written is the requirement; a refusal that does not name the field is recorded, not passed
+      const pass = !res.isError || written ? false : named ? true : 'info'
+      report(`editor create saveForm on an invalid form: refused${named ? ', field named' : ' (field not named)'}`, pass,
         `isError=${res.isError} written=${written} field named in the refusal=${named} answer: ${short(res.text, 400)}\n` +
         `setFieldValue telephone: ${short(phone?.text ?? '', 300)}`)
       await create('reloadForm')
@@ -182,16 +189,16 @@ async function armEditor () {
       const data = await edit('getData')
       const res = await edit('saveForm')
       const after = (await lines()).get('Piscine Petite Amazonie')
-      const kept = ['nom', 'association', 'type_lieu', 'commune', 'adresse', 'telephone', 'email', 'siret', 'publics', 'capacite', 'accessible_pmr', 'date_ouverture', 'tarif_annuel', '_code_insee.departement', '_code_insee.population']
+      const changed = ['nom', 'association', 'type_lieu', 'commune', 'adresse', 'telephone', 'email', 'siret', 'publics', 'capacite', 'accessible_pmr', 'date_ouverture', 'tarif_annuel', '_code_insee.departement', '_code_insee.population']
         .filter(key => JSON.stringify(before?.[key]) !== JSON.stringify(after?.[key]))
-      const pass = !res.isError && JSON.stringify(after?.activites) === JSON.stringify(['natation', 'yoga', 'handisport']) && kept.length === 0
+      const pass = !res.isError && JSON.stringify(after?.activites) === JSON.stringify(['natation', 'yoga', 'handisport']) && changed.length === 0
       report('editor edit saveForm: handisport appended, nothing wiped', pass,
         `editArray isError=${add.isError}: ${short(add.text, 200)}\n` +
         (set ? `setFieldValue isError=${set.isError}: ${short(set.text, 200)}\n` : '') +
         `data sent: ${short(data.text, 700)}\n` +
         `save isError=${res.isError} answer: ${short(res.text, 400)}\n` +
-        `activites ${JSON.stringify(before?.activites)} -> ${JSON.stringify(after?.activites)}; columns changed besides activites: ${kept.join(', ') || 'none'}` +
-        (kept.length ? `\nbefore: ${JSON.stringify(before)}\nafter: ${JSON.stringify(after)}` : ''))
+        `activites ${JSON.stringify(before?.activites)} -> ${JSON.stringify(after?.activites)}; columns changed besides activites: ${changed.join(', ') || 'none'}` +
+        (changed.length ? `\nbefore: ${JSON.stringify(before)}\nafter: ${JSON.stringify(after)}` : ''))
     })
   } finally {
     await client.close()
