@@ -22,10 +22,21 @@ export const REGISTER_TITLE = 'Lieux d\'activité des associations'
 
 /** One register per run, so a run never reads the lines another one wrote. */
 export function registerId (runName: string): string {
-  const slug = runName.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const slug = runName.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  if (!slug) throw new Error(`run name "${runName}" gives an empty register id`)
   return `sim-lieux-${slug}`
 }
+
+/**
+ * The referential's bulk search, and the prefix data-fair gives the columns the register's extension
+ * on it adds: derived from the action id (api/src/datasets/utils/extensions.ts), `_code_insee` for
+ * `masterData_bulkSearch_code-insee`. The seeding checks the register really has these columns.
+ */
+const BULK_SEARCH_ID = 'code-insee'
+const EXTENSION_ACTION = `masterData_bulkSearch_${BULK_SEARCH_ID}`
+const EXTENSION_PREFIX = '_code_insee'
+const EXTENSION_SELECT = ['departement', 'population']
 
 const codeCommuneConcept = 'http://rdf.insee.fr/def/geo#codeCommune'
 
@@ -67,7 +78,7 @@ async function seedReferential (ax: any) {
     ],
     masterData: {
       bulkSearchs: [{
-        id: 'code-insee',
+        id: BULK_SEARCH_ID,
         title: 'Informations par code INSEE',
         input: [{ type: 'equals', property: codeInsee }]
       }],
@@ -167,9 +178,12 @@ function registerSchema (master: Awaited<ReturnType<typeof registerReferential>>
   ]
 }
 
-/** The register's own columns, without the extension's. */
+/** The register's own columns, the ones a line write sets. */
 export const REGISTER_COLUMNS: string[] = ['nom', 'association', 'type_lieu', 'commune', 'adresse', 'telephone', 'email', 'siret',
   'activites', 'publics', 'capacite', 'accessible_pmr', 'date_ouverture', 'date_fermeture', 'tarif_annuel']
+
+/** The columns the extension fills from the referential, read-only for a line write. */
+export const EXTENSION_COLUMNS: string[] = EXTENSION_SELECT.map(key => `${EXTENSION_PREFIX}.${key}`)
 
 /**
  * The lines the register already has, all valid. The cases lean on three of them: `Gymnase de la
@@ -290,7 +304,7 @@ export async function seedLineEditionDatasets (id: string): Promise<void> {
   if (!await waitForWorkerIdle(120_000)) throw new Error(`${REFERENTIAL_ID} was still being processed after 120s`)
   const master = await registerReferential(ax, admin)
 
-  await ax.put(`/api/v1/datasets/${id}`, {
+  const register = (await ax.put(`/api/v1/datasets/${id}`, {
     isRest: true,
     title: REGISTER_TITLE,
     description: 'Lieux où les associations sportives de l\'agglomération exercent leurs activités.',
@@ -301,10 +315,12 @@ export async function seedLineEditionDatasets (id: string): Promise<void> {
       active: true,
       type: 'remoteService',
       remoteService: master.remoteService.id,
-      action: 'masterData_bulkSearch_code-insee',
-      select: ['departement', 'population']
+      action: EXTENSION_ACTION,
+      select: EXTENSION_SELECT
     }]
-  })
+  })).data
+  const missing = EXTENSION_COLUMNS.filter(key => !register.schema.some((p: any) => p.key === key))
+  if (missing.length) throw new Error(`the extension of ${id} did not add ${missing.join(', ')}: EXTENSION_PREFIX no longer matches data-fair's`)
   await bulkLines(ax, id, existingLines)
 
   if (!await waitForWorkerIdle(120_000)) throw new Error(`${id} was still being processed after 120s; the agent would write into an unindexed register`)
