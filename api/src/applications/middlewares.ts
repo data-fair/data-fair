@@ -9,6 +9,7 @@ import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/public
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
+import * as limits from '../limits/service.ts'
 import * as service from './service.ts'
 import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
@@ -116,6 +117,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (!alreadyExists && permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+    if ((await limits.remaining(newApplication.owner)).nbApplications === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
     // only derive/validate the parent ACL on a genuine create
     await service.initApplicationPermissions(ctx.sessionState, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)

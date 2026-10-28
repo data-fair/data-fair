@@ -16,7 +16,8 @@ import filesStorage from '#files-storage'
 const debugLimits = debug('limits')
 
 export const checkStorage = async (locale: string, owner: Account, overwriteDataset: Dataset, contentLength: number, indexed = false) => {
-  const estimatedContentSize = contentLength - 210
+  // the 210 bytes of multipart overhead made a smaller request negative, and it passed even a quota of 0
+  const estimatedContentSize = Math.max(contentLength - 210, 1)
 
   const debugInfo: any = { owner, estimatedContentSize }
 
@@ -34,7 +35,7 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
     debugInfo.overwriteDataset = overwriteDataset.storage
     // ignore the size of the dataset we are overwriting
     if (remaining.storage !== -1) remaining.storage += overwriteDataset.storage.size ?? 0
-    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.size ?? 0
+    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.indexed?.size ?? 0
   }
   const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
   const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)

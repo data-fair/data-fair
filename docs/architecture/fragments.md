@@ -458,7 +458,7 @@ transfer as it did before. Both owner-change routes (`datasets/routes/metadata.t
    lists the parent's owned fragments and refuses if one of them has integrity active (anchors are
    owner-scoped, the same refusal as on a standalone transfer) or if the caller cannot create that kind
    of resource in the new owner; `changeOwnerLimitError` (`limits/service.ts`) checks `nb_datasets`,
-   `store_bytes` and `indexed_bytes` against the parent and all its dataset fragments at once. A
+   `nb_applications`, `store_bytes` and `indexed_bytes` against the parent and all its fragments at once. A
    refusal moves nothing.
 2. compute the parent's post-transfer ACL (`ownerChangePermissions`, `misc/utils/permissions.ts`,
    the same rules as any transfer: public entries kept, partners kept within the same organization);
@@ -613,7 +613,7 @@ permission model on the client, it is purely presentational.
   requirement: creating one grants its author nothing beyond what the parent's ACL derives. The
   anonymous-write anti-spam stack (§10 of `application-keys.md`) still applies to any anonymous write
   through a key.
-- **Fragments count toward the owner's `nb_datasets` and storage quotas** (`store_bytes`,
+- **Fragments count toward the owner's `nb_datasets`, `nb_applications` and storage quotas** (`store_bytes`,
   `indexed_bytes`) exactly like standalone resources. This is a deliberate, revisable product
   decision — not a technical constraint (§10).
 - **No resync endpoint for the derived ACL.** If the sync in §4.1 is ever skipped or fails

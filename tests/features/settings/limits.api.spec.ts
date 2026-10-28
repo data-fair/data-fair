@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
-import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
 import { sendDataset, waitForDatasetError, clearRateLimiting } from '../../support/workers.ts'
 
 const anonymous = axios()
@@ -81,6 +81,40 @@ test.describe('limits', () => {
     await ax.delete('/api/v1/datasets/' + lastDataset.id)
     res = await ax.get('/api/v1/limits/user/test_user1')
     assert.equal(res.data.nb_datasets.consumption, 9)
+  })
+
+  test('Manage a user applications limit', async () => {
+    const ax = testUser1
+    const params = { key: config.secretKeys.limits }
+    await ax.post('/api/v1/limits/user/test_user1', { ...baseLimit, nb_applications: { limit: 2, consumption: 0 } }, { params })
+
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
+    await ax.put('/api/v1/applications/app-2', { url: mockAppUrl('monapp1') })
+    // both creation routes are refused once the limit is reached, an update is not a creation
+    await assert.rejects(ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') }), { status: 429 })
+    await assert.rejects(ax.put('/api/v1/applications/app-3', { url: mockAppUrl('monapp1') }), { status: 429 })
+    await ax.put('/api/v1/applications/app-2', { url: mockAppUrl('monapp1'), title: 'updated' })
+
+    let res = await ax.get('/api/v1/limits/user/test_user1')
+    assert.deepEqual(res.data.nb_applications, { limit: 2, consumption: 2 })
+
+    // a transfer to an account at its limit is refused
+    await ax.post('/api/v1/limits/organization/test_org1', { ...baseLimit, nb_applications: { limit: 0, consumption: 0 } }, { params })
+    await assert.rejects(ax.put(`/api/v1/applications/${app.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }), { status: 429 })
+
+    await ax.delete(`/api/v1/applications/${app.id}`)
+    res = await ax.get('/api/v1/limits/user/test_user1')
+    assert.equal(res.data.nb_applications.consumption, 1)
+    await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+  })
+
+  test('A storage quota of 0 refuses even the smallest writes', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/small-rest', { isRest: true, title: 'small' })
+    await ax.post('/api/v1/limits/user/test_user1', { ...baseLimit, store_bytes: { limit: 0, consumption: 0 } }, { params: { key: config.secretKeys.limits } })
+    // both bodies are smaller than the multipart overhead removed from the estimated size
+    await assert.rejects(ax.post('/api/v1/datasets', { isRest: true, title: 'r' }), { status: 429 })
+    await assert.rejects(ax.post('/api/v1/datasets/small-rest/lines', { a: 1 }), { status: 429 })
   })
 
   test('A user cannot change limits', async () => {

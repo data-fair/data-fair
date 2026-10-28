@@ -539,6 +539,7 @@
         "datasetStorage",
         "datasetIndexed",
         "nbDatasets",
+        "nbApplications",
         "attachmentStorage",
         "attachmentIndexed",
         "apiRate",
@@ -551,6 +552,7 @@
         "datasetStorage": { "type": "number" },
         "datasetIndexed": { "type": "number" },
         "nbDatasets": { "type": "number" },
+        "nbApplications": { "type": "number" },
         "attachmentStorage": { "type": "number" },
         "attachmentIndexed": { "type": "number" },
         "apiRate": {

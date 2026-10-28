@@ -149,6 +149,7 @@
             <v-alert
               v-if="baseAppsFetch.error.value"
               type="error"
+              variant="outlined"
               class="mb-4"
             >
               {{ baseAppsFetch.error.value }}
@@ -207,6 +208,7 @@
                                 :key="'disabled-' + i"
                                 density="compact"
                                 type="error"
+                                variant="outlined"
                               >
                                 {{ disabled }}
                               </v-alert>
@@ -243,12 +245,10 @@
             :label="t('title')"
           />
 
-          <v-alert
-            v-if="createError"
-            :title="createError"
-            type="error"
+          <df-ui-notif-alert
+            :notif="createError ?? undefined"
             class="mt-4"
-            max-width="500"
+            :alert-props="{ maxWidth: 500, variant: 'outlined' }"
           />
         </v-stepper-window-item>
       </v-stepper-window>
@@ -288,6 +288,7 @@ import { APPLICATION_WIZARD_GUIDANCE, APPLICATION_WIZARD_GUIDANCE_KEY } from '~/
 import { buildApplicationWizardState } from '~/composables/agent/host-state'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
+import { getFullNotif, type UiNotif } from '@data-fair/lib-vue/ui-notif'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -459,7 +460,7 @@ function selectBaseApp (baseApp: BaseAppWithContext) {
 // ---- Info ----
 const appTitle = ref('')
 const importing = ref(false)
-const createError = ref<string | null>(null)
+const createError = ref<UiNotif | null>(null)
 
 // ---- Agent tools ----
 // What the wizard currently shows, so the assistant reads it from its context
@@ -529,7 +530,10 @@ async function createApplication () {
     emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
     router.push(`/application/${application.id}`)
   } catch (error: any) {
-    createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')
+    // same rendering as the dataset creation page (useAsyncAction + df-ui-notif-alert)
+    createError.value = error.status === 429
+      ? getFullNotif({ msg: t('exceedLimitNbApplications'), type: 'warning' })
+      : getFullNotif({ msg: t('creationError'), error })
     importing.value = false
   }
 }
@@ -554,6 +558,7 @@ fr:
   back: Retour
   continue: Continuer
   creationError: Erreur pendant la création de l'application
+  exceedLimitNbApplications: Vous avez atteint le nombre maximal d'applications autorisées par votre abonnement.
   copy: copie
   type_copy: Copie d'application
   type_desc_copy: Copiez une configuration complète depuis une application existante.
@@ -581,6 +586,7 @@ en:
   back: Back
   continue: Continue
   creationError: Error while creating the application
+  exceedLimitNbApplications: You have reached the maximum number of applications allowed by your subscription.
   copy: copy
   type_copy: Application copy
   type_desc_copy: Copy a complete configuration from an existing application.

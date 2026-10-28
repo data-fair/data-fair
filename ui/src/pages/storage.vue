@@ -31,7 +31,12 @@
                 / {{ formatBytes(item.limits.store_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
               </template>
             </td>
-            <td>{{ item.applications.toLocaleString() }}</td>
+            <td>
+              {{ item.limits.nb_applications.consumption.toLocaleString() }}
+              <template v-if="item.limits.nb_applications.limit !== -1">
+                / {{ item.limits.nb_applications.limit.toLocaleString() }} {{ t('allowedApplications') }}
+              </template>
+            </td>
           </tr>
         </template>
       </v-data-table>
@@ -85,6 +90,7 @@ fr:
   details: Détail par jeu de données
   loading: Chargement en cours...
   allowed: autorisés
+  allowedApplications: autorisées
   storageType: Trier par catégorie de stockage
 en:
   storage: Storage
@@ -96,6 +102,7 @@ en:
   details: Details per dataset
   loading: Loading...
   allowed: allowed
+  allowedApplications: allowed
   storageType: Sort by storage type
 </i18n>
 

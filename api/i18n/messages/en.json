@@ -10,6 +10,7 @@
 		"exceedLimitStorage": "You exceeded your strorage limit.",
 		"exceedLimitIndexed": "You exceeded your indexed data storage limit.",
 		"exceedLimitNbDatasets": "You exceeded your number of datasets limit.",
+		"exceedLimitNbApplications": "You exceeded your number of applications limit.",
 		"missingPermission": "You don't have the permission to perform this action.",
 		"exceedRateLimiting": "Too much requests in a small time interval for this API.",
 		"exceedComputeBudget": "The cumulated processing time of your requests exceeds the budget allowed on this API. Please wait before trying again, or reduce the cost of your requests.",

@@ -26,6 +26,7 @@
     "store_bytes": { "$ref": "#/$defs/limit" },
     "indexed_bytes": { "$ref": "#/$defs/limit" },
     "nb_datasets": { "$ref": "#/$defs/limit" },
+    "nb_applications": { "$ref": "#/$defs/limit" },
     "hide_brand": { "$ref": "#/$defs/limit" }
   },
   "$defs": {
