@@ -6,8 +6,9 @@
  * As in autonomous-agent.sim.spec.ts, the test fails only when the run itself is invalid: a wrong row
  * is a measure, not a failure.
  *
- * Not part of the unfiltered selection's report (simulations/cases/select.ts): every run spends quota,
- * and SIM_ARMS / SIM_REPEAT say how many.
+ * Run only when SIM_CASES names them (a run name, or a case name for all its runs): every run spends
+ * quota, so a bare `npm run simulate` runs none, and SIM_ARMS / SIM_REPEAT say how many a case has.
+ * All of them: SIM_CASES=saisie-courriel,import-tableur,corrections npm run simulate
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -16,33 +17,29 @@ import { test } from '../tests/fixtures/login.ts'
 import { axiosAuth, waitForWorkerIdle } from '../tests/support/axios.ts'
 import type { LineEditionArm } from '../api/contract/x-agent-line-edition.ts'
 import { lineEditionRuns, type LineEditionRun } from './cases/line-edition.ts'
-import { selectOwnCases } from './cases/select.ts'
+import { requestedCaseNames, selectOwnCases } from './cases/select.ts'
 import { seedLineEditionDatasets, registerId } from './runner/line-edition-fixtures.ts'
 import { seedSettings, OWNER, OWNER_USER } from './runner/settings.ts'
-import { seedAutonomousAgent, waitForAgentTools, LINES_AGENT } from './runner/autonomous-agent.ts'
+import { seedAutonomousAgent, waitForAgentTools, LINES_AGENT, type AbsentTool } from './runner/autonomous-agent.ts'
 import { runAgentCase, ASSISTANT_MODEL, TOOLS_MODEL } from './runner/agent-conversation.ts'
 import { checkRows } from './runner/row-check.ts'
 
 const SUPER_ADMIN = 'test_superadmin@test.com'
 
+/** Every tool of the editor groups, whatever the group. */
+const isEditorTool = (name: string) => name.startsWith('datafair_create_line_') || name.startsWith('datafair_edit_line_')
+
 /** The tools the agent must have and must not have in each arm: reading tools are the same in both. */
-const ARM_TOOLS: Record<LineEditionArm, { present: string[], absent: string[] }> = {
+const ARM_TOOLS: Record<LineEditionArm, { present: string[], absent: AbsentTool[] }> = {
   json: {
     present: ['datafair_write_line', 'datafair_bulk_lines', 'datafair_describe_dataset'],
-    absent: []
+    absent: [isEditorTool]
   },
   editor: {
     present: ['datafair_create_line_saveForm', 'datafair_edit_line_saveForm', 'datafair_create_line_getFieldSuggestions'],
     absent: ['datafair_write_line', 'datafair_patch_line', 'datafair_bulk_lines']
   }
 }
-
-/**
- * Arm json must have no editor tool at all, whatever its group: assertAgentTools only names tools, so
- * they are checked by prefix here, once. No retry needed: the tools come from one platform document,
- * and arm json's present tools are absent from arm editor's.
- */
-const EDITOR_TOOL_PREFIXES = ['datafair_create_line_', 'datafair_edit_line_']
 
 const superAdmin = () => axiosAuth(SUPER_ADMIN, undefined, true)
 
@@ -55,11 +52,7 @@ async function setArm (arm: LineEditionArm | null) {
 /** Wait for the mcp server's refresh to hand the agent the arm's tools, and only them. */
 async function waitForArmTools (arm: LineEditionArm) {
   const { present, absent } = ARM_TOOLS[arm]
-  const names = await waitForAgentTools(present, absent, { agentId: LINES_AGENT.id, timeoutMs: 60_000 })
-  if (arm === 'json') {
-    const editorTools = names.filter(name => EDITOR_TOOL_PREFIXES.some(prefix => name.includes(prefix)))
-    if (editorTools.length) throw new Error(`arm json still has editor tools ${editorTools.join(', ')}; it has: ${names.join(', ')}`)
-  }
+  await waitForAgentTools(present, absent, { agentId: LINES_AGENT.id, timeoutMs: 60_000 })
 }
 
 const rowsFile = (run: LineEditionRun) => path.join(evidenceDir, `sim-${run.name}.rows.json`)
@@ -70,7 +63,8 @@ async function checkRegister (run: LineEditionRun) {
   const admin = await superAdmin()
   const id = registerId(run.name)
   const schema = (await admin.get(`/api/v1/datasets/${id}`)).data.schema
-  const actual = (await admin.get(`/api/v1/datasets/${id}/lines`, { params: { size: 1000, arrays: true } })).data.results as Record<string, unknown>[]
+  const { total, results: actual } = (await admin.get(`/api/v1/datasets/${id}/lines`, { params: { size: 1000, arrays: true } })).data as { total: number, results: Record<string, unknown>[] }
+  if (total > actual.length) throw new Error(`${id} has ${total} lines, only ${actual.length} were read: the row check would be wrong`)
   const check = checkRows(run.expected, actual, schema)
   fs.mkdirSync(evidenceDir, { recursive: true })
   fs.writeFileSync(rowsFile(run), JSON.stringify({ run: run.name, arm: run.arm, repeat: run.repeat, base: run.base, check, actual }, null, 2))
@@ -78,7 +72,8 @@ async function checkRegister (run: LineEditionRun) {
   return { base: run.base, arm: run.arm, repeat: run.repeat, rowCheck: { ...counts, missing: missing.length, unexpectedPresent: unexpectedPresent.length, diffs: diffs.length } }
 }
 
-const selected = selectOwnCases(lineEditionRuns())
+// nothing unless SIM_CASES names runs or cases: a bare `npm run simulate` must not spend these
+const selected = requestedCaseNames().length ? selectOwnCases(lineEditionRuns()) : []
 
 test.afterAll(async () => {
   if (selected.length) await setArm(null)

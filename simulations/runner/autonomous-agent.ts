@@ -69,15 +69,19 @@ export async function seedAutonomousAgent (agent: SimulatedAgentConfig = {}, ide
  * The agents service keys catalog tools by their bare name; a `<server>__` prefix is accepted too, so
  * a change of naming there does not silently invalidate every run.
  */
+/** A tool name, or a test of the bare tool name. */
+export type AbsentTool = string | ((bareName: string) => boolean)
+
 export const toolMatches = (toolName: string, name: string) => toolName === name || toolName.endsWith(`__${name}`)
 
 /**
  * Fail before any model call when the agent cannot reach its tools. The diagnostic performs the NHI
  * exchange and lists the tools as the agent would get them, so a broken issuer, a missing NHI or an
  * mcp server that composed nothing is named here, not discovered as a run where the agent "has no tools".
- * `absent` names tools the agent must not have (an experiment arm's excluded tools). Returns the tool names.
+ * `absent` names tools the agent must not have (an experiment arm's excluded tools), or tests their bare
+ * name for a family of tools (an editor group's). Returns the tool names.
  */
-export async function assertAgentTools (expected: string[], opts: { agentId?: string, absent?: string[] } = {}) {
+export async function assertAgentTools (expected: string[], opts: { agentId?: string, absent?: AbsentTool[] } = {}) {
   const agentId = opts.agentId ?? SIM_AGENT_ID
   const admin = await superAdmin()
   let names: string[]
@@ -89,13 +93,13 @@ export async function assertAgentTools (expected: string[], opts: { agentId?: st
   }
   const missing = expected.filter(name => !names.some(n => toolMatches(n, name)))
   if (missing.length) throw new Error(`the autonomous agent lacks ${missing.join(', ')}; it has: ${names.join(', ') || 'no tools'}`)
-  const unexpected = (opts.absent ?? []).filter(name => names.some(n => toolMatches(n, name)))
+  const unexpected = names.filter(n => (opts.absent ?? []).some(absent => typeof absent === 'string' ? toolMatches(n, absent) : absent(bareToolName(n))))
   if (unexpected.length) throw new Error(`the autonomous agent still has ${unexpected.join(', ')}; it has: ${names.join(', ')}`)
   return names
 }
 
 /** Wait for the mcp server's periodic refresh of the platform document to reach the agent's tools. */
-export async function waitForAgentTools (expected: string[], absent: string[], opts: { agentId: string, timeoutMs: number }) {
+export async function waitForAgentTools (expected: string[], absent: AbsentTool[], opts: { agentId: string, timeoutMs: number }) {
   const deadline = Date.now() + opts.timeoutMs
   for (;;) {
     try {
