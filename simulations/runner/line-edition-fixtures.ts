@@ -14,8 +14,20 @@
  *
  * The referential stays private to the owner: master-data fetches must go through the caller's own
  * credentials, never through a public dataset.
+ *
+ * `SIM_REFERENTIAL=large` seeds every commune of France instead of the 12 of the agglomeration (from
+ * geo.api.gouv.fr, cached in simulations/tmp/cache), to see whether a lookup that cannot be done by
+ * listing the whole referential changes how each arm fares. The 12 rows below win over the real ones
+ * with the same code, so every expected state holds in both modes: their populations are the
+ * fixture's, and 44165 stays Saint-Herblon (a commune since merged, whose code INSEE reassigned).
  */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import { OWNER, OWNER_USER } from './settings.ts'
+
+const LARGE_REFERENTIAL = process.env.SIM_REFERENTIAL === 'large'
+const COMMUNES_URL = 'https://geo.api.gouv.fr/communes?fields=nom,code,codeDepartement,population&format=json'
+const COMMUNES_CACHE = path.join(process.cwd(), 'simulations', 'tmp', 'cache', 'communes-france.json')
 
 export const REFERENTIAL_ID = 'sim-communes-agglo'
 export const REGISTER_TITLE = 'Lieux d\'activité des associations'
@@ -65,11 +77,34 @@ async function bulkLines (ax: any, id: string, lines: Record<string, any>[]) {
   if (nbErrors) throw new Error(`${nbErrors} fixture lines refused by ${id}: ${JSON.stringify(errors)}`)
 }
 
+type ReferentialLine = { _id: string, code_insee: string, nom: string, departement: string, population?: number }
+
+async function franceCommunes (): Promise<ReferentialLine[]> {
+  if (!existsSync(COMMUNES_CACHE)) {
+    const res = await fetch(COMMUNES_URL)
+    if (!res.ok) throw new Error(`could not download the communes of France: ${res.status} ${COMMUNES_URL}`)
+    mkdirSync(path.dirname(COMMUNES_CACHE), { recursive: true })
+    writeFileSync(COMMUNES_CACHE, await res.text())
+  }
+  const communes: Array<{ code: string, nom: string, codeDepartement: string, population?: number }> = JSON.parse(readFileSync(COMMUNES_CACHE, 'utf8'))
+  return communes.map(c => ({ _id: c.code, code_insee: c.code, nom: c.nom, departement: c.codeDepartement, ...(c.population === undefined ? {} : { population: c.population }) }))
+}
+
+async function referentialLines (): Promise<ReferentialLine[]> {
+  const fixture = communes.map(([code, nom, population]) => ({ _id: code, code_insee: code, nom, departement: '44', population }))
+  if (!LARGE_REFERENTIAL) return fixture
+  const byCode = new Map((await franceCommunes()).map(line => [line._id, line]))
+  for (const line of fixture) byCode.set(line._id, line)
+  return [...byCode.values()]
+}
+
 async function seedReferential (ax: any) {
   await ax.put(`/api/v1/datasets/${REFERENTIAL_ID}`, {
     isRest: true,
-    title: 'Communes de l\'agglomération',
-    description: 'Référentiel des communes de l\'agglomération nantaise et de leurs codes INSEE.',
+    title: LARGE_REFERENTIAL ? 'Communes de France' : 'Communes de l\'agglomération',
+    description: LARGE_REFERENTIAL
+      ? 'Référentiel des communes françaises et de leurs codes INSEE.'
+      : 'Référentiel des communes de l\'agglomération nantaise et de leurs codes INSEE.',
     schema: [
       codeInsee,
       nomCommune,
@@ -90,9 +125,9 @@ async function seedReferential (ax: any) {
       }]
     }
   })
-  await bulkLines(ax, REFERENTIAL_ID, communes.map(([code, nom, population]) => ({
-    _id: code, code_insee: code, nom, departement: '44', population
-  })))
+  // chunks under the dev stack's per-request dataset storage limit (api/config/development.cjs)
+  const lines = await referentialLines()
+  for (let i = 0; i < lines.length; i += 1000) await bulkLines(ax, REFERENTIAL_ID, lines.slice(i, i + 1000))
 }
 
 /**
@@ -299,9 +334,16 @@ export async function seedLineEditionDatasets (id: string): Promise<void> {
   const ax = await axiosAuth(`${OWNER_USER}@test.com`, OWNER.id)
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
+  // every commune of France is ~4 MB indexed, over the dev stack's 200 kB per-owner storage; clean()
+  // drops the limits collection, so the raise is made again on every run
+  if (LARGE_REFERENTIAL) {
+    const unlimited = { limit: 1e9, consumption: 0 }
+    await admin.post(`/api/v1/limits/${OWNER.type}/${OWNER.id}`, { store_bytes: unlimited, indexed_bytes: unlimited, lastUpdate: new Date().toISOString() })
+  }
   await seedReferential(ax)
   // the register's extension needs the referential's lines indexed
-  if (!await waitForWorkerIdle(120_000)) throw new Error(`${REFERENTIAL_ID} was still being processed after 120s`)
+  const referentialWait = LARGE_REFERENTIAL ? 600_000 : 120_000
+  if (!await waitForWorkerIdle(referentialWait)) throw new Error(`${REFERENTIAL_ID} was still being processed after ${referentialWait / 1000}s`)
   const master = await registerReferential(ax, admin)
 
   const register = (await ax.put(`/api/v1/datasets/${id}`, {

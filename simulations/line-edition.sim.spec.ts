@@ -69,7 +69,7 @@ async function checkRegister (run: LineEditionRun) {
   fs.mkdirSync(evidenceDir, { recursive: true })
   fs.writeFileSync(rowsFile(run), JSON.stringify({ run: run.name, arm: run.arm, repeat: run.repeat, base: run.base, check, actual }, null, 2))
   const { diffs, missing, unexpectedPresent, ...counts } = check
-  return { base: run.base, arm: run.arm, repeat: run.repeat, rowCheck: { ...counts, missing: missing.length, unexpectedPresent: unexpectedPresent.length, diffs: diffs.length } }
+  return { base: run.base, arm: run.arm, repeat: run.repeat, referential: process.env.SIM_REFERENTIAL === 'large' ? 'large' : 'agglomeration', rowCheck: { ...counts, missing: missing.length, unexpectedPresent: unexpectedPresent.length, diffs: diffs.length } }
 }
 
 // nothing unless SIM_CASES names runs or cases: a bare `npm run simulate` must not spend these
