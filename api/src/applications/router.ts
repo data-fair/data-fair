@@ -79,7 +79,7 @@ router.post('', async (req, res) => {
   const { body } = (await import('#doc/applications/post-req/index.js')).returnValid(req)
   const application = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
-  if ((await limits.remaining(application.owner)).nbApplications === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
+  if ((await limits.remainingApplications(application.owner)) === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const created = await service.createApplication(ctx, application)

@@ -323,7 +323,7 @@ export const registerMetadataRoutes = (router: Router) => {
     // fragments have their parent's owner: they follow it, like they follow its deletion
     const fragments = await fragmentsService.prepareFragmentsOwnerChange('dataset', dataset, req.body, sessionState)
 
-    const limitError = await limits.changeOwnerLimitError(dataset.owner, req.body, [dataset, ...fragments.datasets], fragments.applications.length)
+    const limitError = await limits.changeOwnerLimitError(dataset.owner, req.body, [dataset, ...fragments.datasets])
     if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
 
     const ctx = { sessionState, logCtx: reqEventLogContext(req) }

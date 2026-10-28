@@ -7,7 +7,7 @@ import type { Limit, Limits } from '#types'
 
 const debugLimits = debugModule('limits')
 
-export const getLimits = async (consumer: Account | AccountKeys) => {
+export const getLimits = async (consumer: Account | AccountKeys, countApplications = true) => {
   const now = moment()
   let limits = await mongo.limits.findOne<Limits>({ type: consumer.type, id: consumer.id }, { projection: { _id: 0 } })
   if (!limits) {
@@ -31,10 +31,13 @@ export const getLimits = async (consumer: Account | AccountKeys) => {
   if (limits.indexed_bytes.limit === null || limits.indexed_bytes.limit === undefined) limits.indexed_bytes.limit = config.defaultLimits.totalIndexed
   limits.nb_datasets = limits.nb_datasets || { consumption: 0 }
   if (limits.nb_datasets.limit === null || limits.nb_datasets.limit === undefined) limits.nb_datasets.limit = config.defaultLimits.nbDatasets
-  // counted on the fly instead of being stored, so it never drifts (like the portals pages)
-  limits.nb_applications = {
-    limit: limits.nb_applications?.limit ?? config.defaultLimits.nbApplications,
-    consumption: await mongo.applications.countDocuments({ 'owner.type': consumer.type, 'owner.id': consumer.id })
+  // counted on the fly instead of being stored, so it never drifts (like the portals pages),
+  // but not for the storage checks that run on every write and do not need it
+  if (countApplications) {
+    limits.nb_applications = {
+      limit: limits.nb_applications?.limit ?? config.defaultLimits.nbApplications,
+      consumption: await mongo.applications.countDocuments({ 'owner.type': consumer.type, 'owner.id': consumer.id })
+    }
   }
   return limits
 }
@@ -47,13 +50,16 @@ const calculateRemainingLimit = (limits: Limits, key: keyof Limits) => {
 }
 
 export const remaining = async (consumer: AccountKeys) => {
-  const limits = await getLimits(consumer)
+  const limits = await getLimits(consumer, false)
   return {
     storage: calculateRemainingLimit(limits, 'store_bytes'),
     indexed: calculateRemainingLimit(limits, 'indexed_bytes'),
-    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets'),
-    nbApplications: calculateRemainingLimit(limits, 'nb_applications')
+    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets')
   }
+}
+
+export const remainingApplications = async (consumer: AccountKeys) => {
+  return calculateRemainingLimit(await getLimits(consumer), 'nb_applications')
 }
 
 export const incrementConsumption = async (consumer: AccountKeys, type: keyof Limits, inc: number) => {
@@ -73,13 +79,14 @@ export const setConsumption = async (consumer: AccountKeys, type: keyof Limits, 
 export const changeOwnerLimitError = async (currentOwner: AccountKeys, newOwner: AccountKeys, datasets: { storage?: { size?: number, indexed?: { size?: number } } }[], nbApplications = 0) => {
   if ((!datasets.length && !nbApplications) || (newOwner.type === currentOwner.type && newOwner.id === currentOwner.id)) return null
   const left = await remaining(newOwner)
+  const leftApplications = nbApplications ? await remainingApplications(newOwner) : -1
   const size = datasets.reduce((sum, d) => sum + (d.storage?.size ?? 0), 0)
   const indexed = datasets.reduce((sum, d) => sum + (d.storage?.indexed?.size ?? 0), 0)
   let error: 'exceedLimitNbDatasets' | 'exceedLimitNbApplications' | 'exceedLimitStorage' | 'exceedLimitIndexed' | null = null
   if (left.nbDatasets !== -1 && left.nbDatasets < datasets.length) error = 'exceedLimitNbDatasets'
-  else if (left.nbApplications !== -1 && left.nbApplications < nbApplications) error = 'exceedLimitNbApplications'
+  else if (leftApplications !== -1 && leftApplications < nbApplications) error = 'exceedLimitNbApplications'
   else if (left.storage !== -1 && left.storage < size) error = 'exceedLimitStorage'
   else if (left.indexed !== -1 && left.indexed < indexed) error = 'exceedLimitIndexed'
-  if (error) debugLimits(`${error}/changeOwner`, { owner: newOwner, remaining: left, nbDatasets: datasets.length, nbApplications, size, indexed })
+  if (error) debugLimits(`${error}/changeOwner`, { owner: newOwner, remaining: left, leftApplications, nbDatasets: datasets.length, nbApplications, size, indexed })
   return error
 }

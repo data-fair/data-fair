@@ -117,7 +117,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (!alreadyExists && permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
-    if ((await limits.remaining(newApplication.owner)).nbApplications === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
+    if ((await limits.remainingApplications(newApplication.owner)) === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
     // only derive/validate the parent ACL on a genuine create
     await service.initApplicationPermissions(ctx.sessionState, newApplication)
     const inserted = await service.tryInsertApplication(ctx, newApplication)

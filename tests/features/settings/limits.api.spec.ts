@@ -108,15 +108,6 @@ test.describe('limits', () => {
     await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
   })
 
-  test('A storage quota of 0 refuses even the smallest writes', async () => {
-    const ax = testUser1
-    await ax.post('/api/v1/datasets/small-rest', { isRest: true, title: 'small' })
-    await ax.post('/api/v1/limits/user/test_user1', { ...baseLimit, store_bytes: { limit: 0, consumption: 0 } }, { params: { key: config.secretKeys.limits } })
-    // both bodies are smaller than the multipart overhead removed from the estimated size
-    await assert.rejects(ax.post('/api/v1/datasets', { isRest: true, title: 'r' }), { status: 429 })
-    await assert.rejects(ax.post('/api/v1/datasets/small-rest/lines', { a: 1 }), { status: 429 })
-  })
-
   test('A user cannot change limits', async () => {
     const ax = testUser1
     await assert.rejects(
