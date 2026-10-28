@@ -231,6 +231,17 @@
     }
   },
   {
+    "id": "test_org1_lines_nhi",
+    "email": "test_org1_lines_nhi@test.com",
+    "nhi": {
+      "provider": {
+        "issuer": "http://{DEV_HOST}:{NGINX_PORT}/agents/api/nhi"
+      },
+      "subject": "autonomous-agent:sim-lines",
+      "scopes": ["all:read", "datasets:write"]
+    }
+  },
+  {
     "id": "test_org1_scope_nhi",
     "email": "test_org1_scope_nhi@test.com",
     "nhi": {

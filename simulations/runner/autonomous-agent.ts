@@ -12,6 +12,8 @@ import { ROOT, OWNER, OWNER_USER } from './settings.ts'
 
 export const SIM_AGENT_ID = 'sim-mcp'
 export const SIM_NHI = 'test_org1_agent_nhi'
+/** The line edition experiment's own identity (NHI subject autonomous-agent:sim-lines), allowed to write datasets. */
+export const LINES_AGENT = { id: 'sim-lines', nhi: 'test_org1_lines_nhi' }
 const SUPER_ADMIN = 'test_superadmin@test.com'
 
 export interface SimulatedAgentConfig {
@@ -45,13 +47,13 @@ const superAdmin = async () => {
  * its conversations with it: the agents page reopens the agent's latest thread, so a kept history would carry
  * an earlier run's conversation into this one (and clean() resets data-fair, not the agents service).
  */
-export async function seedAutonomousAgent (agent: SimulatedAgentConfig = {}) {
+export async function seedAutonomousAgent (agent: SimulatedAgentConfig = {}, identity: { id: string, nhi: string } = { id: SIM_AGENT_ID, nhi: SIM_NHI }) {
   const admin = await superAdmin()
-  await admin.delete(`/agents/api/autonomous-agents/${OWNER.type}/${OWNER.id}/${SIM_AGENT_ID}`, { validateStatus: status => status < 300 || status === 404 })
+  await admin.delete(`/agents/api/autonomous-agents/${OWNER.type}/${OWNER.id}/${identity.id}`, { validateStatus: status => status < 300 || status === 404 })
   await admin.post('/agents/api/test-env/autonomous-agent', {
-    id: SIM_AGENT_ID,
+    id: identity.id,
     owner: OWNER,
-    clientId: SIM_NHI,
+    clientId: identity.nhi,
     siteUrl: ROOT,
     issuer: `${ROOT}/agents/api/nhi`,
     autonomousAgent: {
@@ -73,18 +75,36 @@ export const toolMatches = (toolName: string, name: string) => toolName === name
  * Fail before any model call when the agent cannot reach its tools. The diagnostic performs the NHI
  * exchange and lists the tools as the agent would get them, so a broken issuer, a missing NHI or an
  * mcp server that composed nothing is named here, not discovered as a run where the agent "has no tools".
+ * `absent` names tools the agent must not have (an experiment arm's excluded tools). Returns the tool names.
  */
-export async function assertAgentTools (expected: string[]) {
+export async function assertAgentTools (expected: string[], opts: { agentId?: string, absent?: string[] } = {}) {
+  const agentId = opts.agentId ?? SIM_AGENT_ID
   const admin = await superAdmin()
   let names: string[]
   try {
-    const res = await admin.get(`/agents/api/autonomous-agents/${OWNER.type}/${OWNER.id}/${SIM_AGENT_ID}/tools`)
+    const res = await admin.get(`/agents/api/autonomous-agents/${OWNER.type}/${OWNER.id}/${agentId}/tools`)
     names = (res.data.results as Array<{ name: string }>).map(t => t.name)
   } catch (err: any) {
     throw new Error(`the autonomous agent cannot list its tools (NHI exchange or mcp server): ${err.status ?? ''} ${typeof err.data === 'string' ? err.data : JSON.stringify(err.data ?? err.message)}`)
   }
   const missing = expected.filter(name => !names.some(n => toolMatches(n, name)))
   if (missing.length) throw new Error(`the autonomous agent lacks ${missing.join(', ')}; it has: ${names.join(', ') || 'no tools'}`)
+  const unexpected = (opts.absent ?? []).filter(name => names.some(n => toolMatches(n, name)))
+  if (unexpected.length) throw new Error(`the autonomous agent still has ${unexpected.join(', ')}; it has: ${names.join(', ')}`)
+  return names
+}
+
+/** Wait for the mcp server's periodic refresh of the platform document to reach the agent's tools. */
+export async function waitForAgentTools (expected: string[], absent: string[], opts: { agentId: string, timeoutMs: number }) {
+  const deadline = Date.now() + opts.timeoutMs
+  for (;;) {
+    try {
+      return await assertAgentTools(expected, { agentId: opts.agentId, absent })
+    } catch (err) {
+      if (Date.now() >= deadline) throw err
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+  }
 }
 
 type ToolPart = { type?: string, toolName?: string, input?: unknown, __ref?: string, data?: { parts?: ToolPart[] } }

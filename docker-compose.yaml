@@ -151,6 +151,9 @@ services:
       # tool titles are shown to people (chat chips)
       - LOCALE=fr
       - OBSERVER_ACTIVE=false
+      # seconds between refreshes of the platform document: the line-edition simulations flip it between
+      # runs (the experiment switch) and wait for the tools to follow
+      - REFRESH_INTERVAL=10
 
   # registry-side dev container — same domain as data-fair under /registry
   registry:
