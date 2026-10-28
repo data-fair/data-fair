@@ -137,6 +137,24 @@ test.describe('platform api docs', () => {
     assert.deepEqual(fragment.warnings, ['GET /x: x-agent profiles not part of the platform vocabulary, removed'])
   })
 
+  test('editor references are prefixed like the operationIds they name', () => {
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      paths: {
+        '/r': { get: { operationId: 'readThing', responses: ok200 } },
+        '/w': { post: { operationId: 'writeThing', 'x-agent': { name: 'edit_thing', editor: { schemaOperation: 'readThing', readOperation: 'readThing', schemaParams: { a: 1 } } }, responses: ok200 } },
+        '/v': { post: { operationId: 'flagThing', 'x-agent': { name: 'flag_thing', editor: true }, responses: ok200 } },
+        '/u': { post: { operationId: 'lostThing', 'x-agent': { name: 'lost_thing', editor: { schemaOperation: 'nope' } }, responses: ok200 } }
+      }
+    })
+    const editor = fragment.paths['/simple-directory/w'].post['x-agent'].editor
+    assert.equal(editor.schemaOperation, 'sd_readThing')
+    assert.equal(editor.readOperation, 'sd_readThing')
+    assert.deepEqual(editor.schemaParams, { a: 1 })
+    assert.equal(fragment.paths['/simple-directory/v'].post['x-agent'].editor, true)
+    assert.deepEqual(fragment.warnings, ['POST /u: x-agent editor.schemaOperation names nope, which is not an operationId of this service'])
+  })
+
   test('x-agent keys outside the vocabulary are removed, never passed to openapi-mcp', () => {
     const fragment = prepared(metrics, {
       openapi: '3.1.0',

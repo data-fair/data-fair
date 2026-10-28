@@ -342,6 +342,15 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
     for (const entry of entries) {
       const name = entry.name ?? (typeof operationId === 'string' ? snakeCase(operationId) : undefined)
       if (name) entry.name = `${ns}_${name}`
+      // the editor names operations by id: the references follow the prefix of the ids they name
+      if (isObject(entry.editor)) {
+        for (const key of ['schemaOperation', 'readOperation']) {
+          const ref = entry.editor[key]
+          if (typeof ref !== 'string') continue
+          if (!byId.has(ref)) warnings.push(`${at}: x-agent editor.${key} names ${ref}, which is not an operationId of this service`)
+          entry.editor[key] = `${ns}_${ref}`
+        }
+      }
     }
     if (typeof operationId === 'string') op.operationId = `${ns}_${operationId}`
     if (Array.isArray(op.tags)) op.tags = op.tags.map((tag: string) => `${service.title} / ${tag}`)
