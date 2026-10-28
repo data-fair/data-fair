@@ -77,4 +77,10 @@ test.describe('case selection across the two simulation specs', () => {
     assert.equal(new Set(names).size, names.length)
     for (const name of agentCases.map(c => c.name)) assert.match(name, /^[a-z0-9-]+$/)
   })
+
+  test('the line edition runs are known to the report, with names of their own', async () => {
+    const { allCases } = await import('../../../simulations/cases/select.ts')
+    assert.ok(allCases.some(c => c.name === 'saisie-courriel--editor--r2'))
+    assert.equal(new Set(allCases.map(c => c.name)).size, allCases.length)
+  })
 })

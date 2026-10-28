@@ -37,6 +37,13 @@ test.describe('calledTool', () => {
     assert.equal(calledTool(exports, 'datafair_list_account_datasets', input => input.size === 50), true)
     assert.equal(calledTool(exports, 'datafair_search_data'), false)
   })
+
+  test('takes a test of the bare tool name, for tool families', () => {
+    const exports = exportWith([{ type: 'dynamic-tool', toolName: 'datafair-write__datafair_edit_line_saveForm', input: { id: 'x' } }])
+    assert.equal(calledTool(exports, name => name.startsWith('datafair_edit_line_')), true)
+    assert.equal(calledTool(exports, name => name.startsWith('datafair-write'), input => input.id === 'x'), false)
+    assert.equal(calledTool(exports, name => name.endsWith('_saveForm'), input => input.id === 'y'), false)
+  })
 })
 
 test('toolMatches accepts the bare name and server-prefixed forms only', () => {

@@ -109,17 +109,25 @@ export async function waitForAgentTools (expected: string[], absent: string[], o
 
 type ToolPart = { type?: string, toolName?: string, input?: unknown, __ref?: string, data?: { parts?: ToolPart[] } }
 
+/** A tool name without the `<server>__` prefix the agents service may give it. */
+const bareToolName = (toolName: string) => {
+  const sep = toolName.lastIndexOf('__')
+  return sep === -1 ? toolName : toolName.slice(sep + 2)
+}
+
 /**
  * Whether a conversation called the tool, optionally with an input matching `input`. A call a code_mode
  * script made counts too: it is recorded as a part of the script's `data-subagent` part, as a sub-agent's are.
+ * `name` may be a test of the bare tool name, for a family of tools (an editor group's).
  */
-export function calledTool (exports: ParsedExport[], name: string, input?: (input: any) => boolean): boolean {
+export function calledTool (exports: ParsedExport[], name: string | ((bareName: string) => boolean), input?: (input: any) => boolean): boolean {
+  const nameMatches = typeof name === 'string' ? (toolName: string) => toolMatches(toolName, name) : (toolName: string) => name(bareToolName(toolName))
   return exports.some(exported => {
     const matches = (stub: ToolPart): boolean => {
       // a part too large for its message line is lifted into a blob record, with a stub left behind
       const part = (stub.__ref ? exported.blobs.get(stub.__ref) as ToolPart | undefined : undefined) ?? stub
       if (part.type === 'data-subagent') return (part.data?.parts ?? []).some(matches)
-      return part.type === 'dynamic-tool' && !!part.toolName && toolMatches(part.toolName, name) && (!input || input(part.input))
+      return part.type === 'dynamic-tool' && !!part.toolName && nameMatches(part.toolName) && (!input || input(part.input))
     }
     return exported.messages.some(message => (message.parts as ToolPart[]).some(matches))
   })

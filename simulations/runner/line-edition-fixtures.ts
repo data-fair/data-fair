@@ -218,7 +218,7 @@ const existingLines = [
     telephone: '02 40 29 47 85',
     email: 'accueil@nantes-natation.fr',
     siret: '38765432100021',
-    activites: 'natation',
+    activites: 'natation, yoga',
     publics: 'enfants, adultes, seniors',
     capacite: 450,
     accessible_pmr: true,
