@@ -38,9 +38,11 @@ const textOf = (value: unknown) => typeof value === 'string' ? value : value ===
  */
 export function bulkCounts (output: unknown): { ok: number, refused: number } | undefined {
   const text = textOf(output)
-  const refused = /"nbErrors"\s*:\s*(\d+)/.exec(text)
-  if (!refused) return undefined
-  return { ok: Number(/"nbOk"\s*:\s*(\d+)/.exec(text)?.[1] ?? 0), refused: Number(refused[1]) }
+  // a 200 answer is rendered as markdown (`- **nbErrors**: 3`), an error answer carries raw JSON
+  const count = (key: string) => new RegExp(`(?:"${key}"|\\*\\*${key}\\*\\*)\\s*:\\s*(\\d+)`).exec(text)?.[1]
+  const refused = count('nbErrors')
+  if (refused === undefined) return undefined
+  return { ok: Number(count('nbOk') ?? 0), refused: Number(refused) }
 }
 
 /** Every tool part of an export, a lifted part read back from its blob, a code_mode script's calls included. */
