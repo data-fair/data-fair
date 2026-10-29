@@ -321,7 +321,7 @@
               :key="catalogPublicationsKey"
               :src="catalogPublicationsUrl"
               sync-params
-              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.title })"
+              @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
             />
           </v-tabs-window-item>
 
