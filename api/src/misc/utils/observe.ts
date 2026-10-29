@@ -1,5 +1,6 @@
 // TODO: replace this with @data-fair/lib-node/observer.js
 
+import log from '@data-fair/lib-node/log.js'
 import client from 'prom-client'
 import debug from 'debug'
 import { type Request, type Response } from 'express'
@@ -95,7 +96,7 @@ export const reqStep = (req: Request, stepName: string) => {
     const referer = req.headers.referer || req.headers.referrer || 'unknown'
     const user = reqUser(req)
     const userStr = user ? `${user.name}(${user.id})` : 'anonymous'
-    console.log(`slow request ${req.method} ${req.originalUrl} ${stepName} ${duration}ms referer=${referer} user=${userStr}`)
+    log.warn('slow request', { code: 'slow-request', method: req.method, url: req.originalUrl, stepName, duration, referer, user: userStr })
   }
   req[reqObserveKey].step = now
 }

@@ -1,4 +1,5 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
@@ -244,7 +245,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
     // 3rd level of anti-spam protection, simple rate limiting based on ip
     if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
-      console.warn('Rate limit error for application key', reqIp(req), req.originalUrl)
+      log.warn('rate limit error for application key', { code: 'application-key-rate-limit', ip: reqIp(req), url: req.originalUrl })
       rateLimiting.setRetryAfter(res, rateLimiting.retryAfterMs(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat))
       return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
     }

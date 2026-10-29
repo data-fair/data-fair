@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import path from 'node:path'
 import mime from 'mime-types'
 import { type Request, type Response } from 'express'
@@ -52,7 +53,7 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
     if (res.throttle) await pipeline(body, res.throttle('static'), res)
     else await pipeline(body, res)
   } catch (err) {
-    console.error('Streaming failed', err)
+    log.error('streaming failed', { code: 'files-storage-streaming', err })
     if (!res.headersSent) {
       res.status(500).send('Internal Server Error')
     }

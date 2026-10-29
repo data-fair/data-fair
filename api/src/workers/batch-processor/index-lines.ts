@@ -56,7 +56,7 @@ export default async function (dataset: DatasetInternal) {
       let newAttachments
       const filePath = join(dataDir, 'shared-tmp', a.startsWith('drop:') ? a.replace('drop:', '') : a)
       if (!await filesStorage.fileExists(filePath)) {
-        console.warn(`newRestAttachments of dataset ${dataset.id} references missing attachments file`, a)
+        log.warn('newRestAttachments references missing attachments file', { code: 'rest-attachments-missing', datasetId: dataset.id, attachment: a })
       } else {
         if (a.startsWith('drop:')) {
           newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, filePath)

@@ -1,3 +1,4 @@
+import logger from '@data-fair/lib-node/log.js'
 import mongo from '#mongo'
 import moment from 'moment'
 import * as webhooks from './webhooks.ts'
@@ -36,7 +37,7 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
     }
   } catch (err) {
     // errors when writing to journal are never blocking for the actual task
-    console.warn('Failure when writing event to journal', err)
+    logger.warn('failure when writing event to journal', { code: 'journal-write', err })
   }
 }
 

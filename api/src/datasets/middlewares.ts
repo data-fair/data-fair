@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express'
 import type { Dataset } from '#types'
 import config from '#config'
 import mongo from '#mongo'
-import { withLogContext } from '@data-fair/lib-node/log.js'
+import log, { withLogContext } from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
@@ -57,7 +57,7 @@ export const lockDataset = (_shouldLock: boolean | ((body: any, query: any) => b
           await locks.release(lockKey)
           await workerPing('datasets', datasetId)
         } catch (err) {
-          console.error('failure to release dataset lock', err)
+          log.error('failure to release dataset lock', { code: 'dataset-lock-release', err })
         }
       })
       return next()

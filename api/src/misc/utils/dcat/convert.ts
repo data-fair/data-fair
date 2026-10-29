@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import { RdfXmlParser } from 'rdfxml-streaming-parser'
 import { JsonLdSerializer } from 'jsonld-streaming-serializer'
 import { Readable, Writable, Transform } from 'stream'
@@ -19,8 +20,7 @@ export const fromXML = async (dcat: string, baseIRI: string) => {
     }
   })
   myParser.on('error', (err) => {
-    console.error('parsing error', err)
-    console.log('last chunk', lastChunk)
+    log.warn('dcat parsing error', { code: 'dcat-parsing', lastChunk, err })
   })
   let json = ''
   await pump(Readable.from([dcat], { objectMode: false }), logger, myParser, mySerializer, new Writable({

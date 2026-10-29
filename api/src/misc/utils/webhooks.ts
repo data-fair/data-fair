@@ -50,7 +50,7 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
         }
       }
     } catch (err) {
-      console.log('Failure to send Webhook', webhook, err)
+      log.warn('failure to send webhook', { code: 'webhook-send', webhook, err })
     }
   }
 }

@@ -259,7 +259,7 @@ export const configureConstraintIndexes = async (dataset: RestDataset) => {
   for (const idx of existing) {
     if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
       await c.dropIndex(idx.name).catch((err: any) => {
-        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) log.warn('failed to drop stale constraint index', { code: 'rest-drop-constraint-index', indexName: idx.name, err })
       })
     }
   }
@@ -836,7 +836,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"
           } else if (writeError.err.errmsg?.includes('_i_')) {
-            console.error(writeError)
+            log.error('unexpected mongo write error on a rest dataset', { code: 'rest-write-error', writeError })
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
           } else {
@@ -1161,7 +1161,7 @@ const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
   try {
     if (await filesStorage.fileExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
-    console.warn('failed to rollback uploaded attachment', p, err)
+    log.warn('failed to rollback uploaded attachment', { code: 'rest-attachment-rollback', path: p, err })
   }
 }
 
@@ -1258,7 +1258,7 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after deleteLine', { code: 'rest-update-storage', err }))
 }
 
 // the write routes are gated by their default operation (createLine or postLine / updateLine and
@@ -1356,7 +1356,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     const line = getLineFromOperation(operation, rawBody ?? req.body)
     res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   }
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after createOrUpdateLine', { code: 'rest-update-storage', err }))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1380,7 +1380,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after patchLine', { code: 'rest-update-storage', err }))
 }
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1400,7 +1400,7 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE, _esLineBytes: true } })
 
   res.status(204).send()
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after deleteAllLines', { code: 'rest-update-storage', err }))
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
@@ -1593,15 +1593,15 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     res.write(JSON.stringify(result, null, 2))
     res.end()
 
-    storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after bulkLines', { code: 'rest-update-storage', err }))
   } finally {
     // best-effort cleanup: never let a temp-file removal error (e.g. the file
     // already gone) mask the response or escape as an unhandled rejection
     for (const file of req.files?.actions || []) {
-      await fs.remove(file.path).catch((err) => console.warn('failed to clean up bulk actions temp file', file.path, err))
+      await fs.remove(file.path).catch((err) => log.warn('failed to clean up bulk actions temp file', { code: 'rest-bulk-cleanup', path: file.path, err }))
     }
     if (attachmentsFile && !attachmentsRecorded) {
-      await filesStorage.removeFile(attachmentsFile.path).catch((err) => console.warn('failed to clean up bulk attachments temp file', attachmentsFile.path, err))
+      await filesStorage.removeFile(attachmentsFile.path).catch((err) => log.warn('failed to clean up bulk attachments temp file', { code: 'rest-bulk-cleanup', path: attachmentsFile.path, err }))
     }
   }
 }

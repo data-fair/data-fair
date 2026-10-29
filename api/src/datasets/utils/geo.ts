@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import { join } from 'path'
 import { readFile, writeFile } from 'node:fs/promises'
 import pointOnFeature from '@turf/point-on-feature'
@@ -113,7 +114,7 @@ export const readGeometry = (value: any): any => {
     try {
       return wktToGeoJSON(value)
     } catch (err2) {
-      console.log('invalid JSON or WKT', value, err, err2)
+      log.warn('invalid JSON or WKT', { code: 'geo-invalid-json-wkt', value, err, err2 })
       throw new Error('la géométrie ne contient pas de JSON ou de WKT valide')
     }
   }

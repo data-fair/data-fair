@@ -80,7 +80,7 @@ const scanStream = async (stream: Readable, name: string, user: User) => {
   try {
     result = (await socket.readAll())!.toString().replace(/\0/g, '').trim()
   } catch (err) {
-    console.warn('clamav failure', err)
+    log.warn('clamav failure', { code: 'clamav-failure', err })
     throw httpError(400, 'failed to apply antivirus on a file')
   }
   if (result.startsWith('stream: ')) result = result.slice(8)

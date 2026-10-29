@@ -84,10 +84,7 @@ const createWorkers = () => {
 export const workers = createWorkers()
 piscinaGauge(workers)
 
-console.log(`
-Workers are configured with a base concurrency of ${config.worker.baseConcurrency}.
-You should allocate about ${2 * config.worker.baseConcurrency}GB of memory.
-`)
+log.info(`Workers are configured with a base concurrency of ${config.worker.baseConcurrency}. You should allocate about ${2 * config.worker.baseConcurrency}GB of memory.`)
 
 type PendingTask = {
   type: ResourceType,

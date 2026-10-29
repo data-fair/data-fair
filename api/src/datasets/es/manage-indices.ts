@@ -156,7 +156,7 @@ export const switchAlias = async (dataset: any, tempId: any) => {
       timeout: '60s'
     })
   } catch (err) {
-    console.error(`failed to replace index alias ${name} -> ${tempId}`, err)
+    log.error('failed to replace index alias', { code: 'es-replace-alias', name, tempId, err })
     throw new Error('[noretry] failed to replace index alias')
   }
   if (!res.acknowledged) throw new Error('[noretry] failed to get cluster acknowledgement after updating aliases ' + name)

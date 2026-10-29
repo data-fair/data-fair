@@ -100,7 +100,7 @@ export const task = async () => {
 export const start = () => {
   scheduledTask = cron.schedule(config.apiKeysExpirationCron, () => {
     if (taskPromise) {
-      console.warn('api-keys-expiration task already running')
+      log.warn('api-keys-expiration task already running', { code: 'api-keys-expiration-running' })
       return
     }
     taskPromise = task()

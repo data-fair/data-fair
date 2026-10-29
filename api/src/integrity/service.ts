@@ -98,7 +98,7 @@ const backgroundWork = new Set<Promise<void>>()
 // outcome of the action, not a server fault: logged, not reported as internal errors.
 const logBackgroundError = (action: AdminAction, datasetId: string, err: any) => {
   if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
-    console.warn(`integrity admin action ${action} on dataset ${datasetId} ended with ${err.status}: ${err.message}`)
+    log.warn('integrity admin action ended with a client error', { code: 'integrity-admin-client-error', action, datasetId, status: err.status, message: err.message })
   } else {
     log.error('integrity admin background task failed', { code: 'integrity-admin-background', err })
   }

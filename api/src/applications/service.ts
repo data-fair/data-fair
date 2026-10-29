@@ -422,12 +422,12 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   try {
     await filesStorage.removeFile(capture.captureFilePath(application))
   } catch (err) {
-    console.warn('Failure to remove capture file')
+    log.warn('failure to remove application capture file', { code: 'application-remove-capture', applicationId: application.id, err })
   }
   try {
     await filesStorage.removeDir(dir(application))
   } catch (err) {
-    console.warn('Failure to remove application directory')
+    log.warn('failure to remove application directory', { code: 'application-remove-dir', applicationId: application.id, err })
   }
 
   log.info(`deleted application ${application.slug} (${application.id})`, { code: 'df.applications.delete', ...resourceLogFields('applications', application) })

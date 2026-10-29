@@ -192,14 +192,19 @@ export const processResourceTask = (type: ResourceType, resource: any, task: Tas
     let errorMessage = (typeof err === 'string' ? err : (err.message as string)) || 'unknown error'
 
     if (stopped) {
-      console.log('task failed while service was shutting down', errorMessage)
+      log.info('task failed while service was shutting down', { taskName: task.name, errorMessage })
       endTask({ status: 'interrupted' })
       return
     }
 
     endTask({ status: 'error' })
 
-    console.warn(`failure in worker ${task.name} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
+    // bad input failures are not internal errors
+    if (errorMessage.startsWith('[noretry] ') || errorMessage.startsWith('[validation-error] ') || err?.noRetry === true) {
+      log.warn('worker task failed', { code: 'worker-task-failed', taskName: task.name, err })
+    } else {
+      log.error('worker task failed', { code: 'worker-task-failed', taskName: task.name, err })
+    }
 
     // some error are caused by bad input, we should not retry these
     // they are signalled either by a [noretry] message prefix or a noRetry property on the error

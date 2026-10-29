@@ -59,7 +59,7 @@ export const listen = async (callback: (type: ResourceType, id: string) => Promi
       }
     } catch (err: any) {
       if (stopped) break
-      console.log('worker ping tailable cursor was interrupted, reinit it', err && err.message)
+      log.warn('worker ping tailable cursor was interrupted, reinit it', { code: 'worker-ping-interrupted', err })
     }
   }
 }

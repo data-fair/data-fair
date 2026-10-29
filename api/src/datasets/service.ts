@@ -455,13 +455,13 @@ export const deleteDataset = async (app: any, dataset: any) => {
   try {
     await filesStorage.removeDir(dir(dataset))
   } catch (err) {
-    console.warn('Error while deleting dataset draft directory', err)
+    log.warn('error while deleting dataset draft directory', { code: 'dataset-delete-dir', err })
   }
   if (dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(dataset)
     } catch (err) {
-      console.warn('Error while removing mongodb collection for REST dataset', err)
+      log.warn('error while removing mongodb collection for REST dataset', { code: 'dataset-delete-rest-collection', err })
     }
   }
 
@@ -477,7 +477,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
     try {
       await deleteIndex(dataset)
     } catch (err) {
-      console.warn('Error while deleting dataset indexes and alias', err)
+      log.warn('error while deleting dataset indexes and alias', { code: 'dataset-delete-index', err })
     }
     if (!dataset.draftReason) {
       await updateStorage(dataset, { deleted: true })
@@ -527,7 +527,7 @@ export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthen
     try {
       await filesStorage.moveDir(srcDir, dstDir)
     } catch (err) {
-      console.warn('Error while moving dataset directory', err)
+      log.warn('error while moving dataset directory', { code: 'dataset-move-dir', err })
     }
   }
 

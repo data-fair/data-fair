@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import type { ApiConfig } from '../../config/type/index.ts'
 import { relative as relativePath, resolve as resolvePath, join as joinPath } from 'node:path'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCopyCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, type S3ClientConfig } from '@aws-sdk/client-s3'
@@ -157,7 +158,7 @@ export class S3Backend implements FileBackend {
         debug('readStream simple mode ok', response)
         const stream = response.Body as Readable
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
-        stream.on('error', (err) => { console.error('s3 readStream error in simple mode', err) })
+        stream.on('error', (err) => { log.error('s3 readStream error in simple mode', { code: 's3-read-stream', err }) })
         // 1Mb chunks seems like a good compromise between memory consumption and number of requests
         return {
           lastModified: response.LastModified!,
@@ -174,7 +175,7 @@ export class S3Backend implements FileBackend {
           byteRange: s3ChunkSize
         })
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
-        stream.on('error', (err) => { console.error('s3 readStream error in chunked mode', err) })
+        stream.on('error', (err) => { log.error('s3 readStream error in chunked mode', { code: 's3-read-stream', err }) })
         debug('readStream chunked mode')
         return {
           lastModified: headObject.LastModified!,
