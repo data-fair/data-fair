@@ -1,5 +1,8 @@
 <template>
-  <d-frame :src="iframeUrl" />
+  <d-frame
+    :src="iframeUrl"
+    @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
+  />
 </template>
 
 <script setup lang="ts">
@@ -11,6 +14,7 @@ const props = defineProps<{
 }>()
 
 const { locale } = useI18n()
+const { sendUiNotif } = useUiNotif()
 
 const iframeUrl = computed(() => {
   const topics = getResourceTopics(props.resource, props.resourceType, 'notifications', locale.value)
