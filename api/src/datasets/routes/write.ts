@@ -24,7 +24,7 @@ import * as notifications from '../../misc/utils/notifications.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import { emit as workerPing } from '../../workers/ping.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
-import { createDataset, applyPatch, cancelDraft } from '../service.ts'
+import { createDataset, applyPatch, cancelDraft, deleteDataset } from '../service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { assertFragmentWriteBody } from '../../fragments/middlewares.ts'
 import { preparePatch } from '../utils/patch.ts'
@@ -93,10 +93,16 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       debugCreateDataset('init rest dataset')
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
-      await restDatasetsUtils.initDataset(dataset)
-      const indexName = await initDatasetIndex(dataset)
-      await switchAlias(dataset, indexName)
-      await restDatasetsUtils.configureHistory(dataset)
+      try {
+        await restDatasetsUtils.initDataset(dataset)
+        const indexName = await initDatasetIndex(dataset)
+        await switchAlias(dataset, indexName)
+        await restDatasetsUtils.configureHistory(dataset)
+      } catch (err) {
+        // the dataset is already stored as finalized: do not leave it behind without its index
+        await deleteDataset(req.app, dataset)
+        throw err
+      }
       // the ES index was just built empty by the stamping code -> trivially fully stamped
       // (every doc has _bytes, vacuously true with zero docs), and the invariant holds forever
       // after since every REST write path indexes through the same stamping indexStream
