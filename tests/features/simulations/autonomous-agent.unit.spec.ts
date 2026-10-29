@@ -32,7 +32,7 @@ test.describe('calledTool', () => {
   })
 
   test('counts a call a code_mode script made', () => {
-    const nested = { type: 'data-subagent', data: { name: 'code_mode', parts: [{ type: 'dynamic-tool', toolName: 'datafair_list_account_datasets', input: { size: 50 } }] } }
+    const nested = { type: 'data-trace', data: { name: 'code_mode', parts: [{ type: 'dynamic-tool', toolName: 'datafair_list_account_datasets', input: { size: 50 } }] } }
     const exports = [{ conversationId: 'c', messages: [{ seq: 1, role: 'assistant', parts: [{ type: 'dynamic-tool', toolName: 'code_mode', input: {} }, { __ref: 'b1' }] }], runs: [], blobs: new Map([['b1', nested]]) }] as any
     assert.equal(calledTool(exports, 'datafair_list_account_datasets', input => input.size === 50), true)
     assert.equal(calledTool(exports, 'datafair_search_data'), false)

@@ -29,13 +29,13 @@
     <df-agent-chat-action
       action-id="help-annotate-schema"
       :visible-prompt="t('helpAnnotateSchema')"
-      :hidden-context="'Use the schema_annotator subagent to set titles, descriptions, concepts and groups on the dataset columns. Coded values belong to the column_labeler subagent, not to a description.'"
+      :hidden-context="'Set titles, descriptions, concepts and groups on the dataset columns, following the annotate-schema skill. Coded values get value labels (label-column-values skill), not a description.'"
       :title="t('helpAnnotateSchema')"
     />
     <df-agent-chat-action
       action-id="help-label-values"
       :visible-prompt="t('helpLabelValues')"
-      :hidden-context="'Use the column_labeler subagent to give readable labels to the coded values of this dataset (1 becomes Homme, COM becomes Commune). It reads the real values first and only labels what it has seen.'"
+      :hidden-context="'Give readable labels to the coded values of this dataset (1 becomes Homme, COM becomes Commune), following the label-column-values skill: read the real values first and only label what you have seen.'"
       :title="t('helpLabelValues')"
     />
     <df-agent-chat-action
@@ -47,7 +47,7 @@
     <df-agent-chat-action
       action-id="help-configure-properties"
       :visible-prompt="t('helpConfigureProperties')"
-      :hidden-context="'The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.'"
+      :hidden-context="'Help optimize column types and indexing capabilities, following the optimize-column-config skill. Ask the user what they need first: type corrections, capability optimization for performance, or both.'"
       :title="t('helpConfigureProperties')"
     />
   </div>

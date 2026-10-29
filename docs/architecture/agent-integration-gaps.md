@@ -6,14 +6,14 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 - **Navigation**: get location, list pages, navigate (3 tools)
 - **Dataset metadata**: list, describe (2 tools)
-- **Dataset data queries**: schema, search, aggregate, metric, field values (5 tools + 1 subagent)
-- **Dataset summary**: read info, set summary (2 tools + 1 subagent)
-- **Dataset description**: set description (1 tool + 1 subagent)
-- **Dataset changes**: read diff (1 tool + 1 subagent)
-- **Dataset expressions**: context, sample, test, set (4 tools + 1 subagent)
+- **Dataset data queries**: schema, search, aggregate, metric, field values (5 tools + 1 skill)
+- **Dataset summary**: read info, set summary (2 tools + 1 skill)
+- **Dataset description**: set description (1 tool + 1 skill)
+- **Dataset changes**: read diff (1 tool + 1 skill)
+- **Dataset expressions**: context, sample, test, set (4 tools + 1 skill)
 - **Applications**: list, describe, get config, list base apps (4 tools)
-- **Application metadata**: set summary, set description (2 tools + 2 subagents + 2 action buttons)
-- **Application config**: VJSF sub-agent (1 subagent)
+- **Application metadata**: set summary, set description (2 tools + 2 skills + 2 action buttons)
+- **Application config**: VJSF form tools (prefix `appConfig_`) + 1 form skill
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
 
@@ -22,7 +22,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 - **Page guidance**: dataset and application detail pages (shared renderer)
 
-**Total: 54 tools, 12 subagents, 20 action buttons** (counted with `grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`, the same for `useAgentSubAgent(`, and `grep -rno "<df-agent-chat-action\|<DfAgentChatAction" ui/src --include=*.vue | wc -l`; the itemized breakdown above predates several of these tools/subagents and is not kept in sync item-by-item)
+**Total: 55 tools, 12 page skills (plus the 3 form skills VJSF publishes by itself), 20 action buttons** (counted with `grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`, the same for `useAgentSkill(`, and `grep -rno "<df-agent-chat-action\|<DfAgentChatAction" ui/src --include=*.vue | wc -l`; the itemized breakdown above predates several of these tools/skills and is not kept in sync item-by-item)
 
 ---
 
@@ -40,7 +40,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ### 2. Dataset Metadata Completion (topics, keywords, license)
 
-**Implemented:** `read_dataset_metadata` / `set_dataset_metadata` (`ui/src/composables/dataset/agent-metadata-tools.ts`) are a single reader/writer for the whole metadata card — title, summary, description, keywords, license, topics, origin, creator, frequency, spatial and the hidden `searchTerms` field — each gated by the owner's `datasets-metadata` settings and, for license/topics, the organization's closed lists. The `search_terms_writer` subagent (behind the `suggest-search-terms` action button on the metadata form) proposes the hidden search vocabulary — synonyms, acronyms with their expansion, everyday wording — for `searchTerms`. As with every metadata write here, nothing is saved automatically: the tools fill the form and the user still reviews and clicks Enregistrer.
+**Implemented:** `read_dataset_metadata` / `set_dataset_metadata` (`ui/src/composables/dataset/agent-metadata-tools.ts`) are a single reader/writer for the whole metadata card — title, summary, description, keywords, license, topics, origin, creator, frequency, spatial and the hidden `searchTerms` field — each gated by the owner's `datasets-metadata` settings and, for license/topics, the organization's closed lists. The `write-search-terms` skill (behind the `suggest-search-terms` action button on the metadata form) proposes the hidden search vocabulary — synonyms, acronyms with their expansion, everyday wording — for `searchTerms`. As with every metadata write here, nothing is saved automatically: the tools fill the form and the user still reviews and clicks Enregistrer.
 
 **Remaining gap:** automatic suggestion of `relatedDatasets` — no tool reads the catalog to propose datasets that are likely related to the one being edited.
 
@@ -60,7 +60,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ### ~~4. Dataset Property Transformation Suggestions~~ ✓
 
-**Implemented:** `agent-property-config-tools.ts` provides a `read_property_config` tool, a `set_property_config` tool, and a `property_config_advisor` subagent. Action button "Optimize types and capabilities" on `dataset-schema.vue`.
+**Implemented:** `agent-property-config-tools.ts` provides a `read_property_config` tool, a `set_property_config` tool, and and an `optimize-column-config` skill. Action button "Optimize types and capabilities" on `dataset-schema.vue`.
 
 **Location:** `ui/src/composables/dataset/agent-property-config-tools.ts`
 
@@ -78,9 +78,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ### 6. Master Data Configuration Help
 
-**Current state:** `dataset-master-data.vue` uses VJSF to configure master data features (shared orgs, single/bulk searches, virtual datasets, standard schema). Complex config with multiple sections.
-
-**Opportunity:** The VJSF component already supports `:sub-agent="true"` (used for application config). Adding it here would let users configure master data through natural language, following the existing `appConfig_form` pattern.
+**Implemented:** `dataset-master-data.vue` uses VJSF to configure master data features (shared orgs, single/bulk searches, virtual datasets, standard schema), and gives it the `masterData_` prefix: the form registers its tools (`masterData_describeState`, `masterData_setData`, …) and publishes the `master-data-form` skill by itself, following the `appConfig_` pattern. An action button on the page hands the user's request to the assistant.
 
 **Location:** `ui/src/components/dataset/dataset-master-data.vue`
 
@@ -88,7 +86,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ### ~~7. Data Quality / Anomaly Detection~~ ✓
 
-**Implemented:** `agent-data-quality-tools.ts` provides a `data_quality_checker` subagent that performs systematic quality analysis (completeness, duplicates, outliers, format issues) using the existing data query tools. Action button "Check data quality" on `dataset-table.vue`.
+**Implemented:** `agent-data-quality-tools.ts` provides a `check-data-quality` skill that guides systematic quality analysis (completeness, duplicates, outliers, format issues) using the existing data query tools. Action button "Check data quality" on `dataset-table.vue`.
 
 **Location:** `ui/src/composables/dataset/agent-data-quality-tools.ts`
 
@@ -169,7 +167,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | **High** | 3. Schema annotation | High — very tedious manually | Med |
 | **High** | 14. Dataset journal tool | Med-High — debugging/auditing | Low — read-only API call |
 | **High** | 11. Storage stats tool | Med — account management | Low — read-only API call |
-| ~~Done~~ | ~~7. Data quality analysis~~ | ~~High — unique value~~ | ~~Med — subagent prompt design~~ |
+| ~~Done~~ | ~~7. Data quality analysis~~ | ~~High — unique value~~ | ~~Med — skill design~~ |
 | ~~Done~~ | ~~8. App creation guidance~~ | ~~Med — occasional use~~ | ~~Low — leverages existing tools~~ |
 | ~~Done~~ | ~~9. Dataset creation guidance~~ | ~~Med — occasional use~~ | ~~Low — conversational only~~ |
 | **Med** | 12. Processing logs | Med — debugging | Med — new API calls |

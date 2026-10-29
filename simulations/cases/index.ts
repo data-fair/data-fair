@@ -129,10 +129,10 @@ export const cases: SimulationCase[] = [
     maxTurns: 9
   },
   // The step after the one above: open_add_line_dialog / open_edit_line_dialog
-  // hand the form to the editLine_form VJSF subagent, returning once it is
-  // registered (a wait on the dialog's own opening event once stalled a real
-  // session on the add dialog). A judged run once died there — the dialog opened
-  // on a dataset with no columns, the subagent spent two round trips discovering
+  // open the form, returning once its editLine_ tools are registered (a wait on
+  // the dialog's own opening event once stalled a real session on the add
+  // dialog). A judged run once died there — the dialog opened on a dataset with
+  // no columns, the form's sub-agent of the time spent two round trips discovering
   // an empty form, and the person was handed a manual procedure. A precondition
   // now refuses that dialog; this case exercises the path when it should succeed.
   //

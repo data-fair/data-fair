@@ -60,7 +60,7 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         '**Detail pages** (require an ID, use list_datasets or list_applications to find IDs):\n' +
         `- Dataset overview: ${appUrl('/dataset/{id}')}\n` +
         `- Dataset data: ${appUrl('/dataset/{id}/data')}\n` +
-        `- Dataset table: ${appUrl('/dataset/{id}/table')} — filtered by the filterQuery of the dataset_data subagent's Context, pasted verbatim, optionally followed by cols=col1,col2 from its columns keys to choose the visible columns. Never write filter params yourself, in a navigate call or in a link written in the chat: ask dataset_data for the rows you want. Offer a filtered view only when its totalResults is above 0.\n` +
+        `- Dataset table: ${appUrl('/dataset/{id}/table')} — filtered by the "Filter query:" line a data query tool printed, pasted verbatim, optionally followed by cols=col1,col2 from the relevant column keys to choose the visible columns. Never write filter params yourself, in a navigate call or in a link written in the chat: query the rows you want first (query-dataset-data skill). Offer a filtered view only when that query matched rows.\n` +
         `- Dataset map: ${appUrl('/dataset/{id}/map')} — only for a dataset describe_dataset reports as geolocalized (the others have no map), filtered by the same filterQuery as the table page\n` +
         `- Dataset files: ${appUrl('/dataset/{id}/files')}\n` +
         `- Edit dataset data: ${appUrl('/dataset/{id}/edit-data')}\n` +
@@ -106,7 +106,7 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
         },
         query: {
           type: 'string' as const,
-          description: 'Optional query string to append to the URL (without leading "?"). For a dataset table or map page: the filterQuery of the dataset_data subagent\'s Context, verbatim, never written by hand.'
+          description: 'Optional query string to append to the URL (without leading "?"). For a dataset table or map page: the "Filter query:" line a data query tool printed, verbatim, never written by hand.'
         }
       },
       required: ['path'] as const

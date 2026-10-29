@@ -4,15 +4,15 @@
 
 Data Fair integrates an external AI agents service (`data-fair/agents`) to provide a **back-office assistant** embedded directly in the platform UI. This assistant helps users navigate the interface, explore and query datasets, configure visualization applications, write calculated column expressions, and manage metadata.
 
-The integration follows a **browser-side tool exposure** pattern: the main application frame registers tools and subagents using Vue composables, and the external agents service (running in an iframe) discovers and invokes them via a **WebMCP** protocol over BroadcastChannel.
+The integration follows a **browser-side tool exposure** pattern: the main application frame registers tools and skills using Vue composables, and the external agents service (running in an iframe) discovers and invokes them via a **WebMCP** protocol over BroadcastChannel. A skill (`useAgentSkill({ name, description, body })`) is a procedure published as the MCP resource `skill://<name>/SKILL.md` on the page's `navigator.modelContext`: the assistant sees a Skills index (name + description), loads a body on demand with `read_skill`, and follows it itself with the page's tools. Sub-agents (`useAgentSubAgent`, a delegate with reserved tools and its own model) were removed after a measured comparison: they cut the lead's context but bought no quality on form editing, and cost more and ran slower. Delivering procedures as skills is also the convention of MCP servers and agent harnesses.
 
 ### Key characteristics
 
 - **Assistants on WebMCP, autonomous agents on MCP**: the built-in personal assistants (back-office and portal) use the tools of their page and nothing else; the autonomous agents use the MCP server built from the [platform document](platform-api-docs.md). The separation is deliberate: the agents service can give an assistant MCP servers (`PERSONAL_ASSISTANTS`), and that capability stays, but no deployment configures it, since the assistant would then hold every catalog tool twice (its page's and the MCP server's). The WebMCP tools are not deprecated; moving the assistants to MCP is later work.
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
-- **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
+- **Bilingual**: all tool annotations and the system prompt support French and English. Skill bodies are localized; skill descriptions (the index the model reads on every turn) are English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 54 tools (`grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`), 12 write (navigate, set_dataset_metadata, set_expression, set_property_config, add_columns, annotate_schema, reorder_columns, set_column_labels, open_add_line_dialog, open_edit_line_dialog, set_application_summary, set_application_description), and all but `navigate` and the two dialog openers write into the page's edit form client-side — the user still presses Enregistrer. The nine creation-wizard tools likewise manipulate form state only; no agent tool reaches the API.
+- **Read-heavy, write-light**: of 55 tools (`grep -rho "useAgentTool(" ui/src --include=*.ts --include=*.vue | wc -l`), 12 write (navigate, set_dataset_metadata, set_expression, set_property_config, add_columns, annotate_schema, reorder_columns, set_column_labels, open_add_line_dialog, open_edit_line_dialog, set_application_summary, set_application_description), and all but `navigate` and the two dialog openers write into the page's edit form client-side — the user still presses Enregistrer. The nine creation-wizard tools likewise manipulate form state only; no agent tool reaches the API.
 
 ### Activation flow
 
@@ -52,11 +52,11 @@ graph TB
         subgraph MainFrame["Main Application Frame"]
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
-            SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["54 Tools"]
-            SubAgents["12 Subagents"]
+            SR["Skill Registry<br/>(useAgentSkill)"]
+            Tools["55 Tools"]
+            Skills["12 page skills<br/>+ 3 form skills"]
             TR --> Tools
-            SR --> SubAgents
+            SR --> Skills
             FS --> TR
             FS --> SR
         end
@@ -121,21 +121,22 @@ sequenceDiagram
     participant ActionBtn as DfAgentChatAction
     participant ChatUI as Agent Chat (iframe)
     participant AgentSvc as Agents Service
-    participant SubAgent as Subagent
 
     User->>ActionBtn: Click action button
     ActionBtn->>ChatUI: Open chat + inject message
     Note over ChatUI: visible-prompt (shown to user)<br/>+ hidden-context (instruction for agent)
     ChatUI->>AgentSvc: Send combined message
-    AgentSvc->>SubAgent: Delegate to specialized subagent
-    SubAgent->>AgentSvc: Tool calls + result
+    AgentSvc->>ChatUI: read_skill (loads the skill body)
+    ChatUI->>AgentSvc: Skill procedure
+    AgentSvc->>ChatUI: Page tool calls, following the skill
+    ChatUI->>AgentSvc: Tool results
     AgentSvc-->>ChatUI: Stream response
     ChatUI-->>User: Displays result
 ```
 
 ## 3. System Prompt
 
-Defined in `ui/src/layouts/default.vue`, locale-dependent. Instructs the agent to be a Data Fair assistant: help navigate, explore datasets, query data, configure applications, manage metadata. Key directives: respond in the user's language, be concise, and use `navigate` to show filtered data after subagent exploration. It no longer tells the agent to keep asking where the user is: the application reports that itself (see [Host events](#10-host-events)).
+Defined in `ui/src/layouts/default.vue`, locale-dependent. Instructs the agent to be a Data Fair assistant: help navigate, explore datasets, query data, configure applications, manage metadata. Key directives: respond in the user's language, be concise, and use `navigate` to show filtered data after querying the data. It no longer tells the agent to keep asking where the user is: the application reports that itself (see [Host events](#10-host-events)).
 
 ### Absolute-URL link convention
 
@@ -143,7 +144,7 @@ Chat prose renders inside the agents iframe, which resolves a clicked link again
 
 - `list_pages` emits absolute URLs (origin + history base + path) via `toAbsoluteUrl` — `{id}` templates and a trailing `?<query>` are the only things the model substitutes.
 - The host-reported `location` state carries the current page's absolute `url` (see [Host events](#10-host-events)); it replaced the `get_current_location` tool.
-- `list_datasets` (now surfaced in its text output) and `describe_dataset` emit a per-dataset `Link`. The shared formatters default this to the API `page` field — the public/portal page, correct for the portal and MCP consumers. **The back-office integration must not use `page`**: on a secondary domain the API rewrites `page` to the portal URL (via the publication site's `datasetUrlTemplate`) or, through the `setResourceLinks` fallback, to the *primary* back-office (`config.publicUrl`) — never the current secondary back-office the user is in. So `useAgentDatasetTools` passes a `datasetLink` option (`agent-tools/{list-datasets,describe-dataset}.ts`) that builds a current-site link (`window.location.origin + $sitePath + /data-fair/dataset/{id}`), overriding both the text `Link` and `structuredContent.page`. The system prompt points at that link as the base for `/table?<filterQuery>` and `/map?<filterQuery>`. Map links also accept a `category=<column_key>` param (documented in the dataset_data subagent prompt): the map preview colors features per value of that column and shows an interactive legend, so the agent can hand out richer map links for categorical columns.
+- `list_datasets` (now surfaced in its text output) and `describe_dataset` emit a per-dataset `Link`. The shared formatters default this to the API `page` field — the public/portal page, correct for the portal and MCP consumers. **The back-office integration must not use `page`**: on a secondary domain the API rewrites `page` to the portal URL (via the publication site's `datasetUrlTemplate`) or, through the `setResourceLinks` fallback, to the *primary* back-office (`config.publicUrl`) — never the current secondary back-office the user is in. So `useAgentDatasetTools` passes a `datasetLink` option (`agent-tools/{list-datasets,describe-dataset}.ts`) that builds a current-site link (`window.location.origin + $sitePath + /data-fair/dataset/{id}`), overriding both the text `Link` and `structuredContent.page`. The system prompt points at that link as the base for `/table?<filterQuery>` and `/map?<filterQuery>`. Map links also accept a `category=<column_key>` param (documented in the `query-dataset-data` skill): the map preview colors features per value of that column and shows an interactive legend, so the agent can hand out richer map links for categorical columns.
 - `navigate` accepts either an absolute URL or a bare path: `toRoutePath` reduces any input (full URL, base-prefixed path, or bare router path — even one with a wrong/hallucinated origin) back to a base-less router path for `router.push`, mirroring the host handler's logic.
 
 Pure helpers live in `ui/src/composables/agent/url-utils.ts` (`toAbsoluteUrl` / `toRoutePath`, unit-tested in `tests/features/agent-tools/url-utils.unit.spec.ts`); the back-office base is `$sitePath + '/data-fair/'` (`ui/src/main.ts`).
@@ -159,22 +160,22 @@ The user types directly in the chat drawer. The agent has access to all globally
 | | |
 |---|---|
 | **Trigger** | Free chat or via filter/quality actions |
-| **Subagent** | `dataset_data` — data analyst that queries dataset content |
-| **Pattern** | Optimistic exploration: queries directly when the parent already supplied column keys/types (it usually has them from `describe_dataset` or the current page), and only calls `get_dataset_schema` when it lacks column info or needs sample values — relying on the 400 "valid operations" errors to self-correct. Returns a "Context" block for table filtering handoff, with the dataset `slug` and title only when a tool result showed them (it skips `get_dataset_schema` when given the columns, and once reported the dataset id as both). It writes table/map links only when its task gives the dataset URL, otherwise it hands back the `filterQuery` for the parent to link, and it states only figures a tool computed. |
+| **Skill** | `query-dataset-data` — procedure for querying dataset content (shared module `agent-tools/dataset-data-skill.ts`) |
+| **Pattern** | Optimistic exploration: queries directly when the column keys/types are already known (it usually has them from `describe_dataset` or the current page), and only calls `get_dataset_schema` when it lacks column info or needs sample values — relying on the 400 "valid operations" errors to self-correct. There is no "Answer + Context" response protocol: links are built from the `Filter query:` line a query tool prints, verbatim, and only figures a tool computed are stated. |
 | **Tools** | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | **Source** | `ui/src/composables/dataset/agent-data-tools.ts` |
 
 #### Filter capability discovery (error-driven)
 
-The agent is **not** given a per-column capability list in `get_dataset_schema` (kept lean — it would bloat every exploration with mostly-default boilerplate). Instead it knows the global suffix list (in the `dataset_data` subagent prompt via the shared `filtersGuide`; each filtering tool's `filters` param carries only a terse self-contained stub) and assumes the common defaults. When a filter/sort/group/metric/word-agg call hits a column whose `x-capabilities` forbid it, the API returns a 400 whose message lists the operations that column *does* support (`Opérations disponibles sur ce champ — …`), so the agent self-corrects on the next call.
+The agent is **not** given a per-column capability list in `get_dataset_schema` (kept lean — it would bloat every exploration with mostly-default boilerplate). Instead it knows the global suffix list (in the `query-dataset-data` skill body via the shared `filtersGuide`; each filtering tool's `filters` param carries only a terse self-contained stub) and assumes the common defaults. When a filter/sort/group/metric/word-agg call hits a column whose `x-capabilities` forbid it, the API returns a 400 whose message lists the operations that column *does* support (`Opérations disponibles sur ce champ — …`), so the agent self-corrects on the next call.
 
 The capability → operation mapping is a single source of truth: `FILTER_CAPABILITIES` + `getColumnFilters` / `getColumnOperations` / `columnOperationsHint` in `api/src/datasets/es/operations.ts`. It also drives the `commons.js` filter-loop enforcement and the OpenAPI doc generator (`api/contract/dataset-api-docs.ts`).
 
 #### `_c_` prefix disambiguation, ignored-parameter hints, and new 400 validations
 
-**`_c_` prefix is concept-only.** The `_c_` prefix is reserved for concept filters (geo distance, date match, full-text search) that are identified by concept id rather than column key. A column filter normally must not carry this prefix — `ville_eq` is correct, `_c_ville_eq` is the mistake the agent keeps making (copying the pattern from real `_c_` params it sees in live URLs). The `filtersGuide` in `agent-tools/_utils.ts` (embedded once in the `dataset_data` subagent prompt) and the terse `filtersDescription` stub on each filtering tool's `filters` param state this explicitly — those are the surfaces where filters are *actually authored* (the query tools). The main system prompt (`ui/src/layouts/default.vue`) no longer re-teaches the `_c_`/suffix syntax at all: it draws the responsibility boundary instead — **agents never write filter params themselves; only the data tools author filter strings, and everyone else pastes the returned `filterQuery` verbatim** (the one allowed addition is `cols=…` on the table view — the table page's column-visibility param; `select` is an API param the page ignores, which the prompt once taught and a judged run caught as a link promising columns the page did not hide; `buildFilterQueryString` now writes a query's `select` into the filterQuery as `cols`, since the search tools' own output carried it too). This is deliberately stronger and shorter than the old "reuse verbatim, and don't add `_c_`" wording, which still left room to hand-assemble and only patched one symptom. (That older prompt once wrongly described `filterQuery` as "already _c_-prefixed", which made the orchestrator instruct the subagent to slap `_c_` onto column filters in the presentation layer — past the API's `ignoredParamsAdvice` hint, since the corrupted prefix only ever appeared in the emitted link, never in an actual query.)
+**`_c_` prefix is concept-only.** The `_c_` prefix is reserved for concept filters (geo distance, date match, full-text search) that are identified by concept id rather than column key. A column filter normally must not carry this prefix — `ville_eq` is correct, `_c_ville_eq` is the mistake the agent keeps making (copying the pattern from real `_c_` params it sees in live URLs). The `filtersGuide` in `agent-tools/_utils.ts` (embedded once in the `query-dataset-data` skill body) and the terse `filtersDescription` stub on each filtering tool's `filters` param state this explicitly — those are the surfaces where filters are *actually authored* (the query tools). The main system prompt (`ui/src/layouts/default.vue`) no longer re-teaches the `_c_`/suffix syntax at all: it draws the responsibility boundary instead — **agents never write filter params themselves; only the data tools author filter strings, and everyone else pastes the returned `filterQuery` verbatim** (the one allowed addition is `cols=…` on the table view — the table page's column-visibility param; `select` is an API param the page ignores, which the prompt once taught and a judged run caught as a link promising columns the page did not hide; `buildFilterQueryString` now writes a query's `select` into the filterQuery as `cols`, since the search tools' own output carried it too). This is deliberately stronger and shorter than the old "reuse verbatim, and don't add `_c_`" wording, which still left room to hand-assemble and only patched one symptom. (That older prompt once wrongly described `filterQuery` as "already _c_-prefixed", which made the assistant slap `_c_` onto column filters in the presentation layer — past the API's `ignoredParamsAdvice` hint, since the corrupted prefix only ever appeared in the emitted link, never in an actual query.)
 
-**The dropped-operator-suffix variant (and the ownership fix).** The same class recurs without `_c_`: the orchestrator, lacking the suffix rule, hand-authors a filter as `lieu_departement=Finistère` (no `_eq`) — often by *dictating that format to the `dataset_data` subagent in the task*, which then takes the caller's format for granted and emits ready-to-use URLs in it, even though its own `Filter query:` output line correctly read `lieu_departement_eq=…`. A suffix-less key matches no operator in the table/map URL parser and is silently dropped, landing the user on the unfiltered dataset. Fixed by **ownership prompting**, not by a parser tweak: the `subagent_dataset_data` tool description tells the caller to describe the data need *in plain language, not filter/URL syntax*; the subagent prompt makes its verbatim `filterQuery` the only correct filter syntax and forbids hand-assembling `column=value` links even when the task phrased the filter differently. The principle generalizes the `_c_` fix: don't patch each malformed-syntax symptom in the always-present prompt — move authorship to the one agent (and tool output) that has the schema. (A read-side fallback — rewriting a bare `<column>` URL param to `<column>_eq` in `useFilters` — was rejected: it can't be done safely without the schema, and matching bare param keys against schema keys collides with generic column names like `sort`/`select`/`page`.)
+**The dropped-operator-suffix variant (and the ownership fix).** The same class recurs without `_c_`: the assistant, lacking the suffix rule, hand-authors a filter as `lieu_departement=Finistère` (no `_eq`) — at the time often by *dictating that format to the `dataset_data` sub-agent in the task* (history: sub-agents are gone), which took the caller's format for granted and emitted ready-to-use URLs in it, even though its own `Filter query:` output line correctly read `lieu_departement_eq=…`. A suffix-less key matches no operator in the table/map URL parser and is silently dropped, landing the user on the unfiltered dataset. Fixed by **ownership prompting**, not by a parser tweak: the `query-dataset-data` skill makes the verbatim `Filter query:` line the only correct filter syntax and forbids hand-assembling `column=value` links. The principle generalizes the `_c_` fix: don't patch each malformed-syntax symptom in the always-present prompt — move authorship to the one agent (and tool output) that has the schema. (A read-side fallback — rewriting a bare `<column>` URL param to `<column>_eq` in `useFilters` — was rejected: it can't be done safely without the schema, and matching bare param keys against schema keys collides with generic column names like `sort`/`select`/`page`.)
 
 **Defensive resolution of mis-prefixed column filters.** Prompt rules alone can't stop the mistake, because it self-perpetuates: a `_c_<col>_<suffix>` that lands in the address bar is echoed back in the host-reported `location` state (formerly by `get_current_location`), and the model trusts the concrete live URL over the abstract prohibition and re-emits it. The malformed key cannot be normalized at the URL boundary (navigate / the reported location) without the schema, because `_c_<conceptId>_<suffix>` is a **legitimate, API-accepted concept filter** when `<conceptId>` is a real primary concept — indistinguishable from a mis-prefixed column key without knowing the dataset's columns. So the resolution lives where the schema exists: the ES query parser (`api/src/datasets/es/commons.ts`) resolves a `_c_<x>_<suffix>` key against primary concept ids first and, when none matches, **falls back to a column-key lookup** before the existing silent-ignore (`continue`). A genuine inapplicable dashboard concept filter still matches neither and is ignored as before. This fixes the agent data tools *and* the table/map preview in one place: the table forwards every `_c_*` param straight to the API via `useConceptFilters` (`dataset-table.vue` `extraParams`), so the same fallback applies. The pre-existing always-on `ignoredParamsAdvice` hint still nudges the model toward the bare column form.
 
@@ -188,7 +189,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on dataset table toolbar |
 | **Action ID** | `help-filter-table` |
-| **Pattern** | **Subagent-to-navigation handoff**: asks user intent, delegates to `dataset_data` subagent (passing the already-known table columns so it skips `get_dataset_schema`), then uses `navigate` with query params to apply filters to the table page. The subagent's `filterQuery` is passed as the `navigate` `query` string; `navigate` defensively unwraps the occasional `filterQuery=<whole query string>` mistake rather than relying on extra prompt warnings. Query params are reactively bound to the table's filter composable. |
+| **Pattern** | **Skill-to-navigation handoff**: asks user intent, loads `query-dataset-data`, queries with the already-known table columns (skipping `get_dataset_schema`), then uses `navigate` with query params to apply filters to the table page. The verbatim `Filter query:` line of the query tool is passed as the `navigate` `query` string; `navigate` defensively unwraps the occasional `filterQuery=<whole query string>` mistake rather than relying on extra prompt warnings. Query params are reactively bound to the table's filter composable. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue` |
 
 ### 4.4 Check Data Quality
@@ -197,8 +198,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on dataset table toolbar |
 | **Action ID** | `check-data-quality` |
-| **Subagent** | `data_quality_checker` — systematic 6-step audit (completeness, uniqueness, outliers, format consistency, distribution anomalies) |
-| **Pattern** | Asks user for full analysis or specific focus, then delegates. Produces a structured report with quality score. |
+| **Skill** | `check-data-quality` — systematic 6-step audit (completeness, uniqueness, outliers, format consistency, distribution anomalies) |
+| **Pattern** | Asks user for full analysis or specific focus, then follows the skill. Produces a structured report with quality score. |
 | **Tools** | Reuses data query tools: `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | **Source** | `ui/src/composables/dataset/agent-data-quality-tools.ts` |
 
@@ -208,10 +209,10 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the summary textarea, on the metadata form |
 | **Action ID** | `summarize-dataset` |
-| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata and sample data, produces ≤300 char plain text summary |
+| **Skill** | `write-dataset-summary` — reads metadata and sample data, produces ≤300 char plain text summary |
 | **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_metadata` |
-| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
+| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.6 Write Dataset Description
 
@@ -219,10 +220,10 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the description markdown editor, on the metadata form |
 | **Action ID** | `describe-dataset` |
-| **Subagent** | `dataset_description_writer` — reads metadata, produces 500-2000 char markdown description |
+| **Skill** | `write-dataset-description` — reads metadata, produces 500-2000 char markdown description |
 | **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_metadata` (description field). Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
-| **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
+| **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.7 Summarize Metadata Changes
 
@@ -230,8 +231,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on the dataset page (visible when unsaved metadata changes exist) |
 | **Action ID** | `summarize-metadata-changes` |
-| **Subagent** | `dataset_changes_summarizer` (model: `summarizer`) — reads unified diff, produces <500 char plain text summary |
-| **Pattern** | Direct delegation, no user confirmation needed (read-only output) |
+| **Skill** | `summarize-dataset-changes` — reads unified diff, produces <500 char plain text summary |
+| **Pattern** | Direct, no user confirmation needed (read-only output) |
 | **Tools** | `read_dataset_changes` |
 | `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
 | `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
@@ -250,7 +251,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to each expression text field |
 | **Action ID** | `help-expression-{idx}` (one per calculated column) |
-| **Subagent** | `expression_helper` — writes and tests expr-eval expressions (has full language reference in prompt) |
+| **Skill** | `write-expression` — writes and tests expr-eval expressions (has the full language reference in its body) |
 | **Pattern** | Asks user intent first, then: get context → get sample data → write & test expression → fix on errors → present with test results → apply on approval via `set_expression` |
 | **Tools** | `get_expression_context`, `get_sample_data`, `test_expression`, `set_expression` |
 | **Source** | `ui/src/composables/dataset/agent-expression-tools.ts` |
@@ -261,7 +262,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on schema toolbar |
 | **Action ID** | `help-annotate-schema` |
-| **Subagent** | `schema_annotator` — suggests human-readable titles and descriptions for columns |
+| **Skill** | `annotate-schema` — suggests human-readable titles and descriptions for columns |
 | **Source** | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` |
 
 ### 4.9b Declare Columns (REST Dataset)
@@ -274,7 +275,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Signals** | The page publishes `structure` (`columns`, `unsaved`, `ready`) and emits `dataset-structure-saved`, so the agent can say the Enregistrer button is live without looking at the screen and learn of the save by declaring `wait_for_user_action` — the same pair the creation wizard has (§10). |
 | **Precondition** | Only an editable (REST) dataset: anywhere else the columns come from the file or the source, and the form itself offers no add-column button. The tool returns that reason instead of staging. |
 | **Types** | The names offered to the model (`text`, `long-text`, `formatted-text`, `date`, `date-time`, `integer`, `number`, `boolean`) each resolve to one entry of `propertyTypes` in `ui/src/utils/dataset.ts`, and a unit test pins that the two lists still cover each other in both directions — a type added to the dialog and not here would be silently unreachable by the agent. |
-| **Staged payload** | Identical to what `dataset-add-column-dialog.vue` emits: `key` (slugified from the name, as the form derives it), `x-originalName`, `type`, `format`/`x-display` when the type has them, and an empty `title`: the UI labels such a column with its `x-originalName`, and `describe_dataset` prints that same fallback — it printed `title` alone once, and a judged run told the person their new columns had no readable labels. Descriptions and concepts come afterwards through the `schema_annotator` subagent (`annotate_schema` is its tool, not the page's). |
+| **Staged payload** | Identical to what `dataset-add-column-dialog.vue` emits: `key` (slugified from the name, as the form derives it), `x-originalName`, `type`, `format`/`x-display` when the type has them, and an empty `title`: the UI labels such a column with its `x-originalName`, and `describe_dataset` prints that same fallback — it printed `title` alone once, and a judged run told the person their new columns had no readable labels. Descriptions and concepts come afterwards through the `annotate-schema` skill (`annotate_schema` is its tool, not the page's). |
 | **Source** | `ui/src/composables/dataset/agent-add-column-tools.ts`, `agent-add-column-tools-logic.ts` |
 
 ### 4.10 Optimize Property Config
@@ -283,7 +284,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on schema toolbar |
 | **Action ID** | `help-configure-properties` |
-| **Subagent** | `property_config_advisor` (model: `summarizer`) — suggests type overrides and capability optimizations |
+| **Skill** | `optimize-column-config` — suggests type overrides and capability optimizations |
 | **Pattern** | Asks user what they need (type corrections, capability optimization, or both). Reads config and sample data, suggests changes with explanations, applies via `set_property_config`. Does NOT write expressions — directs to expression_helper. |
 | **Tools** | `read_property_config`, `set_property_config` |
 | **Source** | `ui/src/composables/dataset/agent-property-config-tools.ts` |
@@ -294,8 +295,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button above application configuration form |
 | **Action ID** | `configure-application` |
-| **Subagent** | `appConfig_form` — VJSF-managed form manipulation subagent |
-| **Pattern** | **VJSF webmcp**: the VJSF component creates the subagent automatically when `:sub-agent="true"`. Agent asks what the user wants, then delegates to the form subagent. |
+| **Skill** | `app-config-form` — published by the VJSF form itself, beside its `appConfig_` tools |
+| **Pattern** | **VJSF webmcp**: the VJSF component registers its form tools (prefixed `appConfig_`) and publishes its skill automatically, named from the prefix; no prop is needed. Agent asks what the user wants, loads the skill, then fills the form with the `appConfig_` tools itself. |
 | **Source** | `ui/src/components/application/application-config.vue` |
 
 ### 4.12 Enter Data (REST Dataset)
@@ -304,13 +305,13 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on edit-data page |
 | **Action ID** | `help-edit-data` |
-| **Subagent** | `editLine_form` — VJSF-managed form subagent for add/edit line dialogs |
-| **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then delegates form filling to VJSF subagent. User retains Save button control. |
+| **Skill** | `edit-line-form` — published by the line dialog's VJSF form, beside its `editLine_` tools |
+| **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then fills the form with the `editLine_` tools, following the `edit-line-form` skill. User retains Save button control. |
 | **Tools** | `open_add_line_dialog`, `open_edit_line_dialog` |
-| **No one-turn lag** | `editLine_form` registers with the dialog's form, some time after the dialog opens (vjsf lays the form out once the schema is fetched and the element has a width). The openers poll `navigator.modelContext.listTools()` for it (bounded, 5s) before returning, and the chat offers a tool registered while a host tool runs on its very next step (`FrameClientAggregator.settled()`), so a ready result says "delegate now" and asks for no wait. The earlier design returned at once and had the model declare `wait_for_user_action` on `dataset-line-dialog-opened` — which only worked when that event reached the chat *after* the opener's result was drained. The add dialog's form is bundled with it (the edit one is async), so its event was delivered inside the result and the wait sat on « En attente : Ouverture du formulaire d'ajout de ligne » over an open form. Pinned by `tests/features/ui/line-dialog-tools.e2e.spec.ts`. `navigate` had the same advice and the same race (its `location` event landed in its own result); it now waits 500ms then until the page's tool list has been quiet for 300ms (cap 3s) and says the destination's tools are callable from the next step, naming the ones the move took away and the ones it brought (`toolsChangeNote` in `url-utils.ts`): a judged run left the page editor, took its form sub-agent for granted and told the person its tools were broken. `open_edit_line_dialog` also fetches the line first — an unknown `_id` is refused — and names the opened line by its fillable values, after a judged run opened the line it had just created instead of the one to correct. `one-turn-lag-advice.unit.spec.ts` keeps any of the old phrasings from coming back. |
-| **Addressing a row** | `open_edit_line_dialog` needs a line `_id`, and `cleanRow` stripped `_id` from every read — so the tool its own description named could never supply one, even when the caller passed `select=_id`. A judged run spent four sub-agent dispatches on that impossibility, promised the person it would fetch the id itself, retracted the promise, and asked them to find the row and click its pencil, which the persona had said it would not do. `search_data` now keeps `_id` when the `select` names it (`cleanRowKeepingId`); `_i` and `_rand` stay out whatever the select says, because they address nothing. |
+| **No one-turn lag** | The `editLine_` tools register with the dialog's form, some time after the dialog opens (vjsf lays the form out once the schema is fetched and the element has a width). The openers wait for them (`hasLineFormTools`, which looks for `editLine_describeState` in `navigator.modelContext.listTools()`; bounded, 5s) before returning, and the chat offers a tool registered while a host tool runs on its very next step (`FrameClientAggregator.settled()`), so a ready result says to fill or modify the form now with the `editLine_` form tools, following the `edit-line-form` skill, and asks for no wait. The earlier design returned at once and had the model declare `wait_for_user_action` on `dataset-line-dialog-opened` — which only worked when that event reached the chat *after* the opener's result was drained. The add dialog's form is bundled with it (the edit one is async), so its event was delivered inside the result and the wait sat on « En attente : Ouverture du formulaire d'ajout de ligne » over an open form. Pinned by `tests/features/ui/line-dialog-tools.e2e.spec.ts`. `navigate` had the same advice and the same race (its `location` event landed in its own result); it now waits 500ms then until the page's tool list has been quiet for 300ms (cap 3s) and says the destination's tools are callable from the next step, naming the ones the move took away and the ones it brought (`toolsChangeNote` in `url-utils.ts`): a judged run left the page editor, took its form tools for granted and told the person they were broken. `open_edit_line_dialog` also fetches the line first — an unknown `_id` is refused — and names the opened line by its fillable values, after a judged run opened the line it had just created instead of the one to correct. `one-turn-lag-advice.unit.spec.ts` keeps any of the old phrasings from coming back. |
+| **Addressing a row** | `open_edit_line_dialog` needs a line `_id`, and `cleanRow` stripped `_id` from every read — so the tool its own description named could never supply one, even when the caller passed `select=_id`. A judged run (when sub-agents still existed) spent four dispatches on that impossibility, promised the person it would fetch the id itself, retracted the promise, and asked them to find the row and click its pencil, which the persona had said it would not do. `search_data` now keeps `_id` when the `select` names it (`cleanRowKeepingId`); `_i` and `_rand` stay out whatever the select says, because they address nothing. |
 | **Reachability** | The line tools are registered behind `if (edit)` in `dataset-table.vue`, and only `edit-data.vue` passes `edit` — so on `/dataset/{id}/table` the same component runs read-only and the tools do not exist. A judged run was asked to record a line and correct another, was told nothing about the dataset being editable, guessed its way to `/table`, concluded it had no such tool, and sent the person to support. `describe_dataset` now reports an editable dataset and names its data-entry page (back-office callers only — `/edit-data` is not a portal route). `list_datasets` says the same for each editable dataset it lists: a Haiku run went from the list straight to `/table`, never called `describe_dataset`, and declared editing impossible. Registering the tools on `/table` was rejected: the dialog is an edit affordance and that page is deliberately read-only for people too. |
-| **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: the columns are declared first with `add_columns`, under Structure > Schéma. A refused dialog never registers `editLine_form`, so the empty-form dead end — a judged run spent two sub-agent round trips in it — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
+| **Precondition** | `open_add_line_dialog` stays closed on a dataset with no fillable columns (the calculated system columns do not count) and returns the reason: the columns are declared first with `add_columns`, under Structure > Schéma. A refused dialog never registers the `editLine_` tools, so the empty-form dead end — a judged run spent two sub-agent round trips in it, in the sub-agent days — is unreachable rather than merely discouraged. Pure precondition in `ui/src/composables/dataset/agent-edit-line-logic.ts`. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue`, `ui/src/components/dataset/form/dataset-edit-line-form.vue` |
 
 ### 4.13 Create Application
@@ -350,8 +351,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action buttons next to the summary textarea and the description markdown editor on the application detail page (Metadata → Info tab) |
 | **Action IDs** | `summarize-application`, `describe-application` |
-| **Subagents** | `application_summarizer` (model `summarizer`) — ≤300 char plain-text summary; `application_description_writer` — 500-2000 char markdown description |
-| **Pattern** | Same as the dataset summary/description flow. The parent passes the current `applicationId` to the subagent (via the action button's hidden-context); the subagent reads context with the global `describe_application` + `get_application_config` tools. Generated text is presented and applied on approval via `set_application_summary` / `set_application_description` (which write the edit-form field — the user still saves). `set_application_summary` validates ≤300 chars and rejects generic openings ("This application is…" / "Cette application est…"), forcing a retry. |
+| **Skills** | `write-application-summary` — ≤300 char plain-text summary; `write-application-description` — 500-2000 char markdown description |
+| **Pattern** | Same as the dataset summary/description flow. The action button's hidden context gives the current `applicationId`; the assistant reads it itself and gathers context with the global `describe_application` + `get_application_config` tools. Generated text is presented and applied on approval via `set_application_summary` / `set_application_description` (which write the edit-form field — the user still saves). `set_application_summary` validates ≤300 chars and rejects generic openings ("This application is…" / "Cette application est…"), forcing a retry. |
 | **Source** | `ui/src/composables/application/agent-metadata-tools.ts`, `ui/src/components/application/metadata/application-metadata-form.vue`, `ui/src/pages/application/[id]/index.vue` |
 
 ### 4.17 Suggest Search Terms
@@ -360,10 +361,10 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the search terms field, on the metadata form (in the « Informations complémentaires » tab unless the owner settings move it) |
 | **Action ID** | `suggest-search-terms` |
-| **Subagent** | `search_terms_writer` (model: `summarizer`) — reads metadata, schema and samples, returns a newline-separated list of hidden search terms (synonyms, acronyms with expansion, everyday wording) |
-| **Pattern** | The lead agent presents the list to the user and asks for approval, then applies it on approval via `set_dataset_metadata` (searchTerms field, one line of terms separated by commas or newlines). Nothing is saved — the user still clicks Enregistrer. |
+| **Skill** | `write-search-terms` — reads metadata, schema and samples, returns a newline-separated list of hidden search terms (synonyms, acronyms with expansion, everyday wording) |
+| **Pattern** | The assistant presents the list to the user and asks for approval, then applies it on approval via `set_dataset_metadata` (searchTerms field, one line of terms separated by commas or newlines). Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
-| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
+| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### Active-account scope of the listing tools
 
@@ -468,23 +469,29 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 `wait_for_user_action` is not in this table: it is the chat's own built-in (see
 [Host events](#10-host-events)), offered on any page that has published host state.
 
-## 6. Subagent Reference
+## 6. Page skills
 
-| Subagent | Model | Purpose | Tools |
-|----------|-------|---------|-------|
-| `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
-| `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
-| `dataset_summarizer` | summarizer | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
-| `search_terms_writer` | summarizer | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
-| `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
-| `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
-| `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
-| `schema_annotator` | summarizer | Suggest column titles and descriptions | Schema annotation tools |
-| `property_config_advisor` | summarizer | Suggest type overrides and capability optimizations | `read_property_config`, `set_property_config` |
-| `application_summarizer` | summarizer | Generate ≤300 char application summaries | `describe_application`, `get_application_config` |
-| `application_description_writer` | default | Generate 500-2000 char markdown application descriptions | `describe_application`, `get_application_config` |
-| `appConfig_form` | VJSF-managed | Fill application configuration form via natural language | VJSF form tools |
-| `editLine_form` | VJSF-managed | Fill add/edit line form via natural language | VJSF form tools |
+Registered with `useAgentSkill` (the shared `query-dataset-data` one comes from `agent-tools/dataset-data-skill.ts`, which exports `name`, `description` and `body`). The assistant works with its own model: no skill pins another.
+
+| Skill | Purpose | Tools it uses |
+|-------|---------|---------------|
+| `query-dataset-data` | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
+| `check-data-quality` | Systematic data quality audit (6-step) | Same as `query-dataset-data` |
+| `write-dataset-summary` | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
+| `write-search-terms` | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
+| `write-dataset-description` | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
+| `summarize-dataset-changes` | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
+| `write-expression` | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
+| `annotate-schema` | Suggest column titles and descriptions | Schema annotation tools |
+| `label-column-values` | Give readable labels to the coded values of a column | `read_column_values`, `set_column_labels` |
+| `optimize-column-config` | Suggest type overrides and capability optimizations | `read_property_config`, `set_property_config` |
+| `write-application-summary` | Generate ≤300 char application summaries | `describe_application`, `get_application_config` |
+| `write-application-description` | Generate 500-2000 char markdown application descriptions | `describe_application`, `get_application_config` |
+| `app-config-form` | Fill the application configuration form via natural language | `appConfig_` form tools |
+| `master-data-form` | Fill the master data form via natural language | `masterData_` form tools |
+| `edit-line-form` | Fill the add/edit line form via natural language | `editLine_` form tools |
+
+The three form skills are published by the VJSF component itself (named from its tool prefix: `appConfig_` → `app-config-form`, `masterData_` → `master-data-form`, `editLine_` → `edit-line-form`), not registered by the page.
 
 ## 7. Key Files Reference
 
@@ -501,18 +508,18 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/pages/admin/info.vue` | `summarize-releases` action button + page-scoped tool registration |
 | `ui/src/composables/agent/utils.ts` | Shared helpers: `createAgentTranslator`, `agentToolError`, `csvEscape`, `toCsv`, `cleanRow`, `fetchSampleRows`, `buildPaginatedQuery` |
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
-| `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
-| `ui/src/composables/dataset/agent-data-quality-tools.ts` | `data_quality_checker` subagent (reuses data query tools) |
-| `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (1) + `dataset_summarizer` and `search_terms_writer` subagents |
+| `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `query-dataset-data` skill |
+| `ui/src/composables/dataset/agent-data-quality-tools.ts` | `check-data-quality` skill (reuses data query tools) |
+| `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (1) + `write-dataset-summary` and `write-search-terms` skills |
 | `ui/src/composables/dataset/agent-metadata-tools.ts` | Metadata read/write tools (2): `read_dataset_metadata`, `set_dataset_metadata` |
-| `ui/src/composables/dataset/agent-description-tools.ts` | `dataset_description_writer` subagent (writes via `set_dataset_metadata`, in `agent-metadata-tools.ts`) |
-| `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
-| `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
-| `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
-| `ui/src/composables/dataset/agent-property-config-tools.ts` | Property config tools (2) + `property_config_advisor` subagent |
+| `ui/src/composables/dataset/agent-description-tools.ts` | `write-dataset-description` skill (writes via `set_dataset_metadata`, in `agent-metadata-tools.ts`) |
+| `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `summarize-dataset-changes` skill |
+| `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `write-expression` skill |
+| `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `annotate-schema` skill |
+| `ui/src/composables/dataset/agent-property-config-tools.ts` | Property config tools (2) + `optimize-column-config` skill |
 | `ui/src/composables/agent/page-guidance.ts` | Shared page-guidance renderer (`buildGuidance` + `Guided*` types) for dataset + application |
 | `ui/src/composables/application/agent-tools.ts` | Application tools (4): list, describe, `get_application_config`, list base apps |
-| `ui/src/composables/application/agent-metadata-tools.ts` | Application summary + description set-tools (2) + `application_summarizer` & `application_description_writer` subagents |
+| `ui/src/composables/application/agent-metadata-tools.ts` | Application summary + description set-tools (2) + `write-application-summary` & `write-application-description` skills |
 | `ui/src/composables/application/agent-page-guidance-tools.ts` | Application detail page `page_guidance` tool (thin renderer over the shared module) |
 | `ui/src/components/application/metadata/application-metadata-form.vue` | `summarize-application` and `describe-application` action buttons |
 | `ui/src/composables/application/agent-creation-tools.ts` | Application creation wizard tools (4) |
@@ -522,9 +529,9 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |
 | `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` and `check-data-quality` action buttons, line edit tools |
-| `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
+| `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_` form tools + `edit-line-form` skill) |
 | `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |
-| `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
+| `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF form tools and `app-config-form` skill |
 | `ui/src/pages/new-application.vue` | `help-create-application` action button + creation tools registration |
 | `ui/src/pages/new-dataset.vue` | `help-create-dataset` action button + creation tools registration |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
@@ -536,7 +543,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 
 | Package | Role |
 |---------|------|
-| `@data-fair/lib-vue-agents` | Vue composables: `useAgentTool`, `useAgentSubAgent`, `useFrameServer` |
+| `@data-fair/lib-vue-agents` | Vue composables: `useAgentTool`, `useAgentSkill`, `useFrameServer` |
 | `@data-fair/lib-vuetify-agents` | Vue components: `DfAgentChatDrawer`, `DfAgentChatToggle`, `DfAgentChatAction` |
 
 ## 9. Simulations
@@ -553,9 +560,9 @@ drops its premise and the case stops testing anything) types into the real
 chat drawer in a real browser; the assistant under test runs on
 `SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
 configured as an `openai-compatible` provider on the agents service. The
-background roles — sub-agents, compaction, the moderation guard — run on
+background roles — the tools role (memory consolidation), compaction, the moderation guard — run on
 `SIM_TOOLS_MODEL` (default `haiku`) instead, matching where a deployment puts a
-small model: a sub-agent prompt only a large model can follow reads as working
+small model: a background prompt only a large model can follow reads as working
 until the cheap tier runs it. A baseline also runs the cases with
 `SIM_ASSISTANT_MODEL=haiku`: a scenario only a large assistant gets through is
 not covered well enough for a small one. The run is

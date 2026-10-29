@@ -106,8 +106,8 @@ const expressionContext = computed(() => {
   const name = props.extension.property?.['x-originalName'] || props.extension.property?.key || 'calculated column'
   return `The user wants help writing an expr-eval expression for calculated column "${name}" (type: ${props.extension.property?.type || 'string'}, extension index: ${props.idx}). ` +
     (localExpr.value ? `The current expression is: ${localExpr.value}. ` : '') +
-    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent. ' +
-    'Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.'
+    'Start by asking the user what they want to compute or achieve with this column. Do NOT write an expression until you understand the user\'s intent; then follow the write-expression skill. ' +
+    'Present the expression and its test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.'
 })
 
 watch(localExpr, (val) => emit('update:expr', val))

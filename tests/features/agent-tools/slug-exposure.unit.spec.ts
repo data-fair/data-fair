@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import * as listDatasets from '../../../agent-tools/list-datasets.ts'
 import * as getDatasetSchema from '../../../agent-tools/get-dataset-schema.ts'
-import { prompt as datasetDataSubagentPrompt } from '../../../agent-tools/dataset-data-subagent.ts'
+import { body as datasetDataSkillBody } from '../../../agent-tools/dataset-data-skill.ts'
 
 // The agent tools expose `slug` alongside `id` so a portal/MCP consumer can
 // build slug-based links while the back-office keeps using `id`.
@@ -54,25 +54,21 @@ test.describe('get_dataset_schema exposes slug', () => {
   })
 })
 
-test.describe('dataset_data subagent', () => {
-  test('prompt instructs to report datasetSlug', () => {
-    assert.ok(datasetDataSubagentPrompt.includes('datasetSlug'), 'subagent prompt missing datasetSlug')
+test.describe('query-dataset-data skill', () => {
+  // Judged portal simulations: told the columns, the data querier skipped get_dataset_schema,
+  // never saw the slug or title, and reported the dataset id as both — a link built from it
+  // misses the slug route. It also wrote links on a '[datasetUrl]' placeholder it was never given.
+  test('names slug and title only when a tool result showed them', () => {
+    assert.ok(datasetDataSkillBody.includes('never put the dataset id in their place'), 'skill lets the id stand in for slug/title')
   })
 
-  // Judged portal simulations: told the columns, the sub-agent skips get_dataset_schema, never
-  // sees the slug or title, and reported the dataset id as both — a link built from it misses
-  // the slug route. It also wrote links on a '[datasetUrl]' placeholder it was never given.
-  test('prompt reports slug and title only when a tool result showed them', () => {
-    assert.ok(datasetDataSubagentPrompt.includes('never put the dataset id in their place'), 'subagent prompt lets the id stand in for slug/title')
+  test('reports only figures a tool computed', () => {
+    // a judged run added an unrequested « capacité totale : 3 250 places » to its answer,
+    // computed by nobody (the 8 values it had returned add up to 2 850)
+    assert.ok(datasetDataSkillBody.includes('never a figure you worked out yourself'), 'skill lets it state uncomputed figures')
   })
 
-  test('prompt reports only figures a tool computed', () => {
-    // a judged run's sub-agent added an unrequested « capacité totale : 3 250 places » to its
-    // answer, computed by nobody (the 8 values it had returned add up to 2 850)
-    assert.ok(datasetDataSubagentPrompt.includes('never a figure you worked out yourself'), 'subagent prompt lets it state uncomputed figures')
-  })
-
-  test('prompt writes links only from a URL it was given', () => {
-    assert.ok(datasetDataSubagentPrompt.includes('only when your task gives the dataset page URL'), 'subagent prompt asks for links without a URL')
+  test('writes links only from a URL it was given', () => {
+    assert.ok(datasetDataSkillBody.includes('only when you know the dataset page URL'), 'skill asks for links without a URL')
   })
 })

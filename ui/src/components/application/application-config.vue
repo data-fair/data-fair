@@ -89,7 +89,6 @@
                 :options="vjsfOptions"
                 :data-title="t('appConfig')"
                 prefix-name="appConfig_"
-                :sub-agent="true"
                 @update:model-value="saveDraft()"
               />
             </v-sheet>
@@ -176,7 +175,7 @@ if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
 // Whenever this page is open, not only after its assistant button: a configuration the assistant was
 // asked for elsewhere in the conversation is written here too.
 useAgentState('configure-guidance', () => canWriteConfig.value
-  ? 'Application configuration page. Prepare with get_application_config_schema (the expected structure) and get_application_config_draft (the current state), then write through the appConfig_form subagent, which drives the form. ' +
+  ? 'Application configuration page. Prepare with get_application_config_schema (the expected structure) and get_application_config_draft (the current state), then write through the appConfig_ form tools, following the app-config-form skill. ' +
     'The draft is only saved while the form is valid: always leave the form in a valid, complete state, or nothing is persisted. The form tools report the remaining errors. ' +
     'Never validate the draft yourself — the user reviews the live preview and clicks Validate.'
   : '')
@@ -184,7 +183,7 @@ useAgentState('configure-guidance', () => canWriteConfig.value
 const configureContext = computed(() => {
   const baseApp = baseAppDraft.value
   const lines = [
-    'Use the subagent tool appConfig_form to help the user configure the current application.',
+    'Help the user configure the current application with the appConfig_ form tools, following the app-config-form skill.',
     'Start the session by asking the user what they want to achieve.',
   ]
   if (baseApp?.title) lines.push(`The application model is "${baseApp.title}".`)

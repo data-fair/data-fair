@@ -124,7 +124,7 @@ export const bareToolName = (toolName: string) => {
 
 /**
  * Whether a conversation called the tool, optionally with an input matching `input`. A call a code_mode
- * script made counts too: it is recorded as a part of the script's `data-subagent` part, as a sub-agent's are.
+ * script made counts too: it is recorded as a part of the script's `data-trace` part.
  * `name` may be a test of the bare tool name, for a family of tools (an editor group's).
  */
 export function calledTool (exports: ParsedExport[], name: string | ((bareName: string) => boolean), input?: (input: any) => boolean): boolean {
@@ -133,7 +133,7 @@ export function calledTool (exports: ParsedExport[], name: string | ((bareName: 
     const matches = (stub: ToolPart): boolean => {
       // a part too large for its message line is lifted into a blob record, with a stub left behind
       const part = (stub.__ref ? exported.blobs.get(stub.__ref) as ToolPart | undefined : undefined) ?? stub
-      if (part.type === 'data-subagent') return (part.data?.parts ?? []).some(matches)
+      if (part.type === 'data-trace') return (part.data?.parts ?? []).some(matches)
       return part.type === 'dynamic-tool' && !!part.toolName && nameMatches(part.toolName) && (!input || input(part.input))
     }
     return exported.messages.some(message => (message.parts as ToolPart[]).some(matches))

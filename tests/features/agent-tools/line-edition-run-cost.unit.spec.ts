@@ -37,7 +37,7 @@ test.describe('line edition run cost', () => {
 
   test('reads calls made by a code_mode script and parts lifted into blobs', () => {
     const cost = costOf([exportOf([
-      { type: 'data-subagent', data: { parts: [tool('write_line'), tool('describe_dataset', { state: 'output-error' })] } },
+      { type: 'data-trace', data: { parts: [tool('write_line'), tool('describe_dataset', { state: 'output-error' })] } },
       { type: 'dynamic-tool', __ref: 'p1' }
     ], [], [['p1', tool('patch_line')]])], isWrite)
     assert.deepEqual(cost, { toolCalls: 3, failedToolCalls: 1, writeCalls: 2, failedWriteCalls: 0, linesWritten: 2, linesRefused: 0 })

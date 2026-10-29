@@ -35,10 +35,10 @@ test.describe('bridge provider settings', () => {
   })
 
   test('runs the background roles on the cheaper model, as a real deployment would', () => {
-    // The sub-agents, the compaction summariser and the moderation guard are the
+    // The tools role, the compaction summariser and the moderation guard are the
     // roles a deployment puts on a small model. Running them on the assistant's
     // model costs more per case and hides the failures a real user would hit —
-    // a sub-agent prompt only a large model can follow still reads as working.
+    // a background prompt only a large model can follow still reads as working.
     const { org } = bridgeSettings('sonnet', 'haiku')
     assert.equal(org.modelMapping.assistant.id, 'sonnet')
     assert.equal(org.modelMapping.tools.id, 'haiku')

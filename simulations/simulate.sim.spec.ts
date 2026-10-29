@@ -31,7 +31,7 @@ import {
 const TURN_CEILING_MS = 5 * 60 * 1000
 
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
-// The sub-agent, compaction and moderation roles, pinned separately and lower:
+// The tools, compaction and moderation roles, pinned separately and lower:
 // that is where a deployment puts a small model, so that is where the product
 // has to work. See BACKGROUND_ROLES in runner/settings.ts.
 const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
@@ -97,16 +97,6 @@ for (const simCase of selected) {
       const ownerAx = await seedDatasets()
       await seedSettings(ASSISTANT_MODEL, TOOLS_MODEL, ownerAx)
 
-      // SIM_SUB_AGENTS=0 runs the chat in its experimental flattened mode: sub-agents
-      // that do not pin a model hand their tools to the assistant itself. Set through
-      // the chat's own flags cookie, as its settings page does.
-      if (process.env.SIM_SUB_AGENTS === '0') {
-        await page.context().addCookies([{
-          name: 'agent-chat-flags',
-          value: encodeURIComponent(JSON.stringify({ toolExploration: false, subAgents: false, simpleSubAgents: true, mermaid: false, showReasoning: false })),
-          url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/agents`
-        }])
-      }
       await goToWithAuth(simCase.route, OWNER_USER, { org: OWNER.id })
 
       // Not a bare 'iframe': an application page embeds its own render and activity

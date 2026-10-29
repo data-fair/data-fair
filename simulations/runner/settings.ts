@@ -41,10 +41,11 @@ const quotas = {
 }
 
 /**
- * Roles a deployment puts on a small model: sub-agents, compaction, the
- * moderation guard. Running them on the assistant's model would both cost more
- * per case and flatter the product — a sub-agent prompt that only a large model
- * can follow reads as working until a real deployment runs it on the cheap tier.
+ * Roles a deployment puts on a small model: tools (memory consolidation),
+ * compaction, the moderation guard. Running them on the assistant's model would
+ * both cost more per case and flatter the product — a background prompt that only
+ * a large model can follow reads as working until a real deployment runs it on the
+ * cheap tier.
  */
 const BACKGROUND_ROLES = ['tools', 'summarizer', 'moderator'] as const
 

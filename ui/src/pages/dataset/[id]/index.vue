@@ -50,7 +50,7 @@
           v-if="structureHasRealDiff"
           action-id="summarize-structure-changes"
           :visible-prompt="t('summarizeChanges')"
-          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — by delegating to the dataset_changes_summarizer sub-agent. Report its summary as-is so the user can check what they are about to save.'"
+          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — following the summarize-dataset-changes skill, so the user can check what they are about to save.'"
           :btn-props="{ class: 'ml-2' }"
           :title="t('summarizeChanges')"
         />
@@ -183,7 +183,7 @@
           v-if="metadataEditFetch.hasDiff.value"
           action-id="summarize-metadata-changes"
           :visible-prompt="t('summarizeChanges')"
-          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — by delegating to the dataset_changes_summarizer sub-agent. Report its summary as-is so the user can check what they are about to save.'"
+          :hidden-context="'Summarize everything that is waiting to be saved on this dataset — metadata card and structure alike — following the summarize-dataset-changes skill, so the user can check what they are about to save.'"
           :btn-props="{ class: 'ml-2' }"
           :title="t('summarizeChanges')"
         />
@@ -1263,7 +1263,7 @@ const sections = computedDeepDiff(() => {
         title: t('extensions'),
         icon: mdiTableColumnPlusAfter,
         color: extensionsHasDiff.value ? 'accent' : undefined,
-        agentDesc: '**Column-value transformations and row enrichments live here.** Two extension types: (a) remote-service extensions calling external REST APIs (geocoding, SIRENE lookup, geo enrichment, etc.); (b) expr-eval calculated columns (PAD_LEFT, CONCAT, SUBSTRING, REPLACE, TRANSFORM_DATE, MD5, JSON_PARSE, …). Add via the "Add extension" menu. For expr-eval, opening an extension card\'s edit dialog reveals the expression input with a help button next to it → `expression_helper` subagent (writes and tests the expression against sample data).'
+        agentDesc: '**Column-value transformations and row enrichments live here.** Two extension types: (a) remote-service extensions calling external REST APIs (geocoding, SIRENE lookup, geo enrichment, etc.); (b) expr-eval calculated columns (PAD_LEFT, CONCAT, SUBSTRING, REPLACE, TRANSFORM_DATE, MD5, JSON_PARSE, …). Add via the "Add extension" menu. For expr-eval, opening an extension card\'s edit dialog reveals the expression input with a help button next to it → the write-expression skill (writes and tests the expression against sample data).'
       })
     }
 
@@ -1305,7 +1305,7 @@ const sections = computedDeepDiff(() => {
         icon: mdiStarFourPoints,
         color: !masterDataFormValid.value ? 'error' : (masterDataHasDiff.value ? 'accent' : undefined),
         appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined,
-        agentDesc: 'Expose this dataset as a master-data source (reusable as reference data via remote-service extensions on other datasets). Help button "Configure master data" → opens an agent that delegates the form filling to a VJSF subagent.'
+        agentDesc: 'Expose this dataset as a master-data source (reusable as reference data via remote-service extensions on other datasets). Help button "Configure master data" → the masterData_ form tools and their master-data-form skill.'
       })
     }
 
@@ -1320,7 +1320,7 @@ const sections = computedDeepDiff(() => {
   if (metadataEditFetch.hasDiff.value && !modifiedMetadataGroups.size) modifiedMetadataGroups.add('informations')
   const groupColor = (key: string) => modifiedMetadataGroups.has(key) ? 'accent' : undefined
   const metadataTabs: any[] = [
-    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
+    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → the write-dataset-summary skill (a ≤300 char summary from sample data); next to the description → the write-dataset-description skill (500-2000 char markdown).' }
   ]
   // a tab holding no metadata shown on datasets is left out
   // same conditions as the metadata form, which hides these fields
@@ -1329,7 +1329,7 @@ const sections = computedDeepDiff(() => {
     ...(d.finalizedAt || d.isMetaOnly ? [] : ['relatedDatasets'])
   ])
   if (!d.partOf) {
-    if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: datasetsMetadata.value?.coverageTitle || t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, image, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → `search_terms_writer` subagent (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
+    if (metadataGroupsInUse.has('coverage')) metadataTabs.push({ key: 'coverage', title: datasetsMetadata.value?.coverageTitle || t('coverage'), icon: mdiEarth, color: groupColor('coverage'), agentDesc: 'Second tab of the metadata form. By default holds spatial/temporal coverage, update frequency, source modification date, image, keywords, hidden search terms (searchTerms, never displayed) and related datasets. Help button next to the search terms → the write-search-terms skill (proposes synonyms and acronyms, applied via set_dataset_metadata searchTerms).' })
     for (const group of datasetsMetadata.value?.groups ?? []) {
       if (metadataGroupsInUse.has(group.key)) metadataTabs.push({ key: group.key, title: group.title, icon: group.icon?.svgPath ?? mdiShapeOutline, color: groupColor(group.key), agentDesc: 'Metadata category defined in the owner settings: holds the metadata (mostly custom ones) the settings assign to it.' })
     }
@@ -1337,12 +1337,12 @@ const sections = computedDeepDiff(() => {
   if (!d.draftReason && !d.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
   }
-  result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → `dataset_changes_summarizer` subagent (produces a <500 char plain-text summary of the diff).' }
+  result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → the summarize-dataset-changes skill (a short summary of the diff).' }
 
   // Exploration section (direct component tabs)
   if (d.finalizedAt && !d.isMetaOnly) {
     const explorationTabs: any[] = [
-      { key: 'table', title: t('table'), icon: mdiTable, agentDesc: 'Paginated table of the rows with toolbar: free-text search (`q`), faceted filters, column selector, download menu (CSV/XLSX/Parquet/…), display-mode switch. Two help buttons: **Filter help** → `dataset_data` subagent (then `navigate` applies the filterQuery as URL query params); **Check quality** → `data_quality_checker` subagent (6-step audit: completeness, uniqueness, outliers, format consistency, distribution anomalies).' }
+      { key: 'table', title: t('table'), icon: mdiTable, agentDesc: 'Paginated table of the rows with toolbar: free-text search (`q`), faceted filters, column selector, download menu (CSV/XLSX/Parquet/…), display-mode switch. Two help buttons: **Filter help** → the query-dataset-data skill (then `navigate` applies the filterQuery as URL query params); **Check quality** → the check-data-quality skill (6-step audit: completeness, uniqueness, outliers, format consistency, distribution anomalies).' }
     ]
     if (d.bbox) {
       explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap, agentDesc: 'Interactive map of geolocalized rows. Accepts the same filter query params as the table tab (including `_c_bbox` and `_c_geo_distance`).' })

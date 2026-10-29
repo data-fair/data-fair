@@ -58,7 +58,7 @@ const table = (head: string[], rows: unknown[][]) =>
 
 const legend = [
   'How the columns are counted, per arm:',
-  '- tool calls / failed tool calls: every tool call of the run (subagents and code_mode scripts included); failed = the part is stored in error state (an MCP isError result, so an HTTP 4xx/5xx included).',
+  '- tool calls / failed tool calls: every tool call of the run (code_mode scripts included); failed = the part is stored in error state (an MCP isError result, so an HTTP 4xx/5xx included).',
   '- write calls: arm json = datafair_write_line, patch_line, bulk_lines and delete_line calls; arm editor = form saveForm calls and delete_line. A bulk call writes many lines, a form save one, so compare lines, not calls.',
   '- lines written / refused: arm json: write_line, patch_line, delete_line = 1 line each (refused when the call failed); bulk_lines = the `nbOk` / `nbErrors` of its answer (it answers 200 with refused lines, so those count as refused; a failed bulk call without counts is one refused line). Arm editor: one line per saveForm (refused when the call failed).',
   '- failed writes: write calls that failed, plus json bulk calls that refused at least one line.',

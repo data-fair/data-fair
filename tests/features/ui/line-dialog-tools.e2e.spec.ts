@@ -3,12 +3,12 @@ import { axiosAuth, clean } from '../../support/axios.ts'
 import { serviceUp } from '../../support/optional-services.ts'
 
 /**
- * The line dialog openers must not return before the dialog's form subagent
- * exists.
+ * The line dialog openers must not return before the dialog's form tools, and
+ * the form's skill, exist.
  *
  * The chat makes a tool registered DURING a host tool's execution usable on the
- * very next step, so an opener that waits for `editLine_form` can simply say
- * "delegate now". Returning earlier sent the model into a declared wait on the
+ * very next step, so an opener that waits for the `editLine_` tools can simply
+ * say "fill it now". Returning earlier sent the model into a declared wait on the
  * dialog's own opening event — which, the add form being bundled with its
  * dialog, reached the chat before the opener's result and was delivered inside
  * it, leaving the wait with nothing to resolve it. A real session sat on
@@ -18,15 +18,17 @@ import { serviceUp } from '../../support/optional-services.ts'
  * transport reaches, so this holds without an agents service.
  */
 
-const SUBAGENT = 'subagent_editLine_form'
+const FORM_TOOL = 'editLine_describeState'
+const FORM_SKILL = 'skill://edit-line-form/SKILL.md'
 
 const callTool = (page: any, name: string, args: Record<string, unknown> = {}) =>
-  page.evaluate(async ({ name, args, subAgent }: { name: string, args: Record<string, unknown>, subAgent: string }) => {
+  page.evaluate(async ({ name, args, formTool, formSkill }: { name: string, args: Record<string, unknown>, formTool: string, formSkill: string }) => {
     const mc = (navigator as any).modelContext
     const result = await mc.executeTool(name, args)
-    const registered = mc.listTools().some((t: { name: string }) => t.name === subAgent)
-    return { text: JSON.stringify(result), registered }
-  }, { name, args, subAgent: SUBAGENT })
+    const registered = mc.listTools().some((t: { name: string }) => t.name === formTool)
+    const skill = mc.listResources().some((r: { uri: string }) => r.uri === formSkill)
+    return { text: JSON.stringify(result), registered, skill }
+  }, { name, args, formTool: FORM_TOOL, formSkill: FORM_SKILL })
 
 test.describe('line dialog agent tools', () => {
   test.beforeEach(async () => {
@@ -35,7 +37,7 @@ test.describe('line dialog agent tools', () => {
     await ax.patch('/api/v1/settings/user/test_user1', { agentChat: true })
   })
 
-  test('opening a line dialog returns once its form subagent is registered', async ({ page, goToWithAuth }) => {
+  test('opening a line dialog returns once its form tools are registered', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -48,17 +50,18 @@ test.describe('line dialog agent tools', () => {
     await expect(page.getByRole('button', { name: /Ajouter une ligne/ })).toBeVisible({ timeout: 15000 })
 
     const added = await callTool(page, 'open_add_line_dialog')
-    expect(added.registered, `returned before ${SUBAGENT} registered: ${added.text}`).toBe(true)
-    expect(added.text).toContain('delegate to the editLine_form subagent now')
+    expect(added.registered, `returned before ${FORM_TOOL} registered: ${added.text}`).toBe(true)
+    expect(added.skill, `${FORM_SKILL} is not published beside the form tools`).toBe(true)
+    expect(added.text).toContain('fill it now with the editLine_ form tools, following the edit-line-form skill')
     expect(added.text).not.toMatch(/declare wait_for_user_action and the dialog/)
 
     await page.locator('.v-card-actions').getByRole('button', { name: /Annuler/ }).click()
-    await expect.poll(() => page.evaluate((subAgent: string) =>
-      (navigator as any).modelContext.listTools().some((t: { name: string }) => t.name === subAgent), SUBAGENT), { timeout: 15000 }).toBe(false)
+    await expect.poll(() => page.evaluate((formTool: string) =>
+      (navigator as any).modelContext.listTools().some((t: { name: string }) => t.name === formTool), FORM_TOOL), { timeout: 15000 }).toBe(false)
 
     const edited = await callTool(page, 'open_edit_line_dialog', { lineId: line._id })
-    expect(edited.registered, `returned before ${SUBAGENT} registered: ${edited.text}`).toBe(true)
-    expect(edited.text).toContain('delegate to the editLine_form subagent now')
+    expect(edited.registered, `returned before ${FORM_TOOL} registered: ${edited.text}`).toBe(true)
+    expect(edited.text).toContain('modify it now with the editLine_ form tools')
     // Which line is open, so a wrong _id shows in the result instead of in the data.
     expect(edited.text).toContain('nom: Les Amis du Vieux Moulin')
   })

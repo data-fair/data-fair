@@ -122,7 +122,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'get_application_config',
-    description: 'Get the current validated configuration of an application (the live config, not the editable draft). Returns compact JSON, truncated when large — pass "path" to read a sub-tree (e.g. "sections/0"). Read-only — configuration is changed from the application configuration page, where the appConfig_form subagent drives the form and the user validates the draft.',
+    description: 'Get the current validated configuration of an application (the live config, not the editable draft). Returns compact JSON, truncated when large — pass "path" to read a sub-tree (e.g. "sections/0"). Read-only — configuration is changed from the application configuration page, with its appConfig_ form tools, and the user validates the draft.',
     annotations: { title: t('getApplicationConfig'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -174,7 +174,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'get_application_config_draft',
-    description: 'Get the editable configuration draft of an application. Returns compact JSON, truncated when large — pass "path" to read a sub-tree. The draft is edited from the application configuration page, where the appConfig_form subagent drives the form; the user then validates it.',
+    description: 'Get the editable configuration draft of an application. Returns compact JSON, truncated when large — pass "path" to read a sub-tree. The draft is edited from the application configuration page, with its appConfig_ form tools; the user then validates it.',
     annotations: { title: t('getApplicationConfigDraft'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,

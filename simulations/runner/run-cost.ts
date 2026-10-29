@@ -49,7 +49,7 @@ export function bulkCounts (output: unknown): { ok: number, refused: number } | 
 function toolParts (exported: ParsedExport): Part[] {
   const collect = (stub: Part): Part[] => {
     const part = (stub.__ref ? exported.blobs.get(stub.__ref) as Part | undefined : undefined) ?? stub
-    if (part.type === 'data-subagent') return (part.data?.parts ?? []).flatMap(collect)
+    if (part.type === 'data-trace') return (part.data?.parts ?? []).flatMap(collect)
     return part.type === 'dynamic-tool' && part.toolName ? [part] : []
   }
   return exported.messages.flatMap(message => (message.parts as Part[]).flatMap(collect))
