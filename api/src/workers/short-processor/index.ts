@@ -3,7 +3,7 @@ import mongo from '#mongo'
 import es from '#es'
 import debugLib from 'debug'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { indexPatch, mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import type { Dataset, DatasetInternal, RestDataset } from '#types'
@@ -106,7 +106,7 @@ export const historizeLines = async function (dataset: RestDataset) {
  * document keeps its PREVIOUS (stale) index until its next write recomputes it, rather than the
  * worker spinning on it forever — staleness is the failure mode this design already accepts
  * everywhere else (see `markStale` in docs/architecture/catalog-search.md), a tight error loop is
- * not. The failure is reported through `internalError` so it stays visible in logs and metrics.
+ * not. The failure is reported through `log.error` so it stays visible in logs and metrics.
  */
 const drainSearchIndex = async (
   type: 'datasets' | 'applications',
@@ -120,10 +120,10 @@ const drainSearchIndex = async (
     if (!searchIndex) return
     await collection.updateOne({ id }, mergeIndexUpdate({ $unset: { _needsSearchIndex: '' } }, searchIndex))
   } catch (err: any) {
-    internalError('search-index-recompute', `failed to recompute the search index of ${type}/${id}, it keeps its previous index until its next write - ${err?.stack || err?.message || err}`)
+    log.error('failed to recompute the search index, it keeps its previous index until its next write', { code: 'search-index-recompute', err, resourceType: type, resourceId: id })
     // clear the flag anyway, or this task is re-selected in a tight loop forever
     await collection.updateOne({ id }, { $unset: { _needsSearchIndex: '' } })
-      .catch(clearErr => internalError('search-index-recompute-clear', `failed to clear _needsSearchIndex on ${type}/${id} - ${clearErr?.stack || clearErr?.message || clearErr}`))
+      .catch(clearErr => log.error('failed to clear _needsSearchIndex', { code: 'search-index-recompute-clear', err: clearErr, resourceType: type, resourceId: id }))
   }
 }
 

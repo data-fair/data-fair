@@ -6,7 +6,8 @@ import config from '#config'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import * as ops from './operations.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 
 // `dedupKey` defaults to the event key; pass a distinct one when two sources share an event
@@ -22,12 +23,12 @@ export const maybeAlert = async (dataset: DatasetInternal, eventKey: string, isB
   // Operator channel, independent of any subscription. The notification below only reaches
   // someone who subscribed to THIS dataset's topic (by slug), so on its own the guarantee is
   // only as strong as the odds that somebody did — and nobody can subscribe to a dataset
-  // enrolled after they last looked. internalError increments df_internal_error{errorCode},
-  // the counter deployments already alert on, and logs a line with the same code.
+  // enrolled after they last looked. log.error increments df_logs{level, code, host},
+  // the counter deployments already alert on, and logs a line with the event key as code.
   // FIRST, deliberately: the operator signal must not be contingent on the events service being
   // reachable. Same cadence as the notification (entry, then once per realertDays) because it
   // sits past the dedup gate above.
-  internalError(eventKey, new Error(`${eventKey} on dataset ${dataset.id} (${dataset.slug ?? 'no slug'}), owner ${dataset.owner?.type}/${dataset.owner?.id}`))
+  log.error(`${eventKey} on dataset ${dataset.id} (${dataset.slug ?? 'no slug'})`, { code: eventKey, ...resourceLogFields('datasets', dataset) })
   // forcePrivate: these say the dataset's protection is in a bad state, not what it contains.
   // The default visibility follows the dataset, so on a public one "was tampered with" would be
   // broadcast to anyone subscribed — an integrity failure is for the people who can act on it.

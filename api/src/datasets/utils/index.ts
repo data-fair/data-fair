@@ -12,7 +12,7 @@ import * as filesUtils from './files.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as readApiKeyUtils from './read-api-key.ts'
 import mergeDraft from './merge-draft.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { reqSession } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
@@ -87,7 +87,7 @@ export const insertWithId = async (db: Db, dataset: Dataset, onClose?: (release:
       onClose(() => {
         // console.log('releasing dataset lock on id', idLockKey)
         locks.release(idLockKey).catch(err => {
-          internalError('dataset-lock-id', err)
+          log.error('failed to acquire the dataset lock by id', { code: 'dataset-lock-id', err })
         })
       })
     }
@@ -102,7 +102,7 @@ export const insertWithId = async (db: Db, dataset: Dataset, onClose?: (release:
           onClose(() => {
             // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(slugLockKey).catch(err => {
-              internalError('dataset-lock-slug', err)
+              log.error('failed to acquire the dataset lock by slug', { code: 'dataset-lock-slug', err })
             })
           })
         } else {

@@ -6,7 +6,7 @@ import * as virtualDatasetsUtils from './virtual.ts'
 import batchStream from '../../misc/utils/batch-stream.ts'
 import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { Dataset, VirtualDataset } from '#types'
 
 export const bulkSearchPromise = async (streams: any[], data: string): Promise<string> => {
@@ -110,7 +110,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
           try {
             esResponse = await esUtils.multiSearch(es.client, dataset, queries)
           } catch (err) {
-            internalError('masterdata-multi-query', err)
+            log.error('master data multi query failed', { code: 'masterdata-multi-query', err })
             const { message, status } = esUtils.extractError(err)
             throw httpError(status, message)
           }
@@ -121,7 +121,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
             const response = esResponse.responses[i]
 
             if (response.error) {
-              internalError('masterdata-item-query', esUtils.extractError(response.error))
+              log.error('master data item query failed', { code: 'masterdata-item-query', err: esUtils.extractError(response.error) })
               this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }

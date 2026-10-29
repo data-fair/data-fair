@@ -7,7 +7,7 @@ import mime from 'mime-types'
 import clone from '@data-fair/lib-utils/clone.js'
 import locks from '@data-fair/lib-node/locks.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
@@ -100,7 +100,7 @@ const logBackgroundError = (action: AdminAction, datasetId: string, err: any) =>
   if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
     console.warn(`integrity admin action ${action} on dataset ${datasetId} ended with ${err.status}: ${err.message}`)
   } else {
-    internalError('integrity-admin-background', err)
+    log.error('integrity admin background task failed', { code: 'integrity-admin-background', err })
   }
 }
 
@@ -128,13 +128,13 @@ export const withAdminBudget = async <T>(datasetId: string, action: AdminAction,
     await mongo.datasets.updateOne({ id: datasetId }, { $set: { 'integrity.running': { action, startedAt: new Date().toISOString() } } })
   } catch (err) {
     // display-only marker: losing it must not turn a running action into a 500
-    internalError('integrity-admin-background', err)
+    log.error('integrity admin background task failed', { code: 'integrity-admin-background', err })
   }
   // attached after the $set: if the work already settled, this cleanup still runs after it
   const background: Promise<void> = running
     .then(() => {}, (err) => logBackgroundError(action, datasetId, err))
     .finally(() => mongo.datasets.updateOne({ id: datasetId }, { $unset: { 'integrity.running': '' } })
-      .then(() => {}, (err) => internalError('integrity-admin-background', err)))
+      .then(() => {}, (err) => log.error('integrity admin background task failed', { code: 'integrity-admin-background', err })))
   backgroundWork.add(background)
   background.finally(() => backgroundWork.delete(background))
   return { status: 'running' }

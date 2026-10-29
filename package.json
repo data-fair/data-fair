@@ -92,7 +92,7 @@
     "@data-fair/lib-vuetify": "../lib/packages/vuetify"
   },
   "dependencies": {
-    "@data-fair/lib-node": "^2.16.1",
+    "@data-fair/lib-node": "^3.0.0",
     "axios": "^1.9.0"
   },
   "overrides": {

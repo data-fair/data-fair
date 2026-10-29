@@ -10,7 +10,7 @@ import { type AccountKeys } from '@data-fair/lib-express'
 import testEvents from '../misc/utils/test-events.ts'
 import { capturedNotifications as _testNotifBuffer } from '../misc/utils/test-notif-buffer.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 
 const createWorkers = () => {
   const workers = {
@@ -66,7 +66,7 @@ const createWorkers = () => {
 
   for (const [name, worker] of Object.entries(workers)) {
     // a pool emits 'error' when a thread dies with no task in flight (e.g. OOM); without a listener it crashes the process
-    worker.on('error', (err) => internalError('piscina-' + name, err))
+    worker.on('error', (err) => log.error(`${name} worker error`, { code: 'piscina-worker-error', err }))
     worker.on('message', (message) => {
       if (!(message as any)?.topic?.key) return
       if (process.env.NODE_ENV === 'development') {

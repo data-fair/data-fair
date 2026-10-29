@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises'
 import config from '#config'
 import * as app from './src/app.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 
 app.run().then(app => {
   if (config.mode.includes('worker')) {
@@ -11,7 +11,7 @@ app.run().then(app => {
     console.log('Web socket and HTTP server listening on http://localhost:%s\nExposed on %s', config.port, config.publicUrl)
   }
 }, err => {
-  internalError('df-process', err)
+  log.error('unhandled error in the process', { code: 'df-process', err })
   process.exit(-1)
 })
 
@@ -25,7 +25,7 @@ process.on('SIGTERM', async function onSigterm () {
     console.log('shutting down now')
     process.exit()
   }, err => {
-    internalError('stop-process', err)
+    log.error('failed to stop the process', { code: 'stop-process', err })
     process.exit(-1)
   })
 })

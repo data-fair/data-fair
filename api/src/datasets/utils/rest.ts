@@ -37,7 +37,8 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetInternal, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
@@ -81,7 +82,7 @@ export const sheet2csvPiscina = new Piscina({
   maxThreads: 1
 })
 // a pool emits 'error' when a thread dies with no task in flight; without a listener it crashes the process
-sheet2csvPiscina.on('error', (err) => internalError('piscina-sheet2csv', err))
+sheet2csvPiscina.on('error', (err) => log.error('sheet2csv worker error', { code: 'piscina-sheet2csv', err }))
 
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
@@ -1186,7 +1187,7 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
     // client expecting read-after-write.
     const message = `indexation refusée par elasticsearch pour ${stream.nbRejectedItems} ligne(s) : ${stream.firstRejectionReason}`
     await journals.log('datasets', dataset, { type: 'error', data: message } as any)
-    internalError('rest-line-index-rejected', `dataset ${dataset.id}: ${message}`)
+    log.error(message, { code: 'rest-line-index-rejected', ...resourceLogFields('datasets', dataset) })
     throw httpError(500, `la ligne est enregistrée mais son ${message}`)
   }
 
@@ -1253,8 +1254,7 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(dataset, [req.params.lineId])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteLine', ...resourceLogFields('datasets', dataset) })
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
@@ -1344,15 +1344,14 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
-  const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
   if (_action === 'delete') {
-    eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    log.info(`deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteLine', ...resourceLogFields('datasets', dataset) })
     res.status(204).send()
   } else {
     if (_action === 'patch') {
-      eventsLog.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+      log.info(`patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.patchLine', ...resourceLogFields('datasets', dataset) })
     } else {
-      eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+      log.info(`updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.createOrUpdateLine', ...resourceLogFields('datasets', dataset) })
     }
     const line = getLineFromOperation(operation, rawBody ?? req.body)
     res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
@@ -1377,8 +1376,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.patchLine', ...resourceLogFields('datasets', dataset) })
 
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
@@ -1394,8 +1392,7 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   const indexName = await initDatasetIndex(dataset)
   await switchAlias(dataset, indexName)
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteAllLines', ...resourceLogFields('datasets', dataset) })
 
   // initDatasetIndex above replaced the index -> re-stamp, else a legacy stamp survives over a
   // new-shape index
@@ -1569,7 +1566,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         status = 400
         message = 'Le fichier de transactions n\'a pas pu être lu, merci de réessayer.'
       }
-      if (status === 500) internalError('bulk-lines', err)
+      if (status === 500) log.error('bulk lines operation failed', { code: 'bulk-lines', err })
       if (firstBatch) {
         res.writeHead(status, { 'Content-Type': 'application/json' })
       }
@@ -1591,8 +1588,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const result: any = { ...summary }
     delete result._ids
 
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { req, account: dataset.owner as Account }))
+    log.info(`applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { code: 'df.datasets.rest.bulkLines', ...resourceLogFields('datasets', dataset) })
 
     res.write(JSON.stringify(result, null, 2))
     res.end()

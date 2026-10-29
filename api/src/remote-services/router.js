@@ -18,7 +18,7 @@ import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
 import { clean, validateOpenApi, initNew, computeActions } from './operations.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { reqSession, reqAdminMode, reqSitePathSafe } from '@data-fair/lib-express'
 import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
@@ -309,7 +309,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
           // pretty usual for map tiles for example
           resolve()
         } else {
-          internalError('service-proxy-res', err)
+          log.error('remote service proxy response failed', { code: 'service-proxy-res', err })
           reject(err)
         }
       } finally {
@@ -321,7 +321,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {
-        internalError('service-proxy-req', err)
+        log.error('remote service proxy request failed', { code: 'service-proxy-req', err })
         reject(err)
       }
     })

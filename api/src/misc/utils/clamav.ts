@@ -11,7 +11,7 @@ import filesStorage from '#files-storage'
 import { Readable } from 'node:stream'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import unzipper from 'unzipper'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
 
 const debug = debugLib('clamav')
 
@@ -94,7 +94,7 @@ const scanStream = async (stream: Readable, name: string, user: User) => {
     if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
       infectedFilesCounter.inc()
-      eventsLog.warn('df.infected-file', `a user attempted to upload an infected file ${name}`, { user })
+      log.warn(`a user attempted to upload an infected file ${name}`, { code: 'df.infected-file' })
       throw httpError(400, 'malicious file detected')
     }
     throw new Error('Unexpected result from antivirus: ' + result)

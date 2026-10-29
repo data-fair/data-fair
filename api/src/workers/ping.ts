@@ -2,7 +2,7 @@
 
 import mongo from '#mongo'
 import type { ResourceType } from '#types'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { Collection, FindCursor } from 'mongodb'
 import debugLib from 'debug'
 
@@ -55,7 +55,7 @@ export const listen = async (callback: (type: ResourceType, id: string) => Promi
         debug('receive ping message', doc.type, doc.id, doc.date, startDate)
         if (doc.type === 'init') continue
         if (doc.date && doc.date < startDate) continue
-        callback(doc.type, doc.id).catch(err => internalError('worker-ping-callback', err))
+        callback(doc.type, doc.id).catch(err => log.error('worker ping callback failed', { code: 'worker-ping-callback', err }))
       }
     } catch (err: any) {
       if (stopped) break

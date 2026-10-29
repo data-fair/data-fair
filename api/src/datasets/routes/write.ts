@@ -8,7 +8,8 @@ import slug from 'slugify'
 import clone from '@data-fair/lib-utils/clone.js'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import { reqSession, reqSessionAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { readDataset, reqDataset, reqDatasetOptional, reqDatasetFull, checkStorage, lockDataset, setReqDraft } from '../middlewares.ts'
@@ -123,7 +124,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       await updateStorage(dataset)
     }
 
-    eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`created a dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.create', ...resourceLogFields('datasets', dataset) })
 
     debugCreateDataset('final steps')
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id } as Event)
@@ -211,7 +212,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
 
-      eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
+      log.info(`updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { code: 'df.datasets.update', ...resourceLogFields('datasets', dataset) })
 
       const draft = !!dataset.draftReason
       await notifications.send({
@@ -264,7 +265,7 @@ export const registerWriteRoutes = (router: Router) => {
     await applyPatch(dataset, patch, undefined, undefined, whoFromReq(req))
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' } as Event)
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
-    eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`validated dataset draft ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.validateDraft', ...resourceLogFields('datasets', dataset) })
 
     return res.send(clean(req as DfRequest, dataset))
   })
@@ -291,7 +292,7 @@ export const registerWriteRoutes = (router: Router) => {
     // dropped here as a behavior-preserving no-op (parking lot: verify draft-cancelled journal context)
     await journals.log('datasets', dataset, { type: 'draft-cancelled' } as Event, false)
 
-    eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`cancelled dataset draft ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.cancelDraft', ...resourceLogFields('datasets', dataset) })
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'cancelled')
 
     await updateStorage(datasetFull)

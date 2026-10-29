@@ -6,7 +6,7 @@ import { stripTransientLineFlags } from '../utils/line-flags.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 import es from '#es'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { Dataset } from '#types'
 import { lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
 
@@ -136,7 +136,7 @@ class IndexStream extends Transform {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
-              internalError('es-refresh-index', err)
+              log.error('failed to refresh an elasticsearch index', { code: 'es-refresh-index', err })
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
           })
@@ -194,7 +194,7 @@ class IndexStream extends Transform {
       this.items = []
       this.bulkChars = 0
     } catch (err) {
-      internalError('es-bulk-index', err)
+      log.error('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
   }

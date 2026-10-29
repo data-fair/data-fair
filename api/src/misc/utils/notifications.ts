@@ -5,7 +5,7 @@ import { privateAxios as axios } from './axios.ts'
 import debugLib from 'debug'
 import i18n from 'i18n'
 import { nanoid } from 'nanoid'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import eventsQueue, { type PushEvent } from '@data-fair/lib-node/events-queue.js'
 import { type AccountKeys, reqUserAuthenticated, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ResourceType, type Resource, type Dataset } from '#types'
@@ -133,5 +133,5 @@ export const subscribe = async (req, subscription) => {
   debug('send subscription', subscription)
   if (process.env.NODE_ENV === 'development') return
   await axios.post(`${config.privateEventsUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
-    .catch(err => { internalError('subscribe-push', err) })
+    .catch(err => { log.error('failed to subscribe to push notifications', { code: 'subscribe-push', err }) })
 }

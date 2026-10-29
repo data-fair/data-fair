@@ -14,7 +14,7 @@ import * as fieldsSniffer from './fields-sniffer.ts'
 import * as restDatasetsUtils from './rest.ts'
 import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { compileExpression } from './extensions.ts'
 import { getFlattenNoCache } from './flatten.ts'
 import filesStorage from '#files-storage'
@@ -267,7 +267,7 @@ export const readStreams = async (dataset: Dataset, raw = false, full = false, i
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
+    log.error('file missing when indexer started working ' + p, { code: 'indexer-missing-file' })
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 
