@@ -1,25 +1,26 @@
 import mongo from '#mongo'
+import { resourceTask } from '../log-context.ts'
 import es from '#es'
 import config from '#config'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { FileDataset, Dataset } from '#types'
 
-export const extend = async function (dataset: Dataset) {
+export const extend = resourceTask(async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
   const extendRest = await import('./extend-rest.ts')
   await extendRest.default(dataset)
-}
+})
 
-export const indexLines = async function (dataset: Dataset) {
+export const indexLines = resourceTask(async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
   const indexLines = await import('./index-lines.ts')
   await indexLines.default(dataset)
-}
+})
 
-export const validateFile = async function (dataset: FileDataset) {
+export const validateFile = resourceTask(async function (dataset: FileDataset) {
   // es.connect is required because validateFile now also runs extensions (process-file.ts phase B),
   // and local master-data extensions read from elasticsearch via es.client
   await Promise.all([mongo.connect(true), es.connect()])
@@ -27,7 +28,7 @@ export const validateFile = async function (dataset: FileDataset) {
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const processFile = await import('./process-file.ts')
   await processFile.default(dataset)
-}
+})
 
 export type NockInfo = {
   origin: string

@@ -2,6 +2,8 @@ import type { RequestHandler } from 'express'
 import type { Dataset } from '#types'
 import config from '#config'
 import mongo from '#mongo'
+import { withLogContext } from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.ts'
@@ -130,5 +132,5 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   setReqResource(req, dataset)
   setReqDatasetFull(req, datasetFull)
 
-  next()
+  withLogContext(resourceLogFields('datasets', dataset), next)
 }

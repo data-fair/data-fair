@@ -2,6 +2,8 @@ import { type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
+import { withLogContext } from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
@@ -48,7 +50,7 @@ export const readApplication: RequestHandler = async (req, res, next) => {
   permissions.setReqResourceType(req, 'applications')
   permissions.setReqResource(req, application)
   setReqApplication(req, application)
-  next()
+  withLogContext(resourceLogFields('applications', application), next)
 }
 
 // proxy-specific resource resolver: protected application can be given either as
@@ -81,7 +83,7 @@ export const setProxyResource: RequestHandler = async (req, res, next) => {
   permissions.setReqResourceType(req, 'applications')
   permissions.setReqResource(req, application)
   setReqApplication(req, application)
-  next()
+  withLogContext(resourceLogFields('applications', application), next)
 }
 
 export const readBaseApp: RequestHandler = async (req, res, next) => {

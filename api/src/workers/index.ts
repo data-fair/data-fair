@@ -13,6 +13,7 @@ import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram, Gauge } from 'prom-client'
 import log from '@data-fair/lib-node/log.js'
+import { withLogContext, getLogContext } from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import { computeExcludedOwners } from './concurrency.ts'
 
@@ -149,7 +150,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
   }
 }
 
-export const processResourceTask = async (type: ResourceType, resource: any, task: Task) => {
+export const processResourceTask = (type: ResourceType, resource: any, task: Task) => withLogContext({ ...resourceLogFields(type, resource), task: task.name }, async () => {
   const id = resource.id
   const taskFullKey = `${type}/${resource.id}/${task.name}`
   pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner, startedAt: new Date().toISOString() }
@@ -164,7 +165,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
   }
   try {
     debug(`run task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
-    await workers[task.worker].run(resource, { name: task.name })
+    await workers[task.worker].run({ resource, logContext: getLogContext() }, { name: task.name })
     endTask({ status: 'ok' })
     debug(`finished task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
@@ -259,7 +260,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     delete pendingTasks[task.worker][taskFullKey]
     await locks.release(`${type}:${id}`)
   }
-}
+})
 
 let stopped = false
 

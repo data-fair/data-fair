@@ -36,7 +36,7 @@ test.describe('deferred search-index recompute', () => {
     assert.equal(stale._terms.length, 0, 'the simulated bulk write must clear the index')
     assert.equal(stale._needsSearchIndex, true)
 
-    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', stale)
+    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', { resource: stale, logContext: {} })
 
     const drained = await getRawDataset('rc-eolienne')
     assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared')
@@ -60,7 +60,7 @@ test.describe('deferred search-index recompute', () => {
     assert.equal(stale._terms.length, 0, 'the simulated bulk write must clear the index')
     assert.equal(stale._needsSearchIndex, true)
 
-    await callWorkerFunction('shortProcessor', 'computeApplicationSearchIndex', stale)
+    await callWorkerFunction('shortProcessor', 'computeApplicationSearchIndex', { resource: stale, logContext: {} })
 
     const drained = await getRawApplication(created.id)
     assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared')
@@ -101,7 +101,7 @@ test.describe('deferred search-index recompute', () => {
     assert.equal(asDispatched.title, 'Hydrolienne experimentale')
     assert.ok(asDispatched.draftReason, 'the dispatched resource must carry the draftReason')
 
-    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', asDispatched)
+    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', { resource: asDispatched, logContext: {} })
 
     const drained = await getRawDataset('rc-draft')
     assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared')
@@ -126,7 +126,7 @@ test.describe('deferred search-index recompute', () => {
 
     const asDispatched = await getRawDataset('rc-broken')
     // must not reject: a rejection here is what reaches the generic error handler in production
-    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', asDispatched)
+    await callWorkerFunction('shortProcessor', 'computeDatasetSearchIndex', { resource: asDispatched, logContext: {} })
 
     const drained = await getRawDataset('rc-broken')
     assert.equal(drained._needsSearchIndex, undefined, 'the flag must be cleared even on failure, or the task is re-selected forever')

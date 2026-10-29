@@ -1,21 +1,22 @@
 import mongo from '#mongo'
+import { resourceTask } from '../log-context.ts'
 import es from '#es'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { Dataset } from '#types'
 import type { NockInfo } from '../batch-processor/index.ts'
 
-export const initialize = async function (dataset: Dataset) {
+export const initialize = resourceTask(async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
   const initialize = await import('./initialize.ts')
   await initialize.default(dataset)
-}
+})
 
-export const storeFile = async function (dataset: Dataset) {
+export const storeFile = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const storeFile = await import('./store-file.ts')
   await storeFile.default(dataset)
-}
+})
 
 export const setNock = async function (nockInfo: NockInfo) {
   const nock = (await import('nock')).default

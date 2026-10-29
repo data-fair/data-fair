@@ -1,4 +1,5 @@
 import config from '#config'
+import { resourceTask } from '../log-context.ts'
 import mongo from '#mongo'
 import es from '#es'
 import debugLib from 'debug'
@@ -8,7 +9,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { indexPatch, mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
-export const renewApiKey = async function (dataset: DatasetInternal) {
+export const renewApiKey = resourceTask(async function (dataset: DatasetInternal) {
   await mongo.connect(true)
   const datasetsService = await import('../../datasets/service.ts')
   const readApiKeyUtils = await import('../../datasets/utils/read-api-key.ts')
@@ -19,17 +20,17 @@ export const renewApiKey = async function (dataset: DatasetInternal) {
   debug('renewing readApiKey', patch)
   await datasetsService.applyPatch(dataset, patch)
   debug('done')
-}
+})
 
-export const manageTTL = async function (dataset: RestDataset) {
+export const manageTTL = resourceTask(async function (dataset: RestDataset) {
   // es.connect is required because applyTTL iterates elasticsearch hits (iterHits -> es.client)
   // to find the expired lines to delete
   await Promise.all([mongo.connect(true), es.connect()])
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
-}
+})
 
-export const autoUpdate = async function (dataset: Dataset) {
+export const autoUpdate = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const draft = {
     status: 'imported',
@@ -40,9 +41,9 @@ export const autoUpdate = async function (dataset: Dataset) {
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
-}
+})
 
-export const errorRetry = async function (dataset: Dataset) {
+export const errorRetry = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const propertyPrefix = dataset.draftReason ? 'draft.' : ''
   const patch = {
@@ -55,9 +56,9 @@ export const errorRetry = async function (dataset: Dataset) {
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, patch)
-}
+})
 
-export const autoUpdateExtension = async function (dataset: Dataset) {
+export const autoUpdateExtension = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const extensions = [...dataset.extensions!]
   for (const e of extensions) {
@@ -67,27 +68,27 @@ export const autoUpdateExtension = async function (dataset: Dataset) {
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { extensions } })
-}
+})
 
-export const finalize = async function (dataset: Dataset) {
+export const finalize = resourceTask(async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
-}
+})
 
-export const historize = async function (dataset: Dataset) {
+export const historize = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const relay = await import('../../integrity/relay.ts')
   await relay.historize(dataset as any)
-}
+})
 
-export const historizeLines = async function (dataset: RestDataset) {
+export const historizeLines = resourceTask(async function (dataset: RestDataset) {
   await mongo.connect(true)
   const relay = await import('../../integrity/lines-relay.ts')
   await relay.historizeLines(dataset)
-}
+})
 
 /**
  * Shared tail of the two deferred search-index recomputes: write the computed fields and clear
@@ -127,7 +128,7 @@ const drainSearchIndex = async (
   }
 }
 
-export const computeDatasetSearchIndex = async function (dataset: Dataset) {
+export const computeDatasetSearchIndex = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const { searchIndexPatch } = await import('../../datasets/utils/search-text.ts')
   await drainSearchIndex('datasets', dataset.id, async () => {
@@ -139,9 +140,9 @@ export const computeDatasetSearchIndex = async function (dataset: Dataset) {
     if (!published) return null
     return searchIndexPatch(published)
   })
-}
+})
 
-export const computeApplicationSearchIndex = async function (application: { id: string }) {
+export const computeApplicationSearchIndex = resourceTask(async function (application: { id: string }) {
   await mongo.connect(true)
   const { applicationsTextSearch } = await import('../../misc/utils/text-search/collections.ts')
   await drainSearchIndex('applications', application.id, async () => {
@@ -151,7 +152,7 @@ export const computeApplicationSearchIndex = async function (application: { id: 
     if (!stored) return null
     return indexPatch(applicationsTextSearch, stored)
   })
-}
+})
 
 if (process.env.NODE_ENV === 'development') {
   const nock = (await import('nock')).default
