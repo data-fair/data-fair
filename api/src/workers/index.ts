@@ -200,11 +200,7 @@ export const processResourceTask = (type: ResourceType, resource: any, task: Tas
     endTask({ status: 'error' })
 
     // bad input failures are not internal errors
-    if (errorMessage.startsWith('[noretry] ') || errorMessage.startsWith('[validation-error] ') || err?.noRetry === true) {
-      log.warn('worker task failed', { code: 'worker-task-failed', taskName: task.name, err })
-    } else {
-      log.error('worker task failed', { code: 'worker-task-failed', taskName: task.name, err })
-    }
+    const badInput = errorMessage.startsWith('[noretry] ') || errorMessage.startsWith('[validation-error] ') || err?.noRetry === true
 
     // some error are caused by bad input, we should not retry these
     // they are signalled either by a [noretry] message prefix or a noRetry property on the error
@@ -229,6 +225,14 @@ export const processResourceTask = (type: ResourceType, resource: any, task: Tas
         debug('last log in journal was already a retry')
         retry = false
       }
+    }
+
+    // one error line per incident: a failure that will be retried is only a warning,
+    // the final failure of an internal error is an error
+    if (badInput || retry) {
+      log.warn('worker task failed', { code: 'worker-task-failed', taskName: task.name, retry, err })
+    } else {
+      log.error('worker task failed', { code: 'worker-task-failed', taskName: task.name, retry, err })
     }
 
     await progress?.end(true)
@@ -260,7 +264,9 @@ export const processResourceTask = (type: ResourceType, resource: any, task: Tas
 
     await mongo.db.collection(type).updateOne({ id: resource.id }, patch)
 
-    events.emit('error', err)
+    // emitting 'error' without a listener throws: the rejection was logged a second time at error
+    // level ('worker-task') for every failure, including the retried and bad input ones
+    if (events.listenerCount('error')) events.emit('error', err)
   } finally {
     delete pendingTasks[task.worker][taskFullKey]
     await locks.release(`${type}:${id}`)

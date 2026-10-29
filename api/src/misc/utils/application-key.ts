@@ -1,5 +1,6 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
-import log from '@data-fair/lib-node/log.js'
+import log, { withLogContext } from '@data-fair/lib-node/log.js'
+import { sessionLogFields } from '@data-fair/lib-express/req-log-context.js'
 import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
@@ -245,7 +246,7 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
     // 3rd level of anti-spam protection, simple rate limiting based on ip
     if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
-      log.warn('rate limit error for application key', { code: 'application-key-rate-limit', ip: reqIp(req), url: req.originalUrl })
+      log.warn('rate limit error for application key', { code: 'application-key-rate-limit', ip: reqIp(req), url: req.originalUrl.split('?')[0] })
       rateLimiting.setRetryAfter(res, rateLimiting.retryAfterMs(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat))
       return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
     }
@@ -261,6 +262,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
       undefined, undefined, undefined,
       { isApplicationKey: true }
     )
+    // the log context was opened by session.middleware() with the anonymous session
+    return withLogContext(sessionLogFields(reqSession(req)), next)
   }
   next()
 }

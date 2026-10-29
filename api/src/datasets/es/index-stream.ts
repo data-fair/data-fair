@@ -136,7 +136,7 @@ class IndexStream extends Transform {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
-              log.error('failed to refresh an elasticsearch index', { code: 'es-refresh-index', err })
+              log.warn('failed to refresh an elasticsearch index', { code: 'es-refresh-index', err })
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
           })
@@ -194,7 +194,7 @@ class IndexStream extends Transform {
       this.items = []
       this.bulkChars = 0
     } catch (err) {
-      log.error('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
+      log.warn('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
   }

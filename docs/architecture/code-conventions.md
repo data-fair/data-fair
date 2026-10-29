@@ -313,13 +313,24 @@ the `@data-fair/lib-node` README; only the conventions are listed here.
 - **Audit lines** pass a `code` plus `...resourceLogFields(type, resource)`
   (`resourceType`, `resourceId`, `ownerKey`, `ownerDep`, `ownerName`) from
   `misc/utils/log-fields.ts`; settings lines use `ownerLogFields(owner)`. An ownership change logs
-  a "from" line with the old owner and a "to" line with `ownerLogFields(newOwner)` added.
+  a "from" line with the old owner and a "to" line with `ownerLogFields(newOwner)` added:
+  `ownerLogFields` always returns the 3 keys (`ownerDep`/`ownerName` possibly `undefined`, dropped
+  from the line) so they override the old owner's values.
 - The actor (ip, host, userId, userName, accountKey...) is never passed by hand: it is read from
-  the request context of `session.middleware()`.
+  the request context of `session.middleware()`. A middleware that substitutes the session
+  (api key, application key) continues with `withLogContext(sessionLogFields(state), next)`
+  (`@data-fair/lib-express/req-log-context.js`).
 - The dataset and application read middlewares and `processResourceTask` open
   `withLogContext(resourceLogFields(...))` (plus `task` in workers), so every line logged below
-  carries the resource. Resource worker exports are wrapped with `resourceTask(fn)`
-  (`workers/log-context.ts`) and receive `{ resource, logContext }`.
+  carries the resource. Resource worker exports are wrapped with `resourceTask(fn, init)`
+  (`workers/log-context.ts`) and receive `{ resource, logContext }`. `init` is the worker index's
+  memoized `threadInit(...)` (connections, events queue, imports of the task modules): it runs
+  before entering the task's context so long-lived resources never carry the first task's fields.
+- Worker task failures: `error` only for the final failure of an internal error; a failure that
+  will be retried and `[noretry]` / `[validation-error]` / `noRetry` failures are `warn`. Code that
+  catches, logs and rethrows logs at `warn` (the consumer logs the incident), so one incident
+  yields one error line.
+- Per-row user content (line values, geometries) never goes into info/warn lines: use `debug`.
 - `debug` call sites are unchanged; the `debug` output is redirected into the logger.
 - eslint `no-console` applies to `api/src/**` and `api/index.ts`; `api/scripts/` and `api/upgrade/`
   keep `console`.

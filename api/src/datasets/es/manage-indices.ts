@@ -164,7 +164,7 @@ export const switchAlias = async (dataset: any, tempId: any) => {
   try {
     await clearAliases(dataset)
   } catch (err) {
-    log.error('failed to clear elasticsearch aliases', { code: 'es-clear-aliases', err })
+    log.warn('failed to clear elasticsearch aliases, retrying', { code: 'es-clear-aliases', err })
     await new Promise(resolve => setTimeout(resolve, 4000))
     await clearAliases(dataset)
   }

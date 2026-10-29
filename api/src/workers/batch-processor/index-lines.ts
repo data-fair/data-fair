@@ -82,7 +82,7 @@ export default async function (dataset: DatasetInternal) {
     try {
       indexName = await initDatasetIndex(dataset)
     } catch (err) {
-      log.error('failed to initialize an elasticsearch index', { code: 'es-init-index', err })
+      log.warn('failed to initialize an elasticsearch index', { code: 'es-init-index', err })
       const { message } = es.extractError(err)
       throw new Error(message)
     }

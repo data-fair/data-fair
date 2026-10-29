@@ -110,7 +110,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
           try {
             esResponse = await esUtils.multiSearch(es.client, dataset, queries)
           } catch (err) {
-            log.error('master data multi query failed', { code: 'masterdata-multi-query', err })
+            log.warn('master data multi query failed', { code: 'masterdata-multi-query', err })
             const { message, status } = esUtils.extractError(err)
             throw httpError(status, message)
           }

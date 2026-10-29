@@ -6,13 +6,12 @@ import type { ResourceType } from '#types'
 
 export type OwnerLike = { type: string, id: string, name?: string, department?: string }
 
-export type OwnerLogFields = { ownerKey: string, ownerDep?: string, ownerName?: string }
+export type OwnerLogFields = { ownerKey: string, ownerDep: string | undefined, ownerName: string | undefined }
 
+// the 3 keys are always present, possibly undefined: spread after other owner fields (or logged in a
+// context holding them) they override the previous values, and pino drops undefined values from the line
 export function ownerLogFields (owner: OwnerLike): OwnerLogFields {
-  const fields: OwnerLogFields = { ownerKey: owner.type + '.' + owner.id }
-  if (owner.department) fields.ownerDep = owner.department
-  if (owner.name) fields.ownerName = owner.name
-  return fields
+  return { ownerKey: owner.type + '.' + owner.id, ownerDep: owner.department || undefined, ownerName: owner.name || undefined }
 }
 
 export function resourceLogFields (type: ResourceType, resource: { id: string, owner: OwnerLike }): { resourceType: ResourceType, resourceId: string } & OwnerLogFields {

@@ -1,5 +1,5 @@
 import config from '#config'
-import { resourceTask } from '../log-context.ts'
+import { resourceTask, threadInit } from '../log-context.ts'
 import mongo from '#mongo'
 import es from '#es'
 import debugLib from 'debug'
@@ -8,6 +8,23 @@ import log from '@data-fair/lib-node/log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { indexPatch, mergeIndexUpdate } from '../../misc/utils/text-search/index.ts'
 import type { Dataset, DatasetInternal, RestDataset } from '#types'
+
+// per-thread resources, created outside the log context of the first task (see ../log-context.ts)
+const init = threadInit(async () => {
+  await Promise.all([mongo.connect(true), es.connect()])
+  await wsEmitter.init(mongo.db)
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
+  await Promise.all([
+    import('../../datasets/service.ts'),
+    import('../../datasets/utils/read-api-key.ts'),
+    import('../../datasets/utils/rest.ts'),
+    import('./finalize.ts'),
+    import('../../integrity/relay.ts'),
+    import('../../integrity/lines-relay.ts'),
+    import('../../datasets/utils/search-text.ts'),
+    import('../../misc/utils/text-search/collections.ts')
+  ])
+})
 
 export const renewApiKey = resourceTask(async function (dataset: DatasetInternal) {
   await mongo.connect(true)
@@ -20,7 +37,7 @@ export const renewApiKey = resourceTask(async function (dataset: DatasetInternal
   debug('renewing readApiKey', patch)
   await datasetsService.applyPatch(dataset, patch)
   debug('done')
-})
+}, init)
 
 export const manageTTL = resourceTask(async function (dataset: RestDataset) {
   // es.connect is required because applyTTL iterates elasticsearch hits (iterHits -> es.client)
@@ -28,7 +45,7 @@ export const manageTTL = resourceTask(async function (dataset: RestDataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
-})
+}, init)
 
 export const autoUpdate = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
@@ -41,7 +58,7 @@ export const autoUpdate = resourceTask(async function (dataset: Dataset) {
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
-})
+}, init)
 
 export const errorRetry = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
@@ -56,7 +73,7 @@ export const errorRetry = resourceTask(async function (dataset: Dataset) {
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, patch)
-})
+}, init)
 
 export const autoUpdateExtension = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
@@ -68,7 +85,7 @@ export const autoUpdateExtension = resourceTask(async function (dataset: Dataset
     }
   }
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { extensions } })
-})
+}, init)
 
 export const finalize = resourceTask(async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
@@ -76,19 +93,19 @@ export const finalize = resourceTask(async function (dataset: Dataset) {
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
-})
+}, init)
 
 export const historize = resourceTask(async function (dataset: Dataset) {
   await mongo.connect(true)
   const relay = await import('../../integrity/relay.ts')
   await relay.historize(dataset as any)
-})
+}, init)
 
 export const historizeLines = resourceTask(async function (dataset: RestDataset) {
   await mongo.connect(true)
   const relay = await import('../../integrity/lines-relay.ts')
   await relay.historizeLines(dataset)
-})
+}, init)
 
 /**
  * Shared tail of the two deferred search-index recomputes: write the computed fields and clear
@@ -140,7 +157,7 @@ export const computeDatasetSearchIndex = resourceTask(async function (dataset: D
     if (!published) return null
     return searchIndexPatch(published)
   })
-})
+}, init)
 
 export const computeApplicationSearchIndex = resourceTask(async function (application: { id: string }) {
   await mongo.connect(true)
@@ -152,7 +169,7 @@ export const computeApplicationSearchIndex = resourceTask(async function (applic
     if (!stored) return null
     return indexPatch(applicationsTextSearch, stored)
   })
-})
+}, init)
 
 if (process.env.NODE_ENV === 'development') {
   const nock = (await import('nock')).default
