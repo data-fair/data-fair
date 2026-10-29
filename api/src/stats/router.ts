@@ -1,7 +1,6 @@
 import express from 'express'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as limitsUtils from '../limits/service.ts'
-import mongo from '#mongo'
 import { type Account, reqSessionAuthenticated } from '@data-fair/lib-express'
 
 const router = express.Router()
@@ -17,10 +16,7 @@ async function ownerStats (owner: Account) {
   const limits = await limitsUtils.getLimits(owner)
   return {
     limits,
-    applications: await ownerCount('applications', owner)
+    // kept for the API consumers, getLimits already counts the applications
+    applications: limits.nb_applications!.consumption
   }
-}
-
-async function ownerCount (collection: string, owner: Account) {
-  return mongo.db.collection(collection).countDocuments({ 'owner.id': owner.id, 'owner.type': owner.type })
 }

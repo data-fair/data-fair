@@ -79,6 +79,7 @@ router.post('', async (req, res) => {
   const { body } = (await import('#doc/applications/post-req/index.js')).returnValid(req)
   const application = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
+  if ((await limits.remainingApplications(application.owner)) === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const created = await service.createApplication(ctx, application)
@@ -172,17 +173,16 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
   // fragments have their parent's owner: they follow it, like they follow its deletion
   const fragments = await fragmentsService.prepareFragmentsOwnerChange('application', application, req.body, sessionState)
-  const limitError = await limits.changeOwnerLimitError(application.owner, req.body, fragments.datasets)
+  const limitError = await limits.changeOwnerLimitError(application.owner, req.body, fragments.datasets, 1 + fragments.applications.length)
   if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
   const newPermissions = await permissions.ownerChangePermissions(application as any, req.body)
   await fragmentsService.changeFragmentsOwner(ctx, 'applications', fragments, req.body, newPermissions)
   const patchedApp = await service.changeApplicationOwner(ctx, application, req.body, newPermissions)
-  if (fragments.datasets.length) {
-    await updateTotalStorage(application.owner)
-    await updateTotalStorage(req.body)
-  }
+  // the application's own attachments count in its owner's storage, not only its dataset fragments
+  await updateTotalStorage(application.owner)
+  await updateTotalStorage(req.body)
   res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 

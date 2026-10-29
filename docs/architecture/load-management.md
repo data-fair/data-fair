@@ -148,7 +148,8 @@ so a throttled client is told what to change, not just that it was throttled.
 
 - **Storage / dataset quotas** (`api/src/limits/service.ts`): `store_bytes`, `indexed_bytes`,
   `nb_datasets` — checked at dataset creation / ownership change, return `429` on overflow.
-  Write-side; real limits typically come from simple-directory. Irrelevant to the read-flood
+  `nb_applications` (counted on the fly) is checked the same way at application creation / ownership
+  change. Write-side; real limits typically come from simple-directory. Irrelevant to the read-flood
   problem.
 - **Worker concurrency** (`api/src/workers/index.ts`): `WORKER_CONCURRENCY` × thread count, with a
   per-owner fairness cap of 50 % of the slots; tasks beyond that stay queued in MongoDB. Bulk

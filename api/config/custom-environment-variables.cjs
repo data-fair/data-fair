@@ -247,6 +247,10 @@ module.exports = {
       __name: 'DEFAULT_LIMITS_NB_DATASETS',
       __format: 'json'
     },
+    nbApplications: {
+      __name: 'DEFAULT_LIMITS_NB_APPLICATIONS',
+      __format: 'json'
+    },
     maxSpreadsheetSize: {
       __name: 'DEFAULT_LIMITS_MAX_SPREADSHEET_SIZE',
       __format: 'json'
