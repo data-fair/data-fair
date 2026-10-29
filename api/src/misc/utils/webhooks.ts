@@ -50,7 +50,8 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
         }
       }
     } catch (err) {
-      log.warn('failure to send webhook', { code: 'webhook-send', webhook, err })
+      // not the whole webhook settings entry: its target url can embed credentials
+      log.warn('failure to send webhook', { code: 'webhook-send', webhookTitle: webhook.title, event: event.type, err })
     }
   }
 }

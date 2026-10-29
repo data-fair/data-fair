@@ -96,7 +96,7 @@ export const reqStep = (req: Request, stepName: string) => {
     const referer = req.headers.referer || req.headers.referrer || 'unknown'
     const user = reqUser(req)
     const userStr = user ? `${user.name}(${user.id})` : 'anonymous'
-    log.warn('slow request', { code: 'slow-request', method: req.method, url: req.originalUrl, stepName, duration, referer, user: userStr })
+    log.info('slow request', { code: 'slow-request', method: req.method, url: req.originalUrl.split('?')[0], stepName, duration, referer, user: userStr })
   }
   req[reqObserveKey].step = now
 }

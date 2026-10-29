@@ -71,7 +71,7 @@ export const applyResourceCacheHeaders = (req: Request, res: Response, date: Dat
     debug('date in query parameter, use longer max age', queryDateStr)
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
-      log.warn('wrong usage of finalizedAt or updatedAt parameters', { code: 'cache-headers-wrong-date', query: req.query, resource: { finalizedAt: resource.finalizedAt, updatedAt: resource.updatedAt } })
+      log.warn('wrong usage of finalizedAt or updatedAt parameters', { code: 'cache-headers-wrong-date', resource: { finalizedAt: resource.finalizedAt, updatedAt: resource.updatedAt } })
       throw httpError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)

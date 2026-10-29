@@ -28,7 +28,9 @@ export const maybeAlert = async (dataset: DatasetInternal, eventKey: string, isB
   // FIRST, deliberately: the operator signal must not be contingent on the events service being
   // reachable. Same cadence as the notification (entry, then once per realertDays) because it
   // sits past the dedup gate above.
-  log.error(`${eventKey} on dataset ${dataset.id} (${dataset.slug ?? 'no slug'})`, { code: eventKey, ...resourceLogFields('datasets', dataset) })
+  // a dataset without owner must not make the alert throw before the notification
+  const resourceFields = dataset.owner ? resourceLogFields('datasets', dataset) : { resourceType: 'datasets', resourceId: dataset.id }
+  log.error(`${eventKey} on dataset ${dataset.id} (${dataset.slug ?? 'no slug'})`, { code: eventKey, ...resourceFields })
   // forcePrivate: these say the dataset's protection is in a bad state, not what it contains.
   // The default visibility follows the dataset, so on a public one "was tampered with" would be
   // broadcast to anyone subscribed — an integrity failure is for the people who can act on it.

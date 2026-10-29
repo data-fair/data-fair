@@ -836,7 +836,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"
           } else if (writeError.err.errmsg?.includes('_i_')) {
-            log.error('unexpected mongo write error on a rest dataset', { code: 'rest-write-error', writeError })
+            // not err: writeError, its toString (the serializer's message fallback) embeds the line document
+            log.error('unexpected mongo write error on a rest dataset', { code: 'rest-write-error', err: { message: writeError.errmsg, code: writeError.code }, index: writeError.index })
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
           } else {

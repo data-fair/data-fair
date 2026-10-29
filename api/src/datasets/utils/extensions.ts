@@ -1,4 +1,3 @@
-import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -704,14 +703,15 @@ export const prepareCalculations = (dataset: Dataset) => {
       try {
         Object.assign(item, geoUtils.latlon2fields(dataset, flatItem!))
       } catch (err: any) {
-        log.warn('failure to parse geopoints', { code: 'extension-geopoints', datasetId: dataset.id, flatItem, err })
+        // per-row user content, off by default; the row gets the warning
+        debug('failure to parse geopoints', dataset.id, flatItem, err)
         warning = 'Coordonnée géographique non valide - ' + err.message
       }
     } else if (hasGeometry) {
       try {
         Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem!))
       } catch (err: any) {
-        log.warn('failure to parse geometry', { code: 'extension-geometry', datasetId: dataset.id, flatItem, err })
+        debug('failure to parse geometry', dataset.id, flatItem, err)
         warning = 'Géométrie non valide - ' + err.message
       }
     }

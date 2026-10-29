@@ -87,7 +87,7 @@ export const insertWithId = async (db: Db, dataset: Dataset, onClose?: (release:
       onClose(() => {
         // console.log('releasing dataset lock on id', idLockKey)
         locks.release(idLockKey).catch(err => {
-          log.error('failed to acquire the dataset lock by id', { code: 'dataset-lock-id', err })
+          log.error('failed to release the dataset lock by id', { code: 'dataset-lock-id', err })
         })
       })
     }
@@ -102,7 +102,7 @@ export const insertWithId = async (db: Db, dataset: Dataset, onClose?: (release:
           onClose(() => {
             // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(slugLockKey).catch(err => {
-              log.error('failed to acquire the dataset lock by slug', { code: 'dataset-lock-slug', err })
+              log.error('failed to release the dataset lock by slug', { code: 'dataset-lock-slug', err })
             })
           })
         } else {

@@ -66,7 +66,7 @@ const createWorkers = () => {
 
   for (const [name, worker] of Object.entries(workers)) {
     // a pool emits 'error' when a thread dies with no task in flight (e.g. OOM); without a listener it crashes the process
-    worker.on('error', (err) => log.error(`${name} worker error`, { code: 'piscina-worker-error', err }))
+    worker.on('error', (err) => log.error(`${name} worker error`, { code: 'piscina-worker-error', worker: name, err }))
     worker.on('message', (message) => {
       if (!(message as any)?.topic?.key) return
       if (process.env.NODE_ENV === 'development') {
