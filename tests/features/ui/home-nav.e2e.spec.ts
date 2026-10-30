@@ -1,40 +1,49 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { axiosAuth, clean } from '../../support/axios.ts'
 
 test.describe('home dashboard', () => {
-  test('shows account space header', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await expect(page.getByRole('heading', { name: /Test User1/ })).toBeVisible({ timeout: 10000 })
+  test.beforeAll(async () => {
+    await clean()
   })
 
-  test('shows contribute section with SVG cards', async ({ page, goToWithAuth }) => {
+  test('shows the greeting and the personal space notice', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user1')
-    await expect(page.getByRole('heading', { name: /Contribuez/ })).toBeVisible({ timeout: 10000 })
-    // 3 contribute cards
-    await expect(page.getByText('Créer un nouveau jeu de données')).toBeVisible()
-    await expect(page.getByText('Mettre à jour un jeu de données')).toBeVisible()
-    await expect(page.getByText('Publier un jeu de données')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bonjour Test User1' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Espace personnel')).toBeVisible()
+    await expect(page.getByText(/mode collaboratif/)).toBeVisible()
   })
 
-  test('shows manage datasets section with metric cards', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await expect(page.getByRole('heading', { name: /Gérez les jeux de données/ })).toBeVisible({ timeout: 10000 })
-    // Metric cards render (even if counts are 0)
-    await expect(page.getByText(/en erreur/)).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(/brouillon/)).toBeVisible()
-    await expect(page.getByText(/publication à valider/).first()).toBeVisible()
-  })
-
-  test('shows manage applications section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await expect(page.getByRole('heading', { name: /Gérez les applications/ })).toBeVisible({ timeout: 10000 })
-  })
-
-  test('contribute card navigates to new-dataset', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await page.getByText('Créer un nouveau jeu de données').click()
+  test('shows the organization, the role and the creation buttons', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await expect(page.locator('main').getByText('Test Org 1 Administrateur')).toBeVisible({ timeout: 10000 })
+    await page.getByRole('link', { name: 'Créer un jeu de données' }).click()
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
+  })
+
+  test('key figure opens the datasets list', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await page.getByTitle('Voir tous les jeux de données').click()
+    await page.waitForURL(/\/datasets/, { timeout: 10000 })
+  })
+
+  test('to do card lists a requested publication', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'home-portal', url: 'http://portal.com', title: 'Home Portal' })
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'home requested', schema: [{ key: 'a', type: 'string' }] })).data
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:home-portal'] })
+
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await expect(page.getByText('1 · Publication de jeu de données à valider')).toBeVisible({ timeout: 10000 })
+    // the publication site also lists the portal in the right column
+    await expect(page.getByText('Vos portails')).toBeVisible()
+    await expect(page.getByText('Home Portal')).toBeVisible()
+  })
+
+  test('read-only role gets a notice instead of the to do card', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/', 'test_user8', { org: 'test_org1' })
+    await expect(page.getByText('Vous consultez les données de Test Org 1')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('À traiter')).not.toBeVisible()
+    await expect(page.getByRole('link', { name: 'Créer un jeu de données' })).not.toBeVisible()
   })
 
   test('unauthenticated home shows login button', { tag: '@smoke' }, async ({ page }) => {
@@ -49,16 +58,6 @@ test.describe('home dashboard', () => {
     await expect(page.getByText(/Enrichissez et publiez/)).toBeVisible({ timeout: 10000 })
     // SVG is rendered (check for themed SVG container)
     await expect(page.locator('.df-themed-svg svg')).toBeVisible()
-  })
-
-  test('error metric shows count after creating errored dataset', async ({ page, goToWithAuth }) => {
-    // Create a dataset that will error (upload then break it)
-    const ax = await axiosAuth('test_user1@test.com')
-    await sendDataset('datasets/dataset1.csv', ax)
-
-    await goToWithAuth('/data-fair/', 'test_user1')
-    // At minimum, the error card should be visible
-    await expect(page.getByText(/en erreur/)).toBeVisible({ timeout: 10000 })
   })
 })
 

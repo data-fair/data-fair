@@ -447,6 +447,10 @@
       "type": "array",
       "items": { "type": "object" }
     },
+    "extraTodoItems": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
     "extraAdminNavigationItems": {
       "type": "array",
       "items": { "type": "object" }

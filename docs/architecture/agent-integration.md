@@ -364,6 +364,16 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
+### 4.18 Dashboard Help
+
+| | |
+|---|---|
+| **Trigger** | Action button of the « Besoin d'aide ? » card on the dashboard (home page), shown when the account has the agent chat |
+| **Action ID** | `dashboard-diagnose` (contributors and admins), `dashboard-ask` (read-only role) |
+| **Pattern** | **Free chat with a starter prompt**: `dashboard-diagnose` lists the datasets in error of the active account, reads each error and explains how to fix it; `dashboard-ask` asks what the person is looking for, then searches the datasets they can read. No dedicated tool. |
+| **Tools** | the generic listing and description tools |
+| **Source** | `ui/src/components/dashboard/dashboard-assistant.vue` |
+
 ### Active-account scope of the listing tools
 
 The back-office `list_datasets` and `list_applications` send `shared=false`
@@ -526,6 +536,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
 | `ui/src/pages/new-application.vue` | `help-create-application` action button + creation tools registration |
 | `ui/src/pages/new-dataset.vue` | `help-create-dataset` action button + creation tools registration |
+| `ui/src/components/dashboard/dashboard-assistant.vue` | `dashboard-diagnose` / `dashboard-ask` action buttons of the dashboard |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |
 | `api/src/settings/router.ts` | `GET /settings/:type/:id/agent-chat` endpoint |

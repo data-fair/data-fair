@@ -379,6 +379,10 @@ module.exports = {
     __name: 'EXTRA_NAV_ITEMS',
     __format: 'json'
   },
+  extraTodoItems: {
+    __name: 'EXTRA_TODO_ITEMS',
+    __format: 'json'
+  },
   extraAdminNavigationItems: {
     __name: 'EXTRA_ADMIN_NAV_ITEMS',
     __format: 'json'
