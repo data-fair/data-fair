@@ -20,7 +20,7 @@ export const uiConfig = {
   openapiViewerIntegration: !!config.privateOpenapiViewerUrl,
   registryIntegration: !!config.privateRegistryUrl,
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
-  extraTodoItems: config.extraTodoItems as { id: string, title: string | Record<string, string>, url: string, countPath?: string, href: string, can?: string, icon?: string }[],
+  extraTodoItems: config.extraTodoItems as { id: string, title: string | Record<string, string>, url: string, countPath?: string, to?: string, href?: string, can?: string, icon?: string }[],
   extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[],
   brand: config.brand as { logo: string | null, title: string, description: string, url: string | null }
