@@ -71,8 +71,8 @@ fr:
   storage: Espace de stockage rempli à {n} %
   datasetsPublications: Publication de jeu de données à valider | Publications de jeux de données à valider
   applicationsPublications: Publication d'application à valider | Publications d'applications à valider
-  reusesPublications: Réutilisation en attente de publication | Réutilisations en attente de publication
-  pagesPublications: Page dont la publication est demandée | Pages dont la publication est demandée
+  reusesPublications: Publication de réutilisation à valider | Publications de réutilisations à valider
+  pagesPublications: Publication de page à valider | Publications de pages à valider
   datasetsDraft: Brouillon à valider | Brouillons à valider
 en:
   title: To do
@@ -84,8 +84,8 @@ en:
   storage: Storage space {n} % full
   datasetsPublications: Dataset publication to validate | Dataset publications to validate
   applicationsPublications: Application publication to validate | Application publications to validate
-  reusesPublications: Reuse waiting for publication | Reuses waiting for publication
-  pagesPublications: Page with a requested publication | Pages with a requested publication
+  reusesPublications: Reuse publication to validate | Reuse publications to validate
+  pagesPublications: Page publication to validate | Page publications to validate
   datasetsDraft: Draft to validate | Drafts to validate
 </i18n>
 
