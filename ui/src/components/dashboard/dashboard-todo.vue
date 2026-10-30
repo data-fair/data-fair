@@ -155,6 +155,7 @@ const lines = computed(() => {
       count: (extra.countPath ?? 'count').split('.').reduce((obj: any, k) => obj?.[k], fetch.data.value) as number | undefined,
       icon: extra.icon ?? mdiFaceAgent,
       color: 'accent',
+      to: extra.to,
       href: extra.href,
       title: typeof extra.title === 'string' ? extra.title : (extra.title[locale.value] ?? extra.title.fr)
     })),
