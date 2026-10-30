@@ -33,7 +33,7 @@ export const usedGroups = (datasetsMetadata: DatasetsMetadata, hidden: string[] 
   ...(datasetsMetadata?.custom ?? []).map(c => customGroup(datasetsMetadata, c.key))
 ])
 
-const tabFields = ['title', 'summary', 'description', ...Object.keys(fixedMetadata).filter(key => fixedMetadata[key].properties?.group)]
+const tabFields = ['title', ...Object.keys(fixedMetadata).filter(key => fixedMetadata[key].properties?.group)]
 
 // the tabs holding a field changed between the edited dataset and the saved one
 export const modifiedGroups = (datasetsMetadata: DatasetsMetadata, data: any, serverData: any) => {

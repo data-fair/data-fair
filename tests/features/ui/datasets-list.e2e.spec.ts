@@ -70,7 +70,8 @@ test.describe('datasets list page', () => {
     await expect(sortSelect).toBeVisible({ timeout: 10000 })
 
     await sortSelect.click()
-    await page.getByRole('option', { name: 'Titre (A → Z)' }).click()
+    await page.getByRole('option', { name: 'Titre', exact: true }).click()
+    await page.locator('#navigation-right-local').getByRole('button', { name: 'Ordre croissant' }).click()
 
     await page.waitForURL(/sort=title%3A1|sort=title:1/, { timeout: 5000 })
     await expect(page).toHaveURL(/sort=title/)
@@ -136,8 +137,9 @@ test.describe('datasets list page', () => {
     // Sort by title A→Z
     const sortSelect = page.locator('#navigation-right-local .v-select').filter({ hasText: 'Trier par' })
     await sortSelect.click()
-    await page.getByRole('option', { name: 'Titre (A → Z)' }).click()
-    await page.waitForURL(/sort=title/, { timeout: 5000 })
+    await page.getByRole('option', { name: 'Titre', exact: true }).click()
+    await page.locator('#navigation-right-local').getByRole('button', { name: 'Ordre croissant' }).click()
+    await page.waitForURL(/sort=title(%3A|:)1/, { timeout: 5000 })
 
     // Wait for results to re-render
     await expect(page.locator('.v-container .v-card .v-card-title').first()).toHaveText('Alpha Dataset', { timeout: 5000 })

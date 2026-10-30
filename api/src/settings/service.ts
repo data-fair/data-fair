@@ -16,6 +16,7 @@ import log from '@data-fair/lib-node/log.js'
 import { ownerLogFields } from '../misc/utils/log-fields.ts'
 import clone from '@data-fair/lib-utils/clone.js'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
+import { markStale } from '../misc/utils/text-search/mark-stale.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, matchAgentChatAudience, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
@@ -198,6 +199,15 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata) {
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
+  }
+
+  if (isMainSettings(settings)) {
+    const oldDatasetsMetadata = oldSettings && isMainSettings(oldSettings) ? oldSettings.datasetsMetadata : undefined
+    const scored = settings.datasetsMetadata?.completeness?.active || oldDatasetsMetadata?.completeness?.active
+    // the worker rescores the owner's datasets, as it reindexes them after a topic rename
+    if (scored && !equal(oldDatasetsMetadata, settings.datasetsMetadata)) {
+      await markStale(mongo.datasets, { 'owner.type': owner.type, 'owner.id': owner.id })
+    }
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })

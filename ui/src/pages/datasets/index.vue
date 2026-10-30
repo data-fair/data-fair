@@ -113,29 +113,11 @@
         class="mt-4"
       />
 
-      <!-- Sort select -->
-      <v-tooltip
-        :disabled="!searchInput"
-        :text="t('sortDisabledRelevance')"
-        location="bottom"
-      >
-        <template #activator="{ props: tooltipProps }">
-          <div
-            v-bind="tooltipProps"
-            :class="{ 'cursor-not-allowed': !!searchInput }"
-          >
-            <v-select
-              v-model="sort"
-              :label="t('sort')"
-              :items="sortItems"
-              :clearable="false"
-              :disabled="!!searchInput"
-              class="mt-4 mx-4"
-              rounded="md"
-            />
-          </div>
-        </template>
-      </v-tooltip>
+      <catalog-sort
+        v-model="sort"
+        :items="sortItems"
+        :disabled="!!searchInput"
+      />
 
       <!-- Super admin toggle -->
       <v-switch
@@ -274,10 +256,11 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness',
   }
   if (q.value) params.q = q.value
-  else params.sort = sort.value
+  // many datasets share a score: the id keeps the pages from repeating or skipping them
+  else params.sort = sort.value.startsWith('completeness:') ? `${sort.value},id:1` : sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
@@ -307,49 +290,39 @@ watch(() => catalog.totalCount.value, (count) => {
   breadcrumbs.receive({ breadcrumbs: [{ text: t('datasets', { count }) }] })
 }, { immediate: true })
 
+// the score exists only once the account activated it in its settings
+const datasetsMetadataFetch = useFetch<{ completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
+
 const sortItems = computed(() => [
-  { title: t('sortCreatedAtDesc'), value: 'createdAt:-1' },
-  { title: t('sortCreatedAtAsc'), value: 'createdAt:1' },
-  { title: t('sortUpdatedAtDesc'), value: 'updatedAt:-1' },
-  { title: t('sortUpdatedAtAsc'), value: 'updatedAt:1' },
-  { title: t('sortDataUpdatedAtDesc'), value: 'dataUpdatedAt:-1' },
-  { title: t('sortDataUpdatedAtAsc'), value: 'dataUpdatedAt:1' },
-  { title: t('sortTitleAsc'), value: 'title:1' },
-  { title: t('sortTitleDesc'), value: 'title:-1' },
+  { title: t('sortCreatedAt'), value: 'createdAt' },
+  { title: t('sortUpdatedAt'), value: 'updatedAt' },
+  { title: t('sortDataUpdatedAt'), value: 'dataUpdatedAt' },
+  { title: t('sortTitle'), value: 'title' },
+  ...(datasetsMetadataFetch.data.value?.completeness?.active ? [{ title: t('sortCompleteness'), value: 'completeness' }] : [])
 ])
 </script>
 
 <i18n lang="yaml">
 fr:
+  sortCreatedAt: Création
+  sortUpdatedAt: Mise à jour
+  sortDataUpdatedAt: Mise à jour des données
+  sortTitle: Titre
+  sortCompleteness: Score de complétion des métadonnées
   showAll: Voir tous les jeux de données
   showFragments: Voir aussi les fragments
-  sort: Trier par
   createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
-  sortCreatedAtDesc: Création (plus récent)
-  sortCreatedAtAsc: Création (plus ancien)
-  sortUpdatedAtDesc: Mise à jour (plus récente)
-  sortUpdatedAtAsc: Mise à jour (plus ancienne)
-  sortDataUpdatedAtDesc: Données mises à jour (plus récentes)
-  sortDataUpdatedAtAsc: Données mises à jour (plus anciennes)
-  sortTitleAsc: Titre (A → Z)
-  sortTitleDesc: Titre (Z → A)
-  sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
   datasets: "{count} jeux de données"
 en:
+  sortCreatedAt: Creation
+  sortUpdatedAt: Update
+  sortDataUpdatedAt: Data update
+  sortTitle: Title
+  sortCompleteness: Metadata completeness score
   showAll: Show all datasets
   showFragments: Also show fragments
-  sort: Sort by
   createDataset: Create a dataset
   noDataset: You haven't created a dataset yet.
-  sortCreatedAtDesc: Creation (newest)
-  sortCreatedAtAsc: Creation (oldest)
-  sortUpdatedAtDesc: Update (newest)
-  sortUpdatedAtAsc: Update (oldest)
-  sortDataUpdatedAtDesc: Data update (newest)
-  sortDataUpdatedAtAsc: Data update (oldest)
-  sortTitleAsc: Title (A → Z)
-  sortTitleDesc: Title (Z → A)
-  sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
   datasets: "{count} datasets"
 </i18n>

@@ -207,8 +207,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the summary textarea, on the metadata form |
 | **Action ID** | `summarize-dataset` |
-| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata and sample data, produces ≤300 char plain text summary |
-| **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
+| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata, sample data and the summary size recommended in the owner's `datasets-metadata` settings (`read_dataset_metadata`, default 100–300 chars), produces a plain text summary |
+| **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over the recommended maximum (300 chars when unset) or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
@@ -218,7 +218,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the description markdown editor, on the metadata form |
 | **Action ID** | `describe-dataset` |
-| **Subagent** | `dataset_description_writer` — reads metadata, produces 500-2000 char markdown description |
+| **Subagent** | `dataset_description_writer` — reads metadata and the recommended description size (default 300–5000 chars), produces a markdown description |
 | **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_metadata` (description field). Nothing is saved — the user still clicks Enregistrer. |
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (subagent), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
@@ -232,8 +232,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Subagent** | `dataset_changes_summarizer` (model: `summarizer`) — reads unified diff, produces <500 char plain text summary |
 | **Pattern** | Direct delegation, no user confirmation needed (read-only output) |
 | **Tools** | `read_dataset_changes` |
-| `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
-| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
+| `read_dataset_metadata` | Dataset metadata, plus the owner's settings: closed lists, disabled or renamed fields, recommended sizes, custom metadata (definition, help text, value) | R | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `read_schema_for_annotation` | Schema annotation | R | `dataset/agent-schema-annotation-tools.ts` |
 | `annotate_schema` | Schema annotation | **W** | `dataset/agent-schema-annotation-tools.ts` |
 | `reorder_columns` | Schema order | **W** | `dataset/agent-schema-order-tools.ts` |
@@ -401,7 +401,7 @@ mentions the link to the parent and, for a dataset fragment, the "Add to the sou
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
 | `describe_dataset` | Dataset metadata, incl. provenance (origin, producer) and, for an editable dataset, row history and updater tracking | R | `dataset/agent-tools.ts` |
 | `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
-| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `search_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `aggregate_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
@@ -473,9 +473,9 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 |----------|-------|---------|-------|
 | `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
-| `dataset_summarizer` | summarizer | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
+| `dataset_summarizer` | summarizer | Generate dataset summaries within the owner's recommended size, 100–300 chars by default (with sample data, validated on write) | `read_dataset_info`, `read_dataset_metadata` |
 | `search_terms_writer` | summarizer | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
-| `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
+| `dataset_description_writer` | default | Generate markdown descriptions within the owner's recommended size, 300–5000 chars by default | `read_dataset_info`, `read_dataset_metadata` |
 | `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
 | `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
 | `schema_annotator` | summarizer | Suggest column titles and descriptions | Schema annotation tools |

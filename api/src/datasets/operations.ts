@@ -55,6 +55,8 @@ export const datasetFreshnessProjection = (useDraft?: boolean): Record<string, n
   errorRetry: 1,
   'integrity.lastCheck.date': 1,
   'integrity.lastRevision.date': 1,
+  // rescored by the worker after a settings change, without touching updatedAt
+  completeness: 1,
   // the worker moves a draft along by writing draft.status / draft.finalizedAt alone
   ...(useDraft ? { 'draft.updatedAt': 1, 'draft.status': 1, 'draft.finalizedAt': 1, 'draft.errorStatus': 1, 'draft.errorRetry': 1 } : {}),
   _id: 0
@@ -73,6 +75,7 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
+  if (cachedFull.completeness !== fresh.completeness) return false
   // draft-only changes are invisible to every field above
   if (useDraft) {
     for (const field of ['updatedAt', 'status', 'finalizedAt', 'errorStatus', 'errorRetry']) {
