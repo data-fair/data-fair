@@ -149,6 +149,7 @@
             <v-alert
               v-if="baseAppsFetch.error.value"
               type="error"
+              variant="outlined"
               class="mb-4"
             >
               {{ baseAppsFetch.error.value }}
@@ -207,6 +208,7 @@
                                 :key="'disabled-' + i"
                                 density="compact"
                                 type="error"
+                                variant="outlined"
                               >
                                 {{ disabled }}
                               </v-alert>
@@ -243,12 +245,10 @@
             :label="t('title')"
           />
 
-          <v-alert
-            v-if="createError"
-            :title="createError"
-            type="error"
+          <df-ui-notif-alert
+            :notif="createAction.notif.value"
             class="mt-4"
-            max-width="500"
+            :alert-props="{ maxWidth: 500, variant: 'outlined' }"
           />
         </v-stepper-window-item>
       </v-stepper-window>
@@ -264,7 +264,7 @@
             color="primary"
             variant="flat"
             :disabled="(step === 'selection' && !(creationType === 'copy' ? copyApp : selectedBaseApp)) || (step === 'info' && !appTitle)"
-            :loading="importing"
+            :loading="createAction.loading.value"
             @click="goToNext"
           >
             {{ step === 'info' ? t('save') : t('continue') }}
@@ -333,7 +333,7 @@ function goToPrev () {
 
 function goToNext () {
   if (step.value === 'selection') step.value = 'info'
-  else if (step.value === 'info') createApplication()
+  else if (step.value === 'info') createAction.execute()
 }
 
 // ---- Owner ----
@@ -458,8 +458,6 @@ function selectBaseApp (baseApp: BaseAppWithContext) {
 
 // ---- Info ----
 const appTitle = ref('')
-const importing = ref(false)
-const createError = ref<string | null>(null)
 
 // ---- Agent tools ----
 // What the wizard currently shows, so the assistant reads it from its context
@@ -499,40 +497,34 @@ const createApplicationContext = computed(() => {
 })
 
 // ---- Create ----
-async function createApplication () {
-  importing.value = true
-  createError.value = null
-  try {
-    const body: Record<string, any> = {
-      title: appTitle.value
-    }
-    if (owner.value) body.owner = owner.value
-    if (partOf.value) body.partOf = partOf.value
-
-    if (creationType.value === 'copy' && copyApp.value) {
-      body.url = copyApp.value.url
-      body.initFrom = { application: copyApp.value.id }
-    } else if (selectedBaseApp.value) {
-      body.url = selectedBaseApp.value.url
-      body.configurationDraft = {}
-      if (dataset.value) {
-        body.configurationDraft.datasets = [{
-          href: dataset.value.href,
-          title: dataset.value.title,
-          id: dataset.value.id,
-          schema: dataset.value.schema
-        }]
-      }
-    }
-
-    const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
-    emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
-    router.push(`/application/${application.id}`)
-  } catch (error: any) {
-    createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')
-    importing.value = false
+const createAction = useAsyncAction(async () => {
+  const body: Record<string, any> = {
+    title: appTitle.value
   }
-}
+  if (owner.value) body.owner = owner.value
+  if (partOf.value) body.partOf = partOf.value
+
+  if (creationType.value === 'copy' && copyApp.value) {
+    body.url = copyApp.value.url
+    body.initFrom = { application: copyApp.value.id }
+  } else if (selectedBaseApp.value) {
+    body.url = selectedBaseApp.value.url
+    body.configurationDraft = {}
+    if (dataset.value) {
+      body.configurationDraft.datasets = [{
+        href: dataset.value.href,
+        title: dataset.value.title,
+        id: dataset.value.id,
+        schema: dataset.value.schema
+      }]
+    }
+  }
+
+  const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+  emitAgentEvent('application-created', { id: application.id, title: appTitle.value })
+  // awaited so the button stays loading until we leave, no double submit
+  await router.push(`/application/${application.id}`)
+}, { catch: 'all', error: t('creationError') })
 </script>
 
 <i18n lang="yaml">

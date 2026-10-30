@@ -2,7 +2,7 @@ import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache, setConfig } from '../../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -76,6 +76,19 @@ test.describe('REST datasets - CRUD', () => {
     assert.ok(!res.data.draftReason)
     assert.equal(res.data.slug, 'a-rest-dataset-3')
     assert.equal(res.data.title, 'a rest dataset updated')
+  })
+
+  test('A failed index creation does not leave an empty REST dataset behind', async () => {
+    const ax = testUser1
+    // ES refuses an index with a negative number of replicas
+    await setConfig('elasticsearch.nbReplicas', -1)
+    try {
+      await assert.rejects(ax.post('/api/v1/datasets', { isRest: true, title: 'rest index failure' }), (err: any) => err.status >= 400)
+    } finally {
+      await setConfig('elasticsearch.nbReplicas', 1)
+    }
+    const res = await ax.get('/api/v1/datasets', { params: { q: 'rest index failure' } })
+    assert.equal(res.data.count, 0)
   })
 
   test('Perform CRUD operations on REST datasets', { tag: '@smoke' }, async () => {

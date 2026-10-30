@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import { Transform, PassThrough, Readable, pipeline } from 'node:stream'
 import debug from 'debug'
@@ -278,7 +279,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
       const done = (err: NodeJS.ErrnoException | null) => {
         // teardowns are expected, not actionable: client aborts surface as premature-close, and a
         // queue-full res.destroy() (inside res.throttle) is already counted + debug-logged there
-        if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE' && !res.destroyed) console.warn('failed to send response parts', err)
+        if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE' && !res.destroyed) log.warn('failed to send response parts', { code: 'rate-limiting-send-parts', err })
       }
       if (ignoreRateLimiting) {
         pipeline(source, res, done)
@@ -304,7 +305,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
       if (!tokenBucket) return res._originalEnd(buffer) // no bandwidth limit → send unthrottled
       if (!acquireSendSlotOrDestroy(tokenBucket)) return
       throttledEnd(res, buffer, tokenBucket)
-        .catch(err => console.warn('failed to send throttled response', err))
+        .catch(err => log.warn('failed to send throttled response', { code: 'rate-limiting-send-throttled', err }))
         .finally(() => releaseSendSlot(tokenBucket))
     }
   }

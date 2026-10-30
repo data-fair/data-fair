@@ -24,7 +24,7 @@
       class="flex-grow-1"
     />
     <v-spacer />
-    <template v-if="pagination">
+    <template v-if="showPaginationBtns">
       <v-btn
         :disabled="!canPrevPage"
         :icon="mdiChevronLeft"
@@ -99,12 +99,22 @@
       />
     </v-btn-group>
   </v-toolbar>
-  <v-sheet class="pa-0">
+  <v-sheet
+    class="pa-0"
+    style="position:relative;"
+  >
+    <!-- v-table has no loading prop -->
+    <v-progress-linear
+      v-if="fetchResults.loading.value && displayMode !== 'list'"
+      height="2"
+      absolute
+      indeterminate
+      style="z-index:3;"
+    />
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
       ref="tableRoot"
       :height="pagination ? undefined : height - (showToolbar ? 48 : 0)"
-      :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
       @keydown="onTableKeydown"
@@ -302,7 +312,7 @@
     <div
       v-if="displayMode === 'list' && headers"
       ref="cardsList"
-      :style="`height: ${height - (showToolbar ? 48 : 0)}px; overflow-y: scroll;overflow-x: hidden;`"
+      :style="`height: ${height - (showToolbar ? 48 : 0)}px; overflow-y: auto;overflow-x: hidden;`"
       class="dataset-table-list-wrapper"
       @keydown="onCardsKeydown"
       @focusin="onCardsFocusin"
@@ -580,7 +590,9 @@ const showAgentActions = computed(() => can('agent') && showAgentChat.value)
 // row actions or the selection checkboxes
 const canFixCols = computed(() => can('fix-cols') && !selectable && !edit)
 const showBtnGroup = computed(() => (can('display') && display.mdAndUp.value) || can('select-cols') || can('download') || (can('fullscreen') && !!fullscreenTo))
-const showToolbar = computed(() => can('count') || can('search') || can('filters') || pagination || showAgentActions.value || showBtnGroup.value)
+// no pagination buttons without any interaction, nor when every line fits on the single page
+const showPaginationBtns = computed(() => pagination && activeInteractions.value.length > 0 && (total.value === undefined || canPrevPage.value || canNextPage.value))
+const showToolbar = computed(() => can('count') || can('search') || can('filters') || showPaginationBtns.value || showAgentActions.value || showBtnGroup.value)
 // same per column: sorting only shows up on a sortable column
 const showHeaderMenu = (header: TableHeader) => (can('sort') && header.sortable) || can('filters') || can('select-cols') || canFixCols.value
 
@@ -598,12 +610,13 @@ const onFixCol = (key: string) => {
 }
 
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
+// Vuetify's --v-table-header-height, dense mode included
+const theadHeight = 56
 const pageSize = computed(() => {
   if (pagination) {
     // In pagination mode, fit exactly in visible area to avoid scrollbar
-    const toolbarHeight = showToolbar.value ? 48 : 0
-    const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
-    const availableHeight = height - toolbarHeight - theadHeight
+    // the toolbar is reserved whenever it may hold the pagination buttons, as they depend on this page size
+    const availableHeight = height - (activeInteractions.value.length ? 48 : 0) - theadHeight
     return Math.max(5, Math.floor(availableHeight / lineHeight.value))
   }
   return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
@@ -871,7 +884,7 @@ watch(rowResults, async () => {
 const gridBounds = computed<GridBounds>(() => ({
   rows: rowResults.value.length + 1,
   cols: headers.value?.length ?? 0,
-  pageRows: Math.max(1, Math.floor((height - (showToolbar.value ? 48 : 0) - (displayMode.value === 'table-dense' ? 38 : 50)) / lineHeight.value))
+  pageRows: Math.max(1, Math.floor((height - (showToolbar.value ? 48 : 0) - theadHeight) / lineHeight.value))
 }))
 // the tab stop stays on an existing cell when the results shrink (search, sort)
 const tabbableCell = computed(() => ({

@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import path from 'node:path'
 import mime from 'mime-types'
 import { type Request, type Response } from 'express'
@@ -7,6 +8,9 @@ import contentDisposition from 'content-disposition'
 import { dataDir, tmpDir } from '../datasets/utils/files.ts'
 import slug from 'slugify'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import debugModule from 'debug'
+
+const debug = debugModule('files-storage')
 
 type DlFileOpts = {
   dispositionType?: 'inline' | 'attachment'
@@ -51,8 +55,13 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
     // @ts-ignore
     if (res.throttle) await pipeline(body, res.throttle('static'), res)
     else await pipeline(body, res)
-  } catch (err) {
-    console.error('Streaming failed', err)
+  } catch (err: any) {
+    // a cancelled download or a res.destroy() by the rate limiter is not an internal failure
+    if (err?.code === 'ERR_STREAM_PREMATURE_CLOSE' || res.destroyed) {
+      debug('streaming interrupted', err?.code)
+      return
+    }
+    log.error('streaming failed', { code: 'files-storage-streaming', err })
     if (!res.headersSent) {
       res.status(500).send('Internal Server Error')
     }

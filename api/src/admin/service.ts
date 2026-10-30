@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
@@ -284,7 +285,7 @@ export async function getStatus (req: any) {
   const results = await Promise.all(promises)
 
   const errors = results.filter(r => r.status === 'error')
-  if (errors.length) console.error('status has errors', errors)
+  if (errors.length) log.warn('status has errors', { code: 'status-errors', errors })
   return {
     status: errors.length ? 'error' : 'ok',
     message: errors.length ? ('Problem with : ' + errors.map(s => s.name).join(', ')) : 'Service is ok',

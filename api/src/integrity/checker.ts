@@ -2,7 +2,7 @@
 import cron, { type ScheduledTask } from 'node-cron'
 import Debug from 'debug'
 import locks from '@data-fair/lib-node/locks.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
@@ -89,7 +89,7 @@ const readAckedFingerprints = async (dataset: DatasetInternal, store: ReturnType
     if (ackRev.context.operation === 'ackTrail' && ackRev.ack?.fingerprints) return ackRev.ack.fingerprints
   } catch (err: any) {
     // a purged ack revision simply means no acks; anything else is worth logging
-    if (err.name !== 'NoSuchKey' && err.$metadata?.httpStatusCode !== 404) internalError('integrity-trail-ack-read', err)
+    if (err.name !== 'NoSuchKey' && err.$metadata?.httpStatusCode !== 404) log.error('failed to read the integrity trail acknowledgement', { code: 'integrity-trail-ack-read', err })
   }
   return []
 }
@@ -121,7 +121,7 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
     })
     await maybeAlert(dataset, 'integrity-renewal-failed', false, 'renewal-failed')
   } catch (err) {
-    internalError('integrity-renew', err)
+    log.error('integrity renewal failed', { code: 'integrity-renew', err })
     await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: { 'integrity.lastRenewal': { date, status: 'failed', error: err instanceof Error ? err.message : String(err) } }
     })
@@ -179,7 +179,7 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
         await store.extendRetention(anchor.key, retainUntil)
         renewed++
       } catch (err) {
-        internalError('integrity-renew-lines', err)
+        log.error('integrity lines renewal failed', { code: 'integrity-renew-lines', err })
         failed++
       }
     }))
@@ -189,7 +189,7 @@ const maybeRenewLines = async (dataset: DatasetInternal, store: ReturnType<typeo
     for (const group of groups) {
       if (group.deleted) continue
       if (!group.clean) {
-        internalError('integrity-renew-lines', new Error(`refusing to renew tampered key ${group.key}`))
+        log.error(`refusing to renew tampered key ${group.key}`, { code: 'integrity-renew-lines' })
         failed++
         continue
       }
@@ -321,7 +321,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
       const skew = ops.dateSkewAnomaly(key, rev.context.date, datasetView.current.get(key)?.lastModified, skewToleranceMs)
       if (skew) collector.push(skew)
     } catch (err) {
-      internalError('integrity-trail-read', err) // unreadable mid-purge revision: skip, not an anomaly
+      log.error('failed to read an integrity trail revision', { code: 'integrity-trail-read', err }) // unreadable mid-purge revision: skip, not an anomaly
     }
   }
   const trail: TrailVerdict = collector.total()
@@ -371,7 +371,7 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
     try {
       indexResult = await checkIndexConsistency(dataset, { deep: opts?.deep, seed: opts?.seed })
     } catch (err) {
-      internalError('integrity-index-check', err)
+      log.error('integrity index check failed', { code: 'integrity-index-check', err })
       indexResult = { status: 'unknown' }
     }
   }
@@ -440,7 +440,7 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
     try {
       if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true)) alerted.push(dataset.id)
     } catch (err) {
-      internalError('integrity-check-stale', err)
+      log.error('integrity stale check failed', { code: 'integrity-check-stale', err })
     }
   }
   // per-verdict clock (index): the pinned-index shape — index clock stale while the overall
@@ -457,7 +457,7 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
     try {
       if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true, 'index-check-stale')) alerted.push(dataset.id)
     } catch (err) {
-      internalError('integrity-check-stale', err)
+      log.error('integrity stale check failed', { code: 'integrity-check-stale', err })
     }
   }
   return { alerted }
@@ -478,7 +478,7 @@ const runOnce = async () => {
     // first on the next pass.
     const ack = await locks.acquire(`datasets:${dataset.id}`, 'integrity-checker')
     if (!ack) { debug('dataset busy (worker/admin lock held), skipping check', dataset.id); continue }
-    try { await checkDataset(dataset as DatasetInternal) } catch (err) { internalError('integrity-check-dataset', err) } finally { await locks.release(`datasets:${dataset.id}`) }
+    try { await checkDataset(dataset as DatasetInternal) } catch (err) { log.error('integrity check of a dataset failed', { code: 'integrity-check-dataset', err }) } finally { await locks.release(`datasets:${dataset.id}`) }
   }
 }
 
@@ -502,7 +502,7 @@ export const task = async () => {
           reclaimedMarkers = purged.markerScopes
           debug('purged expired revisions', purged)
         } catch (err) {
-          internalError('integrity-purge-run', err)
+          log.error('integrity purge run failed', { code: 'integrity-purge-run', err })
         }
         // storage accounting rides the same daily pass, after the purge so freshly reclaimed
         // bytes stop counting immediately (see integrity/storage.ts)
@@ -510,7 +510,7 @@ export const task = async () => {
           const measured = await measureIntegrityStorage(integrityStore())
           debug('measured integrity storage', measured)
         } catch (err) {
-          internalError('integrity-storage-run', err)
+          log.error('integrity storage run failed', { code: 'integrity-storage-run', err })
         }
         // store-vs-Mongo scope audit (round 3 §S2): the store is the authority on what should
         // be protected — an out-of-band `integrity.active` flip cannot silence it
@@ -518,19 +518,19 @@ export const task = async () => {
           const audited = await auditScopes(integrityStore(), { reclaimedMarkers })
           debug('audited scopes', audited)
         } catch (err) {
-          internalError('integrity-audit-run', err)
+          log.error('integrity audit run failed', { code: 'integrity-audit-run', err })
         }
         // check-stale alert (§S3): unknowns must not silently accumulate
         try {
           const stale = await alertStaleChecks()
           debug('stale-check alerts', stale)
         } catch (err) {
-          internalError('integrity-stale-run', err)
+          log.error('integrity stale run failed', { code: 'integrity-stale-run', err })
         }
       }
     } finally { await locks.release('integrity-check-task') }
   } catch (err) {
-    internalError('integrity-check-cron', err)
+    log.error('integrity check cron failed', { code: 'integrity-check-cron', err })
   }
 }
 

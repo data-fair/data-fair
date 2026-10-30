@@ -18,7 +18,7 @@ import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
 import { clean, validateOpenApi, initNew, computeActions } from './operations.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { reqSession, reqAdminMode, reqSitePathSafe } from '@data-fair/lib-express'
 import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
@@ -200,18 +200,18 @@ router.post('/:remoteServiceId/_update', readService, async (req, res) => {
 async function getAppOwner (req) {
   const referer = req.headers.referer || req.headers.referrer
   // unfortunately this can happen quite a lot when coming from web workers, very restrictive browsers, etc.
-  if (!referer) return console.warn('remote service proxy called without a referer header')
+  if (!referer) return log.warn('remote service proxy called without a referer header', { code: 'remote-service-no-referer' })
   debug('Referer URL', referer)
 
   const publicBaseUrl = reqPublicBaseUrl(req)
-  if (!referer.startsWith(publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
+  if (!referer.startsWith(publicBaseUrl + '/')) return log.warn('remote service proxy called from outside a data-fair page', { code: 'remote-service-foreign-referer', referer })
 
   const refererAppId = referer.startsWith(publicBaseUrl + '/app/') && referer.replace(publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
   if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
   const refererApp = await mongo.applications.findOne({ id: refererAppId }, { projection: { owner: 1 } })
-  if (!refererApp) return console.warn(`remote service proxy called from outside a known application referer=${referer} id=${refererAppId}`)
+  if (!refererApp) return log.warn('remote service proxy called from outside a known application', { code: 'remote-service-unknown-app', referer, applicationId: refererAppId })
 
   return refererApp.owner
 }
@@ -309,7 +309,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
           // pretty usual for map tiles for example
           resolve()
         } else {
-          internalError('service-proxy-res', err)
+          log.error('remote service proxy response failed', { code: 'service-proxy-res', err })
           reject(err)
         }
       } finally {
@@ -321,7 +321,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {
-        internalError('service-proxy-req', err)
+        log.error('remote service proxy request failed', { code: 'service-proxy-req', err })
         reject(err)
       }
     })

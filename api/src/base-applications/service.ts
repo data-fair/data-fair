@@ -4,7 +4,7 @@ import axios from '../misc/utils/axios.ts'
 import i18n from 'i18n'
 import * as parse5 from 'parse5'
 import slug from 'slugify'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { clean, prepareQuery, getFragmentFetchUrl } from './operations.ts'
 import { resolveLocalRefs } from '../misc/utils/json-refs.ts'
@@ -81,7 +81,7 @@ async function failSafeInitBaseApp (app) {
   try {
     await initBaseApp(app)
   } catch (err) {
-    internalError('app-init', err)
+    log.error('failed to initialize a base application', { code: 'app-init', err })
   }
 }
 
@@ -132,7 +132,7 @@ export async function initBaseApp (app, locale?: string) {
     patch.datasetsFilters = datasetsFilters
   } catch (err) {
     patch.hasConfigSchema = false
-    internalError('app-config-schema', err)
+    log.error('failed to build the configuration schema of a base application', { code: 'app-config-schema', err })
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {

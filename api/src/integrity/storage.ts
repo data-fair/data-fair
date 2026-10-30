@@ -5,7 +5,7 @@
 // reclaims it: those bytes are genuinely held either way. Rides the daily checker pass under the
 // same cross-pod lock (see checker.ts); a failed measure only delays accounting, never protection.
 import mongo from '#mongo'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { IntegrityStore } from './store.ts'
 import * as ops from './operations.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
@@ -43,7 +43,7 @@ export const measureIntegrityStorage = async (store: IntegrityStore): Promise<Me
     try {
       await updateTotalStorage(owner)
     } catch (err) {
-      internalError('integrity-storage-consumption', err)
+      log.error('integrity storage consumption failed', { code: 'integrity-storage-consumption', err })
     }
   }
   // owners fully reclaimed from the store: drop their figure and release the metered bytes
@@ -53,7 +53,7 @@ export const measureIntegrityStorage = async (store: IntegrityStore): Promise<Me
     try {
       await updateTotalStorage(doc.owner)
     } catch (err) {
-      internalError('integrity-storage-consumption', err)
+      log.error('integrity storage consumption failed', { code: 'integrity-storage-consumption', err })
     }
   }
   return result

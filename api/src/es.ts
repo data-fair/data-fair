@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import elasticsearch, { type ClientOptions, type Client } from '@elastic/elasticsearch'
 
@@ -36,7 +37,7 @@ export class DfEs {
     }
     const clusterSettings = await client.cluster.getSettings({ flat_settings: true })
     if (!clusterSettings.persistent['indices.id_field_data.enabled'] || clusterSettings.persistent['action.destructive_requires_name'] !== 'false') {
-      console.log('patch some ES cluster settings', clusterSettings)
+      log.info('patch some ES cluster settings', { clusterSettings })
       clusterSettings.persistent['indices.id_field_data.enabled'] = 'true'
       clusterSettings.persistent['action.destructive_requires_name'] = 'false'
       await client.cluster.putSettings(clusterSettings)

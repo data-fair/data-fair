@@ -8,7 +8,7 @@ import { rootSettingsFilter } from '../settings/operations.ts'
 import debugLib from 'debug'
 import datasetAPIDocs from '../../contract/dataset-api-docs.ts'
 import axios from '../misc/utils/axios.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import slug from 'slugify'
 import { type SessionState } from '@data-fair/lib-express'
 import { type Locale } from '../../i18n/utils.ts'
@@ -121,7 +121,7 @@ export const init = async () => {
       const resp = await axios.get(url)
       apis.push({ url, api: resp.data })
     } catch (err) {
-      internalError('service-init', err)
+      log.error('failed to initialize a remote service', { code: 'service-init', err })
     }
   }
 

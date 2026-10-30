@@ -5,7 +5,8 @@ import clone from '@data-fair/lib-utils/clone.js'
 import contentDisposition from 'content-disposition'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
@@ -34,7 +35,7 @@ import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
 import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
-import { reqEventLogContext, reqBypassPermissions } from '../../misc/utils/req-context.ts'
+import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
@@ -225,7 +226,7 @@ export const registerMetadataRoutes = (router: Router) => {
         else delete dataset.partOf
         dataset.permissions = updated.permissions
         dataset.updatedAt = updated.updatedAt
-        eventsLog.info('df.datasets.partOf', `changed dataset parentage ${dataset.slug} (${dataset.id}) -> ${JSON.stringify(dataset.partOf ?? null)}`, { req, account: dataset.owner })
+        log.info(`changed dataset parentage ${dataset.slug} (${dataset.id}) -> ${JSON.stringify(dataset.partOf ?? null)}`, { code: 'df.datasets.partOf', ...resourceLogFields('datasets', dataset) })
       }
 
       // integrity truth-grounding (mirror of the enable-time refusals in integrity/service.ts):
@@ -282,7 +283,7 @@ export const registerMetadataRoutes = (router: Router) => {
           }
         }
 
-        eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
+        log.info(`patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { code: 'df.datasets.patch', ...resourceLogFields('datasets', dataset) })
 
         const draft = !!dataset.draftReason
         await notifications.send({
@@ -326,7 +327,7 @@ export const registerMetadataRoutes = (router: Router) => {
     const limitError = await limits.changeOwnerLimitError(dataset.owner, req.body, [dataset, ...fragments.datasets])
     if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
 
-    const ctx = { sessionState, logCtx: reqEventLogContext(req) }
+    const ctx = { sessionState }
     const newPermissions = await permissions.ownerChangePermissions(dataset, req.body)
     await fragmentsService.changeFragmentsOwner(ctx, 'datasets', fragments, req.body, newPermissions, dataset.isMetaOnly)
     const patchedDataset = await changeDatasetOwner(ctx, dataset, reqDatasetFull(req), req.body, newPermissions)
@@ -343,14 +344,14 @@ export const registerMetadataRoutes = (router: Router) => {
     const datasetFull: any = reqDatasetFull(req)
 
     // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }, 'dataset', dataset.id, dataset.owner)
+    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req) }, 'dataset', dataset.id, dataset.owner)
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {
       await deleteDataset(req.app, datasetFull)
     }
 
-    eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
     const sessionState = await session.req(req)
     await notifications.send({
       title: 'Jeu de données supprimé',

@@ -185,7 +185,7 @@ export const extractError = (err: any): ExtractedError => {
   if (err) {
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
-      // anyone; callers must treat this as a quiet no-op (no internalError, no error metric)
+      // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
       return { message: 'Requête interrompue (client déconnecté).', status: 499 }
     }
     if (err.name === 'TimeoutError') return tooLongError

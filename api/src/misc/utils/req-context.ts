@@ -12,8 +12,7 @@
 // the code that owns them (e.g. reqSettingsParams in settings/middlewares.ts).
 // See docs/architecture/code-conventions.md §2.
 import type { IncomingMessage } from 'node:http'
-import type { Request } from 'express'
-import { reqSession, reqIp, type User, type Account } from '@data-fair/lib-express'
+import type { Account } from '@data-fair/lib-express'
 import type { Resource, ResourceType, BypassPermissions, DatasetInternal, RestDataset } from '#types'
 
 export type ReqContext<T> = {
@@ -94,15 +93,3 @@ export const reqApiKeyRef = apiKeyRefCtx.getOptional
 const publicOperationCtx = defineReqContext<boolean>('publicOperation')
 export const setReqPublicOperation = publicOperationCtx.set
 export const reqPublicOperation = publicOperationCtx.getOptional
-
-// ---- audit-log context without req (same EventLog output as passing { req }) ----
-export type LogContext = { user?: User, account?: Account, ip?: string, host?: string }
-export const reqEventLogContext = (req: Request): LogContext => {
-  const session = reqSession(req)
-  return {
-    user: session.user,
-    account: session.account,
-    ip: reqIp(req, { optional: true }),
-    host: req.get('Host')
-  }
-}

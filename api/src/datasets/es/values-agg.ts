@@ -5,7 +5,8 @@ import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint, assertMetricAccepted } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import es from '#es'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 
 // we used to split by ; but using , is more standard in open api
 const splitRetroCompat = (str: any): any[] => {
@@ -84,7 +85,7 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
   // TODO: remove the condition on size and only use combinedMaxSize, but to do this we must check if we break some existing usage
   if (size > 100 && combinedMaxSize > 100000) throw httpError(400, '"size" x "agg_size" cannot be more than 100000')
   if (combinedMaxSize > 100000) {
-    eventsLog.warn('values_agg_combined_size', `query values_agg on dataset ${dataset.slug} (${dataset.id}) with a combined max size of ${combinedMaxSize} was received, it will be blocked in an incoming release`, { account: dataset.owner })
+    log.warn(`query values_agg on dataset ${dataset.slug} (${dataset.id}) with a combined max size of ${combinedMaxSize} was received, it will be blocked in an incoming release`, { code: 'values_agg_combined_size', ...resourceLogFields('datasets', dataset) })
   }
 
   // Get a ES query to filter the aggregation results
