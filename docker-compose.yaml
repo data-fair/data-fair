@@ -95,9 +95,7 @@ services:
   agents:
     profiles:
       - agents
-    # the autonomous-agent simulations need the agents server loop: back to agents:main once
-    # feat-autonomous-agents is merged in agents
-    image: ${AGENTS_IMAGE:-ghcr.io/data-fair/agents:feat-autonomous-agents}
+    image: ${AGENTS_IMAGE:-ghcr.io/data-fair/agents:main}
     network_mode: host
     depends_on:
       - mongo
@@ -111,7 +109,6 @@ services:
       - SECRET_EVENTS=secret-events
       # the image has no model by default: the mock provider of agents' development config
       - PROVIDERS=[{"type":"mock","id":"global-mock","name":"Global Mock","enabled":true}]
-      # no "evaluator" usage: the feat-autonomous-agents image does not know it yet (put it back with agents:main)
       - MODELS=[{"id":"mock-model","name":"Global Mock Model","provider":"global-mock","usage":["assistant","tools","summarizer","moderator"],"inputPricePerMillion":0,"outputPricePerMillion":0}]
       - DEFAULT_MODELS={"assistant":{"provider":"global-mock","id":"mock-model"}}
       - DEFAULT_CREDITS=-1

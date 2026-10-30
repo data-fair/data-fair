@@ -672,9 +672,8 @@ drawer and its in-page tools are not involved.
 - A case may carry a premise read from the conversation export (which tool was called,
   on which dataset); a run whose premise did not hold is invalid, not judged.
 
-The stack needs the `agents` image of `feat-autonomous-agents` and the `mcp` image
-(`AGENTS_IMAGE`, `MCP_IMAGE` in `.env`); `AGENTS_IMAGE` goes back to the compose default
-once that branch is merged in agents. Run one case through `/agents-sim` as the others,
+The stack needs the `agents` and `mcp` images (`AGENTS_IMAGE`, `MCP_IMAGE` in `.env`
+override the compose defaults). Run one case through `/agents-sim` as the others,
 e.g. `SIM_CASES=inventaire-du-compte`; `SIM_CASES` is shared by both spec files, each
 taking the cases it owns.
 
