@@ -132,7 +132,7 @@
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset or an…"
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
           }
         },
         "additionalProperties": false,

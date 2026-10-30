@@ -386,7 +386,7 @@ on a fragment id exactly like on any other resource, but their curated field whi
 (`agent-tools/describe-dataset.ts`, `ui/src/composables/application/agent-tools.ts`) does not
 include `partOf`, in either the text summary or `structuredContent` — the assistant cannot
 currently tell a fragment from a standalone resource through these tools. The "Fragments" tab
-shown on a virtual dataset's page (Structure section) or
+shown on a virtual or meta-only dataset's page (Structure section, one `agentDesc` per kind) or
 an application's own page (Render section) carries an `agentDesc` (`ui/src/pages/dataset/[id]/index.vue`,
 `ui/src/pages/application/[id]/index.vue`) so the assistant can describe it and use the "new
 fragment" action within it. On a fragment's own page, the Informations section's `agentDesc`

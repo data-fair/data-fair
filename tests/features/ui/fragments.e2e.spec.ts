@@ -200,6 +200,19 @@ test.describe('fragments UI', () => {
     await expect.poll(async () => ax.get(`/api/v1/datasets/${virtualId}`).then(() => 200, (err: any) => err.status), { timeout: 10000 }).toBe(404)
   })
 
+  test('a meta-only parent lists its fragments and warns that only whole permission classes pass', async ({ page, goToWithAuth }) => {
+    const metaOnlyId = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta-only parent' })).data.id
+    await ax.post('/api/v1/datasets', { isRest: true, title: 'meta-only fragment', partOf: { type: 'dataset', id: metaOnlyId } })
+    await goToWithAuth(`/data-fair/dataset/${metaOnlyId}`, 'test_user1', { org: 'test_org1' })
+    // a meta-only has no schema: the Fragments tab is the whole structure section
+    const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
+    await pastActiveAccountGate(page, fragmentsTab)
+    await expect(page.locator('#structure').getByRole('tab')).toHaveCount(1)
+    await expect(page.locator('#structure').getByText('meta-only fragment')).toBeVisible({ timeout: 15000 })
+    await page.locator('#share').getByLabel('Édition détaillée des permissions').check()
+    await expect(page.locator('#share').getByText(/seules les classes de permissions entières/)).toBeVisible()
+  })
+
   test('the application config pickers offer the application\'s own fragment datasets', async ({ page, goToWithAuth }) => {
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'fragments app' })).data
     const otherApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other app' })).data

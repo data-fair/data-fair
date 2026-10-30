@@ -108,6 +108,7 @@
         <!-- fragments are hidden from every listing, this is where they are found -->
         <v-tabs-window-item value="fragments">
           <df-tutorial-alert
+            v-if="!dataset.isMetaOnly"
             id="dataset-fragments"
             persistent
           >
@@ -303,6 +304,7 @@
               :resource="dataset"
               resource-type="datasets"
               :disabled="!can('setPermissions').value"
+              :has-meta-only-fragments="!!dataset.isMetaOnly && nbFragments > 0"
               @save="onSavePermissions"
             />
           </v-tabs-window-item>
@@ -1241,12 +1243,13 @@ const sections = computedDeepDiff(() => {
   result.informations = {
     title: t('informations'),
     subtitle: t('informationsSubtitle'),
-    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent virtual dataset, with an "Add to the sources" button while it is not yet one of the parent\'s sources.'
+    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below. A fragment also shows a link to its parent dataset and, under a virtual parent, an "Add to the sources" button while it is not yet one of the parent\'s sources.'
   }
 
   // Structure section (new)
-  if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
-    const structureTabs: any[] = [{
+  // a meta-only has no schema: its structure is only its fragments
+  if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual || d.isMetaOnly)) {
+    const structureTabs: any[] = d.isMetaOnly ? [] : [{
       key: 'schema',
       title: t('schema'),
       icon: mdiTableCog,
@@ -1282,12 +1285,14 @@ const sections = computedDeepDiff(() => {
     }
 
     // fragments are hidden from every listing, this tab is where they are found
-    if (!d.partOf && (d.isVirtual || nbFragments.value)) {
+    if (!d.partOf && (d.isVirtual || d.isMetaOnly || nbFragments.value)) {
       structureTabs.push({
         key: 'fragments',
         title: t('fragments'),
         icon: mdiPuzzle,
-        agentDesc: 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
+        agentDesc: d.isMetaOnly
+          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and in the "child datasets" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
+          : 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }
 

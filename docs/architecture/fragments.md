@@ -14,12 +14,15 @@ the parent's ACL by a pure function and re-synced whenever the parent's ACL chan
 be published, is hidden from listings by default (§6), is deleted with its parent and follows its
 owner changes (§7), and can be detached back into an ordinary standalone resource.
 
-Three use cases drove the design:
+Four use cases drove the design:
 
 1. the children of a virtual dataset,
 2. the sub-applications of a dashboard application,
 3. a utility dataset that only makes sense inside one application (a form's write target, a lookup
-   table, …).
+   table, …),
+4. the data datasets described by a meta-only dataset (the tables a GTFS or GBFS processing
+   produces from one feed): listed on the portal page of the meta-only (a "child datasets" section),
+   without being published or listed in the catalog.
 
 **One level only.** A parent cannot itself be a fragment, and a resource that already has fragments
 cannot become one (`validatePartOf`, `api/src/fragments/operations.ts:89,93`). Nesting is out of
@@ -79,7 +82,7 @@ data it needs (parent lookup, sibling-fragment count) is fetched by `preparePart
 | Parent is not itself a fragment | 400 | `validatePartOf`, `operations.ts:89` |
 | `parent.owner` equals `fragment.owner` (type, id, department) | 400 | `validatePartOf`, `operations.ts:90` |
 | An application's parent must be an application | 400 | `validatePartOf`, `operations.ts:91` |
-| A dataset's parent must be an application or a **virtual** dataset | 400 | `validatePartOf`, `operations.ts:92` |
+| A dataset's parent must be an application, a **virtual** dataset or a **meta-only** dataset | 400 | `validatePartOf`, `operations.ts:92` |
 | Fragment has no fragments of its own | 400 | `validatePartOf`, `operations.ts:93` |
 | Fragment has no `publicationSites` / `requestedPublicationSites` | 400 | `validatePartOf`, `operations.ts:94` |
 | Fragment has no `publications` (external catalogs) | 400 | `validatePartOf`, `operations.ts:95` |
@@ -183,9 +186,20 @@ recomputing the *what* from the entry's expanded operation set (`classes` expand
   carried over only when both the parent and the fragment are applications. Viewing a dashboard is
   viewing its sub-applications; a public dashboard (an entry granting read with no `type`/`id`) has
   public sub-applications.
+- **B'. Read, meta-only dataset → dataset, whole classes only.** A `list` or `read` class fully
+  covered by the entry becomes the same class on the fragment; no operation is carried over
+  individually, and `readAdvanced` / `manageOwnLines` never pass. The detailed editor of a meta-only
+  hides the data operations (`appliesTo: notMetaOnly`), so a detailed entry never covers `read`: the
+  permissions editor warns about it in detailed mode when the meta-only has fragments. A public
+  meta-only therefore has public fragments, data included — that is the point: their portal page and
+  data are reachable from the "child datasets" section of the meta-only's portal page, which lists
+  all its fragments (`partOf=dataset:<id>`). The related-datasets picker of a meta-only also lists its
+  own fragments (`partOf=false,dataset:<id>`): a GTFS application finds its tables in the related
+  datasets; on the portal, the "see also" section only shows the published ones, so no fragment
+  appears twice.
 - An entry whose derived *what* ends up empty is dropped entirely.
-- **A virtual dataset grants no read on its fragments.** No read is ever derived from a `datasets`
-  parent (case B only fires application → application). Reading the virtual dataset reads its
+- **A virtual dataset grants no read on its fragments.** No read is derived from a virtual
+  `datasets` parent (case B only fires application → application, B' only for a meta-only parent). Reading the virtual dataset reads its
   fragment children through the existing owner pseudo-session used by `datasets/utils/virtual.ts`,
   unchanged by this feature; a direct call on the fragment dataset needs rule A.
 
@@ -194,6 +208,7 @@ Summary by case:
 | Fragment | Parent | A (management → stored) | B (read → stored) | C (application context, §5) |
 |---|---|---|---|---|
 | dataset | virtual dataset | yes | – | – |
+| dataset | meta-only dataset | yes | whole `list` / `read` classes (B') | – |
 | dataset | application | yes | – | yes |
 | application | application | yes | yes | – |
 
@@ -511,8 +526,9 @@ permission model on the client, it is purely presentational.
 - **`fragments-list.vue`**, rendered as a discreet **Fragments tab** — in the Structure section of a
   dataset, just before the "Jeu de données virtuel" tab, and in the Render section of an application,
   after the configuration tab. Fragments appear in no listing, so this is the one place they are
-  found from. Shown on any non-fragment application and on a virtual dataset (or any dataset already
-  holding fragments); on a dataset it follows the Structure section's `writeDescriptionBreaking`
+  found from. Shown on any non-fragment application and on a virtual or meta-only dataset (or any
+  dataset already holding fragments), the virtual-dataset tutorial hidden on a meta-only — a meta-only has
+  no schema, so this tab is its whole Structure section; on a dataset it follows the Structure section's `writeDescriptionBreaking`
   gate, which a reader of a virtual dataset lacks anyway (no read is derived on its fragments, §4). It lists fragment datasets and
   applications (two `partOf=` queries in the dataset/application stores, 100 at a time with a "load
   more" button so none is out of reach) and "Nouveau fragment" buttons that open
@@ -520,7 +536,7 @@ permission model on the client, it is purely presentational.
   only offered when the parent's base app declares `<meta name="df:use-apps" content="true">` (it
   embeds other applications, typically a dashboard), and `writeConfig` on the parent. On those creation pages the owner
   picker is replaced by the parent link (`fragment-info.vue`) and the owner is taken from the parent (a fragment has
-  exactly its parent's owner), a metadata-only dataset is not offered, the breadcrumb leads back to
+  exactly its parent's owner), a metadata-only dataset is offered only under a meta-only parent, the breadcrumb leads back to
   the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
   owner's standalone datasets. For a virtual parent exposing columns, the initialization step starts
   pre-selected on the parent with its schema, so the fragment fits the parent once added to its
@@ -584,7 +600,7 @@ permission model on the client, it is purely presentational.
 - **Outside `partOf=`, a fragment surfaces only to owner members and to holders of derived
   management entries — never through a parent's explicit read-only ACL entry.** A read entry on a
   virtual dataset's ACL grants nothing on its dataset fragments (rule B never fires for a
-  `datasets` parent); a read entry on an application's ACL only reaches an application fragment
+  `datasets` parent; a meta-only parent is the exception, its whole `list` / `read` classes pass, B'); a read entry on an application's ACL only reaches an application fragment
   (rule B), never a dataset fragment (which needs application context instead, §5). This holds for
   read-only entries built from `admin`-class operations too: `getPermissions`, `readIntegrity` and
   `readIntegrityRevisions` are excluded from the carried-over set (§4, rule A), so a parent entry

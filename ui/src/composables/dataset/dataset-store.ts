@@ -156,11 +156,11 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
   const virtualParents = computed(() => nbVirtualDatasetsFetch.data.value?.results ?? [])
 
-  // fragments of this dataset (only a virtual dataset can have some, and only datasets can be fragments of a dataset)
+  // fragments of this dataset (only a virtual or meta-only dataset can have some, and only datasets can be fragments of a dataset)
   // fragments are hidden from every other listing, so this one must reach all of them: the size grows on demand
   const fragmentsSize = ref(100)
   const fragmentsFetch = useFetch<{ results: any[], count: number }>(() => {
-    if (!dataset.value?.isVirtual || dataset.value.partOf) return null
+    if (!(dataset.value?.isVirtual || dataset.value?.isMetaOnly) || dataset.value.partOf) return null
     return `${$apiPath}/datasets`
   }, {
     query: computed(() => ({ partOf: `dataset:${id}`, size: fragmentsSize.value, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,partOf' }))

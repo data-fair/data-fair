@@ -485,8 +485,8 @@ interface InitFrom {
 const allDatasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
 const datasetTypes = computed(() => {
   if (isSimple.value) return allDatasetTypes.filter(dt => dt !== 'virtual')
-  // a metadata-only dataset holds no data, there is nothing for it to contribute as a fragment
-  if (partOf.value) return allDatasetTypes.filter(dt => dt !== 'metaOnly')
+  // a metadata-only dataset holds no data: it only makes sense as the fragment of another meta-only
+  if (partOf.value && !partOfParentFetch.data.value?.isMetaOnly) return allDatasetTypes.filter(dt => dt !== 'metaOnly')
   return allDatasetTypes
 })
 const datasetTypeIcons: Record<DatasetType, string> = {
@@ -644,7 +644,7 @@ const metaOnlyTitle = ref('')
 const owner = ref<AccountKeys | null>(null)
 
 // a fragment has exactly its parent's owner: take it from the parent instead of letting the user pick another one
-const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVirtual?: boolean, schema?: any[] }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner,isVirtual,schema,count' }, notifError: false })
+const partOfParentFetch = useFetch<{ id: string, title: string, owner: any, isVirtual?: boolean, isMetaOnly?: boolean, schema?: any[] }>(() => partOf.value ? `${$apiPath}/${partOf.value.type}s/${partOf.value.id}` : null, { query: { select: 'id,title,owner,isVirtual,isMetaOnly,schema,count' }, notifError: false })
 watch(() => partOfParentFetch.data.value, (parent) => { if (parent) owner.value = parent.owner }, { immediate: true })
 // a fragment of a virtual dataset starts from the columns the parent exposes, so it fits right in once
 // it joins the parent's children (the data part is not offered: it would duplicate the parent's rows)
