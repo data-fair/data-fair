@@ -1291,7 +1291,7 @@ const sections = computedDeepDiff(() => {
         title: t('fragments'),
         icon: mdiPuzzle,
         agentDesc: d.isMetaOnly
-          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and, when also declared as related datasets, in the "see also" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
+          ? 'Datasets that are fragments of this meta-only dataset (partOf): hidden from every other listing, listed only here and in the "child datasets" section of its portal page, deleted with it. They inherit its whole list / read permission classes. A "new fragment" button creates one.'
           : 'Datasets that are fragments of this virtual dataset (partOf): hidden from every other listing, listed only here, deleted with it. Each card tells whether the fragment is already one of the virtual dataset\'s sources, with an "add to sources" button when it is not. A "new fragment" button creates one.'
       })
     }

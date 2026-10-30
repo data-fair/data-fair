@@ -141,7 +141,7 @@ const fixedProperties = () => {
     relatedDatasets: (dataset.value?.finalizedAt || dataset.value?.isMetaOnly) && {
       comp: 'autocomplete',
       getItems: {
-        // a meta-only also lists its own fragments, shown in "Voir aussi" on its portal page
+        // a meta-only also lists its own fragments: a GTFS application finds its tables in the related datasets
         url: `api/v1/datasets?owner=${owner.value?.type}:${owner.value?.id}&size=20&select=id,title${dataset.value?.isMetaOnly ? `&partOf=false,dataset:${dataset.value.id}` : ''}`,
         qSearchParam: 'q',
         itemsResults: 'data.results.filter(d => d.id !== context.datasetId)',
