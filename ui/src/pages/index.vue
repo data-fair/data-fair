@@ -54,7 +54,6 @@
             <dashboard-todo
               :limits="limits"
               :publication-sites="publicationSites"
-              :pages-facets="pagesFacets"
             />
           </v-col>
         </v-row>
@@ -71,7 +70,6 @@
         <dashboard-portals
           v-if="side.portals"
           :publication-sites="publicationSites!"
-          :pages-facets="pagesFacets"
         />
       </v-col>
     </v-row>
@@ -112,10 +110,6 @@ const limits = computed(() => statsFetch.data.value?.limits)
 // shared by the publication lines of the "to do" card and the portals card
 const publicationSitesFetch = useFetch<PublicationSite[]>(() => account.value ? `${$apiPath}/settings/${account.value.type}/${account.value.id}/publication-sites` : null)
 const publicationSites = computed(() => publicationSitesFetch.data.value ?? undefined)
-
-// pages to validate in the "to do" card, pages per portal in the portals card
-const pagesFetch = useFetch<{ facets: { portals: Record<string, number>, requestedPortals: Record<string, number> } }>(() => $uiConfig.portalsIntegration && canContribDep.value ? `${$sitePath}/portals-manager/api/pages?size=0` : null)
-const pagesFacets = computed(() => pagesFetch.data.value?.facets)
 
 const side = computed(() => {
   const blocks = {

@@ -99,10 +99,9 @@ import { usePermissions } from '~/composables/use-permissions'
 import statuses from '../../../../shared/statuses.json'
 import type { PublicationSite } from './dashboard-portals.vue'
 
-const { limits, publicationSites, pagesFacets } = defineProps<{
+const { limits, publicationSites } = defineProps<{
   limits?: Record<string, { consumption: number, limit: number }>
   publicationSites?: PublicationSite[]
-  pagesFacets?: { requestedPortals: Record<string, number> }
 }>()
 
 const { t, locale } = useI18n()
@@ -121,6 +120,8 @@ const processingsErrorFetch = useFetch<{ count: number }>(() => canAdminDep.valu
 const datasetsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 const applicationsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value && !$uiConfig.disableApplications ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 const reusesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/reuses?size=0` : null)
+// only the reuses and pages lines call the portals service, data-fair works without it
+const pagesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/pages?size=0` : null)
 const datasetsDraftFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&draftStatus=${draftStatuses}` : null)
 
 // lines declared by another service (customers...), same "can" values as extraNavigationItems
@@ -148,7 +149,7 @@ const lines = computed(() => {
     { key: 'datasetsPublications', active: canAdminDep.value && !!sitesFilter.value, count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) }, title: '' },
     { key: 'applicationsPublications', active: canAdminDep.value && !!sitesFilter.value && !$uiConfig.disableApplications, count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) }, title: '' },
     { key: 'reusesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: '/reuses', title: '' },
-    { key: 'pagesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(pagesFacets?.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: '/pages', title: '' },
+    { key: 'pagesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: '/pages', title: '' },
     ...extraItems.map(({ extra, fetch }) => ({
       key: extra.id,
       active: !extra.can || !!can[extra.can]?.value,
@@ -173,7 +174,7 @@ const items = computed(() => lines.value
   }))
 
 // a failed fetch counts as loaded, so a missing service does not leave the card loading forever
-const fetches = [datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
+const fetches = [datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
 const loaded = computed(() => fetches.every(f => !f.loading.value))
 </script>
 
