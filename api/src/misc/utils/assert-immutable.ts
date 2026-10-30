@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 
 class MutationError extends Error {
@@ -23,7 +24,7 @@ export default <T extends object>(target: T, label: string): T => {
         try {
           return new Proxy(target[key], proxyHandler)
         } catch (err) {
-          console.warn(`failed to create object proxy for key ${key as string}`, target[key], err)
+          log.warn('failed to create immutable object proxy', { code: 'immutable-proxy', key: String(key), err })
         }
       }
       return target[key]

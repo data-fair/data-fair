@@ -153,7 +153,7 @@ config-free home is not required.
 The same co-location applies to **context builders**: helpers that assemble a service write
 context from `req` live in `middlewares.ts` next to the accessors they compose — not in
 `router.ts`. Example: `reqWriteContext` in `settings/middlewares.ts`, which combines
-`reqSettingsParams`, `reqSessionAuthenticated`, `reqHost` and `reqEventLogContext` into a
+`reqSettingsParams`, `reqSessionAuthenticated` and `reqHost` into a
 `SettingsWriteContext`.
 
 ### Path param narrowing (Express 5)
@@ -276,14 +276,14 @@ Service functions receive plain data, never `req`.
 **Service signatures:** every exported service function takes the module's params/context object
 as its **first argument** — `<Module>Params` for reads, `<Module>WriteContext` for writes — never a
 bare mongo filter. The WriteContext carries only request-derived ambient data (parsed path params /
-resource refs, `sessionState`, `host`, `logCtx`) that **at least two** functions consume; payloads
+resource refs, `sessionState`, `host`) that **at least two** functions consume; payloads
 and per-operation flags stay explicit arguments. Worked example, `settings/service.ts`:
 
 ```ts
 // reads: parsed once by the param middleware, first arg of every read function
 type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
 // writes: ambient request-derived context shared by all write functions
-type SettingsWriteContext = SettingsParams & { sessionState: SessionStateAuthenticated, host: string, logCtx: LogContext }
+type SettingsWriteContext = SettingsParams & { sessionState: SessionStateAuthenticated, host: string }
 
 getTopics(params: SettingsParams)
 updateSettings(ctx: SettingsWriteContext, settings)               // payload = explicit arg
@@ -292,19 +292,48 @@ deletePublicationSite(ctx: SettingsWriteContext, siteType, siteId)
 
 Other recurring shapes:
 
-```ts
-// audit-log context without req — same EventLog output as passing { req }
-const logCtx = reqEventLogContext(req)  // { user, account, ip, host }
-// usage in service:
-eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
-```
-
-- `reqEventLogContext` is exported from `misc/utils/req-context.ts`.
+- Services log through the global logger (section 3.1) and need no log context argument: the actor
+  comes from the request context opened by the `session.middleware()` of lib-express.
 - Helpers that intrinsically need the HTTP layer (e.g. `notifications.subscribe` forwards the auth
   cookie) are **router-layer helpers**: they stay called from `router.ts`, with any pure
   payload-building extracted to `operations.ts`.
 - Validation at the boundary: routers validate/narrow input with `assertValid` / `returnValid`
   (generated validators from `@data-fair/lib-validation`); services receive typed values.
+
+### 3.1 Logging
+
+Everything logs through `import log from '@data-fair/lib-node/log.js'` (pino, JSON on stdout);
+`log.info|warn|alert|error(msg, { code?, err?, ... })`. The full API is in the "Logging" section of
+the `@data-fair/lib-node` README; only the conventions are listed here.
+
+- `code` is a **static string** (`'search-index-recompute'`), never interpolated: it identifies the
+  event for filtering and alerting. The error goes in `err`, not in the message.
+- `error` is for **internal failures only** (counted, triggers alerts). Client errors and expected
+  situations are `warn`.
+- **Audit lines** pass a `code` plus `...resourceLogFields(type, resource)`
+  (`resourceType`, `resourceId`, `ownerKey`, `ownerDep`, `ownerName`) from
+  `misc/utils/log-fields.ts`; settings lines use `ownerLogFields(owner)`. An ownership change logs
+  a "from" line with the old owner and a "to" line with `ownerLogFields(newOwner)` added:
+  `ownerLogFields` always returns the 3 keys (`ownerDep`/`ownerName` possibly `undefined`, dropped
+  from the line) so they override the old owner's values.
+- The actor (ip, host, userId, userName, accountKey...) is never passed by hand: it is read from
+  the request context of `session.middleware()`. A middleware that substitutes the session
+  (api key, application key) continues with `withLogContext(sessionLogFields(state), next)`
+  (`@data-fair/lib-express/req-log-context.js`).
+- The dataset and application read middlewares and `processResourceTask` open
+  `withLogContext(resourceLogFields(...))` (plus `task` in workers), so every line logged below
+  carries the resource. Resource worker exports are wrapped with `resourceTask(fn, init)`
+  (`workers/log-context.ts`) and receive `{ resource, logContext }`. `init` is the worker index's
+  memoized `threadInit(...)` (connections, events queue, imports of the task modules): it runs
+  before entering the task's context so long-lived resources never carry the first task's fields.
+- Worker task failures: `error` only for the final failure of an internal error; a failure that
+  will be retried and `[noretry]` / `[validation-error]` / `noRetry` failures are `warn`. Code that
+  catches, logs and rethrows logs at `warn` (the consumer logs the incident), so one incident
+  yields one error line.
+- Per-row user content (line values, geometries) never goes into info/warn lines: use `debug`.
+- `debug` call sites are unchanged; the `debug` output is redirected into the logger.
+- eslint `no-console` applies to `api/src/**` and `api/index.ts`; `api/scripts/` and `api/upgrade/`
+  keep `console`.
 
 ---
 

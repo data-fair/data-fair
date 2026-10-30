@@ -1,4 +1,4 @@
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 // the catalogs service is part of our own infrastructure (configured url, not user input)
 import { privateAxios as axios } from './axios.ts'
 import Debug from 'debug'
@@ -55,7 +55,7 @@ export class CatalogsPublicationQueue {
       try {
         await axios.post(this.options().catalogsUrl + '/api/datasets', queue, { headers: { 'x-secret-key': this.options().catalogsSecret } })
       } catch (err: any) {
-        internalError('catalogs-publication-queue', err)
+        log.error('failed to queue a catalog publication', { code: 'catalogs-publication-queue', err })
         // retry later
         if (err.status >= 500 && (queue.update.length + queue.delete.length < 100)) {
           this.catalogsPublicationQueue.update = queue.update.concat(this.catalogsPublicationQueue.update)

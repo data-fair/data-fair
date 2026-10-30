@@ -321,7 +321,7 @@
               :key="catalogPublicationsKey"
               :src="catalogPublicationsUrl"
               sync-params
-              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.title })"
+              @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
             />
           </v-tabs-window-item>
 
@@ -846,6 +846,7 @@ import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import useStore from '~/composables/use-store'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
+import { refreshExtensionPatch } from '~/utils/extensions'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
@@ -1044,7 +1045,10 @@ const cancelMetadata = () => {
 }
 
 const onRefreshExtension = async (extension: any) => {
-  await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
+  // without the server list the patch would carry only this extension and drop the others
+  const serverData = structureEditFetch.serverData.value
+  if (!serverData) return
+  await store.patchDataset.execute(refreshExtensionPatch(serverData.extensions ?? [], extension))
   await structureEditFetch.fetch.refresh()
 }
 

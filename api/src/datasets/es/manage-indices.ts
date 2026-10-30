@@ -5,7 +5,7 @@ import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, textAnalyzers, type IndexShape } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
@@ -108,7 +108,7 @@ const safeDeleteIndex = async (index: any) => {
   try {
     await es.client.indices.delete({ index })
   } catch (err) {
-    internalError('es-delete-index', err)
+    log.error('failed to delete an elasticsearch index', { code: 'es-delete-index', err })
   }
 }
 
@@ -156,7 +156,7 @@ export const switchAlias = async (dataset: any, tempId: any) => {
       timeout: '60s'
     })
   } catch (err) {
-    console.error(`failed to replace index alias ${name} -> ${tempId}`, err)
+    log.error('failed to replace index alias', { code: 'es-replace-alias', name, tempId, err })
     throw new Error('[noretry] failed to replace index alias')
   }
   if (!res.acknowledged) throw new Error('[noretry] failed to get cluster acknowledgement after updating aliases ' + name)
@@ -164,7 +164,7 @@ export const switchAlias = async (dataset: any, tempId: any) => {
   try {
     await clearAliases(dataset)
   } catch (err) {
-    internalError('es-clear-aliases', err)
+    log.warn('failed to clear elasticsearch aliases, retrying', { code: 'es-clear-aliases', err })
     await new Promise(resolve => setTimeout(resolve, 4000))
     await clearAliases(dataset)
   }

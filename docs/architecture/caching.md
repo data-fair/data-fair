@@ -68,7 +68,7 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
      max-age=timestampedPublicMaxAge` (1 week). The UI deliberately adds `?finalizedAt=…` to
      map/lines requests (`ui/src/composables/dataset/lines.ts`, `ui/src/components/dataset/map/dataset-map.vue`)
      so repeated views are free, while a new finalization produces a new URL = new cache entry.
-   - If the query timestamp is **greater** than the resource date ⇒ `400` + `console.warn` (the
+   - If the query timestamp is **greater** than the resource date ⇒ `400` + `log.warn` (the
      caller is asking for data that doesn't exist yet — usually a stale memoize cache, see Layer 3).
    - Otherwise: public ⇒ `must-revalidate, public, max-age=publicMaxAge` (5 min); private ⇒
      `setNoCache`.
@@ -313,7 +313,7 @@ two datasets finalized at the identical timestamp.
   third-party API clients generally don't.
 - `resourceBased` throws `400` if a client sends `?finalizedAt=`/`?updatedAt=` *ahead* of the
   resource — the canary for "you're talking to a node whose memoize cache is stale"; logged with
-  `console.warn`.
+  `log.warn`.
 - `htmlCache` in `applications/proxy.js` has no expiry and no size bound (bounded only by the number
   of distinct base-app URLs).
 - The Mongo `cache` collection is capped: under heavy vector-tile traffic across many datasets,

@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import fs from 'fs-extra'
 import sharp from 'sharp'
 import pump from '../utils/pipe.ts'
@@ -76,10 +77,10 @@ const getCacheEntry = async (db: any, url: string, filePath: string | null, shar
         return { entry, status: 'REVALIDATED' }
       } else {
         if (entry) {
-          console.warn(`failed to fetch image for thumbnail "${url}", use stale cache entry`, err)
+          log.warn('failed to fetch image for thumbnail, use stale cache entry', { code: 'thumbnail-fetch-stale', url, err })
           return { entry, status: 'STALE' }
         } else {
-          console.warn(`failed to fetch image for thumbnail "${url}"`, err)
+          log.warn('failed to fetch image for thumbnail', { code: 'thumbnail-fetch', url, err })
           if (err.status === 404) throw httpError(404, `image not found ${url}`)
           // no cache entry to serve as stale content, let getThumbnail redirect to the original image
           return { entry: null, status: 'FALLBACK' }
@@ -111,7 +112,7 @@ const getCacheEntry = async (db: any, url: string, filePath: string | null, shar
     }
     debug('resize ok')
   } catch (err: any) {
-    console.warn('Sharp error while processing thumbnail for image ' + url, err)
+    log.warn('sharp error while processing thumbnail', { code: 'thumbnail-sharp', url, err })
     newEntry.sharpError = err.message
   }
   await fs.remove(tmpFile)

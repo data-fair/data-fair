@@ -1,3 +1,5 @@
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields, truncateLogValue } from '../misc/utils/log-fields.ts'
 import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
@@ -79,7 +81,7 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
     for (let i = 0; i < datasets.length; i++) {
       const dataset = datasets[i]
       if (!dataset.id) {
-        console.error(`missing dataset id "${JSON.stringify(dataset)}" in app config "${application.id}"`)
+        log.warn('missing dataset id in app config', { code: 'application-config-dataset-id', ...resourceLogFields('applications', application), datasetHref: typeof dataset.href === 'string' ? truncateLogValue(dataset.href) : undefined })
         if (dataset.href) dataset.href = dataset.href.replace(config.publicUrl, publicBaseUrl)
         continue
       }

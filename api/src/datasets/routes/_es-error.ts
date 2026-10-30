@@ -2,7 +2,7 @@
 import type { Request } from 'express'
 import { Counter } from 'prom-client'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import * as esUtils from '../es/index.ts'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
 
@@ -21,9 +21,9 @@ export const manageESError = async (req: Request, err: any): Promise<never> => {
     // 499 = client gave up (browser cancel, proxy timeout) -> the query was aborted, nothing to report
     // 504 = the read timeout elapsed (ES "Time exceeded" guard or the per-request client timeout) -> a
     // slow query, not an internal failure
-    // in both cases avoid internalError noise (a flood of these is exactly the overload symptom we want to handle)
+    // in both cases avoid error log noise (a flood of these is exactly the overload symptom we want to handle)
   } else {
-    internalError('es-query-' + status, err)
+    log.error('elasticsearch query failed', { code: 'es-query-failed', err, status })
   }
 
   // We used to store an error on the data whenever a dataset encountered an elasticsearch error

@@ -703,14 +703,15 @@ export const prepareCalculations = (dataset: Dataset) => {
       try {
         Object.assign(item, geoUtils.latlon2fields(dataset, flatItem!))
       } catch (err: any) {
-        console.log('failure to parse geopoints', dataset.id, err, flatItem)
+        // per-row user content, off by default; the row gets the warning
+        debug('failure to parse geopoints', dataset.id, flatItem, err)
         warning = 'Coordonnée géographique non valide - ' + err.message
       }
     } else if (hasGeometry) {
       try {
         Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem!))
       } catch (err: any) {
-        console.log('failure to parse geometry', dataset.id, err, flatItem)
+        debug('failure to parse geometry', dataset.id, flatItem, err)
         warning = 'Géométrie non valide - ' + err.message
       }
     }

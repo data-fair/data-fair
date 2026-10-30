@@ -7,7 +7,7 @@
 import config from '#config'
 import mongo from '#mongo'
 import Debug from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { IntegrityStore } from './store.ts'
 import * as ops from './operations.ts'
 import { maybeAlert } from './alerts.ts'
@@ -85,7 +85,7 @@ export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarke
           await notifications.sendResourceEvent('datasets', resource, 'worker:integrity-audit', 'integrity-scope-incoherent')
         }
       } catch (err) {
-        internalError('integrity-audit-scope', err)
+        log.error('integrity audit failed to resolve its scope', { code: 'integrity-audit-scope', err })
       }
     }
   }
@@ -101,7 +101,7 @@ export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarke
       const resource: any = dataset ?? { id: datasetId, slug: datasetId, title: datasetId, owner }
       await notifications.sendResourceEvent('datasets', resource, 'worker:integrity-audit', 'integrity-scope-incoherent')
     } catch (err) {
-      internalError('integrity-audit-markers', err)
+      log.error('integrity audit failed to read markers', { code: 'integrity-audit-markers', err })
     }
   }
 

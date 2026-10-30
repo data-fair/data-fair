@@ -11,6 +11,8 @@ import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
 import { reqResourceOptional, setReqBypassPermissions, setReqApiKeyRef } from './req-context.ts'
 import dayjs from 'dayjs'
+import { withLogContext } from '@data-fair/lib-node/log.js'
+import { sessionLogFields } from '@data-fair/lib-express/req-log-context.js'
 
 // this lookup runs on every request presenting an api key (M2M harvesters pay it per call);
 // keyed on the hashed key, same staleness budget as the application-key middleware and the
@@ -169,6 +171,8 @@ export const middleware = (scopes: string[] | string) => {
     if (typeof reqApiKey === 'string') {
       const sessionState = await readApiKey(reqApiKey, scopes, asAccountStr, req)
       setReqSession(req, sessionState)
+      // the log context was opened by session.middleware() with the anonymous session
+      return withLogContext(sessionLogFields(sessionState), next)
     }
     next()
   }

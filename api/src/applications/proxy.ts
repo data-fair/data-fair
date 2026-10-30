@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import express from 'express'
 import config from '#config'
 import fs from 'fs'
@@ -141,7 +142,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
 
   if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
-    console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
+    log.warn('serving anything other than /index.html from application-proxy is deprecated', { code: 'application-proxy-deprecated', url: targetUrl.href })
     await deprecatedProxy(cleanApplicationUrl, targetUrl, isPrivate, req, res)
     return
   }

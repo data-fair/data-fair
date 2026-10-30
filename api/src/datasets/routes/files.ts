@@ -1,4 +1,5 @@
 // File-download and metadata-attachment routes for a dataset (extracted from router.js, phase 6d)
+import log from '@data-fair/lib-node/log.js'
 import type { Router } from 'express'
 import type { Dataset, RestDataset, QueryableDescendant } from '#types'
 import { text as stream2text } from 'node:stream/consumers'
@@ -128,7 +129,7 @@ export const registerFilesRoutes = (router: Router) => {
             }
           }
           // we do not throw this error, we don't want to count it as an internal error
-          console.warn('failed to fetch linked attachment', attachmentTarget.targetUrl, err)
+          log.warn('failed to fetch linked attachment', { code: 'linked-attachment-fetch', url: attachmentTarget.targetUrl, err })
           return res.status(502).send('Échec de téléchargement du fichier : ' + message)
         }
       }

@@ -11,6 +11,7 @@
 		"exceedLimitStorage": "Vous avez atteint la limite de votre espace de stockage.",
 		"exceedLimitIndexed": "Vous avez atteint la limite de votre espace de données indexées.",
 		"exceedLimitNbDatasets": "Vous avez atteint votre nombre maximal de jeux de données autorisés.",
+		"exceedLimitNbApplications": "Vous avez atteint votre nombre maximal d'applications autorisées.",
 		"missingPermission": "Vous n'avez pas la permission d'effectuer cette opération.",
 		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
 		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",

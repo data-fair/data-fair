@@ -18,7 +18,7 @@ import taskProgress from '../../datasets/utils/task-progress.ts'
 import { dataDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import debugModule from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import mongo from '#mongo'
 import type { DatasetInternal, Event } from '#types'
 import { isRestDataset, type Unicite } from '#types/dataset/index.ts'
@@ -56,7 +56,7 @@ export default async function (dataset: DatasetInternal) {
       let newAttachments
       const filePath = join(dataDir, 'shared-tmp', a.startsWith('drop:') ? a.replace('drop:', '') : a)
       if (!await filesStorage.fileExists(filePath)) {
-        console.warn(`newRestAttachments of dataset ${dataset.id} references missing attachments file`, a)
+        log.warn('newRestAttachments references missing attachments file', { code: 'rest-attachments-missing', datasetId: dataset.id, attachment: a })
       } else {
         if (a.startsWith('drop:')) {
           newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, filePath)
@@ -82,7 +82,7 @@ export default async function (dataset: DatasetInternal) {
     try {
       indexName = await initDatasetIndex(dataset)
     } catch (err) {
-      internalError('es-init-index', err)
+      log.warn('failed to initialize an elasticsearch index', { code: 'es-init-index', err })
       const { message } = es.extractError(err)
       throw new Error(message)
     }
@@ -213,7 +213,7 @@ export default async function (dataset: DatasetInternal) {
           }
         })
         // do not promote the temp index; drop it so it does not leak
-        await esClient.client.indices.delete({ index: indexName }).catch(err => internalError('es-delete-unicity-temp-index', err))
+        await esClient.client.indices.delete({ index: indexName }).catch(err => log.error('failed to delete the temporary unicity index', { code: 'es-delete-unicity-temp-index', err }))
         throw new Error(`[validation-error] ${summary}`)
       } else {
         await writer.discard()

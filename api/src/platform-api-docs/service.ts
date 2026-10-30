@@ -3,7 +3,7 @@
 // per site on demand. A failing fetch keeps the last good fragment (stale).
 // Design: docs/superpowers/specs/2026-10-19-platform-api-docs-design.md
 import config from '#config'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import apiDocs from '../../contract/api-docs.ts'
 import pJson from '../../contract/p-json.js'
 import { oauth2Scheme } from '../../contract/scopes-security.ts'
@@ -148,7 +148,7 @@ const memo = new Map<string, any>()
 
 export const init = async () => {
   cache = createFragmentCache({ services: platformServices({ ...config, directoryUrl: config.directoryUrl as string }), local: () => apiDocs(config.publicUrl) })
-  const refresh = () => cache?.refresh().catch(err => internalError('platform-api-docs', err))
+  const refresh = () => cache?.refresh().catch(err => log.error('failed to refresh the platform API docs', { code: 'platform-api-docs', err }))
   // the first requests wait for the initial round, but startup does not wait for a slow service
   await Promise.race([refresh(), new Promise(resolve => setTimeout(resolve, initialWait).unref())])
   interval = setInterval(refresh, refreshInterval)

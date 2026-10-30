@@ -134,8 +134,8 @@ supported.
    unchanged (`string`); `reqIp(req, { optional: true })` is `string | undefined`. `events-log`
    reads the IP it logs with it instead of `X-Client-IP`. A minor release.
 2. **data-fair** — the limiter keys on the user, else on `ipRateLimitKey(reqIp(req))`, and answers its 429s with `Retry-After`, instead of the `request-ip`
-   library (which reads `X-Client-IP` first); `request-ip` is removed. The audit-log context
-   (`reqEventLogContext`) reads the IP with the optional form, the application-key log line with
+   library (which reads `X-Client-IP` first); `request-ip` is removed. The logger's request
+   context reads the IP with the optional form, the application-key log line with
    the strict one (it runs after the limiter accepted the request).
 3. **agents** — a chat turn forwards the person's IP (from the socket's upgrade request) in
    `X-Forwarded-For` on its calls to site-bound MCP servers. A planned task's run has no person and

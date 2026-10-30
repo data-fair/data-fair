@@ -15,7 +15,7 @@ import * as observe from './misc/utils/observe.ts'
 import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
@@ -114,7 +114,7 @@ export const run = async () => {
       const siteUrl = mainDomain ? parsedPublicUrl.origin : reqSiteUrl(req)
       const settings = await memoizedGetPublicationSiteSettings(siteUrl, mainDomain && req.query.publicationSites, mongo.db)
       if (!settings && !mainDomain) {
-        internalError('publication-site-unknown', 'no publication site is associated to URL ' + siteUrl)
+        log.error('no publication site is associated to URL ' + siteUrl, { code: 'publication-site-unknown' })
         return res.status(404).send('publication site unknown')
       }
       if (settings) {
@@ -288,7 +288,7 @@ export const run = async () => {
     await workers.init()
     workers.loop().catch(error => {
       // never rethrow: an unhandled rejection here would take the whole process down
-      internalError('workers-loop-error', error)
+      log.error('workers loop failed', { code: 'workers-loop-error', err: error })
     })
     const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
     apiKeysExpirationWorker.start()

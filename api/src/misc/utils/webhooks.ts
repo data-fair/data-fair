@@ -5,7 +5,7 @@ import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
 import type { Resource, Dataset, ResourceType } from '#types'
 import testEvents from './test-events.ts'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 
 const debug = debugLib('webhooks')
 
@@ -30,7 +30,7 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
   try {
     settings = await mongo.settings.findOne(settingsFilter) || {}
   } catch (err) {
-    return internalError('webhook-settings', err)
+    return log.error('failed to read webhook settings', { code: 'webhook-settings', err })
   }
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
@@ -50,7 +50,8 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
         }
       }
     } catch (err) {
-      console.log('Failure to send Webhook', webhook, err)
+      // not the whole webhook settings entry: its target url can embed credentials
+      log.warn('failure to send webhook', { code: 'webhook-send', webhookTitle: webhook.title, event: event.type, err })
     }
   }
 }

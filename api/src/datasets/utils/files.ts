@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import fs from 'fs-extra'
 import path from 'path'
@@ -108,7 +109,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
   if (dataset.originalFile) {
     const originalFile = files.find(f => f.path === dataset.originalFile.name)
     if (!originalFile) {
-      console.warn('Original data file not found', d, dataset.originalFile.name)
+      log.warn('original data file not found', { code: 'data-file-not-found', dir: d, name: dataset.originalFile.name })
     } else {
       results.push({
         name: dataset.originalFile.name,
@@ -123,7 +124,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
       if (dataset.file.name !== dataset.originalFile.name) {
         const file = files.find(f => f.path === dataset.file.name)
         if (!file) {
-          console.warn('Normalized data file not found', d, dataset.file.name)
+          log.warn('normalized data file not found', { code: 'data-file-not-found', dir: d, name: dataset.file.name })
         } else {
           results.push({
             name: dataset.file.name,
@@ -140,7 +141,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
         const name = `${parsed.name}-full${parsed.ext}`
         const fullFile = files.find(f => f.path === name)
         if (!fullFile) {
-          console.warn('Full data file not found', d, name)
+          log.warn('full data file not found', { code: 'data-file-not-found', dir: d, name })
         } else {
           results.push({
             name,

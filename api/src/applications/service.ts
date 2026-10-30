@@ -7,7 +7,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import * as fragmentsService from '../fragments/service.ts'
 import { partOfListFilter } from '../fragments/operations.ts'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { ownerLogFields, resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
@@ -16,7 +17,6 @@ import * as capture from '../misc/utils/capture.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
-import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs, trimApplication } from './operations.ts'
 import filesStorage from '#files-storage'
@@ -57,7 +57,6 @@ const fieldsMap = {
 
 export type ApplicationWriteContext = {
   sessionState: SessionStateAuthenticated
-  logCtx: LogContext
 }
 
 export const findApplications = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, asVisitorFilters?: any[]) => {
@@ -244,7 +243,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   }
   application.status = 'created'
 
-  eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`created application ${application.slug} (${application.id})`, { code: 'df.applications.create', ...resourceLogFields('applications', application) })
 
   await journals.log('applications', application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id } as Event)
   await notifications.sendResourceEvent('applications', application, ctx.sessionState, 'application-created')
@@ -256,7 +255,7 @@ export const tryInsertApplication = async (ctx: ApplicationWriteContext, newAppl
   try {
     await mongo.db.collection('applications').insertOne(newApplication)
 
-    eventsLog.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
+    log.info(`created application ${newApplication.slug} (${newApplication.id})`, { code: 'df.applications.create', ...resourceLogFields('applications', newApplication) })
 
     await journals.log('applications', newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id } as Event)
     await notifications.sendResourceEvent('applications', newApplication, ctx.sessionState, 'application-created')
@@ -291,7 +290,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
   if (!isNew) await publicationSites.applyPatch(existingApplication as any, newApplication, ctx.sessionState, 'applications')
 
   if (!isNew) {
-    eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { ...ctx.logCtx, account: newApplication.owner })
+    log.info(`updated application ${newApplication.slug} (${newApplication.id})`, { code: 'df.applications.update', ...resourceLogFields('applications', newApplication) })
     const sessionState = ctx.sessionState
     await notifications.send({
       title: 'Application entièrement modifiée',
@@ -343,7 +342,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // configuration.datasets changes affect the application-key middleware matching
   clearApplicationKeysCaches()
 
-  eventsLog.info('df.applications.patch', `patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { ...ctx.logCtx, account: patchedApplication!.owner })
+  log.info(`patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { code: 'df.applications.patch', ...resourceLogFields('applications', patchedApplication!) })
 
   const sessionState = ctx.sessionState
   await notifications.send({
@@ -399,8 +398,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
 
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
-  eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { ...ctx.logCtx, account: application.owner })
-  eventsLog.info('df.applications.changeOwnerTo', eventLogMessage, { ...ctx.logCtx, account: newOwner })
+  log.info(eventLogMessage, { code: 'df.applications.changeOwnerFrom', ...resourceLogFields('applications', application) })
+  log.info(eventLogMessage, { code: 'df.applications.changeOwnerTo', ...resourceLogFields('applications', application), ...ownerLogFields(newOwner) })
 
   const event = {
     title: 'Changement de propriétaire d\'une application',
@@ -427,15 +426,15 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   try {
     await filesStorage.removeFile(capture.captureFilePath(application))
   } catch (err) {
-    console.warn('Failure to remove capture file')
+    log.warn('failure to remove application capture file', { code: 'application-remove-capture', applicationId: application.id, err })
   }
   try {
     await filesStorage.removeDir(dir(application))
   } catch (err) {
-    console.warn('Failure to remove application directory')
+    log.warn('failure to remove application directory', { code: 'application-remove-dir', applicationId: application.id, err })
   }
 
-  eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`deleted application ${application.slug} (${application.id})`, { code: 'df.applications.delete', ...resourceLogFields('applications', application) })
 
   const sessionState = ctx.sessionState
   await notifications.send({
@@ -470,7 +469,7 @@ export const writeApplicationConfig = async (ctx: ApplicationWriteContext, appli
     }
   )
 
-  eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`wrote application config ${application.slug} (${application.id})`, { code: 'df.applications.writeConfig', ...resourceLogFields('applications', application) })
 
   await journals.log('applications', application, { type: 'config-updated' } as Event)
   // sync the validated config and reconcile back-references against the previous configuration
@@ -492,7 +491,7 @@ export const writeConfigDraft = async (ctx: ApplicationWriteContext, application
       }
     }
   )
-  eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`validated application config draft ${application.slug} (${application.id})`, { code: 'df.applications.validateDraft', ...resourceLogFields('applications', application) })
 
   await journals.log('applications', application, { type: 'config-draft-updated' } as Event)
 }
@@ -513,7 +512,7 @@ export const deleteConfigDraft = async (ctx: ApplicationWriteContext, applicatio
     }
   )
 
-  eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`cancelled application config draft ${application.slug} (${application.id})`, { code: 'df.applications.cancelDraft', ...resourceLogFields('applications', application) })
 
   await journals.log('applications', application, { type: 'config-draft-cancelled' } as Event)
 }
@@ -555,7 +554,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
   await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: applicationKeyOwner(application.owner) } as any, { upsert: true })
   clearApplicationKeysCaches()
 
-  eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
+  log.info(`wrote application keys ${application.slug} (${application.id})`, { code: 'df.applications.writeKeys', ...resourceLogFields('applications', application) })
 
   const sessionState = ctx.sessionState
   await notifications.send({

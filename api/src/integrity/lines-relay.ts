@@ -1,6 +1,7 @@
 import mongo from '#mongo'
 import config from '#config'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import type { RestDataset, DatasetLine } from '#types'
 import type { AnyBulkWriteOperation } from 'mongodb'
 import * as restUtils from '../datasets/utils/rest.ts'
@@ -28,7 +29,7 @@ export const anchorLine = async (dataset: RestDataset, line: DatasetLine, store:
   // sequence ordering — refuse, loudly; the caller leaves the stamp pending so the dataset
   // stays 'unknown' and the check-stale alert surfaces the wedge if nobody remediates
   if (!lops.lineIndexInRange(line._i!)) {
-    internalError('integrity-line-index', new Error(`refusing to anchor line ${line._id} of dataset ${dataset.id}: _i ${line._i} outside the key padding range`))
+    log.error(`refusing to anchor line ${line._id} of dataset ${dataset.id}: _i ${line._i} outside the key padding range`, { code: 'integrity-line-index', ...resourceLogFields('datasets', dataset) })
     return false
   }
   const hint = contextHint ?? line._needsHistorizing?.context
