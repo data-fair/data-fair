@@ -1,4 +1,5 @@
-[{
+[
+  {
     "id": "test_user1",
     "firstName": "Test",
     "lastName": "User1",
@@ -216,6 +217,50 @@
     "email": "kml_multi_admin@koumoul-test.com",
     "password": {
       "clear": "passwd"
+    }
+  },
+  {
+    "id": "test_org1_agent_nhi",
+    "email": "test_org1_agent_nhi@test.com",
+    "nhi": {
+      "provider": {
+        "issuer": "http://{DEV_HOST}:{NGINX_PORT}/agents/api/nhi"
+      },
+      "subject": "autonomous-agent:sim-mcp",
+      "scopes": ["all:read"]
+    }
+  },
+  {
+    "id": "test_org1_lines_nhi",
+    "email": "test_org1_lines_nhi@test.com",
+    "nhi": {
+      "provider": {
+        "issuer": "http://{DEV_HOST}:{NGINX_PORT}/agents/api/nhi"
+      },
+      "subject": "autonomous-agent:sim-lines",
+      "scopes": ["all:read", "datasets:write"]
+    }
+  },
+  {
+    "id": "test_org1_scope_nhi",
+    "email": "test_org1_scope_nhi@test.com",
+    "nhi": {
+      "provider": {
+        "issuer": "https://data-fair-tests.example.com",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "n": "qbPR4ZEmitVF8AlY4um3x_k0ZkLlQ0ZEgiuEAlqT1g0lZejC9Z6EBVU8gwSQhOmbZMr9-hauBeEMqxJZiDwfvjHxM-bRNr2db0PUpD9PlhVbLXTCd9S1L0Kta51bgrVMfxJDajf4XI5Alo176HBQ904zkBA-lO4WhuR3JZFt4EN2MNK6RB7PlBy75v0WtCMzPxdzAxUym4djJA8tRxJAuJYPZmXPsY9eQ3BWmfXm20ESviT6Bku8LJkSsQoJNZBQ8CzgV6MR0k1zYtS6vZW-FqiQ7tV2qLW6yKsaCSuj1WC06djhtAtmIEq5G6yItCq5SKyQPj2khcmy3B0USqtBCQ",
+              "e": "AQAB",
+              "kid": "test-nhi-key",
+              "alg": "RS256",
+              "use": "sig"
+            }
+          ]
+        }
+      },
+      "subject": "scope-tests"
     }
   }
 ]

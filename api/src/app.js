@@ -43,7 +43,9 @@ export const run = async () => {
     const limits = await import('./limits/router.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
-    session.init(config.privateDirectoryUrl || config.directoryUrl)
+    // scope-aware: a scope-restricted session (OAuth-style token scopes) is readable only by a route
+    // that checked its scopes first (family gate below, or an explicit any-scope mark): deny by default
+    session.init(config.privateDirectoryUrl || config.directoryUrl, undefined, undefined, { scopeAware: true })
 
     app.set('trust proxy', 1)
     // app.set('json spaces', 2)
@@ -136,15 +138,21 @@ export const run = async () => {
 
     // Business routers
     const { middleware: apiKey } = await import('./misc/utils/api-key.ts')
+    const { scopeFamilyGate } = await import('./misc/utils/scopes.ts')
+    const { allowAnyScope } = await import('@data-fair/lib-express/index.js')
+    // family gates: a scoped session without any scope of the family is refused before the router
+    // (and before the rate limiter, which reads the session); the tier is checked per operation by
+    // the permission core. Routers without a gate only accept scoped sessions on routes marked with
+    // allowAnyScope (session reads for identity, UI shell, public data), everything else is 403.
     app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
-    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.ts')).default)
+    app.use('/api/v1/catalog', scopeFamilyGate('datasets'), apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.ts')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
-    app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.ts')).default)
+    app.use('/api/v1/applications', scopeFamilyGate('applications'), apiKey('applications'), (await import('./applications/router.ts')).default)
     // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
     // requests authenticated with an api key are throttled at the `user` tier rather than as anonymous
-    app.use('/api/v1/datasets', (await import('./datasets/router.ts')).default)
+    app.use('/api/v1/datasets', scopeFamilyGate('datasets'), (await import('./datasets/router.ts')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
     app.use('/api/v1/admin', (await import('./admin/router.ts')).default)
@@ -152,7 +160,7 @@ export const run = async () => {
     app.use('/api/v1/activity', (await import('./activity/router.ts')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
-      app.use('/api/v1/compat-ods', (await import('./api-compat/ods/index.ts')).default)
+      app.use('/api/v1/compat-ods', scopeFamilyGate('datasets'), (await import('./api-compat/ods/index.ts')).default)
     }
     if (process.env.NODE_ENV === 'development') {
       app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)
@@ -165,13 +173,13 @@ export const run = async () => {
     // External applications proxy
     const serviceWorkers = await import('./misc/utils/service-workers.ts')
     const { reqApplicationOptional } = await import('./applications/middlewares.ts')
-    app.get('/app-sw.js', (req, res) => {
+    app.get('/app-sw.js', allowAnyScope, (req, res) => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
     // applications are embedded by portals, never a destination of their own,
     // but their content may be indexed as part of the embedding page
-    app.use('/app', (req, res, next) => {
+    app.use('/app', scopeFamilyGate('applications'), (req, res, next) => {
       res.setHeader('X-Robots-Tag', 'noindex, indexifembedded')
       next()
     }, (await import('./applications/proxy.ts')).default)
@@ -179,10 +187,11 @@ export const run = async () => {
     // self hosting of streamsaver man in the middle service worker
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183
     const streamsaverPath = parsePath(new URL(import.meta.resolve('streamsaver')).pathname).dir
-    app.use('/streamsaver/mitm.html', express.static(join(streamsaverPath, 'mitm.html')))
-    app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
+    app.use('/streamsaver/mitm.html', allowAnyScope, express.static(join(streamsaverPath, 'mitm.html')))
+    app.use('/streamsaver/sw.js', allowAnyScope, express.static(join(streamsaverPath, 'sw.js')))
 
     const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
+    const { markScopeChecked } = await import('@data-fair/lib-express/index.js')
 
     const embedUnsafePaths = [
       '/embed/dataset/:id/table-edit',
@@ -196,7 +205,8 @@ export const run = async () => {
       '/embed/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
 
-    app.use('/embed', trackEmbed)
+    // the embed shell is a GET/HEAD page, same restriction as the SPA mark below
+    app.use('/embed', (req, res, next) => (req.method === 'GET' || req.method === 'HEAD') ? allowAnyScope(req, res, next) : next(), trackEmbed)
 
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect
@@ -206,6 +216,8 @@ export const run = async () => {
 
     // same for the embeds, the back-office is never indexed
     app.use('/', (req, res, next) => {
+      // the UI shell (index.html, static assets) is served whatever the scopes of the session
+      if (req.method === 'GET' || req.method === 'HEAD') markScopeChecked(req)
       res.setHeader('X-Robots-Tag', req.path.startsWith('/embed/') ? 'noindex, indexifembedded' : 'noindex')
       next()
     }, await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
@@ -293,12 +305,22 @@ export const run = async () => {
     app.use(errorHandler)
 
     const permissions = await import('./misc/utils/permissions.ts')
+    const { familyScopes } = await import('./misc/utils/scopes.ts')
+    // a scoped session only subscribes to the channels of its families (checked by lib-express
+    // before canSubscribe, which applies the tier through permissions.can)
+    /** @param {string} channel */
+    const channelScopes = (channel) => {
+      const type = channel.split('/')[0]
+      if (type === 'datasets' || type === 'applications') return familyScopes(type)
+      return undefined
+    }
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     const { resolveApplicationContextBypass } = await import('./misc/utils/application-key.ts')
     await Promise.all([
       (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
+      (await import('./platform-api-docs/service.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'development') {
           // TODO: remove this ugly exception, this code should be tested
@@ -323,7 +345,7 @@ export const run = async () => {
           }
         }
         return permissions.can(type, resource, `realtime-${subject}`, sessionState, bypassPermissions)
-      })
+      }, { channelScopes })
     ])
 
     // at this stage the server is fully ready to respond to requests, we can open the port
@@ -350,6 +372,7 @@ export const run = async () => {
 export const stop = async () => {
   if (config.mode.includes('server')) {
     await wsServer.stop()
+    await (await import('./platform-api-docs/service.ts')).stop()
     if (httpTerminator) await httpTerminator.terminate()
   }
 

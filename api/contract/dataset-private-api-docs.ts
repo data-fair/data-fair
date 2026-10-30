@@ -10,6 +10,8 @@ import { visibility } from '../src/misc/utils/visibility.ts'
 import { datasetOperationGrantedBy } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import { operations as xAgent } from './x-agent.ts'
+import { getLineEditionArm, lineEditionAgent, lineEditionBodies } from './x-agent-line-edition.ts'
+import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
@@ -106,7 +108,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       type: 'apiKey',
       in: 'cookie',
       name: 'id_token'
-    }
+    },
+    oauth2: oauth2Scheme()
   }
   api.security = [{ apiKey: [] }, { sdCookie: [] }]
 
@@ -177,6 +180,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       summary: 'Mettre à jour les données',
       description: "Mettre à jour le fichier de données du jeu de données. La nouvelle version est d'abord chargée en brouillon, puis validée selon le paramètre `draft`.",
       operationId: 'writeData',
+      'x-agent': xAgent.writeData,
       'x-permissionClass': 'write',
       tags: ['Données'],
       parameters: [{
@@ -758,6 +762,23 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       convertOwnLineApiPath('/revisions')
       convertOwnLineApiPath('/lines/{lineId}/revisions')
     }
+
+    // dev-only line edition arm (x-agent-line-edition.ts), after the own/ variants were cloned so
+    // they stay without annotation
+    const lineEditionArm = merged ? getLineEditionArm() : undefined
+    if (lineEditionArm) {
+      const annotations = lineEditionAgent(lineEditionArm)
+      const bodies = lineEditionBodies()
+      for (const apiPath of ['/lines', '/lines/{lineId}', '/_bulk_lines']) {
+        for (const operation of Object.values(api.paths[apiPath]) as any[]) {
+          const annotation = annotations[operation?.operationId]
+          if (!annotation) continue
+          operation['x-agent'] = annotation
+          const body = lineEditionArm === 'json' && bodies[operation.operationId]
+          if (body) operation.requestBody = { ...operation.requestBody, content: { 'application/json': { schema: body } } }
+        }
+      }
+    }
   }
 
   // Clone permissionsDoc: the imported object is a module-level singleton shared with the
@@ -933,6 +954,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       if (!Object.keys(methods).some(k => httpMethods.has(k))) delete api.paths[path]
     }
   }
+
+  // paths are relative to /datasets/{id}: the family is the datasets one
+  applyOauth2Security(api, '/datasets')
 
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.

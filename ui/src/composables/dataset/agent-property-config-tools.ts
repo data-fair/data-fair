@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator, fetchSampleRows } from '~/composables/agent/utils'
 import {
   type PropertyConfig,
@@ -20,15 +20,11 @@ export type { PropertyConfig } from './agent-property-config-tools-logic'
 const messages: Record<string, Record<string, string>> = {
   fr: {
     readPropertyConfig: 'Lire la configuration des colonnes',
-    setPropertyConfig: 'Configurer les types et capacités des colonnes',
-    propertyConfigAdvisor: 'Optimiser les types et capacités des colonnes',
-    propertyConfigAdvisorDesc: 'Analyser le schéma et les données pour suggérer des corrections de types et des optimisations de capacités.'
+    setPropertyConfig: 'Configurer les types et capacités des colonnes'
   },
   en: {
     readPropertyConfig: 'Read column configuration',
-    setPropertyConfig: 'Configure column types and capabilities',
-    propertyConfigAdvisor: 'Optimize column types and capabilities',
-    propertyConfigAdvisorDesc: 'Analyze the schema and data to suggest type corrections and capability optimizations.'
+    setPropertyConfig: 'Configure column types and capabilities'
   }
 }
 
@@ -84,7 +80,7 @@ export function useAgentPropertyConfigTools (
   })
 
   const propertyConfigAdvisorPrompts: Record<string, string> = {
-    fr: `Tu es un expert en configuration de données pour Data Fair, une plateforme de publication de données ouvertes. Tu aides les utilisateurs à optimiser les types de colonnes et les capacités d'indexation.
+    fr: `Optimiser les types de colonnes et les capacités d'indexation d'un jeu de données Data Fair, une plateforme de publication de données ouvertes.
 
 Tâche :
 1. Appelle read_property_config pour obtenir le schéma actuel, les capacités et des exemples de données.
@@ -106,7 +102,7 @@ Tâche :
    À activer seulement si l'utilisateur en exprime le besoin : \`textAgg\` (nuage de mots), \`wildcard\` (filtre sur suite de caractères), \`vtPrepare\` (tuiles vectorielles).
 4. Présente tes suggestions avec de brèves explications pour chacune.
 5. Applique tes suggestions avec set_property_config. **Au-delà de 20 colonnes à régler, découpe en plusieurs appels de 20 au maximum** : un appel qui règle cent colonnes d'un coup produit un pavé de JSON que personne ne relit, et pousse à appliquer une règle uniforme au lieu de juger colonne par colonne.
-6. Renvoie un résumé des changements effectués.
+6. Résume à l'utilisateur les changements effectués.
 
 Consignes :
 - Les overrides de type ne sont disponibles que pour les jeux de type fichier. Ignore les suggestions de type si ce n'est pas un fichier.
@@ -114,7 +110,7 @@ Consignes :
 - Ne passe que les valeurs de capacités qui diffèrent des défauts. Les défauts sont : index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
 - N'écris PAS d'expressions de transformation. Si un override de type nécessite une expression (ex: reformater des dates), mentionne-le et indique à l'utilisateur d'utiliser l'assistant d'expressions.
 - Rédige dans la même langue que le titre du jeu et les annotations existantes.`,
-    en: `You are a data configuration expert for Data Fair, an open data publishing platform. You help users optimize column types and indexing capabilities.
+    en: `Optimizing the column types and indexing capabilities of a dataset on Data Fair, an open data publishing platform.
 
 Task:
 1. Call read_property_config to get the current schema, capabilities, and sample data.
@@ -136,7 +132,7 @@ Task:
    Enable only when the user asks for it: \`textAgg\` (word cloud), \`wildcard\` (substring filter), \`vtPrepare\` (vector tiles).
 4. Present your suggestions with brief explanations for each.
 5. Apply your suggestions with set_property_config. **Beyond 20 columns, split into several calls of at most 20**: one call configuring a hundred columns produces a wall of JSON nobody reviews, and pushes toward one blanket rule instead of judging column by column.
-6. Return a summary of changes made.
+6. Summarize the changes made for the user.
 
 Guidelines:
 - Type overrides are only available for file datasets. Skip type suggestions if the dataset is not a file.
@@ -146,12 +142,9 @@ Guidelines:
 - Write in the same language as the dataset title and existing annotations.`
   }
 
-  useAgentSubAgent({
-    name: 'property_config_advisor',
-    title: t('propertyConfigAdvisor'),
-    description: t('propertyConfigAdvisorDesc'),
-    model: 'summarizer',
-    prompt: propertyConfigAdvisorPrompts[locale.value] ?? propertyConfigAdvisorPrompts.en,
-    tools: ['read_property_config', 'set_property_config']
+  useAgentSkill({
+    name: 'optimize-column-config',
+    description: 'How to correct the current dataset\'s column types and tune their indexing capabilities. Load it before changing either.',
+    body: propertyConfigAdvisorPrompts[locale.value] ?? propertyConfigAdvisorPrompts.en
   })
 }

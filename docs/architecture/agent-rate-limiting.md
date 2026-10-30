@@ -1,14 +1,13 @@
 # Rate limiting for agents and other relaying services
 
-Status: plan agreed 2026-10-07. Section 3 is the state the `mcp` server ships with in rollout
-step 3 of [agent-profiles.md](./agent-profiles.md); sections 4 and 5 are the target and the work
-to reach it.
+Status: plan agreed 2026-10-07. Section 3 is the state the `mcp` server ships with;
+sections 4 and 5 are the target and the work to reach it.
 
 ## 1. The problem
 
 Agents reach data-fair through the `mcp` server, which relays each tool call to data-fair on the
 caller's behalf. Parity between agents and every other client
-([agent-profiles.md](./agent-profiles.md), and the agents service's one-server design) means an
+(the agents service's one-server design) means an
 agent must be limited exactly as its user would be when calling data-fair directly — no more, no
 less. Two things prevent that today, and the portals' server-side rendering (SSR) has the same
 shape:
@@ -91,7 +90,7 @@ only a trusted forwarder may set it — or declare that there is none — on som
 With that, a relayed caller is limited exactly like a direct one: by nginx per IP, by data-fair per
 user or per IP. **The `mcp` server has no general limiter of its own**: it was there because
 data-fair's limits did not apply to its traffic (section 3). What it serves itself
-(`/v0/servers`, `/profiles`, `tools/list`) comes from memory; every tool that costs anything is a
+(`/v0/servers`, `tools/list`) comes from memory; every tool that costs anything is a
 data-fair call, limited there. The one exception is below.
 
 ### Keys and answers

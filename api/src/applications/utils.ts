@@ -6,6 +6,7 @@ import memoize from 'memoizee'
 import path from 'path'
 import * as visibilityUtils from '../misc/utils/visibility.ts'
 import * as permissions from '../misc/utils/permissions.ts'
+import { scopeAllowsClass } from '../misc/utils/scopes.ts'
 import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
 import * as findUtils from '../misc/utils/find.ts'
 import clone from '@data-fair/lib-utils/clone.js'
@@ -103,6 +104,10 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
       if (freshDataset) {
         if (checkWithPersonalSession) {
           if (!permissions.list('datasets', freshDataset, reqSession(req)).includes('readDescription')) {
+            // fail closed for a scoped session without the datasets family, but say what is missing
+            if (!scopeAllowsClass(reqSession(req), 'datasets', 'read')) {
+              throw httpError(403, `Le jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans l'application nécessite le scope datasets:read, absent de la session.`)
+            }
             throw httpError(403, `Vous n'avez pas la permission de consulter les informations du jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans l'application.`)
           }
         } else {

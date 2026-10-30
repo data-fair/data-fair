@@ -1,0 +1,2233 @@
+{
+  "tools": [
+    {
+      "name": "datafair_list_account_datasets",
+      "description": "List the datasets owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "French keywords for full-text search (simple terms, not sentences). Examples: \"élus\", \"DPE\", \"entreprises\""
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, count, status, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_create_dataset_from_file",
+      "description": "Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (datafair_list_account_datasets shows it).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "uri",
+            "description": "Le fichier de données. Son type est déduit de l'extension de son nom (.csv, .tsv, .xlsx, .ods, .geojson, .zip d'un shapefile…). Le champ peut aussi s'appeler `dataset`.\n\nURL of the file to send, from the file store this server is configured for: the server downloads it and names it after the last path segment, extension included.",
+            "x-mcp-file": {
+              "maxSize": 104857600
+            }
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "x-i18n-title": {
+              "fr": "Titre"
+            },
+            "description": "Short title of the dataset",
+            "layout": {
+              "props": {
+                "variant": "outlined"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "file"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_list_datasets",
+      "description": "List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update. Only available from a portal, not from the back-office.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "French keywords for full-text search (simple terms, not sentences). Examples: \"élus\", \"DPE\", \"entreprises\""
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, count, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_describe_dataset",
+      "description": "Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call datafair_search_data with size=3 afterwards to see sample rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, schema. detailed: every field."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_replace_dataset_file",
+      "description": "Replace the data file of a file dataset with a new file; all its rows are replaced, its metadata, permissions and publications are kept. If the new file removes or changes the type of a column, the update waits as a draft for a person to validate it in the back-office; otherwise it is applied once indexed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "file": {
+            "type": "string",
+            "format": "uri",
+            "description": "Le fichier de données.\n\nURL of the file to send, from the file store this server is configured for: the server downloads it and names it after the last path segment, extension included.",
+            "x-mcp-file": {
+              "maxSize": 104857600
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "file"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_delete_dataset",
+      "description": "Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_update_dataset",
+      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "body": {
+            "type": "object",
+            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Contraintes de validation à l'échelle du jeu de données, au delà des validations…\nextensions?: object[] | null — Définition des enrichissements appliqués à ce jeu de données\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_publish_dataset",
+      "description": "Change how a dataset is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, its read API key, its master-data exposure, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "body": {
+            "type": "object",
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Données de référence\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset or an…"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_list_account_applications",
+      "description": "List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory. Returns id, title, status and last update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Keywords for full-text search."
+          },
+          "dataset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Restrict to the applications using these datasets (ids from datafair_list_account_datasets)."
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "description": "Numéro de page"
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, status, updatedAt, page. detailed: every field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_describe_application",
+      "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_delete_application",
+      "description": "Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_update_application",
+      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier of the application, usually a slug for URL readability (unique inside the tenant)",
+            "pattern": "^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short title of the application"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Short description of the application"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Detailed description of the application"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "URL d'une image, illustration du jeu de données"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "configuration": {
+            "anyOf": [
+              {
+                "x-exports": [
+                  "types",
+                  "validate",
+                  "resolvedSchema"
+                ],
+                "title": "App config",
+                "type": "object",
+                "description": "A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services",
+                "additionalProperties": true,
+                "properties": {
+                  "datasets": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "href"
+                      ],
+                      "properties": {
+                        "href": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "string",
+                          "description": "Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context."
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "applicationKeyPermissions": {
+                          "type": "object",
+                          "description": "The permissions that should be applied to users accessing this dataset through a protecte application key of this application",
+                          "default": {
+                            "classes": [
+                              "read"
+                            ]
+                          },
+                          "properties": {
+                            "operations": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "API operation that can be used"
+                              }
+                            },
+                            "classes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "API permission classes that can be used"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "type": "string",
+            "deprecated": true,
+            "description": "The URL the base application is located at (replaced by baseApp.url)"
+          },
+          "urlDraft": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "The URL the base application for the draft configuration is located at (replaced by baseAppDraft.url)"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestedPublicationSites": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all sites the application would be exposed in if validated by an admin.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topics": {
+            "anyOf": [
+              {
+                "type": "array",
+                "title": "Liste de thématiques",
+                "layout": {
+                  "itemTitle": "item.title"
+                },
+                "items": {
+                  "title": "Topic",
+                  "x-exports": [
+                    "types",
+                    "schema"
+                  ],
+                  "type": "object",
+                  "required": [
+                    "title"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "readOnly": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title",
+                      "x-i18n-title": {
+                        "fr": "Titre"
+                      },
+                      "layout": {
+                        "cols": {
+                          "md": 5
+                        }
+                      }
+                    },
+                    "icon": {
+                      "type": "object",
+                      "title": "Icon",
+                      "x-i18n-title": {
+                        "fr": "Icône"
+                      },
+                      "description": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
+                      "x-i18n-description": {
+                        "en": "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance."
+                      },
+                      "layout": {
+                        "getItems": {
+                          "url": "https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg,svgPath&size=25",
+                          "itemsResults": "data.results",
+                          "itemTitle": "item.name",
+                          "itemIcon": "item.svg",
+                          "itemKey": "item.name"
+                        },
+                        "cols": {
+                          "md": 5,
+                          "sm": 6
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "svg": {
+                          "type": "string"
+                        },
+                        "svgPath": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "color": {
+                      "type": "string",
+                      "title": "Color",
+                      "x-i18n-title": {
+                        "fr": "Couleur"
+                      },
+                      "layout": {
+                        "comp": "color-picker",
+                        "cols": {
+                          "md": 2,
+                          "sm": 6
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "An object for extra content from client services of data-fair"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preferLargeDisplay": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "default": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attachments": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "name"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "title": "Titre",
+                      "layout": {
+                        "props": {
+                          "outlined": true,
+                          "dense": true
+                        }
+                      }
+                    },
+                    "name": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Name of the file that was used to create or update this attachment"
+                    },
+                    "size": {
+                      "layout": "none",
+                      "type": "number",
+                      "description": "Size of the file on disk"
+                    },
+                    "mimetype": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Mime type of the file"
+                    },
+                    "updatedAt": {
+                      "layout": "none",
+                      "type": "string",
+                      "description": "Date of the last update for this attachment",
+                      "format": "date-time"
+                    },
+                    "url": {
+                      "layout": "none",
+                      "readOnly": true,
+                      "type": "string",
+                      "title": "URL"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_publish_application",
+      "description": "Change where an application is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          },
+          "publications": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all the catalogs the application metadata is published too",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "catalog",
+                    "status"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "catalog": {
+                      "type": "string",
+                      "description": "L'identifiant du catalogue de destination de cette publication."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Statut indiquant clairement si la publication a réussi. Si \"published\", la propriété targetUrl doit être renseignée. Si \"error\", la propriété error doit être renseignée.",
+                      "enum": [
+                        "waiting",
+                        "published",
+                        "error",
+                        "deleted"
+                      ]
+                    },
+                    "publishedAt": {
+                      "type": "string",
+                      "description": "Date de la dernière mise à jour de cette publication.",
+                      "format": "date-time"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "targetUrl": {
+                      "type": "string"
+                    },
+                    "result": {
+                      "type": "object",
+                      "description": "Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue."
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publicationSites": {
+            "anyOf": [
+              {
+                "type": "array",
+                "description": "References to all sites the application is exposed in.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partOf": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent. Only its parent and the parent's other fragments should use it: the readers of any other application get no access to it and lose it when the parent is deleted. To reuse it elsewhere, detach it first (partOf: null).",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "dataset",
+                      "application"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_search_data",
+      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the \"after\" value returned as next.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "after": {
+            "type": "string",
+            "description": "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*"
+          },
+          "size": {
+            "default": 12,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "format": "int32",
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of column keys to sort by, one per element. Prefix a key with - for descending."
+          },
+          "select": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Full-text search across all columns. Prefer filters for structured criteria."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_export_data",
+      "description": "Export the dataset rows matching filters and/or full-text search to a CSV file, at most 10,000 rows, in the order of sort. Returns a link to the file, not its rows: use it to hand data to another tool or a script, and datafair_search_data to read rows yourself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "size": {
+            "default": 10000,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "format": "int32",
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of column keys to sort by, one per element. Prefix a key with - for descending."
+          },
+          "select": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Full-text search across all columns. Prefer filters for structured criteria."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_get_field_values",
+      "description": "List distinct values of a column. Useful to discover values before filtering with _eq or _in.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "fieldKey": {
+            "type": "string",
+            "description": "The column key (use keys from datafair_describe_dataset)"
+          },
+          "size": {
+            "default": 10,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000,
+            "format": "int32",
+            "description": "Le nombre de résultats à retourner (taille de la pagination)."
+          },
+          "sort": {
+            "type": "string",
+            "default": "asc",
+            "oneOf": [
+              {
+                "const": "asc",
+                "title": "Ascendant"
+              },
+              {
+                "const": "desc",
+                "title": "Descendant"
+              }
+            ],
+            "description": "Tri des valeurs (\"**asc**\" ou \"**desc**\")."
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional text to filter values (prefix/substring match within this column)"
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "fieldKey"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_aggregate_data",
+      "description": "Aggregate dataset rows by 1-3 columns with an optional metric (avg, sum, min, max, value_count, cardinality). Defaults to counting rows per group. For a single global metric without grouping, use datafair_calculate_metric.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "groupByColumns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from datafair_describe_dataset. NOT the column to compute the metric on."
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "avg",
+              "sum",
+              "min",
+              "max",
+              "cardinality",
+              "value_count"
+            ],
+            "description": "Metric computed ON EACH GROUP. Omit to count rows per group."
+          },
+          "metricColumn": {
+            "type": "string",
+            "description": "The column to compute the metric on, for the average or sum of that column. Requires metric."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array with one sort key per aggregation level: \"count\"/\"-count\" (group size), \"key\"/\"-key\" (group value), \"metric\"/\"-metric\" (metric value). Example: [\"-count\"]."
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "groupByColumns"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_calculate_metric",
+      "description": "Calculate a single metric on a dataset column: avg, sum, min, max, stats, value_count, cardinality, percentiles. For per-group breakdowns, use datafair_aggregate_data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "avg",
+              "sum",
+              "min",
+              "max",
+              "stats",
+              "value_count",
+              "percentiles",
+              "cardinality"
+            ],
+            "description": "avg, sum, min, max (numbers); min, max, cardinality, value_count (strings); stats returns count/min/max/avg/sum; percentiles returns a distribution."
+          },
+          "fieldKey": {
+            "type": "string",
+            "description": "The column key to calculate the metric on (use keys from datafair_describe_dataset)"
+          },
+          "percents": {
+            "type": "string",
+            "default": "1,5,25,50,75,95,99",
+            "description": "Comma-separated percentages for the percentiles metric (default \"1,5,25,50,75,95,99\")."
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+          },
+          "filters": {
+            "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
+            "patternProperties": {
+              ".*": {
+                "type": "string",
+                "default": "",
+                "layout": {
+                  "placeholder": "saisissez la valeur du filtre"
+                }
+              }
+            },
+            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+          },
+          "bbox": {
+            "type": "string",
+            "examples": [
+              "2.2241,48.8156,2.4699,48.9022"
+            ],
+            "description": "Bounding box \"lonMin,latMin,lonMax,latMax\" (lon before lat), e.g. \"-2.5,43,3,47\". Geolocalized datasets only."
+          },
+          "geoDistance": {
+            "type": "string",
+            "description": "Proximity filter \"lon,lat,distance\" (lon first), e.g. \"2.35,48.85,10km\"; distance \"0\" = point-in-polygon. Geolocalized datasets only."
+          },
+          "dateMatch": {
+            "type": "string",
+            "description": "Date \"YYYY-MM-DD\" (single day) or \"YYYY-MM-DD,YYYY-MM-DD\" (range), e.g. \"2023-11-21\". Temporal datasets only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "metric",
+          "fieldKey"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_download_dataset_file",
+      "description": "Get the data file of a file dataset as it was uploaded, in its original format (CSV, XLSX, ODS, GeoJSON, a zipped shapefile…). Returns a link to the file, not its content. Editable and virtual datasets have no data file: use datafair_export_data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_download_dataset_converted_file",
+      "description": "Get the data file of a file dataset in the format data-fair converted it to for indexing: CSV for spreadsheets and text files, GeoJSON for geographic files. Returns a link to the file, not its content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_get_dataset_permissions",
+      "description": "Read who can access a dataset: its permission entries for users, organizations, roles and departments, or for everyone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_set_dataset_permissions",
+      "description": "Replace the whole list of permission entries of a dataset. Read it with datafair_get_dataset_permissions first, then send the complete new list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "body": {
+            "$id": "https://github.com/data-fair/data-fair/permissions-resolved",
+            "title": "Permissions",
+            "x-exports": [
+              "types",
+              "validate",
+              "resolvedSchema"
+            ],
+            "type": "array",
+            "items": {
+              "title": "Permission",
+              "type": "object",
+              "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "organization"
+                  ],
+                  "description": "If the entity is a user or an organization"
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Identifier of the entity"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the entity"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email of the user"
+                },
+                "department": {
+                  "type": "string",
+                  "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
+                },
+                "departmentName": {
+                  "type": "string",
+                  "description": "Name of the department"
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Role name"
+                  }
+                },
+                "operations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "API operation that can be used"
+                  }
+                },
+                "classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "API permission classes that can be used"
+                  }
+                }
+              }
+            },
+            "$defs": {
+              "permission": {
+                "title": "Permission",
+                "type": "object",
+                "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ],
+                    "description": "If the entity is a user or an organization"
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "Identifier of the entity"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the entity"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Email of the user"
+                  },
+                  "department": {
+                    "type": "string",
+                    "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
+                  },
+                  "departmentName": {
+                    "type": "string",
+                    "description": "Name of the department"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "Role name"
+                    }
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "API operation that can be used"
+                    }
+                  },
+                  "classes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "API permission classes that can be used"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "body"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "datafair-workflow",
+      "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
+      "digest": "sha256:3b6d2a9873db79ade3a79863949f88b2516c647166b7de7c3414495578a3ad9f"
+    }
+  ],
+  "guides": []
+}

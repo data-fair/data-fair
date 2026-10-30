@@ -1,5 +1,6 @@
 import mongo from '#mongo'
 import * as permissions from './permissions.ts'
+import { classByOperation } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib-express'
 import { type Resource, type ResourceType } from '#types'
@@ -27,6 +28,27 @@ const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: strin
     )
   if (!settings?.publicationSites?.[0]) return null
   return { ...settings.publicationSites[0], department: (settings as DepartmentSettings).department }
+}
+
+/**
+ * A resource created with publicationSites is published without going through applyPatch: there is
+ * no ACL yet, so publishing on a site that is not a staging site needs the owner's class of
+ * writePublicationSites (admin), what applyPatch requires through the resource ACL afterwards, and
+ * the same department check as applyPatch.
+ */
+export const assertCanPublishAtCreation = async (owner: AccountKeys, publicationSites: string[], sessionState: SessionStateAuthenticated, resourceType: ResourceType) => {
+  for (const publicationSite of publicationSites) {
+    const publicationSiteInfo = await getPublicationSiteInfo(owner, publicationSite)
+    if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
+    if (publicationSiteInfo.settings?.staging) continue
+    const isContributorDept = !!sessionState.account.department && publicationSiteInfo.settings?.contributorDepartments?.includes(sessionState.account.department)
+    if (!sessionState.user.adminMode && owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === owner.id && !publicationSiteInfo.department && sessionState.account.department && !isContributorDept) {
+      throw httpError(403, 'fail to publish: publication site does not belong to user department')
+    }
+    if (!permissions.canDoForOwner(owner, resourceType, classByOperation[resourceType].writePublicationSites, sessionState)) {
+      throw httpError(403, 'fail to publish: publication site requires permission to publish')
+    }
+  }
 }
 
 // this function is called when the resource is patched to check if publicationSites and requestedPublicationSites have changed

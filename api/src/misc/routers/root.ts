@@ -1,47 +1,60 @@
 import express from 'express'
 import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.ts'
-import { agentsIndex } from '../../../contract/agents-index.ts'
 import { readAgentSkill } from '../../../contract/agent-skills.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
 import config from '#config'
-import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { scopeDescriptions } from '../utils/scopes.ts'
+import { reqSession, reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { reqPublicBaseUrl } from '../utils/public-base-url.ts'
+import { platformDoc, platformDocCacheControl, platformScopes, siteOrigin } from '../../platform-api-docs/service.ts'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
 
 const remoteServices = config.remoteServices.map((s: any) => ({ ...s }))
 
-router.get('/ping', status.ping)
+// allowAnyScope: these routes only read the session for identity or serve public data, a scoped
+// session reaches them whatever its scopes (POST /_check-api stays unmarked)
+router.get('/ping', allowAnyScope, status.ping)
 
-router.get('/api-docs.json', (req, res) => {
+router.get('/api-docs.json', allowAnyScope, (req, res) => {
   const session = reqSession(req)
   const authenticatedSession = session.user ? (session as Parameters<typeof apiDocs>[1]) : undefined
   res.json(apiDocs(reqPublicBaseUrl(req), authenticatedSession))
 })
 
-// The deployment index agents compose their tool set from; no session, cacheable by anyone.
-router.get('/agents/index.json', (req, res) => {
+// The platform document: every service's API of this site in one document, the same for every caller.
+router.get('/platform/api-docs.json', allowAnyScope, (req, res) => {
+  res.set('Cache-Control', platformDocCacheControl())
+  res.json(platformDoc(siteOrigin(reqPublicBaseUrl(req))))
+})
+
+// The platform's scope vocabulary simple-directory consumes (PLATFORM_SCOPES_URL): the scopes every
+// service of the platform document declares, data-fair's own in the requested language; public, no
+// session read.
+router.get('/scopes.json', allowAnyScope, (req, res) => {
   res.set('Cache-Control', 'public, max-age=300')
-  res.json(agentsIndex(reqPublicBaseUrl(req), config))
+  res.vary('Accept-Language')
+  res.json({ scopes: { ...platformScopes(), ...scopeDescriptions(req.getLocale() === 'en' ? 'en' : 'fr') } })
 })
 
 // The bodies of the root document's skills, linked from its x-agent.skills; public like the document.
-router.get('/agents/skills/:file', (req, res) => {
-  const body = req.params.file.endsWith('.md') ? readAgentSkill(req.params.file.slice(0, -3)) : undefined
+router.get('/agents/skills/:file', allowAnyScope, (req, res) => {
+  const file = req.params.file
+  const body = typeof file === 'string' && file.endsWith('.md') ? readAgentSkill(file.slice(0, -3)) : undefined
   if (!body) return res.status(404).send('unknown skill')
   res.set('Cache-Control', 'public, max-age=300')
   res.type('text/markdown').send(body)
 })
 
-router.get('/vocabulary', async (req, res) => {
+router.get('/vocabulary', allowAnyScope, async (req, res) => {
   res.json(await settingsUtils.getFullOwnerVocabulary(reqSession(req).account, req.getLocale() as 'en' | 'fr'))
 })
 
-router.get('/projections', (req, res) => {
+router.get('/projections', allowAnyScope, (req, res) => {
   reqSessionAuthenticated(req)
   res.json(projections.map(p => ({ title: p.title, code: p.code })))
 })
@@ -53,12 +66,12 @@ router.post('/_check-api', (req, res, next) => {
   res.sendStatus(200)
 })
 
-router.get('/configurable-remote-services', (req, res) => {
+router.get('/configurable-remote-services', allowAnyScope, (req, res) => {
   reqSessionAuthenticated(req)
   res.json(remoteServices)
 })
 
-router.get('/configurable-catalogs', (req, res) => {
+router.get('/configurable-catalogs', allowAnyScope, (req, res) => {
   reqSessionAuthenticated(req)
   res.json(config.catalogs)
 })

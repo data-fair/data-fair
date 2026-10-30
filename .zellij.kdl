@@ -2,8 +2,9 @@
 layout {
   pane split_direction="vertical" {
     pane name="shell" borderless=true
-    pane name="status" command="./node_modules/.bin/df-status" {
-      args "--start-deps"
+    pane name="status" command="bash" {
+      // simple-directory mounts dev/resources/users.json: rendered from .env before the containers start
+      args "-c" "node dev/render-users.mjs && exec ./node_modules/.bin/df-status --start-deps"
     }
     pane name="mock" command="bash" {
       args "-c" "FORCE_COLOR=1 exec node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts"

@@ -1,6 +1,7 @@
 import path from 'path'
 import express, { type RequestHandler } from 'express'
 import moment from 'moment'
+import equal from 'deep-equal'
 import mongo from '#mongo'
 import config from '#config'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
@@ -16,7 +17,7 @@ import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
 import { fragmentWriteGuard } from '../fragments/middlewares.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
-import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
+import { readApplication, readBaseApp, attemptInsert, assertCreateBodyPermissions, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
@@ -57,7 +58,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   let sessionState = reqSession(req)
   let asVisitorFilters: any[] | undefined
   if (reqQuery.asVisitor) {
-    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string)
+    const ctx = getAsVisitorContext(reqQuery.asVisitor, sessionState, config.adminRole as string, 'applications')
     sessionState = ctx.sessionState
     asVisitorFilters = [ctx.ownerFilter]
   }
@@ -78,6 +79,7 @@ router.post('', async (req, res) => {
   const { body } = (await import('#doc/applications/post-req/index.js')).returnValid(req)
   const application = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
+  await assertCreateBodyPermissions(application.owner, body, reqSessionAuthenticated(req))
   if ((await limits.remainingApplications(application.owner)) === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
 
   const ctx = { sessionState: reqSessionAuthenticated(req) }
@@ -106,23 +108,30 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
   res.status(200).send(clean(application, reqPublicBaseUrl(req), reqPublicationSite(req), req.query as Record<string, string>))
 })
 
+const permissionsWritePublications = permissionMiddleware('writePublications', 'admin')
+// shared by PATCH and PUT: a write that changes the publications needs writePublications; the
+// publicationSites changes are checked by publicationSites.applyPatch in the service, for both
+const writePublicationsGuard = (changesPublications: (req: express.Request) => boolean): RequestHandler =>
+  (req, res, next) => changesPublications(req) ? permissionsWritePublications(req, res, next) : next()
+
 // PUT used to create or update
 // the fragment guard is mounted after attemptInsert (which answers 201 and stops the chain on a
 // genuine create, where partOf is legitimate and validated by initApplicationPermissions) and after
 // the permission middleware, so an unauthorized caller still gets a 403 rather than a 400
-router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), fragmentWriteGuard(false), async (req, res) => {
-  const ctx = { sessionState: reqSessionAuthenticated(req) }
-  const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
-  res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
-})
-
-const permissionsWritePublications = permissionMiddleware('writePublications', 'admin')
+// PUT replaces the publications: leaving them out removes them, so any difference is a change
+router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'),
+  writePublicationsGuard(req => !equal(req.body.publications ?? [], reqApplication(req).publications ?? [])),
+  fragmentWriteGuard(false), async (req, res) => {
+    const ctx = { sessionState: reqSessionAuthenticated(req) }
+    const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
+    res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
+  })
 
 // Update an application configuration
 router.patch('/:applicationId',
   readApplication,
   permissionMiddleware('writeDescription', 'write'),
-  (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  writePublicationsGuard(req => !!req.body.publications),
   // fragments are never publishable — shared with the other three write routes (spec §5)
   fragmentWriteGuard(true),
   async (req, res) => {

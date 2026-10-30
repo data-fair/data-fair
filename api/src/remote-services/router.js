@@ -19,7 +19,7 @@ import { clean, validateOpenApi, initNew, computeActions } from './operations.ts
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import log from '@data-fair/lib-node/log.js'
-import { reqSession, reqAdminMode, reqSitePathSafe } from '@data-fair/lib-express'
+import { reqSession, reqAdminMode, reqSitePathSafe, allowAnyScope } from '@data-fair/lib-express'
 import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
@@ -38,8 +38,9 @@ router.use((req, res, next) => {
 })
 
 // Get the list of remote-services
-// Accessible to anybody
-router.get('', cacheHeaders.noCache, async (req, res) => {
+// Accessible to anybody, whatever the scopes of the session (remote services have no scope family:
+// the list is filtered by the permission core, which grants a scoped session no operation)
+router.get('', allowAnyScope, cacheHeaders.noCache, async (req, res) => {
   const publicationSite = reqPublicationSite(req)
   const publicBaseUrl = reqPublicBaseUrl(req)
 
@@ -52,7 +53,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 export const actionsRouter = express.Router()
 
 // get the unpacked list of actions inside the remote services
-actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
+actionsRouter.get('', allowAnyScope, cacheHeaders.noCache, async (req, res) => {
   const publicationSite = reqPublicationSite(req)
   const publicBaseUrl = reqPublicBaseUrl(req)
   // @ts-ignore
@@ -227,7 +228,9 @@ router.get('/tileserver-koumoul/proxy/*proxyPath', (req, res) => {
 
 // Use the proxy as a user of an application
 // always apply restrictive rate limiting to remote services, privileged access does not go through here
-router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
+// allowAnyScope: this proxy authorizes by Referer / application owner, never by the session, forwards
+// no caller credentials upstream and only accepts GET, so the scopes of a session are irrelevant here
+router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 

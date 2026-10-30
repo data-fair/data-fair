@@ -468,7 +468,6 @@
             :loading="editLine.loading.value"
             :ro-primary-key="true"
             :owner="!ownLines"
-            :sub-agent="true"
             prefix-name="editLine_"
             :data-title="t('editLine')"
             @on-file-upload="(f: File) => {file = f}"
@@ -538,7 +537,7 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight, mdiOpenInNew } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
-import { addLineDialogPrecondition, hasLineFormSubAgent, lineDialogOpenedResult, describeLine } from '../../../composables/dataset/agent-edit-line-logic'
+import { addLineDialogPrecondition, hasLineFormTools, lineDialogOpenedResult, describeLine } from '../../../composables/dataset/agent-edit-line-logic'
 import { agentToolError } from '~/composables/agent/utils'
 import { untilReady } from '../../../composables/dataset/agent-creation-tools-logic'
 import { useAgentState } from '@data-fair/lib-vue-agents'
@@ -680,8 +679,8 @@ const dataEntryContext = computed(() => {
   const lines = [
     `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
     'You can help them add or edit data lines.',
-    'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
-    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id and delegate to the editLine_form subagent it makes available.',
+    'To add a new line: use the open_add_line_dialog tool, then fill the form fields with the editLine_ form tools it makes available, following the edit-line-form skill.',
+    'To edit an existing line: first find its _id — search_data returns one per row when `_id` is included in its `select`, so ask for it in the same lookup as the values — then use open_edit_line_dialog with that _id and modify the form with the editLine_ form tools it makes available.',
     'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
     'Start by asking the user what they want to do.'
   ]
@@ -697,13 +696,13 @@ const filterHelpContext = computed(() => {
   if (!d) return ''
   const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
   const columns = d.schema?.filter((f: any) => !['_i', '_id', '_rand'].includes(f.key)).map((f: any) => `${f.key} (${f.title || f.key}, ${f.type})`).join(', ')
-  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent.${columns ? ` When you delegate to the dataset_data subagent, pass it these known columns so it can query directly without re-fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding cols=col1,col2,col3 from the columns keys to choose the visible columns.`
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before querying, following the query-dataset-data skill.${columns ? ` Its known columns, so you can query directly without fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: pass the "Filter query:" line the query tool printed, verbatim, as the query parameter of the navigate tool, adding cols=col1,col2,col3 from the relevant column keys to choose the visible columns.`
 })
 
 const dataQualityContext = computed(() => {
   const d = dataset.value
   if (!d) return ''
-  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}). They clicked the "Check data quality" button. Before running the data_quality_checker subagent, ask the user if they want a full quality analysis or if they want to focus on specific aspects (completeness, duplicates, outliers, or format issues). Once the user confirms, dispatch the data_quality_checker subagent with the dataset ID.`
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}). They clicked the "Check data quality" button. Before checking, ask the user if they want a full quality analysis or if they want to focus on specific aspects (completeness, duplicates, outliers, or format issues). Once the user confirms, run the check following the check-data-quality skill.`
 })
 
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
@@ -756,15 +755,15 @@ if (edit) {
     valid: !!lineDialog.value?.valid
   }))
 
-  // The openers return only once the dialog's form subagent is registered: the chat
+  // The openers return only once the dialog's form tools are registered: the chat
   // offers a tool registered while a host tool runs on its very next step, so the
-  // model can delegate straight away (see lineDialogOpenedResult). Registration
+  // model can fill the form straight away (see lineDialogOpenedResult). Registration
   // waits on the form's schema and layout, hence the bounded poll.
-  const untilLineFormRegistered = () => untilReady(() => hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+  const untilLineFormRegistered = () => untilReady(() => hasLineFormTools((navigator as any).modelContext?.listTools?.()), 5000)
 
   useAgentTool({
     name: 'open_add_line_dialog',
-    description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
+    description: 'Open the "Add a new line" dialog on the data editing page. After opening, fill the form fields with the editLine_ form tools and their edit-line-form skill (they become available once the dialog opens). The user will click Save manually.',
     annotations: { title: 'Ouvrir le dialogue d\'ajout de ligne', readOnlyHint: false },
     inputSchema: {
       type: 'object' as const,
@@ -772,7 +771,7 @@ if (edit) {
     },
     execute: async () => {
       // A dataset with nothing to fill gets the reason, not an open dialog and an
-      // invitation to delegate into an empty form (see agent-edit-line-logic.ts).
+      // invitation to fill an empty form (see agent-edit-line-logic.ts).
       const refusal = addLineDialogPrecondition(dataset.value?.schema)
       if (refusal) return refusal
       addLineTrigger.value = true
@@ -782,7 +781,7 @@ if (edit) {
 
   useAgentTool({
     name: 'open_edit_line_dialog',
-    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, delegate to the editLine_form subagent to modify form fields (it becomes available once the dialog opens). The user will click Save manually.',
+    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, modify the form fields with the editLine_ form tools and their edit-line-form skill (they become available once the dialog opens). The user will click Save manually.',
     annotations: { title: 'Ouvrir le dialogue d\'édition de ligne', readOnlyHint: false },
     inputSchema: {
       type: 'object' as const,
@@ -802,7 +801,7 @@ if (edit) {
       }
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
       // The form may still be registered for a line opened before, so wait for this one.
-      const ready = await untilReady(() => loadedLineId.value === params.lineId && hasLineFormSubAgent((navigator as any).modelContext?.listTools?.()), 5000)
+      const ready = await untilReady(() => loadedLineId.value === params.lineId && hasLineFormTools((navigator as any).modelContext?.listTools?.()), 5000)
       return lineDialogOpenedResult('edit', ready, describeLine(dataset.value?.schema, line))
     }
   })

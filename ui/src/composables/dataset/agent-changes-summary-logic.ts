@@ -63,7 +63,7 @@ export interface DatasetSides {
 
 /**
  * Render the pending changes of both editable sections. Returns a stable, compact report
- * meant to be read by a human through the summarizer sub-agent — every line names what
+ * summarized for a human by the assistant (summarize-dataset-changes skill) — every line names what
  * changed, so nothing gets saved unseen.
  */
 export function diffDataset (sides: DatasetSides): string {

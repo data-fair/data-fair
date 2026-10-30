@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
 import { getErrorMsg } from '@data-fair/lib-vue/ui-notif'
 import * as searchData from '@data-fair/agent-tools-data-fair/search-data'
@@ -7,7 +7,7 @@ import * as aggregateData from '@data-fair/agent-tools-data-fair/aggregate-data'
 import * as calculateMetric from '@data-fair/agent-tools-data-fair/calculate-metric'
 import * as getFieldValues from '@data-fair/agent-tools-data-fair/get-field-values'
 import * as getDatasetSchema from '@data-fair/agent-tools-data-fair/get-dataset-schema'
-import * as datasetDataSubagent from '@data-fair/agent-tools-data-fair/dataset-data-subagent'
+import * as datasetDataSkill from '@data-fair/agent-tools-data-fair/dataset-data-skill'
 
 // A bare $fetch rejection reads '[GET] "…": 400 Bad Request' and drops the API's own
 // explanation ('Impossible de trier sur le champ …'), leaving the model to guess what
@@ -88,12 +88,9 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     }
   })
 
-  const ann = (datasetDataSubagent.annotations as any)[locale.value] ?? datasetDataSubagent.annotations.en
-  useAgentSubAgent({
-    name: 'dataset_data',
-    title: ann.title,
-    description: ann.description,
-    prompt: datasetDataSubagent.prompt,
-    tools: [...datasetDataSubagent.tools]
+  useAgentSkill({
+    name: datasetDataSkill.name,
+    description: datasetDataSkill.description,
+    body: datasetDataSkill.body
   })
 }

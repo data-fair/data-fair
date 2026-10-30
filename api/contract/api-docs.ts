@@ -9,6 +9,7 @@ import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch
 import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
+import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import pJson from './p-json.js'
 import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint } from './x-agent.ts'
 
@@ -89,6 +90,30 @@ const annotateDatasetSchema = (schema: any) => {
   return out
 }
 
+/**
+ * The multipart body of POST /datasets and PUT /datasets/{id}, as the upload routes read it
+ * (api/src/datasets/utils/upload.ts, getFiles and getFormBody): the data file, an attachments
+ * archive, and the metadata — one `body` part holding JSON, or one part per property. Nothing is
+ * required: a dataset is also created from another one (initFrom), editable or virtual, without
+ * a file.
+ */
+const datasetPostMultipart = {
+  type: 'object',
+  properties: {
+    // First on purpose: the metadata `attachments` property would otherwise shadow the zip `attachments` part below.
+    ...datasetPost.properties.body.properties,
+    file: {
+      type: 'string',
+      format: 'binary',
+      description: "Le fichier de données. Son type est déduit de l'extension de son nom (.csv, .tsv, .xlsx, .ods, .geojson, .zip d'un shapefile…). Le champ peut aussi s'appeler `dataset`."
+    },
+    attachments: { type: 'string', format: 'binary', description: 'Archive .zip des pièces jointes référencées par les lignes.' },
+    // Not `contentMediaType: application/json`: in OpenAPI 3.1 that marks a part as a file, and a
+    // generated agent tool would ask for a file URL here.
+    body: { type: 'string', description: 'Les métadonnées, en JSON. Si cette partie est présente, les autres parties de métadonnées sont ignorées.' }
+  }
+}
+
 export default (publicUrl: string = config.publicUrl, sessionState?: SessionStateAuthenticated) => {
   const api: RootApiDoc = {
     openapi: '3.1.0',
@@ -118,7 +143,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       schemas: {
         dataset: annotateDatasetSchema(dataset),
         datasetPatch: datasetPatch.properties.body,
-        datasetPost: datasetPost.properties.body,
+        datasetPost: datasetPostMultipart,
         application,
         applicationPatch: applicationPatchReq.properties.body,
         applicationPost: applicationPostReq.properties.body,
@@ -133,7 +158,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           type: 'apiKey',
           in: 'cookie',
           name: 'id_token'
-        }
+        },
+        oauth2: oauth2Scheme()
       },
       responses: {
         BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
@@ -259,6 +285,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         post: {
           summary: 'Créer un jeu de données',
           description: 'Créer un nouveau jeu de données.',
+          'x-agent': xAgent.postDataset,
           operationId: 'postDataset',
           tags: ['Jeux de données (JDD)'],
           requestBody: {
@@ -558,6 +585,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       }
     }
   }
+
+  applyOauth2Security(api)
 
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.

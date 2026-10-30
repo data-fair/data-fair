@@ -188,7 +188,7 @@ test.describe('host events published to the assistant', () => {
 
     // The dialog also announces itself as a transition, so an assistant waiting
     // on the person learns when they open it themselves. (A dialog the assistant
-    // opens needs no wait: the opener returns once the form's subagent is
+    // opens needs no wait: the opener returns once the form's tools are
     // registered — line-dialog-tools.e2e.spec.ts.)
     const opened = (await readEvents(page)).find(e => e.name === 'dataset-line-dialog-opened')
     expect(opened, 'the dialog opened without saying so').toBeTruthy()

@@ -20,7 +20,8 @@
     "MOCK_PORT",
     "AGENTS_PORT",
     "REGISTRY_PORT",
-    "BRIDGE_PORT"
+    "BRIDGE_PORT",
+    "MCP_PORT"
   ],
   "panes": {
     "api": {
@@ -35,7 +36,8 @@
   },
   "url": "http://${DEV_HOST}:${NGINX_PORT}/data-fair/",
   "setup": [
-    "npm -w parquet-writer run build"
+    "npm -w parquet-writer run build",
+    "node dev/render-users.mjs"
   ],
   "optional": {
     "events": {

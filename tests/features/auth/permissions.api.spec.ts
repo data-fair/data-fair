@@ -456,6 +456,65 @@ test.describe('permissions', () => {
     await assert.rejects(testUser5Org.put('/api/v1/settings/organization/test_org1', { topics: [] }), { status: 403 })
   })
 
+  test('organization contrib cannot set the admin keys of a dataset through any write route', async () => {
+    const readApiKey = { readApiKey: { active: true, interval: 'P1W' } }
+    const masterData = { masterData: { standardSchema: { active: true } } }
+    const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset', schema: [{ key: 'a', type: 'string' }] })).data
+
+    // POST/PUT /datasets/:id apply the per key checks of PATCH
+    await assert.rejects(testUser5Org.patch(`/api/v1/datasets/${dataset.id}`, readApiKey), { status: 403 })
+    await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}`, readApiKey), { status: 403 })
+    await assert.rejects(testUser5Org.put(`/api/v1/datasets/${dataset.id}`, readApiKey), { status: 403 })
+    await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}`, masterData), { status: 403 })
+    await testUser5Org.post(`/api/v1/datasets/${dataset.id}`, { title: 'Renamed by contrib' })
+    let stored = (await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.equal(stored.title, 'Renamed by contrib')
+    assert.ok(!stored.readApiKey?.active)
+    assert.ok(!stored.masterData?.standardSchema?.active)
+
+    // nor at creation
+    const base = { isRest: true, title: 'Contrib creation', schema: [{ key: 'a', type: 'string' }] }
+    await assert.rejects(testUser5Org.post('/api/v1/datasets', { ...base, ...readApiKey }), { status: 403 })
+    await assert.rejects(testUser5Org.post('/api/v1/datasets', { ...base, ...masterData }), { status: 403 })
+    await assert.rejects(testUser5Org.put('/api/v1/datasets/contrib-created', { ...base, ...readApiKey }), { status: 403 })
+    assert.ok(!(await testUser1Org.get('/api/v1/datasets', { params: { select: 'title' } })).data.results.some((d: any) => d.title === 'Contrib creation'))
+
+    // an org admin can, through every route
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}`, readApiKey)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}`, masterData)
+    stored = (await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.ok(stored.readApiKey?.active)
+    assert.ok(stored.masterData?.standardSchema?.active)
+    const created = (await testUser1Org.post('/api/v1/datasets', { ...base, ...readApiKey })).data
+    assert.ok(created.readApiKey?.active)
+  })
+
+  test('organization contrib cannot publish a dataset at creation', async () => {
+    const site = { type: 'data-fair-portals', id: 'contrib-portal', url: 'http://contrib-portal.example.com', title: 'Contrib portal' }
+    const siteKey = `${site.type}:${site.id}`
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+
+    await assert.rejects(testUser5Org.post('/api/v1/datasets', { isRest: true, title: 'Published', schema: [], publicationSites: [siteKey] }), { status: 403 })
+    const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'Published by admin', schema: [], publicationSites: [siteKey] })).data
+    assert.deepEqual(dataset.publicationSites, [siteKey])
+  })
+
+  test('organization contrib cannot publish an application through PUT', async () => {
+    const site = { type: 'data-fair-portals', id: 'contrib-portal', url: 'http://contrib-portal.example.com', title: 'Contrib portal' }
+    const siteKey = `${site.type}:${site.id}`
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+
+    const app = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'An application' })).data
+    await assert.rejects(testUser5Org.patch(`/api/v1/applications/${app.id}`, { publicationSites: [siteKey] }), { status: 403 })
+    await assert.rejects(testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] }), { status: 403 })
+    await assert.rejects(testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publications: [{ catalog: 'c1', status: 'waiting' }] }), { status: 403 })
+    assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${app.id}`)).data.publicationSites ?? [], [])
+    await testUser5Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: 'Renamed by contrib' })
+
+    await testUser1Org.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] })
+    assert.deepEqual((await testUser1Org.get(`/api/v1/applications/${app.id}`)).data.publicationSites, [siteKey])
+  })
+
   test('organization user has even more limited capabilities', { tag: '@smoke' }, async () => {
     await assert.rejects(testUser8Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err: any) => err.status === 403)
     const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data

@@ -285,6 +285,10 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
 
   assignIndexFields(newApplication, indexPatch(applicationsTextSearch, newApplication))
 
+  // the publication sites checks and notifications of PATCH: a replacement publishes and unpublishes too
+  // Application is not structurally assignable to Resource (Pick<Dataset>); same cast as patchApplication
+  if (!isNew) await publicationSites.applyPatch(existingApplication as any, newApplication, ctx.sessionState, 'applications')
+
   if (!isNew) {
     log.info(`updated application ${newApplication.slug} (${newApplication.id})`, { code: 'df.applications.update', ...resourceLogFields('applications', newApplication) })
     const sessionState = ctx.sessionState

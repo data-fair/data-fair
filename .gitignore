@@ -28,3 +28,10 @@ dev/profiles/
 /benchmark/capabilities-defaults/data/
 /benchmark/capabilities-defaults/results.json
 .vscode
+.playwright-mcp
+/superpowers/**/*.md
+/docs/superpowers/
+/simulations/tmp/
+
+# rendered from users.template.json by dev/render-users.mjs
+/dev/resources/users.json
