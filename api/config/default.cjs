@@ -315,6 +315,9 @@ module.exports = {
     timeout: 360000 // 6 minutes
   },
   extraNavigationItems: [],
+  // "to do" lines of the dashboard counted by another service, fetched from the browser with the session cookie
+  // { id, title: { fr, en }, url, countPath (default 'count'), href, can (contrib, admin, contribDep, adminDep), icon }
+  extraTodoItems: [],
   extraAdminNavigationItems: [],
   extraDocLinks: [],
   // cf https://momentjs.com/docs/#/parsing/string-format/ en mode strict
