@@ -6,6 +6,10 @@ export default [
   ...dfLibRecommended,
   ...neostandard({ ts: true }),
   {
+    files: ['api/src/**/*.ts', 'api/src/**/*.js', 'api/index.ts'],
+    rules: { 'no-console': 'error' }
+  },
+  {
     // Target the specific folder
     files: ['tests/**/*.ts'],
     rules: {

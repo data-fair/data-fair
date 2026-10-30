@@ -9,7 +9,7 @@ import { Transform } from 'node:stream'
 import split2 from 'split2'
 import pump from '../../misc/utils/pipe.ts'
 import debugLib from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import filesStorage from '#files-storage'
@@ -35,7 +35,7 @@ export default async function (dataset: DatasetInternal) {
     // Remove this block once the root cause is identified and fixed.
     if (!await filesStorage.fileExists(loadedFilePath)) {
       const existing = await filesStorage.lsrWithStats(loadingDir).catch(() => [])
-      internalError('storer-missing-file', `loaded file missing when storer started: expected ${loadedFilePath} — loading dir contents: ${JSON.stringify(existing)}`)
+      log.error(`loaded file missing when storer started: expected ${loadedFilePath} — loading dir contents: ${JSON.stringify(existing)}`, { code: 'storer-missing-file' })
     }
 
     // the file was just written by the upload (a separate process), but some S3 providers

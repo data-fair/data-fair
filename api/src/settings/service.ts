@@ -12,9 +12,9 @@ import mongo from '#mongo'
 import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
 import { type AccountKeys, type SessionStateAuthenticated } from '@data-fair/lib-express'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { ownerLogFields } from '../misc/utils/log-fields.ts'
 import clone from '@data-fair/lib-utils/clone.js'
-import { type LogContext } from '../misc/utils/req-context.ts'
 import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, matchAgentChatAudience, type SettingsParams } from './operations.ts'
@@ -25,7 +25,6 @@ const debugPublicationSites = debugLib('publication-sites')
 export type SettingsWriteContext = SettingsParams & {
   sessionState: SessionStateAuthenticated
   host: string
-  logCtx: LogContext
 }
 
 export const getSettings = async (params: SettingsParams) => {
@@ -58,17 +57,17 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
     // extra safety on top of the creation and immutability checks below; an unchanged existing key can be re-sent
     if (apiKey.adminMode && !user.isAdmin && !(apiKey.id && existingApiKeys.some(k => k.id === apiKey.id))) {
-      eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { ...ctx.logCtx, account: owner })
+      log.alert('a non-admin user attempted to manage settings that include an adminMode api key', { code: 'df.apikeys.manageadmin', ...ownerLogFields(owner) })
       throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
 
     if (apiKey.key) {
-      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { ...ctx.logCtx, account: owner })
+      log.alert('a user attempted to write an api key internal secret', { code: 'df.apikeys.writesecret', ...ownerLogFields(owner) })
       throw httpError(403, 'Attempt to write an api key secret')
     }
 
     if (apiKey.notifiedJ3At !== undefined || apiKey.notifiedJAt !== undefined) {
-      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { ...ctx.logCtx, account: owner })
+      log.alert('a user attempted to write an api key internal notification flag', { code: 'df.apikeys.writeflag', ...ownerLogFields(owner) })
       throw httpError(400, 'API key notification flags are internal and not user-writable')
     }
 
@@ -77,11 +76,11 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
       const returnedApiKey = returnedApiKeys[i]
       if (apiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.createadmin', 'a user attempted to create an adminMode api key', { ...ctx.logCtx, account: owner })
+        log.alert('a user attempted to create an adminMode api key', { code: 'df.apikeys.createadmin', ...ownerLogFields(owner) })
         throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
       }
       if (apiKey.email) {
-        eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { ...ctx.logCtx, account: owner })
+        log.alert('a user attempted to define the email address of an api key', { code: 'df.apikeys.setemail', ...ownerLogFields(owner) })
         throw httpError(403, 'API key email is readonly')
       }
       if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration + 1, 'day').format('YYYY-MM-DD')) {
@@ -103,7 +102,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
         returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${ctx.host}`
       }
 
-      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { ...ctx.logCtx, account: owner })
+      log.info(`a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { code: 'df.apikeys.create', ...ownerLogFields(owner) })
       await notifications.send({
         title: 'Création d\'une clé d\'API',
         body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
@@ -117,25 +116,25 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
       const existingApiKey = existingApiKeys.find(k => k.id === apiKey.id)
       if (!existingApiKey) {
-        eventsLog.alert('df.apikeys.setid', 'a user tried to create an api key with id', { ...ctx.logCtx, account: owner })
+        log.alert('a user tried to create an api key with id', { code: 'df.apikeys.setid', ...ownerLogFields(owner) })
         throw httpError(400, 'API key cannot be created with an id')
       }
       // should be covered by next general immutability check, but double check to be sure
       if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { ...ctx.logCtx, account: owner })
+        log.alert('a user attempted to mutate an api key and make it admin', { code: 'df.apikeys.setadmin', ...ownerLogFields(owner) })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       if (existingApiKey.key) {
         apiKey.key = existingApiKey.key
       } else {
-        eventsLog.warn('df.apikeys.missingKey', `an API ${apiKey.id} key seems to be missing its internal secret`, { ...ctx.logCtx, account: owner })
+        log.warn(`an API key ${apiKey.id} seems to be missing its internal secret`, { code: 'df.apikeys.missingKey', ...ownerLogFields(owner) })
       }
       // notifiedJ3At / notifiedJAt are internal flags set by the expiration worker; they are
       // stripped from API responses and never sent back by the user, so exclude them from the
       // immutability comparison (otherwise any key the worker has notified becomes un-resavable).
       const { notifiedJ3At: _nj3, notifiedJAt: _nj, ...comparableExistingApiKey } = existingApiKey as any
       if (!equal(comparableExistingApiKey, apiKey)) {
-        eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { ...ctx.logCtx, account: owner })
+        log.alert(`a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { code: 'df.apikeys.mutate', ...ownerLogFields(owner) })
         throw httpError(400, 'existing API keys are immutable')
       }
     }
@@ -145,7 +144,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   for (const existingApiKey of existingApiKeys) {
     if (!settings.apiKeys.some(k => k.id === existingApiKey.id)) {
       if (existingApiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { ...ctx.logCtx, account: owner })
+        log.alert('a user attempted to delete an admin api key', { code: 'df.apikeys.deleteadmin', ...ownerLogFields(owner) })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       await notifications.send({

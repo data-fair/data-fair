@@ -12,7 +12,8 @@ import * as journals from '../misc/utils/journals.ts'
 import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram, Gauge } from 'prom-client'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log, { withLogContext, getLogContext } from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import { computeExcludedOwners } from './concurrency.ts'
 
 const debug = debugLib('workers')
@@ -139,7 +140,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
           if (resource.draft.draftReason) {
             mergeDraft(resource)
           } else {
-            internalError('incomplete-draft', `dataset ${resource.id} has a draft object, but no draftReason`)
+            log.error('dataset has a draft object, but no draftReason', { code: 'incomplete-draft', ...resourceLogFields('datasets', resource) })
           }
         }
         return { type, resource, task }
@@ -148,7 +149,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
   }
 }
 
-export const processResourceTask = async (type: ResourceType, resource: any, task: Task) => {
+export const processResourceTask = (type: ResourceType, resource: any, task: Task) => withLogContext({ ...resourceLogFields(type, resource), task: task.name }, async () => {
   const id = resource.id
   const taskFullKey = `${type}/${resource.id}/${task.name}`
   pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner, startedAt: new Date().toISOString() }
@@ -163,7 +164,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
   }
   try {
     debug(`run task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
-    await workers[task.worker].run(resource, { name: task.name })
+    await workers[task.worker].run({ resource, logContext: getLogContext() }, { name: task.name })
     endTask({ status: 'ok' })
     debug(`finished task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
@@ -190,14 +191,15 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     let errorMessage = (typeof err === 'string' ? err : (err.message as string)) || 'unknown error'
 
     if (stopped) {
-      console.log('task failed while service was shutting down', errorMessage)
+      log.info('task failed while service was shutting down', { taskName: task.name, errorMessage })
       endTask({ status: 'interrupted' })
       return
     }
 
     endTask({ status: 'error' })
 
-    console.warn(`failure in worker ${task.name} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
+    // bad input failures are not internal errors
+    const badInput = errorMessage.startsWith('[noretry] ') || errorMessage.startsWith('[validation-error] ') || err?.noRetry === true
 
     // some error are caused by bad input, we should not retry these
     // they are signalled either by a [noretry] message prefix or a noRetry property on the error
@@ -222,6 +224,14 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
         debug('last log in journal was already a retry')
         retry = false
       }
+    }
+
+    // one error line per incident: a failure that will be retried is only a warning,
+    // the final failure of an internal error is an error
+    if (badInput || retry) {
+      log.warn('worker task failed', { code: 'worker-task-failed', taskName: task.name, retry, err })
+    } else {
+      log.error('worker task failed', { code: 'worker-task-failed', taskName: task.name, retry, err })
     }
 
     await progress?.end(true)
@@ -253,12 +263,14 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
 
     await mongo.db.collection(type).updateOne({ id: resource.id }, patch)
 
-    events.emit('error', err)
+    // emitting 'error' without a listener throws: the rejection was logged a second time at error
+    // level ('worker-task') for every failure, including the retried and bad input ones
+    if (events.listenerCount('error')) events.emit('error', err)
   } finally {
     delete pendingTasks[task.worker][taskFullKey]
     await locks.release(`${type}:${id}`)
   }
-}
+})
 
 let stopped = false
 
@@ -284,13 +296,13 @@ export const loop = async () => {
     if (resourceTask) {
       debug('fetch resourceTask from ping', type, id, resourceTask.task.name)
       processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-        internalError('worker-task', err)
+        log.error('worker task failed', { code: 'worker-task', err })
       }).then(() => {
         // at the end of task ignore the wait interval and loop immediately
         if (resolveWaitInterval) resolveWaitInterval()
       })
     }
-  }).catch(err => internalError('worker-ping-listen', err))
+  }).catch(err => log.error('worker ping listener failed', { code: 'worker-ping-listen', err }))
 
   while (true) {
     if (stopped) break
@@ -300,7 +312,7 @@ export const loop = async () => {
         debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
         if (stopped) break
         processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-          internalError('worker-task', err)
+          log.error('worker task failed', { code: 'worker-task', err })
         }).then(() => {
           // at the end of task ignore the wait interval and loop immediately
           if (resolveWaitInterval) resolveWaitInterval()
@@ -310,7 +322,7 @@ export const loop = async () => {
       }
     } catch (err) {
       // a transient mongo/lock error while querying the next task must not kill the loop (and the process)
-      internalError('worker-loop', err)
+      log.error('worker loop failed', { code: 'worker-loop', err })
     }
     if (stopped) break
     debug('wait for ' + config.worker.interval)

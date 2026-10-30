@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import * as virtualDatasetsUtils from './virtual.ts'
 import * as esUtils from '../es/index.ts'
 import * as restDatasetsUtils from './rest.ts'
@@ -201,7 +202,7 @@ export const storage = async (dataset: Dataset & Pick<DatasetInternal, '_esLineB
 // After a change that might impact consumed storage, we store the value
 export const updateStorage = async (dataset: Dataset, options?: UpdateStorageOptions) => {
   if (dataset.draftReason) {
-    console.log(new Error('updateStorage should not be called on a draft dataset'))
+    log.warn('updateStorage should not be called on a draft dataset', { code: 'storage-update-draft', err: new Error('updateStorage called on a draft dataset') })
     return
   }
   if (!options?.deleted) {

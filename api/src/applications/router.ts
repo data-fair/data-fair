@@ -30,7 +30,6 @@ import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { getAsVisitorContext } from '../misc/utils/as-visitor.ts'
-import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
 import filesStorage from '#files-storage'
@@ -81,7 +80,7 @@ router.post('', async (req, res) => {
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
   if ((await limits.remainingApplications(application.owner)) === 0) throw httpError(429, req.__('errors.exceedLimitNbApplications'))
 
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   const created = await service.createApplication(ctx, application)
   res.status(201).json(clean(created, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
@@ -112,7 +111,7 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
 // genuine create, where partOf is legitimate and validated by initApplicationPermissions) and after
 // the permission middleware, so an unauthorized caller still gets a 403 rather than a 400
 router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), fragmentWriteGuard(false), async (req, res) => {
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
@@ -147,7 +146,7 @@ router.patch('/:applicationId',
       patch.image = patch.image.slice(reqPublicBaseUrl(req).length)
     }
 
-    const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+    const ctx = { sessionState: reqSessionAuthenticated(req) }
     let patched
     try {
       patched = await service.patchApplication(ctx, partOfUpdated ?? application, patch)
@@ -176,7 +175,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
   const limitError = await limits.changeOwnerLimitError(application.owner, req.body, fragments.datasets, 1 + fragments.applications.length)
   if (limitError) return res.status(429).type('text/plain').send(req.__('errors.' + limitError))
 
-  const ctx = { sessionState, logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState }
   const newPermissions = await permissions.ownerChangePermissions(application as any, req.body)
   await fragmentsService.changeFragmentsOwner(ctx, 'applications', fragments, req.body, newPermissions)
   const patchedApp = await service.changeApplicationOwner(ctx, application, req.body, newPermissions)
@@ -188,7 +187,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
   await fragmentsService.deleteFragments(req.app, ctx, 'application', reqApplication(req).id, reqApplication(req).owner)
   await service.deleteApplication(ctx, reqApplication(req))
@@ -208,7 +207,7 @@ router.get('/:applicationId/configuration', readApplication, permissionMiddlewar
 const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
   res.status(200).json(req.body)
 }
@@ -228,12 +227,12 @@ router.get('/:applicationId/configuration-draft', readApplication, permissionMid
 router.put('/:applicationId/configuration-draft', readApplication, permissionMiddleware('writeConfig', 'write'), async (req, res, next) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   await service.writeConfigDraft(ctx, reqApplication(req), appConfig)
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissionMiddleware('writeConfig', 'write'), async (req, res, next) => {
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   await service.deleteConfigDraft(ctx, reqApplication(req))
   res.status(200).json(req.body)
 })
@@ -283,7 +282,7 @@ router.get('/:applicationId/keys', readApplication, permissionMiddleware('getKey
 })
 router.post('/:applicationId/keys', readApplication, permissionMiddleware('setKeys', 'admin'), async (req, res) => {
   validateKeys(req.body)
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
   await service.writeApplicationKeys(ctx, reqApplication(req), req.body)
   res.send(req.body)
 })

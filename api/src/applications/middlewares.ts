@@ -2,12 +2,14 @@ import { type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
+import { withLogContext } from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
-import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
+import { defineReqContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as limits from '../limits/service.ts'
 import * as service from './service.ts'
@@ -48,7 +50,7 @@ export const readApplication: RequestHandler = async (req, res, next) => {
   permissions.setReqResourceType(req, 'applications')
   permissions.setReqResource(req, application)
   setReqApplication(req, application)
-  next()
+  withLogContext(resourceLogFields('applications', application), next)
 }
 
 // proxy-specific resource resolver: protected application can be given either as
@@ -81,7 +83,7 @@ export const setProxyResource: RequestHandler = async (req, res, next) => {
   permissions.setReqResourceType(req, 'applications')
   permissions.setReqResource(req, application)
   setReqApplication(req, application)
-  next()
+  withLogContext(resourceLogFields('applications', application), next)
 }
 
 export const readBaseApp: RequestHandler = async (req, res, next) => {
@@ -103,7 +105,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
   // where initNew() called reqUserAuthenticated() before the session/permission checks. So an
   // anonymous PUT 401s here, exactly as before; it does not fall through to readApplication.
   const newApplication = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)
-  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  const ctx = { sessionState: reqSessionAuthenticated(req) }
 
   // canDoForOwner alone does not tell apart a genuine create from a PUT to an existing document: it is
   // evaluated against newApplication.owner, which for a caller with no active organization resolves to

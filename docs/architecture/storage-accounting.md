@@ -126,7 +126,7 @@ pool (Mongo only, never ES — its analyze-csv / analyze-geojson / normalize tas
 `UpdateStorageOptions`, and `storage()` then skips the sum and keeps the legacy computation. The
 remaining `try/catch` is only a last-resort guarantee that storage accounting never crashes on
 an ES anomaly; anything it catches — including a forgotten `esUnavailable` in some future
-ES-less context — is unexpected and reported via `internalError`. The sum is a **pure function
+ES-less context — is unexpected and reported via `log.error`. The sum is a **pure function
 of current index state**: it is automatically correct after any sequence of
 writes/crashes/retries, self-healing on the next reindex with no reconciliation logic needed.
 

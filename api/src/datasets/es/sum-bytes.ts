@@ -1,7 +1,7 @@
 import config from '#config'
 import { aliasName } from './commons.ts'
 import es from '#es'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { Dataset } from '#types'
 
 // total CSV-equivalent size of the indexed lines: sum of the _bytes field stamped
@@ -39,7 +39,7 @@ export default async (dataset: Dataset): Promise<number | null> => {
     // no expected condition flows through here (a missing index is handled above without
     // throwing, ES-less contexts don't call at all) — this is a last-resort guarantee that
     // storage accounting never crashes on an ES anomaly, and anything caught is worth reporting
-    internalError('es-sum-bytes', err)
+    log.error('failed to sum the size of elasticsearch indices', { code: 'es-sum-bytes', err })
     return null
   }
 }
