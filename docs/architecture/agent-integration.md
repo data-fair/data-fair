@@ -719,10 +719,6 @@ the platform document side (the switch, the two tool sets) is under
     (a form save included) is one line, refused when the call failed. The report also shows rows
     expected/actual per run. A run whose `sim-<run>.rows.json` is missing is `no rows evidence`:
     listed, never scored.
-- **mcp image.** The editor groups need openapi-mcp 0.8.0, which the `mcp:main` image does not
-  carry yet (it locks 0.7.0): until it does, the stack must run a locally built mcp image
-  (`MCP_IMAGE` in `.env`, the `mcp-dev` image). Without it the smoke fails on the editor tools
-  being absent.
 - **Scope.** An experiment, not a feature: nothing here ships in the production document, and the
   switch, the fixtures and these cases go away once the comparison is made.
 
