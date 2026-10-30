@@ -116,7 +116,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
         journals.log('datasets', dataset, { type: 'finalize-end' } as Event).catch(err => {
-          log.error('failure when send finalize-end to journal after rest dataset creation', { code: 'rest-finalize-end-journal', err })
+          log.error('failure when sending finalize-end to journal after rest dataset creation', { code: 'rest-finalize-end-journal', err })
         })
       })
     }

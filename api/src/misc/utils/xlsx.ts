@@ -140,14 +140,14 @@ const getWorksheet = async (filePath: string, worksheetIndex: number) => {
   try {
     await workbook.xlsx.readFile(filePath)
   } catch (err) {
-    log.info('failed to use Excel module to parse file, use older parser', { err })
+    log.info('failed to use Excel module to parse file, using older parser', { err })
     return
   }
   const worksheet = workbook.getWorksheet(worksheetIndex)
 
   // fallback to previous implementation
   if (!worksheet) {
-    log.info('failed to extract worksheet using Excel module, use older parser')
+    log.info('failed to extract worksheet using Excel module, using older parser')
     return
   }
 

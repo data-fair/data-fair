@@ -487,7 +487,7 @@ export const writeConfigDraft = async (ctx: ApplicationWriteContext, application
       }
     }
   )
-  log.info(`vaidated application config draft ${application.slug} (${application.id})`, { code: 'df.applications.validateDraft', ...resourceLogFields('applications', application) })
+  log.info(`validated application config draft ${application.slug} (${application.id})`, { code: 'df.applications.validateDraft', ...resourceLogFields('applications', application) })
 
   await journals.log('applications', application, { type: 'config-draft-updated' } as Event)
 }

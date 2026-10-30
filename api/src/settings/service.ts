@@ -127,7 +127,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
       if (existingApiKey.key) {
         apiKey.key = existingApiKey.key
       } else {
-        log.warn(`an API ${apiKey.id} key seems to be missing its internal secret`, { code: 'df.apikeys.missingKey', ...ownerLogFields(owner) })
+        log.warn(`an API key ${apiKey.id} seems to be missing its internal secret`, { code: 'df.apikeys.missingKey', ...ownerLogFields(owner) })
       }
       // notifiedJ3At / notifiedJAt are internal flags set by the expiration worker; they are
       // stripped from API responses and never sent back by the user, so exclude them from the
