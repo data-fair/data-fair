@@ -4,6 +4,7 @@
 // import getFilterableFields from the config-free es/operations.ts (NOT the es/index.ts barrel, which
 // loads #config) so this module stays config-free and unit-testable. See code-conventions.md §2.
 import log from '@data-fair/lib-node/log.js'
+import { truncateLogValue } from '../../misc/utils/log-fields.ts'
 import { getFilterableFields, resolveExactKeywordTarget, virtualFilterClauses, descendantsFilterClause } from '../../datasets/es/operations.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
@@ -31,7 +32,7 @@ export const compatReqCounter = new Counter({
 })
 
 export const logCompatODSError = (err: any, value: string, route: string, status: string, datasetId: string) => {
-  log.warn('compat-ods error', { code: 'compat-ods', status, datasetId, value, err })
+  log.warn('compat-ods error', { code: 'compat-ods', status, datasetId, value: truncateLogValue(value.replace(/([?&]apiKey=)[^&]*/gi, '$1***')), err })
   compatReqCounter.inc({ route, status })
 }
 

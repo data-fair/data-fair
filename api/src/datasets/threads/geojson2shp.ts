@@ -1,4 +1,5 @@
 import log from '@data-fair/lib-node/log.js'
+import { truncateLogValue } from '../../misc/utils/log-fields.ts'
 import fs from 'fs-extra'
 import _config from 'config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -53,7 +54,7 @@ export default async (params: Params) => {
   const ogr = spawn('ogr2ogr', opts, { env: getOgrEnv() })
   return await new Promise((resolve, reject) => {
     ogr.stderr.on('data', (data) => {
-      log.warn('geojson2shp stderr', { code: 'geojson2shp-stderr', stderr: data.toString() })
+      log.warn('geojson2shp stderr', { code: 'geojson2shp-stderr', stderr: truncateLogValue(data.toString()) })
     })
     ogr.on('close', async (code) => {
       if (code === 0) {

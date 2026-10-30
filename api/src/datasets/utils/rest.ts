@@ -1589,7 +1589,8 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const result: any = { ...summary }
     delete result._ids
 
-    log.info(`applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { code: 'df.datasets.rest.bulkLines', ...resourceLogFields('datasets', dataset) })
+    const { nbOk, nbNotModified, nbErrors, nbWarnings, nbCreated, nbModified, nbDeleted, cancelled } = result
+    log.info(`applied operations in bulk to dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.bulkLines', ...resourceLogFields('datasets', dataset), nbOk, nbNotModified, nbErrors, nbWarnings, nbCreated, nbModified, nbDeleted, cancelled })
 
     res.write(JSON.stringify(result, null, 2))
     res.end()

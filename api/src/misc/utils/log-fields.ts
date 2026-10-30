@@ -17,3 +17,8 @@ export function ownerLogFields (owner: OwnerLike): OwnerLogFields {
 export function resourceLogFields (type: ResourceType, resource: { id: string, owner: OwnerLike }): { resourceType: ResourceType, resourceId: string } & OwnerLogFields {
   return { resourceType: type, resourceId: resource.id, ...ownerLogFields(resource.owner) }
 }
+
+// log lines must stay small: cut any field that can carry user content or tool output
+export function truncateLogValue (value: string, max = 1000): string {
+  return value.length > max ? value.slice(0, max) + '…' : value
+}

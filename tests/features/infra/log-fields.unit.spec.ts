@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { getLogContext } from '@data-fair/lib-node/log.js'
 import { resourceTask, threadInit } from '../../../api/src/workers/log-context.ts'
-import { ownerLogFields, resourceLogFields } from '../../../api/src/misc/utils/log-fields.ts'
+import { ownerLogFields, resourceLogFields, truncateLogValue } from '../../../api/src/misc/utils/log-fields.ts'
 
 test('ownerLogFields describes an organization department', () => {
   assert.deepEqual(ownerLogFields({ type: 'organization', id: 'o1', name: 'Org 1', department: 'dep1' }), { ownerKey: 'organization.o1', ownerDep: 'dep1', ownerName: 'Org 1' })
@@ -19,6 +19,13 @@ test('ownerLogFields of a root owner overrides the department of a previous owne
   const dataset = { id: 'd1', owner: { type: 'organization', id: 'o1', name: 'Org 1', department: 'dep1' } }
   const merged = { ...resourceLogFields('datasets', dataset), ...ownerLogFields({ type: 'organization', id: 'o2' }) }
   assert.deepEqual(JSON.parse(JSON.stringify(merged)), { resourceType: 'datasets', resourceId: 'd1', ownerKey: 'organization.o2' })
+})
+test('truncateLogValue keeps short values and cuts long ones', () => {
+  assert.equal(truncateLogValue('short'), 'short')
+  const cut = truncateLogValue('x'.repeat(5000))
+  assert.equal(cut.length, 1001)
+  assert.ok(cut.endsWith('…'))
+  assert.equal(truncateLogValue('abcdef', 3), 'abc…')
 })
 
 test('resourceTask restores the log context of the payload', async () => {
