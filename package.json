@@ -51,7 +51,7 @@
     "@data-fair/lib-dev": "^0.1.0",
     "@data-fair/lib-types-builder": "^1.14.5",
     "@data-fair/lib-utils": "^1.12.0",
-    "@data-fair/openapi-mcp": "^0.7.0",
+    "@data-fair/openapi-mcp": "^0.8.0",
     "@dsnp/parquetjs": "~1.8.8",
     "@json-layout/agents": "^0.4.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
