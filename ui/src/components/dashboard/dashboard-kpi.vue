@@ -69,17 +69,17 @@ const { kind, limits } = defineProps<{
 
 const { t, locale } = useI18n()
 
-// ponytail: the creations are counted among the 50 latest ("50+"), add a createdAt range filter to the lists if the cap matters
+// ponytail: the creations are counted among the 51 latest, more than 50 shows "50+"; add a createdAt range filter to the lists if the cap matters
 // raw: only createdAt in each result, no owner, links nor permissions computed per result
 const latestFetch = useFetch<{ count: number, results: { createdAt: string }[] }>(`${$apiPath}/${kind}`, {
-  query: { size: 50, select: 'createdAt', sort: 'createdAt:-1', shared: false, raw: true }
+  query: { size: 51, select: 'createdAt', sort: 'createdAt:-1', shared: false, raw: true }
 })
 const monthAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
 const created = computed(() => {
   const res = latestFetch.data.value
   if (!res) return
   const n = res.results.filter(r => r.createdAt >= monthAgo).length
-  return n === res.results.length && n < res.count ? `${n}+` : n
+  return n > 50 ? '50+' : n
 })
 
 // -1 is unlimited; the quota counts every resource of the account, fragments included, so it states its own numbers
