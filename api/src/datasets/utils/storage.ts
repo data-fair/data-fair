@@ -1,3 +1,4 @@
+import log from '@data-fair/lib-node/log.js'
 import * as virtualDatasetsUtils from './virtual.ts'
 import * as esUtils from '../es/index.ts'
 import * as restDatasetsUtils from './rest.ts'
@@ -34,7 +35,7 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
     debugInfo.overwriteDataset = overwriteDataset.storage
     // ignore the size of the dataset we are overwriting
     if (remaining.storage !== -1) remaining.storage += overwriteDataset.storage.size ?? 0
-    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.size ?? 0
+    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.indexed?.size ?? 0
   }
   const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
   const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
@@ -201,7 +202,7 @@ export const storage = async (dataset: Dataset & Pick<DatasetInternal, '_esLineB
 // After a change that might impact consumed storage, we store the value
 export const updateStorage = async (dataset: Dataset, options?: UpdateStorageOptions) => {
   if (dataset.draftReason) {
-    console.log(new Error('updateStorage should not be called on a draft dataset'))
+    log.warn('updateStorage should not be called on a draft dataset', { code: 'storage-update-draft', err: new Error('updateStorage called on a draft dataset') })
     return
   }
   if (!options?.deleted) {

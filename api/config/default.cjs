@@ -163,6 +163,8 @@ module.exports = {
     datasetIndexed: -1,
     // maximum number of datasets
     nbDatasets: -1,
+    // maximum number of applications
+    nbApplications: -1,
     // Maximum storage space for 1 attachment
     attachmentStorage: -1,
     // Maximum size for attachment to be indexed

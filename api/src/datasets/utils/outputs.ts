@@ -8,7 +8,7 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import type { Request } from 'express'
 import type { Dataset } from '#types'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 
 export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
@@ -25,8 +25,8 @@ export const geojson2shpPiscina = new Piscina({
 })
 
 // a pool emits 'error' when a thread dies with no task in flight; without a listener it crashes the process
-results2sheetPiscina.on('error', (err) => internalError('piscina-results2sheet', err))
-geojson2shpPiscina.on('error', (err) => internalError('piscina-geojson2shp', err))
+results2sheetPiscina.on('error', (err) => log.error('results2sheet worker error', { code: 'piscina-results2sheet', err }))
+geojson2shpPiscina.on('error', (err) => log.error('geojson2shp worker error', { code: 'piscina-geojson2shp', err }))
 
 // Resolve the columns to emit + the JIT-compiled serializer for them.
 // Matches the historical csvStringifyOptions shape: select via query.select

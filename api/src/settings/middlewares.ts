@@ -2,8 +2,9 @@ import { type Request, type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSessionAuthenticated } from '@data-fair/lib-express'
 import { reqHost } from '@data-fair/lib-express/req-origin.js'
-import eventsLog from '@data-fair/lib-express/events-log.js'
-import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
+import log from '@data-fair/lib-node/log.js'
+import { ownerLogFields } from '../misc/utils/log-fields.ts'
+import { defineReqContext } from '../misc/utils/req-context.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import { parseOwnerParams, type SettingsParams } from './operations.ts'
 import { type SettingsWriteContext } from './service.ts'
@@ -26,7 +27,7 @@ export const isOwnerAdmin: RequestHandler = (req, res, next) => {
   const { owner } = reqSettingsParams(req)
   const sessionState = reqSessionAuthenticated(req)
   if (!sessionState.user.adminMode && permissions.getOwnerRole(owner, sessionState) !== 'admin') {
-    eventsLog.alert('df.apikeys.permission', 'a user attempted to overwrite settings from another account', { req, account: owner })
+    log.alert('a user attempted to overwrite settings from another account', { code: 'df.apikeys.permission', ...ownerLogFields(owner) })
     res.sendStatus(403)
     return
   }
@@ -47,6 +48,5 @@ export const isOwnerMember: RequestHandler = (req, res, next) => {
 export const reqWriteContext = (req: Request): SettingsWriteContext => ({
   ...reqSettingsParams(req),
   sessionState: reqSessionAuthenticated(req),
-  host: reqHost(req),
-  logCtx: reqEventLogContext(req)
+  host: reqHost(req)
 })

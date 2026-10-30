@@ -21,6 +21,7 @@ const schema = {
     store_bytes: limitTypeSchema,
     indexed_bytes: limitTypeSchema,
     nb_datasets: limitTypeSchema,
+    nb_applications: limitTypeSchema,
     hide_brand: limitTypeSchema
   }
 }

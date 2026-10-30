@@ -16,7 +16,7 @@ import { fsyncFile, tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
 import debugLib from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import { mimeTypeStream } from '../../datasets/utils/mime-type-stream.ts'
 import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
@@ -57,7 +57,7 @@ export default async function (dataset: FileDataset) {
       // we should not have to do this
       // this is a weird thing, maybe an unsolved race condition ?
       // let's wait a bit and try again to mask this problem temporarily
-      internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
+      log.error('file missing when normalizer started working ' + originalFilePath, { code: 'normalizer-missing-file' })
       await new Promise(resolve => setTimeout(resolve, 10000))
     }
 

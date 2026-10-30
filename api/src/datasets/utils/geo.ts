@@ -113,7 +113,8 @@ export const readGeometry = (value: any): any => {
     try {
       return wktToGeoJSON(value)
     } catch (err2) {
-      console.log('invalid JSON or WKT', value, err, err2)
+      // per-row user content, off by default; the error reaches the caller
+      debug('invalid JSON or WKT', value, err, err2)
       throw new Error('la géométrie ne contient pas de JSON ou de WKT valide')
     }
   }

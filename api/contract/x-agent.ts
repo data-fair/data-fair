@@ -136,6 +136,8 @@ export const operations = {
       count: { exclude: true },
       hint: { exclude: true },
       collapse: { exclude: true },
+      arrays: { exclude: true },
+      truncate: { exclude: true },
       sort: { description: 'Array of column keys to sort by, one per element. Prefix a key with - for descending.' },
       select: { description: 'Column keys to include in the response, as an array. Use column keys from describe_dataset. If omitted, all columns are returned.' },
       ...queryParams

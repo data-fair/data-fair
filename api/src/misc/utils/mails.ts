@@ -1,7 +1,7 @@
 // the directory is a service of our own infrastructure (configured url, not user input)
 import { privateAxios as axios } from './axios.ts'
 import config from '#config'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 
 export type MailRecipient =
   | string
@@ -16,7 +16,7 @@ export type Mail = {
 
 /**
  * Send a mail through simple-directory's internal /api/mails endpoint.
- * Failures are reported via internalError and never thrown, so a mail outage
+ * Failures are reported via log.error and never thrown, so a mail outage
  * cannot break the cron task. Returns true only when the mail actually went
  * out, so callers can avoid recording a notification that was never sent.
  */
@@ -26,7 +26,7 @@ export const sendMail = async (mail: Mail): Promise<boolean> => {
     await axios.post(directoryUrl + '/api/mails', mail, { params: { key: config.secretKeys.sendMails } })
     return true
   } catch (err) {
-    internalError('send-mail', err)
+    log.error('failed to send a mail', { code: 'send-mail', err })
     return false
   }
 }

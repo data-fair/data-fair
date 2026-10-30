@@ -377,8 +377,8 @@
 
           <df-ui-notif-alert
             :notif="createAction.notif.value"
-            class="mt-4 mb-4"
-            :alert-props="{ maxWidth: 500 }"
+            class="mt-4"
+            :alert-props="{ maxWidth: 500, variant: 'outlined' }"
           />
 
           <!-- Upload progress for file type -->

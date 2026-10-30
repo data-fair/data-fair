@@ -2,9 +2,9 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import moment from 'moment'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { ownerLogFields, resourceLogFields } from '../misc/utils/log-fields.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
@@ -33,7 +33,6 @@ import { anchorDataset } from '../integrity/relay.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import * as fragmentsService from '../fragments/service.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
-import { type LogContext } from '../misc/utils/req-context.ts'
 import { partOfListFilter } from '../fragments/operations.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
@@ -457,13 +456,13 @@ export const deleteDataset = async (app: any, dataset: any) => {
   try {
     await filesStorage.removeDir(dir(dataset))
   } catch (err) {
-    console.warn('Error while deleting dataset draft directory', err)
+    log.warn('error while deleting dataset draft directory', { code: 'dataset-delete-dir', err })
   }
   if (dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(dataset)
     } catch (err) {
-      console.warn('Error while removing mongodb collection for REST dataset', err)
+      log.warn('error while removing mongodb collection for REST dataset', { code: 'dataset-delete-rest-collection', err })
     }
   }
 
@@ -479,7 +478,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
     try {
       await deleteIndex(dataset)
     } catch (err) {
-      console.warn('Error while deleting dataset indexes and alias', err)
+      log.warn('error while deleting dataset indexes and alias', { code: 'dataset-delete-index', err })
     }
     if (!dataset.draftReason) {
       await updateStorage(dataset, { deleted: true })
@@ -492,7 +491,7 @@ export const deleteDataset = async (app: any, dataset: any) => {
  * document. `fragmentPermissions` is given for a fragment, whose ACL is derived from its parent's new ACL
  * rather than reset. The caller checks permissions and quotas, and recomputes the storage totals.
  */
-export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, dataset: any, datasetFull: any, newOwner: any, fragmentPermissions?: Permission[]) => {
+export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthenticated }, dataset: any, datasetFull: any, newOwner: any, fragmentPermissions?: Permission[]) => {
   const { sessionState } = ctx
   const patch: any = {
     owner: newOwner,
@@ -530,15 +529,15 @@ export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthen
     try {
       await filesStorage.moveDir(srcDir, dstDir)
     } catch (err) {
-      console.warn('Error while moving dataset directory', err)
+      log.warn('error while moving dataset directory', { code: 'dataset-move-dir', err })
     }
   }
 
   const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
 
-  eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { ...ctx.logCtx, account: dataset.owner })
-  eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { ...ctx.logCtx, account: patch.owner })
+  log.info(eventLogMessage, { code: 'df.datasets.changeOwnerFrom', ...resourceLogFields('datasets', dataset) })
+  log.info(eventLogMessage, { code: 'df.datasets.changeOwnerTo', ...resourceLogFields('datasets', dataset), ...ownerLogFields(patch.owner) })
   const event = {
     title: 'Changement de propriétaire d\'un jeu de données',
     body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
@@ -757,7 +756,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         // the parent virtual dataset may have become invalid (a conflict introduced by this very
         // patch, another child deleted or not shared anymore...): don't fail this dataset's own
         // patch for it, the parent will surface the error at its next finalization or query
-        internalError('virtual-schema-sync', err)
+        log.error('failed to synchronize the schema of a virtual dataset', { code: 'virtual-schema-sync', err })
       }
     }
   }

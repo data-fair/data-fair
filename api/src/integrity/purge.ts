@@ -33,7 +33,7 @@
 // never authorize a delete — and the version's actual `ObjectLockRetainUntilDate` is what decides.
 import mongo from '#mongo'
 import config from '#config'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { IntegrityStore } from './store.ts'
 import * as ops from './operations.ts'
 import { DELETED_MARKER } from './lines-operations.ts'
@@ -128,7 +128,7 @@ export const purgeExpiredRevisions = async (
           }
         } catch (err) {
           // unreadable latest revision: protect it alone, surface the anomaly
-          internalError('integrity-purge-protect', err)
+          log.error('integrity purge protection failed', { code: 'integrity-purge-protect', err })
         }
       }
     }
@@ -188,7 +188,7 @@ export const purgeExpiredRevisions = async (
             // no error is expected here: the decision was taken on dates, so a failure means
             // something genuinely went wrong (or our view of the lock diverged from the store)
             result.errors++
-            internalError('integrity-purge', err)
+            log.error('integrity purge failed', { code: 'integrity-purge', err })
           }
         }))
       }

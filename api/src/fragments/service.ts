@@ -4,7 +4,6 @@ import type { Permission, WhoHint } from '#types'
 import type { AccountKeys, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as permissions from '../misc/utils/permissions.ts'
-import type { LogContext } from '../misc/utils/req-context.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { stampHistorize } from '../integrity/operations.ts'
 import {
@@ -193,7 +192,7 @@ export const prepareFragmentsOwnerChange = async (parentType: PartOf['type'], pa
  * (ownedFragmentsFilter) and completes. The caller recomputes the storage totals.
  * Dynamic imports: datasets/service and applications/service both import this module.
  */
-export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: FragmentResourceType, fragments: Awaited<ReturnType<typeof findFragments>>, newOwner: OwnerLike, parentPermissions: Permission[]) => {
+export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuthenticated }, parentType: FragmentResourceType, fragments: Awaited<ReturnType<typeof findFragments>>, newOwner: OwnerLike, parentPermissions: Permission[]) => {
   if (fragments.datasets.length) {
     const { changeDatasetOwner } = await import('../datasets/service.ts')
     const derived = deriveFragmentPermissions(parentPermissions, parentType, 'datasets')
@@ -210,7 +209,7 @@ export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuth
  * Delete every fragment of a parent through the full service deletes (journal, index, files, keys).
  * Dynamic imports: datasets/service and applications/service both import this module.
  */
-export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated, logCtx: LogContext }, parentType: PartOf['type'], parentId: string, parentOwner: OwnerLike) => {
+export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated }, parentType: PartOf['type'], parentId: string, parentOwner: OwnerLike) => {
   const { datasets, applications } = await findFragments(parentType, parentId, parentOwner)
   if (datasets.length) {
     const { deleteDataset, mergeDraft } = await import('../datasets/service.ts')

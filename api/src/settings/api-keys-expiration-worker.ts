@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import i18n from 'i18n'
 import Debug from 'debug'
 import locks from '@data-fair/lib-node/locks.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
 import { sendMail, type MailRecipient } from '../misc/utils/mails.ts'
@@ -93,14 +93,14 @@ export const task = async () => {
     }
     debug('api-keys expiration cron task done')
   } catch (err) {
-    internalError('api-keys-expiration-cron', err)
+    log.error('api keys expiration cron failed', { code: 'api-keys-expiration-cron', err })
   }
 }
 
 export const start = () => {
   scheduledTask = cron.schedule(config.apiKeysExpirationCron, () => {
     if (taskPromise) {
-      console.warn('api-keys-expiration task already running')
+      log.warn('api-keys-expiration task already running', { code: 'api-keys-expiration-running' })
       return
     }
     taskPromise = task()

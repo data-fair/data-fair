@@ -225,6 +225,8 @@ export default (
     // cf https://stackoverflow.com/questions/49582559/how-to-document-dynamic-query-parameter-names-in-openapi-swagger
     in: 'query',
     name: 'filters',
+    // kept out of the layout help below, which reaches the agent tools (they must not use _c_)
+    description: "Filtres sur concept : la clé de colonne peut être remplacée par l'identifiant d'un concept préfixé par `_c_` (par exemple `_c_codeCommune_eq`) pour filtrer la colonne qui porte ce concept. Le filtre est ignoré si aucune colonne ne porte ce concept, ce qui permet d'appliquer les mêmes filtres à plusieurs jeux de données. Les paramètres `q`, `bbox`, `geo_distance` et `date_match` acceptent aussi ce préfixe (`_c_q`, `_c_bbox`, etc.) : ils sont alors ignorés au lieu de provoquer une erreur quand le jeu de données ne s'y prête pas.",
     schema: {
       type: 'object',
       title: 'Filtres sur colonnes',
@@ -759,6 +761,23 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             schema: {
               type: 'string',
               enum: isSampleDataset ? undefined : [null, ...valuesProperties.map((p: any) => p.key)]
+            }
+          }, {
+            in: 'query',
+            name: 'arrays',
+            description: 'Retourner les valeurs des colonnes multivaluées sous forme de tableaux plutôt que concaténées avec leur séparateur.',
+            schema: {
+              title: 'Colonnes multivaluées en tableaux',
+              type: 'boolean'
+            }
+          }, {
+            in: 'query',
+            name: 'truncate',
+            description: 'Tronquer les textes au-delà de ce nombre de caractères (suivis de "..."). Les identifiants, liens, images, emails, pièces jointes et colonnes multivaluées ne sont pas tronqués.',
+            schema: {
+              title: 'Troncature des textes',
+              type: 'integer',
+              minimum: 1
             }
           }],
           responses: {

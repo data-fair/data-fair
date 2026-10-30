@@ -8,7 +8,8 @@ import slug from 'slugify'
 import clone from '@data-fair/lib-utils/clone.js'
 import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import eventsLog from '@data-fair/lib-express/events-log.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import { reqSession, reqSessionAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { readDataset, reqDataset, reqDatasetOptional, reqDatasetFull, checkStorage, lockDataset, setReqDraft } from '../middlewares.ts'
@@ -24,7 +25,7 @@ import * as notifications from '../../misc/utils/notifications.ts'
 import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import { emit as workerPing } from '../../workers/ping.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
-import { createDataset, applyPatch, cancelDraft } from '../service.ts'
+import { createDataset, applyPatch, cancelDraft, deleteDataset } from '../service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { assertFragmentWriteBody } from '../../fragments/middlewares.ts'
 import { preparePatch } from '../utils/patch.ts'
@@ -93,10 +94,16 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       debugCreateDataset('init rest dataset')
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
-      await restDatasetsUtils.initDataset(dataset)
-      const indexName = await initDatasetIndex(dataset)
-      await switchAlias(dataset, indexName)
-      await restDatasetsUtils.configureHistory(dataset)
+      try {
+        await restDatasetsUtils.initDataset(dataset)
+        const indexName = await initDatasetIndex(dataset)
+        await switchAlias(dataset, indexName)
+        await restDatasetsUtils.configureHistory(dataset)
+      } catch (err) {
+        // the dataset is already stored as finalized: do not leave it behind without its index
+        await deleteDataset(req.app, dataset)
+        throw err
+      }
       // the ES index was just built empty by the stamping code -> trivially fully stamped
       // (every doc has _bytes, vacuously true with zero docs), and the invariant holds forever
       // after since every REST write path indexes through the same stamping indexStream
@@ -109,7 +116,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
         journals.log('datasets', dataset, { type: 'finalize-end' } as Event).catch(err => {
-          console.error('failure when send finalize-end to journal after rest dataset creation', err)
+          log.error('failure when sending finalize-end to journal after rest dataset creation', { code: 'rest-finalize-end-journal', err })
         })
       })
     }
@@ -117,7 +124,7 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
       await updateStorage(dataset)
     }
 
-    eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`created a dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.create', ...resourceLogFields('datasets', dataset) })
 
     debugCreateDataset('final steps')
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id } as Event)
@@ -205,7 +212,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate, whoFromReq(req))
 
-      eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
+      log.info(`updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { code: 'df.datasets.update', ...resourceLogFields('datasets', dataset) })
 
       const draft = !!dataset.draftReason
       await notifications.send({
@@ -258,7 +265,7 @@ export const registerWriteRoutes = (router: Router) => {
     await applyPatch(dataset, patch, undefined, undefined, whoFromReq(req))
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' } as Event)
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
-    eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`validated dataset draft ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.validateDraft', ...resourceLogFields('datasets', dataset) })
 
     return res.send(clean(req as DfRequest, dataset))
   })
@@ -285,7 +292,7 @@ export const registerWriteRoutes = (router: Router) => {
     // dropped here as a behavior-preserving no-op (parking lot: verify draft-cancelled journal context)
     await journals.log('datasets', dataset, { type: 'draft-cancelled' } as Event, false)
 
-    eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+    log.info(`cancelled dataset draft ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.cancelDraft', ...resourceLogFields('datasets', dataset) })
     await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'cancelled')
 
     await updateStorage(datasetFull)

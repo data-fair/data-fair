@@ -9,7 +9,7 @@ import * as permissionsUtils from './permissions.ts'
 import { reqResource } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
 import resolvePath from 'resolve-path'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
 import type { RequestWithResource } from '#types'
 import type { Response } from 'express'
 import { type AxiosRequestConfig } from 'axios'
@@ -99,7 +99,7 @@ const stream2file = async (reqOpts: AxiosRequestConfig, capturePath: string) => 
     const captureReq = await axios({ ...reqOpts, responseType: 'stream' })
     await filesStorage.writeStream(captureReq.data, capturePath)
   } catch (err: any) {
-    internalError('capture', err)
+    log.error('screenshot capture failed', { code: 'capture', err })
     throw new Error(`failure in capture - ${err.status}`)
   }
 }
@@ -153,7 +153,7 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
     } catch (err) {
       // catch err locally as this method is called without waiting for result
 
-      internalError('app-thumbnail', err)
+      log.error('failed to capture an application thumbnail', { code: 'app-thumbnail', err })
 
       // In case of error do not keep corrupted or empty file
       await filesStorage.removeFile(capturePath)

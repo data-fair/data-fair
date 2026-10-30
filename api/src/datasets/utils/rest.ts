@@ -37,7 +37,8 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { NEW_INDEX_SHAPE } from '../es/operations.ts'
 import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
-import { internalError } from '@data-fair/lib-node/observer.js'
+import log from '@data-fair/lib-node/log.js'
+import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetInternal, DatasetLineRevision, RestActionsSummary, HistorizeContextHint, WhoHint } from '#types'
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
@@ -81,7 +82,7 @@ export const sheet2csvPiscina = new Piscina({
   maxThreads: 1
 })
 // a pool emits 'error' when a thread dies with no task in flight; without a listener it crashes the process
-sheet2csvPiscina.on('error', (err) => internalError('piscina-sheet2csv', err))
+sheet2csvPiscina.on('error', (err) => log.error('sheet2csv worker error', { code: 'piscina-sheet2csv', err }))
 
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
@@ -258,7 +259,7 @@ export const configureConstraintIndexes = async (dataset: RestDataset) => {
   for (const idx of existing) {
     if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
       await c.dropIndex(idx.name).catch((err: any) => {
-        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) log.warn('failed to drop stale constraint index', { code: 'rest-drop-constraint-index', indexName: idx.name, err })
       })
     }
   }
@@ -835,7 +836,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"
           } else if (writeError.err.errmsg?.includes('_i_')) {
-            console.error(writeError)
+            // not err: writeError, its toString (the serializer's message fallback) embeds the line document
+            log.error('unexpected mongo write error on a rest dataset', { code: 'rest-write-error', err: { message: writeError.errmsg, code: writeError.code }, index: writeError.index })
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
           } else {
@@ -1160,7 +1162,7 @@ const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
   try {
     if (await filesStorage.fileExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
-    console.warn('failed to rollback uploaded attachment', p, err)
+    log.warn('failed to rollback uploaded attachment', { code: 'rest-attachment-rollback', path: p, err })
   }
 }
 
@@ -1186,7 +1188,7 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
     // client expecting read-after-write.
     const message = `indexation refusée par elasticsearch pour ${stream.nbRejectedItems} ligne(s) : ${stream.firstRejectionReason}`
     await journals.log('datasets', dataset, { type: 'error', data: message } as any)
-    internalError('rest-line-index-rejected', `dataset ${dataset.id}: ${message}`)
+    log.error(message, { code: 'rest-line-index-rejected', ...resourceLogFields('datasets', dataset) })
     throw httpError(500, `la ligne est enregistrée mais son ${message}`)
   }
 
@@ -1253,12 +1255,11 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(dataset, [req.params.lineId])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteLine', ...resourceLogFields('datasets', dataset) })
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after deleteLine', { code: 'rest-update-storage', err }))
 }
 
 // the write routes are gated by their default operation (createLine or postLine / updateLine and
@@ -1344,20 +1345,19 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
-  const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
   if (_action === 'delete') {
-    eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+    log.info(`deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteLine', ...resourceLogFields('datasets', dataset) })
     res.status(204).send()
   } else {
     if (_action === 'patch') {
-      eventsLog.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+      log.info(`patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.patchLine', ...resourceLogFields('datasets', dataset) })
     } else {
-      eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
+      log.info(`updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.createOrUpdateLine', ...resourceLogFields('datasets', dataset) })
     }
     const line = getLineFromOperation(operation, rawBody ?? req.body)
     res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   }
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after createOrUpdateLine', { code: 'rest-update-storage', err }))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1377,12 +1377,11 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   if (operation._status !== 304) await removeStaleAttachments(staleAttachments)
   await commitLines(dataset, [fullLine._id])
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.patchLine', ...resourceLogFields('datasets', dataset) })
 
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after patchLine', { code: 'rest-update-storage', err }))
 }
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1394,8 +1393,7 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   const indexName = await initDatasetIndex(dataset)
   await switchAlias(dataset, indexName)
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
+  log.info(`deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.deleteAllLines', ...resourceLogFields('datasets', dataset) })
 
   // initDatasetIndex above replaced the index -> re-stamp, else a legacy stamp survives over a
   // new-shape index
@@ -1403,7 +1401,7 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated', _indexShape: NEW_INDEX_SHAPE, _esLineBytes: true } })
 
   res.status(204).send()
-  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after deleteAllLines', { code: 'rest-update-storage', err }))
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
@@ -1569,7 +1567,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         status = 400
         message = 'Le fichier de transactions n\'a pas pu être lu, merci de réessayer.'
       }
-      if (status === 500) internalError('bulk-lines', err)
+      if (status === 500) log.error('bulk lines operation failed', { code: 'bulk-lines', err })
       if (firstBatch) {
         res.writeHead(status, { 'Content-Type': 'application/json' })
       }
@@ -1591,21 +1589,21 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const result: any = { ...summary }
     delete result._ids
 
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { req, account: dataset.owner as Account }))
+    const { nbOk, nbNotModified, nbErrors, nbWarnings, nbCreated, nbModified, nbDeleted, cancelled } = result
+    log.info(`applied operations in bulk to dataset ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.rest.bulkLines', ...resourceLogFields('datasets', dataset), nbOk, nbNotModified, nbErrors, nbWarnings, nbCreated, nbModified, nbDeleted, cancelled })
 
     res.write(JSON.stringify(result, null, 2))
     res.end()
 
-    storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(dataset).catch((err) => log.error('failed to update storage after bulkLines', { code: 'rest-update-storage', err }))
   } finally {
     // best-effort cleanup: never let a temp-file removal error (e.g. the file
     // already gone) mask the response or escape as an unhandled rejection
     for (const file of req.files?.actions || []) {
-      await fs.remove(file.path).catch((err) => console.warn('failed to clean up bulk actions temp file', file.path, err))
+      await fs.remove(file.path).catch((err) => log.warn('failed to clean up bulk actions temp file', { code: 'rest-bulk-cleanup', path: file.path, err }))
     }
     if (attachmentsFile && !attachmentsRecorded) {
-      await filesStorage.removeFile(attachmentsFile.path).catch((err) => console.warn('failed to clean up bulk attachments temp file', attachmentsFile.path, err))
+      await filesStorage.removeFile(attachmentsFile.path).catch((err) => log.warn('failed to clean up bulk attachments temp file', { code: 'rest-bulk-cleanup', path: attachmentsFile.path, err }))
     }
   }
 }

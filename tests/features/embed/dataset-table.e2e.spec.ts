@@ -15,6 +15,15 @@ test.describe('embed dataset table page', () => {
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
   })
 
+  test('hides the pagination buttons when every line fits on one page', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?pagination=true&interaction=sort`, 'test_user1')
+    await expect(page.locator('tbody tr')).toHaveCount(2, { timeout: 10000 })
+    await expect(page.locator('.v-toolbar')).toHaveCount(0)
+  })
+
   test('selects a line from the card list display', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)

@@ -148,7 +148,8 @@ so a throttled client is told what to change, not just that it was throttled.
 
 - **Storage / dataset quotas** (`api/src/limits/service.ts`): `store_bytes`, `indexed_bytes`,
   `nb_datasets` — checked at dataset creation / ownership change, return `429` on overflow.
-  Write-side; real limits typically come from simple-directory. Irrelevant to the read-flood
+  `nb_applications` (counted on the fly) is checked the same way at application creation / ownership
+  change. Write-side; real limits typically come from simple-directory. Irrelevant to the read-flood
   problem.
 - **Worker concurrency** (`api/src/workers/index.ts`): `WORKER_CONCURRENCY` × thread count, with a
   per-owner fairness cap of 50 % of the slots; tasks beyond that stay queued in MongoDB. Bulk
@@ -314,7 +315,7 @@ there is no ES slow-query log to identify offenders.
 → `429`, surfaced verbatim. `RequestAbortedError`/`AbortError` → a quiet `499` ("client closed
 request" — on a read path the only thing that aborts the ES request is the http client going away).
 `TimeoutError` → `504`. Other ES errors pass through with their status. **No retries.** `manageESError`
-(router) skips `internalError` for `499`/`504` (a flood of those is the overload symptom, not a bug);
+(router) skips `log.error` for `499`/`504` (a flood of those is the overload symptom, not a bug);
 the ODS `records` catch skips its error log for `499`.
 
 For status `504` and `429`, `manageESError` (and the equivalent ODS-compat catch blocks) append the
@@ -429,7 +430,7 @@ Items marked **measured** carry benchmark-harness evidence (`benchmark/`, raw re
   (aggregations over the collected subset then become approximate — acceptable as an abuse guard).
 - **`values-agg.js` fan-out** — the combined `Π agg_size × size` is pre-checked before execution
   only when `size > 100` (`values-agg.js:85`); for the common aggregation case (`size ≤ 100`, incl.
-  `size: 0`) it merely `eventsLog.warn`s past 100000. The hard `400` is thrown only *after* ES
+  `size: 0`) it merely `log.warn`s past 100000. The hard `400` is thrown only *after* ES
   returns, when `buckets.length > 10000` (`values-agg.js:241`). *Proposed bound:* enforce the
   fan-out cap before execution for every `size`.
 - **`master-data/bulk-searchs`** — the handler builds no abort context and `multiSearch` runs

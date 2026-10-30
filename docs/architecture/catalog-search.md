@@ -179,7 +179,7 @@ task that is bookkeeping and writes no journal by design, and, for applications,
 `error` forever because `applicationTasks` has no `errorRetry`.
 
 So `drainSearchIndex` swallows the failure, reports it through
-`internalError('search-index-recompute', …)`, and clears `_needsSearchIndex` regardless. The
+`log.error` with `code: 'search-index-recompute'`, and clears `_needsSearchIndex` regardless. The
 document keeps its PREVIOUS, stale index until its next write recomputes it. That is the same
 failure mode `markStale` already trades in (see below) — staleness, visible in logs, resolved by
 the next real write — chosen over a loop that no operator can stop. Guarded by
