@@ -134,7 +134,7 @@ services:
     profiles:
       - mcp
       - agents
-    image: ${MCP_IMAGE:-ghcr.io/data-fair/mcp:feat-openapi-mcp}
+    image: ${MCP_IMAGE:-ghcr.io/data-fair/mcp:main}
     network_mode: host
     environment:
       - TRANSPORT=http
