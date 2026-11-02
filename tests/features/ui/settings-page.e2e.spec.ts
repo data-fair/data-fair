@@ -261,30 +261,49 @@ test.describe('settings cross-subEdit interference', () => {
   })
 })
 
-test.describe('settings integrations save/cancel', () => {
-  test.beforeAll(async () => {
+test.describe('settings integrations auto-save', () => {
+  test.beforeEach(async () => {
     await clean()
   })
 
-  test('an API key is created only on explicit save', async ({ page, goToWithAuth }) => {
+  test('an API key is saved as soon as it is added', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
     const section = page.locator('#integrations')
     await section.scrollIntoViewIfNeeded()
     await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
-    await section.getByLabel('Titre', { exact: true }).fill('Manual key')
-    await section.getByRole('button', { name: 'Ajouter', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Titre', { exact: true }).fill('Auto key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
 
-    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
-    await expect(saveButton).toBeVisible({ timeout: 5000 })
-    expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys ?? []).toHaveLength(0)
-
-    await saveButton.click()
     await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.length ?? 0, { timeout: 10000 }).toBe(1)
-    await expect(saveButton).not.toBeVisible({ timeout: 5000 })
     // the secret is shown once, right after the save
-    await expect(section.getByText(/Clé secrète/)).toBeVisible()
+    await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
+    await expect(section.getByRole('row').filter({ hasText: 'Auto key' })).not.toContainText('Non enregistrée')
+    await expect(section.getByRole('button', { name: /Enregistrer/i })).not.toBeVisible()
+  })
+
+  test('a webhook is saved only once complete', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    const webhooks = async () => (await ax.get('/api/v1/settings/user/test_user1')).data.webhooks ?? []
+
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByRole('tab', { name: /Webhooks/ }).click()
+    await section.getByRole('button', { name: /Ajouter un webhook/i }).click()
+    await section.getByLabel('Titre', { exact: true }).fill('Auto hook')
+    await section.getByLabel('URL du serveur HTTP cible').fill('https://example.com/hook')
+    await section.getByLabel('URL du serveur HTTP cible').blur()
+    // still missing its events: nothing is sent
+    await page.waitForTimeout(1000)
+    expect(await webhooks()).toHaveLength(0)
+
+    await section.locator('.v-select').filter({ hasText: 'Événements déclencheurs' }).click()
+    await page.getByRole('option', { name: 'Un nouveau jeu de données a été créé' }).click()
+    await page.keyboard.press('Escape')
+    await expect.poll(async () => (await webhooks()).map((w: any) => w.title), { timeout: 10000 }).toEqual(['Auto hook'])
   })
 })
 

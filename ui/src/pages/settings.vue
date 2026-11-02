@@ -149,7 +149,7 @@
         </template>
       </df-section-tabs>
 
-      <!-- Access & integrations section (2 tabs, save/cancel + leave guard) -->
+      <!-- Access & integrations section (2 tabs, auto-save) -->
       <df-section-tabs
         v-if="sections.integrations"
         id="integrations"
@@ -160,28 +160,6 @@
         :subtitle="t('sections.integrations.subtitle')"
         :tabs="sections.integrations.tabs"
       >
-        <template #actions>
-          <confirm-menu
-            v-if="integrationsEdit.hasDiff.value"
-            :btn-props="{ color: 'warning', variant: 'tonal' }"
-            :label="t('cancel')"
-            :text="t('confirmCancelText')"
-            :icon="mdiCancel"
-            yes-color="warning"
-            @confirm="integrationsEdit.cancel()"
-          />
-          <v-btn
-            v-if="integrationsEdit.hasDiff.value"
-            class="ml-2"
-            color="accent"
-            variant="flat"
-            :disabled="!webhooksValid"
-            :loading="integrationsEdit.save.loading.value"
-            @click="integrationsEdit.save.execute()"
-          >
-            {{ t('save') }}
-          </v-btn>
-        </template>
         <template #windows>
           <v-tabs-window-item value="apiKeys">
             <settings-api-keys v-model="settings.apiKeys" />
@@ -510,11 +488,25 @@ const catalogEdit = settingsEditFetch.createSubEdit(
   ['topics', 'licenses', 'datasetsMetadata', 'privateVocabulary'],
   { success: t('saved') }
 )
-const integrationsEdit = settingsEditFetch.createSubEdit(['apiKeys', 'webhooks'], { success: t('saved') })
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
 const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS'], { success: t('saved') })
 
-const edits = [infoEdit, catalogEdit, integrationsEdit, portalsEdit, featuresEdit]
+// API keys and webhooks save on each change, webhooks only once valid
+const webhooksValid = ref(true)
+const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
+const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
+watch(apiKeysEdit.hasDiff, (dirty) => { if (dirty) apiKeysEdit.save.execute() })
+// the form validity settles after the change, wait for it before saving
+let webhooksTimeout: ReturnType<typeof setTimeout> | undefined
+watch([webhooksEdit.hasDiff, () => webhooksValid.value], () => {
+  clearTimeout(webhooksTimeout)
+  webhooksTimeout = setTimeout(() => {
+    if (webhooksEdit.hasDiff.value && webhooksValid.value) webhooksEdit.save.execute()
+  }, 300)
+})
+
+// an invalid webhook stays unsaved, the leave guards keep it
+const edits = [infoEdit, catalogEdit, webhooksEdit, portalsEdit, featuresEdit]
 for (const edit of edits) useLeaveGuard(edit.hasDiff, { locale })
 const anyDirty = computed(() => edits.some(edit => edit.hasDiff.value))
 
@@ -528,7 +520,6 @@ const topicsValid = ref(true)
 const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
 const privateVocabularyValid = ref(true)
-const webhooksValid = ref(true)
 const portalsValid = ref(true)
 const catalogValid = computed(() => topicsValid.value && licensesValid.value && datasetsMetadataValid.value && privateVocabularyValid.value)
 
@@ -560,8 +551,8 @@ const sections = computed(() => {
   result.integrations = {
     title: t('sections.integrations.title'),
     tabs: [
-      { key: 'apiKeys', title: t('sections.integrations.tabs.apiKeys'), icon: mdiKey, color: tabColor(integrationsEdit.keyHasDiff('apiKeys').value, true) },
-      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: tabColor(integrationsEdit.keyHasDiff('webhooks').value, webhooksValid.value) }
+      { key: 'apiKeys', title: t('sections.integrations.tabs.apiKeys'), icon: mdiKey },
+      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: webhooksValid.value ? undefined : 'error' }
     ]
   }
   if (!$uiConfig.disablePublicationSites) {
