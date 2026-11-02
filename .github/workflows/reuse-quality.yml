@@ -186,8 +186,10 @@ jobs:
     # it loses often. Keeping it out of the wait and running it to completion afterwards also
     # closes the other half of the problem: --wait used to return while the buckets were still
     # being created, so the tests could start without them.
+    # mcp reads the platform document from the dev API, which only starts in a later step: it
+    # exits at once and fails the wait. No test calls it.
     - name: Start services
-      run: docker compose --profile '*' up -d --wait --scale s3-init=0
+      run: docker compose --profile '*' up -d --wait --scale s3-init=0 --scale mcp=0
 
     - name: Create S3 buckets
       run: docker compose --profile '*' run --rm s3-init
