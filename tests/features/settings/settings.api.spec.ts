@@ -127,6 +127,25 @@ test.describe('settings API', () => {
     assert.equal(updated.customMetadata?.[barKey], 'bar value', 'kept custom metadata should remain')
   })
 
+  test('renaming or removing a topic propagates to the datasets carrying it', async () => {
+    const ax = testUser1Org
+    const settingsUrl = '/api/v1/settings/organization/test_org1'
+
+    // same path as the settings page: PATCH { topics }
+    const topics = (await ax.patch(settingsUrl, { topics: [{ title: 'Topic A', color: '#ff0000' }, { title: 'Topic B' }] })).data.topics
+    const [topicA, topicB] = topics
+    await ax.post('/api/v1/datasets/topics-meta-only', { isMetaOnly: true, title: 'topics meta only', topics })
+    const restDataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'topics rest', schema: [], topics: [topicA] })).data
+
+    // propagation does not bump updatedAt: a dataset read in the last 30s is served from the read
+    // memo, so each dataset is read once, after the change it checks
+    await ax.patch(settingsUrl, { topics: [{ ...topicA, title: 'Topic A renamed' }, topicB] })
+    assert.deepEqual((await ax.get('/api/v1/datasets/topics-meta-only')).data.topics, [{ ...topicA, title: 'Topic A renamed' }, topicB])
+
+    await ax.patch(settingsUrl, { topics: [topicB] })
+    assert.deepEqual((await ax.get(`/api/v1/datasets/${restDataset.id}`)).data.topics, [])
+  })
+
   test('metadata categories get a key and reject reserved or duplicate keys', async () => {
     const ax = testUser1Org
     const settings = (await ax.put('/api/v1/settings/organization/test_org1', {
