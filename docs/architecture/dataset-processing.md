@@ -170,6 +170,28 @@ finalized + new data → _partialRestStatus: 'updated'
 
 This allows the dataset to stay queryable while new data is being processed.
 
+### Line flags and the extension write-back
+
+Every line written through the API carries `_needsExtending` (when the dataset has active
+extensions) until the `extend` task has written the extension values back
+(`writeExtendedStreams` in `api/src/datasets/utils/rest.ts`). Sending the same line again does
+not set the flag again: an unchanged `_hash` is a no-op. So a line whose flag is cleared without
+all its extension values keeps empty columns for good. The write-back follows two rules to
+prevent that:
+
+- **Only a pass over all the active extensions clears the flag.** The `extend` task runs either
+  over the flagged lines with every extension (`updatedLines`), or over every line with only
+  the extensions flagged `needsUpdate` (`updatedExtensions`: an extension whose definition was
+  edited, the refresh button, or a reference data enrichment with "auto update if the source
+  changes", flagged by `autoUpdateExtension`). The second mode can run while a large
+  asynchronous `_bulk_lines` is still writing lines, because the dataset is only marked
+  `updated` at the end of the bulk. It leaves the flag of those lines in place, and the task
+  then stays in `updated` for an `updatedLines` pass that applies the other extensions.
+- **The values are only written onto the version of the line that was read.** The update is
+  filtered on `_id`, `_hash` and `_updatedAt`: a line rewritten while it was being extended
+  (a bulk recreating a line the TTL just deleted, for instance) keeps its flag and is extended
+  again from its new content.
+
 ## Maintenance Tasks
 
 These run on finalized datasets as background housekeeping:

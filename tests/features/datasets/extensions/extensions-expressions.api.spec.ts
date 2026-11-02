@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, restCollectionCount, restCollectionUpdateOne } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -218,6 +218,48 @@ test.describe('Extensions (expressions)', () => {
     assert.ok(lowerLine.exp.startsWith('STR 1 - STR 2'))
     const upperLine = updatedLines.find((l: any) => l.str1 === 'UPPER STR 1')
     assert.ok(upperLine.exp.startsWith('UPPER STR 1 - UPPER STR 2'))
+  })
+
+  test('Updating one extension of a Rest dataset does not leave lines pending extension without the other extensions', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest partial extension pass',
+      schema: [{ key: 'str', type: 'string' }],
+      extensions: [
+        { active: true, type: 'exprEval', expr: 'UPPER(str)', property: { key: 'calca', type: 'string' } },
+        { active: true, type: 'exprEval', expr: 'LOWER(str)', property: { key: 'calcb', type: 'string' } }
+      ]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line1', str: 'Line 1' }, { _id: 'line2', str: 'Line 2' }])
+    await waitForFinalize(ax, dataset.id)
+
+    // put line1 in the state a large asynchronous _bulk_lines leaves it in while the bulk is
+    // still running: rewritten and flagged _needsExtending, without values for the calculated
+    // columns yet, and the dataset not marked "updated" yet (that only happens at the end of
+    // the bulk)
+    await restCollectionUpdateOne(dataset.id, { _id: 'line1' }, { $set: { str: 'New Line 1', _needsExtending: true }, $unset: { calca: 1, calcb: 1 } })
+
+    // meanwhile, a single extension is updated. A reference data enrichment with "auto update
+    // if the source changes" gets the same needsUpdate flag on its own, without any user action
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [
+        { active: true, type: 'exprEval', expr: 'UPPER(str)', property: { key: 'calca', type: 'string' } },
+        { active: true, type: 'exprEval', expr: 'CONCAT(LOWER(str), "!")', property: { key: 'calcb', type: 'string' } }
+      ]
+    })
+    assert.equal(res.data.extensions[0].needsUpdate, undefined)
+    assert.equal(res.data.extensions[1].needsUpdate, true)
+    await waitForFinalize(ax, dataset.id)
+
+    // the pass over the updated extension alone must not clear the flag of line1: it would
+    // never get calca, since sending the same line again is a no-op (same hash)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: '_id' } })).data.results
+    assert.deepEqual(lines.map((l: any) => [l._id, l.calca, l.calcb]), [
+      ['line1', 'NEW LINE 1', 'new line 1!'],
+      ['line2', 'LINE 2', 'line 2!']
+    ])
+    assert.equal(await restCollectionCount(dataset.id, { _needsExtending: true }), 0)
   })
 
   test('An expression returning an empty string produces an undefined value', async () => {

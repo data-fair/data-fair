@@ -1712,6 +1712,11 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
   // set: one shared source of truth instead of two mirrored implementations, so the write-back
   // and the coverage exclusion can never drift apart.
   const patchedKeys = [...extensionOwnedKeys(extensions)]
+  // a pass over some of the active extensions only (an extension whose definition changed) must
+  // not clear _needsExtending: a line written by a bulk and not extended yet would keep only
+  // that extension's columns, the others staying empty for good (its hash is unchanged, so
+  // resending it does not help). The flag stays, and the next pass applies all the extensions.
+  const appliesAllExtensions = [...extensionOwnedKeys(dataset.extensions?.filter(e => e.active))].every(key => patchedKeys.includes(key))
   const c = collection(dataset)
   // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
   let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
@@ -1725,12 +1730,20 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
     objectMode: true,
     async write (item, encoding, cb) {
       try {
-        const patch: UpdateFilter<DatasetLine> = { $set: { _needsIndexing: true }, $unset: { _needsExtending: 1 } }
+        const patch: UpdateFilter<DatasetLine> = { $set: { _needsIndexing: true }, $unset: appliesAllExtensions ? { _needsExtending: 1 } : {} }
         for (const key of patchedKeys) {
           if (key in item && patch.$set) patch.$set[key] = item[key]
           else if (patch.$unset) patch.$unset[key] = item[key]
         }
-        bulkOps.push({ updateOne: { filter: { _id: item._id }, update: patch } })
+        // older MongoDB versions reject an empty operator
+        if (!Object.keys(patch.$unset ?? {}).length) delete patch.$unset
+        // only write back onto the version of the line that was extended: a line rewritten
+        // meanwhile (a bulk recreating a line the TTL just deleted, for instance) keeps its
+        // _needsExtending flag and is extended again, instead of receiving values computed
+        // from its previous content
+        const filter: Filter<DatasetLine> = { _id: item._id, _hash: item._hash ?? null }
+        if (item._updatedAt) filter._updatedAt = item._updatedAt
+        bulkOps.push({ updateOne: { filter, update: patch } })
         if (bulkOps.length >= config.mongo.maxBulkOps) await flush()
         cb()
       } catch (err: any) {

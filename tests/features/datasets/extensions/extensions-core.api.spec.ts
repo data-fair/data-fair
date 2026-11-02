@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests, restCollectionCount } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -492,6 +492,49 @@ koumoul,19 rue de la voie lactée saint avé
     await waitForFinalize(ax, dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0][extensionKey + '.lat'], undefined)
+  })
+
+  test('A REST line rewritten while it is being extended is extended again', async () => {
+    const ax = testUser1
+
+    let dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest-extension-rewrite',
+      schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })).data
+
+    for (let i = 0; i < 100 && dataset.status !== 'finalized'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+    }
+    assert.equal(dataset.status, 'finalized')
+
+    // an asynchronous bulk leaves the extension to the worker (a small synchronous write is
+    // extended inside the request), and the geocoder answers slowly for the first version
+    await setupMockRoute({ path: '/geocoder/coords', delay: 3000, ndjsonEcho: { fields: { lat: 10, lon: 10, matchLevel: 'match' }, indexFields: ['matchLevel'] } })
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line1', address: 'first address' }], { params: { async: true } })
+
+    // wait for the extension worker to be waiting on the geocoder for that version
+    for (let i = 0; i < 100; i++) {
+      if ((await getMockReceivedRequests()).some(r => r.path === '/geocoder/coords')) break
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    assert.ok((await getMockReceivedRequests()).some(r => r.path === '/geocoder/coords'))
+
+    // rewrite the line meanwhile, through the worker too (a bulk recreating a line the TTL
+    // just deleted, for instance)
+    await setupCoordsMock(11)
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line1', address: 'second address' }], { params: { async: true } })
+
+    // the values computed from the first version must not be written onto the second one,
+    // nor clear its _needsExtending flag: it is extended again from its own content
+    dataset = await waitForFinalize(ax, dataset.id, 30000)
+    const extensionKey = dataset.extensions[0].propertyPrefix
+    const line = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results[0]
+    assert.equal(line.address, 'second address')
+    assert.equal(line[extensionKey + '.lat'], 11)
+    assert.equal(await restCollectionCount(dataset.id, { _needsExtending: true }), 0)
   })
 
   test('Remove extensions when input properties got removed', async () => {
