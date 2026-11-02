@@ -186,11 +186,14 @@ jobs:
     # it loses often. Keeping it out of the wait and running it to completion afterwards also
     # closes the other half of the problem: --wait used to return while the buckets were still
     # being created, so the tests could start without them.
+    # mcp is left out too: it loads the platform document from the API at startup and exits
+    # when it cannot, and the API only starts below. No test calls it.
+    # --progress quiet: no per-layer pull lines, a failing container is still reported
     - name: Start services
-      run: docker compose --profile '*' up -d --wait --scale s3-init=0
+      run: docker compose --progress quiet --profile '*' up -d --wait --scale s3-init=0 --scale mcp=0
 
     - name: Create S3 buckets
-      run: docker compose --profile '*' run --rm s3-init
+      run: docker compose --progress quiet --profile '*' run --rm s3-init
 
     - name: Start mock server
       run: mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts > dev/logs/mock.log 2>&1 &
@@ -234,4 +237,4 @@ jobs:
 
     - name: Stop services
       if: always()
-      run: docker compose --profile '*' down
+      run: docker compose --progress quiet --profile '*' down
