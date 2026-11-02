@@ -63,7 +63,7 @@ test.describe('list_datasets points editable datasets at their data-entry page',
 
   test('in the back office', () => {
     const { text } = listDatasets.formatResult(data, 1, 10, { datasetLink: backOfficeLink })
-    assert.ok(text.includes('Editable: rows are entered and corrected on https://secondary.example.com/data-fair/dataset/reg/edit-data'), text)
+    assert.ok(text.includes('Editable: navigate to https://secondary.example.com/data-fair/dataset/reg/edit-data to get your tools'), text)
     assert.equal((text.match(/Editable:/g) ?? []).length, 1, 'only the editable dataset')
   })
 
