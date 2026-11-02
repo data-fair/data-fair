@@ -102,7 +102,9 @@ export function formatResult (data: any, page: number, size: number, options?: {
     // Back-office only, as in describe_dataset: /edit-data is a back-office route. A
     // judged run went from this list straight to the read-only /table, never called
     // describe_dataset, and told a person asking to enter a row that it could not.
-    if (d.isRest && options?.datasetLink && datasetUrl) parts.push(`  Editable: rows are entered and corrected on ${datasetUrl}/edit-data, where the line tools live`)
+    // « where the line tools live » read as controls for the person: a judged run answered « I have no way to
+    // edit » three times instead of going there. Say whose tools they are.
+    if (d.isRest && options?.datasetLink && datasetUrl) parts.push(`  Editable: navigate to ${datasetUrl}/edit-data to get your tools that add and correct its rows; they exist only on that page`)
     return parts.join('\n')
   })
 

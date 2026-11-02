@@ -225,7 +225,7 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   // behind `edit` and only the data-entry page passes it — and sent the person to
   // support. It reasoned correctly from what it was told; this is what it was not told.
   if (fetchedData.isRest && options?.datasetLink) {
-    meta.push(`- **Editable:** yes. Rows can be added and corrected on the data-entry page, ${link}/edit-data, which is where the line tools live. Navigate there first; they are not available anywhere else.`)
+    meta.push(`- **Editable:** yes. Navigate to the data-entry page, ${link}/edit-data, to get your tools that add and correct its rows; they exist only on that page.`)
   }
 
   const schemaRows = formatSchemaColumns(fetchedData.schema)

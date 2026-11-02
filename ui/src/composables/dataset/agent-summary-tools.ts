@@ -97,6 +97,7 @@ Tâche :
 
 Règles :
 - Ne répète pas les mots déjà présents dans le titre, le résumé ou les mots-clés : ils sont déjà indexés.
+- Les termes que l'utilisateur demande vont dans la liste, même déjà présents ailleurs.
 - Donne les sigles AVEC leur développement (ex. "PLU" et "plan local d'urbanisme").
 - Ajoute les formulations courantes et administratives d'un même concept (ex. "HLM", "logement social", "habitat social").
 - Ajoute les notions voisines qu'une personne taperait pour trouver ce jeu (ex. "élections" pour des bureaux de vote).
@@ -111,6 +112,7 @@ Task:
 
 Rules:
 - Do not repeat words already in the title, summary or keywords: they are already indexed.
+- Terms the user asks for go in the list, even when already present elsewhere.
 - Give acronyms WITH their expansion (e.g. "PLU" and "plan local d'urbanisme").
 - Add everyday and administrative wordings of the same concept (e.g. "HLM", "logement social", "habitat social").
 - Add neighbouring notions a person would type to find this dataset (e.g. "élections" for polling stations).

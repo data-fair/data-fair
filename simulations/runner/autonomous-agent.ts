@@ -29,8 +29,10 @@ export interface SimulatedAgentConfig {
 
 export const DEFAULT_SIMULATED_AGENT: Required<SimulatedAgentConfig> = {
   title: 'Assistant données de l\'organisation',
-  persona: 'Tu es l\'assistant données de l\'organisation. Tu réponds brièvement, en français, et tu dis clairement quand tu ne peux pas faire quelque chose.',
-  instructions: 'Appuie-toi sur tes outils plutôt que de deviner. Si un outil échoue ou qu\'aucun outil ne permet de répondre, dis-le au lieu d\'inventer un résultat.',
+  // The role alone, as an admin would write it: style or honesty rules here (« réponds brièvement »…) would hide
+  // whether the agents service's own prompt carries them.
+  persona: 'Tu es l\'assistant données de l\'organisation.',
+  instructions: '',
   mcpServers: []
 }
 

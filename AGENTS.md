@@ -19,7 +19,7 @@ npx --no df-dev down events
 - Read the logs before restarting: nodemon (api) and vite (ui) already reload on file changes. Restart only a pane that exited, hangs, or needs new env.
 - If `restart` answers "not ready", report to the user with the logs instead of retrying.
 - Never use `docker compose restart`, `kill` or `zellij action` directly.
-- Core containers: elasticsearch, mongo, s3, simple-directory, nginx, clamav (upload scanning, ~30 MB with the EICAR-only signature database). Optional: `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). The user starts them with the env: `npm run dev-zellij -- --services events,agents`. When events, agents or registry does not run as the api pane starts, its config entry is overridden (`optional` in `dev/dev.json`, exported as `NODE_CONFIG`): after `npx --no df-dev up <service>`, run `npx --no df-dev restart api`.
+- Core containers: elasticsearch, mongo, s3, simple-directory, nginx, clamav (upload scanning, ~30 MB with the EICAR-only signature database). Optional: `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). The user starts them with the env: `npm run dev-zellij -- --services events,agents`. When events, agents or registry does not run as the api pane starts, its config entry is overridden (`optional` in `dev/dev.json`, exported as `NODE_CONFIG` by the api and ui panes, vite building the ui-config from it): after `npx --no df-dev up <service>` or `down <service>`, run `npx --no df-dev restart api && npx --no df-dev restart ui`.
 
 ### Port assignments
 

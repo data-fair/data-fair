@@ -129,7 +129,28 @@ while someone is relying on that data.
    Relay the summary, the friction list and the findings. Exit code is non-zero
    if any case was unsatisfactory, invalid, not judged, or never ran.
 
-8. **Root-cause what it found.** The judge reads a record, not the source: it
+8. **Comparing rounds** — when a run is one condition of a comparison (a prompt
+   before and after a change, a persona variant), archive it once it is judged
+   and reported, so the next round does not overwrite it:
+
+   ```bash
+   mkdir -p simulations/tmp/before-r1 && mv simulations/tmp/sim-* simulations/tmp/before-r1/
+   ```
+
+   Judge before moving: the verdict paths are the un-moved ones. Label rounds
+   `<condition>-r<n>`, run each condition at least twice (model runs are noisy),
+   then:
+
+   ```bash
+   npm run simulate:compare before=simulations/tmp/before-r1,simulations/tmp/before-r2 after=simulations/tmp/after-r1,simulations/tmp/after-r2
+   ```
+
+   Compare conditions only under the same judge text, `assistantModel` and
+   `personaVariant` — the table's "ran on" column shows the last two. A
+   shorter condition that lost substance is worse, not better: read
+   `substance kept` before `padding/msg`.
+
+9. **Root-cause what it found.** The judge reads a record, not the source: it
    says a tool result misled the assistant, not which line built that result.
    That half is yours, and it is where a run becomes a change. For each friction
    point and each finding worth acting on, go into the code, find what produced
