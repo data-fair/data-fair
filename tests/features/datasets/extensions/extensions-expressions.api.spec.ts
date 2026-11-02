@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, restCollectionCount, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -260,6 +260,28 @@ test.describe('Extensions (expressions)', () => {
       ['line2', 'LINE 2', 'line 2!']
     ])
     assert.equal(await restCollectionCount(dataset.id, { _needsExtending: true }), 0)
+  })
+
+  test('An extension value that becomes empty is removed from the lines of a Rest dataset', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest emptied extension value',
+      schema: [{ key: 'str', type: 'string' }],
+      extensions: [{ active: true, type: 'exprEval', expr: 'UPPER(str)', property: { key: 'calc', type: 'string' } }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'line1', str: 'a' }, { _id: 'line2', str: 'b' }])
+    await waitForFinalize(ax, dataset.id)
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [{ active: true, type: 'exprEval', expr: 'str == "a" ? "" : UPPER(str)', property: { key: 'calc', type: 'string' } }]
+    })
+    await waitForFinalize(ax, dataset.id)
+
+    // the mongo client drops undefined values: the previous value must be explicitly unset
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: '_id' } })).data.results
+    assert.deepEqual(lines.map((l: any) => [l._id, l.calc]), [['line1', undefined], ['line2', 'B']])
+    assert.equal((await restCollectionFindOne(dataset.id, { _id: 'line1' })).calc, undefined)
   })
 
   test('An expression returning an empty string produces an undefined value', async () => {
