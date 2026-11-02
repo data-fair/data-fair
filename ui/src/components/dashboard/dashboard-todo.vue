@@ -112,23 +112,24 @@ type FacetsRes = { count: number, facets: Record<string, { value: string }[]> }
 type PortalsRes = { facets: { requestedPortals: Record<string, number> } }
 
 const sitesFilter = computed(() => publicationSites?.map(p => `${p.type}:${p.id}`).join(','))
-const draftStatuses = Object.keys(statuses.dataset).filter(s => s !== 'error' && s !== 'finalized').join(',')
+// a finalized draft is the one waiting for validation
+const draftStatuses = Object.keys(statuses.dataset).filter(s => s !== 'error').join(',')
 const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + b, 0)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
-const processingsErrorFetch = useFetch<{ count: number }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0&statuses=error` : null)
+const processingsErrorFetch = useFetch<{ count: number }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0&statuses=error` : null, { notifError: false })
 const datasetsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 const applicationsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value && !$uiConfig.disableApplications ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
-const reusesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/reuses?size=0` : null)
-// only the reuses and pages lines call the portals service, data-fair works without it
-const pagesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/pages?size=0` : null)
+// another service down must not raise a toast on the home page: its line just stays hidden
+const reusesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/reuses?size=0` : null, { notifError: false })
+const pagesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/pages?size=0` : null, { notifError: false })
 const datasetsDraftFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&draftStatus=${draftStatuses}` : null)
 
 // lines declared by another service (customers...), same "can" values as extraNavigationItems
 const can: Record<string, typeof canContrib> = { contrib: canContrib, admin: canAdmin, contribDep: canContribDep, adminDep: canAdminDep }
 const extraItems = ($uiConfig.extraTodoItems ?? []).map(extra => ({
   extra,
-  fetch: useFetch<Record<string, any>>(() => !extra.can || can[extra.can]?.value ? extra.url : null)
+  fetch: useFetch<Record<string, any>>(() => !extra.can || can[extra.can]?.value ? extra.url : null, { notifError: false })
 }))
 
 const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).join(',') })
