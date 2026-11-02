@@ -193,10 +193,7 @@ recomputing the *what* from the entry's expanded operation set (`classes` expand
   permissions editor warns about it in detailed mode when the meta-only has fragments. A public
   meta-only therefore has public fragments, data included — that is the point: their portal page and
   data are reachable from the "child datasets" section of the meta-only's portal page, which lists
-  all its fragments (`partOf=dataset:<id>`). The related-datasets picker of a meta-only also lists its
-  own fragments (`partOf=false,dataset:<id>`): a GTFS application finds its tables in the related
-  datasets; on the portal, the "see also" section only shows the published ones, so no fragment
-  appears twice.
+  all its fragments (`partOf=dataset:<id>`).
 - An entry whose derived *what* ends up empty is dropped entirely.
 - **A virtual dataset grants no read on its fragments.** No read is derived from a virtual
   `datasets` parent (case B only fires application → application, B' only for a meta-only parent). Reading the virtual dataset reads its
