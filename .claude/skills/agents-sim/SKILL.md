@@ -28,7 +28,10 @@ while someone is relying on that data.
 
 ## Steps
 
-1. **Read the case list** in `simulations/cases/index.ts`. Note each `name` and `goal`.
+1. **Read the case lists**: `simulations/cases/index.ts` (the back-office assistant)
+   and `simulations/cases/autonomous-agents.ts` (an autonomous agent on the mcp
+   server, see docs/architecture/agent-integration.md). Note each `name` and `goal`.
+   `SIM_CASES` selects across both.
 
 2. **Delete evidence from earlier runs.**
 
@@ -81,12 +84,15 @@ while someone is relying on that data.
    fix it. Capture the pid and watch that instead:
 
    ```bash
-   nohup npm run simulate > sim.log 2>&1 &
+   nohup npm run simulate > simulations/tmp/sim-run.log 2>&1 &
    SIMPID=$!
    while kill -0 "$SIMPID" 2>/dev/null; do sleep 20; done
    ```
 
    For the same reason, never `pkill -f` a pattern taken from your own script.
+
+   The log goes with the rest of the evidence: `simulations/tmp/` is ignored by git, and step 2
+   clears it with the previous run's files.
 
 4. **Ignore the runner's own account of how it went.** The transcript at
    `simulations/tmp/sim-<case>.json` is the evidence. A Playwright `passed` line
@@ -96,7 +102,7 @@ while someone is relying on that data.
    `simulations/tmp/sim-<case>.run.json` for the recorded error instead.
 
 5. **Dispatch one `simulation-judge` subagent per valid case.** Give it paths, not
-   pasted content — transcripts carry every gateway request:
+   pasted content — a run's conversation exports can run to megabytes:
 
    - the case name and its goal
    - the transcript path, `simulations/tmp/sim-<case>.json`

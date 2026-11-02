@@ -135,16 +135,16 @@ const { t, locale } = useI18n()
 
 const summarizeContext = computed(() =>
   `The user wants help writing a summary for application "${application.value?.id}". ` +
-  'Use the application_summarizer subagent to produce a summary, passing it that applicationId. ' +
-  'Once you receive the summary, present it to the user and ask for their approval before applying it. ' +
+  'Write it following the write-application-summary skill. ' +
+  'Present it to the user and ask for their approval before applying it. ' +
   'If approved, use the set_application_summary tool to set it. If the user wants changes, adjust accordingly.'
 )
 const describeContext = computed(() =>
   `The user wants help writing a description for application "${application.value?.id}". ` +
   'The description field supports markdown and should be more detailed than the summary. ' +
-  'Ask the user what aspects they want to emphasize or any specific requirements, then use the ' +
-  'application_description_writer subagent, passing it that applicationId. ' +
-  'Once you receive the description, present it to the user and ask for their approval before applying it. ' +
+  'Ask the user what aspects they want to emphasize or any specific requirements, then write it ' +
+  'following the write-application-description skill. ' +
+  'Present it to the user and ask for their approval before applying it. ' +
   'If approved, use the set_application_description tool to set it. If the user wants changes, adjust accordingly.'
 )
 

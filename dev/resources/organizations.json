@@ -40,6 +40,15 @@
       "id": "test_user4",
       "role": "admin",
       "department": "dep2"
+    }, {
+      "id": "test_org1_agent_nhi",
+      "role": "contrib"
+    }, {
+      "id": "test_org1_lines_nhi",
+      "role": "admin"
+    }, {
+      "id": "test_org1_scope_nhi",
+      "role": "admin"
     }]
   },
   {

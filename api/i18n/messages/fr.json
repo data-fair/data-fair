@@ -1,5 +1,6 @@
 {
 	"errors": {
+		"activeAccountRequired": "Cette liste est limitée au compte actif et nécessite une session authentifiée.",
 		"missingBaseApp": "Modèle d'application inconnu ou à accès restreint.",
 		"missingApp": "Application configuration not found",
 		"brokenHTML": "La structure HTML est corrompue, les éléments html, head et body sont requis",

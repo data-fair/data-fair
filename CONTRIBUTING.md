@@ -19,7 +19,7 @@ Start the development environment (zellij >= 0.44; core containers + ui, api, mo
     npm run dev-zellij
     npm run dev-zellij -- --services events,agents   # with optional containers
 
-The footer shows the dev URL; log in with an account of `dev/resources/users.json`. From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
+The footer shows the dev URL; log in with an account of `dev/resources/users.template.json` (`users.json` is rendered from it, with the checkout's host and port, by `dev/render-users.mjs`, run by `df-dev setup` and before the containers start). From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
 
 Run test suite:
 

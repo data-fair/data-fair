@@ -476,6 +476,24 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
+  /**
+   * What /lines serves besides JSON, one media type per value of `format` (the route sets them:
+   * api/src/datasets/routes/read.ts). A generated export tool names and types its file from them.
+   */
+  const linesFileContent: Record<string, any> = {
+    'text/csv': { schema: { type: 'string' } },
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } },
+    'application/vnd.oasis.opendocument.spreadsheet': { schema: { type: 'string', format: 'binary' } },
+    ...(hasBbox
+      ? {
+          'application/geo+json': { schema: { type: 'object' } },
+          'application/x-protobuf': { schema: { type: 'string', format: 'binary' } },
+          'application/zip': { schema: { type: 'string', format: 'binary' } },
+          'text/plain': { schema: { type: 'string' } }
+        }
+      : {})
+  }
+
   const formatParam = {
     in: 'query',
     name: 'format',
@@ -823,7 +841,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       }
                     }
                   }
-                }
+                },
+                ...linesFileContent
               }
             },
             ...errorResponses
@@ -1196,6 +1215,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Télécharger',
           description: "Télécharger le jeu de données dans son format d'origine.",
           operationId: 'downloadOriginalData',
+          'x-agent': xAgent.downloadOriginalData,
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
@@ -1214,6 +1234,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           summary: 'Télécharger (format converti)',
           description: 'Télécharger le jeu de données après conversion automatique vers un format standard (CSV typiquement).',
           operationId: 'downloadConvertedData',
+          'x-agent': xAgent.downloadConvertedData,
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {

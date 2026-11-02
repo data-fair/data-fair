@@ -1,5 +1,6 @@
-import type { SessionState } from '@data-fair/lib-express'
+import { hasScope, type SessionState } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { acceptedScopes, type ScopeFamily } from './scopes.ts'
 
 /**
  * A hypothetical visitor, serialized as colon-separated segments (like the owner filters):
@@ -70,7 +71,7 @@ export const parseAsVisitor = (raw: string, accountId: string): AsVisitor => {
  * The descriptor is client-supplied on purpose: the caller is already admin over everything in
  * the forced scope, so a wrong role/department cannot escalate access.
  */
-export const getAsVisitorContext = (rawParam: string, sessionState: SessionState, adminRole: string): AsVisitorContext => {
+export const getAsVisitorContext = (rawParam: string, sessionState: SessionState, adminRole: string, family?: ScopeFamily): AsVisitorContext => {
   if (!sessionState.user) throw httpError(401)
   // API keys mint a session with accountRole = adminRole for every org key regardless of scope
   // (see readApiKey in api-key.ts), so the adminRole check below cannot distinguish a real org
@@ -85,6 +86,11 @@ export const getAsVisitorContext = (rawParam: string, sessionState: SessionState
   }
   if (!sessionState.user.adminMode && sessionState.accountRole !== adminRole) {
     throw httpError(403, 'le paramètre asVisitor est réservé aux administrateurs de l\'organisation')
+  }
+  // auditing as a visitor is an admin act: a scoped session also needs the admin tier of the
+  // audited family (fail closed when the caller names none)
+  if (sessionState.scopes && !(family && hasScope(sessionState, acceptedScopes(family, 'admin')))) {
+    throw httpError(403, 'le paramètre asVisitor requiert le scope d\'administration de la famille de ressources')
   }
 
   const visitor = parseAsVisitor(rawParam, account.id)

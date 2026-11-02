@@ -8,7 +8,7 @@ export function cleanRow (row: any): any {
  *
  * `open_edit_line_dialog` takes a line `_id` and its description says to find one
  * with search_data; cleanRow meant that could never work, even when the caller
- * passed `select=_id`. A judged run spent four sub-agent dispatches on that
+ * passed `select=_id`. A judged run spent four delegated query rounds on that
  * impossibility and ended up asking the person to find the row and click it.
  *
  * `_i` and `_rand` stay out whatever the select says: they address nothing, and a
@@ -67,8 +67,8 @@ export function normalizeSort (sort: string): string {
   }).filter(Boolean).join(',')
 }
 
-// Full filtering guide — the single rich source. Embedded once into the dataset_data
-// subagent prompt. Covers column filters AND the geo/temporal params (bbox, geoDistance,
+// Full filtering guide — the single rich source. Embedded once into the query-dataset-data
+// skill. Covers column filters AND the geo/temporal params (bbox, geoDistance,
 // dateMatch), so the spec lives in one place instead of being repeated across every tool.
 export const filtersGuide = `Filtering covers column filters (the \`filters\` object) plus three separate geo/temporal params (bbox, geoDistance, dateMatch).
 
@@ -140,8 +140,8 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
 
 /**
  * Consumer-side counterpart to buildFilterQueryString, for browser apps that feed a
- * filterQuery into their `navigate` tool. The dataset_data subagent returns filterQuery as
- * a complete query string and the caller is told to pass it verbatim, but LLMs sometimes
+ * filterQuery into their `navigate` tool. The query tools print filterQuery as a complete
+ * query string and the assistant is told to pass it verbatim, but LLMs sometimes
  * wrap it as "filterQuery=<the whole query string>". Detect that single-param mistake and
  * return the inner query string; otherwise return the input unchanged.
  */

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
 import { createAgentTranslator } from '~/composables/agent/utils'
 import {
@@ -14,15 +14,11 @@ import { isEditableColumn } from './agent-schema-annotation-tools-logic'
 const messages: Record<string, Record<string, string>> = {
   fr: {
     readColumnValues: 'Lire les valeurs des colonnes codées',
-    setColumnLabels: 'Poser les libellés de valeurs',
-    columnLabeler: 'Libeller les valeurs codées',
-    columnLabelerDesc: 'Lire les valeurs réelles des colonnes codées, puis leur donner un libellé lisible.'
+    setColumnLabels: 'Poser les libellés de valeurs'
   },
   en: {
     readColumnValues: 'Read coded column values',
-    setColumnLabels: 'Set value labels',
-    columnLabeler: 'Label coded values',
-    columnLabelerDesc: 'Read the real values of coded columns, then give each one a readable label.'
+    setColumnLabels: 'Set value labels'
   }
 }
 
@@ -133,13 +129,13 @@ export function useAgentColumnLabelsTools (
   })
 
   const columnLabelerPrompts: Record<string, string> = {
-    fr: `Tu poses les libellés de valeurs d'un jeu de données Data Fair. Une colonne codée (\`sexe\` valant 1 ou 2, \`nivgeo\` valant COM ou ARM) est illisible telle quelle : les libellés la rendent lisible partout, dans les tableaux comme dans les graphiques, sans toucher à la donnée.
+    fr: `Poser les libellés de valeurs d'un jeu de données Data Fair. Une colonne codée (\`sexe\` valant 1 ou 2, \`nivgeo\` valant COM ou ARM) est illisible telle quelle : les libellés la rendent lisible partout, dans les tableaux comme dans les graphiques, sans toucher à la donnée.
 
 Tâche :
 1. Appelle read_column_values pour voir les valeurs réelles et les libellés déjà posés.
 2. Pour chaque colonne codée, propose un libellé par valeur.
 3. Appelle set_column_labels avec l'ensemble. **C'est cet appel qui fait le travail.**
-4. Renvoie comme réponse finale le compte rendu de l'outil.
+4. Rapporte à l'utilisateur le compte rendu de l'outil.
 
 Règles :
 - **Ne libelle que les valeurs que l'outil t'a montrées.** Ne complète pas une nomenclature de mémoire : si tu crois qu'un code manque, dis-le, ne l'invente pas.
@@ -150,13 +146,13 @@ Règles :
 - N'écrase pas un libellé existant correct.
 
 Rédige dans la langue du jeu de données.`,
-    en: `You set the value labels of a Data Fair dataset. A coded column (\`sexe\` holding 1 or 2, \`nivgeo\` holding COM or ARM) is unreadable as such: labels make it readable everywhere, in tables and charts alike, without touching the data.
+    en: `Setting the value labels of a Data Fair dataset. A coded column (\`sexe\` holding 1 or 2, \`nivgeo\` holding COM or ARM) is unreadable as such: labels make it readable everywhere, in tables and charts alike, without touching the data.
 
 Task:
 1. Call read_column_values to see the real values and the labels already in place.
 2. For each coded column, propose one label per value.
 3. Call set_column_labels with the whole set. **That call is the work.**
-4. Return the tool's report as your final answer.
+4. Tell the user what the tool reported.
 
 Rules:
 - **Only label values the tool showed you.** Do not complete a nomenclature from memory: if you think a code is missing, say so, do not invent it.
@@ -169,12 +165,9 @@ Rules:
 Write in the language of the dataset.`
   }
 
-  useAgentSubAgent({
-    name: 'column_labeler',
-    title: t('columnLabeler'),
-    description: t('columnLabelerDesc'),
-    model: 'summarizer',
-    prompt: columnLabelerPrompts[locale.value] ?? columnLabelerPrompts.en,
-    tools: ['read_column_values', 'set_column_labels']
+  useAgentSkill({
+    name: 'label-column-values',
+    description: 'How to give readable labels to the coded values of the current dataset\'s columns (1 becomes Male, COM becomes Municipality). Load it before labelling values.',
+    body: columnLabelerPrompts[locale.value] ?? columnLabelerPrompts.en
   })
 }

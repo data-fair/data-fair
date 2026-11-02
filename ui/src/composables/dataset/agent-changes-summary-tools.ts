@@ -1,18 +1,14 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator } from '~/composables/agent/utils'
 import { diffDataset } from './agent-changes-summary-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
-    readDatasetChanges: 'Lire les modifications du jeu de données',
-    changesSummarizerSubAgent: 'Résumer les modifications du jeu de données',
-    changesSummarizerSubAgentDesc: 'Lire les modifications en attente d\'enregistrement, métadonnées et structure, puis les résumer.'
+    readDatasetChanges: 'Lire les modifications du jeu de données'
   },
   en: {
-    readDatasetChanges: 'Read dataset changes',
-    changesSummarizerSubAgent: 'Summarize dataset changes',
-    changesSummarizerSubAgentDesc: 'Read the changes pending save, metadata and structure alike, then summarize them.'
+    readDatasetChanges: 'Read dataset changes'
   }
 }
 
@@ -48,7 +44,7 @@ export function useAgentDatasetChangesSummaryTools (locale: Ref<string>, sides: 
   })
 
   const changesSummarizerPrompts: Record<string, string> = {
-    fr: `Tu relis les modifications qu'un utilisateur s'apprête à enregistrer sur un jeu de données Data Fair. Ton rôle est qu'il ne sauvegarde rien sans l'avoir vu.
+    fr: `Relire les modifications qu'un utilisateur s'apprête à enregistrer sur un jeu de données Data Fair, pour qu'il ne sauvegarde rien sans l'avoir vu.
 
 Tâche :
 1. Appelle read_dataset_changes pour obtenir la liste des modifications en attente.
@@ -65,7 +61,7 @@ Priorités :
 - Un type forcé qui rétrécit un type détecté (nombre vers entier, texte vers date) doit être signalé explicitement : il modifie les valeurs indexées.
 - Pour les changements nombreux et de même nature, donne le compte plutôt que la liste ("libellés posés sur 14 colonnes").
 - Ne donne aucun avis sur la pertinence des changements, dis seulement ce qu'ils sont.`,
-    en: `You review the changes a user is about to save on a Data Fair dataset. Your job is that nothing gets saved unseen.
+    en: `Reviewing the changes a user is about to save on a Data Fair dataset, so that nothing gets saved unseen.
 
 Task:
 1. Call read_dataset_changes to get the pending changes.
@@ -84,12 +80,9 @@ Priorities:
 - Do not judge whether the changes are a good idea, only say what they are.`
   }
 
-  useAgentSubAgent({
-    name: 'dataset_changes_summarizer',
-    title: t('changesSummarizerSubAgent'),
-    description: t('changesSummarizerSubAgentDesc'),
-    model: 'summarizer',
-    prompt: changesSummarizerPrompts[locale.value] ?? changesSummarizerPrompts.en,
-    tools: ['read_dataset_changes']
+  useAgentSkill({
+    name: 'summarize-dataset-changes',
+    description: 'How to summarize everything waiting to be saved on the current dataset, metadata and structure alike. Load it before summarizing the pending changes.',
+    body: changesSummarizerPrompts[locale.value] ?? changesSummarizerPrompts.en
   })
 }

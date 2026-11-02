@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator, toCsv, fetchSampleRows } from '~/composables/agent/utils'
 import {
   type SchemaAnnotation,
@@ -13,15 +13,11 @@ import {
 const messages: Record<string, Record<string, string>> = {
   fr: {
     readSchemaForAnnotation: 'Lire le schéma pour annotation',
-    annotateSchema: 'Annoter les colonnes du schéma',
-    schemaAnnotator: 'Annoter le schéma d\'un jeu de données',
-    schemaAnnotatorDesc: 'Lire le schéma et des exemples de données, puis poser libellés, descriptions, concepts et groupes sur les colonnes.'
+    annotateSchema: 'Annoter les colonnes du schéma'
   },
   en: {
     readSchemaForAnnotation: 'Read schema for annotation',
-    annotateSchema: 'Annotate schema columns',
-    schemaAnnotator: 'Annotate a dataset schema',
-    schemaAnnotatorDesc: 'Read the schema and sample data, then set column titles, descriptions, concepts and groups.'
+    annotateSchema: 'Annotate schema columns'
   }
 }
 
@@ -118,13 +114,13 @@ export function useAgentSchemaAnnotationTools (
   })
 
   const schemaAnnotatorPrompts: Record<string, string> = {
-    fr: `Tu es un expert en documentation de données pour Data Fair, une plateforme de publication de données ouvertes. Tu annotes les colonnes d'un jeu de données pour qu'elles soient lisibles sans documentation externe.
+    fr: `Annoter les colonnes d'un jeu de données Data Fair, une plateforme de publication de données ouvertes, pour qu'elles soient lisibles sans documentation externe.
 
 Tâche :
 1. Appelle read_schema_for_annotation : schéma courant, exemples de données, concepts assignables.
 2. Pour chaque colonne, décide libellé, description, concept et groupe.
 3. Appelle annotate_schema avec l'ensemble de tes décisions. **C'est cet appel qui fait le travail** — un rapport sans appel d'outil ne sert à rien.
-4. Renvoie comme réponse finale le compte rendu que l'outil t'a retourné, sans le réécrire.
+4. Rapporte à l'utilisateur le compte rendu que l'outil t'a retourné, sans le réécrire.
 
 Libellés :
 - 2 à 5 mots, capitalisation naturelle ("Montant HT", "Date de naissance")
@@ -149,13 +145,13 @@ Groupes :
 - Des noms courts et évidents : « Identification », « Adresse », « Géolocalisation », « Mesures ». Toute colonne d'un même sujet dans le même groupe.
 
 Rédige dans la langue du titre et des annotations existantes du jeu.`,
-    en: `You are a data documentation expert for Data Fair, an open data publishing platform. You annotate a dataset's columns so they can be read without external documentation.
+    en: `Annotating the columns of a dataset on Data Fair, an open data publishing platform, so they can be read without external documentation.
 
 Task:
 1. Call read_schema_for_annotation: current schema, sample data, assignable concepts.
 2. For each column decide on a title, a description, a concept and a group.
 3. Call annotate_schema with all your decisions. **That call is the work** — a report with no tool call achieves nothing.
-4. Return the tool's report as your final answer, without rewriting it.
+4. Give the user the tool's report, without rewriting it.
 
 Titles:
 - 2 to 5 words, natural capitalization ("Net amount", "Date of birth")
@@ -182,12 +178,9 @@ Groups:
 Write in the language of the dataset title and existing annotations.`
   }
 
-  useAgentSubAgent({
-    name: 'schema_annotator',
-    title: t('schemaAnnotator'),
-    description: t('schemaAnnotatorDesc'),
-    model: 'summarizer',
-    prompt: schemaAnnotatorPrompts[locale.value] ?? schemaAnnotatorPrompts.en,
-    tools: ['read_schema_for_annotation', 'annotate_schema']
+  useAgentSkill({
+    name: 'annotate-schema',
+    description: 'How to set titles, descriptions, concepts and groups on the current dataset\'s columns. Load it before annotating columns.',
+    body: schemaAnnotatorPrompts[locale.value] ?? schemaAnnotatorPrompts.en
   })
 }

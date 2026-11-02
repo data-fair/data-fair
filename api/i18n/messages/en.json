@@ -1,5 +1,6 @@
 {
 	"errors": {
+		"activeAccountRequired": "This listing is limited to the active account and needs an authenticated session.",
 		"missingBaseApp": "The base application is unknown or as a restricted access.",
 		"missingApp": "Application configuration not found",
 		"brokenHTML": "HTML structure is broken, expect html, head and body elements",

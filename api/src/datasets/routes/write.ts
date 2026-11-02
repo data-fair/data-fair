@@ -12,7 +12,7 @@ import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../../misc/utils/log-fields.ts'
 import { reqSession, reqSessionAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
-import { readDataset, reqDataset, reqDatasetOptional, reqDatasetFull, checkStorage, lockDataset, setReqDraft } from '../middlewares.ts'
+import { readDataset, reqDataset, reqDatasetOptional, reqDatasetFull, checkStorage, lockDataset, setReqDraft, assertWriteBodyPermissions, assertCreateBodyPermissions } from '../middlewares.ts'
 import { apiKeyMiddlewareWrite } from './_common.ts'
 import * as permissions from '../../misc/utils/permissions.ts'
 import { can } from '../../misc/utils/permissions.ts'
@@ -67,6 +67,8 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', sessionState)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
+    // the keys PATCH reserves to the admin operations (read API key, master data, publications...)
+    await assertCreateBodyPermissions(owner, body, sessionState)
     if (body.customMetadata) await prepareCustomMetadata(owner, body.customMetadata)
     if ((await limits.remaining(owner)).nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
@@ -184,6 +186,10 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
     // preparePatch -> applyPatch's $set, bypassing the owner-change gate, the parent validation
     // and the derived-ACL replacement of applyPartOfChange (spec §5).
     assertFragmentWriteBody(patch, dataset, false)
+
+    // the per key checks of PATCH (read API key, master data, publications, exports): the route
+    // chain only checked writeData. On the changed keys only, the unchanged ones were dropped above
+    assertWriteBodyPermissions(dataset, patch, sessionState, permissions.reqBypassPermissions(req))
 
     // TODO: do not use always as default value when the dataset is public or published ?
     const canBreak = can('datasets', dataset, 'writeDescriptionBreaking', reqSession(req))

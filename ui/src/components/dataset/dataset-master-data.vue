@@ -28,7 +28,6 @@
         :options="vjsfOptions"
         data-title="Master data"
         prefix-name="masterData_"
-        :sub-agent="true"
       />
     </v-form>
   </div>
@@ -96,7 +95,7 @@ const context = computed(() => ({
 
 const configureContext = computed(() => {
   const lines = [
-    'Use the subagent tool masterData_form to help the user configure the master data settings for the current dataset.',
+    'Help the user configure the master data settings for the current dataset with the masterData_ form tools, following the master-data-form skill.',
     'Start the session by asking the user what they want to achieve.',
   ]
   if (dataset.value?.title) lines.push(`The dataset title is "${dataset.value.title}".`)

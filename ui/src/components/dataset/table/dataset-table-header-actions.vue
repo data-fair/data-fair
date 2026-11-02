@@ -203,7 +203,6 @@
             :loading="addLine.loading.value"
             :extension="true"
             :owner="!ownLines"
-            :sub-agent="true"
             prefix-name="editLine_"
             :data-title="t('addLine')"
             @on-file-upload="(f: File) => {file = f}"

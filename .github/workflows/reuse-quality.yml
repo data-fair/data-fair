@@ -171,6 +171,10 @@ jobs:
     - name: Use localhost as DEV_HOST in CI
       run: sed -i 's/^DEV_HOST=.*/DEV_HOST=localhost/' .env
 
+    # simple-directory mounts it, with the host and port of .env
+    - name: Render dev users
+      run: node dev/render-users.mjs
+
     # the zellij panes get .env from df-dev; here every later step does
     - name: Export .env to the next steps
       run: cat .env >> "$GITHUB_ENV"

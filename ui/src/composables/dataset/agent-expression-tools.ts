@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { useAgentTool, useAgentSkill } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
 import { createAgentTranslator, agentToolError, csvEscape, toCsv, fetchSampleRows } from '~/composables/agent/utils'
 import { getAvailableSchema, executeGetExpressionContext } from './agent-expression-tools-logic'
@@ -13,17 +13,13 @@ const messages: Record<string, Record<string, string>> = {
     getExpressionContext: 'Obtenir le contexte de l\'expression',
     getSampleData: 'Lire des exemples de données',
     testExpression: 'Tester une expression',
-    setExpression: 'Définir l\'expression',
-    expressionHelper: 'Aide à l\'écriture d\'expressions',
-    expressionHelperDesc: 'Aide à écrire des expressions pour les colonnes calculées. Décrivez le calcul souhaité.'
+    setExpression: 'Définir l\'expression'
   },
   en: {
     getExpressionContext: 'Get expression context',
     getSampleData: 'Read sample data',
     testExpression: 'Test an expression',
-    setExpression: 'Set the expression',
-    expressionHelper: 'Expression writing helper',
-    expressionHelperDesc: 'Help write expressions for calculated columns. Describe the desired computation.'
+    setExpression: 'Set the expression'
   }
 }
 
@@ -215,15 +211,15 @@ f(x) = x * 2; f(column_name)
 - NO_VALUE(): an undefined result — the calculated column is left empty for this row (same as an empty string result). To test whether a value is undefined, use "not DEFINED(value)"`
 
   const expressionHelperPrompts: Record<string, string> = {
-    fr: `Tu es un assistant d'écriture d'expressions pour Data Fair, une plateforme de gestion de données. Tu aides les utilisateurs à écrire des expressions expr-eval pour les colonnes calculées.
+    fr: `Écrire une expression expr-eval pour une colonne calculée d'un jeu de données Data Fair, une plateforme de gestion de données.
 
 ## Processus
-1. L'index de l'extension et la description de ce que l'utilisateur souhaite sont fournis dans le contexte.
+1. L'index de l'extension est donné par la page ; ce que l'utilisateur souhaite calculer, par la conversation.
 2. Appelle get_expression_context avec extensionIndex pour comprendre les colonnes disponibles et le type de la propriété cible.
 3. Appelle get_sample_data pour voir les valeurs réelles.
 4. Écris une expression et appelle test_expression pour la valider.
 5. En cas d'erreurs, corrige et réessaie.
-6. Une fois l'expression validée, renvoie l'expression et les résultats de test comme réponse finale.
+6. Une fois l'expression validée, présente-la à l'utilisateur avec les résultats de test. S'il l'approuve, applique-la avec set_expression.
 ${expressionLanguageRef}
 
 ### Important
@@ -231,15 +227,15 @@ ${expressionLanguageRef}
 - Le résultat doit correspondre au type de la propriété cible (string, number, integer, boolean).
 - Pour les résultats string qui doivent être des tableaux, utilise un séparateur défini sur la propriété.
 - Réponds dans la langue de l'utilisateur.`,
-    en: `You are an expression writing assistant for Data Fair, a data management platform. You help users write expr-eval expressions for calculated columns.
+    en: `Writing an expr-eval expression for a calculated column of a dataset on Data Fair, a data management platform.
 
 ## Workflow
-1. The extension index and the user's description of what they want are provided in the context.
+1. The page gives the extension index; the conversation, what the user wants to compute.
 2. Call get_expression_context with the extensionIndex to understand available columns and the target property type.
 3. Call get_sample_data to see real data values.
 4. Write an expression and call test_expression to validate it.
 5. If there are errors, fix and retry.
-6. Once the expression works correctly, return the validated expression and test results as your final response.
+6. Once the expression works correctly, show it to the user with the test results. If they approve, apply it with set_expression.
 ${expressionLanguageRef}
 
 ### Important
@@ -249,11 +245,9 @@ ${expressionLanguageRef}
 - Respond in the same language as the user.`
   }
 
-  useAgentSubAgent({
-    name: 'expression_helper',
-    title: t('expressionHelper'),
-    description: t('expressionHelperDesc'),
-    prompt: expressionHelperPrompts[locale.value] ?? expressionHelperPrompts.en,
-    tools: ['get_expression_context', 'get_sample_data', 'test_expression']
+  useAgentSkill({
+    name: 'write-expression',
+    description: 'How to write, test and apply the expr-eval expression of a calculated column. Load it before writing one.',
+    body: expressionHelperPrompts[locale.value] ?? expressionHelperPrompts.en
   })
 }

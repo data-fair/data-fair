@@ -48,3 +48,39 @@ test.describe('contract fixes pinned on the generated root document', () => {
     assert.match(next.description, /même requête/)
   })
 })
+
+/** The multipart schema of an operation, its $ref followed. */
+const multipartSchema = (doc: any, operationId: string): any => {
+  const schema = operation(doc, operationId).requestBody.content['multipart/form-data'].schema
+  return schema.$ref ? doc.components.schemas[schema.$ref.split('/').pop()] : schema
+}
+
+test.describe('file operations: the document declares what the upload and export routes handle', () => {
+  test('POST /datasets and PUT /datasets/{id} declare the data file, the attachments and the body part', async () => {
+    const doc = (await load())('https://example.test')
+    for (const id of ['postDataset', 'putDataset']) {
+      const schema = multipartSchema(doc, id)
+      assert.equal(schema.properties.file.format, 'binary', id)
+      assert.equal(schema.properties.attachments.format, 'binary', id)
+      assert.equal(schema.properties.body.type, 'string', id)
+      assert.equal(schema.properties.body.contentMediaType, undefined, `${id}: JSON text, not a file part`)
+      assert.equal(schema.properties.title.type, 'string', `${id}: metadata parts stay declared one by one`)
+      assert.equal(schema.required, undefined, `${id}: a dataset is also created without a file (initFrom, editable, virtual)`)
+      assert.equal(schema.additionalProperties, undefined, `${id}: <field>_encoding parts are accepted too`)
+    }
+  })
+  test('readLines declares the file formats its format parameter serves, JSON unchanged', async () => {
+    const doc = (await load())('https://example.test')
+    const content = operation(doc, 'readLines').responses[200].content
+    for (const type of [
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.oasis.opendocument.spreadsheet',
+      'application/geo+json',
+      'application/zip',
+      'application/x-protobuf',
+      'text/plain'
+    ]) assert.ok(content[type], type)
+    assert.equal(content['application/json'].schema.properties.results.type, 'array')
+  })
+})

@@ -1,17 +1,5 @@
 import type { Ref } from 'vue'
-import { useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { createAgentTranslator } from '~/composables/agent/utils'
-
-const messages: Record<string, Record<string, string>> = {
-  fr: {
-    dataQualitySubAgent: 'Vérifier la qualité des données',
-    dataQualitySubAgentDesc: 'Analyser un jeu de données pour détecter les problèmes de qualité : valeurs manquantes, doublons, valeurs aberrantes et incohérences de format.'
-  },
-  en: {
-    dataQualitySubAgent: 'Check data quality',
-    dataQualitySubAgentDesc: 'Analyze a dataset for quality issues: missing values, duplicates, outliers, and format inconsistencies.'
-  }
-}
+import { useAgentSkill } from '@data-fair/lib-vue-agents'
 
 /**
  * Requires the data query tools (get_dataset_schema, search_data, aggregate_data,
@@ -19,10 +7,8 @@ const messages: Record<string, Record<string, string>> = {
  * These are registered in default-layout.vue.
  */
 export function useAgentDataQualityTools (locale: Ref<string>) {
-  const t = createAgentTranslator(messages, locale)
-
   const dataQualityPrompts: Record<string, string> = {
-    fr: `Tu es un analyste qualité des données pour Data Fair. Ta mission est de réaliser un audit qualité systématique d'un jeu de données et de produire un rapport clair et actionnable.
+    fr: `Réaliser l'audit qualité systématique d'un jeu de données Data Fair et en tirer un rapport clair et actionnable.
 
 Processus — suis ces étapes dans l'ordre :
 
@@ -78,7 +64,7 @@ Règles importantes :
 - Rapporte toujours les résultats de manière concise avec des chiffres et pourcentages
 - Réponds dans la langue de la question de l'utilisateur
 - Si le jeu a beaucoup de colonnes (>15), concentre-toi sur les plus importantes et mentionne que tu as échantillonné`,
-    en: `You are a data quality analyst for Data Fair. Your job is to perform a systematic quality audit of a dataset and produce a clear, actionable report.
+    en: `Performing a systematic quality audit of a Data Fair dataset and producing a clear, actionable report.
 
 Workflow — follow these steps in order:
 
@@ -136,11 +122,9 @@ Important rules:
 - If the dataset has many columns (>15), focus on the most important ones and mention you sampled a subset`
   }
 
-  useAgentSubAgent({
-    name: 'data_quality_checker',
-    title: t('dataQualitySubAgent'),
-    description: t('dataQualitySubAgentDesc'),
-    prompt: dataQualityPrompts[locale.value] ?? dataQualityPrompts.en,
-    tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
+  useAgentSkill({
+    name: 'check-data-quality',
+    description: 'How to audit a dataset\'s data quality (missing values, duplicates, outliers, format inconsistencies) with the data query tools. Load it before a quality check.',
+    body: dataQualityPrompts[locale.value] ?? dataQualityPrompts.en
   })
 }

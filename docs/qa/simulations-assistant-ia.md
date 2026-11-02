@@ -53,7 +53,7 @@ Une référence prise le matin sur la même base a échoué sur trois cas. Chaqu
 
 1. **Reprise de l'attente avec Haiku.** Après une interruption, Sonnet reprend l'attente dans tous les cas observés, Haiku seulement 1 fois sur 5. Un rappel placé dans le tour suivant, en cours de validation, ne suffit pas pour Haiku. Il reste à faire surveiller l'action attendue par le chat lui-même, sans dépendre du modèle.
 2. **Cas `creation`.** Il faut soit accepter le second clic dans l'objectif, soit permettre d'initialiser le jeu depuis un jeu existant. Il manque aussi un outil pour activer le suivi « qui a modifié quoi ».
-3. **Sous-agent de données.** Il invente parfois un lien incomplet, un titre, ou un filtre mal formé.
+3. **Interrogation des données (skill `query-dataset-data`).** L'assistant charge ce guide puis interroge les données avec les outils de la page ; il invente parfois un lien incomplet, un titre, ou un filtre mal formé.
 4. **Modèle cible.** Le modèle envisagé en production est DeepSeek V4.1 Flash. Ses benchmarks agentiques le placent plutôt au niveau de Sonnet, mais seule une passe de simulation dira s'il reprend l'attente comme Sonnet ou l'oublie comme Haiku.
 5. **Couverture.** 7 cas couvrent 6 des 17 parcours documentés, et aucun ne concerne les applications. Il faut aussi un cas en anglais et un cas sans droit d'écriture.
 6. **Rythme.** On relance la suite avant chaque version qui touche l'assistant : deux passes Sonnet et une passe sur le modèle cible. Chaque run consomme du quota et réinitialise les données de test du poste.
@@ -64,7 +64,7 @@ Un utilisateur simulé (la persona) poursuit un objectif avec le vrai assistant,
 
 - **Un cas = une page, une persona, un objectif**, sans résultat attendu écrit à l'avance.
 - **La persona tourne sur Sonnet**, pour simuler un utilisateur crédible. Elle regarde l'écran, clique et saisit.
-- **L'assistant tourne sur Sonnet par défaut, et doit aussi être validé sur Haiku.** Un parcours que seul un grand modèle réussit n'est pas assez guidé. Les sous-agents et la modération tournent sur Haiku.
+- **L'assistant tourne sur Sonnet par défaut, et doit aussi être validé sur Haiku.** Un parcours que seul un grand modèle réussit n'est pas assez guidé. Les rôles de fond (outils et consolidation de la mémoire, compaction, modération) tournent sur Haiku.
 - **Un run invalide n'est pas un échec produit.** Une limite de débit, un refus du service ou une panne du pont vers le modèle rend le run invalide, et il n'est pas jugé.
 
 La suite se lance avec le skill `/agents-sim`. Elle reste hors de `npm test` et de la CI, à cause de son coût en quota.

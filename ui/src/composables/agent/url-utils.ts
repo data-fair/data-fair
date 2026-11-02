@@ -71,7 +71,7 @@ export function suggestRoutes (routePaths: string[], attemptedPath: string): str
 
 /**
  * What a navigation did to the tools the agent can call. It used to say only « this page's
- * agent tools are registered »: a judged run took that to mean its page form's sub-agent was
+ * agent tools are registered »: a judged run took that to mean its page form's tools were
  * still there after leaving the editor, and told the person its tools were broken.
  */
 export function toolsChangeNote (before: string[], after: string[]): string {

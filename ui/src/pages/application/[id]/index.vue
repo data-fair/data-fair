@@ -788,7 +788,7 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs: any[] = [
-    { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → application_summarizer subagent (≤300 char summary); next to the description → application_description_writer subagent (500-2000 char markdown).' },
+    { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → the write-application-summary skill (≤300 char summary); next to the description → the write-application-description skill (500-2000 char markdown).' },
   ]
   if (!application.value.partOf) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' })
@@ -802,7 +802,7 @@ const sections = computedDeepDiff(() => {
   result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons appear in the section header when there are unsaved changes.' }
 
   // Render section
-  const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }]
+  const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_ form tools and their app-config-form skill assist). Use get_application_config to read the current validated configuration.' }]
   // fragments are hidden from every listing, this tab is where they are found
   if (!application.value.partOf) {
     renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })

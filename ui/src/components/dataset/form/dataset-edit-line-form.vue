@@ -3,7 +3,6 @@
     v-model="model"
     :schema="editSchema"
     :options="vjsfOptions"
-    :sub-agent="subAgent"
     :prefix-name="prefixName"
     :data-title="dataTitle"
   />
@@ -73,7 +72,7 @@ import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle, owner } = defineProps({
+const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, prefixName, dataTitle, owner } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   // let the user set the line owner (free account id), only meaningful on the standard /lines routes
   owner: { type: Boolean, default: false },
@@ -81,7 +80,6 @@ const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, subAgent, 
   extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   roPrimaryKey: { type: Boolean, default: false },
-  subAgent: { type: Boolean, default: false },
   prefixName: { type: String, default: undefined },
   dataTitle: { type: String, default: undefined }
 })
@@ -96,12 +94,13 @@ const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 
 // The dialog reports itself from here, not from the watcher that flips the
 // dialog flag, because this is the moment the form exists. It is context, not a
-// wake-up signal: the openers wait for this form's editLine_form subagent before
+// wake-up signal: the openers wait for this form's editLine_ tools before
 // returning, so the event of a dialog the assistant opened lands in the opener's
 // own result. It was once the thing the assistant waited on, which only worked
 // when the event happened to arrive after that result — never for the add
 // dialog, whose form is bundled with it rather than loaded asynchronously.
-if (subAgent) {
+// Only the dialogs the assistant drives name their tools (prefix-name); the embedded form does not.
+if (prefixName) {
   const { lineDialog } = useDatasetEdition()
   onMounted(() => {
     emitAgentEvent('dataset-line-dialog-opened', { id, mode: lineDialog.value?.mode })

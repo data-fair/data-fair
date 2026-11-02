@@ -17,7 +17,7 @@
     "./list-datasets": "./list-datasets.js",
     "./describe-dataset": "./describe-dataset.js",
     "./geocode-address": "./geocode-address.js",
-    "./dataset-data-subagent": "./dataset-data-subagent.js",
+    "./dataset-data-skill": "./dataset-data-skill.js",
     ".": "./index.js"
   },
   "files": [

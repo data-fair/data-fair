@@ -2,7 +2,7 @@ import express from 'express'
 import config from '#config'
 import mongo from '#mongo'
 import * as ajv from '../misc/utils/ajv.ts'
-import { reqAdminMode, reqUserAuthenticated, secretKeyMatches } from '@data-fair/lib-express'
+import { reqAdminMode, reqUserAuthenticated, secretKeyMatches, allowAnyScope } from '@data-fair/lib-express'
 import type { Limits, Request } from '#types'
 import type { Response, NextFunction, RequestHandler } from 'express'
 import type { Filter } from 'mongodb'
@@ -72,7 +72,8 @@ router.post('/:type/:id', isSuperAdmin as RequestHandler, async (req, res, next)
 })
 
 // A user can get limits information for himself only
-router.get('/:type/:id', isAccountMember as RequestHandler, async (req, res, next) => {
+// allowAnyScope: the UIs read the account limits on load, whatever the scopes of the session
+router.get('/:type/:id', allowAnyScope, isAccountMember as RequestHandler, async (req, res, next) => {
   const limits = await getLimits({ type: req.params.type as 'user' | 'organization', id: req.params.id })
   if (!limits) {
     res.status(404).send()

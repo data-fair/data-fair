@@ -7,7 +7,7 @@ import * as findUtils from '../misc/utils/find.ts'
 import { clean } from './operations.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
-import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
+import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession, allowAnyScope } from '@data-fair/lib-express'
 import type { BaseAppWithContext, Request } from '#types'
 import { initBaseApp, syncBaseApp } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
@@ -68,7 +68,8 @@ const getQuery = (req, showAll = false) => {
 }
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
-router.get('', cacheHeaders.noCache, async (_req, res) => {
+// allowAnyScope on the read routes: the catalog of base applications is read for identity only
+router.get('', allowAnyScope, cacheHeaders.noCache, async (_req, res) => {
   const req = _req as Request
   const sessionState = reqSession(req)
   const { query, privateAccess } = getQuery(req)
@@ -177,7 +178,7 @@ router.get('', cacheHeaders.noCache, async (_req, res) => {
   res.send({ count, results })
 })
 
-router.get('/:id/icon', async (req, res, next) => {
+router.get('/:id/icon', allowAnyScope, async (req, res, next) => {
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
@@ -189,7 +190,7 @@ router.get('/:id/icon', async (req, res, next) => {
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
 })
-router.get('/:id/thumbnail', async (req, res, next) => {
+router.get('/:id/thumbnail', allowAnyScope, async (req, res, next) => {
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
