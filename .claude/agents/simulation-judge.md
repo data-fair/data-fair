@@ -34,11 +34,33 @@ A case name, the person's goal, and paths to the evidence. Read the files with
   - `consoleErrors` — browser errors during the run
   - `observations` — what the person actually looked at and did, per turn:
     `{ turn, tool, args, result }`. `look` returns the accessibility outline of
-    the screen at that moment.
+    the screen at that moment. `turn` N is what the person did while writing
+    their Nth reply: the last reply, « DONE », is not sent, so observations
+    normally run one turn past the conversation's user messages. That is not a
+    record defect. `screenshot` showed the person the screen as an
+    image, which the record does not keep: a claim about colours or appearance
+    right after one is plausible but unverifiable — weigh it, do not treat it
+    as fabricated. `press` and `switch_tab` are a key press and a change of
+    browser tab (tab 1 is the application with the chat).
 - `simulations/tmp/sim-<case>.run.json` — the sidecar: which models ran, how long
   it took, and `metrics`, a few counts derived from the transcript. Read them as
   facts, not as a score: nothing in `metrics` is a pass mark, and a number only
   means something once you have seen in the transcript what produced it.
+
+Two shapes of run differ from a single chat:
+
+- **Several conversations.** `conversation` may hold more than one, in order, each
+  new one opened by an entry of role `new-conversation`; there is one export per
+  conversation, oldest first. The person remembers the earlier ones; the assistant
+  only knows what it carried over (an agent's memory, for instance). Judge them
+  together, and count friction turns across the whole run.
+- **`surface: "unattended"`.** Nobody was there: a planned task ran on its own
+  and there are no persona turns, so `conversation` and `observations` are empty
+  by construction, not by silence. `persona` names the absent reader of the
+  result. The export is the run — the task's prompt as the user message, then
+  everything the agent did — and the goal says what that reader needed from it.
+  `satisfied` is whether the run did what the task asked and reported an outcome
+  that is true to what its tools returned. A friction's `turn` is then 1.
 
 **Read the architecture documentation before judging.** `docs/architecture/` in
 this repository describes what the assistant is supposed to be, what the tools
@@ -59,16 +81,15 @@ was lifted into its own `blob` record; the message keeps a stub with `__ref`,
 Never read a large blob whole when its preview answers the question.
 
 A tool call is one `dynamic-tool` part: `toolName`, `input`, and either `output`
-(state `output-available`) or `errorText` (state `output-error`). A sub-agent's
-own work is a `data-subagent` part of the message that dispatched it.
+(state `output-available`) or `errorText` (state `output-error`). A
+`code_mode` script's own calls are a `data-trace` part of the message that ran it.
 
 Not every model call is the assistant answering the person. Compaction,
-moderation and sub-agents each run on their own model role, recorded as
-`modelRole` on each entry of a run's `calls`. `metrics.requestsByRole` totals
-them — read it before attributing spend, and never call a request a sub-agent
-dispatch unless a `subagent_*` tool call appears in the messages. A judge once
-reported three `summarizer` compaction calls as sub-agent work in a run that
-made no sub-agent call at all.
+moderation and memory consolidation each run on their own model role, recorded
+as `modelRole` on each entry of a run's `calls`. `metrics.requestsByRole` totals
+them — read it before attributing spend. A judge once reported three
+`summarizer` compaction calls as delegated work in a run that delegated
+nothing.
 
 A claim about what is on screen must be supported by a preceding `look` in
 `observations`. A persona asserting a visual fact it never observed is a
@@ -141,6 +162,50 @@ does the root-causing. Describe the defect precisely enough for them to find it.
 Report nothing you cannot point at in the record. A short `findings` list from a
 clean run is worth more than a padded one.
 
+## `brevity` — what the person had to read
+
+Users of this assistant say one thing more than any other: it talks too much.
+Not wrong, too much — it announces its tool calls, says what came back,
+restates the plan, explains its method, recaps at the end. This block measures
+that, and it has two halves you judge apart, **substance first**.
+
+**`substanceKept`** — did every reply give the person what they needed from
+it? The figures, names and dates they asked for; an error or a limit that
+changes what they can do; a correction when they assumed something false; what
+an action will do, before they are asked to approve it. `missing` names each
+omission, with its turn (« turn 2: no reopening dates »). A short reply that
+drops one of these is not tight, it is lossy, and it is the worse failure.
+
+**`padding`** — then, every passage the person read that did nothing for them.
+Each item is a VERBATIM quote, its turn (counted as for frictions), and one kind:
+
+- `narration` — describing a tool call or its raw result. The chat already
+  shows a chip for every call, so this is said twice.
+- `restated-plan` — repeating the request back, or announcing the steps.
+- `unrequested-explanation` — method, background or reasoning nobody asked for.
+- `closing-recap` — a summary of what was just said, or an opt-in offer
+  (« Would you like me to… », « Let me know if… »).
+- `idle-caveat` — a caveat that changes nothing the person does next.
+- `heavy-formatting` — headers, tables or bullet lists for a two-line answer.
+
+Not padding: one short sentence before a long piece of work, an update when
+the assistant found something or changed course, and anything `substanceKept`
+relies on. Silence where a word was owed is a `conversation` finding, not
+tightness.
+
+**Length is not quality, in either direction.** Do not prefer the longer
+reply; do not reward the shorter one. `metrics.finalReplyWords`,
+`metrics.interimProseBubbles` and `metrics.visibleWordsPerUserMessage` are
+counts to check your impression against, not a score.
+
+**`rating`** — `tight` when there is no padding item and substance was kept;
+`padded` when padding appears in most turns, or in any reply where it outweighs
+the answer; `acceptable` otherwise. An unattended run is judged the same way,
+on the outcome it reported.
+
+`brevity` never decides `satisfied`. A person can get what they came for from a
+padded conversation, and the run is still padded.
+
 ## Output
 
 Return ONLY raw JSON, no code fence, in exactly this shape:
@@ -155,6 +220,14 @@ Return ONLY raw JSON, no code fence, in exactly this shape:
   "findings": [
     { "area": "cost" | "conversation" | "tools" | "product" | "harness" | "<your own>", "severity": "high" | "medium" | "low", "what": "<the defect>", "evidence": "<where in the record>" }
   ],
+  "brevity": {
+    "substanceKept": true | false,
+    "missing": ["<turn N: what the person needed and did not get>"],
+    "padding": [
+      { "turn": <number>, "kind": "narration" | "restated-plan" | "unrequested-explanation" | "closing-recap" | "idle-caveat" | "heavy-formatting", "quote": "<verbatim>" }
+    ],
+    "rating": "tight" | "acceptable" | "padded"
+  },
   "notes": "<the overall opinion a maintainer should hear, or empty>"
 }
 
