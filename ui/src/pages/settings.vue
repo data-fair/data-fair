@@ -74,79 +74,46 @@
         </template>
       </df-section-tabs>
 
-      <!-- Topics section (save/cancel + leave guard) -->
+      <!-- Catalog section (4 tabs, save/cancel + leave guard) -->
       <df-section-tabs
-        v-if="sections.topics"
-        id="topics"
-        :svg="flagsSvg"
-        svg-no-margin
-        :title="sections.topics.title"
-        :subtitle="$uiConfig.disableApplications ? t('sections.topics.subtitleNoApps') : t('sections.topics.subtitle')"
-      >
-        <template #actions>
-          <confirm-menu
-            v-if="topicsEdit.hasDiff.value"
-            :btn-props="{ color: 'warning', variant: 'tonal' }"
-            :label="t('cancel')"
-            :text="t('confirmCancelText')"
-            :icon="mdiCancel"
-            yes-color="warning"
-            @confirm="topicsEdit.cancel()"
-          />
-          <v-btn
-            v-if="topicsEdit.hasDiff.value"
-            class="ml-2"
-            color="accent"
-            variant="flat"
-            :disabled="!topicsValid"
-            :loading="topicsEdit.save.loading.value || saveConfirm?.loading"
-            @click="saveConfirm?.save(topicsEdit, 'topics')"
-          >
-            {{ t('save') }}
-          </v-btn>
-        </template>
-        <template #content>
-          <div class="pa-4">
-            <settings-topics
-              v-model="settings.topics"
-              v-model:valid="topicsValid"
-            />
-          </div>
-        </template>
-      </df-section-tabs>
-
-      <!-- Quality section (3 tabs, save/cancel + leave guard) -->
-      <df-section-tabs
-        v-if="sections.quality"
-        id="quality"
-        v-model="qualityTab"
+        v-if="sections.catalog"
+        id="catalog"
+        v-model="catalogTab"
         :svg="qualitySvg"
-        :title="sections.quality.title"
-        :tabs="sections.quality.tabs"
+        :title="sections.catalog.title"
+        :subtitle="$uiConfig.disableApplications ? t('sections.catalog.subtitleNoApps') : t('sections.catalog.subtitle')"
+        :tabs="sections.catalog.tabs"
       >
         <template #actions>
           <confirm-menu
-            v-if="qualityEdit.hasDiff.value"
+            v-if="catalogEdit.hasDiff.value"
             :btn-props="{ color: 'warning', variant: 'tonal' }"
             :label="t('cancel')"
             :text="t('confirmCancelText')"
             :icon="mdiCancel"
             yes-color="warning"
-            @confirm="qualityEdit.cancel()"
+            @confirm="catalogEdit.cancel()"
           />
           <v-btn
-            v-if="qualityEdit.hasDiff.value"
+            v-if="catalogEdit.hasDiff.value"
             class="ml-2"
             color="accent"
             variant="flat"
-            :disabled="!qualityValid"
-            :loading="qualityEdit.save.loading.value || saveConfirm?.loading"
-            @click="saveConfirm?.save(qualityEdit, 'customMetadata')"
+            :disabled="!catalogValid"
+            :loading="catalogEdit.save.loading.value || saveConfirm?.loading"
+            @click="saveConfirm?.save(catalogEdit)"
           >
             {{ t('save') }}
           </v-btn>
         </template>
         <template #windows>
+          <v-tabs-window-item value="topics">
+            <settings-topics
+              v-model="settings.topics"
+              v-model:valid="topicsValid"
+            />
+          </v-tabs-window-item>
+
           <v-tabs-window-item value="datasetsMetadata">
             <settings-datasets-metadata
               v-model="settings.datasetsMetadata"
@@ -182,35 +149,52 @@
         </template>
       </df-section-tabs>
 
-      <!-- API Keys section (auto-save) -->
+      <!-- Access & integrations section (2 tabs, save/cancel + leave guard) -->
       <df-section-tabs
-        v-if="sections['api-keys']"
-        id="api-keys"
+        v-if="sections.integrations"
+        id="integrations"
+        v-model="integrationsTab"
         :svg="securitySvg"
         svg-no-margin
-        :title="sections['api-keys'].title"
-        :subtitle="t('sections.apiKeys.subtitle')"
+        :title="sections.integrations.title"
+        :subtitle="t('sections.integrations.subtitle')"
+        :tabs="sections.integrations.tabs"
       >
-        <template #content>
-          <v-container>
-            <settings-api-keys v-model="settings.apiKeys" />
-          </v-container>
+        <template #actions>
+          <confirm-menu
+            v-if="integrationsEdit.hasDiff.value"
+            :btn-props="{ color: 'warning', variant: 'tonal' }"
+            :label="t('cancel')"
+            :text="t('confirmCancelText')"
+            :icon="mdiCancel"
+            yes-color="warning"
+            @confirm="integrationsEdit.cancel()"
+          />
+          <v-btn
+            v-if="integrationsEdit.hasDiff.value"
+            class="ml-2"
+            color="accent"
+            variant="flat"
+            :disabled="!webhooksValid"
+            :loading="integrationsEdit.save.loading.value"
+            @click="integrationsEdit.save.execute()"
+          >
+            {{ t('save') }}
+          </v-btn>
         </template>
-      </df-section-tabs>
+        <template #windows>
+          <v-tabs-window-item value="apiKeys">
+            <settings-api-keys v-model="settings.apiKeys" />
+          </v-tabs-window-item>
 
-      <!-- Webhooks section (auto-save) -->
-      <df-section-tabs
-        v-if="sections.webhooks"
-        id="webhooks"
-        :svg="wwwSvg"
-        svg-no-margin
-        :title="sections.webhooks.title"
-        :subtitle="t('sections.webhooks.subtitle')"
-      >
-        <template #content>
-          <div class="pa-4 narrow-section">
-            <settings-webhooks v-model="settings.webhooks" />
-          </div>
+          <v-tabs-window-item value="webhooks">
+            <div class="pa-4 narrow-section">
+              <settings-webhooks
+                v-model="settings.webhooks"
+                v-model:valid="webhooksValid"
+              />
+            </div>
+          </v-tabs-window-item>
         </template>
       </df-section-tabs>
 
@@ -256,68 +240,66 @@
         </template>
       </df-section-tabs>
 
-      <!-- AI Assistant section (save/cancel + leave guard) -->
+      <!-- Features section: AI assistant and API compatibility (save/cancel + leave guard) -->
       <df-section-tabs
-        v-if="sections.agentChat"
-        id="agentChat"
+        v-if="sections.features"
+        id="features"
         :svg="compatSvg"
         svg-no-margin
-        :title="sections.agentChat.title"
-        :subtitle="t('sections.agentChat.subtitle')"
+        :title="sections.features.title"
+        :subtitle="t('sections.features.subtitle')"
       >
         <template #actions>
           <confirm-menu
-            v-if="agentChatEdit.hasDiff.value"
+            v-if="featuresEdit.hasDiff.value"
             :btn-props="{ color: 'warning', variant: 'tonal' }"
             :label="t('cancel')"
             :text="t('confirmCancelText')"
             :icon="mdiCancel"
             yes-color="warning"
-            @confirm="agentChatEdit.cancel()"
+            @confirm="featuresEdit.cancel()"
           />
           <v-btn
-            v-if="agentChatEdit.hasDiff.value"
+            v-if="featuresEdit.hasDiff.value"
             class="ml-2"
             color="accent"
             variant="flat"
-            :loading="agentChatEdit.save.loading.value"
-            @click="agentChatEdit.save.execute()"
+            :loading="featuresEdit.save.loading.value"
+            @click="featuresEdit.save.execute()"
           >
             {{ t('save') }}
           </v-btn>
         </template>
         <template #content>
           <v-container>
-            <v-checkbox
-              v-model="settings.agentChat"
-              :label="t('agentChatToggle')"
-            />
-            <settings-agent-chat-audience
-              v-if="settings.agentChat && settingsAccount.type === 'organization'"
-              v-model="settings.agentChatAudience"
-              :departments="departments.filter(d => d.id !== '__root')"
-              :roles="accountDetailsFetch.data.value?.roles ?? []"
-            />
-          </v-container>
-        </template>
-      </df-section-tabs>
-
-      <!-- Compatibility section (auto-save) -->
-      <df-section-tabs
-        v-if="sections.compat"
-        id="compat"
-        :svg="compatSvg"
-        svg-no-margin
-        color="admin"
-        :title="sections.compat.title"
-        :subtitle="t('sections.compat.subtitle')"
-      >
-        <template #content>
-          <v-container>
-            <v-checkbox
-              v-model="settings.compatODS"
-              :label="t('compatODS')"
-            />
+            <template v-if="showAgentChat">
+              <h3 class="text-title-medium">
+                {{ t('agentChatTitle') }}
+              </h3>
+              <v-checkbox
+                v-model="settings.agentChat"
+                :label="t('agentChatToggle')"
+              />
+              <settings-agent-chat-audience
+                v-if="settings.agentChat && settingsAccount.type === 'organization'"
+                v-model="settings.agentChatAudience"
+                :departments="departments.filter(d => d.id !== '__root')"
+                :roles="accountDetailsFetch.data.value?.roles ?? []"
+              />
+            </template>
+            <template v-if="showCompat">
+              <h3 class="text-title-medium text-admin">
+                {{ t('compatTitle') }}
+              </h3>
+              <p class="text-body-medium">
+                {{ t('compatSubtitle') }}
+              </p>
+              <v-checkbox
+                v-model="settings.compatODS"
+                :label="t('compatODS')"
+                color="admin"
+              />
+            </template>
           </v-container>
         </template>
       </df-section-tabs>
@@ -369,37 +351,36 @@ fr:
   confirmCancelText: Voulez-vous annuler les modifications en cours ?
   docLink: Documentation
   privateVocabWarning: Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+  agentChatTitle: Assistant IA
   agentChatToggle: Activer l'assistant IA
+  compatTitle: Gestion des compatibilités
+  compatSubtitle: Compatibilité des APIs avec d'autres services. Peut être utile en période de transition.
   compatODS: Activer la compatibilité ODS
   sections:
     info:
       title: Informations de contact
       subtitle: Informations de contact pour les utilisateurs de vos APIs et applications.
-    topics:
-      title: Thématiques
-      subtitle: Les thématiques permettent de catégoriser vos jeux de données et applications pour en faciliter la recherche et la navigation.
-      subtitleNoApps: Les thématiques permettent de catégoriser vos jeux de données pour en faciliter la recherche et la navigation.
-    quality:
-      title: Qualité des jeux de données
+    catalog:
+      title: Catalogue
+      subtitle: Thématiques, métadonnées, licences et vocabulaire utilisés pour décrire vos jeux de données et applications.
+      subtitleNoApps: Thématiques, métadonnées, licences et vocabulaire utilisés pour décrire vos jeux de données.
       tabs:
+        topics: Thématiques
+        datasetsMetadata: Métadonnées
         licenses: Licences
         privateVocabulary: Vocabulaire privé
-        datasetsMetadata: Métadonnées
-    apiKeys:
-      title: "Clés d'API"
-      subtitle: "Les clés d'API permettent d'accéder à l'API Data Fair de manière sécurisée. Configuration technique destinée aux utilisateurs avancés."
-    webhooks:
-      title: "Appels extérieurs (Webhooks)"
-      subtitle: "Les webhooks permettent de notifier des services externes lorsqu'un événement survient dans Data Fair. Configuration technique destinée aux utilisateurs avancés."
+    integrations:
+      title: Accès & intégrations
+      subtitle: "Clés d'API pour accéder à l'API Data Fair, webhooks pour notifier des services externes. Configuration technique destinée aux utilisateurs avancés."
+      tabs:
+        apiKeys: "Clés d'API"
+        webhooks: Webhooks
     publicationSites:
       title: Portails
       subtitle: Paramètres de vos portails de publication de ressources.
-    agentChat:
-      title: Assistant IA
-      subtitle: Paramètres d'activation de l'assistant IA.
-    compat:
-      title: Gestion des compatibilités
-      subtitle: Compatibilité des APIs avec d'autres services. Peut être utile en période de transition.
+    features:
+      title: Fonctionnalités
+      subtitle: Fonctionnalités optionnelles activées pour votre compte.
 en:
   pageTitle: Parameters - Data Fair
   settings: Settings
@@ -415,49 +396,46 @@ en:
   confirmCancelText: Do you want to discard the current changes?
   docLink: Documentation
   privateVocabWarning: Warning, if you delete a concept referenced in datasets you may cause malfunctions.
+  agentChatTitle: AI Assistant
   agentChatToggle: Enable AI assistant
+  compatTitle: Compatibility management
+  compatSubtitle: API compatibility with other services. Can be useful during transition periods.
   compatODS: Enable ODS compatibility
   sections:
     info:
       title: Contact information
       subtitle: Contact information for users of your APIs and applications.
-    topics:
-      title: Topics
-      subtitle: Topics allow you to categorize your datasets and applications to make them easier to find and browse.
-      subtitleNoApps: Topics allow you to categorize your datasets to make them easier to find and browse.
-    quality:
-      title: Data quality
+    catalog:
+      title: Catalog
+      subtitle: Topics, metadata, licenses and vocabulary used to describe your datasets and applications.
+      subtitleNoApps: Topics, metadata, licenses and vocabulary used to describe your datasets.
       tabs:
+        topics: Topics
+        datasetsMetadata: Metadata
         licenses: Licenses
         privateVocabulary: Private vocabulary
-        datasetsMetadata: Metadata
-    apiKeys:
-      title: API keys
-      subtitle: API keys provide secure access to the Data Fair API. Technical configuration intended for advanced users.
-    webhooks:
-      title: "External requests (Webhooks)"
-      subtitle: Webhooks notify external services when an event occurs in Data Fair. Technical configuration intended for advanced users.
+    integrations:
+      title: Access & integrations
+      subtitle: API keys to access the Data Fair API, webhooks to notify external services. Technical configuration intended for advanced users.
+      tabs:
+        apiKeys: API keys
+        webhooks: Webhooks
     publicationSites:
       title: Portals
       subtitle: Settings for your resource publication portals.
-    agentChat:
-      title: AI Assistant
-      subtitle: AI assistant activation settings.
-    compat:
-      title: Compatibility management
-      subtitle: API compatibility with other services. Can be useful during transition periods.
+    features:
+      title: Features
+      subtitle: Optional features enabled for your account.
 </i18n>
 
 <script setup lang="ts">
 import { type Settings, settingsSchema } from '#api/types'
-import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet } from '@mdi/js'
+import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet, mdiTagMultiple, mdiKey, mdiWebhook } from '@mdi/js'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
-import flagsSvg from '~/assets/svg/Crossed flags_Two Color.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import wwwSvg from '~/assets/svg/World wide web_Two Color.svg?raw'
 import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
 import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
@@ -516,40 +494,22 @@ watch(settingsEditFetch.serverData, (s) => {
   }
 })
 
-// Sub-edits for sections with save/cancel
+// Sub-edits, each section has its own save/cancel
 const infoEdit = settingsEditFetch.createSubEdit(['info'], { success: t('saved') })
-const topicsEdit = settingsEditFetch.createSubEdit(['topics'], { success: t('saved') })
-const qualityEdit = settingsEditFetch.createSubEdit(
-  ['licenses', 'datasetsMetadata', 'privateVocabulary'],
+const catalogEdit = settingsEditFetch.createSubEdit(
+  ['topics', 'licenses', 'datasetsMetadata', 'privateVocabulary'],
   { success: t('saved') }
 )
+const integrationsEdit = settingsEditFetch.createSubEdit(['apiKeys', 'webhooks'], { success: t('saved') })
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
-const agentChatEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience'], { success: t('saved') })
+const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS'], { success: t('saved') })
 
-// Sub-edits for auto-save sections (watch hasDiff to trigger save, avoids feedback loops)
-const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
-const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
-const compatEdit = settingsEditFetch.createSubEdit(['compatODS'], { success: t('saved') })
+const edits = [infoEdit, catalogEdit, integrationsEdit, portalsEdit, featuresEdit]
+for (const edit of edits) useLeaveGuard(edit.hasDiff, { locale })
+const anyDirty = computed(() => edits.some(edit => edit.hasDiff.value))
 
-// Auto-save: trigger save when hasDiff becomes true
-watch(apiKeysEdit.hasDiff, (dirty) => { if (dirty) apiKeysEdit.save.execute() })
-watch(webhooksEdit.hasDiff, (dirty) => { if (dirty) webhooksEdit.save.execute() })
-watch(compatEdit.hasDiff, (dirty) => { if (dirty) compatEdit.save.execute() })
-
-// Leave guards for sections with save/cancel
-useLeaveGuard(infoEdit.hasDiff, { locale })
-useLeaveGuard(topicsEdit.hasDiff, { locale })
-useLeaveGuard(qualityEdit.hasDiff, { locale })
-useLeaveGuard(portalsEdit.hasDiff, { locale })
-useLeaveGuard(agentChatEdit.hasDiff, { locale })
-
-// Track if any section with save/cancel has unsaved changes
-const anyDirty = computed(() =>
-  infoEdit.hasDiff.value || topicsEdit.hasDiff.value || qualityEdit.hasDiff.value ||
-  portalsEdit.hasDiff.value || agentChatEdit.hasDiff.value
-)
-
-const qualityTab = ref('datasetsMetadata')
+const catalogTab = ref('topics')
+const integrationsTab = ref('apiKeys')
 const saveConfirm = useTemplateRef('save-confirm')
 
 // Validation state from child components
@@ -558,8 +518,9 @@ const topicsValid = ref(true)
 const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
 const privateVocabularyValid = ref(true)
+const webhooksValid = ref(true)
 const portalsValid = ref(true)
-const qualityValid = computed(() => licensesValid.value && datasetsMetadataValid.value && privateVocabularyValid.value)
+const catalogValid = computed(() => topicsValid.value && licensesValid.value && datasetsMetadataValid.value && privateVocabularyValid.value)
 
 // Tab color helper: red if invalid, accent if valid with diff, undefined otherwise
 function tabColor (hasDiff: boolean, valid: boolean): string | undefined {
@@ -568,33 +529,36 @@ function tabColor (hasDiff: boolean, valid: boolean): string | undefined {
   return undefined
 }
 
+// agentChat and compatODS are activated at the organization level only, departments inherit them
+const showAgentChat = computed(() => !settingsAccount.value.department && !!$uiConfig.agentsIntegration)
+const showCompat = computed(() => !settingsAccount.value.department && !!$uiConfig.compatODS && !!session.user.value.adminMode)
+
 const sections = computed(() => {
   const result: Record<string, { title: string, tabs?: { key: string, title: string, icon: string, color?: string }[] }> = {}
   if (!settingsAccount.value.department) {
     result.info = { title: t('sections.info.title') }
-    result.topics = { title: t('sections.topics.title') }
-    result.quality = {
-      title: t('sections.quality.title'),
+    result.catalog = {
+      title: t('sections.catalog.title'),
       tabs: [
-        { key: 'datasetsMetadata', title: t('sections.quality.tabs.datasetsMetadata'), icon: mdiFileDocumentEdit, color: tabColor(qualityEdit.keyHasDiff('datasetsMetadata').value, datasetsMetadataValid.value) },
-        { key: 'licenses', title: t('sections.quality.tabs.licenses'), icon: mdiCertificate, color: tabColor(qualityEdit.keyHasDiff('licenses').value, licensesValid.value) },
-        { key: 'privateVocabulary', title: t('sections.quality.tabs.privateVocabulary'), icon: mdiBookAlphabet, color: tabColor(qualityEdit.keyHasDiff('privateVocabulary').value, privateVocabularyValid.value) }
+        { key: 'topics', title: t('sections.catalog.tabs.topics'), icon: mdiTagMultiple, color: tabColor(catalogEdit.keyHasDiff('topics').value, topicsValid.value) },
+        { key: 'datasetsMetadata', title: t('sections.catalog.tabs.datasetsMetadata'), icon: mdiFileDocumentEdit, color: tabColor(catalogEdit.keyHasDiff('datasetsMetadata').value, datasetsMetadataValid.value) },
+        { key: 'licenses', title: t('sections.catalog.tabs.licenses'), icon: mdiCertificate, color: tabColor(catalogEdit.keyHasDiff('licenses').value, licensesValid.value) },
+        { key: 'privateVocabulary', title: t('sections.catalog.tabs.privateVocabulary'), icon: mdiBookAlphabet, color: tabColor(catalogEdit.keyHasDiff('privateVocabulary').value, privateVocabularyValid.value) }
       ]
     }
   }
-  result['api-keys'] = { title: t('sections.apiKeys.title') }
-  result.webhooks = { title: t('sections.webhooks.title') }
+  result.integrations = {
+    title: t('sections.integrations.title'),
+    tabs: [
+      { key: 'apiKeys', title: t('sections.integrations.tabs.apiKeys'), icon: mdiKey, color: tabColor(integrationsEdit.keyHasDiff('apiKeys').value, true) },
+      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: tabColor(integrationsEdit.keyHasDiff('webhooks').value, webhooksValid.value) }
+    ]
+  }
   if (!$uiConfig.disablePublicationSites) {
     result.publicationSites = { title: t('sections.publicationSites.title') }
   }
-  // agentChat and compatODS are activated at the organization level only, departments inherit them
-  if (!settingsAccount.value.department) {
-    if ($uiConfig.agentsIntegration) {
-      result.agentChat = { title: t('sections.agentChat.title') }
-    }
-    if ($uiConfig.compatODS && session.user.value.adminMode) {
-      result.compat = { title: t('sections.compat.title') }
-    }
+  if (showAgentChat.value || showCompat.value) {
+    result.features = { title: t('sections.features.title') }
   }
   return result
 })

@@ -112,9 +112,8 @@ const topicsRisks = async () => {
   })
 }
 
-const risks = { topics: topicsRisks, customMetadata: customMetadataRisks }
-const save = useAsyncAction(async (edit: Edit, kind: keyof typeof risks) => {
-  const warnings = await risks[kind]()
+const save = useAsyncAction(async (edit: Edit) => {
+  const warnings = (await Promise.all([topicsRisks(), customMetadataRisks()])).flat()
   if (warnings.length) confirmation.value = { warnings, edit }
   else await edit.save.execute()
 })

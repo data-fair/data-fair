@@ -27,19 +27,20 @@ test.describe('settings page sections', () => {
 
     // Sections visible for user (no department)
     await expect(page.locator('#info')).toBeVisible()
-    await expect(page.locator('#topics')).toBeVisible()
-    await expect(page.locator('#quality')).toBeVisible()
-    await expect(page.locator('#api-keys')).toBeVisible()
-    await expect(page.locator('#webhooks')).toBeVisible()
+    await expect(page.locator('#catalog')).toBeVisible()
+    await expect(page.locator('#integrations')).toBeVisible()
   })
 
-  test('quality section has 3 tabs', async ({ page, goToWithAuth }) => {
+  test('catalog and integrations sections have their tabs', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
-    await page.locator('#quality').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
 
+    await expect(page.getByRole('tab', { name: /Thématiques/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Licences/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Métadonnées/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Vocabulaire privé/i })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Clés d'API/i })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Webhooks/i })).toBeVisible()
   })
 })
 
@@ -61,20 +62,20 @@ test.describe('settings topics save/cancel', () => {
 
   test('save button appears on topic change and saves correctly', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
-    await page.locator('#topics').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
 
     // Initially no save button
-    await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible()
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible()
 
     // Add a topic via VJSF
-    await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('Test Topic')
+    await page.locator('#catalog').getByRole('button', { name: /ajouter/i }).click()
+    await page.locator('#catalog').getByLabel(/titre/i).filter({ visible: true }).first().fill('Test Topic')
 
     // Save button appears
-    await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
 
     // Click save
-    await page.locator('#topics').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
 
     // Verify via API
     await expect.poll(async () => {
@@ -83,26 +84,26 @@ test.describe('settings topics save/cancel', () => {
     }, { timeout: 10000 }).toBeTruthy()
 
     // Save button should disappear after save
-    await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
   })
 
   test('cancel reverts topic changes', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
-    await page.locator('#topics').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
 
     // Add a topic
-    await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('To Cancel')
+    await page.locator('#catalog').getByRole('button', { name: /ajouter/i }).click()
+    await page.locator('#catalog').getByLabel(/titre/i).filter({ visible: true }).first().fill('To Cancel')
 
     // Cancel button should be visible
-    await expect(page.locator('#topics').getByRole('button', { name: /Annuler/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Annuler/i })).toBeVisible({ timeout: 5000 })
 
     // Click cancel and confirm
-    await page.locator('#topics').getByRole('button', { name: /Annuler/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Annuler/i }).click()
     await page.getByRole('button', { name: /Confirmer/i }).click()
 
     // Save/cancel buttons should disappear
-    await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
   })
 
   test('deleting a used topic asks for confirmation before saving', async ({ page, goToWithAuth }) => {
@@ -111,14 +112,14 @@ test.describe('settings topics save/cancel', () => {
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'with topic', topics })).data
 
     await goToSettings(page, goToWithAuth)
-    await page.locator('#topics').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
     // delete through the item actions menu, then its own confirmation
-    const item = page.locator('#topics').getByRole('listitem').first()
+    const item = page.locator('#catalog').getByRole('listitem').first()
     await item.hover()
     await item.getByRole('button').last().click()
     await page.getByRole('listitem').filter({ hasText: 'Supprimer' }).last().click()
     await page.locator('.v-btn.bg-warning').filter({ hasText: 'Confirmer' }).click()
-    await page.locator('#topics').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toContainText('Thématique « Used topic » supprimée : elle sera retirée de 1 jeu de données.')
@@ -126,13 +127,13 @@ test.describe('settings topics save/cancel', () => {
     // checked on the settings: reading the dataset here would put it in the 30s memoize cache
     assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.topics.length, 1)
 
-    await page.locator('#topics').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
     await page.getByRole('dialog').getByRole('button', { name: /Enregistrer/i }).click()
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${dataset.id}`)).data.topics?.length ?? 0, { timeout: 10000 }).toBe(0)
   })
 })
 
-test.describe('settings quality tabs save/cancel', () => {
+test.describe('settings catalog tabs save/cancel', () => {
   let ax: AxiosInstance
   let baseSettings: any
 
@@ -149,25 +150,25 @@ test.describe('settings quality tabs save/cancel', () => {
 
   test('save persists license across tabs', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
-    await page.locator('#quality').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
 
     // Switch to the Licences tab (default tab is Métadonnées)
     await page.getByRole('tab', { name: /Licences/i }).click()
 
     // Add a license in the Licences tab
-    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('MIT License')
-    await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://mit.edu/license')
+    await page.locator('#catalog').getByRole('button', { name: /ajouter une licence/i }).click()
+    await page.locator('#catalog').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('MIT License')
+    await page.locator('#catalog').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://mit.edu/license')
 
     // Save button appears
-    await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
 
     // Switch to Metadata tab — save button should still be visible
     await page.getByRole('tab', { name: /Métadonnées/i }).click()
-    await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).toBeVisible()
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).toBeVisible()
 
     // Save
-    await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
 
     // Verify via API
     await expect.poll(async () => {
@@ -176,23 +177,23 @@ test.describe('settings quality tabs save/cancel', () => {
     }, { timeout: 10000 }).toBeTruthy()
   })
 
-  test('cancel reverts changes across all quality tabs', async ({ page, goToWithAuth }) => {
+  test('cancel reverts changes across all catalog tabs', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
-    await page.locator('#quality').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
 
     // Switch to the Licences tab (default tab is Métadonnées)
     await page.getByRole('tab', { name: /Licences/i }).click()
 
     // Add a license
-    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('To Cancel')
+    await page.locator('#catalog').getByRole('button', { name: /ajouter une licence/i }).click()
+    await page.locator('#catalog').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('To Cancel')
 
     // Cancel and confirm
-    await page.locator('#quality').getByRole('button', { name: /Annuler/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /Annuler/i }).click()
     await page.getByRole('button', { name: /Confirmer/i }).click()
 
     // Buttons should disappear
-    await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
   })
 })
 
@@ -228,35 +229,62 @@ test.describe('settings cross-subEdit interference', () => {
     await clean()
   })
 
-  test('saving quality does not affect pending topics changes', async ({ page, goToWithAuth }) => {
+  test('saving the catalog does not affect pending contact changes', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
 
-    // Add a topic (don't save)
-    await page.locator('#topics').scrollIntoViewIfNeeded()
-    await page.locator('#topics').getByRole('button', { name: /ajouter/i }).click()
-    await page.locator('#topics').getByLabel(/titre/i).filter({ visible: true }).first().fill('Pending Topic')
+    // Change the contact name (don't save)
+    const info = page.locator('#info')
+    const nameInput = info.getByLabel('Nom', { exact: true })
+    await nameInput.fill('Pending Contact')
+    await nameInput.blur()
 
     // Add a license and save
-    await page.locator('#quality').scrollIntoViewIfNeeded()
+    await page.locator('#catalog').scrollIntoViewIfNeeded()
     await page.getByRole('tab', { name: /Licences/i }).click()
-    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
-    await page.locator('#quality').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('Saved License')
-    await page.locator('#quality').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://example.com/license')
-    await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
+    await page.locator('#catalog').getByRole('button', { name: /ajouter une licence/i }).click()
+    await page.locator('#catalog').getByLabel('Titre', { exact: true }).filter({ visible: true }).first().fill('Saved License')
+    await page.locator('#catalog').getByLabel(/URL/i).filter({ visible: true }).first().fill('https://example.com/license')
+    await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
 
     // Wait for save to complete
-    await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#catalog').getByRole('button', { name: /Enregistrer/i })).not.toBeVisible({ timeout: 5000 })
 
-    // Topics should still show the save button (pending changes preserved)
-    await page.locator('#topics').scrollIntoViewIfNeeded()
-    await expect(page.locator('#topics').getByRole('button', { name: /Enregistrer/i })).toBeVisible()
+    // Contact should still show the save button (pending changes preserved)
+    await expect(info.getByRole('button', { name: /Enregistrer/i })).toBeVisible()
 
-    // Verify API: license saved, topic NOT saved
+    // Verify API: license saved, contact NOT saved
     const res = await ax.get('/api/v1/settings/user/test_user1')
     expect(res.data.licenses?.some((l: any) => l.title === 'Saved License')).toBeTruthy()
-    expect(res.data.topics?.some((t: any) => t.title === 'Pending Topic')).toBeFalsy()
+    expect(res.data.info?.contact?.name).toBeUndefined()
+  })
+})
+
+test.describe('settings integrations save/cancel', () => {
+  test.beforeAll(async () => {
+    await clean()
+  })
+
+  test('an API key is created only on explicit save', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+    await section.getByLabel('Titre', { exact: true }).fill('Manual key')
+    await section.getByRole('button', { name: 'Ajouter', exact: true }).click()
+
+    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
+    await expect(saveButton).toBeVisible({ timeout: 5000 })
+    expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys ?? []).toHaveLength(0)
+
+    await saveButton.click()
+    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.length ?? 0, { timeout: 10000 }).toBe(1)
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 })
+    // the secret is shown once, right after the save
+    await expect(section.getByText(/Clé secrète/)).toBeVisible()
   })
 })
 
@@ -298,7 +326,7 @@ test.describe('settings AI assistant audience', () => {
     const ax = await axiosAuth('test_user1@test.com', 'test_org1')
 
     await goToSettingsOrg(page, goToWithAuth)
-    const section = page.locator('#agentChat')
+    const section = page.locator('#features')
     await section.scrollIntoViewIfNeeded()
     await section.getByLabel(/Activer l'assistant IA/i).check()
     await section.getByRole('button', { name: /Enregistrer/i }).click()
