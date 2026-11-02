@@ -301,10 +301,14 @@ test.describe('settings contact save/cancel', () => {
     const section = page.locator('#info')
     await section.scrollIntoViewIfNeeded()
     const nameInput = section.getByLabel('Nom', { exact: true })
+    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
+    // an account without contact info must not look modified on load
+    await expect(nameInput).toBeVisible()
+    await expect(saveButton).not.toBeVisible()
+
     await nameInput.fill('Test Contact')
     await nameInput.blur()
 
-    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
     await expect(saveButton).toBeVisible({ timeout: 5000 })
     expect((await ax.get('/api/v1/settings/user/test_user1')).data.info?.contact?.name).toBeUndefined()
 
@@ -314,6 +318,36 @@ test.describe('settings contact save/cancel', () => {
       return res.data.info?.contact?.name
     }, { timeout: 10000 }).toBe('Test Contact')
     await expect(saveButton).not.toBeVisible({ timeout: 5000 })
+  })
+})
+
+test.describe('settings department switch guard', () => {
+  test.beforeAll(async () => {
+    await clean()
+  })
+
+  test('refusing to drop pending changes keeps the department and asks only once', async ({ page, goToWithAuth }) => {
+    await goToSettingsOrg(page, goToWithAuth)
+
+    const nameInput = page.locator('#info').getByLabel('Nom', { exact: true })
+    await nameInput.fill('Pending Contact')
+    await nameInput.blur()
+    await expect(page.locator('#info').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
+
+    let dialogs = 0
+    page.on('dialog', async (dialog) => {
+      dialogs++
+      await dialog.dismiss()
+    })
+    const departmentSelect = page.locator('.v-select').filter({ hasText: 'Département' })
+    await departmentSelect.click()
+    await page.getByRole('option', { name: 'department 1' }).click()
+
+    await expect(departmentSelect).toContainText("Racine de l'organisation")
+    await expect(nameInput).toHaveValue('Pending Contact')
+    // the restore of the previous department used to ask again, endlessly
+    await page.waitForTimeout(500)
+    expect(dialogs).toBe(1)
   })
 })
 

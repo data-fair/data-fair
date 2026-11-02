@@ -451,10 +451,19 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('settings') }] })
 const settingsAccount = ref({ ...session.account.value })
 
 const selectedDepartment = ref('__root')
+// set while restoring the previous department, so the restore is not asked to confirm again
+let restoringDepartment = false
 watch(selectedDepartment, (newVal, oldVal) => {
+  if (restoringDepartment) {
+    restoringDepartment = false
+    return
+  }
   // Guard: prevent department switch if there are unsaved changes
   if (anyDirty.value && !window.confirm(t('confirmCancelText'))) {
-    nextTick(() => { selectedDepartment.value = oldVal })
+    nextTick(() => {
+      restoringDepartment = true
+      selectedDepartment.value = oldVal
+    })
     return
   }
   if (newVal === '__root') {
@@ -482,6 +491,7 @@ const settings = settingsEditFetch.data
 // schema defaults (active: false) on mount when the server has no value yet
 function normalizeSettings (s: any) {
   if (!s) return
+  s.info = s.info || {}
   const dm = s.datasetsMetadata = s.datasetsMetadata || {}
   for (const [key, prop] of Object.entries(settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)) {
     if (prop.properties?.active && !dm[key]) dm[key] = { active: prop.properties.active.default }
