@@ -59,7 +59,7 @@
   },
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
-    "@data-fair/lib-vuetify-events": "^0.3.0",
+    "@data-fair/lib-vuetify-events": "^0.4.0",
     "tinycolor2": "^1.6.0"
   }
 }
