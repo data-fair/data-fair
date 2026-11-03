@@ -3,7 +3,7 @@
   <v-card
     :to="`/${kind}`"
     :title.attr="t(kind + '.seeAll')"
-    class="h-100 rounded-lg"
+    class="h-100"
   >
     <v-card-text>
       <div class="d-flex align-center ga-3 mb-2">

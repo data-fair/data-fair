@@ -1,5 +1,6 @@
 <template>
   <div class="d-flex flex-column ga-4">
+    <!-- rounded-lg: the left border curves like the section tabs -->
     <v-card
       class="rounded-lg"
       style="border-left: 3px solid rgb(var(--v-theme-primary))"
