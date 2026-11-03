@@ -1,6 +1,9 @@
 <template>
   <div class="d-flex flex-column ga-4">
-    <v-card style="border-left: 3px solid rgb(var(--v-theme-primary))">
+    <v-card
+      class="rounded-lg"
+      style="border-left: 3px solid rgb(var(--v-theme-primary))"
+    >
       <v-card-text class="pa-6">
         <df-themed-svg
           :source="heroSvg"

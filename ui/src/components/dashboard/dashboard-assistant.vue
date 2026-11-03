@@ -1,6 +1,7 @@
 <template>
   <v-card
     border="secondary md opacity-100"
+    class="rounded-lg"
     flat
   >
     <v-card-text>

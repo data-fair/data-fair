@@ -1,5 +1,5 @@
 <template>
-  <v-card class="h-100">
+  <v-card class="h-100 rounded-lg">
     <v-card-item>
       <v-card-title class="d-flex align-center ga-2">
         <v-icon
@@ -73,7 +73,7 @@ fr:
   applicationsPublications: Publication d'application à valider | Publications d'applications à valider
   reusesPublications: Publication de réutilisation à valider | Publications de réutilisations à valider
   pagesPublications: Publication de page à valider | Publications de pages à valider
-  datasetsDraft: Brouillon à valider | Brouillons à valider
+  datasetsDraft: Brouillon de jeu de données à valider | Brouillons de jeux de données à valider
 en:
   title: To do
   subtitle: What needs your attention
@@ -86,7 +86,7 @@ en:
   applicationsPublications: Application publication to validate | Application publications to validate
   reusesPublications: Reuse publication to validate | Reuse publications to validate
   pagesPublications: Page publication to validate | Page publications to validate
-  datasetsDraft: Draft to validate | Drafts to validate
+  datasetsDraft: Draft dataset to validate | Draft datasets to validate
 </i18n>
 
 <script setup lang="ts">
@@ -132,7 +132,8 @@ const extraItems = ($uiConfig.extraTodoItems ?? []).map(extra => ({
   fetch: useFetch<Record<string, any>>(() => !extra.can || can[extra.can]?.value ? extra.url : null, { notifError: false })
 }))
 
-const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).join(',') })
+// only the known sites: the facet also lists the other sites requested by the same resources
+const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
 
 // the fullest of the stored and indexed spaces, a line from 80 %
 const storagePercent = computed(() => {
@@ -145,7 +146,7 @@ const storagePercent = computed(() => {
 const lines = computed(() => {
   const lines: (Line & { active: boolean })[] = [
     { key: 'datasetsError', active: canContribDep.value, count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } }, title: '' },
-    { key: 'processingsError', active: canAdminDep.value && !!$uiConfig.processingsIntegration, count: processingsErrorFetch.data.value?.count, icon: mdiCogTransferOutline, color: 'error', to: '/processings', title: '' },
+    { key: 'processingsError', active: canAdminDep.value && !!$uiConfig.processingsIntegration, count: processingsErrorFetch.data.value?.count, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } }, title: '' },
     { key: 'storage', active: canContrib.value, count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage', title: '' },
     { key: 'datasetsPublications', active: canAdminDep.value && !!sitesFilter.value, count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) }, title: '' },
     { key: 'applicationsPublications', active: canAdminDep.value && !!sitesFilter.value && !$uiConfig.disableApplications, count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) }, title: '' },

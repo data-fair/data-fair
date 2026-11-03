@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="rounded-lg">
     <v-card-item>
       <v-card-title class="d-flex align-center ga-2">
         <v-icon
