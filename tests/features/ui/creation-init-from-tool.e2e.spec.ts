@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
+import { waitForFinalize } from '../../support/workers.ts'
 
 /**
  * The creation wizard can start a dataset from an existing one; the assistant could only
@@ -47,9 +48,10 @@ test.describe('creation wizard agent tools', () => {
     expect(await callTool(page, 'advance_to_confirmation')).toContain('ready')
     await page.getByRole('button', { name: /Créer/ }).last().click()
     await page.waitForURL(/\/dataset\/[^/]+$/, { timeout: 20000 })
-    const id = page.url().split('/').pop()
+    const id = page.url().split('/').pop() as string
 
-    const { data: created } = await ax.get(`/api/v1/datasets/${id}`)
+    // created with an empty schema: the initialize worker copies the source columns afterwards
+    const created = await waitForFinalize(ax, id)
     expect(created.title).toBe('Registre 2027')
     expect(created.schema.filter((p: any) => !p.key.startsWith('_')).map((p: any) => p.key)).toEqual(['association', 'montant'])
   })
