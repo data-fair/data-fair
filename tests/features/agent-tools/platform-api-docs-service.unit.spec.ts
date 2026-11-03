@@ -190,5 +190,11 @@ test.describe('platform document fragment cache', () => {
     assert.equal(internal[2].service.docPath, '/metrics/api/api-docs.json')
     assert.equal(internal[3].url, 'http://events:8080/api/api-docs.json')
     assert.equal(internal[3].service.mountPath, '/events/api')
+
+    const withRegistry = platformServices({ publicUrl: 'https://main.test/data-fair', directoryUrl: 'https://main.test/simple-directory', privateRegistryUrl: 'http://registry:8080' })
+    assert.deepEqual(withRegistry.map(s => s.service.id), ['datafair', 'sd', 'registry'])
+    assert.equal(withRegistry[2].url, 'http://registry:8080/api/v1/api-docs.json')
+    assert.equal(withRegistry[2].service.mountPath, '/registry/api/v1')
+    assert.equal(withRegistry[2].service.docPath, '/registry/api/v1/api-docs.json')
   })
 })
