@@ -2,7 +2,6 @@ import slug from 'slugify'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User, type SessionStateAuthenticated } from '@data-fair/lib-express'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import trimFields from '../misc/utils/trim-fields.ts'
 import nanoid from '../misc/utils/nanoid.ts'
 
@@ -150,35 +149,18 @@ export const matchAgentChatAudience = (audience: AIAssistantAudience | undefined
 }
 
 /**
- * The x-acting-user header of a publication-site write made with the portals secret key: the user
- * on whose behalf portals acts, as URL-encoded JSON {"id","name"}. 400 when absent or invalid.
+ * The session-less state of a publication-site write made with the portals secret key: a synthetic
+ * admin of the owner read from the path. The owner name is not known here, the owner id stands for
+ * it when the settings document has to be created.
  */
-export const parseActingUser = (header: string | undefined): { id: string, name: string } => {
-  let parsed: any
-  try {
-    parsed = header && JSON.parse(decodeURIComponent(header))
-  } catch {
-    throw httpError(400, 'invalid x-acting-user header')
-  }
-  if (!parsed || typeof parsed.id !== 'string' || !parsed.id || typeof parsed.name !== 'string') {
-    throw httpError(400, 'x-acting-user header must be a JSON object with id and name')
-  }
-  return { id: parsed.id, name: parsed.name }
-}
-
-/**
- * The session-less state of a publication-site write made with the portals secret key: the acting
- * user, admin of the owner read from the path. The organization name is not known here, the owner id
- * stands for it when the settings document has to be created.
- */
-export const actingSessionState = (owner: AccountKeys, actingUser: { id: string, name: string }): SessionStateAuthenticated => {
-  const user: User = { id: actingUser.id, name: actingUser.name, email: '', organizations: [] }
+export const secretSessionState = (owner: AccountKeys): SessionStateAuthenticated => {
+  const department = owner.department ? { department: owner.department } : {}
+  const user: User = { id: owner.type === 'user' ? owner.id : 'portals', name: owner.id, email: '', organizations: [] }
   if (owner.type === 'organization') {
-    user.organizations.push({ id: owner.id, name: owner.id, role: 'admin', ...(owner.department ? { department: owner.department } : {}) })
-    return { user, account: { type: 'organization', id: owner.id, name: owner.id, ...(owner.department ? { department: owner.department } : {}) }, accountRole: 'admin', lang: 'fr' }
+    user.organizations.push({ id: owner.id, name: owner.id, role: 'admin', ...department })
+    return { user, account: { type: 'organization', id: owner.id, name: owner.id, ...department }, accountRole: 'admin', lang: 'fr' }
   }
-  if (actingUser.id !== owner.id) throw httpError(400, 'x-acting-user must be the owner of user settings')
-  return { user, account: { type: 'user', id: owner.id, name: actingUser.name }, accountRole: 'admin', lang: 'fr' }
+  return { user, account: { type: 'user', id: owner.id, name: owner.id }, accountRole: 'admin', lang: 'fr' }
 }
 
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }

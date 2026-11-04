@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents, matchAgentChatAudience, parseActingUser, actingSessionState } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents, matchAgentChatAudience, secretSessionState } from '../../../api/src/settings/operations.ts'
 
 test.describe('rootSettingsFilter', () => {
   test('always targets the root document, ignoring the department the caller is in', () => {
@@ -255,29 +255,17 @@ test.describe('matchAgentChatAudience', () => {
   })
 })
 
-test.describe('parseActingUser', () => {
-  test('reads the URL-encoded JSON user', () => {
-    assert.deepEqual(parseActingUser(encodeURIComponent(JSON.stringify({ id: 'u1', name: 'Ü 1', extra: 1 }))), { id: 'u1', name: 'Ü 1' })
-  })
-  test('refuses an absent or invalid header with a 400', () => {
-    for (const header of [undefined, '', 'not json', encodeURIComponent('{"name":"x"}'), encodeURIComponent('{"id":"","name":"x"}'), encodeURIComponent('"u1"')]) {
-      assert.throws(() => parseActingUser(header), { status: 400 })
-    }
-  })
-})
-
-test.describe('actingSessionState', () => {
-  test('makes the acting user admin of the organization owner, department included', () => {
-    const state = actingSessionState({ type: 'organization', id: 'org1', department: 'dep1' }, { id: 'u1', name: 'User 1' })
+test.describe('secretSessionState', () => {
+  test('makes a synthetic admin of the organization owner, department included', () => {
+    const state = secretSessionState({ type: 'organization', id: 'org1', department: 'dep1' })
     assert.deepEqual(state.user.organizations, [{ id: 'org1', name: 'org1', role: 'admin', department: 'dep1' }])
     assert.deepEqual(state.account, { type: 'organization', id: 'org1', name: 'org1', department: 'dep1' })
     assert.equal(fillSettings({ type: 'organization', id: 'org1', department: 'dep1' }, state.user, {}).name, 'org1 - dep1')
   })
-  test('a user owner must be the acting user', () => {
-    const state = actingSessionState({ type: 'user', id: 'u1' }, { id: 'u1', name: 'User 1' })
+  test('a user owner is named after its id, without email', () => {
+    const state = secretSessionState({ type: 'user', id: 'u1' })
     const settings = fillSettings({ type: 'user', id: 'u1' }, state.user, {})
-    assert.equal(settings.name, 'User 1')
+    assert.equal(settings.name, 'u1')
     assert.equal('email' in settings, false)
-    assert.throws(() => actingSessionState({ type: 'user', id: 'u2' }, { id: 'u1', name: 'User 1' }), { status: 400 })
   })
 })

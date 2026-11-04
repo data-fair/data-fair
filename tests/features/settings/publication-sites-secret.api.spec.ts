@@ -4,9 +4,7 @@ import { axiosAuth, anonymousAx, clean, checkPendingTasks, config, apiUrl } from
 
 // portals reaches the API on its private url with the shared secret, there is no session
 const settingsUrl = `${apiUrl}/api/v1/settings`
-const actingUser = (user: { id: string, name: string }) => encodeURIComponent(JSON.stringify(user))
-const secretHeaders = (secretKey: string, user: { id: string, name: string } = { id: 'test_user1', name: 'Test User1' }) =>
-  ({ headers: { 'x-secret-key': secretKey, 'x-acting-user': actingUser(user) } })
+const secretHeaders = (secretKey: string) => ({ headers: { 'x-secret-key': secretKey } })
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -71,21 +69,10 @@ test.describe('publication sites with the portals secret key', () => {
     assert.ok(!sites.some((s: any) => s.id === portal.id))
   })
 
-  test('the acting user header is required with the secret key', async () => {
-    const url = `${settingsUrl}/organization/test_org1/publication-sites`
-    const headers = { 'x-secret-key': config.secretKeys.portals }
-    await assert.rejects(anonymousAx.post(url, portal, { headers }), { status: 400 })
-    await assert.rejects(anonymousAx.post(url, portal, { headers: { ...headers, 'x-acting-user': 'not json' } }), { status: 400 })
-    await assert.rejects(anonymousAx.post(url, portal, { headers: { ...headers, 'x-acting-user': actingUser({ name: 'no id' } as any) } }), { status: 400 })
-  })
-
-  test('the acting user is recorded', async () => {
-    // the settings record no author: the acting user is what fills the owner name of a new user settings document
-    const res = await anonymousAx.post(`${settingsUrl}/user/test_user1/publication-sites`, portal,
-      secretHeaders(config.secretKeys.portals, { id: 'test_user1', name: 'Acting User1' }))
+  test('a user owner is created without any header but the key', async () => {
+    const res = await anonymousAx.post(`${settingsUrl}/user/test_user1/publication-sites`, portal, secretHeaders(config.secretKeys.portals))
     assert.equal(res.data.created, true)
     const settings = (await testUser1.get('/api/v1/settings/user/test_user1')).data
-    assert.equal(settings.name, 'Acting User1')
     assert.ok(settings.publicationSites.some((s: any) => s.id === portal.id))
   })
 })

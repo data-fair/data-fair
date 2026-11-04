@@ -7,7 +7,7 @@ import log from '@data-fair/lib-node/log.js'
 import { ownerLogFields } from '../misc/utils/log-fields.ts'
 import { defineReqContext } from '../misc/utils/req-context.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { parseOwnerParams, parseActingUser, actingSessionState, type SettingsParams } from './operations.ts'
+import { parseOwnerParams, secretSessionState, type SettingsParams } from './operations.ts'
 import { type SettingsWriteContext } from './service.ts'
 
 const settingsParams = defineReqContext<SettingsParams>('settings-params')
@@ -52,7 +52,7 @@ export const reqPortalsSecret = (req: Request) => !!portalsSecretSession.getOpti
 
 /**
  * Publication-site writes: portals syncs the sites of its agent (scoped) sessions with its shared
- * secret key (x-secret-key) and the user it acts for (x-acting-user), without a session. Without a
+ * secret key (x-secret-key), without a session. Without a
  * matching key this is isOwnerAdmin, whatever the headers: the session path is unchanged.
  */
 export const portalsSecretOrOwnerAdmin: RequestHandler = (req, res, next) => {
@@ -61,7 +61,7 @@ export const portalsSecretOrOwnerAdmin: RequestHandler = (req, res, next) => {
     return
   }
   const { owner } = reqSettingsParams(req)
-  portalsSecretSession.set(req, actingSessionState(owner, parseActingUser(req.get('x-acting-user'))))
+  portalsSecretSession.set(req, secretSessionState(owner))
   // a session-less call: the key, not a scope, is what allows it
   markScopeChecked(req)
   next()

@@ -57,7 +57,7 @@ router.get('/:type/:id/publication-sites', allowAnyScope, isOwnerMember, async (
 })
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
 // with the portals secret key there is no session to subscribe: the subscriptions are returned
-// for portals to post on behalf of the acting user
+// for portals to post itself
 router.post('/:type/:id/publication-sites', portalsSecretOrOwnerAdmin, async (req, res) => {
   const ctx = reqWriteContext(req)
   const { created } = await service.upsertPublicationSite(ctx, req.body)
