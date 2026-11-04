@@ -51,7 +51,7 @@ const items = {
     switch: [
       // the row only shows the title and subtitle of the list
       { if: 'summary', children: [] },
-      { children: [{ name: 'metadata-info' }, 'active', 'title', 'group', 'description'] }
+      { children: [{ name: 'metadata-info' }, 'active', 'group', 'title', 'description'] }
     ]
   },
   properties: {
@@ -66,7 +66,7 @@ const items = {
       type: 'string',
       title: 'Custom label',
       'x-i18n-title': { fr: 'Libellé personnalisé' },
-      layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ variant: 'outlined', placeholder: ${meta}.title, persistentPlaceholder: true })` }
+      layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ placeholder: ${meta}.title, persistentPlaceholder: true })` }
     },
     group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: ${meta}.groupPlaceholder })`, 12),
     description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
