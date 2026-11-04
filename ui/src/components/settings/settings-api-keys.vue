@@ -156,21 +156,24 @@
           />
           {{ [item.adminMode && t('superadminShort'), item.asAccount && t('asAccountShort')].filter(Boolean).join(' · ') }}
         </div>
-        <div class="d-flex flex-wrap ga-1 mt-1">
-          <v-chip
-            v-for="scope of item.scopes"
-            :key="scope"
-            size="small"
-          >
-            {{ te('scopeShort.' + scope) ? t('scopeShort.' + scope) : scope }}
-          </v-chip>
-          <span
-            v-if="!item.scopes?.length"
-            class="text-body-small text-medium-emphasis"
-          >
-            {{ t('noScope') }}
-          </span>
-        </div>
+      </div>
+    </template>
+
+    <template #item.scopes="{ item }">
+      <div class="d-flex flex-wrap ga-1 py-2">
+        <v-chip
+          v-for="scope of item.scopes"
+          :key="scope"
+          size="small"
+        >
+          {{ te('scopeShort.' + scope) ? t('scopeShort.' + scope) : scope }}
+        </v-chip>
+        <span
+          v-if="!item.scopes?.length"
+          class="text-body-small text-medium-emphasis"
+        >
+          {{ t('noScope') }}
+        </span>
       </div>
     </template>
 
@@ -250,7 +253,6 @@ fr:
   copyEmailFailed: "Impossible d'accéder au presse-papiers. Email de la clé : {email}"
   scope: Portée
   email: Email
-  key: Clé
   noScope: Permissions explicites uniquement
   scopeMsg: En attribuant des portées à cette clé d'API, celle-ci pourra effectuer les opérations sélectionnées sur l'ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
   emailMsg: Le pseudo email d'une clé, à copier depuis sa ligne, peut être utilisé pour lui affecter des permissions fines.
@@ -297,7 +299,6 @@ en:
   copyEmailFailed: "Cannot access the clipboard. Key email: {email}"
   scope: Scope
   email: Email
-  key: Key
   noScope: Explicit permissions only
   scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
   emailMsg: The pseudo email of a key, copied from its row, can be used to assign it fine-grained permissions.
@@ -361,8 +362,9 @@ const { sendUiNotif } = useUiNotif()
 const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
 
 const headers = computed(() => [
-  { title: t('key'), key: 'title', sortable: false },
-  { title: t('email'), key: 'email', sortable: false, width: '45%' },
+  { title: t('title'), key: 'title', sortable: false },
+  { title: t('scope'), key: 'scopes', sortable: false },
+  { title: t('email'), key: 'email', sortable: false, width: '40%' },
   { title: t('expiration'), key: 'expireAt', sortable: false, nowrap: true },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
@@ -431,11 +433,10 @@ const resetNewApiKey = () => {
   if (filteredScopes.value.length === 1) newApiKey.value.scopes.push(filteredScopes.value[0])
 }
 onMounted(resetNewApiKey)
+watch(createToggle, (open) => { if (!open) resetNewApiKey() })
 
 const addApiKey = async () => {
-  if (!await saveApiKeys([...(apiKeys.value ?? []), newApiKey.value])) return
-  createToggle.value = false
-  resetNewApiKey()
+  if (await saveApiKeys([...(apiKeys.value ?? []), newApiKey.value])) createToggle.value = false
 }
 
 const removeApiKey = (apiKey: ApiKey) => saveApiKeys((apiKeys.value ?? []).filter(k => k !== apiKey))
