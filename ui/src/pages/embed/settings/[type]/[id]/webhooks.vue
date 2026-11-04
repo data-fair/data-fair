@@ -3,15 +3,31 @@
     <settings-webhooks
       v-if="settings"
       v-model="settings.webhooks"
-      @update:model-value="settingsEditFetch.save.execute()"
+      v-model:valid="valid"
     />
+    <div
+      v-if="settingsEditFetch.hasDiff.value"
+      class="d-flex justify-end mt-4"
+    >
+      <v-btn
+        color="accent"
+        variant="flat"
+        :disabled="!valid"
+        :loading="settingsEditFetch.save.loading.value"
+        @click="settingsEditFetch.save.execute()"
+      >
+        {{ t('save') }}
+      </v-btn>
+    </div>
   </v-container>
 </template>
 
 <i18n lang="yaml">
 fr:
+  save: Enregistrer
   saved: Les webhooks ont été mis à jour
 en:
+  save: Save
   saved: Webhooks have been updated
 </i18n>
 
@@ -26,4 +42,5 @@ const settingsEditFetch = useEditFetch<Settings>(
   { patch: true, saveOptions: { success: t('saved') } }
 )
 const settings = settingsEditFetch.data
+const valid = ref(true)
 </script>
