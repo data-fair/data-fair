@@ -1,5 +1,26 @@
 <template>
-  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+  <!-- only admin mode can add a portal, the list is otherwise edit-only -->
+  <p
+    v-if="!user.adminMode && !publicationSites?.length"
+    class="text-medium-emphasis"
+  >
+    {{ t('noPortal') }}
+    <i18n-t
+      v-if="$uiConfig.portalsIntegration"
+      keypath="portalsIntegration"
+      tag="span"
+    >
+      <template #link>
+        <router-link to="/portals">
+          {{ t('portalsLink') }}
+        </router-link>
+      </template>
+    </i18n-t>
+  </p>
+  <v-defaults-provider
+    v-else
+    :defaults="{ global: { hideDetails: 'auto' } }"
+  >
     <v-form v-model="valid">
       <vjsf
         v-model="editPublicationSites"
@@ -14,9 +35,15 @@
 fr:
   summary: Résumé
   description: Description
+  noPortal: Aucun portail.
+  portalsIntegration: "Les portails sont ajoutés automatiquement lorsque vous les créez dans la {link}."
+  portalsLink: gestion des portails
 en:
   summary: Summary
   description: Description
+  noPortal: No portal.
+  portalsIntegration: "Portals are added automatically when you create them in the {link}."
+  portalsLink: portals management
 </i18n>
 
 <script setup lang="ts">
