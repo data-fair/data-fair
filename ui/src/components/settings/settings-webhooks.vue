@@ -27,6 +27,7 @@ watchDeepDiff(editWebhooks, () => {
 const { locale } = useI18n()
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
+  initialValidation: 'always',
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',

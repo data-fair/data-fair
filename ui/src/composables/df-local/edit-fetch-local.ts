@@ -16,7 +16,7 @@ type UseEditFetchOptions = UseFetchOptions & {
 
 type OptionalUrl = string | null | undefined
 
-interface SubEdit<T = Record<string, any>> {
+export interface SubEdit<T = Record<string, any>> {
   hasDiff: ComputedRef<boolean>
   keyHasDiff: (key: keyof T) => ComputedRef<boolean>
   save: {
@@ -124,23 +124,15 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
       }
       if (!Object.keys(patch).length) return
 
-      // Capture server state BEFORE save for post-response sync
-      const serverDataBefore = clone(serverData.value) as Record<string, any>
+      const sent = clone(patch)
 
       const res = await ofetch(fetch.fullUrl.value!, { method: 'PATCH', body: patch })
       if (res) {
-        const keysSet = new Set(keys.map(k => String(k)))
-        // Update serverData with full response
-        for (const k of Object.keys(res)) {
+        // Only the keys sent: the rest of a late response is older than the saves of other subEdits
+        for (const k of Object.keys(sent)) {
           sd[k] = clone(res[k])
-        }
-        // Sync data from response:
-        // - For keys in THIS subEdit: always update (server may add computed fields like IDs)
-        // - For keys in OTHER subEdits: only update if no pending local edits
-        for (const k of Object.keys(res)) {
-          if (keysSet.has(k) || equal(d[k], serverDataBefore[k])) {
-            d[k] = clone(res[k])
-          }
+          // the server may add computed fields like IDs, except on a key edited during the request
+          if (equal(d[k], sent[k])) d[k] = clone(res[k])
         }
       }
     }, saveOptions)

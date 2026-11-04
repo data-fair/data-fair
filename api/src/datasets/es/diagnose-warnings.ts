@@ -89,8 +89,9 @@ const sortByPriority = (warnings: Warning[]): Warning[] => {
   )
 }
 
-const getRecommendedNbShards = (dataset: any, maxShardSize: number): number => {
-  return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / maxShardSize))
+// the only sizing formula: a diagnostic differing from initDatasetIndex would never clear on reindex
+export const recommendedNbShards = (dataset: any, priStoreSize: number, maxShardSize: number): number => {
+  return Math.max(1, Math.ceil(Math.max(dataset.storage?.indexed?.size || 0, priStoreSize) / maxShardSize))
 }
 
 const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): Warning[] => {
@@ -124,14 +125,18 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   }
 
   const currentNbShards = Number(indexSettings.number_of_shards)
-  const recommendedNbShards = getRecommendedNbShards(dataset, config.maxShardSize)
-  if (currentNbShards !== recommendedNbShards) {
-    warnings.push({
-      code: 'ShardingRecommended',
-      severity: 'warning',
-      message: `current shard count ${currentNbShards} differs from recommended ${recommendedNbShards}`,
-      details: { currentNbShards, recommendedNbShards }
-    })
+  // `_cat/indices` answers null when primaries are unavailable, and Number(null) would read as empty
+  const priStoreSize = esInfos.index['pri.store.size']
+  if (priStoreSize !== undefined && priStoreSize !== null) {
+    const recommended = recommendedNbShards(dataset, Number(priStoreSize), config.maxShardSize)
+    if (currentNbShards !== recommended) {
+      warnings.push({
+        code: 'ShardingRecommended',
+        severity: 'warning',
+        message: `current shard count ${currentNbShards} differs from recommended ${recommended}`,
+        details: { currentNbShards, recommendedNbShards: recommended }
+      })
+    }
   }
 
   const properties = esInfos.index.definition?.mappings?.properties ?? {}
@@ -190,7 +195,7 @@ const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   if (!indexSettings?.number_of_shards) return warnings
   const nbShards = Number(indexSettings.number_of_shards)
 
-  const segments = Number(esInfos.index['segments.count'])
+  const segments = Number(esInfos.index['pri.segments.count'])
   if (!Number.isNaN(segments) && nbShards > 0) {
     const segmentsPerShard = segments / nbShards
     if (segmentsPerShard > config.diagnose.segmentsPerShardWarn) {

@@ -214,7 +214,7 @@ const summaryRows = computed(() => {
     { key: 'storeSize', label: 'pri.store.size', value: formatBytes(Number(idx['pri.store.size']) || 0) },
     { key: 'shards', label: 'number_of_shards', value: settings.number_of_shards },
     { key: 'replicas', label: 'number_of_replicas', value: settings.number_of_replicas },
-    { key: 'segments', label: 'segments.count', value: idx['segments.count'] }
+    { key: 'segments', label: 'pri.segments.count', value: idx['pri.segments.count'] }
   ]
 })
 
