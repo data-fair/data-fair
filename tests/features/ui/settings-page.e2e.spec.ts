@@ -261,7 +261,7 @@ test.describe('settings cross-subEdit interference', () => {
   })
 })
 
-test.describe('settings integrations auto-save', () => {
+test.describe('settings integrations', () => {
   test.beforeEach(async () => {
     await clean()
   })
@@ -280,11 +280,41 @@ test.describe('settings integrations auto-save', () => {
     await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.length ?? 0, { timeout: 10000 }).toBe(1)
     // the secret is shown once, right after the save
     await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
-    await expect(section.getByRole('row').filter({ hasText: 'Auto key' })).not.toContainText('Non enregistrée')
     await expect(section.getByRole('button', { name: /Enregistrer/i })).not.toBeVisible()
+
+    // the secret of the first key survives the save of the second
+    await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+    await dialog.getByLabel('Titre', { exact: true }).fill('Second key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
+    await expect(section.getByText('Clé « Second key » créée')).toBeVisible()
+    await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
   })
 
-  test('a webhook is saved only once complete', async ({ page, goToWithAuth }) => {
+  test('a refused API key save is rolled back and the next one still goes out', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.scrollIntoViewIfNeeded()
+    const addKey = async (title: string) => {
+      await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+      await page.getByRole('dialog').getByLabel('Titre', { exact: true }).fill(title)
+      await page.getByRole('dialog').getByRole('button', { name: 'Ajouter', exact: true }).click()
+    }
+
+    await page.route('**/api/v1/settings/**', route => route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 500, body: 'refused' })
+      : route.fallback())
+    await addKey('Refused key')
+    await expect(section.getByRole('row').filter({ hasText: 'Refused key' })).not.toBeVisible({ timeout: 5000 })
+
+    await page.unroute('**/api/v1/settings/**')
+    await addKey('Accepted key')
+    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title), { timeout: 10000 })
+      .toContain('Accepted key')
+    expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title)).not.toContain('Refused key')
+  })
+
+  test('a webhook is saved on explicit save, once complete', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const webhooks = async () => (await ax.get('/api/v1/settings/user/test_user1')).data.webhooks ?? []
 
@@ -294,16 +324,25 @@ test.describe('settings integrations auto-save', () => {
     await section.getByRole('tab', { name: /Webhooks/ }).click()
     await section.getByRole('button', { name: /Ajouter un webhook/i }).click()
     await section.getByLabel('Titre', { exact: true }).fill('Auto hook')
-    await section.getByLabel('URL du serveur HTTP cible').fill('https://example.com/hook')
-    await section.getByLabel('URL du serveur HTTP cible').blur()
-    // still missing its events: nothing is sent
-    await page.waitForTimeout(1000)
-    expect(await webhooks()).toHaveLength(0)
+    const urlInput = section.getByLabel('URL du serveur HTTP cible')
+    await urlInput.fill('https://example.com/hook')
+    await urlInput.blur()
+
+    // still missing its events: it cannot be saved
+    const saveButton = section.getByRole('button', { name: /Enregistrer/i })
+    await expect(saveButton).toBeDisabled({ timeout: 5000 })
 
     await section.locator('.v-select').filter({ hasText: 'Événements déclencheurs' }).click()
     await page.getByRole('option', { name: 'Un nouveau jeu de données a été créé' }).click()
     await page.keyboard.press('Escape')
-    await expect.poll(async () => (await webhooks()).map((w: any) => w.title), { timeout: 10000 }).toEqual(['Auto hook'])
+    await expect(saveButton).toBeEnabled({ timeout: 5000 })
+    expect(await webhooks()).toHaveLength(0)
+
+    // the form updates on blur: a value still in the field must be part of the save
+    await urlInput.fill('https://example.com/typed-last')
+    await saveButton.click()
+    await expect.poll(async () => (await webhooks()).map((w: any) => w.target.params.url), { timeout: 10000 }).toEqual(['https://example.com/typed-last'])
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 })
   })
 })
 

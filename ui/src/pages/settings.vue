@@ -149,7 +149,7 @@
         </template>
       </df-section-tabs>
 
-      <!-- Access & integrations section (2 tabs, auto-save) -->
+      <!-- Access & integrations section (2 tabs, API keys auto-save, webhooks save/cancel + leave guard) -->
       <df-section-tabs
         v-if="sections.integrations"
         id="integrations"
@@ -160,9 +160,34 @@
         :subtitle="t('sections.integrations.subtitle')"
         :tabs="sections.integrations.tabs"
       >
+        <template #actions>
+          <confirm-menu
+            v-if="webhooksEdit.hasDiff.value"
+            :btn-props="{ color: 'warning', variant: 'tonal' }"
+            :label="t('cancel')"
+            :text="t('confirmCancelText')"
+            :icon="mdiCancel"
+            yes-color="warning"
+            @confirm="webhooksEdit.cancel()"
+          />
+          <v-btn
+            v-if="webhooksEdit.hasDiff.value"
+            class="ml-2"
+            color="accent"
+            variant="flat"
+            :disabled="!webhooksValid"
+            :loading="webhooksEdit.save.loading.value"
+            @click="webhooksEdit.save.execute()"
+          >
+            {{ t('save') }}
+          </v-btn>
+        </template>
         <template #windows>
           <v-tabs-window-item value="apiKeys">
-            <settings-api-keys v-model="settings.apiKeys" />
+            <settings-api-keys
+              v-model="settings.apiKeys"
+              :saving="apiKeysEdit.save.loading.value"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="webhooks">
@@ -429,19 +454,12 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('settings') }] })
 const settingsAccount = ref({ ...session.account.value })
 
 const selectedDepartment = ref('__root')
-// set while restoring the previous department, so the restore is not asked to confirm again
-let restoringDepartment = false
 watch(selectedDepartment, (newVal, oldVal) => {
-  if (restoringDepartment) {
-    restoringDepartment = false
-    return
-  }
+  // restoring the department after a refused confirm
+  if (newVal === (settingsAccount.value.department ?? '__root')) return
   // Guard: prevent department switch if there are unsaved changes
   if (anyDirty.value && !window.confirm(t('confirmCancelText'))) {
-    nextTick(() => {
-      restoringDepartment = true
-      selectedDepartment.value = oldVal
-    })
+    nextTick(() => { selectedDepartment.value = oldVal })
     return
   }
   if (newVal === '__root') {
@@ -491,24 +509,19 @@ const catalogEdit = settingsEditFetch.createSubEdit(
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
 const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS'], { success: t('saved') })
 
-// API keys and webhooks save on each change, webhooks only once valid
-const webhooksValid = ref(true)
-const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
-watch(apiKeysEdit.hasDiff, (dirty) => { if (dirty) apiKeysEdit.save.execute() })
-// the form validity settles after the change, wait for it before saving
-let webhooksTimeout: ReturnType<typeof setTimeout> | undefined
-watch([webhooksEdit.hasDiff, () => webhooksValid.value], () => {
-  clearTimeout(webhooksTimeout)
-  webhooksTimeout = setTimeout(() => {
-    if (webhooksEdit.hasDiff.value && webhooksValid.value) webhooksEdit.save.execute()
-  }, 300)
+
+// API keys save on each change, a refused save is rolled back: the table only shows the server state
+const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
+watch(() => settings.value?.apiKeys, async () => {
+  if (!apiKeysEdit.hasDiff.value) return
+  await apiKeysEdit.save.execute()
+  if (apiKeysEdit.save.error.value) apiKeysEdit.cancel()
 })
 
-// an invalid webhook stays unsaved, the leave guards keep it
 const edits = [infoEdit, catalogEdit, webhooksEdit, portalsEdit, featuresEdit]
-for (const edit of edits) useLeaveGuard(edit.hasDiff, { locale })
 const anyDirty = computed(() => edits.some(edit => edit.hasDiff.value))
+useLeaveGuard(anyDirty, { locale })
 
 const catalogTab = ref('topics')
 const integrationsTab = ref('apiKeys')
@@ -516,6 +529,7 @@ const saveConfirm = useTemplateRef('save-confirm')
 
 // Validation state from child components
 const infoValid = ref(true)
+const webhooksValid = ref(true)
 const topicsValid = ref(true)
 const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
@@ -552,7 +566,7 @@ const sections = computed(() => {
     title: t('sections.integrations.title'),
     tabs: [
       { key: 'apiKeys', title: t('sections.integrations.tabs.apiKeys'), icon: mdiKey },
-      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: webhooksValid.value ? undefined : 'error' }
+      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: tabColor(webhooksEdit.hasDiff.value, webhooksValid.value || !webhooksEdit.hasDiff.value) }
     ]
   }
   if (!$uiConfig.disablePublicationSites) {

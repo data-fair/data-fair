@@ -5,6 +5,7 @@
     color="primary"
     density="comfortable"
     variant="flat"
+    :disabled="saving"
     @click="createToggle = true"
   >
     {{ t('addApiKey') }}
@@ -90,7 +91,7 @@
     </v-card>
   </v-dialog>
 
-  <!-- the secret of a key is readable only in the response of the save that created it -->
+  <!-- the secret of a key is readable only in the response of the save that created it, kept for the page lifetime -->
   <v-alert
     v-for="apiKey in newKeys"
     :key="apiKey.id"
@@ -103,14 +104,14 @@
       {{ t('newKeyAlert') }}
     </p>
     <div class="d-flex align-center flex-wrap ga-2">
-      <code class="text-break">{{ apiKey.clearKey }}</code>
+      <code class="text-break">{{ clearKeys[apiKey.id!] }}</code>
       <v-btn
-        :prepend-icon="copied === apiKey.clearKey ? mdiCheck : mdiContentCopy"
+        :prepend-icon="copied === clearKeys[apiKey.id!] ? mdiCheck : mdiContentCopy"
         density="comfortable"
         variant="text"
-        @click="copy(apiKey.clearKey!)"
+        @click="copy(clearKeys[apiKey.id!])"
       >
-        {{ copied === apiKey.clearKey ? t('copied') : t('copySecret') }}
+        {{ copied === clearKeys[apiKey.id!] ? t('copied') : t('copySecret') }}
       </v-btn>
     </div>
   </v-alert>
@@ -136,17 +137,7 @@
   >
     <template #item.title="{ item }">
       <div class="py-2">
-        <div>
-          {{ item.title }}
-          <v-chip
-            v-if="!item.id"
-            color="accent"
-            size="x-small"
-            class="ml-1"
-          >
-            {{ t('notSaved') }}
-          </v-chip>
-        </div>
+        <div>{{ item.title }}</div>
         <div
           v-if="item.adminMode || item.asAccount"
           class="text-body-small text-error"
@@ -204,12 +195,12 @@
           :title="t('copyEmail', { email: item.email })"
           variant="text"
           density="comfortable"
-          @click="copy(item.email)"
+          @click="copy(item.email, t('copyEmailFailed', { email: item.email }))"
         />
         <confirm-menu
           variant="menu"
           yes-color="warning"
-          :btn-props="{ color: 'warning', icon: true, variant: 'text', density: 'comfortable' }"
+          :btn-props="{ color: 'warning', icon: true, variant: 'text', density: 'comfortable', disabled: saving }"
           :tooltip="t('deleteKey')"
           :text="t('deleteKeyDetails')"
           @confirm="removeApiKey(item)"
@@ -237,7 +228,8 @@ fr:
   copySecret: Copier la clé
   copied: Copié
   copyEmail: "Copier le pseudo email : {email}"
-  notSaved: Non enregistrée
+  copyFailed: "Impossible d'accéder au presse-papiers, copiez la valeur manuellement."
+  copyEmailFailed: "Impossible d'accéder au presse-papiers. Pseudo email : {email}"
   scope: Portée
   noScope: Permissions explicites uniquement
   scopeMsg: En attribuant des portées à cette clé d'API, celle-ci pourra effectuer les opérations sélectionnées sur l'ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
@@ -281,7 +273,8 @@ en:
   copySecret: Copy the key
   copied: Copied
   copyEmail: "Copy the pseudo email: {email}"
-  notSaved: Not saved
+  copyFailed: Cannot access the clipboard, copy the value manually.
+  copyEmailFailed: "Cannot access the clipboard. Pseudo email: {email}"
   scope: Scope
   noScope: Explicit permissions only
   scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
@@ -316,8 +309,10 @@ import { mdiAlert, mdiAt, mdiCheck, mdiContentCopy, mdiPlus } from '@mdi/js'
 
 type ApiKey = NonNullable<Settings['apiKeys']>[number]
 
-const { restrictedScopes } = defineProps<{
+const { restrictedScopes, saving = false } = defineProps<{
   restrictedScopes?: string[]
+  /** a list changed during a save would be overwritten by its response */
+  saving?: boolean
 }>()
 
 const apiKeys = defineModel<Settings['apiKeys']>()
@@ -325,6 +320,7 @@ const apiKeys = defineModel<Settings['apiKeys']>()
 const { t } = useI18n()
 const session = useSessionAuthenticated()
 const { dayjs } = useLocaleDayjs()
+const { sendUiNotif } = useUiNotif()
 
 const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
 
@@ -335,7 +331,12 @@ const headers = computed(() => [
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
 
-const newKeys = computed(() => (apiKeys.value ?? []).filter(k => !!k.clearKey))
+// by key id: the response of any later save drops the clearKey from the list
+const clearKeys = ref<Record<string, string>>({})
+watch(apiKeys, (keys) => {
+  for (const key of keys ?? []) if (key.id && key.clearKey) clearKeys.value[key.id] = key.clearKey
+}, { immediate: true })
+const newKeys = computed(() => (apiKeys.value ?? []).filter(k => k.id && clearKeys.value[k.id]))
 
 // same milestones as the expiration mails: J-3 warning, then the expiry day (the key still works that day)
 const expiration = (expireAt: string) => {
@@ -347,8 +348,14 @@ const expiration = (expireAt: string) => {
 }
 
 const copied = ref<string | null>(null)
-const copy = async (value: string) => {
-  await navigator.clipboard.writeText(value)
+const copy = async (value: string, failedMsg = t('copyFailed')) => {
+  try {
+    await navigator.clipboard.writeText(value)
+  } catch {
+    // unavailable over http, refused in an iframe without the clipboard-write permission
+    sendUiNotif({ type: 'warning', msg: failedMsg })
+    return
+  }
   copied.value = value
   setTimeout(() => { if (copied.value === value) copied.value = null }, 2000)
 }

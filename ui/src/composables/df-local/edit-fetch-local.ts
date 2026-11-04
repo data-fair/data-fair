@@ -124,21 +124,20 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
       }
       if (!Object.keys(patch).length) return
 
-      // Capture server state BEFORE save for post-response sync
+      // Capture what was sent and the server state BEFORE save for post-response sync
+      const sent = clone(patch)
       const serverDataBefore = clone(serverData.value) as Record<string, any>
 
       const res = await ofetch(fetch.fullUrl.value!, { method: 'PATCH', body: patch })
       if (res) {
-        const keysSet = new Set(keys.map(k => String(k)))
         // Update serverData with full response
         for (const k of Object.keys(res)) {
           sd[k] = clone(res[k])
         }
-        // Sync data from response:
-        // - For keys in THIS subEdit: always update (server may add computed fields like IDs)
-        // - For keys in OTHER subEdits: only update if no pending local edits
+        // Sync data from response (server may add computed fields like IDs), except keys edited
+        // meanwhile: they would lose the edit, pending in another subEdit or typed during the request
         for (const k of Object.keys(res)) {
-          if (keysSet.has(k) || equal(d[k], serverDataBefore[k])) {
+          if (equal(d[k], k in sent ? sent[k] : serverDataBefore[k])) {
             d[k] = clone(res[k])
           }
         }
