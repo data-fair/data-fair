@@ -1,0 +1,102 @@
+import { settingsSchema } from '#api/types'
+
+const schema = settingsSchema.properties.datasetsMetadata as any
+const properties: Record<string, any> = schema.properties
+
+// the metadata of a dataset the settings know, read from the settings schema
+export const standardMetadata = Object.entries(properties)
+  .filter(([, prop]) => prop.properties?.active && (prop.properties.group || prop.properties.title))
+  .map(([key, prop]) => {
+    const { active, title, group, description } = prop.properties
+    return {
+      key,
+      title: active.title as string,
+      info: active.description as string,
+      defaultActive: !!active.default,
+      alwaysActive: !!active.readOnly,
+      renamable: !!title,
+      hasGroup: !!group,
+      groupPlaceholder: group?.layout.props.placeholder,
+      hasHelp: !!description,
+      nativeHelp: description?.layout.props.placeholder
+    }
+  })
+export const standardMetadataByKey = Object.fromEntries(standardMetadata.map(m => [m.key, m]))
+// the rows of the list: a metadata without settings yet starts from its default
+export const standardMetadataItems = standardMetadata.map(m => ({ key: m.key, active: m.defaultActive }))
+
+// the settings store one object per metadata, a vjsf list needs an array
+export const toMetadataForm = (datasetsMetadata: Record<string, any> | null | undefined) => {
+  const { ...form } = datasetsMetadata ?? {}
+  form.standardMetadata = standardMetadata.filter(m => form[m.key]).map(m => ({ ...form[m.key], key: m.key }))
+  for (const m of standardMetadata) delete form[m.key]
+  return form
+}
+export const fromMetadataForm = ({ standardMetadata: items, ...datasetsMetadata }: Record<string, any>) => {
+  for (const { key, ...item } of items ?? []) datasetsMetadata[key] = item
+  return datasetsMetadata
+}
+
+const meta = 'context.metadata[parent.data.key]'
+const shown = `(parent.data.active || ${meta}.alwaysActive)`
+
+// a field of the list items, built on its definition in the settings schema
+const field = (prop: any, ifExpr: string, getProps: string, cols?: number) => {
+  return { ...prop, layout: { ...prop.layout, if: ifExpr, getProps, ...(cols && { cols }) } }
+}
+
+const items = {
+  type: 'object',
+  layout: {
+    switch: [
+      // the row only shows the title and subtitle of the list
+      { if: 'summary', children: [] },
+      { children: [{ name: 'metadata-info' }, 'active', 'title', 'group', 'description'] }
+    ]
+  },
+  properties: {
+    key: { type: 'string', layout: 'none' },
+    active: {
+      type: 'boolean',
+      title: 'Offer this metadata',
+      'x-i18n-title': { fr: 'Proposer cette métadonnée' },
+      layout: { comp: 'switch', if: `!${meta}.alwaysActive` }
+    },
+    title: {
+      type: 'string',
+      title: 'Custom label',
+      'x-i18n-title': { fr: 'Libellé personnalisé' },
+      layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ variant: 'outlined', placeholder: ${meta}.title, persistentPlaceholder: true })` }
+    },
+    group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: ${meta}.groupPlaceholder })`, 12),
+    description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
+  }
+}
+
+export const metadataFormSchema = {
+  ...schema,
+  layout: {
+    title: null,
+    children: ['informationsTitle', 'coverageTitle', 'groups', 'standardMetadata', 'custom']
+  },
+  properties: {
+    informationsTitle: properties.informationsTitle,
+    coverageTitle: properties.coverageTitle,
+    groups: properties.groups,
+    standardMetadata: {
+      type: 'array',
+      title: 'Standard metadata',
+      'x-i18n-title': { fr: 'Métadonnées standard' },
+      layout: {
+        comp: 'list',
+        listEditMode: 'inline-single',
+        listActions: ['edit'],
+        getItems: { expr: 'context.metadataItems', itemKey: 'item.key', immutable: true },
+        itemTitle: 'item.title || context.metadata[item.key].title',
+        itemSubtitle: 'context.metadataSubtitles[item.key]'
+      },
+      items
+    },
+    custom: properties.custom
+  }
+}
