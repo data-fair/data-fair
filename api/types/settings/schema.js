@@ -1,4 +1,5 @@
 import _publicationSites from '../../contract/publication-sites.js'
+import datasetSchema from '../dataset/schema.js'
 const publicationSites = _publicationSites()
 
 // the two default tabs of the dataset metadata form, never stored in datasetsMetadata.groups
@@ -26,27 +27,37 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
-// replaces the help shown next to the field in the dataset form
-const metadataHelp = (toggleable = false) => ({
-  type: 'string',
-  title: 'Infobulle',
-  layout: { comp: 'textarea', ...(toggleable && { if: 'parent.data.active' }), cols: 12, props: { rows: 1, autoGrow: true, density: 'compact' } }
-})
+// replaces the help shown next to the field in the dataset form, the native help is the placeholder
+/** @param {string} key */
+const metadataHelp = (key, toggleable = false) => {
+  const placeholder = /** @type {any} */(datasetSchema.properties)[key]['x-i18n-description']?.fr
+  return {
+    type: 'string',
+    title: 'Infobulle',
+    layout: {
+      comp: 'textarea',
+      ...(toggleable && { if: 'parent.data.active' }),
+      cols: 12,
+      props: { rows: 1, autoGrow: true, density: 'compact', ...(placeholder && { placeholder, persistentPlaceholder: true }) }
+    }
+  }
+}
 
 // a metadata always shown on a dataset: only its tab and help can be chosen
 /**
+ * @param {string} key
  * @param {string} title
  * @param {{ key: string, title: string }} defaultGroup
  * @param {string} description
  */
-const fixedMetadata = (title, defaultGroup, description) => ({
+const fixedMetadata = (key, title, defaultGroup, description) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
   layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
     active: { title, description, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
     group: metadataGroup(defaultGroup),
-    description: metadataHelp()
+    description: metadataHelp(key)
   }
 })
 
@@ -438,11 +449,11 @@ export default {
             }
           }
         },
-        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."),
-        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."),
-        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
-        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
-        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."),
+        license: fixedMetadata('license', 'Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."),
+        origin: fixedMetadata('origin', 'Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."),
+        image: fixedMetadata('image', 'Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."),
+        topics: fixedMetadata('topics', 'Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'),
+        relatedDatasets: fixedMetadata('relatedDatasets', 'Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."),
         creator: {
           type: 'object',
           properties: {
@@ -463,7 +474,7 @@ export default {
               }
             },
             group: metadataGroup(informationsGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('creator', true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
@@ -487,7 +498,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('spatial', true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
@@ -511,7 +522,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('temporal', true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -535,7 +546,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('frequency', true)
           }
         },
         modified: {
@@ -558,7 +569,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('modified', true)
           }
         },
         keywords: {
@@ -581,7 +592,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('keywords', true)
           }
         },
         searchTerms: {
@@ -604,7 +615,7 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp('searchTerms', true)
           }
         },
         conformsTo: {
